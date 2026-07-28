@@ -3,6 +3,7 @@ import { Scene } from '#core/Scene';
 import type { SceneScope } from '#core/SceneScope';
 import { SceneState } from '#core/SceneState';
 import { Signal } from '#core/Signal';
+import type { ContextMenuRequest } from '#input/ContextMenuRequest';
 import { FocusController } from '#input/FocusController';
 import type { InputManager } from '#input/InputManager';
 import { InteractionManager } from '#input/InteractionManager';
@@ -36,23 +37,32 @@ class TestSprite extends Drawable {
 
 const makePointer = (x: number, y: number, id = 1): Pointer => ({ id, x, y, type: 'mouse', isPrimary: true }) as unknown as Pointer;
 
+/** Dispatch a mock pointer through a mock signal with its own x/y, matching the real (pointer, x, y) shape. */
+const dispatchPointer = (signal: Signal<[Pointer, number, number]>, x: number, y: number, id = 1): Pointer => {
+  const pointer = makePointer(x, y, id);
+
+  signal.dispatch(pointer, x, y);
+
+  return pointer;
+};
+
 const createUIApp = (): {
   scene: Scene;
   im: InteractionManager;
   focus: FocusController;
   signals: {
-    onPointerDown: Signal<[Pointer]>;
+    onPointerDown: Signal<[Pointer, number, number]>;
     onKeyDown: Signal<[number]>;
   };
 } => {
   const signals = {
-    onPointerDown: new Signal<[Pointer]>(),
-    onPointerMove: new Signal<[Pointer]>(),
-    onPointerUp: new Signal<[Pointer]>(),
-    onPointerTap: new Signal<[Pointer]>(),
-    onPointerCancel: new Signal<[Pointer]>(),
-    onPointerLeave: new Signal<[Pointer]>(),
-    onContextMenu: new Signal<[Pointer]>(),
+    onPointerDown: new Signal<[Pointer, number, number]>(),
+    onPointerMove: new Signal<[Pointer, number, number]>(),
+    onPointerUp: new Signal<[Pointer, number, number]>(),
+    onPointerTap: new Signal<[Pointer, number, number]>(),
+    onPointerCancel: new Signal<[Pointer, number, number]>(),
+    onPointerLeave: new Signal<[Pointer, number, number]>(),
+    onContextMenu: new Signal<[ContextMenuRequest]>(),
     onKeyDown: new Signal<[number]>(),
     onKeyUp: new Signal<[number]>(),
   };
@@ -112,7 +122,7 @@ describe('UI interaction routing', () => {
     const handler = vi.fn();
 
     button.onPointerDown.add(handler);
-    signals.onPointerDown.dispatch(makePointer(80, 80));
+    dispatchPointer(signals.onPointerDown, 80, 80);
     im.update();
 
     expect(handler).toHaveBeenCalledTimes(1);
@@ -134,7 +144,7 @@ describe('UI interaction routing', () => {
 
     button.onPointerDown.add(uiHandler);
     worldSprite.onPointerDown.add(worldHandler);
-    signals.onPointerDown.dispatch(makePointer(80, 80));
+    dispatchPointer(signals.onPointerDown, 80, 80);
     im.update();
 
     expect(uiHandler).toHaveBeenCalledTimes(1);
@@ -157,7 +167,7 @@ describe('UI interaction routing', () => {
 
     button.onPointerDown.add(uiHandler);
     worldSprite.onPointerDown.add(worldHandler);
-    signals.onPointerDown.dispatch(makePointer(400, 400));
+    dispatchPointer(signals.onPointerDown, 400, 400);
     im.update();
 
     expect(uiHandler).not.toHaveBeenCalled();

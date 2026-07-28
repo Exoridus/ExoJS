@@ -8,6 +8,7 @@ import type { PlatformAdapter, PlatformSubscription } from '#platform/PlatformAd
 
 import type { ActionMap, ActionRecord } from './actions/ActionMap';
 import type { ActionSample, ChannelEvent } from './actions/types';
+import type { ContextMenuRequest } from './ContextMenuRequest';
 import { Gamepad } from './Gamepad';
 import type { GamepadAxis } from './GamepadAxis';
 import type { GamepadButton } from './GamepadButton';
@@ -16,7 +17,7 @@ import { builtInGamepadDefinitions, resolveGamepadDefinition } from './GamepadDe
 import { GestureRecognizer } from './GestureRecognizer';
 import type { InputBindingOptions, InputChannel } from './InputBinding';
 import { InputBinding } from './InputBinding';
-import { Pointer, PointerState, PointerStateFlag } from './Pointer';
+import { computeDesignPoint, Pointer, PointerState, PointerStateFlag } from './Pointer';
 import { ChannelOffset, ChannelSize, maxPointers, pointerSlotSize, resolveGamepadSlotChannel } from './types';
 
 const gamepadSlots = 4;
@@ -135,8 +136,8 @@ export class InputManager {
   private pointerDistanceThreshold: number;
   private readonly allowNativeContextMenu: boolean;
   private readonly allowTextSelection: boolean;
-  /** Pointer that requested a context menu since the last frame, if any. */
-  private contextMenuPointer: Pointer | null = null;
+  /** Context-menu request recorded since the last frame, if any. */
+  private contextMenuRequest: ContextMenuRequest | null = null;
 
   /** Platform subscriptions held for the manager's lifetime, undone on destroy. */
   private readonly listeners: PlatformSubscription[] = [];
@@ -172,16 +173,19 @@ export class InputManager {
    * This is the engine-wide fallback: it fires unconditionally, with no
    * regard for the scene graph, so it is the right place for an
    * application-level menu that should appear no matter what — or nothing —
-   * was under the pointer. A request over a specific interactive node
-   * additionally bubbles as a scene-graph `contextmenu`
-   * {@link InteractionEvent} (see {@link InteractionManager}), which only
-   * fires when a node is actually hit and can be stopped with
-   * {@link InteractionEvent.stopPropagation}; use that one for a per-node
-   * menu instead. Do not confuse either with {@link GestureRecognizer.onLongPress}
-   * — a separate, purely informational touch/mouse-hold signal that never
-   * triggers this one on its own.
+   * was under the pointer. Fires even when the request has no pointer to
+   * attribute itself to (a keyboard-only session that has never moved a
+   * mouse) — see {@link ContextMenuRequest}'s doc comment for why the request
+   * carries its own coordinates instead of forcing the contract onto a
+   * {@link Pointer}. A request over a specific interactive node additionally
+   * bubbles as a scene-graph `contextmenu` {@link InteractionEvent} (see
+   * {@link InteractionManager}), which only fires when a node is actually hit
+   * and can be stopped with {@link InteractionEvent.stopPropagation}; use that
+   * one for a per-node menu instead. Do not confuse either with
+   * {@link GestureRecognizer.onLongPress} — a separate, purely informational
+   * touch/mouse-hold signal that never triggers this one on its own.
    */
-  public readonly onContextMenu = new Signal<[Pointer]>();
+  public readonly onContextMenu = new Signal<[ContextMenuRequest]>();
 
   /** Fires when a physical pad connects to any slot. */
   public readonly onGamepadConnected = new Signal<[Gamepad]>();
@@ -739,24 +743,21 @@ export class InputManager {
    * semantic engine event for the frame boundary, where it is routed through
    * the scene graph. The two are independent: an application may want its own
    * in-game menu and the native one, or neither.
+   *
+   * The request's coordinates are computed directly, not read off a
+   * `Pointer` — the keyboard context-menu key and Shift+F10 fire this same
+   * native event with no pointer ever having touched the surface, so a
+   * missing pointer must not suppress the request itself. `_primaryPointer()`
+   * is still attached when one exists, as best-effort attribution only.
    */
   private handleContextMenu(event: MouseEvent): void {
     if (!this.allowNativeContextMenu) {
       stopEvent(event);
     }
 
-    const pointer = this._primaryPointer();
+    const { x, y } = computeDesignPoint(this._app, this.platform, event.clientX, event.clientY);
 
-    if (pointer === null) {
-      return;
-    }
-
-    // The request carries its own coordinates and no pointer id. Record them on
-    // the pointer it is attributed to, so the frame's dispatch can hand handlers
-    // the place the menu was asked for rather than wherever that pointer has
-    // moved since.
-    pointer._noteContextMenu(event.clientX, event.clientY);
-    this.contextMenuPointer = pointer;
+    this.contextMenuRequest = { x, y, pointer: this._primaryPointer() };
     this.flags.push(InputManagerFlag.ContextMenu);
   }
 
@@ -1030,12 +1031,14 @@ export class InputManager {
     }
 
     if (this.flags.pop(InputManagerFlag.ContextMenu)) {
-      const pointer = this.contextMenuPointer;
+      const request = this.contextMenuRequest;
 
-      this.contextMenuPointer = null;
+      this.contextMenuRequest = null;
 
-      if (pointer !== null) {
-        this.onContextMenu.dispatch(pointer);
+      // Fires regardless of `request.pointer` — see this signal's own doc
+      // comment for why a missing pointer must not swallow the request.
+      if (request !== null) {
+        this.onContextMenu.dispatch(request);
       }
     }
 

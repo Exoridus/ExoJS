@@ -65,6 +65,25 @@ export interface PointerPhaseEntry {
   readonly maxDistance: number;
 }
 
+/**
+ * Map a host-pixel client point into design space — the position-only half of
+ * {@link Pointer._computeDesignGeometry}'s conversion, usable without a live
+ * {@link Pointer} instance. Used for a context-menu request, which may need
+ * to report a design-space position (the keyboard context-menu key, Shift+F10)
+ * with no pointer ever having touched the surface to compute it from.
+ *
+ * @internal
+ */
+export function computeDesignPoint(app: Application, platform: PlatformAdapter, clientX: number, clientY: number): { x: number; y: number } {
+  const rect = platform.getSurfaceMetrics();
+  const u = rect.width > 0 ? (clientX - rect.left) / rect.width : 0;
+  const v = rect.height > 0 ? (clientY - rect.top) / rect.height : 0;
+  const backingStoreX = u * rect.backingWidth;
+  const backingStoreY = v * rect.backingHeight;
+
+  return app._backingStoreToDesign(backingStoreX, backingStoreY);
+}
+
 /** High-level lifecycle state of a {@link Pointer}. */
 export enum PointerState {
   Unknown,
@@ -141,13 +160,6 @@ export class Pointer {
 
   /** Position the platform cancelled this pointer at. `(-1, -1)` until it has been cancelled at least once. */
   public readonly cancelPosition: Vector = new Vector(-1, -1);
-
-  /**
-   * Position of the most recent context-menu request. Set from the request
-   * itself rather than from wherever the pointer has since moved, so a menu
-   * opens where the user asked for it. `(-1, -1)` until one has been requested.
-   */
-  public readonly contextMenuPosition: Vector = new Vector(-1, -1);
 
   public readonly size: Size;
   public readonly tilt: Vector;
@@ -364,19 +376,6 @@ export class Pointer {
   }
 
   /**
-   * Note where a context-menu request happened. The request arrives as a plain
-   * platform mouse event with no pointer id of its own, so the manager
-   * attributes it to a pointer and hands the coordinates here.
-   *
-   * @internal
-   */
-  public _noteContextMenu(clientX: number, clientY: number): void {
-    const geometry = this._computeDesignGeometry(clientX, clientY, 0, 0);
-
-    this.contextMenuPosition.set(geometry.x, geometry.y);
-  }
-
-  /**
    * Promote the phases accumulated since the last boundary into this frame's
    * snapshot and recompute {@link delta}. Called once per frame by the
    * {@link InputManager} before anything reads the pointer.
@@ -445,7 +444,6 @@ export class Pointer {
     this.movePosition.destroy();
     this.releasePosition.destroy();
     this.cancelPosition.destroy();
-    this.contextMenuPosition.destroy();
     this._latestPosition.destroy();
     this._frameBaseline.destroy();
     this.size.destroy();
@@ -498,15 +496,8 @@ export class Pointer {
       return { x: 0, y: 0, width: 0, height: 0 };
     }
 
-    const rect = platform.getSurfaceMetrics();
-    const u = rect.width > 0 ? (clientX - rect.left) / rect.width : 0;
-    const v = rect.height > 0 ? (clientY - rect.top) / rect.height : 0;
-    const backingStoreX = u * rect.backingWidth;
-    const backingStoreY = v * rect.backingHeight;
-    const backingStoreW = rect.width > 0 ? (width / rect.width) * rect.backingWidth : 0;
-    const backingStoreH = rect.height > 0 ? (height / rect.height) * rect.backingHeight : 0;
-    const origin = app._backingStoreToDesign(backingStoreX, backingStoreY);
-    const corner = app._backingStoreToDesign(backingStoreX + backingStoreW, backingStoreY + backingStoreH);
+    const origin = computeDesignPoint(app, platform, clientX, clientY);
+    const corner = computeDesignPoint(app, platform, clientX + width, clientY + height);
 
     return {
       x: origin.x,

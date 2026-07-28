@@ -6,11 +6,11 @@
   "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 102,
+  "memberCount": 101,
   "counts": {
     "constructors": 1,
     "methods": 7,
-    "properties": 33,
+    "properties": 32,
     "events": 0
   },
   "sections": [
@@ -512,27 +512,6 @@
           "description": "Position the platform cancelled this pointer at. (-1, -1) until it has been cancelled at least once."
         },
         {
-          "name": "contextMenuPosition",
-          "signature": "contextMenuPosition: Vector",
-          "signatureTokens": [
-            {
-              "text": "contextMenuPosition",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Vector",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Position of the most recent context-menu request. Set from the request itself rather than from wherever the pointer has since moved, so a menu opens where the user asked for it. (-1, -1) until one has been requested."
-        },
-        {
           "name": "delta",
           "signature": "delta: Vector",
           "signatureTokens": [
@@ -614,7 +593,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Current position in design pixels. During a phase dispatch it reads the position that phase happened at, so a handler always sees the coordinates of the event it was called for — not the last coordinates of the frame. Outside of a dispatch it is the pointer's latest position."
+          "description": "Current position in design pixels — always the pointer's latest, live position, never rewound to an earlier phase. A signal handler that needs the coordinates a SPECIFIC phase happened at (press, move, release, context menu) receives them as explicit arguments rather than reading this property, and InteractionEvent.x/InteractionEvent.y are the corresponding immutable per-phase snapshot at the interaction layer — this is a deliberate choice over a temporary rewind-and-restore, which could leave a handler reading a DIFFERENT phase's position if it runs any code after the dispatch that called it returns."
         },
         {
           "name": "pressPosition",

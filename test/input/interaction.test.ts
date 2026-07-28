@@ -2,6 +2,7 @@
 import { Scene } from '#core/Scene';
 import { SceneState } from '#core/SceneState';
 import { Signal } from '#core/Signal';
+import type { ContextMenuRequest } from '#input/ContextMenuRequest';
 import type { InputManager } from '#input/InputManager';
 import type { InteractionEvent } from '#input/InteractionEvent';
 import { InteractionManager } from '#input/InteractionManager';
@@ -99,7 +100,7 @@ const createApp = (): {
     onPointerTap: new Signal<[Pointer, number, number]>(),
     onPointerCancel: new Signal<[Pointer, number, number]>(),
     onPointerLeave: new Signal<[Pointer, number, number]>(),
-    onContextMenu: new Signal<[Pointer]>(),
+    onContextMenu: new Signal<[ContextMenuRequest]>(),
     // InteractionManager owns the focus controller, which listens for keys.
     onKeyDown: new Signal<[number]>(),
     onKeyUp: new Signal<[number]>(),
@@ -156,7 +157,7 @@ const createAppNoScene = (
     onPointerTap: new Signal<[Pointer, number, number]>(),
     onPointerCancel: new Signal<[Pointer, number, number]>(),
     onPointerLeave: new Signal<[Pointer, number, number]>(),
-    onContextMenu: new Signal<[Pointer]>(),
+    onContextMenu: new Signal<[ContextMenuRequest]>(),
     // InteractionManager owns the focus controller, which listens for keys.
     onKeyDown: new Signal<[number]>(),
     onKeyUp: new Signal<[number]>(),
@@ -546,6 +547,83 @@ describe('InteractionManager — pointerover / pointerout on move', () => {
     expect(outHandler).toHaveBeenCalledTimes(1);
     expect(overHandler).toHaveBeenCalledTimes(1); // unchanged — no new pointerover fired
     expect(im.getHoveredNode()).toBeNull();
+
+    im.destroy();
+    sprite.destroy();
+  });
+
+  test('a pointerout handler that destroys the incoming node suppresses its pointerover without throwing', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+    const spriteA = new TestSprite().setBounds(0, 0, 50, 50);
+    const spriteB = new TestSprite().setBounds(60, 0, 50, 50);
+
+    spriteA.interactive = true;
+    spriteB.interactive = true;
+    scene.addChild(spriteA);
+    scene.addChild(spriteB);
+
+    const bOver = vi.fn();
+
+    // A's own pointerout handler reaches out and destroys B — the node the
+    // SAME flush is about to dispatch pointerover on next.
+    spriteA.onPointerOut.add(() => spriteB.destroy());
+    spriteB.onPointerOver.add(bOver);
+
+    dispatchPointer(signals.onPointerMove, { x: 25, y: 25 });
+    flushInteractions(im);
+
+    expect(() => {
+      dispatchPointer(signals.onPointerMove, { x: 80, y: 25 });
+      flushInteractions(im);
+    }).not.toThrow();
+
+    expect(bOver).not.toHaveBeenCalled();
+
+    im.destroy();
+    spriteA.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 6b. Phase-consistent coordinates
+// ---------------------------------------------------------------------------
+
+describe('InteractionManager — phase-consistent event coordinates', () => {
+  test('event.x/y are the phase-specific layer-space coordinates; event.pointer.x/y always read the live position', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+    const sprite = new TestSprite().setBounds(0, 0, 200, 200);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    let seenEventX: number | null = null;
+    let seenPointerX: number | null = null;
+
+    // The pointer's mock `x` is its LIVE field (set once, at dispatch time,
+    // by the test harness below) — a real Pointer always reads live too (see
+    // Pointer.position's own doc comment); it is deliberately not what a
+    // handler should read for "where did THIS phase happen".
+    sprite.onPointerDown.add(event => {
+      seenEventX = event.x;
+      seenPointerX = event.pointer.x;
+    });
+
+    const pointer = makePointer({ x: 50, y: 50 });
+
+    signals.onPointerDown.dispatch(pointer, 50, 50);
+    // Mutate the mock pointer's live field to a LATER value, exactly as a
+    // same-frame Move happening after Down would leave it — proving a
+    // handler reading event.x gets the Down phase's own coordinate (50)
+    // rather than silently observing the pointer's later, live position.
+    (pointer as unknown as { x: number }).x = 999;
+    flushInteractions(im);
+
+    expect(seenEventX).toBe(50);
+    expect(seenPointerX).toBe(999);
 
     im.destroy();
     sprite.destroy();

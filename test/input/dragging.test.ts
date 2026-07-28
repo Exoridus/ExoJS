@@ -9,6 +9,7 @@ import type { Application } from '#core/Application';
 import { Scene } from '#core/Scene';
 import { SceneState } from '#core/SceneState';
 import { Signal } from '#core/Signal';
+import type { ContextMenuRequest } from '#input/ContextMenuRequest';
 import type { InputManager } from '#input/InputManager';
 import { InteractionManager } from '#input/InteractionManager';
 import type { Pointer } from '#input/Pointer';
@@ -68,7 +69,7 @@ const createApp = (dragThreshold?: number): { app: Application; scene: Scene; si
     onPointerTap: new Signal<[Pointer, number, number]>(),
     onPointerCancel: new Signal<[Pointer, number, number]>(),
     onPointerLeave: new Signal<[Pointer, number, number]>(),
-    onContextMenu: new Signal<[Pointer]>(),
+    onContextMenu: new Signal<[ContextMenuRequest]>(),
     onKeyDown: new Signal<[number]>(),
     onKeyUp: new Signal<[number]>(),
   };
@@ -307,6 +308,144 @@ describe('parent-local positioning', () => {
 
     expect(sprite.position.x).toBeCloseTo(20);
     expect(sprite.position.y).toBeCloseTo(20);
+
+    im.destroy();
+  });
+});
+
+describe('reentrancy: node removed/destroyed inside its own handler', () => {
+  it('a pointerdown handler that destroys its own node leaves no drag candidate to promote', () => {
+    const { scene, signals, im } = createApp();
+    const sprite = draggable();
+    const started = vi.fn();
+
+    scene.addChild(sprite);
+    sprite.onDragStart.add(started);
+    // No removeChild first — the harder case: destroy() alone does not
+    // unregister the node from the interaction manager on its own.
+    sprite.onPointerDown.add(() => sprite.destroy());
+
+    dispatchPointer(signals.onPointerDown, 50, 50);
+    im.update();
+
+    expect(() => {
+      dispatchPointer(signals.onPointerMove, 90, 50, 40);
+      im.update();
+    }).not.toThrow();
+
+    expect(started).not.toHaveBeenCalled();
+    expect(im.getCapturedNodes()).toEqual([]);
+
+    im.destroy();
+  });
+
+  it('a pointerdown handler that removes (not destroys) its own node via removeChild leaves no drag candidate', () => {
+    const { scene, signals, im } = createApp();
+    const sprite = draggable();
+    const started = vi.fn();
+
+    scene.addChild(sprite);
+    sprite.onDragStart.add(started);
+    sprite.onPointerDown.add(() => scene.removeChild(sprite));
+
+    dispatchPointer(signals.onPointerDown, 50, 50);
+    im.update();
+
+    dispatchPointer(signals.onPointerMove, 90, 50, 40);
+    im.update();
+
+    expect(started).not.toHaveBeenCalled();
+    expect(im.getCapturedNodes()).toEqual([]);
+
+    im.destroy();
+  });
+
+  it('a dragstart handler that destroys its own node leaves no stale drag state repositioning it', () => {
+    const { scene, signals, im } = createApp();
+    const sprite = draggable();
+    const dragged = vi.fn();
+
+    scene.addChild(sprite);
+    sprite.onDragStart.add(() => sprite.destroy());
+    sprite.onDrag.add(dragged);
+
+    dispatchPointer(signals.onPointerDown, 50, 50);
+    im.update();
+
+    // This move promotes the candidate, fires dragstart (which destroys the
+    // node), and must not then reposition it or fire `drag`.
+    expect(() => {
+      dispatchPointer(signals.onPointerMove, 90, 50, 40);
+      im.update();
+    }).not.toThrow();
+
+    expect(dragged).not.toHaveBeenCalled();
+    expect(im.getCapturedNodes()).toEqual([]);
+
+    // A further move must not resurrect stale state or throw either.
+    expect(() => {
+      dispatchPointer(signals.onPointerMove, 120, 50, 40);
+      im.update();
+    }).not.toThrow();
+
+    im.destroy();
+  });
+
+  it('a drag handler that destroys its own node stops further drag ticks and clears capture', () => {
+    const { scene, signals, im } = createApp();
+    const sprite = draggable();
+    const dragged = vi.fn();
+
+    scene.addChild(sprite);
+    sprite.onDrag.add(() => {
+      dragged();
+      sprite.destroy();
+    });
+
+    dispatchPointer(signals.onPointerDown, 50, 50);
+    im.update();
+
+    // Promotes, fires dragstart, then the first `drag` tick — which destroys
+    // the node from inside its own handler.
+    dispatchPointer(signals.onPointerMove, 90, 50, 40);
+    im.update();
+
+    expect(dragged).toHaveBeenCalledTimes(1);
+    expect(im.getCapturedNodes()).toEqual([]);
+
+    // A further move must find no captured node left to move or tick again.
+    expect(() => {
+      dispatchPointer(signals.onPointerMove, 120, 50, 40);
+      im.update();
+    }).not.toThrow();
+
+    expect(dragged).toHaveBeenCalledTimes(1);
+
+    im.destroy();
+  });
+
+  it('a pointerup handler that destroys the dragged node suppresses dragend but still ends the drag state', () => {
+    const { scene, signals, im } = createApp();
+    const sprite = draggable();
+    const ended = vi.fn();
+
+    scene.addChild(sprite);
+    sprite.onDragEnd.add(ended);
+    sprite.onPointerUp.add(() => sprite.destroy());
+
+    dispatchPointer(signals.onPointerDown, 50, 50);
+    im.update();
+    dispatchPointer(signals.onPointerMove, 90, 50, 40);
+    im.update();
+
+    expect(() => {
+      dispatchPointer(signals.onPointerUp, 90, 50, 40);
+      im.update();
+    }).not.toThrow();
+
+    // The node was already gone by the time dragend would have fired.
+    expect(ended).not.toHaveBeenCalled();
+    expect(im.getCapturedNodes()).toEqual([]);
 
     im.destroy();
   });

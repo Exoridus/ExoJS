@@ -11,6 +11,7 @@ import type { PlatformAdapter } from '#platform/PlatformAdapter';
 import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 
+import type { ContextMenuRequest } from './ContextMenuRequest';
 import { FocusController } from './FocusController';
 import type { InteractionEventType } from './InteractionEvent';
 import { InteractionEvent } from './InteractionEvent';
@@ -227,7 +228,7 @@ export class InteractionManager implements InteractionHooks {
   private readonly _onPointerTapHandler: (pointer: Pointer, x: number, y: number) => void;
   private readonly _onPointerCancelHandler: (pointer: Pointer, x: number, y: number) => void;
   private readonly _onPointerLeaveHandler: (pointer: Pointer, x: number, y: number) => void;
-  private readonly _onContextMenuHandler: (pointer: Pointer) => void;
+  private readonly _onContextMenuHandler: (request: ContextMenuRequest) => void;
 
   public constructor(app: Application) {
     this._app = app;
@@ -627,8 +628,21 @@ export class InteractionManager implements InteractionHooks {
     this._enqueue(pointer, PointerEventFlag.Tap, x, y);
   }
 
-  private _handleContextMenu(pointer: Pointer): void {
-    this._enqueue(pointer, PointerEventFlag.ContextMenu, pointer.contextMenuPosition.x, pointer.contextMenuPosition.y);
+  /**
+   * Node-level `contextmenu` routing is inherently pointer-shaped — every
+   * {@link InteractionEvent} carries a {@link Pointer} — so a request with no
+   * pointer attached (a keyboard-only session; see
+   * {@link ContextMenuRequest}'s doc comment) has no per-node event to
+   * dispatch. `app.input.onContextMenu`, the scene-graph-independent
+   * fallback, still fires unconditionally regardless — see that Signal's own
+   * doc comment.
+   */
+  private _handleContextMenu(request: ContextMenuRequest): void {
+    if (request.pointer === null) {
+      return;
+    }
+
+    this._enqueue(request.pointer, PointerEventFlag.ContextMenu, request.x, request.y);
   }
 
   private _handlePointerCancel(pointer: Pointer, x: number, y: number): void {
@@ -724,12 +738,17 @@ export class InteractionManager implements InteractionHooks {
     // chance to register a candidate, so reading capture here (whatever it
     // is — realistically always null) is safe regardless of ordering.
     if ((events & PointerEventFlag.Down) !== 0) {
-      const capturedForDown = this._capturedPointers.get(id) ?? null;
-      const { node: hit, x, y } = this._resolvePhase(downX, downY, capturedForDown);
+      const { node: hit, x, y } = this._resolvePhase(downX, downY, this._currentCapture(id));
 
       if (hit !== null) {
         this._dispatchBubble(new InteractionEvent('pointerdown', hit, pointer, x, y));
-        this._registerDragCandidate(id, hit, x, y);
+
+        // The handler just run may have destroyed or detached `hit` itself —
+        // see `_isLive`'s doc comment — so a drag candidate must not be
+        // created on a node that is already gone.
+        if (this._isLive(hit)) {
+          this._registerDragCandidate(id, hit, x, y);
+        }
       }
     }
 
@@ -737,26 +756,26 @@ export class InteractionManager implements InteractionHooks {
     // just registered is visible to this same evaluation.
     this._promoteDragCandidate(id, pointer, events);
 
-    // This frame's true, final drag state — after any promotion just above.
-    const captured = this._capturedPointers.get(id) ?? null;
-
     // --- Over / Out transitions ---
     // Tracks the pointer's live, current position — not any specific phase —
     // and is skipped entirely on an exit event, which dispatches its own
     // pointerout below instead (no "entered" state survives a cancel/leave).
     // Also skipped while a drag is active: the dragged node stays "hovered"
     // by definition, so retargeting hover onto whatever it swept over would
-    // be spurious.
-    if (!isExitEvent && captured === null) {
-      const { node: hit, x, y } = this._resolvePhase(pointer.x, pointer.y, captured);
+    // be spurious. Reads capture fresh — this frame's true, final drag state
+    // after any promotion just above.
+    if (!isExitEvent && this._currentCapture(id) === null) {
+      const { node: hit, x, y } = this._resolvePhase(pointer.x, pointer.y, null);
       const last = this._lastHit.get(id) ?? null;
 
       if (hit !== last) {
-        if (last !== null) {
+        if (last !== null && this._isLive(last)) {
           this._dispatchBubble(new InteractionEvent('pointerout', last, pointer, x, y));
         }
 
-        if (hit !== null) {
+        // The pointerout handler just run on `last` may have destroyed or
+        // detached `hit` (a different node) before it gets its own dispatch.
+        if (hit !== null && this._isLive(hit)) {
           this._dispatchBubble(new InteractionEvent('pointerover', hit, pointer, x, y));
         }
 
@@ -766,11 +785,14 @@ export class InteractionManager implements InteractionHooks {
 
     // --- Move: drag state machine steps 3-4 (dragstart, reposition, drag) around pointermove ---
     if ((events & PointerEventFlag.Move) !== 0) {
-      const { node: hit, x, y } = this._resolvePhase(moveX, moveY, captured);
+      const { node: hit, x, y } = this._resolvePhase(moveX, moveY, this._currentCapture(id));
 
       this._advanceDragOnMove(id, pointer, x, y);
 
-      if (hit !== null) {
+      // dragstart, just dispatched by _advanceDragOnMove, may have destroyed
+      // the dragged node — which IS `hit` while a drag is active, since
+      // _resolvePhase short-circuits to the captured node.
+      if (hit !== null && this._isLive(hit)) {
         this._dispatchBubble(new InteractionEvent('pointermove', hit, pointer, x, y));
       }
 
@@ -781,9 +803,9 @@ export class InteractionManager implements InteractionHooks {
     let completedDrag = false;
 
     if ((events & PointerEventFlag.Up) !== 0) {
-      const { node: hit, x, y } = this._resolvePhase(upX, upY, captured);
+      const { node: hit, x, y } = this._resolvePhase(upX, upY, this._currentCapture(id));
 
-      if (hit !== null) {
+      if (hit !== null && this._isLive(hit)) {
         this._dispatchBubble(new InteractionEvent('pointerup', hit, pointer, x, y));
       }
 
@@ -793,30 +815,30 @@ export class InteractionManager implements InteractionHooks {
     // --- Tap --- (dispatched inside InputManager's own release-phase bracket, so it shares Up's coordinates)
     // A press that turned into a real drag is not also a tap.
     if ((events & PointerEventFlag.Tap) !== 0 && !completedDrag) {
-      const { node: hit, x, y } = this._resolvePhase(upX, upY, captured);
+      const { node: hit, x, y } = this._resolvePhase(upX, upY, this._currentCapture(id));
 
-      if (hit !== null) {
+      if (hit !== null && this._isLive(hit)) {
         this._dispatchBubble(new InteractionEvent('pointertap', hit, pointer, x, y));
       }
     }
 
     // --- Context menu ---
     if ((events & PointerEventFlag.ContextMenu) !== 0) {
-      const { node: hit, x, y } = this._resolvePhase(contextMenuX, contextMenuY, captured);
+      const { node: hit, x, y } = this._resolvePhase(contextMenuX, contextMenuY, this._currentCapture(id));
 
-      if (hit !== null) {
+      if (hit !== null && this._isLive(hit)) {
         this._dispatchBubble(new InteractionEvent('contextmenu', hit, pointer, x, y));
       }
     }
 
     // --- Cancel / Leave: drag state machine step 4, alternate ending ---
     if (isExitEvent) {
-      const { x, y } = this._resolvePhase(pointer.x, pointer.y, captured);
+      const { x, y } = this._resolvePhase(pointer.x, pointer.y, this._currentCapture(id));
 
       if (!this._completeDrag(id, pointer, x, y)) {
         const last = this._lastHit.get(id) ?? null;
 
-        if (last !== null) {
+        if (last !== null && this._isLive(last)) {
           this._dispatchBubble(new InteractionEvent('pointerout', last, pointer, x, y));
         }
       }
@@ -843,7 +865,20 @@ export class InteractionManager implements InteractionHooks {
 
     const drag = this._drags.get(id) ?? null;
 
-    if (drag === null || drag.active || pointer.maxDistanceFromPress <= this._dragThreshold) {
+    if (drag === null) {
+      return;
+    }
+
+    // The candidate's node died (destroyed without removeChild, or removed
+    // by some other path) before it ever became a real drag — drop the
+    // stale candidate rather than promoting it. See `_isLive`'s doc comment.
+    if (!this._isLive(drag.node)) {
+      this._drags.delete(id);
+
+      return;
+    }
+
+    if (drag.active || pointer.maxDistanceFromPress <= this._dragThreshold) {
       return;
     }
 
@@ -888,9 +923,23 @@ export class InteractionManager implements InteractionHooks {
       return;
     }
 
+    if (!this._isLive(drag.node)) {
+      this._endDrag(id);
+
+      return;
+    }
+
     if (drag.started) {
       drag.started = false;
       this._dispatchDirect(new InteractionEvent('dragstart', drag.node, pointer, x, y), drag.node._peekInteractionSignal('dragstart'));
+
+      // The dragstart handler just run may have destroyed/detached the node —
+      // no stale drag state may keep moving/capturing/referencing it.
+      if (!this._isLive(drag.node)) {
+        this._endDrag(id);
+
+        return;
+      }
     }
 
     if (drag.active) {
@@ -905,8 +954,25 @@ export class InteractionManager implements InteractionHooks {
   private _dispatchDragTick(id: number, pointer: Pointer, x: number, y: number): void {
     const drag = this._drags.get(id) ?? null;
 
-    if (drag !== null && drag.active) {
-      this._dispatchDirect(new InteractionEvent('drag', drag.node, pointer, x, y), drag.node._peekInteractionSignal('drag'));
+    if (drag === null || !drag.active) {
+      return;
+    }
+
+    // The pointermove dispatch just run (or dragstart, for the frame the
+    // drag was promoted) may have destroyed/detached the node.
+    if (!this._isLive(drag.node)) {
+      this._endDrag(id);
+
+      return;
+    }
+
+    this._dispatchDirect(new InteractionEvent('drag', drag.node, pointer, x, y), drag.node._peekInteractionSignal('drag'));
+
+    // The `drag` handler just run may itself have destroyed/detached the
+    // node — leave no stale capture/drag state referencing it around for a
+    // caller to observe before the next phase happens to re-check.
+    if (!this._isLive(drag.node)) {
+      this._endDrag(id);
     }
   }
 
@@ -928,7 +994,10 @@ export class InteractionManager implements InteractionHooks {
 
     const wasActive = drag.active;
 
-    if (wasActive) {
+    // The pointerup dispatch just run may have destroyed/detached the node —
+    // still tear down capture/state below regardless, but a destroyed node
+    // gets no further event dispatched on it.
+    if (wasActive && this._isLive(drag.node)) {
       this._dispatchDirect(new InteractionEvent('dragend', drag.node, pointer, x, y), drag.node._peekInteractionSignal('dragend'));
     }
 
@@ -975,6 +1044,45 @@ export class InteractionManager implements InteractionHooks {
     this._drags.delete(pointerId);
     this._capturedPointers.delete(pointerId);
     this._platform.releasePointer(pointerId);
+  }
+
+  /**
+   * Whether `node` is still safe to act on — not destroyed, and still
+   * attached to a live stage. A user handler run synchronously during THIS
+   * flush's own dispatch may have destroyed or detached (`removeChild`) the
+   * very node an earlier-resolved `hit`/drag reference points at; every
+   * dispatch site re-checks this immediately before acting on such a
+   * reference rather than trusting it for the rest of the flush.
+   *
+   * `removeChild` alone already unregisters a node synchronously (see
+   * {@link _unregisterNode}), but `destroy()` without a prior `removeChild`
+   * does not — the node stays fully hit-testable and its bare presence in
+   * `_interactiveNodes` would not catch that case, so this checks
+   * `destroyed` and stage attachment directly instead.
+   */
+  private _isLive(node: RenderNode): boolean {
+    return !node.destroyed && node._getStage() !== null;
+  }
+
+  /**
+   * The node currently holding pointer-capture for `id`, re-read fresh
+   * immediately before each phase rather than cached once per flush — an
+   * earlier phase in the SAME flush may have ended the drag for real
+   * (`_completeDrag`), or a handler dispatched moments ago may have
+   * destroyed/detached the captured node directly. Either way, a stale
+   * capture is dropped here (ending the drag) rather than being handed to
+   * the next phase as if it were still valid.
+   */
+  private _currentCapture(id: number): RenderNode | null {
+    const node = this._capturedPointers.get(id) ?? null;
+
+    if (node !== null && !this._isLive(node)) {
+      this._endDrag(id);
+
+      return null;
+    }
+
+    return node;
   }
 
   // ---------------------------------------------------------------------------

@@ -157,7 +157,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "true on the frame the action became active. A press and release that both happen between two frames set pressed and released on the same frame, so a fast tap is never missed — and so does a release followed by a fresh press, even though the action reads active both before and after that frame."
+          "description": "true on the frame the AGGREGATE value — the strongest of every bound source — crossed above the action's own threshold. Bound sources are replayed in the true order their channels changed, so a value that crosses the threshold twice within one frame (0.4 → 0.7 → 0.4 at threshold 0.5) sets both pressed and released on that same frame, while a source that never actually reaches the threshold (0 → 0.1 → 0 at threshold 0.5) sets neither. A second, alternative source tapping while a first stays continuously active never manufactures an edge either, because the aggregate itself never drops below threshold."
         },
         {
           "name": "released",
@@ -178,7 +178,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "true on the frame the action stopped being active. See pressed."
+          "description": "true on the frame the aggregate value crossed back below the threshold. See pressed."
         },
         {
           "name": "value",

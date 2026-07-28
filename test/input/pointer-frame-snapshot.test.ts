@@ -495,7 +495,8 @@ describe('context menu policy', () => {
     manager.update(0 as never);
 
     expect(seen).toHaveBeenCalledTimes(1);
-    expect(seen.mock.calls[0]![0].contextMenuPosition.x).toBe(40);
+    expect(seen.mock.calls[0]![0].x).toBe(40);
+    expect(seen.mock.calls[0]![0].y).toBe(50);
     manager.destroy();
   });
 
@@ -503,7 +504,7 @@ describe('context menu policy', () => {
     const { im: manager, canvas: c } = createManager();
     const seen: Array<[number, number]> = [];
 
-    manager.onContextMenu.add(p => void seen.push([p.contextMenuPosition.x, p.contextMenuPosition.y]));
+    manager.onContextMenu.add(request => void seen.push([request.x, request.y]));
     c.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerId: 1, isPrimary: true, clientX: 10, clientY: 10 }));
     manager.update(0 as never);
 
@@ -512,6 +513,23 @@ describe('context menu policy', () => {
     manager.update(0 as never);
 
     expect(seen).toEqual([[200, 150]]);
+    manager.destroy();
+  });
+
+  it('fires app.input.onContextMenu with a null pointer when no pointer has ever touched the surface', () => {
+    const { im: manager, canvas: c } = createManager({ allowNativeContextMenu: true });
+    const seen = vi.fn();
+
+    manager.onContextMenu.add(seen);
+
+    // The keyboard context-menu key / Shift+F10 funnel into this same native
+    // event — no prior pointerover/pointerdown means no pointer was ever
+    // tracked, but the request itself must still carry real coordinates.
+    c.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 40, clientY: 50 }));
+    manager.update(0 as never);
+
+    expect(seen).toHaveBeenCalledTimes(1);
+    expect(seen.mock.calls[0]![0]).toEqual({ x: 40, y: 50, pointer: null });
     manager.destroy();
   });
 

@@ -10,6 +10,7 @@ import type { Application } from '#core/Application';
 import { Scene } from '#core/Scene';
 import { SceneState } from '#core/SceneState';
 import { Signal } from '#core/Signal';
+import type { ContextMenuRequest } from '#input/ContextMenuRequest';
 import type { InputManager } from '#input/InputManager';
 import { InteractionManager } from '#input/InteractionManager';
 import type { Pointer } from '#input/Pointer';
@@ -52,7 +53,7 @@ const createApp = (): { app: Application; scene: Scene; signals: { onPointerDown
     onPointerTap: new Signal<[Pointer]>(),
     onPointerCancel: new Signal<[Pointer]>(),
     onPointerLeave: new Signal<[Pointer]>(),
-    onContextMenu: new Signal<[Pointer]>(),
+    onContextMenu: new Signal<[ContextMenuRequest]>(),
     onKeyDown: new Signal<[number]>(),
     onKeyUp: new Signal<[number]>(),
   };

@@ -434,4 +434,29 @@ describe('context menu: engine-wide fallback', () => {
 
     h.im.destroy();
   });
+
+  it('reaches app.input.onContextMenu even when no pointer has ever touched the surface', () => {
+    const h = createHarness();
+    const engineWide = vi.fn();
+    const nodeLevel = vi.fn();
+    const a = sprite(0, 0, 800);
+
+    a.onContextMenu.add(nodeLevel);
+    h.scene.addChild(a);
+    h.input.onContextMenu.add(engineWide);
+
+    // No pointerover/pointerdown/pointermove precedes this — the keyboard
+    // context-menu key and Shift+F10 fire this same native event with no
+    // pointer ever having been tracked.
+    h.fire('contextmenu', { clientX: 40, clientY: 50 });
+    flush(h);
+
+    expect(engineWide).toHaveBeenCalledTimes(1);
+    expect(engineWide.mock.calls[0]![0]).toEqual({ x: 40, y: 50, pointer: null });
+    // No pointer to attribute a per-node event to — the scene-graph route
+    // stays silent; only the engine-wide fallback fires.
+    expect(nodeLevel).not.toHaveBeenCalled();
+
+    h.im.destroy();
+  });
 });

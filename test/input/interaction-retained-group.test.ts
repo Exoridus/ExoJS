@@ -3,6 +3,7 @@ import { logger } from '#core/logging';
 import { Scene } from '#core/Scene';
 import { SceneState } from '#core/SceneState';
 import { Signal } from '#core/Signal';
+import type { ContextMenuRequest } from '#input/ContextMenuRequest';
 import type { InputManager } from '#input/InputManager';
 import { InteractionManager } from '#input/InteractionManager';
 import type { Pointer } from '#input/Pointer';
@@ -61,7 +62,7 @@ const createApp = (): {
     onPointerTap: new Signal<[Pointer, number, number]>(),
     onPointerCancel: new Signal<[Pointer, number, number]>(),
     onPointerLeave: new Signal<[Pointer, number, number]>(),
-    onContextMenu: new Signal<[Pointer]>(),
+    onContextMenu: new Signal<[ContextMenuRequest]>(),
     // InteractionManager owns the focus controller, which listens for keys.
     onKeyDown: new Signal<[number]>(),
     onKeyUp: new Signal<[number]>(),

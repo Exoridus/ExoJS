@@ -2,6 +2,7 @@ import type { Application } from '#core/Application';
 import { Scene } from '#core/Scene';
 import { SceneState } from '#core/SceneState';
 import { Signal } from '#core/Signal';
+import type { ContextMenuRequest } from '#input/ContextMenuRequest';
 import type { InputManager } from '#input/InputManager';
 import type { InteractionEvent } from '#input/InteractionEvent';
 import { InteractionManager } from '#input/InteractionManager';
@@ -90,7 +91,7 @@ const createApp = (): {
     onPointerTap: new Signal<[Pointer, number, number]>(),
     onPointerCancel: new Signal<[Pointer, number, number]>(),
     onPointerLeave: new Signal<[Pointer, number, number]>(),
-    onContextMenu: new Signal<[Pointer]>(),
+    onContextMenu: new Signal<[ContextMenuRequest]>(),
     // InteractionManager owns the focus controller, which listens for keys.
     onKeyDown: new Signal<[number]>(),
     onKeyUp: new Signal<[number]>(),
