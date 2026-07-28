@@ -38,18 +38,29 @@ export class InteractionEvent {
   /** The node currently dispatching this event during bubbling. Changes per bubble step. */
   public currentTarget: RenderNode;
   public readonly pointer: Pointer;
-  /** Canvas-space coordinates (same space as Pointer.x/y). */
-  public readonly worldX: number;
-  public readonly worldY: number;
+  /**
+   * Coordinates in `target`'s own rendering layer — **not** a single fixed
+   * space. A hit inside the scene's UI layer reads in screen space (the same
+   * space `RenderingContext.screenView` maps into); a hit against the world
+   * tree reads in camera/world space (post pan/zoom/rotate — identical to
+   * screen space only at the default centered camera). This matches the
+   * space `target.position`/`target.contains()` already operate in for
+   * whichever layer `target` lives in, so the two always agree; it is
+   * deliberately not `Pointer.x`/`Pointer.y`, which is raw design-pixel space
+   * and does not track a panned or zoomed camera at all.
+   */
+  public readonly x: number;
+  /** See {@link InteractionEvent.x}. */
+  public readonly y: number;
   private _stopped = false;
 
-  public constructor(type: InteractionEventType, target: RenderNode, pointer: Pointer, worldX: number, worldY: number) {
+  public constructor(type: InteractionEventType, target: RenderNode, pointer: Pointer, x: number, y: number) {
     this.type = type;
     this.target = target;
     this.currentTarget = target;
     this.pointer = pointer;
-    this.worldX = worldX;
-    this.worldY = worldY;
+    this.x = x;
+    this.y = y;
   }
 
   public get propagationStopped(): boolean {

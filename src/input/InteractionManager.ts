@@ -34,9 +34,27 @@ const enum PointerEventFlag {
   ContextMenu = 1 << 6,
 }
 
+/**
+ * Pending events for one pointer, accumulated between two flushes. Several
+ * platform phases can collapse into one frame (a fast down-move-up sequence),
+ * so each phase's own design-space coordinates are captured at enqueue time —
+ * when `pointer.x`/`pointer.y` are still that phase's own, per
+ * {@link InputManager}'s per-phase dispatch — rather than read back later from
+ * whatever the pointer's position has since become. `pointertap` and
+ * `pointerout` on exit share `upX`/`upY` and the pointer's live position
+ * respectively; they need no dedicated fields.
+ */
 interface PointerQueue {
   pointer: Pointer;
   events: number; // bitfield of PointerEventFlag
+  downX: number;
+  downY: number;
+  moveX: number;
+  moveY: number;
+  upX: number;
+  upY: number;
+  contextMenuX: number;
+  contextMenuY: number;
 }
 
 interface DragState {
@@ -79,6 +97,12 @@ interface IndexedNode {
  * `contextmenu` / `dragstart` / `drag` / `dragend`. A `pointerdown` on a
  * draggable node only marks a drag candidate; the drag begins once the
  * pointer travels past `ApplicationOptions.input.dragThreshold`.
+ *
+ * The `contextmenu` event here only fires when a specific interactive node
+ * is actually under the pointer; a request over empty space, or one your
+ * handler never stops, still reaches `app.input.onContextMenu` — the
+ * engine-wide fallback, unconditional and scene-graph-independent. See that
+ * Signal's own doc comment for the full two-tier picture.
  *
  * Constructed automatically by {@link Application}; you do not instantiate
  * this class yourself.
@@ -564,15 +588,45 @@ export class InteractionManager implements InteractionHooks {
     this._enqueue(pointer, PointerEventFlag.Leave);
   }
 
+  /**
+   * Record that `flag` happened, capturing `pointer.x`/`pointer.y` into that
+   * phase's dedicated field. Called synchronously from the `InputManager`
+   * signal for that exact phase, which is the only moment the pointer's
+   * position is that phase's own rather than wherever it ended the frame.
+   */
   private _enqueue(pointer: Pointer, flag: PointerEventFlag): void {
     let q = this._pending.get(pointer.id);
 
     if (!q) {
-      q = { pointer, events: 0 };
+      q = { pointer, events: 0, downX: 0, downY: 0, moveX: 0, moveY: 0, upX: 0, upY: 0, contextMenuX: 0, contextMenuY: 0 };
       this._pending.set(pointer.id, q);
     } else {
       // Refresh to latest pointer ref (same object usually, but be defensive).
       q.pointer = pointer;
+    }
+
+    switch (flag) {
+      case PointerEventFlag.Down:
+        q.downX = pointer.x;
+        q.downY = pointer.y;
+        break;
+      case PointerEventFlag.Move:
+        q.moveX = pointer.x;
+        q.moveY = pointer.y;
+        break;
+      case PointerEventFlag.Up:
+        q.upX = pointer.x;
+        q.upY = pointer.y;
+        break;
+      case PointerEventFlag.ContextMenu:
+        q.contextMenuX = pointer.x;
+        q.contextMenuY = pointer.y;
+        break;
+      // Tap dispatches inside InputManager's own release-phase bracket, so it
+      // shares upX/upY; Cancel/Leave use the pointer's live position (see
+      // _processQueue) — neither needs a dedicated field.
+      default:
+        break;
     }
 
     q.events |= flag;
@@ -583,126 +637,113 @@ export class InteractionManager implements InteractionHooks {
   // Per-frame queue processing
   // ---------------------------------------------------------------------------
 
+  /**
+   * Process one pointer's pending events for this flush. Each discrete phase
+   * (press / move / release / context menu) hit-tests and dispatches at its
+   * OWN coordinates — captured by {@link _enqueue} at the moment that phase
+   * actually happened — rather than a single position shared across every
+   * phase, so a fast down-move-up collapsed into one frame still lands each
+   * event on the node that was actually there when it happened. Hover
+   * tracking is the one exception: it deliberately follows the pointer's
+   * live, end-of-frame position, since "what is currently hovered" has no
+   * per-phase meaning.
+   *
+   * The drag lifecycle (candidate → promotion → dragstart → drag → dragend)
+   * runs as one sequential state machine spread across the phases below: a
+   * press registers a candidate first, promotion runs right after — so a
+   * Down and a past-threshold Move colliding in the very same flush still
+   * promotes on its first evaluation instead of silently waiting a frame for
+   * a candidate that already exists — a move then advances the state
+   * machine, and a release or exit completes it, each step depending only on
+   * the state the previous step left behind.
+   *
+   * Down and promotion run BEFORE hover tracking specifically so that hover
+   * always sees this frame's true, final drag state: a Move that promotes a
+   * drag on its own (the candidate came from an earlier frame) must not let
+   * hover retarget onto whatever the pointer swept over on the way, and a
+   * stale pre-promotion snapshot would do exactly that.
+   */
   private _processQueue(queue: PointerQueue): void {
-    const { pointer, events } = queue;
+    const { pointer, events, downX, downY, moveX, moveY, upX, upY, contextMenuX, contextMenuY } = queue;
     const { id } = pointer;
-
-    // Commit a pending drag candidate before anything else: the very frame a
-    // drag starts must already route through the captured node, or a fast
-    // first move would land pointerover on whatever it swept across.
-    this._promoteDragCandidate(id, pointer, events);
-
-    // Resolve the hit node and the coordinate space it lives in. A captured
-    // pointer short-circuits hit-testing; otherwise the screen-fixed UI layer
-    // is tried before the camera-space world (see _resolveHit). Coordinates
-    // follow the hit's layer (UI = screen space, world = camera space) so
-    // dragging and event positions agree with node positions — correct under
-    // pixelRatio > 1, letterboxing, and a panned / zoomed / rotated camera.
-    const captured = this._capturedPointers.get(id) ?? null;
-    let hit: RenderNode | null;
-    let x: number;
-    let y: number;
-
-    if (captured !== null) {
-      const coords = this._pointerCoords(pointer, this._isUINode(captured));
-
-      hit = captured;
-      x = coords.x;
-      y = coords.y;
-    } else {
-      const resolved = this._resolveHit(pointer);
-
-      hit = resolved.node;
-      x = resolved.x;
-      y = resolved.y;
-    }
-
-    // --- Over / Out transitions ---
-    // Skip while a drag is active for this pointer — the dragged node
-    // stays "hovered" by definition and we don't want spurious events.
-    const drag = this._drags.get(id) ?? null;
-    const last = this._lastHit.get(id) ?? null;
     const isExitEvent = (events & (PointerEventFlag.Cancel | PointerEventFlag.Leave)) !== 0;
 
-    if (captured === null && hit !== last && !isExitEvent) {
-      if (last !== null) {
-        this._dispatchBubble(new InteractionEvent('pointerout', last, pointer, x, y));
-      }
-
-      if (hit !== null) {
-        this._dispatchBubble(new InteractionEvent('pointerover', hit, pointer, x, y));
-      }
-
-      this._setLastHit(id, hit);
-    }
-
-    // --- Down ---
+    // --- Down: drag state machine step 1 (register candidate) ---
+    // A pointer cannot already be captured before its own Down has had a
+    // chance to register a candidate, so reading capture here (whatever it
+    // is — realistically always null) is safe regardless of ordering.
     if ((events & PointerEventFlag.Down) !== 0) {
+      const capturedForDown = this._capturedPointers.get(id) ?? null;
+      const { node: hit, x, y } = this._resolvePhase(downX, downY, capturedForDown);
+
       if (hit !== null) {
         this._dispatchBubble(new InteractionEvent('pointerdown', hit, pointer, x, y));
-
-        // Only note the candidate. A press is not yet a drag — committing here
-        // would make every click on a draggable node jitter it and swallow the tap.
-        if (hit.draggable && !this._drags.has(id)) {
-          const local = this._toParentLocal(hit, x, y);
-
-          this._drags.set(id, {
-            pointerId: id,
-            node: hit,
-            offsetX: hit.position.x - local.x,
-            offsetY: hit.position.y - local.y,
-            active: false,
-            started: false,
-          });
-        }
+        this._registerDragCandidate(id, hit, x, y);
       }
     }
 
-    // --- Move ---
+    // Drag state machine step 2: promote right after Down, so a candidate it
+    // just registered is visible to this same evaluation.
+    this._promoteDragCandidate(id, pointer, events);
+
+    // This frame's true, final drag state — after any promotion just above.
+    const captured = this._capturedPointers.get(id) ?? null;
+
+    // --- Over / Out transitions ---
+    // Tracks the pointer's live, current position — not any specific phase —
+    // and is skipped entirely on an exit event, which dispatches its own
+    // pointerout below instead (no "entered" state survives a cancel/leave).
+    // Also skipped while a drag is active: the dragged node stays "hovered"
+    // by definition, so retargeting hover onto whatever it swept over would
+    // be spurious.
+    if (!isExitEvent && captured === null) {
+      const { node: hit, x, y } = this._resolvePhase(pointer.x, pointer.y, captured);
+      const last = this._lastHit.get(id) ?? null;
+
+      if (hit !== last) {
+        if (last !== null) {
+          this._dispatchBubble(new InteractionEvent('pointerout', last, pointer, x, y));
+        }
+
+        if (hit !== null) {
+          this._dispatchBubble(new InteractionEvent('pointerover', hit, pointer, x, y));
+        }
+
+        this._setLastHit(id, hit);
+      }
+    }
+
+    // --- Move: drag state machine steps 3-4 (dragstart, reposition, drag) around pointermove ---
     if ((events & PointerEventFlag.Move) !== 0) {
-      if (drag !== null && drag.started) {
-        drag.started = false;
-        this._dispatchDirect(new InteractionEvent('dragstart', drag.node, pointer, x, y), drag.node._peekInteractionSignal('dragstart'));
-      }
+      const { node: hit, x, y } = this._resolvePhase(moveX, moveY, captured);
 
-      if (drag !== null && drag.active) {
-        // Auto-position the dragged node, preserving the grab offset. `position`
-        // is parent-local, so the pointer has to be mapped there first.
-        const local = this._toParentLocal(drag.node, x, y);
-
-        drag.node.position.x = local.x + drag.offsetX;
-        drag.node.position.y = local.y + drag.offsetY;
-      }
+      this._advanceDragOnMove(id, pointer, x, y);
 
       if (hit !== null) {
         this._dispatchBubble(new InteractionEvent('pointermove', hit, pointer, x, y));
       }
 
-      if (drag !== null && drag.active) {
-        this._dispatchDirect(new InteractionEvent('drag', drag.node, pointer, x, y), drag.node._peekInteractionSignal('drag'));
-      }
+      this._dispatchDragTick(id, pointer, x, y);
     }
 
-    // --- Up ---
-    const completedDrag = drag !== null && drag.active && (events & (PointerEventFlag.Up | PointerEventFlag.Cancel | PointerEventFlag.Leave)) !== 0;
+    // --- Up: drag state machine step 4 (dragend) ---
+    let completedDrag = false;
 
     if ((events & PointerEventFlag.Up) !== 0) {
+      const { node: hit, x, y } = this._resolvePhase(upX, upY, captured);
+
       if (hit !== null) {
         this._dispatchBubble(new InteractionEvent('pointerup', hit, pointer, x, y));
       }
 
-      if (drag !== null) {
-        if (drag.active) {
-          this._dispatchDirect(new InteractionEvent('dragend', drag.node, pointer, x, y), drag.node._peekInteractionSignal('dragend'));
-        }
-
-        this._endDrag(id);
-      }
+      completedDrag = this._completeDrag(id, pointer, x, y);
     }
 
-    // --- Tap ---
-    // A press that turned into a drag is not also a tap.
+    // --- Tap --- (dispatched inside InputManager's own release-phase bracket, so it shares Up's coordinates)
+    // A press that turned into a real drag is not also a tap.
     if ((events & PointerEventFlag.Tap) !== 0 && !completedDrag) {
+      const { node: hit, x, y } = this._resolvePhase(upX, upY, captured);
+
       if (hit !== null) {
         this._dispatchBubble(new InteractionEvent('pointertap', hit, pointer, x, y));
       }
@@ -710,21 +751,23 @@ export class InteractionManager implements InteractionHooks {
 
     // --- Context menu ---
     if ((events & PointerEventFlag.ContextMenu) !== 0) {
+      const { node: hit, x, y } = this._resolvePhase(contextMenuX, contextMenuY, captured);
+
       if (hit !== null) {
         this._dispatchBubble(new InteractionEvent('contextmenu', hit, pointer, x, y));
       }
     }
 
-    // --- Cancel / Leave ---
+    // --- Cancel / Leave: drag state machine step 4, alternate ending ---
     if (isExitEvent) {
-      if (drag !== null) {
-        if (drag.active) {
-          this._dispatchDirect(new InteractionEvent('dragend', drag.node, pointer, x, y), drag.node._peekInteractionSignal('dragend'));
-        }
+      const { x, y } = this._resolvePhase(pointer.x, pointer.y, captured);
 
-        this._endDrag(id);
-      } else if (last !== null) {
-        this._dispatchBubble(new InteractionEvent('pointerout', last, pointer, x, y));
+      if (!this._completeDrag(id, pointer, x, y)) {
+        const last = this._lastHit.get(id) ?? null;
+
+        if (last !== null) {
+          this._dispatchBubble(new InteractionEvent('pointerout', last, pointer, x, y));
+        }
       }
 
       this._lastHit.delete(id);
@@ -732,9 +775,15 @@ export class InteractionManager implements InteractionHooks {
   }
 
   /**
-   * Turn a drag candidate into a real drag once the press has travelled past
-   * the threshold. Uses the pointer's accumulated excursion rather than its
-   * current distance, so a drag that wanders out and back still counts.
+   * Drag state machine, step 2: turn a candidate into a real drag once the
+   * press has travelled past the threshold. Uses the pointer's accumulated
+   * excursion rather than its current distance, so a drag that wanders out
+   * and back still counts. Runs right after Down (it no-ops without a Move
+   * event) so a candidate {@link _registerDragCandidate} just registered
+   * this same flush is already visible to it — a Down and a past-threshold
+   * Move colliding in one flush must still promote on the first evaluation,
+   * not silently wait for a following frame because no candidate existed yet
+   * when promotion was checked.
    */
   private _promoteDragCandidate(id: number, pointer: Pointer, events: number): void {
     if ((events & PointerEventFlag.Move) === 0) {
@@ -751,6 +800,90 @@ export class InteractionManager implements InteractionHooks {
     drag.started = true;
     this._capturedPointers.set(id, drag.node);
     this._platform.capturePointer(id);
+  }
+
+  /**
+   * Drag state machine, step 1: note a fresh candidate on a qualifying press.
+   * Not yet a drag — committing here would jitter every click on a draggable
+   * node and swallow its tap; see {@link _promoteDragCandidate} for that.
+   */
+  private _registerDragCandidate(id: number, hit: RenderNode, x: number, y: number): void {
+    if (!hit.draggable || this._drags.has(id)) {
+      return;
+    }
+
+    const local = this._toParentLocal(hit, x, y);
+
+    this._drags.set(id, {
+      pointerId: id,
+      node: hit,
+      offsetX: hit.position.x - local.x,
+      offsetY: hit.position.y - local.y,
+      active: false,
+      started: false,
+    });
+  }
+
+  /**
+   * Drag state machine, step 3: fire `dragstart` exactly once, on the frame
+   * {@link _promoteDragCandidate} just promoted the candidate, then
+   * reposition the dragged node for every frame the drag stays active —
+   * preserving the grab offset in the node's own parent-local space.
+   */
+  private _advanceDragOnMove(id: number, pointer: Pointer, x: number, y: number): void {
+    const drag = this._drags.get(id) ?? null;
+
+    if (drag === null) {
+      return;
+    }
+
+    if (drag.started) {
+      drag.started = false;
+      this._dispatchDirect(new InteractionEvent('dragstart', drag.node, pointer, x, y), drag.node._peekInteractionSignal('dragstart'));
+    }
+
+    if (drag.active) {
+      const local = this._toParentLocal(drag.node, x, y);
+
+      drag.node.position.x = local.x + drag.offsetX;
+      drag.node.position.y = local.y + drag.offsetY;
+    }
+  }
+
+  /** Drag state machine, step 3 continued: the `drag` event, dispatched after `pointermove` (matching DOM-ish ordering). */
+  private _dispatchDragTick(id: number, pointer: Pointer, x: number, y: number): void {
+    const drag = this._drags.get(id) ?? null;
+
+    if (drag !== null && drag.active) {
+      this._dispatchDirect(new InteractionEvent('drag', drag.node, pointer, x, y), drag.node._peekInteractionSignal('drag'));
+    }
+  }
+
+  /**
+   * Drag state machine, step 4: end whatever drag state exists for `id`. A
+   * real (promoted) drag fires `dragend` before its capture is released; a
+   * candidate that never got promoted is simply dropped — it was never a
+   * drag, so nothing needs undoing beyond forgetting it. Returns whether an
+   * ACTIVE drag actually ended (dragend fired) — that is what suppresses a
+   * following pointertap, and (for an exit event) what skips the fallback
+   * pointerout.
+   */
+  private _completeDrag(id: number, pointer: Pointer, x: number, y: number): boolean {
+    const drag = this._drags.get(id) ?? null;
+
+    if (drag === null) {
+      return false;
+    }
+
+    const wasActive = drag.active;
+
+    if (wasActive) {
+      this._dispatchDirect(new InteractionEvent('dragend', drag.node, pointer, x, y), drag.node._peekInteractionSignal('dragend'));
+    }
+
+    this._endDrag(id);
+
+    return wasActive;
   }
 
   /**
@@ -798,15 +931,28 @@ export class InteractionManager implements InteractionHooks {
   // ---------------------------------------------------------------------------
 
   /**
-   * Resolve the hit node and its coordinate space for a fresh pointer. An
-   * active interaction scope confines hit-testing to its subtree; otherwise the
-   * screen-fixed UI layer is tried first (screen space), then the camera world.
+   * Resolve the hit node and its coordinate space for a design-space point.
+   * An active interaction scope confines hit-testing to its subtree — unless
+   * the scope root or one of its OWN ancestors (outside the scoped subtree)
+   * is invisible, in which case the whole scoped subtree is not actually
+   * painted either and nothing inside it can be a legitimate hit target.
+   * Without a scope, the screen-fixed UI layer is tried first (screen space),
+   * then the camera world.
+   *
+   * Takes an explicit `(x, y)` rather than reading a `Pointer` so callers can
+   * resolve each phase (press / move / release / context menu) against its
+   * own coordinates instead of whichever position the pointer ends the frame
+   * at — see {@link PointerQueue}'s doc comment.
    */
-  private _resolveHit(pointer: Pointer): { node: RenderNode | null; x: number; y: number } {
+  private _resolveHit(x: number, y: number): { node: RenderNode | null; x: number; y: number } {
     const scope = this._scopeStack.at(-1);
 
     if (scope !== undefined) {
-      const coords = this._pointerCoords(pointer, this._isUINode(scope));
+      const coords = this._designToLayerSpace(x, y, this._isUINode(scope));
+
+      if (!this._isHittable(scope)) {
+        return { node: null, x: coords.x, y: coords.y };
+      }
 
       return { node: this._hitTestNode(scope, coords.x, coords.y), x: coords.x, y: coords.y };
     }
@@ -814,7 +960,7 @@ export class InteractionManager implements InteractionHooks {
     const uiRoot = this._app.scenes.currentScene?._peekUI() ?? null;
 
     if (uiRoot !== null) {
-      const ui = this._app.rendering.screenView.screenToWorld(pointer.x, pointer.y);
+      const ui = this._app.rendering.screenView.screenToWorld(x, y);
       const uiHit = this._hitTestNode(uiRoot, ui.x, ui.y);
 
       if (uiHit !== null) {
@@ -822,16 +968,31 @@ export class InteractionManager implements InteractionHooks {
       }
     }
 
-    const world = this._app.rendering.view.screenToWorld(pointer.x, pointer.y);
+    const world = this._app.rendering.view.screenToWorld(x, y);
 
     return { node: this._hitTest(world.x, world.y), x: world.x, y: world.y };
   }
 
-  /** Map a design-space pointer into either the screen-fixed UI view or the camera world. */
-  private _pointerCoords(pointer: Pointer, ui: boolean): PointLike {
+  /**
+   * Resolve `(x, y)` against either a captured node (hit-testing
+   * short-circuited — the node stays the target for every phase of an active
+   * drag, wherever the pointer strays) or a fresh hit-test.
+   */
+  private _resolvePhase(x: number, y: number, captured: RenderNode | null): { node: RenderNode | null; x: number; y: number } {
+    if (captured !== null) {
+      const coords = this._designToLayerSpace(x, y, this._isUINode(captured));
+
+      return { node: captured, x: coords.x, y: coords.y };
+    }
+
+    return this._resolveHit(x, y);
+  }
+
+  /** Map a design-space point into either the screen-fixed UI view or the camera world. */
+  private _designToLayerSpace(x: number, y: number, ui: boolean): PointLike {
     const view = ui ? this._app.rendering.screenView : this._app.rendering.view;
 
-    return view.screenToWorld(pointer.x, pointer.y);
+    return view.screenToWorld(x, y);
   }
 
   /** Whether `node` lives inside the active scene's UI layer. */
@@ -1101,7 +1262,12 @@ export class InteractionManager implements InteractionHooks {
 
   /**
    * Unregister an interactive node: remove from the tree and tracking
-   * set. Dispose the tree when it becomes empty.
+   * set. Dispose the tree when it becomes empty. Also purges any per-pointer
+   * reference to `node` — a node can be removed from the scene (destroyed,
+   * reparented out, or simply unregistered) while it is mid-hover, mid-drag,
+   * or holding pointer capture; without this, `node` would stay orphaned in
+   * `_lastHit`/`_drags`/`_capturedPointers` and every future frame would keep
+   * dragging/hit-testing/repositioning a node no longer in the tree.
    */
   private _unregisterNode(node: RenderNode): void {
     if (!this._interactiveNodes.has(node)) {
@@ -1120,10 +1286,27 @@ export class InteractionManager implements InteractionHooks {
     }
 
     this._proxies.delete(node);
+    this._purgePointerReferences(node);
 
     if (this._interactiveNodes.size === 0 && this._tree !== null) {
       this._tree.destroy();
       this._tree = null;
+    }
+  }
+
+  /** Drop every per-pointer reference to `node` — see {@link _unregisterNode}'s doc comment. */
+  private _purgePointerReferences(node: RenderNode): void {
+    for (const [pointerId, hit] of this._lastHit) {
+      if (hit === node) {
+        this._lastHit.delete(pointerId);
+      }
+    }
+
+    // Snapshot first — _endDrag deletes from `_drags` as it goes.
+    for (const [pointerId, drag] of [...this._drags]) {
+      if (drag.node === node) {
+        this._endDrag(pointerId);
+      }
     }
   }
 

@@ -1604,6 +1604,47 @@ describe('InteractionManager — coalesced events', () => {
     im.destroy();
     sprite.destroy();
   });
+
+  test('each coalesced phase hit-tests against the node it actually happened over, not a shared position', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    const left = new TestSprite().setBounds(0, 0, 50, 50);
+    const right = new TestSprite().setBounds(200, 0, 50, 50);
+
+    left.interactive = true;
+    right.interactive = true;
+    scene.addChild(left);
+    scene.addChild(right);
+
+    const leftDown = vi.fn();
+    const rightMove = vi.fn();
+    const leftUp = vi.fn();
+
+    left.onPointerDown.add(leftDown);
+    right.onPointerMove.add(rightMove);
+    left.onPointerUp.add(leftUp);
+
+    // A mock pointer carries only ONE (x, y) — makePointer's `x`/`y` become
+    // whatever pointer.x/y read AT dispatch time, which is exactly what
+    // InteractionManager._enqueue captures per phase. Down and Up share the
+    // same stub position (25, 25) — still over `left` — while Move alone
+    // reports (225, 25), over `right`; all three collapse into one flush.
+    signals.onPointerDown.dispatch(makePointer({ id: 9, x: 25, y: 25 }));
+    signals.onPointerMove.dispatch(makePointer({ id: 9, x: 225, y: 25 }));
+    signals.onPointerUp.dispatch(makePointer({ id: 9, x: 25, y: 25 }));
+    flushInteractions(im);
+
+    expect(leftDown).toHaveBeenCalledTimes(1);
+    expect(rightMove).toHaveBeenCalledTimes(1);
+    expect(leftUp).toHaveBeenCalledTimes(1);
+
+    im.destroy();
+    left.destroy();
+    right.destroy();
+  });
 });
 
 // ---------------------------------------------------------------------------

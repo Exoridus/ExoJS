@@ -152,9 +152,24 @@ export class InputManager {
   public readonly onKeyDown = new Signal<[number]>();
   public readonly onKeyUp = new Signal<[number]>();
   /**
-   * Fires when a pointer requests a context menu (right-click, long-press,
-   * context-menu key). Independent of whether the browser's own menu was
-   * suppressed — see {@link InputApplicationOptions.allowNativeContextMenu}.
+   * Fires whenever the platform's single native `contextmenu` event fires —
+   * right-click, the keyboard context-menu key, Shift+F10, and (on most
+   * touch browsers) a long-press all funnel through that one event, so there
+   * is exactly one source to listen to here regardless of which of them the
+   * user used. Independent of whether the browser's own menu was suppressed
+   * — see {@link InputApplicationOptions.allowNativeContextMenu}.
+   *
+   * This is the engine-wide fallback: it fires unconditionally, with no
+   * regard for the scene graph, so it is the right place for an
+   * application-level menu that should appear no matter what — or nothing —
+   * was under the pointer. A request over a specific interactive node
+   * additionally bubbles as a scene-graph `contextmenu`
+   * {@link InteractionEvent} (see {@link InteractionManager}), which only
+   * fires when a node is actually hit and can be stopped with
+   * {@link InteractionEvent.stopPropagation}; use that one for a per-node
+   * menu instead. Do not confuse either with {@link GestureRecognizer.onLongPress}
+   * — a separate, purely informational touch/mouse-hold signal that never
+   * triggers this one on its own.
    */
   public readonly onContextMenu = new Signal<[Pointer]>();
 
