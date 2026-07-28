@@ -29,16 +29,37 @@ export interface ActionOptions {
 }
 
 /**
- * Per-frame channel state an action samples. `values` holds what the channels
- * read right now; `peaks` holds the strongest value each channel reached since
- * the previous frame boundary, which is what lets an action see a press that
- * was already released again before this frame started.
+ * Per-frame channel state an action samples.
+ *
+ * `values` holds what the channels read right now. `pressed` and `released`
+ * are per-channel edge latches: `1` when the channel crossed away from — or
+ * back to — zero at least once during this frame. Together they describe what
+ * *happened* in the frame rather than only how it ended, which is what lets an
+ * action see a tap that started and finished between two frame boundaries, or
+ * a key that was released and pressed again within one.
+ *
+ * `peaks` holds the strongest value each channel reached since the previous
+ * boundary. It survives for readers that need the magnitude of a sub-frame
+ * excursion rather than its edges.
  *
  * @internal
  */
 export interface ActionSample {
   readonly values: Float32Array;
   readonly peaks: Float32Array;
+  readonly pressed: Uint8Array;
+  readonly released: Uint8Array;
+}
+
+/** Whether any of `channels` has its latch set in `buffer`. */
+export function sampleAnyLatch(buffer: Uint8Array, channels: readonly number[]): boolean {
+  for (const channel of channels) {
+    if (buffer[channel] === 1) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /** Strongest absolute value among `channels`, sign-preserving. */

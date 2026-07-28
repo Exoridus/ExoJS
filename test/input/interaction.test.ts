@@ -7,6 +7,7 @@ import type { InteractionEvent } from '#input/InteractionEvent';
 import { InteractionManager } from '#input/InteractionManager';
 import type { Pointer } from '#input/Pointer';
 import { Rectangle } from '#math/Rectangle';
+import { BrowserPlatform } from '#platform/BrowserPlatform';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 
@@ -102,6 +103,7 @@ const createApp = (): {
 
   const app = {
     canvas,
+    platform: new BrowserPlatform(canvas),
     width: 800,
     height: 600,
     input: signals as unknown as InputManager,
@@ -155,6 +157,7 @@ const createAppNoScene = (
 
   const app = {
     canvas,
+    platform: new BrowserPlatform(canvas),
     width: overrides.width ?? 800,
     height: overrides.height ?? 600,
     input: signals as unknown as InputManager,

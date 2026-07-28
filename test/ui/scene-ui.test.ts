@@ -9,6 +9,7 @@ import { InteractionManager } from '#input/InteractionManager';
 import type { Pointer } from '#input/Pointer';
 import { Keyboard } from '#input/types';
 import { Rectangle } from '#math/Rectangle';
+import { BrowserPlatform } from '#platform/BrowserPlatform';
 import { Drawable } from '#rendering/Drawable';
 
 // Camera offset so world-space coordinates differ from screen-space ones; the
@@ -59,6 +60,7 @@ const createUIApp = (): {
   const scene = new Scene();
   const app = {
     canvas,
+    platform: new BrowserPlatform(canvas),
     width: 800,
     height: 600,
     input: signals as unknown as InputManager,

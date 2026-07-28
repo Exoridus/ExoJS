@@ -200,7 +200,7 @@ describe('Application.onFrame', () => {
     rawApp['onFrame'] = onFrame;
     rawApp['onFixedFrame'] = { dispatch: vi.fn() };
 
-    vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
+    rawApp['platform'] = { requestFrame: vi.fn().mockReturnValue(1), cancelFrame: vi.fn() };
 
     app.update();
 

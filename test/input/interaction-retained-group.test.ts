@@ -7,6 +7,7 @@ import type { InputManager } from '#input/InputManager';
 import { InteractionManager } from '#input/InteractionManager';
 import type { Pointer } from '#input/Pointer';
 import { Vector } from '#math/Vector';
+import { BrowserPlatform } from '#platform/BrowserPlatform';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import { RetainedContainer } from '#rendering/RetainedContainer';
@@ -67,6 +68,7 @@ const createApp = (): {
 
   const app = {
     canvas,
+    platform: new BrowserPlatform(canvas),
     width: 800,
     height: 600,
     input: signals as unknown as InputManager,

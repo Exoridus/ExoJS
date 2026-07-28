@@ -7,6 +7,7 @@ import type { Application } from '#core/Application';
 import { InputManager } from '#input/InputManager';
 import { Pointer, PointerState } from '#input/Pointer';
 import { ChannelSize, PointerButton } from '#input/types';
+import { BrowserPlatform } from '#platform/BrowserPlatform';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -48,6 +49,7 @@ const createMockApp = (canvas: HTMLCanvasElement, pixelRatio = 1): Application =
 
   return {
     canvas,
+    platform: new BrowserPlatform(canvas),
     width: designWidth,
     height: designHeight,
     pixelRatio,
@@ -585,7 +587,7 @@ describe('Pointer — direct construction and getters', () => {
       tiltX: 10,
       tiltY: -20,
     });
-    const pointer = new Pointer(event, app, canvas, channels, 3);
+    const pointer = new Pointer(event, app, new BrowserPlatform(canvas), channels, 3);
 
     expect(pointer.width).toBeCloseTo(80, 5);
     expect(pointer.height).toBeCloseTo(60, 5);
@@ -605,7 +607,7 @@ describe('Pointer — direct construction and getters', () => {
     const canvas = createCanvas(800, 600);
     const app = createMockApp(canvas);
     const channels = new Float32Array(ChannelSize.Container);
-    const pointer = new Pointer(makeEvent({ clientX: 400, clientY: 300 }), app, canvas, channels, 0);
+    const pointer = new Pointer(makeEvent({ clientX: 400, clientY: 300 }), app, new BrowserPlatform(canvas), channels, 0);
 
     pointer.handleEnter(makeEvent({ clientX: 100, clientY: 100 }));
 
@@ -619,7 +621,7 @@ describe('Pointer — direct construction and getters', () => {
     const canvas = createCanvas(800, 600);
     const app = createMockApp(canvas);
     const channels = new Float32Array(ChannelSize.Container);
-    const pointer = new Pointer(makeEvent(), app, canvas, channels, 0);
+    const pointer = new Pointer(makeEvent(), app, new BrowserPlatform(canvas), channels, 0);
 
     pointer.destroy();
 
@@ -643,7 +645,7 @@ describe('Pointer — direct construction and getters', () => {
 
     const app = createMockApp(canvas);
     const channels = new Float32Array(ChannelSize.Container);
-    const pointer = new Pointer(makeEvent({ clientX: 400, clientY: 300, width: 20, height: 20 }), app, canvas, channels, 0);
+    const pointer = new Pointer(makeEvent({ clientX: 400, clientY: 300, width: 20, height: 20 }), app, new BrowserPlatform(canvas), channels, 0);
 
     expect(pointer.x).toBe(0);
     expect(pointer.y).toBe(0);
@@ -654,11 +656,11 @@ describe('Pointer — direct construction and getters', () => {
   });
 
   test('a null app (defensive guard) yields a zero-size geometry and a safe channel-write fallback', () => {
-    const canvas = createCanvas(0, 0); // also exercises the `|| 1` normalization fallback in _writeChannels
+    const canvas = createCanvas(0, 0); // a zero-size surface on top of the missing app
     const channels = new Float32Array(ChannelSize.Container);
 
     expect(() => {
-      const pointer = new Pointer(makeEvent({ clientX: 10, clientY: 10 }), null as unknown as Application, canvas, channels, 0);
+      const pointer = new Pointer(makeEvent({ clientX: 10, clientY: 10 }), null as unknown as Application, new BrowserPlatform(canvas), channels, 0);
 
       expect(pointer.x).toBe(0);
       expect(pointer.y).toBe(0);
@@ -673,7 +675,7 @@ describe('Pointer — direct construction and getters', () => {
     const canvas = createCanvas(800, 600);
     const app = createMockApp(canvas);
     const channels = new Float32Array(ChannelSize.Container);
-    const pointer = new Pointer(makeEvent({ clientX: 400, clientY: 300, buttons: 0b110 }), app, canvas, channels, 0);
+    const pointer = new Pointer(makeEvent({ clientX: 400, clientY: 300, buttons: 0b110 }), app, new BrowserPlatform(canvas), channels, 0);
 
     expect(channels[PointerButton.Primary]).toBe(0);
     expect(channels[PointerButton.Secondary]).toBe(1);
@@ -686,7 +688,7 @@ describe('Pointer — direct construction and getters', () => {
     const canvas = createCanvas(800, 600);
     const app = createMockApp(canvas);
     const channels = new Float32Array(ChannelSize.Container);
-    const pointer = new Pointer(makeEvent({ clientX: 100, clientY: 100 }), app, canvas, channels, 0);
+    const pointer = new Pointer(makeEvent({ clientX: 100, clientY: 100 }), app, new BrowserPlatform(canvas), channels, 0);
 
     pointer.destroy();
 

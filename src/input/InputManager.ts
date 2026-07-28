@@ -4,6 +4,7 @@ import type { Time } from '#core/Time';
 import { stopEvent } from '#core/utils';
 import { Flags } from '#math/Flags';
 import { Vector } from '#math/Vector';
+import type { PlatformAdapter, PlatformSubscription } from '#platform/PlatformAdapter';
 
 import type { ActionMap, ActionRecord } from './actions/ActionMap';
 import type { ActionSample } from './actions/types';
@@ -15,8 +16,6 @@ import { builtInGamepadDefinitions, resolveGamepadDefinition } from './GamepadDe
 import { GestureRecognizer } from './GestureRecognizer';
 import type { InputBindingOptions, InputChannel } from './InputBinding';
 import { InputBinding } from './InputBinding';
-import type { InputHost } from './InputHost';
-import { createBrowserInputHost } from './InputHost';
 import { Pointer, PointerState, PointerStateFlag } from './Pointer';
 import { ChannelOffset, ChannelSize, maxPointers, pointerSlotSize, resolveGamepadSlotChannel } from './types';
 
@@ -64,9 +63,8 @@ enum InputManagerFlag {
  */
 export class InputManager {
   private readonly _app: Application;
-  private readonly canvas: HTMLCanvasElement;
-  /** Everything this manager needs from the host platform beyond event delivery. */
-  private readonly host: InputHost;
+  /** The one seam between this manager and its host: events, focus, gamepads, capture. */
+  private readonly platform: PlatformAdapter;
   private readonly channels: Float32Array = new Float32Array(ChannelSize.Container);
   /**
    * Per-channel strongest value seen since the previous frame boundary,
@@ -75,6 +73,22 @@ export class InputManager {
    * report a press/release edge for a tap the frame never sampled directly.
    */
   private readonly channelsPeak: Float32Array = new Float32Array(ChannelSize.Container);
+  /**
+   * Per-channel latch: `1` when the channel rose from zero at least once during
+   * this frame. Set as the platform events arrive and cleared only when the
+   * frame closes, so every reader within a frame sees the same answer — reading
+   * it does not consume it.
+   */
+  private readonly channelPressLatch: Uint8Array = new Uint8Array(ChannelSize.Container);
+  /** Per-channel latch for the opposite edge. See {@link InputManager.channelPressLatch}. */
+  private readonly channelReleaseLatch: Uint8Array = new Uint8Array(ChannelSize.Container);
+  /**
+   * Channel values as of the last edge check. Compared against the live buffer
+   * to detect the edges above — a frame-boundary snapshot could not, because
+   * both edges of a press that starts and ends between two frames would fall
+   * inside the gap.
+   */
+  private readonly channelsLast: Float32Array = new Float32Array(ChannelSize.Container);
   private readonly pointers = new Map<number, Pointer>();
   private readonly _gamepads: readonly [Gamepad, Gamepad, Gamepad, Gamepad];
   private readonly gamepadsByBrowserIndex = new Map<number, Gamepad>();
@@ -122,19 +136,8 @@ export class InputManager {
   /** Pointer that requested a context menu since the last frame, if any. */
   private contextMenuPointer: Pointer | null = null;
 
-  private readonly keyDownHandler = this.handleKeyDown.bind(this);
-  private readonly keyUpHandler = this.handleKeyUp.bind(this);
-  private readonly canvasFocusHandler = this.handleCanvasFocus.bind(this);
-  private readonly canvasBlurHandler = this.handleCanvasBlur.bind(this);
-  private readonly windowBlurHandler = this.handleWindowBlur.bind(this);
-  private readonly mouseWheelHandler = this.handleMouseWheel.bind(this);
-  private readonly pointerOverHandler = this.handlePointerOver.bind(this);
-  private readonly pointerLeaveHandler = this.handlePointerLeave.bind(this);
-  private readonly pointerDownHandler = this.handlePointerDown.bind(this);
-  private readonly pointerMoveHandler = this.handlePointerMove.bind(this);
-  private readonly pointerUpHandler = this.handlePointerUp.bind(this);
-  private readonly pointerCancelHandler = this.handlePointerCancel.bind(this);
-  private readonly contextMenuHandler = this.handleContextMenu.bind(this);
+  /** Platform subscriptions held for the manager's lifetime, undone on destroy. */
+  private readonly listeners: PlatformSubscription[] = [];
 
   public readonly onCanvasFocusChange = new Signal<[focused: boolean]>();
   public readonly onPointerEnter = new Signal<[Pointer]>();
@@ -187,21 +190,25 @@ export class InputManager {
     const gamepadSlotStrategy = inputOptions.gamepadSlotStrategy ?? 'sticky';
 
     this._app = app;
-    this.canvas = app.canvas;
-    this.host = createBrowserInputHost(app.canvas);
-    this.canvasFocusedValue = this.host.focused;
+    this.platform = app.platform;
+    this.canvasFocusedValue = this.platform.surfaceFocused;
     this.pointerDistanceThreshold = pointerDistanceThreshold;
     this.allowNativeContextMenu = inputOptions.allowNativeContextMenu ?? false;
     this.allowTextSelection = inputOptions.allowTextSelection ?? false;
     this.gamepadDefinitions = [...gamepadDefinitions, ...builtInGamepadDefinitions];
     this.slotStrategy = gamepadSlotStrategy;
 
-    // Disable the browser's default pan/zoom/double-tap-zoom on touch devices so
-    // pointer events reach the canvas without being swallowed by the browser's
-    // native touch gestures.
-    this.host.setTouchAction('none');
+    // Disable the host's default pan/zoom/double-tap-zoom on touch devices so
+    // pointer events reach the surface without being swallowed by native touch
+    // gestures.
+    this.platform.setTouchAction('none');
 
-    this.actionSample = { values: this.channels, peaks: this.channelsPeak };
+    this.actionSample = {
+      values: this.channels,
+      peaks: this.channelsPeak,
+      pressed: this.channelPressLatch,
+      released: this.channelReleaseLatch,
+    };
     this.gestureRecognizer = new GestureRecognizer(pointerDistanceThreshold, this.onPinch, this.onRotate, this.onLongPress);
 
     const slot0 = new Gamepad(0, this.channels);
@@ -352,11 +359,6 @@ export class InputManager {
     this.actionMaps.delete(map);
   }
 
-  /** The platform seam this application's input runs on. @internal */
-  public get _host(): InputHost {
-    return this.host;
-  }
-
   /**
    * Register a callback fired once when any of `channels` becomes active.
    * Manual lifecycle — call `.unbind()` on the returned binding to detach.
@@ -419,8 +421,12 @@ export class InputManager {
 
     // Close the frame: peaks start the next frame at the values the channels
     // actually hold, so a press that is still held keeps reading as held while
-    // a press that ended stops contributing.
+    // a press that ended stops contributing. The edge latches are cleared here
+    // rather than where they are read — every reader within a frame must see
+    // the same answer.
     this.channelsPeak.set(this.channels);
+    this.channelPressLatch.fill(0);
+    this.channelReleaseLatch.fill(0);
   }
 
   /**
@@ -536,12 +542,13 @@ export class InputManager {
   }
 
   /**
-   * Fold the current values of `[base, base + length)` into the peak buffer.
-   * Called right after a platform handler wrote into those channels, which is
-   * the only moment a sub-frame extremum is still observable.
+   * Fold the current values of `[base, base + length)` into the peak buffer and
+   * latch any zero-crossing edge they just crossed. Called right after a
+   * platform handler wrote into those channels, which is the only moment a
+   * sub-frame extremum or edge is still observable.
    */
   private _mergePeaks(base: number, length: number): void {
-    const { channels, channelsPeak } = this;
+    const { channels, channelsPeak, channelsLast, channelPressLatch, channelReleaseLatch } = this;
 
     for (let i = base, end = base + length; i < end; i++) {
       const value = channels[i] ?? 0;
@@ -549,10 +556,22 @@ export class InputManager {
       if (Math.abs(value) > Math.abs(channelsPeak[i] ?? 0)) {
         channelsPeak[i] = value;
       }
+
+      const previous = channelsLast[i] ?? 0;
+
+      if (previous === 0) {
+        if (value !== 0) {
+          channelPressLatch[i] = 1;
+        }
+      } else if (value === 0) {
+        channelReleaseLatch[i] = 1;
+      }
+
+      channelsLast[i] = value;
     }
   }
 
-  /** Fold a pointer's whole 16-channel slot into the peak buffer. */
+  /** Fold a pointer's whole 16-channel slot into the peak and latch buffers. */
   private _mergePointerPeaks(pointer: Pointer): void {
     this._mergePeaks(ChannelOffset.Pointers + pointer.slotIndex * pointerSlotSize, pointerSlotSize);
   }
@@ -591,6 +610,7 @@ export class InputManager {
     const channel = ChannelOffset.Keyboard + event.keyCode;
 
     this.channels[channel] = 0;
+    this._mergePeaks(channel, 1);
     this.channelsReleased.push(channel);
     this.flags.push(InputManagerFlag.KeyUp);
 
@@ -606,7 +626,7 @@ export class InputManager {
       return;
     }
 
-    const pointer = new Pointer(event, this._app, this.canvas, this.channels, slot);
+    const pointer = new Pointer(event, this._app, this.platform, this.channels, slot);
 
     this.pointers.set(event.pointerId, pointer);
     this._mergePointerPeaks(pointer);
@@ -628,7 +648,7 @@ export class InputManager {
   }
 
   private handlePointerDown(event: PointerEvent): void {
-    this.host.focus();
+    this.platform.focusSurface();
     this.canvasFocusedValue = true;
 
     const pointer = this.pointers.get(event.pointerId);
@@ -705,6 +725,11 @@ export class InputManager {
       return;
     }
 
+    // The request carries its own coordinates and no pointer id. Record them on
+    // the pointer it is attributed to, so the frame's dispatch can hand handlers
+    // the place the menu was asked for rather than wherever that pointer has
+    // moved since.
+    pointer._noteContextMenu(event.clientX, event.clientY);
     this.contextMenuPointer = pointer;
     this.flags.push(InputManagerFlag.ContextMenu);
   }
@@ -766,58 +791,54 @@ export class InputManager {
 
       if (this.channels[channel] !== 0) {
         this.channels[channel] = 0;
+        this._mergePeaks(channel, 1);
         this.channelsReleased.push(channel);
         this.flags.push(InputManagerFlag.KeyUp);
       }
     }
   }
 
+  /**
+   * Subscribe to every platform event this manager consumes. Which events are
+   * listened for, and which are suppressed, stays here rather than in the
+   * platform: that is input policy, not host mechanics.
+   */
   private addEventListeners(): void {
-    const activeWindow = window;
-    const activeListenerOption = { capture: true, passive: false };
-    const passiveListenerOption = { capture: true, passive: true };
+    const active = { capture: true, passive: false };
+    const passive = { capture: true, passive: true };
+    const { platform, listeners } = this;
 
-    activeWindow.addEventListener('keydown', this.keyDownHandler, true);
-    activeWindow.addEventListener('keyup', this.keyUpHandler, true);
-    activeWindow.addEventListener('blur', this.windowBlurHandler, true);
-    this.canvas.addEventListener('focus', this.canvasFocusHandler, true);
-    this.canvas.addEventListener('blur', this.canvasBlurHandler, true);
-    this.canvas.addEventListener('wheel', this.mouseWheelHandler, activeListenerOption);
-    this.canvas.addEventListener('pointerover', this.pointerOverHandler, passiveListenerOption);
-    this.canvas.addEventListener('pointerleave', this.pointerLeaveHandler, passiveListenerOption);
-    this.canvas.addEventListener('pointerdown', this.pointerDownHandler, activeListenerOption);
-    this.canvas.addEventListener('pointermove', this.pointerMoveHandler, passiveListenerOption);
-    this.canvas.addEventListener('pointerup', this.pointerUpHandler, activeListenerOption);
-    this.canvas.addEventListener('pointercancel', this.pointerCancelHandler, passiveListenerOption);
-    this.canvas.addEventListener('contextmenu', this.contextMenuHandler, activeListenerOption);
+    listeners.push(
+      platform.onWindowEvent('keydown', event => this.handleKeyDown(event), active),
+      platform.onWindowEvent('keyup', event => this.handleKeyUp(event), active),
+      platform.onWindowEvent('blur', () => this.handleWindowBlur(), active),
+      platform.onSurfaceEvent('focus', () => this.handleCanvasFocus(), active),
+      platform.onSurfaceEvent('blur', () => this.handleCanvasBlur(), active),
+      platform.onSurfaceEvent('wheel', event => this.handleMouseWheel(event), active),
+      platform.onSurfaceEvent('pointerover', event => this.handlePointerOver(event), passive),
+      platform.onSurfaceEvent('pointerleave', event => this.handlePointerLeave(event), passive),
+      platform.onSurfaceEvent('pointerdown', event => this.handlePointerDown(event), active),
+      platform.onSurfaceEvent('pointermove', event => this.handlePointerMove(event), passive),
+      platform.onSurfaceEvent('pointerup', event => this.handlePointerUp(event), active),
+      platform.onSurfaceEvent('pointercancel', event => this.handlePointerCancel(event), passive),
+      platform.onSurfaceEvent('contextmenu', event => this.handleContextMenu(event), active),
+    );
 
     if (!this.allowTextSelection) {
-      this.canvas.addEventListener('selectstart', stopEvent, activeListenerOption);
+      listeners.push(platform.onSurfaceEvent('selectstart', event => stopEvent(event), active));
     }
   }
 
   private removeEventListeners(): void {
-    const activeListenerOption = { capture: true, passive: false };
-    const passiveListenerOption = { capture: true, passive: true };
+    for (const unsubscribe of this.listeners) {
+      unsubscribe();
+    }
 
-    window.removeEventListener('keydown', this.keyDownHandler, true);
-    window.removeEventListener('keyup', this.keyUpHandler, true);
-    window.removeEventListener('blur', this.windowBlurHandler, true);
-    this.canvas.removeEventListener('focus', this.canvasFocusHandler, true);
-    this.canvas.removeEventListener('blur', this.canvasBlurHandler, true);
-    this.canvas.removeEventListener('wheel', this.mouseWheelHandler, activeListenerOption);
-    this.canvas.removeEventListener('pointerover', this.pointerOverHandler, passiveListenerOption);
-    this.canvas.removeEventListener('pointerleave', this.pointerLeaveHandler, passiveListenerOption);
-    this.canvas.removeEventListener('pointerdown', this.pointerDownHandler, activeListenerOption);
-    this.canvas.removeEventListener('pointermove', this.pointerMoveHandler, passiveListenerOption);
-    this.canvas.removeEventListener('pointerup', this.pointerUpHandler, activeListenerOption);
-    this.canvas.removeEventListener('pointercancel', this.pointerCancelHandler, passiveListenerOption);
-    this.canvas.removeEventListener('contextmenu', this.contextMenuHandler, activeListenerOption);
-    this.canvas.removeEventListener('selectstart', stopEvent, activeListenerOption);
+    this.listeners.length = 0;
   }
 
   private updateGamepads(): this {
-    const browserGamepads = this.host.pollGamepads();
+    const browserGamepads = this.platform.pollGamepads();
     const seenBrowserIndices = new Set<number>();
 
     for (const browserGamepad of browserGamepads) {
@@ -989,7 +1010,9 @@ export class InputManager {
       this.contextMenuPointer = null;
 
       if (pointer !== null) {
+        pointer._enterPhase(pointer.contextMenuPosition);
         this.onContextMenu.dispatch(pointer);
+        pointer._exitPhase();
       }
     }
 
@@ -1016,17 +1039,19 @@ export class InputManager {
       }
 
       if (phases & PointerStateFlag.Down) {
-        pointer._enterPhase(pointer.pressPosition.x, pointer.pressPosition.y);
+        pointer._enterPhase(pointer.pressPosition);
         this.onPointerDown.dispatch(pointer);
         pointer._exitPhase();
       }
 
       if (phases & PointerStateFlag.Move) {
+        pointer._enterPhase(pointer.movePosition);
         this.onPointerMove.dispatch(pointer);
+        pointer._exitPhase();
       }
 
       if (phases & PointerStateFlag.Up) {
-        pointer._enterPhase(pointer.releasePosition.x, pointer.releasePosition.y);
+        pointer._enterPhase(pointer.releasePosition);
         this.onPointerUp.dispatch(pointer);
 
         // A press that travelled far and came back is a swipe, not a tap —
@@ -1043,7 +1068,9 @@ export class InputManager {
       }
 
       if (phases & PointerStateFlag.Cancel) {
+        pointer._enterPhase(pointer.cancelPosition);
         this.onPointerCancel.dispatch(pointer);
+        pointer._exitPhase();
       }
 
       if (phases & PointerStateFlag.Leave) {

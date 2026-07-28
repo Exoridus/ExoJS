@@ -9,6 +9,7 @@ import type { Application } from '#core/Application';
 import { InputManager } from '#input/InputManager';
 import type { Pointer } from '#input/Pointer';
 import { Keyboard } from '#input/types';
+import { BrowserPlatform } from '#platform/BrowserPlatform';
 
 const createCanvas = (width = 800, height = 600): HTMLCanvasElement => {
   const canvas = document.createElement('canvas');
@@ -34,6 +35,7 @@ const createCanvas = (width = 800, height = 600): HTMLCanvasElement => {
 const createMockApp = (canvas: HTMLCanvasElement): Application =>
   ({
     canvas,
+    platform: new BrowserPlatform(canvas),
     width: canvas.width,
     height: canvas.height,
     pixelRatio: 1,
@@ -46,6 +48,8 @@ const fire = (canvas: HTMLCanvasElement, type: string, init: PointerEventInit): 
 };
 
 const peak = (im: InputManager, channel: number): number => (im as unknown as { channelsPeak: Float32Array }).channelsPeak[channel]!;
+const pressLatch = (im: InputManager, channel: number): number => (im as unknown as { channelPressLatch: Uint8Array }).channelPressLatch[channel]!;
+const releaseLatch = (im: InputManager, channel: number): number => (im as unknown as { channelReleaseLatch: Uint8Array }).channelReleaseLatch[channel]!;
 
 let canvas: HTMLCanvasElement;
 let im: InputManager;
@@ -114,8 +118,39 @@ describe('multiple phases within one frame', () => {
     im.update(0 as never);
 
     expect(seen.down).toEqual([10, 20]);
-    expect(seen.move).toEqual([90, 100]);
+    expect(seen.move).toEqual([50, 60]);
     expect(seen.up).toEqual([90, 100]);
+  });
+
+  it('collapses several moves onto the last of them', () => {
+    fire(canvas, 'pointerover', { clientX: 10, clientY: 10 });
+    im.update(0 as never);
+
+    const seen: Array<[number, number]> = [];
+
+    im.onPointerMove.add(p => void seen.push([p.x, p.y]));
+
+    fire(canvas, 'pointermove', { clientX: 20, clientY: 20 });
+    fire(canvas, 'pointermove', { clientX: 30, clientY: 30 });
+    fire(canvas, 'pointermove', { clientX: 40, clientY: 40 });
+    im.update(0 as never);
+
+    expect(seen).toEqual([[40, 40]]);
+  });
+
+  it('dispatches a cancel at the position it was cancelled at', () => {
+    fire(canvas, 'pointerover', { clientX: 10, clientY: 10 });
+    im.update(0 as never);
+
+    const seen: Array<[number, number]> = [];
+
+    im.onPointerCancel.add(p => void seen.push([p.x, p.y]));
+
+    fire(canvas, 'pointerdown', { clientX: 10, clientY: 10, buttons: 1 });
+    fire(canvas, 'pointercancel', { clientX: 70, clientY: 80, buttons: 0 });
+    im.update(0 as never);
+
+    expect(seen).toEqual([[70, 80]]);
   });
 
   it('restores the latest position once the phase dispatch is over', () => {
@@ -244,8 +279,21 @@ describe('per-frame delta', () => {
 
     expect(pointer.delta.x).toBeCloseTo(40);
     expect(pointer.delta.y).toBeCloseTo(10);
-    expect(pointer.previousPosition.x).toBeCloseTo(140);
-    expect(pointer.previousPosition.y).toBeCloseTo(110);
+    expect(pointer.previousPosition.x).toBeCloseTo(100);
+    expect(pointer.previousPosition.y).toBeCloseTo(100);
+  });
+
+  it('keeps previousPosition spanning delta together with position', () => {
+    fire(canvas, 'pointerover', { clientX: 100, clientY: 100 });
+    im.update(0 as never);
+
+    const pointer = getPointer();
+
+    fire(canvas, 'pointermove', { clientX: 140, clientY: 110 });
+    im.update(0 as never);
+
+    expect(pointer.position.x - pointer.previousPosition.x).toBeCloseTo(pointer.delta.x);
+    expect(pointer.position.y - pointer.previousPosition.y).toBeCloseTo(pointer.delta.y);
   });
 
   it('is zero on a frame without movement', () => {
@@ -291,11 +339,62 @@ describe('channel peak buffer', () => {
   });
 });
 
+describe('channel edge latches', () => {
+  const focusAndPress = (keyCode: number): void => {
+    canvas.dispatchEvent(new FocusEvent('focus'));
+    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode } as KeyboardEventInit));
+  };
+
+  it('latches both edges of a press that started and ended within one frame', () => {
+    focusAndPress(32);
+    window.dispatchEvent(new KeyboardEvent('keyup', { keyCode: 32 } as KeyboardEventInit));
+
+    expect(pressLatch(im, Keyboard.Space)).toBe(1);
+    expect(releaseLatch(im, Keyboard.Space)).toBe(1);
+  });
+
+  it('latches both edges of a release followed by a fresh press', () => {
+    focusAndPress(32);
+    im.update(0 as never);
+
+    window.dispatchEvent(new KeyboardEvent('keyup', { keyCode: 32 } as KeyboardEventInit));
+    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: 32 } as KeyboardEventInit));
+
+    expect(pressLatch(im, Keyboard.Space)).toBe(1);
+    expect(releaseLatch(im, Keyboard.Space)).toBe(1);
+  });
+
+  it('does not consume a latch when it is read', () => {
+    focusAndPress(32);
+
+    expect(pressLatch(im, Keyboard.Space)).toBe(1);
+    expect(pressLatch(im, Keyboard.Space)).toBe(1);
+  });
+
+  it('clears the latches once the frame closes', () => {
+    focusAndPress(32);
+    im.update(0 as never);
+
+    expect(pressLatch(im, Keyboard.Space)).toBe(0);
+    expect(releaseLatch(im, Keyboard.Space)).toBe(0);
+  });
+
+  it('leaves a key held across a frame boundary without a fresh edge', () => {
+    focusAndPress(32);
+    im.update(0 as never);
+    im.update(0 as never);
+
+    expect(pressLatch(im, Keyboard.Space)).toBe(0);
+    expect(releaseLatch(im, Keyboard.Space)).toBe(0);
+  });
+});
+
 describe('context menu policy', () => {
   const createManager = (input?: { allowNativeContextMenu?: boolean; allowTextSelection?: boolean }): { im: InputManager; canvas: HTMLCanvasElement } => {
     const c = createCanvas();
     const app = {
       canvas: c,
+      platform: new BrowserPlatform(c),
       width: c.width,
       height: c.height,
       pixelRatio: 1,
@@ -339,6 +438,22 @@ describe('context menu policy', () => {
 
     expect(seen).toHaveBeenCalledTimes(1);
     expect(seen.mock.calls[0]![0].x).toBe(40);
+    manager.destroy();
+  });
+
+  it('dispatches at the coordinates the menu was requested at, not where the pointer has since moved', () => {
+    const { im: manager, canvas: c } = createManager();
+    const seen: Array<[number, number]> = [];
+
+    manager.onContextMenu.add(p => void seen.push([p.x, p.y]));
+    c.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerId: 1, isPrimary: true, clientX: 10, clientY: 10 }));
+    manager.update(0 as never);
+
+    c.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 200, clientY: 150 }));
+    c.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 1, isPrimary: true, clientX: 400, clientY: 400 }));
+    manager.update(0 as never);
+
+    expect(seen).toEqual([[200, 150]]);
     manager.destroy();
   });
 

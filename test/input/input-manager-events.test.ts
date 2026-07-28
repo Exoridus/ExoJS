@@ -13,6 +13,7 @@ import { GamepadButton } from '#input/GamepadButton';
 import { InputManager } from '#input/InputManager';
 import { Pointer } from '#input/Pointer';
 import { Keyboard } from '#input/types';
+import { BrowserPlatform } from '#platform/BrowserPlatform';
 
 // ---------------------------------------------------------------------------
 // Helpers (mirrors test/input/pointer-channels.test.ts conventions)
@@ -45,6 +46,7 @@ const createMockApp = (canvas: HTMLCanvasElement, pixelRatio = 1): Application =
 
   return {
     canvas,
+    platform: new BrowserPlatform(canvas),
     width: designWidth,
     height: designHeight,
     pixelRatio,
@@ -146,7 +148,7 @@ const withMockedGetGamepads = (run: (setSnapshot: (snapshot: Array<BrowserGamepa
 describe('InputManager — constructor option defaults', () => {
   test('falls back to defaults when app.options.input is entirely absent', () => {
     const canvas = createCanvas();
-    const app = { canvas, options: {} } as unknown as Application;
+    const app = { canvas, platform: new BrowserPlatform(canvas), options: {} } as unknown as Application;
     const im = new InputManager(app);
 
     expect(im.gamepadSlotStrategy).toBe('sticky');

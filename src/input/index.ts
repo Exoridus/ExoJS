@@ -11,8 +11,6 @@ export * from './GamepadMapping';
 export * from './GamepadPromptLayouts';
 export * from './GenericDualAnalogGamepadMapping';
 export * from './InputBinding';
-export type { InputHost } from './InputHost';
-export { createBrowserInputHost } from './InputHost';
 export * from './InputManager';
 export * from './InteractionEvent';
 export * from './InteractionManager';

@@ -7,12 +7,11 @@ import type { Time } from '#core/Time';
 import { DynamicAabbTree } from '#math/DynamicAabbTree';
 import { Matrix } from '#math/Matrix';
 import type { PointLike } from '#math/PointLike';
+import type { PlatformAdapter } from '#platform/PlatformAdapter';
 import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 
 import { FocusController } from './FocusController';
-import type { InputHost } from './InputHost';
-import { createBrowserInputHost } from './InputHost';
 import type { InteractionEventType } from './InteractionEvent';
 import { InteractionEvent } from './InteractionEvent';
 import type { Pointer } from './Pointer';
@@ -188,8 +187,8 @@ export class InteractionManager implements InteractionHooks {
   /** Scratch for inverting a parent's world matrix while positioning a dragged node. */
   private readonly _dragInverse = new Matrix();
 
-  /** Platform seam for cursor and pointer capture. Shared with `app.input` where available. */
-  private readonly _host: InputHost;
+  /** Platform seam for cursor and pointer capture — the same adapter `app.input` runs on. */
+  private readonly _platform: PlatformAdapter;
 
   /** Whether any pointer enqueued events since the last update(). */
   private _dirty = false;
@@ -206,7 +205,7 @@ export class InteractionManager implements InteractionHooks {
     this._app = app;
     this._focus = new FocusController(app);
     this._dragThreshold = app.options?.input?.dragThreshold ?? defaultDragThreshold;
-    this._host = app.input._host ?? createBrowserInputHost(app.canvas);
+    this._platform = app.platform;
     this._stage = { interaction: this, focus: this._focus, app };
     this._uiStage = { interaction: this._uiInteraction, focus: this._focus, app };
 
@@ -751,7 +750,7 @@ export class InteractionManager implements InteractionHooks {
     drag.active = true;
     drag.started = true;
     this._capturedPointers.set(id, drag.node);
-    this._host.capturePointer(id);
+    this._platform.capturePointer(id);
   }
 
   /**
@@ -791,7 +790,7 @@ export class InteractionManager implements InteractionHooks {
   private _endDrag(pointerId: number): void {
     this._drags.delete(pointerId);
     this._capturedPointers.delete(pointerId);
-    this._host.releasePointer(pointerId);
+    this._platform.releasePointer(pointerId);
   }
 
   // ---------------------------------------------------------------------------
@@ -1366,6 +1365,6 @@ export class InteractionManager implements InteractionHooks {
       }
     }
 
-    this._host.setCursor(cursor ?? '');
+    this._platform.setCursor(cursor ?? '');
   }
 }

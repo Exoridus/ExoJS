@@ -2,6 +2,7 @@ import type { Application } from '#core/Application';
 import { Size } from '#math/Size';
 import { getDistance } from '#math/utils';
 import { Vector } from '#math/Vector';
+import type { PlatformAdapter } from '#platform/PlatformAdapter';
 
 import { ChannelOffset, pointerSlotSize } from './types';
 
@@ -81,15 +82,18 @@ export class Pointer {
   public readonly type: string;
 
   /**
-   * Current position in design pixels. During a phase dispatch
-   * (`onPointerDown` / `onPointerUp`) this reads the position that phase
-   * happened at, so a handler always sees the coordinates of the event it
-   * was called for — not the last coordinates of the frame. Outside of a
-   * dispatch it is the pointer's latest position.
+   * Current position in design pixels. During a phase dispatch it reads the
+   * position that phase happened at, so a handler always sees the coordinates
+   * of the event it was called for — not the last coordinates of the frame.
+   * Outside of a dispatch it is the pointer's latest position.
    */
   public readonly position: Vector;
 
-  /** Position at the previous frame boundary. Together with {@link position} it spans {@link delta}. */
+  /**
+   * Position at the previous frame boundary. Together with {@link position} it
+   * spans {@link delta}: `position - previousPosition === delta` on any frame
+   * read outside a phase dispatch.
+   */
   public readonly previousPosition: Vector = new Vector();
 
   /** Movement accumulated over the current frame — `position - previousPosition`. */
@@ -98,14 +102,32 @@ export class Pointer {
   /** Position of the most recent press. Retains its value after release so tap/drag logic can still read it. */
   public readonly pressPosition: Vector = new Vector(-1, -1);
 
+  /**
+   * Position of the most recent move. Several platform moves in one frame
+   * collapse into this, their last one — the coordinates the frame's
+   * {@link moved} phase is dispatched at. `(-1, -1)` until the pointer has
+   * moved at least once.
+   */
+  public readonly movePosition: Vector = new Vector(-1, -1);
+
   /** Position of the most recent release. `(-1, -1)` until the pointer has been released at least once. */
   public readonly releasePosition: Vector = new Vector(-1, -1);
+
+  /** Position the platform cancelled this pointer at. `(-1, -1)` until it has been cancelled at least once. */
+  public readonly cancelPosition: Vector = new Vector(-1, -1);
+
+  /**
+   * Position of the most recent context-menu request. Set from the request
+   * itself rather than from wherever the pointer has since moved, so a menu
+   * opens where the user asked for it. `(-1, -1)` until one has been requested.
+   */
+  public readonly contextMenuPosition: Vector = new Vector(-1, -1);
 
   public readonly size: Size;
   public readonly tilt: Vector;
 
   private _app: Application | null;
-  private _canvas: HTMLCanvasElement | null;
+  private _platform: PlatformAdapter | null;
   private _channels: Float32Array | null;
   private _slotIndex: number;
   private _channelBase: number;
@@ -125,12 +147,20 @@ export class Pointer {
   private _releaseClosedPress = false;
   /** Latest position, kept aside while {@link position} is temporarily rewound to a phase position. */
   private readonly _latestPosition = new Vector();
+  /**
+   * Position {@link delta} is measured from — the pointer's coordinates at the
+   * frame boundary before last. Kept apart from {@link previousPosition} so
+   * that one can keep meaning "where the pointer was on the previous frame"
+   * for readers, instead of being overwritten with the current position as a
+   * side effect of computing the delta.
+   */
+  private readonly _frameBaseline = new Vector();
 
-  public constructor(event: PointerEvent, app: Application, canvas: HTMLCanvasElement, channels: Float32Array, slotIndex: number) {
+  public constructor(event: PointerEvent, app: Application, platform: PlatformAdapter, channels: Float32Array, slotIndex: number) {
     const { pointerId, pointerType, clientX, clientY, width, height, tiltX, tiltY, buttons, pressure, twist, isPrimary } = event;
 
     this._app = app;
-    this._canvas = canvas;
+    this._platform = platform;
     this._channels = channels;
     this._slotIndex = slotIndex;
     this._channelBase = ChannelOffset.Pointers + slotIndex * pointerSlotSize;
@@ -149,6 +179,7 @@ export class Pointer {
 
     this.previousPosition.set(geometry.x, geometry.y);
     this._latestPosition.set(geometry.x, geometry.y);
+    this._frameBaseline.set(geometry.x, geometry.y);
     this._pendingFlags |= PointerStateFlag.Over;
     this._writeChannels(true);
   }
@@ -279,6 +310,7 @@ export class Pointer {
 
   public handleMove(event: PointerEvent): void {
     this.handleEvent(event);
+    this.movePosition.copy(this.position);
     this._pendingFlags |= PointerStateFlag.Move;
     this._currentState = PointerState.Moving;
     this._writeChannels(true);
@@ -296,10 +328,24 @@ export class Pointer {
 
   public handleCancel(event: PointerEvent): void {
     this.handleEvent(event);
+    this.cancelPosition.copy(this.position);
     this._pressActive = false;
     this._pendingFlags |= PointerStateFlag.Cancel;
     this._currentState = PointerState.Cancelled;
     this._writeChannels(false);
+  }
+
+  /**
+   * Note where a context-menu request happened. The request arrives as a plain
+   * platform mouse event with no pointer id of its own, so the manager
+   * attributes it to a pointer and hands the coordinates here.
+   *
+   * @internal
+   */
+  public _noteContextMenu(clientX: number, clientY: number): void {
+    const geometry = this._computeDesignGeometry(clientX, clientY, 0, 0);
+
+    this.contextMenuPosition.set(geometry.x, geometry.y);
   }
 
   /**
@@ -314,10 +360,13 @@ export class Pointer {
     this._pendingFlags = PointerStateFlag.None;
 
     const { x, y } = this._latestPosition;
+    const baseX = this._frameBaseline.x;
+    const baseY = this._frameBaseline.y;
 
+    this.previousPosition.set(baseX, baseY);
     this.position.set(x, y);
-    this.delta.set(x - this.previousPosition.x, y - this.previousPosition.y);
-    this.previousPosition.set(x, y);
+    this.delta.set(x - baseX, y - baseY);
+    this._frameBaseline.set(x, y);
   }
 
   /** Phases of this frame, for the {@link InputManager}'s signal dispatch. @internal */
@@ -331,14 +380,15 @@ export class Pointer {
   }
 
   /**
-   * Temporarily present `x`/`y` as {@link position} for the duration of one
-   * phase dispatch, so `onPointerDown` sees the press coordinates even when a
-   * move and a release followed within the same frame.
+   * Temporarily present one of this pointer's phase positions as
+   * {@link position} for the duration of that phase's dispatch, so every
+   * handler sees the coordinates of the event it was called for even when a
+   * press, several moves and a release all collapsed into one frame.
    *
    * @internal
    */
-  public _enterPhase(x: number, y: number): void {
-    this.position.set(x, y);
+  public _enterPhase(phase: Vector): void {
+    this.position.copy(phase);
   }
 
   /** Restore {@link position} to the pointer's latest coordinates. @internal */
@@ -352,12 +402,16 @@ export class Pointer {
     this.previousPosition.destroy();
     this.delta.destroy();
     this.pressPosition.destroy();
+    this.movePosition.destroy();
     this.releasePosition.destroy();
+    this.cancelPosition.destroy();
+    this.contextMenuPosition.destroy();
     this._latestPosition.destroy();
+    this._frameBaseline.destroy();
     this.size.destroy();
     this.tilt.destroy();
     this._app = null;
-    this._canvas = null;
+    this._platform = null;
     this._channels = null;
   }
 
@@ -389,27 +443,28 @@ export class Pointer {
   }
 
   /**
-   * Map a CSS-pixel pointer event into design space. The event point is first
-   * expressed as a fraction of the canvas display rect, scaled to backing-store
-   * pixels, then routed through {@link Application._backingStoreToDesign} (which
-   * folds in `pixelRatio` and any letterbox content viewport). The contact
-   * size is mapped as a delta through the same transform.
+   * Map a host-pixel pointer event into design space. The event point is first
+   * expressed as a fraction of the surface's display rect, scaled to
+   * backing-store pixels, then routed through
+   * {@link Application._backingStoreToDesign} (which folds in `pixelRatio` and
+   * any letterbox content viewport). The contact size is mapped as a delta
+   * through the same transform.
    */
   private _computeDesignGeometry(clientX: number, clientY: number, width: number, height: number): { x: number; y: number; width: number; height: number } {
     const app = this._app;
-    const canvas = this._canvas;
+    const platform = this._platform;
 
-    if (!app || !canvas) {
+    if (!app || !platform) {
       return { x: 0, y: 0, width: 0, height: 0 };
     }
 
-    const rect = canvas.getBoundingClientRect();
+    const rect = platform.getSurfaceMetrics();
     const u = rect.width > 0 ? (clientX - rect.left) / rect.width : 0;
     const v = rect.height > 0 ? (clientY - rect.top) / rect.height : 0;
-    const backingStoreX = u * canvas.width;
-    const backingStoreY = v * canvas.height;
-    const backingStoreW = rect.width > 0 ? (width / rect.width) * canvas.width : 0;
-    const backingStoreH = rect.height > 0 ? (height / rect.height) * canvas.height : 0;
+    const backingStoreX = u * rect.backingWidth;
+    const backingStoreY = v * rect.backingHeight;
+    const backingStoreW = rect.width > 0 ? (width / rect.width) * rect.backingWidth : 0;
+    const backingStoreH = rect.height > 0 ? (height / rect.height) * rect.backingHeight : 0;
     const origin = app._backingStoreToDesign(backingStoreX, backingStoreY);
     const corner = app._backingStoreToDesign(backingStoreX + backingStoreW, backingStoreY + backingStoreH);
 
@@ -424,18 +479,17 @@ export class Pointer {
   /** Write the full 16-channel per-pointer state into the shared channel buffer. */
   private _writeChannels(active: boolean): void {
     const ch = this._channels;
-    const canvas = this._canvas;
+    const app = this._app;
 
-    if (!ch || !canvas) {
+    if (!ch || !app) {
       return;
     }
 
     const base = this._channelBase;
     // position/size are in design pixels (0..app.width × 0..app.height), so
     // normalize by the design size for a scale-invariant 0..1 channel value.
-    const app = this._app;
-    const w = (app ? app.width : canvas.width) || 1;
-    const h = (app ? app.height : canvas.height) || 1;
+    const w = app.width || 1;
+    const h = app.height || 1;
 
     if (!active) {
       // Zero the entire slot for a clean release.

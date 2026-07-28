@@ -254,7 +254,9 @@ describe('Application', () => {
     rawApp['onFrame'] = { dispatch: vi.fn() };
     rawApp['onFixedFrame'] = { dispatch: vi.fn() };
 
-    const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
+    const rafSpy = vi.fn().mockReturnValue(1);
+
+    rawApp['platform'] = { requestFrame: rafSpy, cancelFrame: vi.fn() };
 
     app.update();
 
@@ -540,9 +542,10 @@ describe('Application', () => {
     };
     const activeClock = { stop: vi.fn() };
     const frameClock = { stop: vi.fn() };
-    const cancelSpy = vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined);
+    const cancelSpy = vi.fn();
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
+    rawApp['platform'] = { requestFrame: vi.fn().mockReturnValue(1), cancelFrame: cancelSpy };
     rawApp['_status'] = ApplicationStatus.Running;
     rawApp['_frameLoopActive'] = true;
     rawApp['_frameRequest'] = 99;
@@ -566,7 +569,6 @@ describe('Application', () => {
       sceneTeardownError,
     );
 
-    cancelSpy.mockRestore();
     consoleErrorSpy.mockRestore();
   });
 });
