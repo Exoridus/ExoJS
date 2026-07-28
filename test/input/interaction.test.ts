@@ -1140,8 +1140,9 @@ describe('InteractionManager — interaction scope', () => {
 
     outside.onPointerDown.add(outsideHandler);
 
-    im.pushScope(modal);
-    im.popScope();
+    const token = im.pushScope(modal);
+
+    im.popScope(token);
 
     signals.onPointerDown.dispatch(makePointer({ x: 250, y: 50 }));
     flushInteractions(im);

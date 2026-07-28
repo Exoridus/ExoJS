@@ -308,11 +308,11 @@ describe('scoped hit-testing', () => {
     modal.addChild(above);
     modal.addChild(below);
 
-    im.pushScope(modal);
+    const token = im.pushScope(modal);
 
     expect(pick(im, signals, scene, 50, 50)).toBe(above);
 
-    im.popScope();
+    im.popScope(token);
     im.destroy();
   });
 });

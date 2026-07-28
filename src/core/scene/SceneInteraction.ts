@@ -1,6 +1,7 @@
 import type { Application } from '#core/Application';
 import { SceneState } from '#core/SceneState';
 import type { Destroyable } from '#core/types';
+import type { ScopeToken } from '#input/ScopeToken';
 import type { RenderNode } from '#rendering/RenderNode';
 
 /**
@@ -39,8 +40,8 @@ interface TrackedObservation extends InteractionObservation {
 
 interface TrackedScope extends InteractionScope {
   readonly root: RenderNode;
-  /** Whether this scope is currently pushed onto `app.interaction`'s stack — false while created/left dormant. */
-  attached: boolean;
+  /** The live scope's token while pushed onto `app.interaction`'s stack, `null` while created/left dormant. */
+  token: ScopeToken | null;
   released: boolean;
 }
 
@@ -118,14 +119,11 @@ export class SceneInteraction implements Destroyable {
    */
   public scope(root: RenderNode): InteractionScope {
     const live = this._isLive();
-
-    if (live) {
-      this._app.interaction.pushScope(root);
-    }
+    const token = live ? this._app.interaction.pushScope(root) : null;
 
     const scope: TrackedScope = {
       root,
-      attached: live,
+      token,
       released: false,
       release: () => this._releaseScope(scope),
       destroy: () => this._releaseScope(scope),
@@ -157,12 +155,13 @@ export class SceneInteraction implements Destroyable {
       }
     }
 
-    for (let i = this._scopes.length - 1; i >= 0; i--) {
-      const scope = this._scopes[i]!;
-
-      if (scope.attached) {
-        this._app.interaction.popScope();
-        scope.attached = false;
+    for (const scope of this._scopes) {
+      if (scope.token !== null) {
+        // A targeted release — InteractionManager.popScope finds this exact
+        // entry by its token wherever it sits, so entries can be released in
+        // ANY order here without disturbing the others; no rebuild needed.
+        this._app.interaction.popScope(scope.token);
+        scope.token = null;
       }
     }
   }
@@ -184,9 +183,8 @@ export class SceneInteraction implements Destroyable {
     }
 
     for (const scope of this._scopes) {
-      if (!scope.attached) {
-        this._app.interaction.pushScope(scope.root);
-        scope.attached = true;
+      if (scope.token === null) {
+        scope.token = this._app.interaction.pushScope(scope.root);
       }
     }
   }
@@ -198,7 +196,7 @@ export class SceneInteraction implements Destroyable {
 
     this._observations.clear();
 
-    for (const scope of [...this._scopes].reverse()) {
+    for (const scope of [...this._scopes]) {
       this._releaseScope(scope);
     }
   }
@@ -216,43 +214,22 @@ export class SceneInteraction implements Destroyable {
     }
   }
 
+  /**
+   * Release `scope`, wherever it sits in tracking order — released in ANY
+   * order relative to its siblings, since {@link InteractionManager.popScope}
+   * removes exactly this scope's own token, never anything above or below it.
+   */
   private _releaseScope(scope: TrackedScope): void {
     if (scope.released) {
       return;
     }
 
-    const index = this._scopes.indexOf(scope);
-
-    if (!scope.attached) {
-      // Never reached app.interaction (created while dormant, or currently
-      // detached by suspend()) — local bookkeeping only; the manager's
-      // stack was never touched for this scope in the first place.
-      scope.released = true;
-      this._scopes.splice(index, 1);
-
-      return;
-    }
-
-    // Every scope from `index` onward is attached together in practice —
-    // scopes only ever attach while genuinely Active, and suspend()
-    // detaches the entire array together, so a mix of attached/unattached
-    // entries above an attached one cannot arise. Pop every scope from
-    // the top down through (and including) this one, then re-push
-    // everything that was above it, in original order — restores the
-    // manager's stack as if `scope` had never existed.
-    const above = this._scopes.slice(index + 1);
-
-    for (let i = this._scopes.length - 1; i >= index; i--) {
-      this._app.interaction.popScope();
-      this._scopes[i]!.attached = false;
-    }
-
     scope.released = true;
-    this._scopes.splice(index, 1);
+    this._scopes.splice(this._scopes.indexOf(scope), 1);
 
-    for (const entry of above) {
-      this._app.interaction.pushScope(entry.root);
-      entry.attached = true;
+    if (scope.token !== null) {
+      this._app.interaction.popScope(scope.token);
+      scope.token = null;
     }
   }
 }

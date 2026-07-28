@@ -365,7 +365,7 @@ describe('scoped hit-testing and invisible ancestors', () => {
 
     outerAncestor.visible = false; // above the scope root, outside the scoped subtree
 
-    h.im.pushScope(scopeRoot);
+    const token = h.im.pushScope(scopeRoot);
 
     const down = vi.fn();
 
@@ -378,7 +378,7 @@ describe('scoped hit-testing and invisible ancestors', () => {
 
     expect(down).not.toHaveBeenCalled();
 
-    h.im.popScope();
+    h.im.popScope(token);
     h.im.destroy();
   });
 
@@ -393,7 +393,7 @@ describe('scoped hit-testing and invisible ancestors', () => {
     h.scene.addChild(outerAncestor);
     outerAncestor.visible = false;
 
-    h.im.pushScope(scopeRoot);
+    const token = h.im.pushScope(scopeRoot);
 
     const down = vi.fn();
 
@@ -408,7 +408,7 @@ describe('scoped hit-testing and invisible ancestors', () => {
 
     expect(down).toHaveBeenCalledTimes(1);
 
-    h.im.popScope();
+    h.im.popScope(token);
     h.im.destroy();
   });
 });

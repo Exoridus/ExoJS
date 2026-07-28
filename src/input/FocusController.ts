@@ -4,7 +4,16 @@ import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 
 import { KeyEvent } from './KeyEvent';
+import type { ScopeToken } from './ScopeToken';
 import { Keyboard } from './types';
+
+/** One entry of the focus-scope stack — see {@link FocusController.pushScope}. */
+interface FocusScopeEntry {
+  readonly token: ScopeToken;
+  readonly root: RenderNode;
+  /** Whatever held focus the instant this scope activated, restored when it pops. */
+  readonly previousFocus: RenderNode | null;
+}
 
 /**
  * Keyboard-focus service owned by the {@link InteractionManager}. Tracks the
@@ -30,8 +39,10 @@ export class FocusController implements FocusHooks {
   private _focused: RenderNode | null = null;
   private _shiftDown = false;
 
-  // Stack of subtree roots that bound Tab traversal; a modal dialog pushes one.
-  private readonly _scopeStack: RenderNode[] = [];
+  // Stack of scopes that bound Tab traversal AND act as a focus trap; a modal
+  // dialog pushes one. Keyed by stable token, not by root — see ScopeToken's
+  // doc comment for why root identity alone cannot identify an entry.
+  private readonly _scopeStack: FocusScopeEntry[] = [];
 
   private readonly _onKeyDownHandler: (channel: number) => void;
   private readonly _onKeyUpHandler: (channel: number) => void;
@@ -51,12 +62,20 @@ export class FocusController implements FocusHooks {
   }
 
   /**
-   * Move keyboard focus to `node`. No-op when `node` is already focused or is
-   * not {@link RenderNode.focusable}. Fires `onBlur` on the previously focused
-   * node, then `onFocus` on `node`.
+   * Move keyboard focus to `node`. No-op when `node` is already focused, is
+   * not {@link RenderNode.focusable}, or — while a scope is active — sits
+   * outside that scope's subtree: an active scope is a real focus trap, not
+   * only a Tab-order boundary, so programmatic focus cannot escape it either.
+   * Fires `onBlur` on the previously focused node, then `onFocus` on `node`.
    */
   public focus(node: RenderNode): void {
     if (node === this._focused || !node.focusable) {
+      return;
+    }
+
+    const activeScope = this._scopeStack.at(-1)?.root ?? null;
+
+    if (activeScope !== null && !this._isInsideScope(node, activeScope)) {
       return;
     }
 
@@ -78,23 +97,52 @@ export class FocusController implements FocusHooks {
   }
 
   /**
-   * Bound subsequent Tab traversal to `root`'s subtree. Pushed by
+   * Bound subsequent Tab traversal — and, from this point on, every
+   * programmatic {@link focus} call — to `root`'s subtree. Pushed by
    * {@link InteractionManager.pushScope} so focus navigation and pointer
    * hit-testing are confined to the same subtree — a modal that shields
-   * clicks must shield Tab too.
+   * clicks must shield Tab (and focus) too.
+   *
+   * Whatever holds focus at this instant is blurred immediately if it sits
+   * outside `root` — a scope is a trap from the moment it activates, not
+   * only once something inside it is explicitly focused. That prior focus is
+   * remembered either way and restored by the matching {@link popScope}.
    */
-  public pushScope(root: RenderNode): void {
-    this._scopeStack.push(root);
+  public pushScope(token: ScopeToken, root: RenderNode): void {
+    const previousFocus = this._focused;
+
+    if (previousFocus !== null && !this._isInsideScope(previousFocus, root)) {
+      this.blur();
+    }
+
+    this._scopeStack.push({ token, root, previousFocus });
   }
 
-  /** Pop the most recently pushed focus scope. */
-  public popScope(): void {
-    this._scopeStack.pop();
-  }
+  /**
+   * Release the scope identified by `token`, wherever it sits in the stack —
+   * a targeted removal, never a rebuild of the entries around it. Only
+   * popping the topmost (currently active) scope affects focus: whatever was
+   * focused when that scope was pushed is restored, provided it is still
+   * focusable and — if another scope is now active underneath — still inside
+   * that scope; otherwise focus is cleared rather than left somewhere the
+   * newly-active scope does not own. Releasing a scope buried under others
+   * (see {@link InteractionScope.release}'s any-order contract) changes
+   * nothing about current focus, since the actually-active scope above it is
+   * untouched.
+   */
+  public popScope(token: ScopeToken): void {
+    const index = this._scopeStack.findIndex(entry => entry.token === token);
 
-  /** Drop every pushed scope. Used when the whole root detaches. */
-  public clearScopes(): void {
-    this._scopeStack.length = 0;
+    if (index === -1) {
+      return;
+    }
+
+    const wasActive = index === this._scopeStack.length - 1;
+    const [entry] = this._scopeStack.splice(index, 1);
+
+    if (wasActive && entry) {
+      this._restoreFocusAfterPop(entry.previousFocus);
+    }
   }
 
   /** Move focus to the next focusable node in the active scope (Tab order). */
@@ -140,7 +188,7 @@ export class FocusController implements FocusHooks {
     if (focused !== null) {
       const event = new KeyEvent('keydown', channel, focused);
 
-      focused._peekKeySignal('keydown')?.dispatch(event);
+      this._dispatchKeyBubble(event, 'keydown');
       defaultPrevented = event.defaultPrevented;
     }
 
@@ -161,7 +209,29 @@ export class FocusController implements FocusHooks {
     const focused = this._focused;
 
     if (focused !== null) {
-      focused._peekKeySignal('keyup')?.dispatch(new KeyEvent('keyup', channel, focused));
+      this._dispatchKeyBubble(new KeyEvent('keyup', channel, focused), 'keyup');
+    }
+  }
+
+  /**
+   * Bubble `event` from its target up through every ancestor, same shape as
+   * {@link InteractionManager}'s pointer-event bubble: `focusable` gates
+   * which nodes can be the *target*, not which ones may observe an event
+   * bubbling past them, so a plain container above the focused node still
+   * receives it. Stops early on {@link KeyEvent.stopPropagation}.
+   */
+  private _dispatchKeyBubble(event: KeyEvent, type: 'keydown' | 'keyup'): void {
+    let current: RenderNode | null = event.target;
+
+    while (current !== null) {
+      event.currentTarget = current;
+      current._peekKeySignal(type)?.dispatch(event);
+
+      if (event.propagationStopped) {
+        break;
+      }
+
+      current = current.parent;
     }
   }
 
@@ -188,13 +258,50 @@ export class FocusController implements FocusHooks {
     }
   }
 
+  /** Whether `node` is `scopeRoot` itself or lives somewhere in its subtree. */
+  private _isInsideScope(node: RenderNode, scopeRoot: RenderNode): boolean {
+    let current: RenderNode | null = node;
+
+    while (current !== null) {
+      if (current === scopeRoot) {
+        return true;
+      }
+
+      current = current.parent;
+    }
+
+    return false;
+  }
+
+  /**
+   * Restore whatever was focused before the just-popped scope activated —
+   * provided it is still focusable and, if another scope is now active
+   * underneath, still inside that one. Blurs otherwise: guessing at a
+   * different node to focus instead would be surprising, and leaving focus
+   * on a node the newly-active scope doesn't own would break its trap.
+   */
+  private _restoreFocusAfterPop(previousFocus: RenderNode | null): void {
+    const activeScope = this._scopeStack.at(-1)?.root ?? null;
+    const canRestore =
+      previousFocus !== null &&
+      !previousFocus.destroyed &&
+      previousFocus.focusable &&
+      (activeScope === null || this._isInsideScope(previousFocus, activeScope));
+
+    if (canRestore && previousFocus !== null) {
+      this.focus(previousFocus);
+    } else {
+      this.blur();
+    }
+  }
+
   /**
    * Collect the focusable nodes of the active scope (the topmost pushed scope,
    * else the active scene root) in Tab order: ascending `tabIndex`, ties broken
    * by document (tree) order.
    */
   private _collectFocusables(): RenderNode[] {
-    const root: RenderNode | null = this._scopeStack.at(-1) ?? this._app.scenes.currentScene?.root ?? null;
+    const root: RenderNode | null = this._scopeStack.at(-1)?.root ?? this._app.scenes.currentScene?.root ?? null;
 
     if (root === null) {
       return [];

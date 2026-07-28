@@ -198,7 +198,7 @@ describe('SceneInteraction.scope()', () => {
     expect(scopeA.active).toBe(true);
   });
 
-  test('releasing a non-top capture pops down to it, removes it, and re-pushes the ones above in order', () => {
+  test('releasing a non-top capture is one targeted pop — no rebuild of the ones above it', () => {
     const app = createAppStub();
     const interaction = new SceneInteraction(app, () => SceneState.Active);
     const rootA = fakeRoot();
@@ -213,10 +213,11 @@ describe('SceneInteraction.scope()', () => {
 
     scopeA.release(); // out-of-order: A is at the bottom, B and C are above it
 
-    // Pop C, pop B, pop A (removing A), then re-push B, then C, restoring relative order.
-    expect(app.interaction.popScope).toHaveBeenCalledTimes(3);
-    expect(app.interaction.pushScope).toHaveBeenNthCalledWith(1, rootB);
-    expect(app.interaction.pushScope).toHaveBeenNthCalledWith(2, rootC);
+    // Exactly one targeted popScope call for A's own token — InteractionManager
+    // finds and splices that entry itself, wherever it sits; B and C, still
+    // active, are never popped or re-pushed to make room for it.
+    expect(app.interaction.popScope).toHaveBeenCalledTimes(1);
+    expect(app.interaction.pushScope).not.toHaveBeenCalled();
     expect(scopeA.active).toBe(false);
     expect(scopeB.active).toBe(true);
     expect(scopeC.active).toBe(true);

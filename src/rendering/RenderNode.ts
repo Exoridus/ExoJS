@@ -263,8 +263,10 @@ export abstract class RenderNode extends SceneNode {
 
   /**
    * When `true`, this node can receive keyboard focus — via {@link focus},
-   * Tab traversal, or `app.interaction.focus(node)` — and is delivered key events
-   * through {@link onKeyDown} / {@link onKeyUp} while focused.
+   * Tab traversal, or `app.interaction.focus(node)` — and is delivered key
+   * events through {@link onKeyDown} / {@link onKeyUp} while focused, or
+   * while any of its descendants holds focus (key events bubble up the
+   * parent chain like pointer {@link InteractionEvent}s do).
    *
    * @default false
    */
@@ -293,12 +295,12 @@ export abstract class RenderNode extends SceneNode {
     return (this._onBlur ??= new Signal<[RenderNode]>());
   }
 
-  /** Fired for each key pressed while this node holds focus. */
+  /** Fired for each key pressed while this node — or a descendant of it — holds focus. Bubbles; see {@link KeyEvent}. */
   public get onKeyDown(): Signal<[KeyEvent]> {
     return (this._onKeyDown ??= new Signal<[KeyEvent]>());
   }
 
-  /** Fired for each key released while this node holds focus. */
+  /** Fired for each key released while this node — or a descendant of it — holds focus. Bubbles; see {@link KeyEvent}. */
   public get onKeyUp(): Signal<[KeyEvent]> {
     return (this._onKeyUp ??= new Signal<[KeyEvent]>());
   }

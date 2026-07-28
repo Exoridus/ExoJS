@@ -5,6 +5,7 @@ import type { InteractionHooks, Stage } from '#core/Stage';
 import { FocusController } from '#input/FocusController';
 import type { InputManager } from '#input/InputManager';
 import type { KeyEvent } from '#input/KeyEvent';
+import { createScopeToken } from '#input/ScopeToken';
 import { Keyboard } from '#input/types';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
@@ -376,7 +377,10 @@ describe('FocusController', () => {
 
     modal.addChild(inA).addChild(inB);
     scene.root.addChild(outside).addChild(modal);
-    focus.pushScope(modal);
+
+    const token = createScopeToken();
+
+    focus.pushScope(token, modal);
 
     onKeyDown.dispatch(Keyboard.Tab);
     expect(focus.focused).toBe(inA);
@@ -387,7 +391,9 @@ describe('FocusController', () => {
     onKeyDown.dispatch(Keyboard.Tab);
     expect(focus.focused).toBe(inA);
 
-    focus.popScope();
-    expect(focus.focused).toBe(inA);
+    // Nothing was focused when the scope opened, so popping it restores
+    // exactly that — not whatever Tab happened to land on inside the scope.
+    focus.popScope(token);
+    expect(focus.focused).toBeNull();
   });
 });

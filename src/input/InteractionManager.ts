@@ -15,6 +15,7 @@ import { FocusController } from './FocusController';
 import type { InteractionEventType } from './InteractionEvent';
 import { InteractionEvent } from './InteractionEvent';
 import type { Pointer } from './Pointer';
+import { createScopeToken, type ScopeToken } from './ScopeToken';
 
 // ---------------------------------------------------------------------------
 // Internal types
@@ -197,10 +198,13 @@ export class InteractionManager implements InteractionHooks {
 
   /**
    * Interaction-scope stack. While non-empty, hit-testing and focus traversal
-   * are confined to the topmost root's subtree, so a modal dialog shields the
-   * nodes beneath it.
+   * are confined to the topmost entry's subtree, so a modal dialog shields
+   * the nodes beneath it. Each entry is keyed by a stable {@link ScopeToken}
+   * (not by `root` — two scopes can legitimately share a root) so a specific
+   * entry can be released with a targeted splice wherever it sits, instead of
+   * popping and rebuilding everything above it.
    */
-  private readonly _scopeStack: RenderNode[] = [];
+  private readonly _scopeStack: Array<{ token: ScopeToken; root: RenderNode }> = [];
 
   /** Keyboard focus for this application. Public access goes through this manager. */
   private readonly _focus: FocusController;
@@ -314,26 +318,45 @@ export class InteractionManager implements InteractionHooks {
   }
 
   /**
-   * Confine interaction to `root`'s subtree until a matching {@link popScope}.
-   * Pointer events outside the subtree hit nothing and Tab traversal stays
-   * inside it, so a modal dialog (optionally with a full-screen backdrop to
-   * swallow clicks) shields everything beneath it. Scopes stack — the most
-   * recently pushed root wins.
+   * Confine interaction to `root`'s subtree until it is released via
+   * {@link popScope} with the returned token. Pointer events outside the
+   * subtree hit nothing, Tab traversal stays inside it, and — since the
+   * scope is a real focus trap — so does every programmatic
+   * {@link InteractionManager.focus} call; a modal dialog (optionally with a
+   * full-screen backdrop to swallow clicks) shields everything beneath it.
+   * Scopes stack — the most recently pushed one wins — and nest freely with
+   * scopes pushed at any other level (app-wide or scene-scoped alike).
    *
    * A scope is not what makes a node interactive; `node.interactive = true`
    * alone does that. Nor is it the browser pointer-capture taken during a
    * drag, which is a private implementation detail. Prefer
    * `scene.interaction.scope()` when the scope should end with its scene.
    */
-  public pushScope(root: RenderNode): void {
-    this._scopeStack.push(root);
-    this._focus.pushScope(root);
+  public pushScope(root: RenderNode): ScopeToken {
+    const token = createScopeToken();
+
+    this._scopeStack.push({ token, root });
+    this._focus.pushScope(token, root);
+
+    return token;
   }
 
-  /** Release the most recently pushed interaction scope (see {@link pushScope}). */
-  public popScope(): void {
-    this._scopeStack.pop();
-    this._focus.popScope();
+  /**
+   * Release the scope `token` identifies — a targeted removal wherever it
+   * sits in the stack, never a rebuild of the entries above or below it (see
+   * {@link pushScope}). Idempotent: releasing an already-released or unknown
+   * token is a no-op, so a caller never needs to track whether it already let
+   * go of a scope.
+   */
+  public popScope(token: ScopeToken): void {
+    const index = this._scopeStack.findIndex(entry => entry.token === token);
+
+    if (index === -1) {
+      return;
+    }
+
+    this._scopeStack.splice(index, 1);
+    this._focus.popScope(token);
   }
 
   /**
@@ -448,14 +471,42 @@ export class InteractionManager implements InteractionHooks {
    * Unbind a root node: unregister its interactive nodes and clear the stage
    * from the subtree. Called automatically for a scene's structural root by
    * its `SceneScope` when the scene ends permanently.
+   *
+   * Releases only scopes rooted inside `root`'s own subtree, and blurs focus
+   * only if the focused node lives inside it — an app-wide scope, or one
+   * belonging to a different (e.g. retained) scene, must survive this scene
+   * detaching entirely untouched. A global wipe here would break the
+   * "scopes nest freely at any level" guarantee {@link pushScope} documents.
    * @internal
    */
   public detachRoot(root: RenderNode): void {
-    this._focus.blur();
-    this._scopeStack.length = 0;
-    this._focus.clearScopes();
+    for (let i = this._scopeStack.length - 1; i >= 0; i--) {
+      const entry = this._scopeStack[i];
+
+      if (entry !== undefined && this._isDescendantOrSelf(entry.root, root)) {
+        this._scopeStack.splice(i, 1);
+        this._focus.popScope(entry.token);
+      }
+    }
+
+    this._focus._notifyNodeRemoved(root);
     this._notifyNodeRemoved(root);
     root._setStage(null);
+  }
+
+  /** Whether `node` is `root` itself or lives somewhere in its subtree. */
+  private _isDescendantOrSelf(node: RenderNode, root: RenderNode): boolean {
+    let current: RenderNode | null = node;
+
+    while (current !== null) {
+      if (current === root) {
+        return true;
+      }
+
+      current = current.parent;
+    }
+
+    return false;
   }
 
   /**
@@ -945,7 +996,7 @@ export class InteractionManager implements InteractionHooks {
    * at — see {@link PointerQueue}'s doc comment.
    */
   private _resolveHit(x: number, y: number): { node: RenderNode | null; x: number; y: number } {
-    const scope = this._scopeStack.at(-1);
+    const scope = this._scopeStack.at(-1)?.root;
 
     if (scope !== undefined) {
       const coords = this._designToLayerSpace(x, y, this._isUINode(scope));
