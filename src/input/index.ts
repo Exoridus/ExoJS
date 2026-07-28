@@ -1,3 +1,4 @@
+export * from './actions';
 export * from './ArcadeStickGamepadMapping';
 export * from './FocusManager';
 export * from './GameCubeGamepadMapping';
@@ -22,5 +23,5 @@ export { Pointer, PointerState, PointerStateFlag } from './Pointer';
 export * from './SteamControllerGamepadMapping';
 export * from './SteamDeckGamepadMapping';
 export * from './SwitchProGamepadMapping';
-export { ChannelOffset, ChannelSize, Keyboard, maxPointers, pointerSlotSize } from './types';
+export { ChannelOffset, ChannelSize, Keyboard, maxPointers, PointerButton, pointerSlotSize } from './types';
 export * from './XboxGamepadMapping';

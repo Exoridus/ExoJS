@@ -169,7 +169,7 @@ Every pointer also carries a per-frame snapshot that stays stable for the whole 
 ## When to use which
 
 - **Signal API** (`app.input.onPointerMove` etc.) for raw pointer data — position tracking, custom gesture detection, drawing apps.
-- **Binding API** (`this.inputs.onActive(Pointer.Left)` etc.) for simple button/binary state — holding mouse button to fire, right-click context menus.
+- **Binding API** (`this.inputs.onActive(PointerButton.Primary)` etc.) for simple button/binary state — holding mouse button to fire, right-click context menus.
 - **Interactive sprites** (`interactive`/`draggable`) for drag-and-drop and click-on-object behavior without manual hit testing.
 - **Gesture signals** (`onPinch`/`onRotate`/`onLongPress`) for map zoom/rotate and touch-hold menus.
 

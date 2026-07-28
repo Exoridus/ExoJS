@@ -28,6 +28,36 @@ export const maxPointers = 16;
 export const pointerSlotSize = 16;
 
 /**
+ * Rebase a gamepad channel onto `slot`'s sub-allocation. Channels outside the
+ * gamepad category pass through unchanged, so callers can map a mixed binding
+ * list without inspecting each entry.
+ */
+export function resolveGamepadSlotChannel(channel: number, slot: 0 | 1 | 2 | 3): number {
+  if (channel >= ChannelOffset.Gamepads && channel < ChannelOffset.Gamepads + ChannelSize.Category) {
+    return ChannelOffset.Gamepads + slot * ChannelSize.Gamepad + (channel ^ ChannelOffset.Gamepads);
+  }
+
+  return channel;
+}
+
+/**
+ * Channel indices for the buttons of the primary pointer (slot 0), named by
+ * role rather than by mouse geometry so they read correctly for pen and touch
+ * input too. These address fields 9..11 of the pointer slot layout written by
+ * {@link Pointer}.
+ *
+ * @example
+ * ```ts
+ * attack: new ButtonAction(PointerButton.Primary)
+ * ```
+ */
+export enum PointerButton {
+  Primary = ChannelOffset.Pointers + 9,
+  Secondary = ChannelOffset.Pointers + 10,
+  Auxiliary = ChannelOffset.Pointers + 11,
+}
+
+/**
  * Channel indices for keyboard keys, derived from the legacy `KeyboardEvent.keyCode`
  * map. Pass any value to the {@link Input} constructor to react to that key.
  *

@@ -5,6 +5,8 @@ import { stopEvent } from '#core/utils';
 import { Flags } from '#math/Flags';
 import { Vector } from '#math/Vector';
 
+import type { ActionMap, ActionRecord } from './actions/ActionMap';
+import type { ActionSample } from './actions/types';
 import { Gamepad } from './Gamepad';
 import type { GamepadAxis } from './GamepadAxis';
 import type { GamepadButton } from './GamepadButton';
@@ -14,7 +16,7 @@ import { GestureRecognizer } from './GestureRecognizer';
 import type { InputBindingOptions, InputChannel } from './InputBinding';
 import { InputBinding } from './InputBinding';
 import { Pointer, PointerState, PointerStateFlag } from './Pointer';
-import { ChannelOffset, ChannelSize, maxPointers, pointerSlotSize } from './types';
+import { ChannelOffset, ChannelSize, maxPointers, pointerSlotSize, resolveGamepadSlotChannel } from './types';
 
 const gamepadSlots = 4;
 
@@ -72,6 +74,9 @@ export class InputManager {
   private readonly _gamepads: readonly [Gamepad, Gamepad, Gamepad, Gamepad];
   private readonly gamepadsByBrowserIndex = new Map<number, Gamepad>();
   private readonly bindings: Set<InputBinding> = new Set<InputBinding>();
+  private readonly actionMaps = new Set<ActionMap>();
+  /** Reused view over both channel buffers, handed to action maps each frame. */
+  private readonly actionSample: ActionSample;
   private readonly capturedKeyChannels = new Map<number, number>();
   private readonly bindingDetacher = {
     detach: (binding: InputBinding): void => {
@@ -177,6 +182,7 @@ export class InputManager {
     // native touch gestures.
     this.canvas.style.touchAction = 'none';
 
+    this.actionSample = { values: this.channels, peaks: this.channelsPeak };
     this.gestureRecognizer = new GestureRecognizer(pointerDistanceThreshold, this.onPinch, this.onRotate, this.onLongPress);
 
     const slot0 = new Gamepad(0, this.channels);
@@ -299,6 +305,35 @@ export class InputManager {
   }
 
   /**
+   * Start updating `map` every frame for the application's lifetime. Attaching
+   * a map that is already attached elsewhere moves it here. Call
+   * {@link ActionMap.detach} to stop, or use `scene.inputs.attach` for a map
+   * that should die with its scene.
+   */
+  public attach<T extends ActionRecord>(map: ActionMap<T>): ActionMap<T> {
+    map._attach(this);
+    this.actionMaps.add(map);
+
+    return map;
+  }
+
+  /**
+   * Add `map` to the per-frame update set without claiming ownership of it.
+   * Used by {@link SceneInputs}, which owns its maps but delegates the actual
+   * sampling here so there is only ever one input clock.
+   *
+   * @internal
+   */
+  public _trackActionMap(map: ActionMap): void {
+    this.actionMaps.add(map);
+  }
+
+  /** Stop updating `map`. Called by {@link ActionMap.detach}. @internal */
+  public _detachActionMap(map: ActionMap): void {
+    this.actionMaps.delete(map);
+  }
+
+  /**
    * Register a callback fired once when any of `channels` becomes active.
    * Manual lifecycle — call `.unbind()` on the returned binding to detach.
    */
@@ -350,6 +385,10 @@ export class InputManager {
       binding.update(this.channels);
     }
 
+    for (const map of this.actionMaps) {
+      map._update(this.actionSample);
+    }
+
     if (this.flags.value !== InputManagerFlag.None) {
       this.updateEvents();
     }
@@ -387,7 +426,12 @@ export class InputManager {
       binding.unbind();
     }
 
+    for (const map of [...this.actionMaps]) {
+      map.detach();
+    }
+
     this.bindings.clear();
+    this.actionMaps.clear();
     this.capturedKeyChannels.clear();
     this.gamepadsByBrowserIndex.clear();
     this.channelsPressed.length = 0;
@@ -425,7 +469,7 @@ export class InputManager {
     // type; annotate `list` so the element type is restored for `.map`.
     const list: readonly InputChannel[] = Array.isArray(channel) ? channel : [channel];
     const slot = options.gamepadSlot ?? 0;
-    const resolved = list.map(c => this.resolveExternalChannel(c, slot));
+    const resolved = list.map(c => resolveGamepadSlotChannel(c, slot));
     const binding = new InputBinding(resolved, options, this.bindingDetacher);
     this.bindings.add(binding);
 
@@ -436,14 +480,6 @@ export class InputManager {
     }
 
     return binding;
-  }
-
-  private resolveExternalChannel(channel: InputChannel, slot: 0 | 1 | 2 | 3): number {
-    if (channel >= ChannelOffset.Gamepads && channel < ChannelOffset.Gamepads + ChannelSize.Category) {
-      return ChannelOffset.Gamepads + slot * ChannelSize.Gamepad + (channel ^ ChannelOffset.Gamepads);
-    }
-
-    return channel;
   }
 
   private wireGamepadEvents(pad: Gamepad): void {

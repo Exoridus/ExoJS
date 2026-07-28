@@ -501,9 +501,7 @@ export namespace Pointer {
   export const Twist = pointerCh(6);
   export const TiltX = pointerCh(7);
   export const TiltY = pointerCh(8);
-  export const Left = pointerCh(9);
-  export const Right = pointerCh(10);
-  export const Middle = pointerCh(11);
+  // Fields 9..11 are the buttons — addressed through `PointerButton`.
   export const IsMouse = pointerCh(12);
   export const IsTouch = pointerCh(13);
   export const IsPen = pointerCh(14);

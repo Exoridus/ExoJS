@@ -6,7 +6,7 @@
 import type { Application } from '#core/Application';
 import { InputManager } from '#input/InputManager';
 import { Pointer, PointerState } from '#input/Pointer';
-import { ChannelSize } from '#input/types';
+import { ChannelSize, PointerButton } from '#input/types';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -669,15 +669,15 @@ describe('Pointer — direct construction and getters', () => {
     }).not.toThrow();
   });
 
-  test('buttons bitmask sets Right and Middle channel flags (Left clear)', () => {
+  test('buttons bitmask sets Secondary and Auxiliary channel flags (Primary clear)', () => {
     const canvas = createCanvas(800, 600);
     const app = createMockApp(canvas);
     const channels = new Float32Array(ChannelSize.Container);
     const pointer = new Pointer(makeEvent({ clientX: 400, clientY: 300, buttons: 0b110 }), app, canvas, channels, 0);
 
-    expect(channels[Pointer.Left]).toBe(0);
-    expect(channels[Pointer.Right]).toBe(1);
-    expect(channels[Pointer.Middle]).toBe(1);
+    expect(channels[PointerButton.Primary]).toBe(0);
+    expect(channels[PointerButton.Secondary]).toBe(1);
+    expect(channels[PointerButton.Auxiliary]).toBe(1);
 
     pointer.destroy();
   });

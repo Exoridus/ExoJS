@@ -1,6 +1,7 @@
 import type { Application } from '#core/Application';
 import { SceneState } from '#core/SceneState';
 import type { Destroyable } from '#core/types';
+import type { ActionMap, ActionRecord } from '#input/actions/ActionMap';
 import type { InputBinding, InputBindingOptions, InputChannel } from '#input/InputBinding';
 
 /** Visible-scene states in which a {@link SceneInputs} binding may dispatch. Default: `'active'`. */
@@ -56,6 +57,7 @@ type BindingKind = 'onStart' | 'onActive' | 'onStop' | 'onTrigger';
  */
 export class SceneInputs implements Destroyable {
   private readonly _bindings = new Set<InputBinding>();
+  private readonly _actionMaps = new Set<ActionMap>();
   private _suspended = false;
 
   public constructor(
@@ -63,6 +65,28 @@ export class SceneInputs implements Destroyable {
     private readonly _getState: () => SceneState,
     private readonly _getPaused: () => boolean,
   ) {}
+
+  /**
+   * Update `map` for as long as this scene lives, then detach it. A suspended
+   * scene stops feeding its maps and resets every action, so a key held across
+   * the suspend does not surface as a fresh press on resume.
+   */
+  public attach<T extends ActionRecord>(map: ActionMap<T>): ActionMap<T> {
+    map._attach(this);
+    this._actionMaps.add(map);
+
+    if (!this._suspended) {
+      this._app.input._trackActionMap(map);
+    }
+
+    return map;
+  }
+
+  /** Stop updating `map`. Called by {@link ActionMap.detach}. @internal */
+  public _detachActionMap(map: ActionMap): void {
+    this._actionMaps.delete(map);
+    this._app.input._detachActionMap(map);
+  }
 
   /**
    * Fire `callback` on the channel's press edge (value crosses above the
@@ -102,11 +126,20 @@ export class SceneInputs implements Destroyable {
    */
   public suspend(): void {
     this._suspended = true;
+
+    for (const map of this._actionMaps) {
+      this._app.input._detachActionMap(map);
+      map._reset();
+    }
   }
 
   /** Restore normal `when`-policy dispatch after {@link SceneInputs.suspend}. */
   public resume(): void {
     this._suspended = false;
+
+    for (const map of this._actionMaps) {
+      this._app.input._trackActionMap(map);
+    }
   }
 
   /** Unbind every tracked binding. Called automatically when the owning scene ends permanently. */
@@ -115,7 +148,12 @@ export class SceneInputs implements Destroyable {
       binding.unbind();
     }
 
+    for (const map of [...this._actionMaps]) {
+      map.detach();
+    }
+
     this._bindings.clear();
+    this._actionMaps.clear();
   }
 
   private _bind(

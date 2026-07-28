@@ -4,10 +4,11 @@ import { Timer } from '#core/Timer';
 
 import type { GamepadAxisChannel } from './GamepadAxis';
 import type { GamepadButtonChannel } from './GamepadButton';
-import type { Keyboard } from './types';
+import type { PointerChannel } from './Pointer';
+import type { Keyboard, PointerButton } from './types';
 
 /** Channel a single {@link InputBinding} can subscribe to. */
-export type InputChannel = GamepadButtonChannel | GamepadAxisChannel | Keyboard;
+export type InputChannel = GamepadButtonChannel | GamepadAxisChannel | PointerChannel | Keyboard | PointerButton;
 
 /** Construction options shared by every binding factory method. */
 export interface InputBindingOptions {

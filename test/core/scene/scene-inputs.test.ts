@@ -2,7 +2,10 @@ import type { Application } from '#core/Application';
 import { SceneInputs } from '#core/scene/SceneInputs';
 import { SceneState } from '#core/SceneState';
 import { Signal } from '#core/Signal';
+import { ActionMap } from '#input/actions/ActionMap';
+import { ButtonAction } from '#input/actions/ButtonAction';
 import type { InputBinding } from '#input/InputBinding';
+import { ChannelSize, Keyboard } from '#input/types';
 
 interface StubBinding {
   onStart: Signal<[number]>;
@@ -345,5 +348,96 @@ describe('SceneInputs — destroy()', () => {
 
     expect(bindings[0]!.unbind).toHaveBeenCalledTimes(1);
     expect(bindings[1]!.unbind).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('SceneInputs action maps', () => {
+  const createMapStub = (): { app: Application; tracked: Set<unknown>; inputs: SceneInputs } => {
+    const tracked = new Set<unknown>();
+    const app = {
+      input: {
+        _trackActionMap: vi.fn((map: unknown) => void tracked.add(map)),
+        _detachActionMap: vi.fn((map: unknown) => void tracked.delete(map)),
+      },
+      scenes: { get _transitionGateOpen(): boolean { return false; } },
+    } as unknown as Application;
+
+    return { app, tracked, inputs: new SceneInputs(app, () => SceneState.Active, () => false) };
+  };
+
+  test('attaching a map registers it with the application input clock', () => {
+    const { tracked, inputs } = createMapStub();
+    const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+
+    expect(inputs.attach(map)).toBe(map);
+    expect(map.attached).toBe(true);
+    expect(tracked.has(map)).toBe(true);
+  });
+
+  test('suspend stops updates and clears action state', () => {
+    const { tracked, inputs } = createMapStub();
+    const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+    const values = new Float32Array(ChannelSize.Container);
+    const peaks = new Float32Array(ChannelSize.Container);
+
+    inputs.attach(map);
+    values[Keyboard.Space] = 1;
+    peaks[Keyboard.Space] = 1;
+    map._update({ values, peaks });
+    expect(map.jump.active).toBe(true);
+
+    inputs.suspend();
+
+    expect(tracked.has(map)).toBe(false);
+    expect(map.jump.active).toBe(false);
+    expect(map.jump.pressed).toBe(false);
+  });
+
+  test('resume re-registers the map', () => {
+    const { tracked, inputs } = createMapStub();
+    const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+
+    inputs.attach(map);
+    inputs.suspend();
+    inputs.resume();
+
+    expect(tracked.has(map)).toBe(true);
+  });
+
+  test('a map attached while suspended stays out of the update set until resume', () => {
+    const { tracked, inputs } = createMapStub();
+    const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+
+    inputs.suspend();
+    inputs.attach(map);
+    expect(tracked.has(map)).toBe(false);
+
+    inputs.resume();
+    expect(tracked.has(map)).toBe(true);
+  });
+
+  test('destroy detaches every tracked map', () => {
+    const { tracked, inputs } = createMapStub();
+    const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+
+    inputs.attach(map);
+    inputs.destroy();
+
+    expect(tracked.has(map)).toBe(false);
+    expect(map.attached).toBe(false);
+  });
+
+  test('detaching a map directly removes it from the scene facade too', () => {
+    const { tracked, inputs } = createMapStub();
+    const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+
+    inputs.attach(map);
+    map.detach();
+
+    expect(tracked.has(map)).toBe(false);
+
+    // A later suspend must not resurrect the detached map.
+    inputs.resume();
+    expect(tracked.has(map)).toBe(false);
   });
 });
