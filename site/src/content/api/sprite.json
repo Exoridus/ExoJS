@@ -1976,7 +1976,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "When true, this node can receive keyboard focus — via focus, Tab traversal, or app.interaction.focus(node) — and is delivered key events through onKeyDown / onKeyUp while focused."
+          "description": "When true, this node can receive keyboard focus — via focus, Tab traversal, or app.interaction.focus(node) — and is delivered key events through onKeyDown / onKeyUp while focused, or while any of its descendants holds focus (key events bubble up the parent chain like pointer InteractionEvents do)."
         },
         {
           "name": "name",
@@ -3083,7 +3083,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fired for each key pressed while this node holds focus."
+          "description": "Fired for each key pressed while this node — or a descendant of it — holds focus. Bubbles; see KeyEvent."
         },
         {
           "name": "onKeyUp",
@@ -3124,7 +3124,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fired for each key released while this node holds focus."
+          "description": "Fired for each key released while this node — or a descendant of it — holds focus. Bubbles; see KeyEvent."
         },
         {
           "name": "onPointerDown",

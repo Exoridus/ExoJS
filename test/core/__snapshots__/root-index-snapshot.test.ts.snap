@@ -127,7 +127,6 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "Pointer",
   "PointerButton",
   "PointerState",
-  "PointerStateFlag",
   "PolarVector",
   "Polygon",
   "Prefab",

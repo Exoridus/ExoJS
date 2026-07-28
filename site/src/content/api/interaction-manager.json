@@ -1,6 +1,6 @@
 {
   "title": "InteractionManager",
-  "description": "Routes pointer events from the InputManager to interactive scene-graph nodes via DOM-style event bubbling. Maintains a persistent dynamic-AABB-tree spatial index of interactive RenderNodes for hit-testing and updates it incrementally — nodes notify the manager via the `_notify*` hooks when they enter/leave the scene, change interactivity, or move (causing bounds to dirty). Dispatches InteractionEvents of every type in InteractionEventType: `pointerdown` / `pointerup` / `pointermove` / `pointerover` / `pointerout` / `pointertap` / `contextmenu` / `dragstart` / `drag` / `dragend`. A `pointerdown` on a draggable node only marks a drag candidate; the drag begins once the pointer travels past `ApplicationOptions.input.dragThreshold`. Constructed automatically by Application; you do not instantiate this class yourself.",
+  "description": "Routes pointer events from the InputManager to interactive scene-graph nodes via DOM-style event bubbling. Maintains a persistent dynamic-AABB-tree spatial index of interactive RenderNodes for hit-testing and updates it incrementally — nodes notify the manager via the `_notify*` hooks when they enter/leave the scene, change interactivity, or move (causing bounds to dirty). Dispatches InteractionEvents of every type in InteractionEventType: `pointerdown` / `pointerup` / `pointermove` / `pointerover` / `pointerout` / `pointertap` / `contextmenu` / `dragstart` / `drag` / `dragend`. A `pointerdown` on a draggable node only marks a drag candidate; the drag begins once the pointer travels past `ApplicationOptions.input.dragThreshold`. The `contextmenu` event here only fires when a specific interactive node is actually under the pointer; a request over empty space, or one your handler never stops, still reaches `app.input.onContextMenu` — the engine-wide fallback, unconditional and scene-graph-independent. See that Signal's own doc comment for the full two-tier picture. Constructed automatically by Application; you do not instantiate this class yourself.",
   "symbol": "InteractionManager",
   "kind": "class",
   "subsystem": "input",
@@ -21,6 +21,7 @@
       "paragraphs": [
         "Routes pointer events from the InputManager to interactive scene-graph nodes via DOM-style event bubbling. Maintains a persistent dynamic-AABB-tree spatial index of interactive RenderNodes for hit-testing and updates it incrementally — nodes notify the manager via the `_notify*` hooks when they enter/leave the scene, change interactivity, or move (causing bounds to dirty).",
         "Dispatches InteractionEvents of every type in InteractionEventType: `pointerdown` / `pointerup` / `pointermove` / `pointerover` / `pointerout` / `pointertap` / `contextmenu` / `dragstart` / `drag` / `dragend`. A `pointerdown` on a draggable node only marks a drag candidate; the drag begins once the pointer travels past `ApplicationOptions.input.dragThreshold`.",
+        "The `contextmenu` event here only fires when a specific interactive node is actually under the pointer; a request over empty space, or one your handler never stops, still reaches `app.input.onContextMenu` — the engine-wide fallback, unconditional and scene-graph-independent. See that Signal's own doc comment for the full two-tier picture.",
         "Constructed automatically by Application; you do not instantiate this class yourself."
       ],
       "importLine": "import { InteractionManager } from '@codexo/exojs'",
@@ -373,7 +374,7 @@
         },
         {
           "name": "popScope",
-          "signature": "popScope(): void",
+          "signature": "popScope(token: object): void",
           "signatureTokens": [
             {
               "text": "popScope",
@@ -382,6 +383,18 @@
             {
               "text": "(",
               "kind": "punctuation"
+            },
+            {
+              "text": "token",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "object",
+              "kind": "keyword"
             },
             {
               "text": ")",
@@ -396,13 +409,19 @@
               "kind": "keyword"
             }
           ],
-          "params": [],
+          "params": [
+            {
+              "name": "token",
+              "type": "object",
+              "optional": false
+            }
+          ],
           "returnType": "void",
-          "description": "Release the most recently pushed interaction scope (see pushScope)."
+          "description": "Release the scope token identifies — a targeted removal wherever it sits in the stack, never a rebuild of the entries above or below it (see pushScope). Idempotent: releasing an already-released or unknown token is a no-op, so a caller never needs to track whether it already let go of a scope."
         },
         {
           "name": "pushScope",
-          "signature": "pushScope(root: RenderNode): void",
+          "signature": "pushScope(root: RenderNode): object",
           "signatureTokens": [
             {
               "text": "pushScope",
@@ -433,7 +452,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "void",
+              "text": "object",
               "kind": "keyword"
             }
           ],
@@ -444,8 +463,8 @@
               "optional": false
             }
           ],
-          "returnType": "void",
-          "description": "Confine interaction to root's subtree until a matching popScope. Pointer events outside the subtree hit nothing and Tab traversal stays inside it, so a modal dialog (optionally with a full-screen backdrop to swallow clicks) shields everything beneath it. Scopes stack — the most recently pushed root wins. A scope is not what makes a node interactive; node.interactive = true alone does that. Nor is it the browser pointer-capture taken during a drag, which is a private implementation detail. Prefer scene.interaction.scope() when the scope should end with its scene."
+          "returnType": "object",
+          "description": "Confine interaction to root's subtree until it is released via popScope with the returned token. Pointer events outside the subtree hit nothing, Tab traversal stays inside it, and — since the scope is a real focus trap — so does every programmatic InteractionManager.focus call; a modal dialog (optionally with a full-screen backdrop to swallow clicks) shields everything beneath it. Scopes stack — the most recently pushed one wins — and nest freely with scopes pushed at any other level (app-wide or scene-scoped alike). A scope is not what makes a node interactive; node.interactive = true alone does that. Nor is it the browser pointer-capture taken during a drag, which is a private implementation detail. Prefer scene.interaction.scope() when the scope should end with its scene."
         },
         {
           "name": "update",

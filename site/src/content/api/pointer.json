@@ -6,11 +6,11 @@
   "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 99,
+  "memberCount": 102,
   "counts": {
     "constructors": 1,
     "methods": 7,
-    "properties": 30,
+    "properties": 33,
     "events": 0
   },
   "sections": [
@@ -32,7 +32,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(event: PointerEvent, app: Application, canvas: HTMLCanvasElement, channels: Float32Array, slotIndex: number): Pointer",
+          "signature": "new(event: PointerEvent, app: Application, platform: PlatformAdapter, channels: Float32Array, slotIndex: number): Pointer",
           "signatureTokens": [
             {
               "text": "new",
@@ -75,7 +75,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "canvas",
+              "text": "platform",
               "kind": "param"
             },
             {
@@ -83,7 +83,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "HTMLCanvasElement",
+              "text": "PlatformAdapter",
               "kind": "type"
             },
             {
@@ -143,8 +143,8 @@
               "optional": false
             },
             {
-              "name": "canvas",
-              "type": "HTMLCanvasElement",
+              "name": "platform",
+              "type": "PlatformAdapter",
               "optional": false
             },
             {
@@ -491,6 +491,48 @@
       "title": "Properties",
       "members": [
         {
+          "name": "cancelPosition",
+          "signature": "cancelPosition: Vector",
+          "signatureTokens": [
+            {
+              "text": "cancelPosition",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Position the platform cancelled this pointer at. (-1, -1) until it has been cancelled at least once."
+        },
+        {
+          "name": "contextMenuPosition",
+          "signature": "contextMenuPosition: Vector",
+          "signatureTokens": [
+            {
+              "text": "contextMenuPosition",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Position of the most recent context-menu request. Set from the request itself rather than from wherever the pointer has since moved, so a menu opens where the user asked for it. (-1, -1) until one has been requested."
+        },
+        {
           "name": "delta",
           "signature": "delta: Vector",
           "signatureTokens": [
@@ -533,6 +575,27 @@
           "description": ""
         },
         {
+          "name": "movePosition",
+          "signature": "movePosition: Vector",
+          "signatureTokens": [
+            {
+              "text": "movePosition",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Position of the most recent move. Several platform moves in one frame collapse into this, their last one — the coordinates the frame's moved phase is dispatched at. (-1, -1) until the pointer has moved at least once."
+        },
+        {
           "name": "position",
           "signature": "position: Vector",
           "signatureTokens": [
@@ -551,7 +614,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Current position in design pixels. During a phase dispatch (onPointerDown / onPointerUp) this reads the position that phase happened at, so a handler always sees the coordinates of the event it was called for — not the last coordinates of the frame. Outside of a dispatch it is the pointer's latest position."
+          "description": "Current position in design pixels. During a phase dispatch it reads the position that phase happened at, so a handler always sees the coordinates of the event it was called for — not the last coordinates of the frame. Outside of a dispatch it is the pointer's latest position."
         },
         {
           "name": "pressPosition",
@@ -593,7 +656,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Position at the previous frame boundary. Together with position it spans delta."
+          "description": "Position at the previous frame boundary. Together with position it spans delta: position - previousPosition === delta on any frame read outside a phase dispatch."
         },
         {
           "name": "releasePosition",

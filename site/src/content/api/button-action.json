@@ -157,7 +157,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "true on the frame the action became active. A press and release that both happen between two frames set pressed and released on the same frame, so a fast tap is never missed."
+          "description": "true on the frame the action became active. A press and release that both happen between two frames set pressed and released on the same frame, so a fast tap is never missed — and so does a release followed by a fresh press, even though the action reads active both before and after that frame."
         },
         {
           "name": "released",
@@ -178,7 +178,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "true on the frame the action stopped being active."
+          "description": "true on the frame the action stopped being active. See pressed."
         },
         {
           "name": "value",

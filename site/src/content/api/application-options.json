@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 11,
+  "memberCount": 12,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 11,
+    "properties": 12,
     "events": 0
   },
   "sections": [
@@ -237,6 +237,31 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "platform",
+          "signature": "platform?: PlatformAdapter",
+          "signatureTokens": [
+            {
+              "text": "platform",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PlatformAdapter",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Host seam the application runs on — surface focus and geometry, cursor, touch-action, pointer capture, gamepad polling, document visibility, frame scheduling, and input-event delivery. Defaults to a BrowserPlatform bound to the application's canvas. Pass your own to host the engine somewhere other than a plain DOM canvas, or to drive input and the frame loop from a test without monkey-patching globals. An injected adapter is *not* destroyed by Application.destroy — it stays yours to dispose."
         },
         {
           "name": "rendering",

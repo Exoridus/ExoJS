@@ -1,0 +1,64 @@
+{
+  "title": "ScopeToken",
+  "description": "Opaque, stable identity for one scope pushed via InteractionManager.pushScope. Release exactly that scope — wherever it currently sits in the stack — through the matching InteractionManager.popScope call, regardless of whether other scopes were pushed (and are still active) above or below it. A token, not the scope's `root` node, is what identifies an entry: two scopes can legitimately share the same root (nesting a scope on a node that is already a scope root), and only a token distinguishes which of the two a given `popScope` call means to release.",
+  "symbol": "ScopeToken",
+  "kind": "type",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Opaque, stable identity for one scope pushed via InteractionManager.pushScope. Release exactly that scope — wherever it currently sits in the stack — through the matching InteractionManager.popScope call, regardless of whether other scopes were pushed (and are still active) above or below it.",
+        "A token, not the scope's `root` node, is what identifies an entry: two scopes can legitimately share the same root (nesting a scope on a node that is already a scope root), and only a token distinguishes which of the two a given `popScope` call means to release."
+      ],
+      "importLine": "import { ScopeToken } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "ScopeToken",
+          "signature": "object",
+          "signatureTokens": [
+            {
+              "text": "object",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/ScopeToken.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/ScopeToken.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/ScopeToken.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/ScopeToken.ts"
+}
