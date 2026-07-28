@@ -1,6 +1,6 @@
 import type { Application } from '#core/Application';
-import { Flags } from '#math/Flags';
 import { Size } from '#math/Size';
+import { getDistance } from '#math/utils';
 import { Vector } from '#math/Vector';
 
 import { ChannelOffset, pointerSlotSize } from './types';
@@ -24,10 +24,14 @@ const pointerCh = (offset: number): PointerChannel => (ChannelOffset.Pointers + 
 const slot = (s: number, field: 0 | 1 | 2): PointerChannel => pointerCh(s * pointerSlotSize + field);
 
 /**
- * Bit flags accumulated on a {@link Pointer} between frames so consumers can
- * detect transient events (entered the canvas, was released, was cancelled)
- * even if the pointer's `currentState` has already moved on. Cleared each
- * frame by the {@link InteractionManager}.
+ * Bit flags accumulated on a {@link Pointer} while platform events arrive,
+ * then promoted to the frame snapshot at the frame boundary. Several platform
+ * events of the same kind within one frame collapse into a single bit — read
+ * them through the frame accessors ({@link Pointer.pressed},
+ * {@link Pointer.moved}, {@link Pointer.released}, …) rather than the raw
+ * value.
+ *
+ * @internal
  */
 export enum PointerStateFlag {
   None = 0,
@@ -75,11 +79,30 @@ export enum PointerState {
 export class Pointer {
   public readonly id: number;
   public readonly type: string;
+
+  /**
+   * Current position in design pixels. During a phase dispatch
+   * (`onPointerDown` / `onPointerUp`) this reads the position that phase
+   * happened at, so a handler always sees the coordinates of the event it
+   * was called for — not the last coordinates of the frame. Outside of a
+   * dispatch it is the pointer's latest position.
+   */
   public readonly position: Vector;
-  public readonly startPos: Vector = new Vector(-1, -1);
+
+  /** Position at the previous frame boundary. Together with {@link position} it spans {@link delta}. */
+  public readonly previousPosition: Vector = new Vector();
+
+  /** Movement accumulated over the current frame — `position - previousPosition`. */
+  public readonly delta: Vector = new Vector();
+
+  /** Position of the most recent press. Retains its value after release so tap/drag logic can still read it. */
+  public readonly pressPosition: Vector = new Vector(-1, -1);
+
+  /** Position of the most recent release. `(-1, -1)` until the pointer has been released at least once. */
+  public readonly releasePosition: Vector = new Vector(-1, -1);
+
   public readonly size: Size;
   public readonly tilt: Vector;
-  public readonly stateFlags: Flags<PointerStateFlag> = new Flags<PointerStateFlag>();
 
   private _app: Application | null;
   private _canvas: HTMLCanvasElement | null;
@@ -91,6 +114,17 @@ export class Pointer {
   private _rotation: number;
   private _isPrimary: boolean;
   private _currentState: PointerState = PointerState.Unknown;
+
+  /** Phases seen since the last frame boundary; promoted to `_frameFlags` by {@link Pointer._beginFrame}. */
+  private _pendingFlags: PointerStateFlag = PointerStateFlag.None;
+  /** Phases belonging to the current frame. Stable for the whole frame — reading it does not consume it. */
+  private _frameFlags: PointerStateFlag = PointerStateFlag.None;
+  private _maxDistanceFromPress = 0;
+  private _pressActive = false;
+  /** Whether the most recent release closed an actual press — a stray `pointerup` is neither tap nor swipe. */
+  private _releaseClosedPress = false;
+  /** Latest position, kept aside while {@link position} is temporarily rewound to a phase position. */
+  private readonly _latestPosition = new Vector();
 
   public constructor(event: PointerEvent, app: Application, canvas: HTMLCanvasElement, channels: Float32Array, slotIndex: number) {
     const { pointerId, pointerType, clientX, clientY, width, height, tiltX, tiltY, buttons, pressure, twist, isPrimary } = event;
@@ -113,7 +147,9 @@ export class Pointer {
     this._rotation = twist;
     this._isPrimary = isPrimary;
 
-    this.stateFlags.push(PointerStateFlag.Over);
+    this.previousPosition.set(geometry.x, geometry.y);
+    this._latestPosition.set(geometry.x, geometry.y);
+    this._pendingFlags |= PointerStateFlag.Over;
     this._writeChannels(true);
   }
 
@@ -169,6 +205,55 @@ export class Pointer {
     return this._currentState;
   }
 
+  /** `true` while at least one button is held. Reflects the live button state, not a frame phase. */
+  public get down(): boolean {
+    return this._buttons !== 0;
+  }
+
+  /**
+   * `true` when the pointer was pressed during this frame. A press and release
+   * that both land between two frames set {@link pressed} *and*
+   * {@link released} on the same frame — the phases are not lost.
+   */
+  public get pressed(): boolean {
+    return (this._frameFlags & PointerStateFlag.Down) !== 0;
+  }
+
+  /** `true` when the pointer moved during this frame. Several platform moves collapse into one. */
+  public get moved(): boolean {
+    return (this._frameFlags & PointerStateFlag.Move) !== 0;
+  }
+
+  /** `true` when the pointer was released during this frame. */
+  public get released(): boolean {
+    return (this._frameFlags & PointerStateFlag.Up) !== 0;
+  }
+
+  /** `true` when the platform cancelled this pointer during this frame (system gesture, focus loss, …). */
+  public get cancelled(): boolean {
+    return (this._frameFlags & PointerStateFlag.Cancel) !== 0;
+  }
+
+  /** `true` when the pointer entered the canvas during this frame. */
+  public get entered(): boolean {
+    return (this._frameFlags & PointerStateFlag.Over) !== 0;
+  }
+
+  /** `true` when the pointer left the canvas during this frame. */
+  public get exited(): boolean {
+    return (this._frameFlags & PointerStateFlag.Leave) !== 0;
+  }
+
+  /**
+   * Largest distance the pointer reached from {@link pressPosition} during the
+   * current press, in design pixels. Accumulated from every platform move, so
+   * a pointer that travels far and returns to its press position does *not*
+   * read as a tap. Resets on the next press.
+   */
+  public get maxDistanceFromPress(): number {
+    return this._maxDistanceFromPress;
+  }
+
   public handleEnter(event: PointerEvent): void {
     this.handleEvent(event);
     this._currentState = PointerState.InsideCanvas;
@@ -177,44 +262,98 @@ export class Pointer {
 
   public handleLeave(event: PointerEvent): void {
     this.handleEvent(event);
-    this.stateFlags.push(PointerStateFlag.Leave);
+    this._pendingFlags |= PointerStateFlag.Leave;
     this._currentState = PointerState.OutsideCanvas;
     this._writeChannels(false);
   }
 
   public handlePress(event: PointerEvent): void {
     this.handleEvent(event);
-    this.startPos.copy(this.position);
-    this.stateFlags.push(PointerStateFlag.Down);
+    this.pressPosition.copy(this.position);
+    this._maxDistanceFromPress = 0;
+    this._pressActive = true;
+    this._pendingFlags |= PointerStateFlag.Down;
     this._currentState = PointerState.Pressed;
     this._writeChannels(true);
   }
 
   public handleMove(event: PointerEvent): void {
     this.handleEvent(event);
-    this.stateFlags.push(PointerStateFlag.Move);
+    this._pendingFlags |= PointerStateFlag.Move;
     this._currentState = PointerState.Moving;
     this._writeChannels(true);
   }
 
   public handleRelease(event: PointerEvent): void {
     this.handleEvent(event);
-    this.stateFlags.push(PointerStateFlag.Up);
+    this.releasePosition.copy(this.position);
+    this._releaseClosedPress = this._pressActive;
+    this._pressActive = false;
+    this._pendingFlags |= PointerStateFlag.Up;
     this._currentState = PointerState.Released;
     this._writeChannels(true);
   }
 
   public handleCancel(event: PointerEvent): void {
     this.handleEvent(event);
-    this.stateFlags.push(PointerStateFlag.Cancel);
+    this._pressActive = false;
+    this._pendingFlags |= PointerStateFlag.Cancel;
     this._currentState = PointerState.Cancelled;
     this._writeChannels(false);
+  }
+
+  /**
+   * Promote the phases accumulated since the last boundary into this frame's
+   * snapshot and recompute {@link delta}. Called once per frame by the
+   * {@link InputManager} before anything reads the pointer.
+   *
+   * @internal
+   */
+  public _beginFrame(): void {
+    this._frameFlags = this._pendingFlags;
+    this._pendingFlags = PointerStateFlag.None;
+
+    const { x, y } = this._latestPosition;
+
+    this.position.set(x, y);
+    this.delta.set(x - this.previousPosition.x, y - this.previousPosition.y);
+    this.previousPosition.set(x, y);
+  }
+
+  /** Phases of this frame, for the {@link InputManager}'s signal dispatch. @internal */
+  public get _phases(): PointerStateFlag {
+    return this._frameFlags;
+  }
+
+  /** `true` when this frame's release closed a press that started on this pointer. @internal */
+  public get _releaseCompletedPress(): boolean {
+    return this._releaseClosedPress;
+  }
+
+  /**
+   * Temporarily present `x`/`y` as {@link position} for the duration of one
+   * phase dispatch, so `onPointerDown` sees the press coordinates even when a
+   * move and a release followed within the same frame.
+   *
+   * @internal
+   */
+  public _enterPhase(x: number, y: number): void {
+    this.position.set(x, y);
+  }
+
+  /** Restore {@link position} to the pointer's latest coordinates. @internal */
+  public _exitPhase(): void {
+    this.position.copy(this._latestPosition);
   }
 
   public destroy(): void {
     this._clearChannels();
     this.position.destroy();
-    this.startPos.destroy();
+    this.previousPosition.destroy();
+    this.delta.destroy();
+    this.pressPosition.destroy();
+    this.releasePosition.destroy();
+    this._latestPosition.destroy();
     this.size.destroy();
     this.tilt.destroy();
     this._app = null;
@@ -227,6 +366,18 @@ export class Pointer {
     const geometry = this._computeDesignGeometry(clientX, clientY, width, height);
 
     this.position.set(geometry.x, geometry.y);
+    this._latestPosition.set(geometry.x, geometry.y);
+
+    // Track the press excursion as it happens: keeping only the release
+    // position would read "out and back" as a tap.
+    if (this._pressActive) {
+      const distance = getDistance(this.pressPosition.x, this.pressPosition.y, geometry.x, geometry.y);
+
+      if (distance > this._maxDistanceFromPress) {
+        this._maxDistanceFromPress = distance;
+      }
+    }
+
     this.size.set(geometry.width, geometry.height);
     this.tilt.set(tiltX, tiltY);
     this._buttons = buttons;

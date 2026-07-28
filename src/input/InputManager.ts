@@ -3,7 +3,6 @@ import { Signal } from '#core/Signal';
 import type { Time } from '#core/Time';
 import { stopEvent } from '#core/utils';
 import { Flags } from '#math/Flags';
-import { getDistance } from '#math/utils';
 import { Vector } from '#math/Vector';
 
 import { Gamepad } from './Gamepad';
@@ -15,7 +14,7 @@ import { GestureRecognizer } from './GestureRecognizer';
 import type { InputBindingOptions, InputChannel } from './InputBinding';
 import { InputBinding } from './InputBinding';
 import { Pointer, PointerState, PointerStateFlag } from './Pointer';
-import { ChannelOffset, ChannelSize, maxPointers } from './types';
+import { ChannelOffset, ChannelSize, maxPointers, pointerSlotSize } from './types';
 
 const gamepadSlots = 4;
 
@@ -62,6 +61,13 @@ export class InputManager {
   private readonly _app: Application;
   private readonly canvas: HTMLCanvasElement;
   private readonly channels: Float32Array = new Float32Array(ChannelSize.Container);
+  /**
+   * Per-channel strongest value seen since the previous frame boundary,
+   * sign-preserving. A key pressed and released between two frames leaves
+   * `channels` back at 0 but `channelsPeak` at 1, which is what lets actions
+   * report a press/release edge for a tap the frame never sampled directly.
+   */
+  private readonly channelsPeak: Float32Array = new Float32Array(ChannelSize.Container);
   private readonly pointers = new Map<number, Pointer>();
   private readonly _gamepads: readonly [Gamepad, Gamepad, Gamepad, Gamepad];
   private readonly gamepadsByBrowserIndex = new Map<number, Gamepad>();
@@ -333,7 +339,12 @@ export class InputManager {
    * each registered binding.
    */
   public update(_delta: Time): void {
+    for (const pointer of this.pointers.values()) {
+      pointer._beginFrame();
+    }
+
     this.updateGamepads();
+    this._mergePeaks(ChannelOffset.Gamepads, ChannelSize.Category);
 
     for (const binding of this.bindings) {
       binding.update(this.channels);
@@ -342,6 +353,11 @@ export class InputManager {
     if (this.flags.value !== InputManagerFlag.None) {
       this.updateEvents();
     }
+
+    // Close the frame: peaks start the next frame at the values the channels
+    // actually hold, so a press that is still held keeps reading as held while
+    // a press that ended stops contributing.
+    this.channelsPeak.set(this.channels);
   }
 
   /**
@@ -458,6 +474,28 @@ export class InputManager {
     return slot;
   }
 
+  /**
+   * Fold the current values of `[base, base + length)` into the peak buffer.
+   * Called right after a platform handler wrote into those channels, which is
+   * the only moment a sub-frame extremum is still observable.
+   */
+  private _mergePeaks(base: number, length: number): void {
+    const { channels, channelsPeak } = this;
+
+    for (let i = base, end = base + length; i < end; i++) {
+      const value = channels[i] ?? 0;
+
+      if (Math.abs(value) > Math.abs(channelsPeak[i] ?? 0)) {
+        channelsPeak[i] = value;
+      }
+    }
+  }
+
+  /** Fold a pointer's whole 16-channel slot into the peak buffer. */
+  private _mergePointerPeaks(pointer: Pointer): void {
+    this._mergePeaks(ChannelOffset.Pointers + pointer.slotIndex * pointerSlotSize, pointerSlotSize);
+  }
+
   private _releaseSlot(pointerId: number): void {
     const slot = this.pointerSlots.get(pointerId);
 
@@ -475,6 +513,7 @@ export class InputManager {
     const channel = ChannelOffset.Keyboard + event.keyCode;
 
     this.channels[channel] = 1;
+    this._mergePeaks(channel, 1);
     this.channelsPressed.push(channel);
     this.flags.push(InputManagerFlag.KeyDown);
 
@@ -506,7 +545,10 @@ export class InputManager {
       return;
     }
 
-    this.pointers.set(event.pointerId, new Pointer(event, this._app, this.canvas, this.channels, slot));
+    const pointer = new Pointer(event, this._app, this.canvas, this.channels, slot);
+
+    this.pointers.set(event.pointerId, pointer);
+    this._mergePointerPeaks(pointer);
     this.flags.push(InputManagerFlag.PointerUpdate);
   }
 
@@ -518,6 +560,7 @@ export class InputManager {
     }
 
     pointer.handleLeave(event);
+    this._mergePointerPeaks(pointer);
     this.gestureRecognizer.onPointerLeave(pointer);
     this._releaseSlot(event.pointerId);
     this.flags.push(InputManagerFlag.PointerUpdate);
@@ -534,6 +577,7 @@ export class InputManager {
     }
 
     pointer.handlePress(event);
+    this._mergePointerPeaks(pointer);
     this.gestureRecognizer.onPointerDown(pointer);
     this.flags.push(InputManagerFlag.PointerUpdate);
 
@@ -548,6 +592,7 @@ export class InputManager {
     }
 
     pointer.handleMove(event);
+    this._mergePointerPeaks(pointer);
     this.gestureRecognizer.onPointerMove(pointer, this.pointerDistanceThreshold);
     this.flags.push(InputManagerFlag.PointerUpdate);
   }
@@ -560,6 +605,7 @@ export class InputManager {
     }
 
     pointer.handleRelease(event);
+    this._mergePointerPeaks(pointer);
     this.gestureRecognizer.onPointerUp(pointer);
     this.flags.push(InputManagerFlag.PointerUpdate);
 
@@ -574,6 +620,7 @@ export class InputManager {
     }
 
     pointer.handleCancel(event);
+    this._mergePointerPeaks(pointer);
     this.gestureRecognizer.onPointerCancel(pointer);
     this._releaseSlot(event.pointerId);
     this.flags.push(InputManagerFlag.PointerUpdate);
@@ -836,47 +883,57 @@ export class InputManager {
     return this;
   }
 
+  /**
+   * Dispatch this frame's pointer phases in semantic order
+   * (enter → down → move → up/tap/swipe → cancel → leave). Each phase is
+   * dispatched with the pointer's position rewound to where that phase
+   * actually happened, so a down-move-up sequence collapsed into one frame
+   * still hands every handler the right coordinates.
+   */
   private updatePointerEvents(): void {
     for (const pointer of this.pointers.values()) {
-      const { stateFlags } = pointer;
+      const phases = pointer._phases;
 
-      if (stateFlags.value === PointerStateFlag.None) {
+      if (phases === PointerStateFlag.None) {
         continue;
       }
 
-      if (stateFlags.pop(PointerStateFlag.Over)) {
+      if (phases & PointerStateFlag.Over) {
         this.onPointerEnter.dispatch(pointer);
       }
 
-      if (stateFlags.pop(PointerStateFlag.Down)) {
+      if (phases & PointerStateFlag.Down) {
+        pointer._enterPhase(pointer.pressPosition.x, pointer.pressPosition.y);
         this.onPointerDown.dispatch(pointer);
+        pointer._exitPhase();
       }
 
-      if (stateFlags.pop(PointerStateFlag.Move)) {
+      if (phases & PointerStateFlag.Move) {
         this.onPointerMove.dispatch(pointer);
       }
 
-      if (stateFlags.pop(PointerStateFlag.Up)) {
-        const { x: startX, y: startY } = pointer.startPos;
-
+      if (phases & PointerStateFlag.Up) {
+        pointer._enterPhase(pointer.releasePosition.x, pointer.releasePosition.y);
         this.onPointerUp.dispatch(pointer);
 
-        if (startX >= 0 && startY >= 0) {
-          if (getDistance(startX, startY, pointer.x, pointer.y) < this.pointerDistanceThreshold) {
+        // A press that travelled far and came back is a swipe, not a tap —
+        // hence the accumulated maximum rather than the release distance.
+        if (pointer._releaseCompletedPress) {
+          if (pointer.maxDistanceFromPress < this.pointerDistanceThreshold) {
             this.onPointerTap.dispatch(pointer);
           } else {
             this.onPointerSwipe.dispatch(pointer);
           }
         }
 
-        pointer.startPos.set(-1, -1);
+        pointer._exitPhase();
       }
 
-      if (stateFlags.pop(PointerStateFlag.Cancel)) {
+      if (phases & PointerStateFlag.Cancel) {
         this.onPointerCancel.dispatch(pointer);
       }
 
-      if (stateFlags.pop(PointerStateFlag.Leave)) {
+      if (phases & PointerStateFlag.Leave) {
         this.onPointerLeave.dispatch(pointer);
         this.pointers.delete(pointer.id);
       }
