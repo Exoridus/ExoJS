@@ -1030,23 +1030,25 @@ export class InteractionManager implements InteractionHooks {
   // Dispatch helpers
   // ---------------------------------------------------------------------------
 
+  /**
+   * Walk the event from its target up through every ancestor. `interactive`
+   * decides whether a node can be *hit*, not whether an event may pass through
+   * it — a plain layout container in the middle of the path must not silently
+   * cut a listener on the node above it off from the event. Propagation ends
+   * only at the root or at an explicit {@link InteractionEvent.stopPropagation}.
+   */
   private _dispatchBubble(event: InteractionEvent): void {
     let current: RenderNode | null = event.target;
 
-    while (current !== null && !event.propagationStopped) {
+    while (current !== null) {
       event.currentTarget = current;
-      const signal = this._signalFor(event.type, current);
-
-      signal?.dispatch(event);
+      this._signalFor(event.type, current)?.dispatch(event);
 
       if (event.propagationStopped) {
         break;
       }
 
-      // Walk up to interactive ancestor only (parent must opt in to receive bubble).
-      const parent: Container | null = current.parent;
-
-      current = parent !== null && parent.interactive ? parent : null;
+      current = current.parent;
     }
   }
 

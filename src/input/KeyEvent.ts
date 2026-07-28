@@ -8,9 +8,11 @@ export type KeyEventType = 'keydown' | 'keyup';
  * for keyboard input. `channel` is the input channel of the key — compare it
  * with the `Keyboard` constants (e.g. `event.channel === Keyboard.Enter`).
  *
- * A handler may call {@link KeyEvent.preventDefault} to suppress the
- * FocusManager's built-in handling for this key (currently `Tab` focus
- * traversal), letting the focused widget consume the key itself.
+ * A handler may call {@link KeyEvent.preventDefault} to suppress ExoJS's own
+ * built-in handling for this key (currently `Tab` focus traversal), letting
+ * the focused widget consume the key itself. It affects engine behaviour only
+ * — the browser's own default was already decided synchronously when the
+ * platform event arrived, long before this envelope was dispatched.
  */
 export class KeyEvent {
   public readonly type: KeyEventType;
@@ -30,7 +32,7 @@ export class KeyEvent {
     return this._defaultPrevented;
   }
 
-  /** Suppress the FocusManager's built-in handling (e.g. Tab traversal) for this key. */
+  /** Suppress ExoJS's built-in handling (e.g. Tab traversal) for this key. Never affects the browser. */
   public preventDefault(): void {
     this._defaultPrevented = true;
   }

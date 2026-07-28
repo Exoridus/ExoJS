@@ -362,8 +362,8 @@ describe('InteractionManager — stopPropagation', () => {
 // 5. Bubble stops at non-interactive parent
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — bubble stops at non-interactive parent', () => {
-  test('event does not reach grandparent through non-interactive parent', () => {
+describe('InteractionManager — bubble passes through non-interactive ancestors', () => {
+  test('event reaches grandparent through a non-interactive parent', () => {
     const { app, scene, signals } = createApp();
     const im = new InteractionManager(app);
     im.attachRoot(scene.root);
@@ -372,7 +372,9 @@ describe('InteractionManager — bubble stops at non-interactive parent', () => 
     const child = new TestSprite().setBounds(0, 0, 50, 50);
 
     grandparent.interactive = true;
-    parent.interactive = false; // non-interactive — chain breaks here
+    // A plain layout container in the middle of the path. `interactive`
+    // governs whether a node can be hit, not whether events may pass it.
+    parent.interactive = false;
     child.interactive = true;
 
     scene.root.addChild(grandparent);
@@ -388,6 +390,61 @@ describe('InteractionManager — bubble stops at non-interactive parent', () => 
     flushInteractions(im);
 
     expect(childHandler).toHaveBeenCalledTimes(1);
+    expect(grandparentHandler).toHaveBeenCalledTimes(1);
+    expect(grandparentHandler.mock.calls[0]![0].target).toBe(child);
+
+    im.destroy();
+    grandparent.destroy();
+  });
+
+  test('a listener on the non-interactive parent itself still receives the event', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+    const parent = new Container();
+    const child = new TestSprite().setBounds(0, 0, 50, 50);
+
+    parent.interactive = false;
+    child.interactive = true;
+
+    scene.root.addChild(parent);
+    parent.addChild(child);
+
+    const parentHandler = vi.fn();
+
+    parent.onPointerDown.add(parentHandler);
+    signals.onPointerDown.dispatch(makePointer({ x: 25, y: 25 }));
+    flushInteractions(im);
+
+    expect(parentHandler).toHaveBeenCalledTimes(1);
+
+    im.destroy();
+    parent.destroy();
+  });
+
+  test('stopPropagation on a non-interactive parent halts the walk', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+    const grandparent = new Container();
+    const parent = new Container();
+    const child = new TestSprite().setBounds(0, 0, 50, 50);
+
+    grandparent.interactive = true;
+    parent.interactive = false;
+    child.interactive = true;
+
+    scene.root.addChild(grandparent);
+    grandparent.addChild(parent);
+    parent.addChild(child);
+
+    const grandparentHandler = vi.fn();
+
+    parent.onPointerDown.add(event => event.stopPropagation());
+    grandparent.onPointerDown.add(grandparentHandler);
+    signals.onPointerDown.dispatch(makePointer({ x: 25, y: 25 }));
+    flushInteractions(im);
+
     expect(grandparentHandler).not.toHaveBeenCalled();
 
     im.destroy();

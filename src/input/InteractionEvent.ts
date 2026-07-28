@@ -11,15 +11,20 @@ export type InteractionEventType = 'pointerdown' | 'pointerup' | 'pointermove' |
 
 /**
  * DOM-Event-shaped envelope dispatched by {@link InteractionManager} to
- * interactive scene nodes. Bubbles up the parent chain — `target` stays
- * pinned to the hit-deepest node while `currentTarget` advances to each
- * ancestor that receives the event. Handlers may call
- * {@link InteractionEvent.stopPropagation} to halt the bubble.
+ * interactive scene nodes. Bubbles up the *entire* parent chain — `target`
+ * stays pinned to the hit-deepest node while `currentTarget` advances to each
+ * ancestor, whether or not that ancestor is itself interactive. Handlers may
+ * call {@link InteractionEvent.stopPropagation} to halt the bubble.
+ *
+ * The envelope deliberately exposes no native `PointerEvent`: engine events
+ * are frame-synchronous and outlive the platform event they came from. It also
+ * has no `preventDefault` — a pointer event has no engine default behaviour to
+ * suppress, and suppressing a *browser* default after the fact is not possible.
  */
 export class InteractionEvent {
   public readonly type: InteractionEventType;
   /** The node that was originally hit (deepest interactive). Stable across bubble. */
-  public target: RenderNode;
+  public readonly target: RenderNode;
   /** The node currently dispatching this event during bubbling. Changes per bubble step. */
   public currentTarget: RenderNode;
   public readonly pointer: Pointer;
