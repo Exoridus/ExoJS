@@ -215,7 +215,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                 ],
                 prerequisites: ['runtime/scenes-and-lifecycle'],
                 examples: ['ui/hud-and-widgets', 'application-scenes/hud-overlay-scene'],
-                apiLinks: ['uiroot', 'widget', 'button', 'panel', 'label', 'progress-bar', 'focus-manager'],
+                apiLinks: ['uiroot', 'widget', 'button', 'panel', 'label', 'progress-bar', 'interaction-manager'],
             },
             {
                 slug: 'serialization-and-prefabs',
