@@ -3,7 +3,7 @@ import { Scene } from '#core/Scene';
 import type { SceneScope } from '#core/SceneScope';
 import { SceneState } from '#core/SceneState';
 import { Signal } from '#core/Signal';
-import { FocusManager } from '#input/FocusManager';
+import { FocusController } from '#input/FocusController';
 import type { InputManager } from '#input/InputManager';
 import { InteractionManager } from '#input/InteractionManager';
 import type { Pointer } from '#input/Pointer';
@@ -38,7 +38,7 @@ const makePointer = (x: number, y: number, id = 1): Pointer => ({ id, x, y, type
 const createUIApp = (): {
   scene: Scene;
   im: InteractionManager;
-  focus: FocusManager;
+  focus: FocusController;
   signals: {
     onPointerDown: Signal<[Pointer]>;
     onKeyDown: Signal<[number]>;
@@ -61,7 +61,7 @@ const createUIApp = (): {
     width: 800,
     height: 600,
     input: signals as unknown as InputManager,
-    focus: null as FocusManager | null,
+    focus: null as FocusController | null,
     interaction: null as InteractionManager | null,
     rendering: {
       view: { screenToWorld: (x: number, y: number): { x: number; y: number } => ({ x: x + CAMERA_OFFSET, y: y + CAMERA_OFFSET }) },
@@ -77,7 +77,7 @@ const createUIApp = (): {
   };
   const typed = app as unknown as Application;
 
-  app.focus = new FocusManager(typed);
+  app.focus = new FocusController(typed);
   app.interaction = new InteractionManager(typed);
   scene._attach(typed, {} as unknown as SceneScope<void>);
   app.interaction.attachRoot(scene.root);

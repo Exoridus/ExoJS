@@ -51,6 +51,9 @@ const createApp = (): {
     onPointerTap: new Signal<[Pointer]>(),
     onPointerCancel: new Signal<[Pointer]>(),
     onPointerLeave: new Signal<[Pointer]>(),
+    // InteractionManager owns the focus controller, which listens for keys.
+    onKeyDown: new Signal<[number]>(),
+    onKeyUp: new Signal<[number]>(),
   };
 
   const canvas = document.createElement('canvas');
@@ -231,7 +234,7 @@ describe('InteractionManager: hit-testing children of a translated RetainedConta
     scene.root.destroy();
   });
 
-  test('the recursive-walk path (input capture) is world-correct too', () => {
+  test('the recursive-walk path (interaction scope) is world-correct too', () => {
     const { app, scene, signals } = createApp();
     const im = new InteractionManager(app);
 
@@ -247,7 +250,7 @@ describe('InteractionManager: hit-testing children of a translated RetainedConta
 
     // Confine hit-testing to the scene root subtree: this routes through the
     // recursive _hitTestNode walk instead of the spatial index.
-    im.pushInputCapture(scene.root);
+    im.pushScope(scene.root);
 
     const handler = vi.fn();
 

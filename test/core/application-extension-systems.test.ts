@@ -72,7 +72,8 @@ describe('Application app-system extension bindings (Slice F)', () => {
     expect(seenApp).toBe(app);
     expect(seenApp?.input).toBeDefined();
     expect(seenApp?.interaction).toBeDefined();
-    expect(seenApp?.focus).toBeDefined();
+    // RenderNode focus lives under app.interaction, not as its own subsystem.
+    expect(seenApp?.interaction.focused).toBeNull();
     expect(seenApp?.audio).toBeDefined();
     expect(seenApp?.tweens).toBeDefined();
     expect(seenApp?.scenes).toBeDefined();

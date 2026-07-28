@@ -63,7 +63,6 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "FadeSceneTransition",
   "Filter",
   "Flags",
-  "FocusManager",
   "FontAsset",
   "FontFactory",
   "GameCubeGamepadMapping",

@@ -2,7 +2,7 @@
 import { logger } from '#core/logging';
 import { SceneNode } from '#core/SceneNode';
 import type { InteractionHooks, Stage } from '#core/Stage';
-import { FocusManager } from '#input/FocusManager';
+import { FocusController } from '#input/FocusController';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import { Graphics } from '#rendering/primitives/Graphics';
@@ -265,7 +265,7 @@ describe('Container children view', () => {
     };
     const stubInput = { onKeyDown: { add() {}, remove() {} }, onKeyUp: { add() {}, remove() {} } };
     const focusApp = { input: stubInput } as unknown as Application;
-    const focus = new FocusManager(focusApp);
+    const focus = new FocusController(focusApp);
     const stage: Stage = { interaction: noopInteraction, focus };
 
     const container = new Container();

@@ -1,6 +1,5 @@
 export * from './actions';
 export * from './ArcadeStickGamepadMapping';
-export * from './FocusManager';
 export * from './GameCubeGamepadMapping';
 export * from './Gamepad';
 export type { GamepadAxisOptions } from './GamepadAxis';

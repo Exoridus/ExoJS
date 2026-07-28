@@ -4,7 +4,7 @@ import type { RenderNode } from '#rendering/RenderNode';
 export type KeyEventType = 'keydown' | 'keyup';
 
 /**
- * Envelope dispatched by {@link FocusManager} to the focused {@link RenderNode}
+ * Envelope dispatched by `app.interaction` to the focused {@link RenderNode}
  * for keyboard input. `channel` is the input channel of the key — compare it
  * with the `Keyboard` constants (e.g. `event.channel === Keyboard.Enter`).
  *

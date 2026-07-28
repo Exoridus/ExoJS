@@ -7,20 +7,25 @@ import { KeyEvent } from './KeyEvent';
 import { Keyboard } from './types';
 
 /**
- * Per-Application keyboard-focus service. Tracks the single focused
- * {@link RenderNode}, routes keyboard input from the {@link InputManager} to
- * it, and provides Tab-order traversal across the focusable nodes of the active
- * focus scope.
+ * Keyboard-focus service owned by the {@link InteractionManager}. Tracks the
+ * single focused {@link RenderNode}, routes keyboard input from the
+ * {@link InputManager} to it, and provides Tab-order traversal across the
+ * focusable nodes of the active scope.
  *
- * A node reaches this service through its {@link Stage} (`stage.focus`); app
- * code reaches it through `app.focus`. Constructed automatically by
- * {@link Application}; you do not instantiate this class yourself.
+ * Not public API — RenderNode focus is reached through `app.interaction`
+ * (`focused`, `focus`, `blur`, `focusNext`, `focusPrevious`), which forwards
+ * here. Kept as a separate class because focus and pointer picking are
+ * genuinely different concerns; they merely share an owner and a scope stack.
+ * Distinct from canvas/application focus, which lives on
+ * `app.input.canvasFocused`.
  *
  * Built-in key handling: `Tab` / `Shift+Tab` move focus to the next / previous
  * focusable node. A focused node can call {@link KeyEvent.preventDefault} on its
  * `onKeyDown` event to opt out of this and consume the key itself.
+ *
+ * @internal
  */
-export class FocusManager implements FocusHooks {
+export class FocusController implements FocusHooks {
   private readonly _app: Application;
   private _focused: RenderNode | null = null;
   private _shiftDown = false;
@@ -72,7 +77,12 @@ export class FocusManager implements FocusHooks {
     previous._peekFocusSignal('blur')?.dispatch(previous);
   }
 
-  /** Push a subtree root that bounds subsequent Tab traversal (e.g. a modal dialog). */
+  /**
+   * Bound subsequent Tab traversal to `root`'s subtree. Pushed by
+   * {@link InteractionManager.pushScope} so focus navigation and pointer
+   * hit-testing are confined to the same subtree — a modal that shields
+   * clicks must shield Tab too.
+   */
   public pushScope(root: RenderNode): void {
     this._scopeStack.push(root);
   }
@@ -80,6 +90,11 @@ export class FocusManager implements FocusHooks {
   /** Pop the most recently pushed focus scope. */
   public popScope(): void {
     this._scopeStack.pop();
+  }
+
+  /** Drop every pushed scope. Used when the whole root detaches. */
+  public clearScopes(): void {
+    this._scopeStack.length = 0;
   }
 
   /** Move focus to the next focusable node in the active scope (Tab order). */

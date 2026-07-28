@@ -24,7 +24,7 @@ export interface InteractionHooks {
 
 /**
  * Friend-class hooks a scene node uses to reach its owning keyboard-focus
- * service. Implemented by `FocusManager`. Kept on the {@link Stage} so a node
+ * service. Implemented by `FocusController`. Kept on the {@link Stage} so a node
  * never needs a direct reference to the manager.
  */
 export interface FocusHooks {

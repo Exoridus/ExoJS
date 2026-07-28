@@ -8,8 +8,8 @@ const createAppStub = (): Application =>
     interaction: {
       attachRoot: vi.fn(),
       detachRoot: vi.fn(),
-      pushInputCapture: vi.fn(),
-      popInputCapture: vi.fn(),
+      pushScope: vi.fn(),
+      popScope: vi.fn(),
     },
   }) as unknown as Application;
 
@@ -146,37 +146,37 @@ describe('SceneInteraction', () => {
   });
 });
 
-describe('SceneInteraction.capture()', () => {
+describe('SceneInteraction.scope()', () => {
   test('capture() pushes the root onto the manager capture stack', () => {
     const app = createAppStub();
     const interaction = new SceneInteraction(app, () => SceneState.Active);
     const root = fakeRoot();
 
-    interaction.capture(root);
+    interaction.scope(root);
 
-    expect(app.interaction.pushInputCapture).toHaveBeenCalledWith(root);
+    expect(app.interaction.pushScope).toHaveBeenCalledWith(root);
   });
 
   test('release() pops the top capture and is idempotent', () => {
     const app = createAppStub();
     const interaction = new SceneInteraction(app, () => SceneState.Active);
-    const capture = interaction.capture(fakeRoot());
+    const scope = interaction.scope(fakeRoot());
 
-    capture.release();
-    expect(app.interaction.popInputCapture).toHaveBeenCalledTimes(1);
-    expect(capture.active).toBe(false);
+    scope.release();
+    expect(app.interaction.popScope).toHaveBeenCalledTimes(1);
+    expect(scope.active).toBe(false);
 
-    capture.release();
-    expect(app.interaction.popInputCapture).toHaveBeenCalledTimes(1); // idempotent
+    scope.release();
+    expect(app.interaction.popScope).toHaveBeenCalledTimes(1); // idempotent
   });
 
   test('destroy() on the capture is an alias for release()', () => {
     const app = createAppStub();
     const interaction = new SceneInteraction(app, () => SceneState.Active);
-    const capture = interaction.capture(fakeRoot());
+    const scope = interaction.scope(fakeRoot());
 
-    capture.destroy();
-    expect(app.interaction.popInputCapture).toHaveBeenCalledTimes(1);
+    scope.destroy();
+    expect(app.interaction.popScope).toHaveBeenCalledTimes(1);
   });
 
   test('nested captures: releasing the top restores the previous one (net stack effect)', () => {
@@ -185,17 +185,17 @@ describe('SceneInteraction.capture()', () => {
     const rootA = fakeRoot();
     const rootB = fakeRoot();
 
-    const captureA = interaction.capture(rootA);
-    const captureB = interaction.capture(rootB);
+    const scopeA = interaction.scope(rootA);
+    const scopeB = interaction.scope(rootB);
 
-    expect(app.interaction.pushInputCapture).toHaveBeenNthCalledWith(1, rootA);
-    expect(app.interaction.pushInputCapture).toHaveBeenNthCalledWith(2, rootB);
+    expect(app.interaction.pushScope).toHaveBeenNthCalledWith(1, rootA);
+    expect(app.interaction.pushScope).toHaveBeenNthCalledWith(2, rootB);
 
-    captureB.release();
+    scopeB.release();
 
     // Popped B, nothing needed re-pushing below it (A was never popped).
-    expect(app.interaction.popInputCapture).toHaveBeenCalledTimes(1);
-    expect(captureA.active).toBe(true);
+    expect(app.interaction.popScope).toHaveBeenCalledTimes(1);
+    expect(scopeA.active).toBe(true);
   });
 
   test('releasing a non-top capture pops down to it, removes it, and re-pushes the ones above in order', () => {
@@ -205,33 +205,33 @@ describe('SceneInteraction.capture()', () => {
     const rootB = fakeRoot();
     const rootC = fakeRoot();
 
-    const captureA = interaction.capture(rootA);
-    const captureB = interaction.capture(rootB);
-    const captureC = interaction.capture(rootC);
+    const scopeA = interaction.scope(rootA);
+    const scopeB = interaction.scope(rootB);
+    const scopeC = interaction.scope(rootC);
 
-    (app.interaction.pushInputCapture as MockInstance).mockClear();
+    (app.interaction.pushScope as MockInstance).mockClear();
 
-    captureA.release(); // out-of-order: A is at the bottom, B and C are above it
+    scopeA.release(); // out-of-order: A is at the bottom, B and C are above it
 
     // Pop C, pop B, pop A (removing A), then re-push B, then C, restoring relative order.
-    expect(app.interaction.popInputCapture).toHaveBeenCalledTimes(3);
-    expect(app.interaction.pushInputCapture).toHaveBeenNthCalledWith(1, rootB);
-    expect(app.interaction.pushInputCapture).toHaveBeenNthCalledWith(2, rootC);
-    expect(captureA.active).toBe(false);
-    expect(captureB.active).toBe(true);
-    expect(captureC.active).toBe(true);
+    expect(app.interaction.popScope).toHaveBeenCalledTimes(3);
+    expect(app.interaction.pushScope).toHaveBeenNthCalledWith(1, rootB);
+    expect(app.interaction.pushScope).toHaveBeenNthCalledWith(2, rootC);
+    expect(scopeA.active).toBe(false);
+    expect(scopeB.active).toBe(true);
+    expect(scopeC.active).toBe(true);
   });
 
   test('destroy() on the facade releases every remaining capture', () => {
     const app = createAppStub();
     const interaction = new SceneInteraction(app, () => SceneState.Active);
 
-    interaction.capture(fakeRoot());
-    interaction.capture(fakeRoot());
+    interaction.scope(fakeRoot());
+    interaction.scope(fakeRoot());
 
     interaction.destroy();
 
-    expect(app.interaction.popInputCapture).toHaveBeenCalledTimes(2);
+    expect(app.interaction.popScope).toHaveBeenCalledTimes(2);
   });
 
   test('suspend() pops every active capture; resume() re-pushes them in original order', () => {
@@ -240,16 +240,16 @@ describe('SceneInteraction.capture()', () => {
     const rootA = fakeRoot();
     const rootB = fakeRoot();
 
-    interaction.capture(rootA);
-    interaction.capture(rootB);
-    (app.interaction.pushInputCapture as MockInstance).mockClear();
+    interaction.scope(rootA);
+    interaction.scope(rootB);
+    (app.interaction.pushScope as MockInstance).mockClear();
 
     interaction.suspend();
-    expect(app.interaction.popInputCapture).toHaveBeenCalledTimes(2);
+    expect(app.interaction.popScope).toHaveBeenCalledTimes(2);
 
     interaction.resume();
-    expect(app.interaction.pushInputCapture).toHaveBeenNthCalledWith(1, rootA);
-    expect(app.interaction.pushInputCapture).toHaveBeenNthCalledWith(2, rootB);
+    expect(app.interaction.pushScope).toHaveBeenNthCalledWith(1, rootA);
+    expect(app.interaction.pushScope).toHaveBeenNthCalledWith(2, rootB);
   });
 
   test('releasing a non-top capture while suspended only updates local bookkeeping; resume() re-pushes the corrected stack', () => {
@@ -259,28 +259,28 @@ describe('SceneInteraction.capture()', () => {
     const rootB = fakeRoot();
     const rootC = fakeRoot();
 
-    const captureA = interaction.capture(rootA);
-    const captureB = interaction.capture(rootB);
-    const captureC = interaction.capture(rootC);
+    const scopeA = interaction.scope(rootA);
+    const scopeB = interaction.scope(rootB);
+    const scopeC = interaction.scope(rootC);
 
     interaction.suspend();
-    (app.interaction.popInputCapture as MockInstance).mockClear();
-    (app.interaction.pushInputCapture as MockInstance).mockClear();
+    (app.interaction.popScope as MockInstance).mockClear();
+    (app.interaction.pushScope as MockInstance).mockClear();
 
-    captureB.release(); // out-of-order release while suspended: must not touch the live manager at all
+    scopeB.release(); // out-of-order release while suspended: must not touch the live manager at all
 
-    expect(app.interaction.popInputCapture).not.toHaveBeenCalled();
-    expect(app.interaction.pushInputCapture).not.toHaveBeenCalled();
-    expect(captureA.active).toBe(true);
-    expect(captureB.active).toBe(false);
-    expect(captureC.active).toBe(true);
+    expect(app.interaction.popScope).not.toHaveBeenCalled();
+    expect(app.interaction.pushScope).not.toHaveBeenCalled();
+    expect(scopeA.active).toBe(true);
+    expect(scopeB.active).toBe(false);
+    expect(scopeC.active).toBe(true);
 
     interaction.resume();
 
     // resume() re-pushes the corrected, deduplicated stack from scratch: A then C, not a stale/duplicated sequence.
-    expect(app.interaction.pushInputCapture).toHaveBeenCalledTimes(2);
-    expect(app.interaction.pushInputCapture).toHaveBeenNthCalledWith(1, rootA);
-    expect(app.interaction.pushInputCapture).toHaveBeenNthCalledWith(2, rootC);
+    expect(app.interaction.pushScope).toHaveBeenCalledTimes(2);
+    expect(app.interaction.pushScope).toHaveBeenNthCalledWith(1, rootA);
+    expect(app.interaction.pushScope).toHaveBeenNthCalledWith(2, rootC);
   });
 });
 
@@ -345,9 +345,9 @@ describe('SceneInteraction — dormancy (registration while not Active)', () => 
     const interaction = new SceneInteraction(app, () => SceneState.Suspended);
     const root = fakeRoot();
 
-    interaction.capture(root);
+    interaction.scope(root);
 
-    expect(app.interaction.pushInputCapture).not.toHaveBeenCalled();
+    expect(app.interaction.pushScope).not.toHaveBeenCalled();
   });
 
   test('suspend() then resume() re-pushes captures in original order', () => {
@@ -357,19 +357,19 @@ describe('SceneInteraction — dormancy (registration while not Active)', () => 
     const rootA = fakeRoot();
     const rootB = fakeRoot();
 
-    interaction.capture(rootA);
-    interaction.capture(rootB);
-    (app.interaction.pushInputCapture as MockInstance).mockClear();
+    interaction.scope(rootA);
+    interaction.scope(rootB);
+    (app.interaction.pushScope as MockInstance).mockClear();
 
     state = SceneState.Suspended;
     interaction.suspend();
-    expect(app.interaction.popInputCapture).toHaveBeenCalledTimes(2);
+    expect(app.interaction.popScope).toHaveBeenCalledTimes(2);
 
     state = SceneState.Active;
     interaction.resume();
 
-    expect(app.interaction.pushInputCapture).toHaveBeenNthCalledWith(1, rootA);
-    expect(app.interaction.pushInputCapture).toHaveBeenNthCalledWith(2, rootB);
+    expect(app.interaction.pushScope).toHaveBeenNthCalledWith(1, rootA);
+    expect(app.interaction.pushScope).toHaveBeenNthCalledWith(2, rootB);
   });
 
   test('releasing a still-dormant capture never touches the app-wide capture stack', () => {
@@ -377,10 +377,10 @@ describe('SceneInteraction — dormancy (registration while not Active)', () => 
     const interaction = new SceneInteraction(app, () => SceneState.Ready);
     const root = fakeRoot();
 
-    const capture = interaction.capture(root);
-    capture.release();
+    const scope = interaction.scope(root);
+    scope.release();
 
-    expect(app.interaction.pushInputCapture).not.toHaveBeenCalled();
-    expect(app.interaction.popInputCapture).not.toHaveBeenCalled();
+    expect(app.interaction.pushScope).not.toHaveBeenCalled();
+    expect(app.interaction.popScope).not.toHaveBeenCalled();
   });
 });

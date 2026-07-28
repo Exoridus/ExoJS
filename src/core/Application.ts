@@ -4,7 +4,6 @@ import type { Extension } from '#extensions/Extension';
 import { getGlobalSnapshotInternal } from '#extensions/ExtensionRegistry';
 import { materializeApplicationSystems, materializeAssetBindings, materializeRendererBindings, materializeSerializerBindings } from '#extensions/materialize';
 import { buildSnapshot, type ExtensionSnapshot } from '#extensions/snapshot';
-import { FocusManager } from '#input/FocusManager';
 import type { GamepadDefinition } from '#input/GamepadDefinitions';
 import type { GamepadSlotStrategy } from '#input/InputManager';
 import { InputManager } from '#input/InputManager';
@@ -294,7 +293,6 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   public readonly canvas: HTMLCanvasElement;
   public readonly loader: Loader;
   public readonly input: InputManager;
-  public readonly focus: FocusManager;
   public readonly interaction: InteractionManager;
   public readonly scenes: SceneDirector<Registry>;
   /** Per-Application seedable RNG. Isolated from other Applications and from the global `rand()`. */
@@ -468,7 +466,6 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._backend = this.createBackend(this._backendType, this._snapshot);
     this._rendering = new RenderingContext(this._backend);
     this.input = new InputManager(this);
-    this.focus = new FocusManager(this);
     this.interaction = new InteractionManager(this);
     this.scenes = new SceneDirector<Registry>(this, appSettings.scenes);
     this.random = new Random(this.options.seed);
@@ -1294,7 +1291,6 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     }
 
     this.loader.destroy();
-    this.focus.destroy();
     this.systems.destroy();
     // Core managers are driven directly (not via `systems`, see the internal
     // prepare stage in `update()`), so they are torn down explicitly here, in

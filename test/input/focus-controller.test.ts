@@ -2,7 +2,7 @@ import type { Application } from '#core/Application';
 import { Scene } from '#core/Scene';
 import { Signal } from '#core/Signal';
 import type { InteractionHooks, Stage } from '#core/Stage';
-import { FocusManager } from '#input/FocusManager';
+import { FocusController } from '#input/FocusController';
 import type { InputManager } from '#input/InputManager';
 import type { KeyEvent } from '#input/KeyEvent';
 import { Keyboard } from '#input/types';
@@ -20,10 +20,10 @@ const noopInteraction: InteractionHooks = {
   _notifyTransformGroupMoved() {},
 };
 
-/** Build a minimal Application mock wired to a real Scene root + a FocusManager. */
+/** Build a minimal Application mock wired to a real Scene root + a FocusController. */
 const createFocusApp = (): {
   scene: Scene;
-  focus: FocusManager;
+  focus: FocusController;
   onKeyDown: Signal<[number]>;
   onKeyUp: Signal<[number]>;
 } => {
@@ -38,7 +38,7 @@ const createFocusApp = (): {
       },
     },
   } as unknown as Application;
-  const focus = new FocusManager(app);
+  const focus = new FocusController(app);
   const stage: Stage = { interaction: noopInteraction, focus };
 
   scene.root._setStage(stage);
@@ -55,7 +55,7 @@ const focusable = (tabIndex = 0): Container => {
   return node;
 };
 
-describe('FocusManager', () => {
+describe('FocusController', () => {
   test('focus sets the focused node and fires onFocus', () => {
     const { scene, focus } = createFocusApp();
     const node = focusable();
@@ -318,7 +318,7 @@ describe('FocusManager', () => {
         },
       },
     } as unknown as Application;
-    const focus = new FocusManager(app);
+    const focus = new FocusController(app);
 
     expect(() => onKeyDown.dispatch(Keyboard.Tab)).not.toThrow();
     expect(focus.focused).toBeNull();

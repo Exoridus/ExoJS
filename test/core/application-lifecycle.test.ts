@@ -216,14 +216,15 @@ const loadHarness = async (options: LifecycleHarnessOptions = {}): Promise<Lifec
       return inputManager;
     }),
   }));
-  vi.doMock('#input/FocusManager', () => ({
-    FocusManager: vi.fn(function () {
+  vi.doMock('#input/FocusController', () => ({
+    FocusController: vi.fn(function () {
       return {
         focused: null,
         focus: vi.fn(),
         blur: vi.fn(),
         pushScope: vi.fn(),
         popScope: vi.fn(),
+        clearScopes: vi.fn(),
         focusNext: vi.fn(),
         focusPrevious: vi.fn(),
         _notifyNodeRemoved: vi.fn(),

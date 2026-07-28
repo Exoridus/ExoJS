@@ -83,6 +83,9 @@ const createApp = (): {
     onPointerTap: new Signal<[Pointer]>(),
     onPointerCancel: new Signal<[Pointer]>(),
     onPointerLeave: new Signal<[Pointer]>(),
+    // InteractionManager owns the focus controller, which listens for keys.
+    onKeyDown: new Signal<[number]>(),
+    onKeyUp: new Signal<[number]>(),
   };
 
   const canvas = document.createElement('canvas');
@@ -135,6 +138,9 @@ const createAppNoScene = (
     onPointerTap: new Signal<[Pointer]>(),
     onPointerCancel: new Signal<[Pointer]>(),
     onPointerLeave: new Signal<[Pointer]>(),
+    // InteractionManager owns the focus controller, which listens for keys.
+    onKeyDown: new Signal<[number]>(),
+    onKeyUp: new Signal<[number]>(),
   };
 
   const canvas = document.createElement('canvas');
@@ -1059,8 +1065,8 @@ describe('InteractionManager — multi-Application isolation', () => {
 // Modal input capture
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — input capture', () => {
-  test('confines hit-testing to the captured subtree; outside pointers hit nothing', () => {
+describe('InteractionManager — interaction scope', () => {
+  test('confines hit-testing to the scoped subtree; outside pointers hit nothing', () => {
     const { app, scene, signals } = createApp();
     const im = new InteractionManager(app);
     im.attachRoot(scene.root);
@@ -1081,7 +1087,7 @@ describe('InteractionManager — input capture', () => {
     inside.onPointerDown.add(insideHandler);
     outside.onPointerDown.add(outsideHandler);
 
-    im.pushInputCapture(modal);
+    im.pushScope(modal);
 
     // Pointer over `outside` (not in the captured subtree) hits nothing.
     signals.onPointerDown.dispatch(makePointer({ x: 250, y: 50 }));
@@ -1099,7 +1105,7 @@ describe('InteractionManager — input capture', () => {
     modal.destroy();
   });
 
-  test('popInputCapture restores hit-testing outside the previous subtree', () => {
+  test('popScope restores hit-testing outside the previous subtree', () => {
     const { app, scene, signals } = createApp();
     const im = new InteractionManager(app);
     im.attachRoot(scene.root);
@@ -1118,8 +1124,8 @@ describe('InteractionManager — input capture', () => {
 
     outside.onPointerDown.add(outsideHandler);
 
-    im.pushInputCapture(modal);
-    im.popInputCapture();
+    im.pushScope(modal);
+    im.popScope();
 
     signals.onPointerDown.dispatch(makePointer({ x: 250, y: 50 }));
     flushInteractions(im);
@@ -1247,7 +1253,7 @@ describe('InteractionManager — getCapturedNodes', () => {
 // ---------------------------------------------------------------------------
 
 describe('InteractionManager — detachRoot', () => {
-  test('blurs focus, clears the capture stack, unregisters interactive nodes, and clears the subtree stage', () => {
+  test('blurs focus, clears the scope stack, unregisters interactive nodes, and clears the subtree stage', () => {
     const { app, scene } = createApp();
     const im = new InteractionManager(app);
 
@@ -1258,13 +1264,17 @@ describe('InteractionManager — detachRoot', () => {
     sprite.interactive = true;
     scene.addChild(sprite);
 
-    im.pushInputCapture(scene.root);
+    im.pushScope(scene.root);
 
     expect(sprite._getStage()).not.toBeNull();
 
+    sprite.focusable = true;
+    im.focus(sprite);
+    expect(im.focused).toBe(sprite);
+
     im.detachRoot(scene.root);
 
-    expect(app.focus.blur).toHaveBeenCalledTimes(1);
+    expect(im.focused).toBeNull();
 
     // Interactive nodes were unregistered — the quadtree is torn down.
     expect(im._getDebugQuadtree()).toBeNull();
@@ -1272,8 +1282,8 @@ describe('InteractionManager — detachRoot', () => {
     // The subtree's stage was cleared — nodes are no longer routed anywhere.
     expect(sprite._getStage()).toBeNull();
 
-    // The (stale) capture pushed above was cleared, not merely shadowed.
-    expect((im as unknown as { _captureStack: unknown[] })._captureStack).toHaveLength(0);
+    // The (stale) scope pushed above was cleared, not merely shadowed.
+    expect((im as unknown as { _scopeStack: unknown[] })._scopeStack).toHaveLength(0);
 
     im.destroy();
     sprite.destroy();
@@ -1509,7 +1519,7 @@ describe('InteractionManager — no active scene', () => {
 // ---------------------------------------------------------------------------
 
 describe('InteractionManager — invisible nodes', () => {
-  test('an invisible interactive node inside a captured subtree is skipped by hit-testing', () => {
+  test('an invisible interactive node inside a scoped subtree is skipped by hit-testing', () => {
     const { app, scene, signals } = createApp();
     const im = new InteractionManager(app);
 
@@ -1522,7 +1532,7 @@ describe('InteractionManager — invisible nodes', () => {
     hidden.visible = false;
     modal.addChild(hidden);
     scene.addChild(modal);
-    im.pushInputCapture(modal);
+    im.pushScope(modal);
 
     const handler = vi.fn();
 

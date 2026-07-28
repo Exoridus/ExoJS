@@ -248,11 +248,11 @@ export abstract class RenderNode extends SceneNode {
 
   // Focus & keyboard. Like the interaction signals these are lazily
   // materialized — a node that never participates in focus allocates none.
-  // Routed by FocusManager (app.focus / stage.focus) to the focused node.
+  // Routed by app.interaction's focus controller to the focused node.
 
   /**
    * When `true`, this node can receive keyboard focus — via {@link focus},
-   * Tab traversal, or `app.focus.focus(node)` — and is delivered key events
+   * Tab traversal, or `app.interaction.focus(node)` — and is delivered key events
    * through {@link onKeyDown} / {@link onKeyUp} while focused.
    *
    * @default false

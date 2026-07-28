@@ -10,6 +10,7 @@ import type { PointLike } from '#math/PointLike';
 import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 
+import { FocusController } from './FocusController';
 import type { InteractionEventType } from './InteractionEvent';
 import { InteractionEvent } from './InteractionEvent';
 import type { Pointer } from './Pointer';
@@ -156,10 +157,14 @@ export class InteractionManager implements InteractionHooks {
   private readonly _drags = new Map<number, DragState>();
 
   /**
-   * Modal input-capture stack. While non-empty, hit-testing is confined to the
-   * topmost root's subtree, so a modal dialog shields the nodes beneath it.
+   * Interaction-scope stack. While non-empty, hit-testing and focus traversal
+   * are confined to the topmost root's subtree, so a modal dialog shields the
+   * nodes beneath it.
    */
-  private readonly _captureStack: RenderNode[] = [];
+  private readonly _scopeStack: RenderNode[] = [];
+
+  /** Keyboard focus for this application. Public access goes through this manager. */
+  private readonly _focus: FocusController;
 
   /** Whether any pointer enqueued events since the last update(). */
   private _dirty = false;
@@ -173,8 +178,9 @@ export class InteractionManager implements InteractionHooks {
 
   public constructor(app: Application) {
     this._app = app;
-    this._stage = { interaction: this, focus: app.focus, app };
-    this._uiStage = { interaction: this._uiInteraction, focus: app.focus, app };
+    this._focus = new FocusController(app);
+    this._stage = { interaction: this, focus: this._focus, app };
+    this._uiStage = { interaction: this._uiInteraction, focus: this._focus, app };
 
     this._onPointerDownHandler = this._handlePointerDown.bind(this);
     this._onPointerMoveHandler = this._handlePointerMove.bind(this);
@@ -225,20 +231,56 @@ export class InteractionManager implements InteractionHooks {
     return [...this._capturedPointers.values()];
   }
 
-  /**
-   * Confine pointer hit-testing to `root`'s subtree until a matching
-   * {@link popInputCapture}. Pointer events outside the subtree hit nothing, so
-   * a modal dialog (optionally with a full-screen backdrop to swallow clicks)
-   * shields the interactive nodes beneath it. Captures stack — the most
-   * recently pushed root wins.
-   */
-  public pushInputCapture(root: RenderNode): void {
-    this._captureStack.push(root);
+  /** The node that currently holds keyboard focus, or `null`. */
+  public get focused(): RenderNode | null {
+    return this._focus.focused;
   }
 
-  /** Release the most recently pushed input capture (see {@link pushInputCapture}). */
-  public popInputCapture(): void {
-    this._captureStack.pop();
+  /**
+   * Move keyboard focus to `node`. No-op when `node` is already focused or is
+   * not {@link RenderNode.focusable}. Fires `onBlur` on the previously focused
+   * node, then `onFocus` on `node`.
+   */
+  public focus(node: RenderNode): void {
+    this._focus.focus(node);
+  }
+
+  /** Clear keyboard focus, or only clear it when `node` currently holds it. */
+  public blur(node?: RenderNode): void {
+    this._focus.blur(node);
+  }
+
+  /** Move focus to the next focusable node of the active scope, in Tab order. */
+  public focusNext(): void {
+    this._focus.focusNext();
+  }
+
+  /** Move focus to the previous focusable node of the active scope, in Tab order. */
+  public focusPrevious(): void {
+    this._focus.focusPrevious();
+  }
+
+  /**
+   * Confine interaction to `root`'s subtree until a matching {@link popScope}.
+   * Pointer events outside the subtree hit nothing and Tab traversal stays
+   * inside it, so a modal dialog (optionally with a full-screen backdrop to
+   * swallow clicks) shields everything beneath it. Scopes stack — the most
+   * recently pushed root wins.
+   *
+   * A scope is not what makes a node interactive; `node.interactive = true`
+   * alone does that. Nor is it the browser pointer-capture taken during a
+   * drag, which is a private implementation detail. Prefer
+   * `scene.interaction.scope()` when the scope should end with its scene.
+   */
+  public pushScope(root: RenderNode): void {
+    this._scopeStack.push(root);
+    this._focus.pushScope(root);
+  }
+
+  /** Release the most recently pushed interaction scope (see {@link pushScope}). */
+  public popScope(): void {
+    this._scopeStack.pop();
+    this._focus.popScope();
   }
 
   /**
@@ -264,7 +306,8 @@ export class InteractionManager implements InteractionHooks {
     this._pending.clear();
     this._capturedPointers.clear();
     this._drags.clear();
-    this._captureStack.length = 0;
+    this._scopeStack.length = 0;
+    this._focus.destroy();
     this._interactiveNodes.clear();
     this._staleNodes.clear();
     this._proxies.clear();
@@ -354,8 +397,9 @@ export class InteractionManager implements InteractionHooks {
    * @internal
    */
   public detachRoot(root: RenderNode): void {
-    this._app.focus.blur();
-    this._captureStack.length = 0;
+    this._focus.blur();
+    this._scopeStack.length = 0;
+    this._focus.clearScopes();
     this._notifyNodeRemoved(root);
     root._setStage(null);
   }
@@ -643,16 +687,16 @@ export class InteractionManager implements InteractionHooks {
 
   /**
    * Resolve the hit node and its coordinate space for a fresh pointer. An
-   * active modal capture confines hit-testing to its subtree; otherwise the
+   * active interaction scope confines hit-testing to its subtree; otherwise the
    * screen-fixed UI layer is tried first (screen space), then the camera world.
    */
   private _resolveHit(pointer: Pointer): { node: RenderNode | null; x: number; y: number } {
-    const capture = this._captureStack.at(-1);
+    const scope = this._scopeStack.at(-1);
 
-    if (capture !== undefined) {
-      const coords = this._pointerCoords(pointer, this._isUINode(capture));
+    if (scope !== undefined) {
+      const coords = this._pointerCoords(pointer, this._isUINode(scope));
 
-      return { node: this._hitTestNode(capture, coords.x, coords.y), x: coords.x, y: coords.y };
+      return { node: this._hitTestNode(scope, coords.x, coords.y), x: coords.x, y: coords.y };
     }
 
     const uiRoot = this._app.scenes.currentScene?._peekUI() ?? null;
