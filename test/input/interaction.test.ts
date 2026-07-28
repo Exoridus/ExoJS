@@ -584,6 +584,28 @@ describe('InteractionManager — pointerover / pointerout on move', () => {
     im.destroy();
     spriteA.destroy();
   });
+
+  test('a pointerover handler that destroys its own node leaves no stale hover entry behind', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+    const sprite = new TestSprite().setBounds(0, 0, 50, 50);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+    sprite.onPointerOver.add(() => sprite.destroy());
+
+    expect(() => {
+      dispatchPointer(signals.onPointerMove, { x: 25, y: 25 });
+      flushInteractions(im);
+    }).not.toThrow();
+
+    // The node that was just hovered destroyed itself from inside its own
+    // pointerover handler — it must not linger as the recorded hover target.
+    expect(im.getHoveredNode()).toBeNull();
+
+    im.destroy();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -737,6 +759,10 @@ describe('InteractionManager — tap', () => {
     const handler = vi.fn();
 
     sprite.onPointerTap.add(handler);
+    // A tap only fires when this release resolves to the same node its own
+    // cycle's press landed on — see `_pressTargets`' doc comment — so a
+    // preceding press is required now, not just the release/tap signal.
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     dispatchPointer(signals.onPointerTap, { x: 50, y: 50 });
     flushInteractions(im);
 
@@ -748,6 +774,108 @@ describe('InteractionManager — tap', () => {
 
     im.destroy();
     sprite.destroy();
+  });
+});
+
+describe('InteractionManager — tap target semantics', () => {
+  test('a release that resolves to a different node than the press does not fire a tap on either', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+    const left = new TestSprite().setBounds(0, 0, 50, 50);
+    const right = new TestSprite().setBounds(50, 0, 50, 50);
+
+    left.interactive = true;
+    right.interactive = true;
+    scene.addChild(left);
+    scene.addChild(right);
+
+    const leftTap = vi.fn();
+    const rightTap = vi.fn();
+
+    left.onPointerTap.add(leftTap);
+    right.onPointerTap.add(rightTap);
+
+    // Press lands on `left`, a 2px sub-threshold shift lands the release on
+    // `right` instead — the press and release targets genuinely differ, even
+    // though nothing here would ever promote to a real drag.
+    dispatchPointer(signals.onPointerDown, { x: 49, y: 25 });
+    dispatchPointer(signals.onPointerUp, { x: 51, y: 25 });
+    dispatchPointer(signals.onPointerTap, { x: 51, y: 25 });
+    flushInteractions(im);
+
+    expect(leftTap).not.toHaveBeenCalled();
+    expect(rightTap).not.toHaveBeenCalled();
+
+    im.destroy();
+    left.destroy();
+    right.destroy();
+  });
+
+  test('a press target destroyed between press and release suppresses the tap without throwing', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    const tapped = vi.fn();
+
+    sprite.onPointerTap.add(tapped);
+
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
+    flushInteractions(im);
+
+    // Something unrelated to this pointer's own dispatch destroys the press
+    // target before its release ever arrives — a bare destroy(), no
+    // removeChild, the harder case (see `_isLive`'s doc comment).
+    sprite.destroy();
+
+    expect(() => {
+      dispatchPointer(signals.onPointerUp, { x: 50, y: 50 });
+      dispatchPointer(signals.onPointerTap, { x: 50, y: 50 });
+      flushInteractions(im);
+    }).not.toThrow();
+
+    expect(tapped).not.toHaveBeenCalled();
+
+    im.destroy();
+  });
+
+  test('preventDefault() on pointerdown suppresses automatic drag-candidate creation without stopping propagation', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+    const parent = new Container();
+    const child = new TestSprite().setBounds(0, 0, 100, 100);
+
+    child.interactive = true;
+    child.draggable = true;
+    parent.addChild(child);
+    scene.addChild(parent);
+
+    const parentDown = vi.fn();
+    const dragStart = vi.fn();
+
+    parent.onPointerDown.add(parentDown);
+    child.onPointerDown.add(event => event.preventDefault());
+    child.onDragStart.add(dragStart);
+
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
+    // 40 design pixels past the default 8px drag threshold — would promote a
+    // candidate to a real drag if one had been created.
+    dispatchPointer(signals.onPointerMove, { x: 90, y: 50 });
+    flushInteractions(im);
+
+    // Propagation is unaffected by preventDefault() — only stopPropagation()
+    // halts bubbling.
+    expect(parentDown).toHaveBeenCalledTimes(1);
+    expect(dragStart).not.toHaveBeenCalled();
+    expect(im.getCapturedNodes()).toEqual([]);
+
+    im.destroy();
   });
 });
 

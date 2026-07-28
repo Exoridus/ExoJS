@@ -53,6 +53,7 @@ export class InteractionEvent {
   /** See {@link InteractionEvent.x}. */
   public readonly y: number;
   private _stopped = false;
+  private _defaultPrevented = false;
 
   public constructor(type: InteractionEventType, target: RenderNode, pointer: Pointer, x: number, y: number) {
     this.type = type;
@@ -70,5 +71,26 @@ export class InteractionEvent {
   /** Halt further bubbling up the parent chain for this event. */
   public stopPropagation(): void {
     this._stopped = true;
+  }
+
+  /** Whether {@link InteractionEvent.preventDefault} was called on this event. */
+  public get defaultPrevented(): boolean {
+    return this._defaultPrevented;
+  }
+
+  /**
+   * Suppress this event's own default engine behavior — currently
+   * meaningful only for `pointerdown`, where it suppresses the automatic
+   * creation (and so promotion) of a drag candidate for {@link target}, on
+   * a node whose own `draggable` would otherwise start one. Independent of
+   * {@link InteractionEvent.stopPropagation}: propagation still bubbles
+   * normally unless that is also called. Also independent of the browser's
+   * own native default (e.g. touch scrolling, text selection, the native
+   * context menu) — those are suppressed synchronously in `InputManager`,
+   * at the platform-event boundary, before this engine-level event is even
+   * constructed; calling this method has no effect on them.
+   */
+  public preventDefault(): void {
+    this._defaultPrevented = true;
   }
 }

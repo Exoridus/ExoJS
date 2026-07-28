@@ -449,4 +449,35 @@ describe('reentrancy: node removed/destroyed inside its own handler', () => {
 
     im.destroy();
   });
+
+  it('a dragend handler that destroys a different node does not crash a later phase sharing the same flush', () => {
+    const { scene, signals, im } = createApp();
+    const sprite = draggable();
+    const other = new TestSprite().setBounds(200, 0, 100, 100);
+    const otherTap = vi.fn();
+
+    other.interactive = true;
+    scene.addChild(sprite);
+    scene.addChild(other);
+    other.onPointerTap.add(otherTap);
+    sprite.onDragEnd.add(() => other.destroy());
+
+    dispatchPointer(signals.onPointerDown, 50, 50);
+    im.update();
+    dispatchPointer(signals.onPointerMove, 90, 50, 40);
+    im.update();
+
+    // Release ends the drag (firing dragend, which destroys `other`), then a
+    // tap-shaped release/tap pair over `other` shares the SAME flush.
+    expect(() => {
+      dispatchPointer(signals.onPointerUp, 90, 50, 40);
+      dispatchPointer(signals.onPointerDown, 250, 50);
+      dispatchPointer(signals.onPointerTap, 250, 50);
+      im.update();
+    }).not.toThrow();
+
+    expect(otherTap).not.toHaveBeenCalled();
+
+    im.destroy();
+  });
 });

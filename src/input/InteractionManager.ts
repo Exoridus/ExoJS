@@ -225,6 +225,15 @@ export class InteractionManager implements InteractionHooks {
   private readonly _drags = new Map<number, DragState>();
 
   /**
+   * The node a pointer's CURRENT press cycle actually went down on. Recorded
+   * on Down (any interactive hit, not only a draggable one — unlike
+   * {@link _drags}), consulted by the matching Tap entry to decide whether a
+   * tap fires at all: a release must resolve to this SAME, still-live node,
+   * not merely whatever happens to be under the pointer at release time.
+   */
+  private readonly _pressTargets = new Map<number, RenderNode>();
+
+  /**
    * Interaction-scope stack. While non-empty, hit-testing and focus traversal
    * are confined to the topmost entry's subtree, so a modal dialog shields
    * the nodes beneath it. Each entry is keyed by a stable {@link ScopeToken}
@@ -411,6 +420,7 @@ export class InteractionManager implements InteractionHooks {
     this._pending.clear();
     this._capturedPointers.clear();
     this._drags.clear();
+    this._pressTargets.clear();
     this._scopeStack.length = 0;
     this._focus.destroy();
     this._interactiveNodes.clear();
@@ -767,13 +777,25 @@ export class InteractionManager implements InteractionHooks {
           const { node: hit, x, y } = this._resolvePhase(phase.x, phase.y, this._currentCapture(id));
 
           if (hit !== null) {
-            this._dispatchBubble(new InteractionEvent('pointerdown', hit, pointer, x, y));
+            const event = new InteractionEvent('pointerdown', hit, pointer, x, y);
+
+            this._dispatchBubble(event);
 
             // The handler just run may have destroyed or detached `hit`
-            // itself — see `_isLive`'s doc comment — so a drag candidate
-            // must not be created on a node that is already gone.
+            // itself — see `_isLive`'s doc comment — so neither the press
+            // target nor a drag candidate may be created on a node that is
+            // already gone.
             if (this._isLive(hit)) {
-              this._registerDragCandidate(id, hit, x, y, phase.x, phase.y);
+              // Recorded regardless of draggability — unlike the drag
+              // candidate below — so a tap can fire on any interactive node.
+              this._pressTargets.set(id, hit);
+
+              // preventDefault() suppresses only automatic drag-candidate
+              // creation (and so promotion); it does not stop bubbling —
+              // see InteractionEvent.preventDefault's own doc comment.
+              if (!event.defaultPrevented) {
+                this._registerDragCandidate(id, hit, x, y, phase.x, phase.y);
+              }
             }
           }
 
@@ -806,29 +828,47 @@ export class InteractionManager implements InteractionHooks {
         }
 
         case InteractionPhaseKind.Up: {
+          // Frozen BEFORE the pointerup dispatch below, not read back from
+          // `_drags` afterward: a pointerup handler that removes its own
+          // dragged node (e.g. `removeChild()`) purges `_drags` for it
+          // synchronously (see `_unregisterNode`'s doc comment), which would
+          // otherwise make a REAL drag look, after the fact, like it was
+          // never active — wrongly letting the Tap entry below fire on
+          // whatever node a fresh hit-test now finds underneath the one
+          // that just disappeared.
+          const dragWasActive = this._drags.get(id)?.active ?? false;
           const { node: hit, x, y } = this._resolvePhase(phase.x, phase.y, this._currentCapture(id));
 
           if (hit !== null && this._isLive(hit)) {
             this._dispatchBubble(new InteractionEvent('pointerup', hit, pointer, x, y));
           }
 
-          completedDragForTap = this._completeDrag(id, pointer, x, y);
+          this._completeDrag(id, pointer, x, y);
+          completedDragForTap = dragWasActive;
           break;
         }
 
         // InputManager dispatches Tap immediately after the Up that closed
         // it, so this entry is always this cycle's own — no independent
         // reset is needed between cycles sharing a flush. A press that
-        // turned into a real drag is not also a tap.
+        // turned into a real drag is not also a tap. Otherwise, a tap fires
+        // only when this release resolves to the SAME, still-live node the
+        // cycle's own Down landed on (see `_pressTargets`' doc comment) —
+        // not merely whatever a fresh hit-test finds at the release
+        // coordinates — and targets that press node specifically.
         case InteractionPhaseKind.Tap: {
-          if (completedDragForTap) {
+          const pressTarget = this._pressTargets.get(id) ?? null;
+
+          this._pressTargets.delete(id);
+
+          if (completedDragForTap || pressTarget === null || !this._isLive(pressTarget)) {
             break;
           }
 
           const { node: hit, x, y } = this._resolvePhase(phase.x, phase.y, this._currentCapture(id));
 
-          if (hit !== null && this._isLive(hit)) {
-            this._dispatchBubble(new InteractionEvent('pointertap', hit, pointer, x, y));
+          if (hit === pressTarget) {
+            this._dispatchBubble(new InteractionEvent('pointertap', pressTarget, pointer, x, y));
           }
 
           break;
@@ -859,6 +899,7 @@ export class InteractionManager implements InteractionHooks {
           }
 
           this._lastHit.delete(id);
+          this._pressTargets.delete(id);
           break;
         }
 
@@ -882,7 +923,11 @@ export class InteractionManager implements InteractionHooks {
           this._dispatchBubble(new InteractionEvent('pointerover', hit, pointer, x, y));
         }
 
-        this._setLastHit(id, hit);
+        // Either dispatch just above — pointerout on `last`, or `hit`'s own
+        // pointerover handler removing/destroying itself — may have left
+        // `hit` no longer live; re-checked one final time immediately before
+        // it is ever recorded, so no stale hover entry survives either case.
+        this._setLastHit(id, hit !== null && this._isLive(hit) ? hit : null);
       }
     }
   }
@@ -1555,6 +1600,12 @@ export class InteractionManager implements InteractionHooks {
     for (const [pointerId, hit] of this._lastHit) {
       if (hit === node) {
         this._lastHit.delete(pointerId);
+      }
+    }
+
+    for (const [pointerId, target] of this._pressTargets) {
+      if (target === node) {
+        this._pressTargets.delete(pointerId);
       }
     }
 

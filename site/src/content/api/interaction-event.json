@@ -6,11 +6,11 @@
   "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 9,
+  "memberCount": 11,
   "counts": {
     "constructors": 1,
-    "methods": 1,
-    "properties": 7,
+    "methods": 2,
+    "properties": 8,
     "events": 0
   },
   "sections": [
@@ -169,6 +169,35 @@
       "id": "methods",
       "title": "Methods",
       "members": [
+        {
+          "name": "preventDefault",
+          "signature": "preventDefault(): void",
+          "signatureTokens": [
+            {
+              "text": "preventDefault",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Suppress this event's own default engine behavior — currently meaningful only for pointerdown, where it suppresses the automatic creation (and so promotion) of a drag candidate for target, on a node whose own draggable would otherwise start one. Independent of InteractionEvent.stopPropagation: propagation still bubbles normally unless that is also called. Also independent of the browser's own native default (e.g. touch scrolling, text selection, the native context menu) — those are suppressed synchronously in InputManager, at the platform-event boundary, before this engine-level event is even constructed; calling this method has no effect on them."
+        },
         {
           "name": "stopPropagation",
           "signature": "stopPropagation(): void",
@@ -332,6 +361,27 @@
           "params": [],
           "returnType": null,
           "description": "See InteractionEvent.x."
+        },
+        {
+          "name": "defaultPrevented",
+          "signature": "defaultPrevented: boolean",
+          "signatureTokens": [
+            {
+              "text": "defaultPrevented",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether InteractionEvent.preventDefault was called on this event."
         },
         {
           "name": "propagationStopped",
