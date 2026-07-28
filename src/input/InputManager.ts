@@ -67,17 +67,11 @@ export class InputManager {
   private readonly platform: PlatformAdapter;
   private readonly channels: Float32Array = new Float32Array(ChannelSize.Container);
   /**
-   * Per-channel strongest value seen since the previous frame boundary,
-   * sign-preserving. A key pressed and released between two frames leaves
-   * `channels` back at 0 but `channelsPeak` at 1, which is what lets actions
-   * report a press/release edge for a tap the frame never sampled directly.
-   */
-  private readonly channelsPeak: Float32Array = new Float32Array(ChannelSize.Container);
-  /**
    * Per-channel latch: `1` when the channel rose from zero at least once during
    * this frame. Set as the platform events arrive and cleared only when the
    * frame closes, so every reader within a frame sees the same answer — reading
-   * it does not consume it.
+   * it does not consume it. This is what lets an action report a press/release
+   * edge for a tap the frame never sampled directly.
    */
   private readonly channelPressLatch: Uint8Array = new Uint8Array(ChannelSize.Container);
   /** Per-channel latch for the opposite edge. See {@link InputManager.channelPressLatch}. */
@@ -94,8 +88,14 @@ export class InputManager {
   private readonly gamepadsByBrowserIndex = new Map<number, Gamepad>();
   private readonly bindings: Set<InputBinding> = new Set<InputBinding>();
   private readonly actionMaps = new Set<ActionMap>();
-  /** Reused view over both channel buffers, handed to action maps each frame. */
+  /**
+   * Reused view over the channel buffers, handed to action maps each frame.
+   * `frameId` is bumped once per {@link InputManager.update} — the mechanism an
+   * action shared by two attached maps uses to sample itself only once per
+   * real frame no matter how many owners reach it.
+   */
   private readonly actionSample: ActionSample;
+  private _actionFrameId = 0;
   private readonly capturedKeyChannels = new Map<number, number>();
   private readonly bindingDetacher = {
     detach: (binding: InputBinding): void => {
@@ -205,9 +205,9 @@ export class InputManager {
 
     this.actionSample = {
       values: this.channels,
-      peaks: this.channelsPeak,
       pressed: this.channelPressLatch,
       released: this.channelReleaseLatch,
+      frameId: 0,
     };
     this.gestureRecognizer = new GestureRecognizer(pointerDistanceThreshold, this.onPinch, this.onRotate, this.onLongPress);
 
@@ -360,6 +360,18 @@ export class InputManager {
   }
 
   /**
+   * Resync `map` against this frame's real channel state without treating a
+   * still-held source as a fresh press. Used by {@link SceneInputs.resume} so
+   * a key held across a suspend does not surface as a synthetic press the
+   * moment the scene resumes sampling it again.
+   *
+   * @internal
+   */
+  public _resyncActionMap(map: ActionMap): void {
+    map._resync(this.actionSample);
+  }
+
+  /**
    * Register a callback fired once when any of `channels` becomes active.
    * Manual lifecycle — call `.unbind()` on the returned binding to detach.
    */
@@ -405,11 +417,15 @@ export class InputManager {
     }
 
     this.updateGamepads();
-    this._mergePeaks(ChannelOffset.Gamepads, ChannelSize.Category);
+    this._trackEdges(ChannelOffset.Gamepads, ChannelSize.Category);
 
     for (const binding of this.bindings) {
       binding.update(this.channels);
     }
+
+    // A fresh id per real frame — the guard an action shared by two attached
+    // maps uses to sample itself only once, however many owners reach it.
+    this.actionSample.frameId = ++this._actionFrameId;
 
     for (const map of this.actionMaps) {
       map._update(this.actionSample);
@@ -419,12 +435,8 @@ export class InputManager {
       this.updateEvents();
     }
 
-    // Close the frame: peaks start the next frame at the values the channels
-    // actually hold, so a press that is still held keeps reading as held while
-    // a press that ended stops contributing. The edge latches are cleared here
-    // rather than where they are read — every reader within a frame must see
-    // the same answer.
-    this.channelsPeak.set(this.channels);
+    // Close the frame: the edge latches are cleared here rather than where
+    // they are read — every reader within the frame must see the same answer.
     this.channelPressLatch.fill(0);
     this.channelReleaseLatch.fill(0);
   }
@@ -542,21 +554,15 @@ export class InputManager {
   }
 
   /**
-   * Fold the current values of `[base, base + length)` into the peak buffer and
-   * latch any zero-crossing edge they just crossed. Called right after a
-   * platform handler wrote into those channels, which is the only moment a
-   * sub-frame extremum or edge is still observable.
+   * Latch any zero-crossing edge `[base, base + length)` just crossed. Called
+   * right after a platform handler wrote into those channels, which is the
+   * only moment a sub-frame edge is still observable.
    */
-  private _mergePeaks(base: number, length: number): void {
-    const { channels, channelsPeak, channelsLast, channelPressLatch, channelReleaseLatch } = this;
+  private _trackEdges(base: number, length: number): void {
+    const { channels, channelsLast, channelPressLatch, channelReleaseLatch } = this;
 
     for (let i = base, end = base + length; i < end; i++) {
       const value = channels[i] ?? 0;
-
-      if (Math.abs(value) > Math.abs(channelsPeak[i] ?? 0)) {
-        channelsPeak[i] = value;
-      }
-
       const previous = channelsLast[i] ?? 0;
 
       if (previous === 0) {
@@ -571,9 +577,9 @@ export class InputManager {
     }
   }
 
-  /** Fold a pointer's whole 16-channel slot into the peak and latch buffers. */
-  private _mergePointerPeaks(pointer: Pointer): void {
-    this._mergePeaks(ChannelOffset.Pointers + pointer.slotIndex * pointerSlotSize, pointerSlotSize);
+  /** Fold a pointer's whole 16-channel slot into the edge-latch buffers. */
+  private _trackPointerEdges(pointer: Pointer): void {
+    this._trackEdges(ChannelOffset.Pointers + pointer.slotIndex * pointerSlotSize, pointerSlotSize);
   }
 
   private _releaseSlot(pointerId: number): void {
@@ -593,7 +599,7 @@ export class InputManager {
     const channel = ChannelOffset.Keyboard + event.keyCode;
 
     this.channels[channel] = 1;
-    this._mergePeaks(channel, 1);
+    this._trackEdges(channel, 1);
     this.channelsPressed.push(channel);
     this.flags.push(InputManagerFlag.KeyDown);
 
@@ -610,7 +616,7 @@ export class InputManager {
     const channel = ChannelOffset.Keyboard + event.keyCode;
 
     this.channels[channel] = 0;
-    this._mergePeaks(channel, 1);
+    this._trackEdges(channel, 1);
     this.channelsReleased.push(channel);
     this.flags.push(InputManagerFlag.KeyUp);
 
@@ -629,7 +635,7 @@ export class InputManager {
     const pointer = new Pointer(event, this._app, this.platform, this.channels, slot);
 
     this.pointers.set(event.pointerId, pointer);
-    this._mergePointerPeaks(pointer);
+    this._trackPointerEdges(pointer);
     this.flags.push(InputManagerFlag.PointerUpdate);
   }
 
@@ -641,7 +647,7 @@ export class InputManager {
     }
 
     pointer.handleLeave(event);
-    this._mergePointerPeaks(pointer);
+    this._trackPointerEdges(pointer);
     this.gestureRecognizer.onPointerLeave(pointer);
     this._releaseSlot(event.pointerId);
     this.flags.push(InputManagerFlag.PointerUpdate);
@@ -658,7 +664,7 @@ export class InputManager {
     }
 
     pointer.handlePress(event);
-    this._mergePointerPeaks(pointer);
+    this._trackPointerEdges(pointer);
     this.gestureRecognizer.onPointerDown(pointer);
     this.flags.push(InputManagerFlag.PointerUpdate);
 
@@ -673,7 +679,7 @@ export class InputManager {
     }
 
     pointer.handleMove(event);
-    this._mergePointerPeaks(pointer);
+    this._trackPointerEdges(pointer);
     this.gestureRecognizer.onPointerMove(pointer, this.pointerDistanceThreshold);
     this.flags.push(InputManagerFlag.PointerUpdate);
   }
@@ -686,7 +692,7 @@ export class InputManager {
     }
 
     pointer.handleRelease(event);
-    this._mergePointerPeaks(pointer);
+    this._trackPointerEdges(pointer);
     this.gestureRecognizer.onPointerUp(pointer);
     this.flags.push(InputManagerFlag.PointerUpdate);
 
@@ -701,7 +707,7 @@ export class InputManager {
     }
 
     pointer.handleCancel(event);
-    this._mergePointerPeaks(pointer);
+    this._trackPointerEdges(pointer);
     this.gestureRecognizer.onPointerCancel(pointer);
     this._releaseSlot(event.pointerId);
     this.flags.push(InputManagerFlag.PointerUpdate);
@@ -791,7 +797,7 @@ export class InputManager {
 
       if (this.channels[channel] !== 0) {
         this.channels[channel] = 0;
-        this._mergePeaks(channel, 1);
+        this._trackEdges(channel, 1);
         this.channelsReleased.push(channel);
         this.flags.push(InputManagerFlag.KeyUp);
       }

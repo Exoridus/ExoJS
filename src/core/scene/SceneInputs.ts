@@ -133,11 +133,17 @@ export class SceneInputs implements Destroyable {
     }
   }
 
-  /** Restore normal `when`-policy dispatch after {@link SceneInputs.suspend}. */
+  /**
+   * Restore normal `when`-policy dispatch after {@link SceneInputs.suspend}.
+   * Each map is resynced against the current real channel state before it
+   * resumes being sampled — a source still held across the suspend must not
+   * surface as a synthetic press the instant this scene wakes back up.
+   */
   public resume(): void {
     this._suspended = false;
 
     for (const map of this._actionMaps) {
+      this._app.input._resyncActionMap(map);
       this._app.input._trackActionMap(map);
     }
   }

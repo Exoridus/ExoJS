@@ -4,6 +4,7 @@
  * and ActionMap attachment lifetime against InputManager and SceneInputs.
  */
 
+import type { Application } from '#core/Application';
 import { ActionMap } from '#input/actions/ActionMap';
 import { AxisAction } from '#input/actions/AxisAction';
 import { ButtonAction } from '#input/actions/ButtonAction';
@@ -11,23 +12,44 @@ import type { ActionSample } from '#input/actions/types';
 import { VectorAction } from '#input/actions/VectorAction';
 import { GamepadAxis } from '#input/GamepadAxis';
 import { GamepadButton } from '#input/GamepadButton';
+import { InputManager } from '#input/InputManager';
 import { ChannelSize, Keyboard, PointerButton } from '#input/types';
+import { BrowserPlatform } from '#platform/BrowserPlatform';
 
+/**
+ * Builds an `ActionSample` and the two operations a test drives it with:
+ * `set()` mimics a platform write mid-frame (folding the edge latches the
+ * same way `InputManager._trackEdges` does), and `frame()` closes the frame
+ * (clearing the latches and bumping `frameId`, mirroring `InputManager.update`).
+ */
 const createSample = (): { sample: ActionSample; set: (channel: number, value: number) => void; frame: () => void } => {
   const values = new Float32Array(ChannelSize.Container);
-  const peaks = new Float32Array(ChannelSize.Container);
+  const pressed = new Uint8Array(ChannelSize.Container);
+  const released = new Uint8Array(ChannelSize.Container);
+  const last = new Float32Array(ChannelSize.Container);
+  const sample: ActionSample = { values, pressed, released, frameId: 1 };
 
   return {
-    sample: { values, peaks },
-    // Writing a channel folds into the peak buffer the same way InputManager does.
+    sample,
     set: (channel: number, value: number): void => {
-      values[channel] = value;
+      const previous = last[channel] ?? 0;
 
-      if (Math.abs(value) > Math.abs(peaks[channel] ?? 0)) {
-        peaks[channel] = value;
+      if (previous === 0) {
+        if (value !== 0) {
+          pressed[channel] = 1;
+        }
+      } else if (value === 0) {
+        released[channel] = 1;
       }
+
+      last[channel] = value;
+      values[channel] = value;
     },
-    frame: (): void => void peaks.set(values),
+    frame: (): void => {
+      pressed.fill(0);
+      released.fill(0);
+      sample.frameId++;
+    },
   };
 };
 
@@ -44,13 +66,14 @@ describe('ButtonAction', () => {
   });
 
   it('stays inactive until the value clears its threshold', () => {
-    const { sample, set } = createSample();
+    const { sample, set, frame } = createSample();
     const action = new ButtonAction(GamepadButton.RightTrigger, { threshold: 0.5 });
 
     set(GamepadButton.RightTrigger, 0.4);
     action._update(sample);
     expect(action.active).toBe(false);
 
+    frame();
     set(GamepadButton.RightTrigger, 0.6);
     action._update(sample);
     expect(action.active).toBe(true);
@@ -320,5 +343,177 @@ describe('ActionMap', () => {
 
     expect(controls.jump.active).toBe(false);
     expect(controls.jump.pressed).toBe(false);
+  });
+
+  it.each(['actions', 'attached', 'detach', '_owner', '_attach', '_update', '_resync', '_reset'])('rejects a reserved action name: "%s"', name => {
+    expect(() => new ActionMap({ [name]: new ButtonAction(Keyboard.Space) })).toThrow(/reserved/i);
+  });
+
+  it('does not update the same action instance twice in one frame across two maps', () => {
+    const { sample, set } = createSample();
+    const jump = new ButtonAction(Keyboard.Space);
+    const first = new ActionMap({ jump });
+    const second = new ActionMap({ jump });
+
+    set(Keyboard.Space, 1);
+    first._update(sample);
+    // A second map sharing the same underlying action, reached within the
+    // same real frame — must not re-derive `pressed` off its own just-written
+    // `active` state and erase the edge it correctly saw a moment ago.
+    second._update(sample);
+
+    expect(jump.pressed).toBe(true);
+    expect(jump.active).toBe(true);
+  });
+
+  it('resync leaves a still-held action active without a synthetic press', () => {
+    const { sample, set, frame } = createSample();
+    const jump = new ButtonAction(Keyboard.Space);
+
+    set(Keyboard.Space, 1);
+    jump._update(sample);
+    expect(jump.pressed).toBe(true);
+
+    jump._reset(); // scene suspend: state goes inert while the key stays physically held
+    expect(jump.active).toBe(false);
+
+    frame(); // real time passes while suspended
+    jump._resync(sample); // scene resume: key is still 1 in the sample
+
+    expect(jump.active).toBe(true);
+    expect(jump.pressed).toBe(false);
+    expect(jump.released).toBe(false);
+  });
+
+  it('resync followed by a real release edge still reports released', () => {
+    const { sample, set, frame } = createSample();
+    const jump = new ButtonAction(Keyboard.Space);
+
+    set(Keyboard.Space, 1);
+    jump._update(sample);
+    jump._reset();
+    frame();
+    jump._resync(sample); // still held, active=true, no edge
+
+    frame();
+    set(Keyboard.Space, 0);
+    jump._update(sample);
+
+    expect(jump.released).toBe(true);
+    expect(jump.active).toBe(false);
+  });
+});
+
+describe('ActionMap × InputManager lifecycle', () => {
+  const createManager = (): InputManager => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 800;
+    canvas.height = 600;
+
+    const app = {
+      canvas,
+      platform: new BrowserPlatform(canvas),
+      width: 800,
+      height: 600,
+      pixelRatio: 1,
+      options: { input: {} },
+      _backingStoreToDesign: (x: number, y: number): { x: number; y: number } => ({ x, y }),
+    } as unknown as Application;
+
+    return new InputManager(app);
+  };
+
+  beforeAll(() => {
+    Object.defineProperty(window.navigator, 'getGamepads', {
+      configurable: true,
+      value: (): ReturnType<Navigator['getGamepads']> => [] as unknown as ReturnType<Navigator['getGamepads']>,
+    });
+  });
+
+  it('updates an attached map every frame', () => {
+    const im = createManager();
+    const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+
+    im.attach(map);
+    expect(map.attached).toBe(true);
+
+    im.update(0 as never);
+    expect(map.jump.active).toBe(false); // no channel activity, but no throw either
+
+    im.destroy();
+  });
+
+  it('stops updating a map once it detaches', () => {
+    const im = createManager();
+    const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+
+    im.attach(map);
+    map.detach();
+
+    expect(map.attached).toBe(false);
+
+    // Directly poking the action after detach must not throw, and reflects
+    // whatever state the map was left at rather than being force-reset.
+    im.update(0 as never);
+
+    im.destroy();
+  });
+
+  it('attaching a map already attached elsewhere moves it, updating it only once per frame', () => {
+    const im = createManager();
+    const other = createManager();
+    const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+
+    im.attach(map);
+    other.attach(map);
+
+    expect(map.attached).toBe(true);
+
+    // Still tracked by `other` only — `im` must have let go of it.
+    im.update(0 as never);
+    other.update(0 as never);
+
+    im.destroy();
+    other.destroy();
+  });
+
+  it('destroy() detaches every attached map', () => {
+    const im = createManager();
+    const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+
+    im.attach(map);
+    im.destroy();
+
+    expect(map.attached).toBe(false);
+  });
+
+  it('a suspended-then-resumed scene map does not report a synthetic press for a key still held across the cycle', () => {
+    const im = createManager();
+    const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+
+    im.attach(map);
+
+    const channels = (im as unknown as { channels: Float32Array }).channels;
+
+    channels[Keyboard.Space] = 1;
+    im.update(0 as never);
+    expect(map.jump.pressed).toBe(true);
+
+    // Simulate a scene suspend: detach, reset — key stays physically held.
+    map.detach();
+    map._reset();
+    expect(map.jump.active).toBe(false);
+
+    // Resume: resync against the manager's live sample before re-tracking.
+    im._resyncActionMap(map);
+    im._trackActionMap(map);
+
+    expect(map.jump.active).toBe(true);
+    expect(map.jump.pressed).toBe(false);
+
+    im.update(0 as never);
+    expect(map.jump.pressed).toBe(false); // still just held, no fresh edge
+
+    im.destroy();
   });
 });

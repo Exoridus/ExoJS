@@ -38,17 +38,19 @@ export interface ActionOptions {
  * action see a tap that started and finished between two frame boundaries, or
  * a key that was released and pressed again within one.
  *
- * `peaks` holds the strongest value each channel reached since the previous
- * boundary. It survives for readers that need the magnitude of a sub-frame
- * excursion rather than its edges.
+ * `frameId` is bumped once per real frame by the owning {@link InputManager}.
+ * An action stamps the id it last sampled at and skips a repeat call carrying
+ * the same one — the guard against being reached twice in the same frame
+ * through two different attached {@link ActionMap}s that happen to share the
+ * same underlying action instance.
  *
  * @internal
  */
 export interface ActionSample {
   readonly values: Float32Array;
-  readonly peaks: Float32Array;
   readonly pressed: Uint8Array;
   readonly released: Uint8Array;
+  frameId: number;
 }
 
 /** Whether any of `channels` has its latch set in `buffer`. */

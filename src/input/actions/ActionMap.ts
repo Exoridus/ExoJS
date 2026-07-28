@@ -15,6 +15,16 @@ export interface ActionMapOwner {
 }
 
 /**
+ * Own members of {@link ActionMapBase} — the constructor assigns every action
+ * directly onto the instance (`Object.assign(this, actions)`), so an action
+ * named after one of these would silently overwrite it (`actions` collapsing
+ * from the internal array to a single Action being the most damaging: it
+ * breaks `_update`/`_reset`/`_resync` for every action the map owns, not just
+ * the colliding one) instead of throwing anywhere near the mistake.
+ */
+const reservedActionMapNames: ReadonlySet<string> = new Set(['actions', 'attached', 'detach', '_owner', '_attach', '_update', '_resync', '_reset']);
+
+/**
  * A named group of actions updated as a unit. The actions are exposed directly
  * on the instance, so a map reads like the control scheme it describes.
  *
@@ -43,6 +53,14 @@ class ActionMapBase<T extends ActionRecord> {
   private _owner: ActionMapOwner | null = null;
 
   public constructor(actions: T) {
+    for (const name of Object.keys(actions)) {
+      if (reservedActionMapNames.has(name)) {
+        throw new Error(
+          `ActionMap: "${name}" collides with ActionMap's own API and cannot be used as an action name. Reserved names: ${[...reservedActionMapNames].sort().join(', ')}.`,
+        );
+      }
+    }
+
     this.actions = Object.values(actions);
     Object.assign(this, actions);
   }
@@ -82,6 +100,18 @@ class ActionMapBase<T extends ActionRecord> {
   public _update(sample: ActionSample): void {
     for (const action of this.actions) {
       action._update(sample);
+    }
+  }
+
+  /**
+   * Resync every action against `sample` without a synthetic press for a
+   * source that is still held. See {@link ButtonAction._resync}.
+   *
+   * @internal
+   */
+  public _resync(sample: ActionSample): void {
+    for (const action of this.actions) {
+      action._resync(sample);
     }
   }
 

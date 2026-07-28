@@ -116,6 +116,17 @@ export class VectorAction {
     this.value.set(winnerX, winnerY);
   }
 
+  /**
+   * Recompute against `sample`. Identical to {@link _update} — unlike
+   * {@link ButtonAction}, a vector carries no frame-to-frame edge memory to
+   * desync, so resyncing after a suspend is just a normal sample.
+   *
+   * @internal
+   */
+  public _resync(sample: ActionSample): void {
+    this._update(sample);
+  }
+
   /** Clear all state, as if no source had ever been touched. @internal */
   public _reset(): void {
     this.value.set(0, 0);

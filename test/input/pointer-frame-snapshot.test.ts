@@ -47,7 +47,6 @@ const fire = (canvas: HTMLCanvasElement, type: string, init: PointerEventInit): 
   canvas.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerId: 1, isPrimary: true, pointerType: 'mouse', ...init }));
 };
 
-const peak = (im: InputManager, channel: number): number => (im as unknown as { channelsPeak: Float32Array }).channelsPeak[channel]!;
 const pressLatch = (im: InputManager, channel: number): number => (im as unknown as { channelPressLatch: Uint8Array }).channelPressLatch[channel]!;
 const releaseLatch = (im: InputManager, channel: number): number => (im as unknown as { channelReleaseLatch: Uint8Array }).channelReleaseLatch[channel]!;
 
@@ -307,35 +306,6 @@ describe('per-frame delta', () => {
     im.update(0 as never);
 
     expect([pointer.delta.x, pointer.delta.y]).toEqual([0, 0]);
-  });
-});
-
-describe('channel peak buffer', () => {
-  it('retains a keyboard press that was released before the frame boundary', () => {
-    canvas.dispatchEvent(new FocusEvent('focus'));
-    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: 32 } as KeyboardEventInit));
-    window.dispatchEvent(new KeyboardEvent('keyup', { keyCode: 32 } as KeyboardEventInit));
-
-    expect(peak(im, Keyboard.Space)).toBe(1);
-  });
-
-  it('falls back to the live channel value once the frame closes', () => {
-    canvas.dispatchEvent(new FocusEvent('focus'));
-    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: 32 } as KeyboardEventInit));
-    window.dispatchEvent(new KeyboardEvent('keyup', { keyCode: 32 } as KeyboardEventInit));
-
-    im.update(0 as never);
-
-    expect(peak(im, Keyboard.Space)).toBe(0);
-  });
-
-  it('keeps reporting a key that is still held', () => {
-    canvas.dispatchEvent(new FocusEvent('focus'));
-    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: 32 } as KeyboardEventInit));
-
-    im.update(0 as never);
-
-    expect(peak(im, Keyboard.Space)).toBe(1);
   });
 });
 
