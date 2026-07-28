@@ -51,7 +51,7 @@ describe('Signal', () => {
     expect(signal.count).toBe(0);
   });
 
-  it('stops dispatching when a handler returns false', () => {
+  it('notifies every listener regardless of what a handler returns', () => {
     const signal = new Signal();
     const calls: string[] = [];
 
@@ -60,7 +60,6 @@ describe('Signal', () => {
     });
     signal.add(() => {
       calls.push('b');
-      return false;
     });
     signal.add(() => {
       calls.push('c');
@@ -68,7 +67,7 @@ describe('Signal', () => {
 
     signal.dispatch();
 
-    expect(calls).toEqual(['a', 'b']);
+    expect(calls).toEqual(['a', 'b', 'c']);
   });
 
   it('forwards arguments to handlers', () => {
@@ -117,20 +116,20 @@ describe('dispatchIsolated', () => {
     ).not.toThrow();
   });
 
-  it('a handler returning false still short-circuits the remaining listeners (unaffected by isolation)', () => {
+  it('notifies every listener regardless of what a handler returns', () => {
     const signal = new Signal();
     const calls: string[] = [];
 
     signal.add(() => {
       calls.push('a');
-
-      return false;
     });
-    signal.add(() => calls.push('b'));
+    signal.add(() => {
+      calls.push('b');
+    });
 
     signal.dispatchIsolated(() => {});
 
-    expect(calls).toEqual(['a']);
+    expect(calls).toEqual(['a', 'b']);
   });
 
   it('_dispatching is always cleared via finally, even after a throw — remove()/add() work normally afterward', () => {

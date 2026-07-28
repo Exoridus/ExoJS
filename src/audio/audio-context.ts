@@ -151,7 +151,7 @@ const onUserInteraction = (): void => {
  */
 class AudioContextReadySignal extends Signal<[AudioContext]> {
   /** Subscribe and immediately start interaction monitoring. */
-  public override add(handler: (audioContext: AudioContext) => void | boolean): this {
+  public override add(handler: (audioContext: AudioContext) => void): this {
     super.add(handler);
     ensureAudioContextReadyMonitoring();
 
@@ -159,7 +159,7 @@ class AudioContextReadySignal extends Signal<[AudioContext]> {
   }
 
   /** Subscribe once and immediately start interaction monitoring. */
-  public override once(handler: (audioContext: AudioContext) => void | boolean): this {
+  public override once(handler: (audioContext: AudioContext) => void): this {
     super.once(handler);
     ensureAudioContextReadyMonitoring();
 

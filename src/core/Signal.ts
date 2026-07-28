@@ -1,11 +1,12 @@
 import { removeArrayItems } from './utils';
 
 /**
- * Listener function for a {@link Signal}. Returning `false` from a handler
- * stops further dispatch to remaining listeners for the current invocation
- * (subsequent dispatches are unaffected).
+ * Listener function for a {@link Signal}. A Signal is a pure notification —
+ * a handler's return value carries no meaning. Routable engine events that
+ * need to stop propagating expose `stopPropagation()` on the event instead,
+ * so control flow is never hidden in a return value.
  */
-type SignalHandler<Args extends unknown[]> = (...params: Args) => void | boolean;
+type SignalHandler<Args extends unknown[]> = (...params: Args) => void;
 
 /**
  * Lightweight typed event emitter. Each `Signal` represents one named
@@ -21,8 +22,7 @@ type SignalHandler<Args extends unknown[]> = (...params: Args) => void | boolean
  * `dispatch` uses a guard flag instead of a snapshot copy, so no allocation
  * occurs per dispatch. Handlers added or removed during dispatch take effect
  * on the next call; a `remove` mid-dispatch defers the splice until after the
- * current iteration finishes. Returning `false` from a handler short-circuits
- * the rest of the dispatch.
+ * current iteration finishes.
  */
 export class Signal<Args extends unknown[] = []> {
   private readonly _handlers: Array<SignalHandler<Args>> = [];
@@ -96,10 +96,9 @@ export class Signal<Args extends unknown[] = []> {
   }
 
   /**
-   * Notify every registered listener in registration order. Returning `false`
-   * from a handler stops dispatch to the remaining listeners for this call.
-   * Listeners may safely remove themselves or others during dispatch — removals
-   * are deferred until after the current iteration completes.
+   * Notify every registered listener in registration order. Listeners may
+   * safely remove themselves or others during dispatch — removals are deferred
+   * until after the current iteration completes.
    */
   public dispatch(...params: Args): this {
     const length = this._handlers.length;
@@ -111,9 +110,7 @@ export class Signal<Args extends unknown[] = []> {
     this._dispatching = true;
 
     for (let i = 0; i < length; i++) {
-      if (this._handlers[i]!(...params) === false) {
-        break;
-      }
+      this._handlers[i]!(...params);
     }
 
     this._dispatching = false;
@@ -144,13 +141,11 @@ export class Signal<Args extends unknown[] = []> {
    *
    * A throwing listener is reported to `onError` (itself guarded — a
    * throwing `onError` callback never propagates back into this dispatch)
-   * and dispatch continues to the remaining listeners. A handler returning
-   * `false` still short-circuits the rest of the dispatch exactly as
-   * {@link Signal.dispatch} does — that contract is unaffected; only a
-   * *throw* is isolated. `_dispatching`/pending-removes bookkeeping is
-   * guaranteed via `finally`, so a throw here can never corrupt a later
-   * `dispatch()`/`add()`/`remove()` call on this Signal the way an
-   * unguarded throw inside {@link Signal.dispatch} would.
+   * and dispatch continues to the remaining listeners.
+   * `_dispatching`/pending-removes bookkeeping is guaranteed via `finally`,
+   * so a throw here can never corrupt a later `dispatch()`/`add()`/`remove()`
+   * call on this Signal the way an unguarded throw inside
+   * {@link Signal.dispatch} would.
    */
   public dispatchIsolated(onError: (error: unknown) => void, ...params: Args): this {
     const length = this._handlers.length;
@@ -163,10 +158,8 @@ export class Signal<Args extends unknown[] = []> {
 
     try {
       for (let i = 0; i < length; i++) {
-        let result: void | boolean;
-
         try {
-          result = this._handlers[i]!(...params);
+          this._handlers[i]!(...params);
         } catch (error) {
           try {
             onError(error);
@@ -174,12 +167,6 @@ export class Signal<Args extends unknown[] = []> {
             // A throwing onError listener must never propagate back into
             // the lifecycle dispatch that triggered it.
           }
-
-          continue;
-        }
-
-        if (result === false) {
-          break;
         }
       }
     } finally {
