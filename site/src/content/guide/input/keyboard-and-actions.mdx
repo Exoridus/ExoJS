@@ -345,14 +345,84 @@ destroy() {
 }
 ```
 
-### When to add indirection
+## Named actions
 
-The flat approach — one object, direct writes from listeners — scales well for most projects. You might want an intermediate action-map layer when:
-- You need runtime-rebindable controls that persist across scenes.
-- You need to serialize/deserialize control configurations.
-- You have a large number of actions and keeping them as flat object properties becomes unwieldy.
+Wiring listeners by hand is fine for a couple of keys. Once a control scheme has
+a name for each thing the player can do — and each of those can come from the
+keyboard *or* the pad — describe it instead with an `ActionMap`:
 
-In those cases, build a thin `ActionMap` class that maps action names to arrays of channels and exposes `actionMap.bind('jump', [Keyboard.Space, GamepadButton.South])`. The engine does not ship this abstraction — it is a few dozen lines of your own code on top of the existing binding API.
+```ts
+import { ActionMap, AxisAction, ButtonAction, GamepadAxis, GamepadButton, Keyboard, PointerButton, Scene, type Vector, VectorAction } from '@codexo/exojs';
+
+class GameScene extends Scene {
+    // Your own game object — anything exposing these three methods.
+    declare player: { jump(): void; steer(amount: number): void; move(direction: Vector): void };
+
+    controls = new ActionMap({
+        jump: new ButtonAction([Keyboard.Space, GamepadButton.South]),
+        attack: new ButtonAction([PointerButton.Primary, GamepadButton.West]),
+        steer: new AxisAction([
+            GamepadAxis.LeftStickX,
+            { negative: Keyboard.A, positive: Keyboard.D },
+        ]),
+        move: new VectorAction([
+            { x: GamepadAxis.LeftStickX, y: GamepadAxis.LeftStickY },
+            { up: Keyboard.W, down: Keyboard.S, left: Keyboard.A, right: Keyboard.D },
+        ]),
+    });
+
+    init() {
+        this.inputs.attach(this.controls);
+    }
+
+    update() {
+        if (this.controls.jump.pressed) {
+            this.player.jump();
+        }
+
+        this.player.steer(this.controls.steer.value);
+        this.player.move(this.controls.move.value);
+    }
+}
+```
+
+Attaching through `this.inputs` ties the map to the scene: it is detached when
+the scene ends, and its actions are reset across a suspend so a key held while
+the scene was away does not read as a fresh press on resume. Use
+`app.input.attach(map)` for a map that should live as long as the application.
+
+### The three action kinds
+
+- **`ButtonAction`** — `value` (0..1), `active`, `pressed`, `released`. Sources
+  may be digital or analog; the strongest one wins. `pressed` and `released`
+  both fire on the same frame for a tap that started and ended between two
+  frames, so a fast press is never missed.
+- **`AxisAction`** — a signed `value` in -1..1, from a stick axis or from two
+  opposing button groups (`{ negative, positive }`). Either side may be omitted
+  for a one-sided axis.
+- **`VectorAction`** — a 2D `value`, from `{ x, y }` stick axes or from
+  `{ up, down, left, right }` buttons. The result is clamped to unit length, so
+  a digital diagonal is no faster than a cardinal direction.
+
+Pass one binding directly or several as an array; options are always a separate
+second argument (`new ButtonAction(GamepadButton.RightTrigger, { threshold: 0.5 })`).
+
+### How alternatives resolve
+
+Alternative bindings are never summed. Each is evaluated on its own and the one
+with the largest deflection wins — so holding `D` while the stick rests reads as
+full right, not as one-and-a-bit. `VectorAction` picks whole vectors, so `x`
+never comes from the keyboard while `y` comes from the pad.
+
+An action's `threshold` is its own, separate from a gamepad's device-level
+deadzone: the deadzone decides what reaches the channel at all, the threshold
+decides what counts as `active`.
+
+### When you still want raw bindings
+
+The listener-based API below is still the right tool when you need a callback at
+the exact moment an edge happens rather than a value polled in `update()`, or
+when you are reacting to a channel that is not part of a named control scheme.
 
 ## Examples
 
