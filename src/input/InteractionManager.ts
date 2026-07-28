@@ -221,12 +221,12 @@ export class InteractionManager implements InteractionHooks {
   /** Whether any pointer enqueued events since the last update(). */
   private _dirty = false;
 
-  private readonly _onPointerDownHandler: (pointer: Pointer) => void;
-  private readonly _onPointerMoveHandler: (pointer: Pointer) => void;
-  private readonly _onPointerUpHandler: (pointer: Pointer) => void;
-  private readonly _onPointerTapHandler: (pointer: Pointer) => void;
-  private readonly _onPointerCancelHandler: (pointer: Pointer) => void;
-  private readonly _onPointerLeaveHandler: (pointer: Pointer) => void;
+  private readonly _onPointerDownHandler: (pointer: Pointer, x: number, y: number) => void;
+  private readonly _onPointerMoveHandler: (pointer: Pointer, x: number, y: number) => void;
+  private readonly _onPointerUpHandler: (pointer: Pointer, x: number, y: number) => void;
+  private readonly _onPointerTapHandler: (pointer: Pointer, x: number, y: number) => void;
+  private readonly _onPointerCancelHandler: (pointer: Pointer, x: number, y: number) => void;
+  private readonly _onPointerLeaveHandler: (pointer: Pointer, x: number, y: number) => void;
   private readonly _onContextMenuHandler: (pointer: Pointer) => void;
 
   public constructor(app: Application) {
@@ -611,41 +611,41 @@ export class InteractionManager implements InteractionHooks {
   // Signal handlers — only enqueue flags, never hit-test
   // ---------------------------------------------------------------------------
 
-  private _handlePointerDown(pointer: Pointer): void {
-    this._enqueue(pointer, PointerEventFlag.Down);
+  private _handlePointerDown(pointer: Pointer, x: number, y: number): void {
+    this._enqueue(pointer, PointerEventFlag.Down, x, y);
   }
 
-  private _handlePointerMove(pointer: Pointer): void {
-    this._enqueue(pointer, PointerEventFlag.Move);
+  private _handlePointerMove(pointer: Pointer, x: number, y: number): void {
+    this._enqueue(pointer, PointerEventFlag.Move, x, y);
   }
 
-  private _handlePointerUp(pointer: Pointer): void {
-    this._enqueue(pointer, PointerEventFlag.Up);
+  private _handlePointerUp(pointer: Pointer, x: number, y: number): void {
+    this._enqueue(pointer, PointerEventFlag.Up, x, y);
   }
 
-  private _handlePointerTap(pointer: Pointer): void {
-    this._enqueue(pointer, PointerEventFlag.Tap);
+  private _handlePointerTap(pointer: Pointer, x: number, y: number): void {
+    this._enqueue(pointer, PointerEventFlag.Tap, x, y);
   }
 
   private _handleContextMenu(pointer: Pointer): void {
-    this._enqueue(pointer, PointerEventFlag.ContextMenu);
+    this._enqueue(pointer, PointerEventFlag.ContextMenu, pointer.contextMenuPosition.x, pointer.contextMenuPosition.y);
   }
 
-  private _handlePointerCancel(pointer: Pointer): void {
-    this._enqueue(pointer, PointerEventFlag.Cancel);
+  private _handlePointerCancel(pointer: Pointer, x: number, y: number): void {
+    this._enqueue(pointer, PointerEventFlag.Cancel, x, y);
   }
 
-  private _handlePointerLeave(pointer: Pointer): void {
-    this._enqueue(pointer, PointerEventFlag.Leave);
+  private _handlePointerLeave(pointer: Pointer, x: number, y: number): void {
+    this._enqueue(pointer, PointerEventFlag.Leave, x, y);
   }
 
   /**
-   * Record that `flag` happened, capturing `pointer.x`/`pointer.y` into that
-   * phase's dedicated field. Called synchronously from the `InputManager`
-   * signal for that exact phase, which is the only moment the pointer's
-   * position is that phase's own rather than wherever it ended the frame.
+   * Record that `flag` happened at `(x, y)` — passed explicitly by the
+   * `InputManager` signal for that exact phase, an immutable snapshot rather
+   * than a value read back off the pointer (which now always reads live;
+   * see {@link Pointer.position}'s doc comment).
    */
-  private _enqueue(pointer: Pointer, flag: PointerEventFlag): void {
+  private _enqueue(pointer: Pointer, flag: PointerEventFlag, x: number, y: number): void {
     let q = this._pending.get(pointer.id);
 
     if (!q) {
@@ -658,20 +658,20 @@ export class InteractionManager implements InteractionHooks {
 
     switch (flag) {
       case PointerEventFlag.Down:
-        q.downX = pointer.x;
-        q.downY = pointer.y;
+        q.downX = x;
+        q.downY = y;
         break;
       case PointerEventFlag.Move:
-        q.moveX = pointer.x;
-        q.moveY = pointer.y;
+        q.moveX = x;
+        q.moveY = y;
         break;
       case PointerEventFlag.Up:
-        q.upX = pointer.x;
-        q.upY = pointer.y;
+        q.upX = x;
+        q.upY = y;
         break;
       case PointerEventFlag.ContextMenu:
-        q.contextMenuX = pointer.x;
-        q.contextMenuY = pointer.y;
+        q.contextMenuX = x;
+        q.contextMenuY = y;
         break;
       // Tap dispatches inside InputManager's own release-phase bracket, so it
       // shares upX/upY; Cancel/Leave use the pointer's live position (see

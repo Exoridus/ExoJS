@@ -25,12 +25,11 @@ const pointerCh = (offset: number): PointerChannel => (ChannelOffset.Pointers + 
 const slot = (s: number, field: 0 | 1 | 2): PointerChannel => pointerCh(s * pointerSlotSize + field);
 
 /**
- * Bit flags accumulated on a {@link Pointer} while platform events arrive,
- * then promoted to the frame snapshot at the frame boundary. Several platform
- * events of the same kind within one frame collapse into a single bit — read
- * them through the frame accessors ({@link Pointer.pressed},
- * {@link Pointer.moved}, {@link Pointer.released}, …) rather than the raw
- * value.
+ * Identifies which platform phase a {@link PointerPhaseEntry} records. Also
+ * used as a bitmask by the frame accessors ({@link Pointer.pressed},
+ * {@link Pointer.moved}, {@link Pointer.released}, …), which only ask "did
+ * this happen at all this frame" — order doesn't matter for that question,
+ * only for dispatch (see {@link Pointer._phaseList}).
  *
  * @internal
  */
@@ -42,6 +41,28 @@ export enum PointerStateFlag {
   Move = 1 << 3,
   Up = 1 << 4,
   Cancel = 1 << 5,
+}
+
+/**
+ * One platform phase recorded in the exact chronological position it
+ * happened, with the coordinates and (for `Up`) the tap/swipe classification
+ * data that belongs to THAT occurrence specifically — not whatever the
+ * pointer's fields read later, after further phases in the same frame may
+ * have overwritten them. `Move` phases immediately adjacent to one another
+ * coalesce into the latest (see {@link Pointer._pushPhase}); every other
+ * phase, and any run of moves separated by a non-move phase, is preserved
+ * individually and in order.
+ *
+ * @internal
+ */
+export interface PointerPhaseEntry {
+  readonly flag: PointerStateFlag;
+  readonly x: number;
+  readonly y: number;
+  /** `Up` only: whether this release closed an actual press (not a stray `pointerup`). */
+  readonly closedPress: boolean;
+  /** `Up` only: the press excursion accumulated during the press THIS release closed. */
+  readonly maxDistance: number;
 }
 
 /** High-level lifecycle state of a {@link Pointer}. */
@@ -82,10 +103,15 @@ export class Pointer {
   public readonly type: string;
 
   /**
-   * Current position in design pixels. During a phase dispatch it reads the
-   * position that phase happened at, so a handler always sees the coordinates
-   * of the event it was called for — not the last coordinates of the frame.
-   * Outside of a dispatch it is the pointer's latest position.
+   * Current position in design pixels — always the pointer's latest, live
+   * position, never rewound to an earlier phase. A signal handler that needs
+   * the coordinates a SPECIFIC phase happened at (press, move, release,
+   * context menu) receives them as explicit arguments rather than reading
+   * this property, and {@link InteractionEvent.x}/{@link InteractionEvent.y}
+   * are the corresponding immutable per-phase snapshot at the interaction
+   * layer — this is a deliberate choice over a temporary rewind-and-restore,
+   * which could leave a handler reading a DIFFERENT phase's position if it
+   * runs any code after the dispatch that called it returns.
    */
   public readonly position: Vector;
 
@@ -137,15 +163,13 @@ export class Pointer {
   private _isPrimary: boolean;
   private _currentState: PointerState = PointerState.Unknown;
 
-  /** Phases seen since the last frame boundary; promoted to `_frameFlags` by {@link Pointer._beginFrame}. */
-  private _pendingFlags: PointerStateFlag = PointerStateFlag.None;
-  /** Phases belonging to the current frame. Stable for the whole frame — reading it does not consume it. */
-  private _frameFlags: PointerStateFlag = PointerStateFlag.None;
+  /** Phases seen since the last frame boundary, in order; promoted to `_framePhases` by {@link Pointer._beginFrame}. */
+  private _pendingPhases: PointerPhaseEntry[] = [];
+  /** Phases belonging to the current frame, in order. Stable for the whole frame — reading it does not consume it. */
+  private _framePhases: readonly PointerPhaseEntry[] = [];
   private _maxDistanceFromPress = 0;
   private _pressActive = false;
-  /** Whether the most recent release closed an actual press — a stray `pointerup` is neither tap nor swipe. */
-  private _releaseClosedPress = false;
-  /** Latest position, kept aside while {@link position} is temporarily rewound to a phase position. */
+  /** Kept aside so {@link position} can stay the single always-live source of truth. */
   private readonly _latestPosition = new Vector();
   /**
    * Position {@link delta} is measured from — the pointer's coordinates at the
@@ -180,8 +204,8 @@ export class Pointer {
     this.previousPosition.set(geometry.x, geometry.y);
     this._latestPosition.set(geometry.x, geometry.y);
     this._frameBaseline.set(geometry.x, geometry.y);
-    this._pendingFlags |= PointerStateFlag.Over;
     this._writeChannels(true);
+    this._pushPhase(PointerStateFlag.Over);
   }
 
   public get x(): number {
@@ -247,32 +271,32 @@ export class Pointer {
    * {@link released} on the same frame — the phases are not lost.
    */
   public get pressed(): boolean {
-    return (this._frameFlags & PointerStateFlag.Down) !== 0;
+    return this._framePhases.some(phase => phase.flag === PointerStateFlag.Down);
   }
 
   /** `true` when the pointer moved during this frame. Several platform moves collapse into one. */
   public get moved(): boolean {
-    return (this._frameFlags & PointerStateFlag.Move) !== 0;
+    return this._framePhases.some(phase => phase.flag === PointerStateFlag.Move);
   }
 
   /** `true` when the pointer was released during this frame. */
   public get released(): boolean {
-    return (this._frameFlags & PointerStateFlag.Up) !== 0;
+    return this._framePhases.some(phase => phase.flag === PointerStateFlag.Up);
   }
 
   /** `true` when the platform cancelled this pointer during this frame (system gesture, focus loss, …). */
   public get cancelled(): boolean {
-    return (this._frameFlags & PointerStateFlag.Cancel) !== 0;
+    return this._framePhases.some(phase => phase.flag === PointerStateFlag.Cancel);
   }
 
   /** `true` when the pointer entered the canvas during this frame. */
   public get entered(): boolean {
-    return (this._frameFlags & PointerStateFlag.Over) !== 0;
+    return this._framePhases.some(phase => phase.flag === PointerStateFlag.Over);
   }
 
   /** `true` when the pointer left the canvas during this frame. */
   public get exited(): boolean {
-    return (this._frameFlags & PointerStateFlag.Leave) !== 0;
+    return this._framePhases.some(phase => phase.flag === PointerStateFlag.Leave);
   }
 
   /**
@@ -289,13 +313,14 @@ export class Pointer {
     this.handleEvent(event);
     this._currentState = PointerState.InsideCanvas;
     this._writeChannels(true);
+    this._pushPhase(PointerStateFlag.Over);
   }
 
   public handleLeave(event: PointerEvent): void {
     this.handleEvent(event);
-    this._pendingFlags |= PointerStateFlag.Leave;
     this._currentState = PointerState.OutsideCanvas;
     this._writeChannels(false);
+    this._pushPhase(PointerStateFlag.Leave);
   }
 
   public handlePress(event: PointerEvent): void {
@@ -303,36 +328,39 @@ export class Pointer {
     this.pressPosition.copy(this.position);
     this._maxDistanceFromPress = 0;
     this._pressActive = true;
-    this._pendingFlags |= PointerStateFlag.Down;
     this._currentState = PointerState.Pressed;
     this._writeChannels(true);
+    this._pushPhase(PointerStateFlag.Down);
   }
 
   public handleMove(event: PointerEvent): void {
     this.handleEvent(event);
     this.movePosition.copy(this.position);
-    this._pendingFlags |= PointerStateFlag.Move;
     this._currentState = PointerState.Moving;
     this._writeChannels(true);
+    this._pushPhase(PointerStateFlag.Move);
   }
 
   public handleRelease(event: PointerEvent): void {
     this.handleEvent(event);
     this.releasePosition.copy(this.position);
-    this._releaseClosedPress = this._pressActive;
+
+    const closedPress = this._pressActive;
+    const maxDistance = this._maxDistanceFromPress;
+
     this._pressActive = false;
-    this._pendingFlags |= PointerStateFlag.Up;
     this._currentState = PointerState.Released;
     this._writeChannels(true);
+    this._pushPhase(PointerStateFlag.Up, closedPress, maxDistance);
   }
 
   public handleCancel(event: PointerEvent): void {
     this.handleEvent(event);
     this.cancelPosition.copy(this.position);
     this._pressActive = false;
-    this._pendingFlags |= PointerStateFlag.Cancel;
     this._currentState = PointerState.Cancelled;
     this._writeChannels(false);
+    this._pushPhase(PointerStateFlag.Cancel);
   }
 
   /**
@@ -356,8 +384,8 @@ export class Pointer {
    * @internal
    */
   public _beginFrame(): void {
-    this._frameFlags = this._pendingFlags;
-    this._pendingFlags = PointerStateFlag.None;
+    this._framePhases = this._pendingPhases;
+    this._pendingPhases = [];
 
     const { x, y } = this._latestPosition;
     const baseX = this._frameBaseline.x;
@@ -369,31 +397,43 @@ export class Pointer {
     this._frameBaseline.set(x, y);
   }
 
-  /** Phases of this frame, for the {@link InputManager}'s signal dispatch. @internal */
-  public get _phases(): PointerStateFlag {
-    return this._frameFlags;
-  }
-
-  /** `true` when this frame's release closed a press that started on this pointer. @internal */
-  public get _releaseCompletedPress(): boolean {
-    return this._releaseClosedPress;
-  }
-
   /**
-   * Temporarily present one of this pointer's phase positions as
-   * {@link position} for the duration of that phase's dispatch, so every
-   * handler sees the coordinates of the event it was called for even when a
-   * press, several moves and a release all collapsed into one frame.
+   * This frame's phases, in the exact order they happened — the
+   * {@link InputManager}'s signal dispatch iterates this directly instead of
+   * checking a bitmask in a fixed order, so an Up followed by a Down within
+   * one frame dispatches in that same order, and two discrete presses in one
+   * frame each get their own `onPointerDown`.
    *
    * @internal
    */
-  public _enterPhase(phase: Vector): void {
-    this.position.copy(phase);
+  public get _phaseList(): readonly PointerPhaseEntry[] {
+    return this._framePhases;
   }
 
-  /** Restore {@link position} to the pointer's latest coordinates. @internal */
-  public _exitPhase(): void {
-    this.position.copy(this._latestPosition);
+  /**
+   * Record `flag` as having happened, at the pointer's current (post-event)
+   * position. A `Move` immediately following another pending `Move` replaces
+   * it in place rather than appending — intermediate positions of a fast
+   * drag are never individually meaningful, only the latest is, so runs of
+   * moves stay coalesced exactly as before. Any other phase, or a `Move` that
+   * is not adjacent to a prior one (a Down or Up happened in between), is
+   * always its own entry.
+   */
+  private _pushPhase(flag: PointerStateFlag, closedPress = false, maxDistance = 0): void {
+    const { x, y } = this.position;
+
+    if (flag === PointerStateFlag.Move) {
+      const lastIndex = this._pendingPhases.length - 1;
+      const last = this._pendingPhases[lastIndex];
+
+      if (last !== undefined && last.flag === PointerStateFlag.Move) {
+        this._pendingPhases[lastIndex] = { flag, x, y, closedPress: false, maxDistance: 0 };
+
+        return;
+      }
+    }
+
+    this._pendingPhases.push({ flag, x, y, closedPress, maxDistance });
   }
 
   public destroy(): void {

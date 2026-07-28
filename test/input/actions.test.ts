@@ -5,10 +5,11 @@
  */
 
 import type { Application } from '#core/Application';
+import { logger } from '#core/logging';
 import { ActionMap } from '#input/actions/ActionMap';
 import { AxisAction } from '#input/actions/AxisAction';
 import { ButtonAction } from '#input/actions/ButtonAction';
-import type { ActionSample } from '#input/actions/types';
+import type { ActionSample, ChannelEvent } from '#input/actions/types';
 import { VectorAction } from '#input/actions/VectorAction';
 import { GamepadAxis } from '#input/GamepadAxis';
 import { GamepadButton } from '#input/GamepadButton';
@@ -18,36 +19,28 @@ import { BrowserPlatform } from '#platform/BrowserPlatform';
 
 /**
  * Builds an `ActionSample` and the two operations a test drives it with:
- * `set()` mimics a platform write mid-frame (folding the edge latches the
- * same way `InputManager._trackEdges` does), and `frame()` closes the frame
- * (clearing the latches and bumping `frameId`, mirroring `InputManager.update`).
+ * `set()` mimics a platform write mid-frame, appending an ordered
+ * `ChannelEvent` exactly like `InputManager._recordChannelChanges` does, and
+ * `frame()` closes the frame (clearing the event log and bumping `frameId`,
+ * mirroring `InputManager.update`).
  */
 const createSample = (): { sample: ActionSample; set: (channel: number, value: number) => void; frame: () => void } => {
   const values = new Float32Array(ChannelSize.Container);
-  const pressed = new Uint8Array(ChannelSize.Container);
-  const released = new Uint8Array(ChannelSize.Container);
-  const last = new Float32Array(ChannelSize.Container);
-  const sample: ActionSample = { values, pressed, released, frameId: 1 };
+  const events: ChannelEvent[] = [];
+  const sample: ActionSample = { values, events, frameId: 1 };
 
   return {
     sample,
     set: (channel: number, value: number): void => {
-      const previous = last[channel] ?? 0;
-
-      if (previous === 0) {
-        if (value !== 0) {
-          pressed[channel] = 1;
-        }
-      } else if (value === 0) {
-        released[channel] = 1;
+      if (values[channel] === value) {
+        return;
       }
 
-      last[channel] = value;
       values[channel] = value;
+      events.push({ channel, value });
     },
     frame: (): void => {
-      pressed.fill(0);
-      released.fill(0);
+      events.length = 0;
       sample.frameId++;
     },
   };
@@ -146,6 +139,113 @@ describe('ButtonAction', () => {
 
     expect(action.active).toBe(true);
   });
+
+  it('raises no edge for a value that dips without ever crossing its own threshold (0 → 0.1 → 0)', () => {
+    const { sample, set } = createSample();
+    const action = new ButtonAction(GamepadButton.RightTrigger, { threshold: 0.5 });
+
+    set(GamepadButton.RightTrigger, 0.1);
+    set(GamepadButton.RightTrigger, 0);
+    action._update(sample);
+
+    expect(action.pressed).toBe(false);
+    expect(action.released).toBe(false);
+    expect(action.active).toBe(false);
+  });
+
+  it('raises both pressed and released for a value that spikes across its own threshold and back (0.4 → 0.7 → 0.4)', () => {
+    const { sample, set, frame } = createSample();
+    const action = new ButtonAction(GamepadButton.RightTrigger, { threshold: 0.5 });
+
+    set(GamepadButton.RightTrigger, 0.4);
+    action._update(sample);
+    expect(action.active).toBe(false);
+
+    frame();
+    set(GamepadButton.RightTrigger, 0.7);
+    set(GamepadButton.RightTrigger, 0.4);
+    action._update(sample);
+
+    expect(action.pressed).toBe(true);
+    expect(action.released).toBe(true);
+    expect(action.active).toBe(false);
+    expect(action.value).toBeCloseTo(0.4);
+  });
+
+  it('an active source that releases and presses again within one frame stays correct (active → release → press)', () => {
+    const { sample, set, frame } = createSample();
+    const action = new ButtonAction(Keyboard.Space);
+
+    set(Keyboard.Space, 1);
+    action._update(sample);
+    expect(action.active).toBe(true);
+
+    frame();
+    set(Keyboard.Space, 0);
+    set(Keyboard.Space, 1);
+    action._update(sample);
+
+    expect(action.pressed).toBe(true);
+    expect(action.released).toBe(true);
+    expect(action.active).toBe(true);
+    expect(action.value).toBe(1);
+  });
+
+  it('a tap on an alternative source never fakes a release/re-press while a different source stays continuously active', () => {
+    const { sample, set, frame } = createSample();
+    const action = new ButtonAction([Keyboard.Space, GamepadButton.South]);
+
+    set(Keyboard.Space, 1);
+    action._update(sample);
+    expect(action.pressed).toBe(true);
+    expect(action.active).toBe(true);
+
+    // A second, alternative source taps on its own — the aggregate never
+    // drops below threshold because Space stays held throughout.
+    frame();
+    set(GamepadButton.South, 1);
+    set(GamepadButton.South, 0);
+    action._update(sample);
+
+    expect(action.pressed).toBe(false);
+    expect(action.released).toBe(false);
+    expect(action.active).toBe(true);
+    expect(action.value).toBe(1);
+  });
+
+  it('a legitimate ownership handoff re-baselines without a synthetic edge, skips no frame, and warns once in dev', () => {
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
+    const first = createSample();
+    const second = createSample();
+    const action = new ButtonAction(Keyboard.Space);
+
+    first.set(Keyboard.Space, 1);
+    action._update(first.sample);
+    expect(action.pressed).toBe(true);
+    expect(action.active).toBe(true);
+
+    // A different owner's sample — an independent channel buffer, e.g. a
+    // second Application's InputManager — now drives this same action.
+    second.set(Keyboard.Space, 1);
+    action._update(second.sample);
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    // The frame is not skipped: state re-baselines to the new owner's data...
+    expect(action.active).toBe(true);
+    // ...but it does not fabricate an edge off the unrelated previous owner.
+    expect(action.pressed).toBe(false);
+    expect(action.released).toBe(false);
+
+    // Normal edge detection resumes on the new owner's very next real frame.
+    second.frame();
+    second.set(Keyboard.Space, 0);
+    action._update(second.sample);
+
+    expect(action.released).toBe(true);
+    expect(action.active).toBe(false);
+
+    warnSpy.mockRestore();
+  });
 });
 
 describe('AxisAction', () => {
@@ -160,13 +260,14 @@ describe('AxisAction', () => {
   });
 
   it('resolves a digital composite as positive minus negative', () => {
-    const { sample, set } = createSample();
+    const { sample, set, frame } = createSample();
     const action = new AxisAction({ negative: Keyboard.A, positive: Keyboard.D });
 
     set(Keyboard.D, 1);
     action._update(sample);
     expect(action.value).toBe(1);
 
+    frame();
     set(Keyboard.A, 1);
     action._update(sample);
     expect(action.value).toBe(0);
@@ -239,13 +340,14 @@ describe('VectorAction', () => {
   });
 
   it('resolves directions as right minus left and down minus up', () => {
-    const { sample, set } = createSample();
+    const { sample, set, frame } = createSample();
     const action = new VectorAction({ up: Keyboard.W, down: Keyboard.S, left: Keyboard.A, right: Keyboard.D });
 
     set(Keyboard.D, 1);
     action._update(sample);
     expect([action.value.x, action.value.y]).toEqual([1, 0]);
 
+    frame();
     set(Keyboard.D, 0);
     set(Keyboard.W, 1);
     action._update(sample);
@@ -493,9 +595,10 @@ describe('ActionMap × InputManager lifecycle', () => {
 
     im.attach(map);
 
-    const channels = (im as unknown as { channels: Float32Array }).channels;
+    const canvas = (im as unknown as { platform: BrowserPlatform }).platform.surface;
 
-    channels[Keyboard.Space] = 1;
+    canvas.dispatchEvent(new FocusEvent('focus'));
+    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: Keyboard.Space } as KeyboardEventInit));
     im.update(0 as never);
     expect(map.jump.pressed).toBe(true);
 

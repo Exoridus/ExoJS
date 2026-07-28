@@ -2,7 +2,7 @@ import type { InputChannel } from '#input/InputBinding';
 import { resolveGamepadSlotChannel } from '#input/types';
 
 import type { ActionOptions, ActionSample, AtLeastOne, OneOrMany } from './types';
-import { sampleStrongest, toChannels } from './types';
+import { ActionOwnership, sampleStrongest, toChannels } from './types';
 
 /**
  * Two opposing groups of sources forming one signed axis. `negative` and
@@ -68,6 +68,7 @@ function evaluateAxis(buffer: Float32Array, binding: ResolvedAxisBinding): numbe
 export class AxisAction {
   private readonly _bindings: readonly ResolvedAxisBinding[];
   private readonly _threshold: number;
+  private readonly _ownership = new ActionOwnership();
   private _value = 0;
 
   public constructor(binding: OneOrMany<AxisBinding>, options: ActionOptions = {}) {
@@ -88,8 +89,36 @@ export class AxisAction {
     return Math.abs(this._value) > this._threshold;
   }
 
-  /** Sample the channel buffers for this frame. @internal */
+  /**
+   * Sample the channel buffers for this frame. Skips a repeat call for the
+   * same owner's already-processed frame (two attached maps sharing this
+   * instance); a genuinely different owner is still sampled normally — an
+   * axis has no frame-to-frame edge memory to protect during a handoff,
+   * unlike {@link ButtonAction}. See {@link ActionSample}'s doc comment.
+   *
+   * @internal
+   */
   public _update(sample: ActionSample): void {
+    if (this._ownership.resolve(sample) === 'duplicate') {
+      return;
+    }
+
+    this._computeFrom(sample);
+  }
+
+  /**
+   * Recompute against `sample`. Identical to {@link _update} — unlike
+   * {@link ButtonAction}, an axis carries no frame-to-frame edge memory to
+   * desync, so resyncing after a suspend is just a normal sample.
+   *
+   * @internal
+   */
+  public _resync(sample: ActionSample): void {
+    this._ownership.resolve(sample);
+    this._computeFrom(sample);
+  }
+
+  private _computeFrom(sample: ActionSample): void {
     let winner = 0;
 
     for (const binding of this._bindings) {
@@ -103,19 +132,9 @@ export class AxisAction {
     this._value = Math.min(1, Math.max(-1, winner));
   }
 
-  /**
-   * Recompute against `sample`. Identical to {@link _update} — unlike
-   * {@link ButtonAction}, an axis carries no frame-to-frame edge memory to
-   * desync, so resyncing after a suspend is just a normal sample.
-   *
-   * @internal
-   */
-  public _resync(sample: ActionSample): void {
-    this._update(sample);
-  }
-
   /** Clear all state, as if no source had ever been touched. @internal */
   public _reset(): void {
     this._value = 0;
+    this._ownership.reset();
   }
 }

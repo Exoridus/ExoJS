@@ -47,8 +47,6 @@ const fire = (canvas: HTMLCanvasElement, type: string, init: PointerEventInit): 
   canvas.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerId: 1, isPrimary: true, pointerType: 'mouse', ...init }));
 };
 
-const pressLatch = (im: InputManager, channel: number): number => (im as unknown as { channelPressLatch: Uint8Array }).channelPressLatch[channel]!;
-const releaseLatch = (im: InputManager, channel: number): number => (im as unknown as { channelReleaseLatch: Uint8Array }).channelReleaseLatch[channel]!;
 
 let canvas: HTMLCanvasElement;
 let im: InputManager;
@@ -107,9 +105,9 @@ describe('multiple phases within one frame', () => {
 
     const seen: Record<string, [number, number]> = {};
 
-    im.onPointerDown.add(p => void (seen.down = [p.x, p.y]));
-    im.onPointerMove.add(p => void (seen.move = [p.x, p.y]));
-    im.onPointerUp.add(p => void (seen.up = [p.x, p.y]));
+    im.onPointerDown.add((_p, x, y) => void (seen.down = [x, y]));
+    im.onPointerMove.add((_p, x, y) => void (seen.move = [x, y]));
+    im.onPointerUp.add((_p, x, y) => void (seen.up = [x, y]));
 
     fire(canvas, 'pointerdown', { clientX: 10, clientY: 20, buttons: 1 });
     fire(canvas, 'pointermove', { clientX: 50, clientY: 60, buttons: 1 });
@@ -127,7 +125,7 @@ describe('multiple phases within one frame', () => {
 
     const seen: Array<[number, number]> = [];
 
-    im.onPointerMove.add(p => void seen.push([p.x, p.y]));
+    im.onPointerMove.add((_p, x, y) => void seen.push([x, y]));
 
     fire(canvas, 'pointermove', { clientX: 20, clientY: 20 });
     fire(canvas, 'pointermove', { clientX: 30, clientY: 30 });
@@ -143,7 +141,7 @@ describe('multiple phases within one frame', () => {
 
     const seen: Array<[number, number]> = [];
 
-    im.onPointerCancel.add(p => void seen.push([p.x, p.y]));
+    im.onPointerCancel.add((_p, x, y) => void seen.push([x, y]));
 
     fire(canvas, 'pointerdown', { clientX: 10, clientY: 10, buttons: 1 });
     fire(canvas, 'pointercancel', { clientX: 70, clientY: 80, buttons: 0 });
@@ -309,53 +307,143 @@ describe('per-frame delta', () => {
   });
 });
 
-describe('channel edge latches', () => {
+describe('ordered channel event log', () => {
+  interface RawChannelEvent {
+    readonly channel: number;
+    readonly value: number;
+  }
+
+  const frameEvents = (manager: InputManager): RawChannelEvent[] =>
+    (manager as unknown as { frameEvents: RawChannelEvent[] }).frameEvents;
+  const forSpace = (manager: InputManager): number[] =>
+    frameEvents(manager)
+      .filter(e => e.channel === (Keyboard.Space as number))
+      .map(e => e.value);
+
   const focusAndPress = (keyCode: number): void => {
     canvas.dispatchEvent(new FocusEvent('focus'));
     window.dispatchEvent(new KeyboardEvent('keydown', { keyCode } as KeyboardEventInit));
   };
 
-  it('latches both edges of a press that started and ended within one frame', () => {
+  it('records a press then a release in that true order within one frame', () => {
     focusAndPress(32);
     window.dispatchEvent(new KeyboardEvent('keyup', { keyCode: 32 } as KeyboardEventInit));
 
-    expect(pressLatch(im, Keyboard.Space)).toBe(1);
-    expect(releaseLatch(im, Keyboard.Space)).toBe(1);
+    expect(forSpace(im)).toEqual([1, 0]);
   });
 
-  it('latches both edges of a release followed by a fresh press', () => {
+  it('records a release then a fresh press in that true order', () => {
     focusAndPress(32);
     im.update(0 as never);
 
     window.dispatchEvent(new KeyboardEvent('keyup', { keyCode: 32 } as KeyboardEventInit));
     window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: 32 } as KeyboardEventInit));
 
-    expect(pressLatch(im, Keyboard.Space)).toBe(1);
-    expect(releaseLatch(im, Keyboard.Space)).toBe(1);
+    expect(forSpace(im)).toEqual([0, 1]);
   });
 
-  it('does not consume a latch when it is read', () => {
+  it('does not consume the log when it is read mid-frame', () => {
     focusAndPress(32);
 
-    expect(pressLatch(im, Keyboard.Space)).toBe(1);
-    expect(pressLatch(im, Keyboard.Space)).toBe(1);
+    expect(forSpace(im)).toEqual([1]);
+    expect(forSpace(im)).toEqual([1]);
   });
 
-  it('clears the latches once the frame closes', () => {
+  it('clears the log once the frame closes', () => {
     focusAndPress(32);
     im.update(0 as never);
 
-    expect(pressLatch(im, Keyboard.Space)).toBe(0);
-    expect(releaseLatch(im, Keyboard.Space)).toBe(0);
+    expect(forSpace(im)).toEqual([]);
   });
 
-  it('leaves a key held across a frame boundary without a fresh edge', () => {
+  it('does not log a repeat write of the same value', () => {
     focusAndPress(32);
     im.update(0 as never);
+    im.update(0 as never); // still held, no new platform event
+
+    expect(forSpace(im)).toEqual([]);
+  });
+});
+
+describe('keyboard dispatch order', () => {
+  it('dispatches a Shift-up followed by a Tab-down in that true order, not grouped by type', () => {
+    canvas.dispatchEvent(new FocusEvent('focus'));
+    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: 16 } as KeyboardEventInit)); // Shift down
     im.update(0 as never);
 
-    expect(pressLatch(im, Keyboard.Space)).toBe(0);
-    expect(releaseLatch(im, Keyboard.Space)).toBe(0);
+    const seen: Array<{ channel: number; pressed: boolean }> = [];
+
+    im.onKeyDown.add(channel => seen.push({ channel, pressed: true }));
+    im.onKeyUp.add(channel => seen.push({ channel, pressed: false }));
+
+    // Shift released, THEN Tab pressed — within the same frame. A fixed
+    // "all keydowns before all keyups" dispatch order would report Tab's
+    // keydown before Shift's keyup, letting a Tab handler still see Shift
+    // as held.
+    window.dispatchEvent(new KeyboardEvent('keyup', { keyCode: 16 } as KeyboardEventInit));
+    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: 9 } as KeyboardEventInit)); // Tab down
+    im.update(0 as never);
+
+    expect(seen).toEqual([
+      { channel: Keyboard.Shift, pressed: false },
+      { channel: Keyboard.Tab, pressed: true },
+    ]);
+  });
+});
+
+describe('pointer dispatch order', () => {
+  it('dispatches an Up followed by a Down in that true order, not reordered to Down-then-Up', () => {
+    fire(canvas, 'pointerover', { clientX: 10, clientY: 10 });
+    fire(canvas, 'pointerdown', { clientX: 10, clientY: 10, buttons: 1 });
+    im.update(0 as never);
+
+    const seen: string[] = [];
+
+    im.onPointerDown.add(() => seen.push('down'));
+    im.onPointerUp.add(() => seen.push('up'));
+
+    // Release, then immediately press again — within the same frame. A
+    // fixed "Down always dispatches before Up" order would report this
+    // backwards.
+    fire(canvas, 'pointerup', { clientX: 10, clientY: 10, buttons: 0 });
+    fire(canvas, 'pointerdown', { clientX: 10, clientY: 10, buttons: 1 });
+    im.update(0 as never);
+
+    expect(seen).toEqual(['up', 'down']);
+  });
+
+  it('carries a fresh press as a live candidate into the next frame after an up-then-down collapse', () => {
+    fire(canvas, 'pointerover', { clientX: 10, clientY: 10 });
+    fire(canvas, 'pointerdown', { clientX: 10, clientY: 10, buttons: 1 });
+    im.update(0 as never);
+
+    fire(canvas, 'pointerup', { clientX: 10, clientY: 10, buttons: 0 });
+    fire(canvas, 'pointerdown', { clientX: 10, clientY: 10, buttons: 1 });
+    im.update(0 as never);
+
+    const pointer = getPointer();
+
+    expect(pointer.down).toBe(true);
+
+    im.update(0 as never); // next frame: no new platform events
+
+    expect(pointer.down).toBe(true);
+  });
+
+  it('dispatches two discrete presses within one frame as two separate onPointerDown calls', () => {
+    fire(canvas, 'pointerover', { clientX: 10, clientY: 10 });
+    im.update(0 as never);
+
+    const downHandler = vi.fn();
+
+    im.onPointerDown.add(downHandler);
+
+    fire(canvas, 'pointerdown', { clientX: 10, clientY: 10, buttons: 1 });
+    fire(canvas, 'pointerup', { clientX: 10, clientY: 10, buttons: 0 });
+    fire(canvas, 'pointerdown', { clientX: 20, clientY: 20, buttons: 1 });
+    im.update(0 as never);
+
+    expect(downHandler).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -400,14 +488,14 @@ describe('context menu policy', () => {
     const seen = vi.fn();
 
     manager.onContextMenu.add(seen);
-    c.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerId: 1, isPrimary: true, clientX: 40, clientY: 50 }));
+    c.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerId: 1, isPrimary: true, clientX: 10, clientY: 10 }));
     manager.update(0 as never);
 
-    c.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    c.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 40, clientY: 50 }));
     manager.update(0 as never);
 
     expect(seen).toHaveBeenCalledTimes(1);
-    expect(seen.mock.calls[0]![0].x).toBe(40);
+    expect(seen.mock.calls[0]![0].contextMenuPosition.x).toBe(40);
     manager.destroy();
   });
 
@@ -415,7 +503,7 @@ describe('context menu policy', () => {
     const { im: manager, canvas: c } = createManager();
     const seen: Array<[number, number]> = [];
 
-    manager.onContextMenu.add(p => void seen.push([p.x, p.y]));
+    manager.onContextMenu.add(p => void seen.push([p.contextMenuPosition.x, p.contextMenuPosition.y]));
     c.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerId: 1, isPrimary: true, clientX: 10, clientY: 10 }));
     manager.update(0 as never);
 

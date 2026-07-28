@@ -68,13 +68,22 @@ const makePointer = ({ id = 1, x = 0, y = 0, travelled = 0 }: MockPointerOptions
 const pastThreshold = 40;
 
 interface MockSignals {
-  onPointerDown: Signal<[Pointer]>;
-  onPointerMove: Signal<[Pointer]>;
-  onPointerUp: Signal<[Pointer]>;
-  onPointerTap: Signal<[Pointer]>;
-  onPointerCancel: Signal<[Pointer]>;
-  onPointerLeave: Signal<[Pointer]>;
+  onPointerDown: Signal<[Pointer, number, number]>;
+  onPointerMove: Signal<[Pointer, number, number]>;
+  onPointerUp: Signal<[Pointer, number, number]>;
+  onPointerTap: Signal<[Pointer, number, number]>;
+  onPointerCancel: Signal<[Pointer, number, number]>;
+  onPointerLeave: Signal<[Pointer, number, number]>;
 }
+
+/** Dispatch a mock pointer through a mock signal with its own x/y, matching the real (pointer, x, y) shape. */
+const dispatchPointer = (signal: Signal<[Pointer, number, number]>, opts: MockPointerOptions = {}): Pointer => {
+  const pointer = makePointer(opts);
+
+  signal.dispatch(pointer, opts.x ?? 0, opts.y ?? 0);
+
+  return pointer;
+};
 
 /** Build a minimal Application mock wired to a real Scene root. */
 const createApp = (): {
@@ -84,12 +93,12 @@ const createApp = (): {
   canvas: HTMLCanvasElement;
 } => {
   const signals: MockSignals = {
-    onPointerDown: new Signal<[Pointer]>(),
-    onPointerMove: new Signal<[Pointer]>(),
-    onPointerUp: new Signal<[Pointer]>(),
-    onPointerTap: new Signal<[Pointer]>(),
-    onPointerCancel: new Signal<[Pointer]>(),
-    onPointerLeave: new Signal<[Pointer]>(),
+    onPointerDown: new Signal<[Pointer, number, number]>(),
+    onPointerMove: new Signal<[Pointer, number, number]>(),
+    onPointerUp: new Signal<[Pointer, number, number]>(),
+    onPointerTap: new Signal<[Pointer, number, number]>(),
+    onPointerCancel: new Signal<[Pointer, number, number]>(),
+    onPointerLeave: new Signal<[Pointer, number, number]>(),
     onContextMenu: new Signal<[Pointer]>(),
     // InteractionManager owns the focus controller, which listens for keys.
     onKeyDown: new Signal<[number]>(),
@@ -141,12 +150,12 @@ const createAppNoScene = (
   canvas: HTMLCanvasElement;
 } => {
   const signals: MockSignals = {
-    onPointerDown: new Signal<[Pointer]>(),
-    onPointerMove: new Signal<[Pointer]>(),
-    onPointerUp: new Signal<[Pointer]>(),
-    onPointerTap: new Signal<[Pointer]>(),
-    onPointerCancel: new Signal<[Pointer]>(),
-    onPointerLeave: new Signal<[Pointer]>(),
+    onPointerDown: new Signal<[Pointer, number, number]>(),
+    onPointerMove: new Signal<[Pointer, number, number]>(),
+    onPointerUp: new Signal<[Pointer, number, number]>(),
+    onPointerTap: new Signal<[Pointer, number, number]>(),
+    onPointerCancel: new Signal<[Pointer, number, number]>(),
+    onPointerLeave: new Signal<[Pointer, number, number]>(),
     onContextMenu: new Signal<[Pointer]>(),
     // InteractionManager owns the focus controller, which listens for keys.
     onKeyDown: new Signal<[number]>(),
@@ -209,7 +218,7 @@ describe('InteractionManager — hit-test basics', () => {
     const handler = vi.fn();
 
     sprite.onPointerDown.add(handler);
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
     expect(handler).toHaveBeenCalledTimes(1);
@@ -231,7 +240,7 @@ describe('InteractionManager — hit-test basics', () => {
     const handler = vi.fn();
 
     sprite.onPointerDown.add(handler);
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
     expect(handler).not.toHaveBeenCalled();
@@ -252,7 +261,7 @@ describe('InteractionManager — hit-test basics', () => {
     const handler = vi.fn();
 
     sprite.onPointerDown.add(handler);
-    signals.onPointerDown.dispatch(makePointer({ x: 200, y: 200 }));
+    dispatchPointer(signals.onPointerDown, { x: 200, y: 200 });
     flushInteractions(im);
 
     expect(handler).not.toHaveBeenCalled();
@@ -284,7 +293,7 @@ describe('InteractionManager — z-order', () => {
 
     bottom.onPointerDown.add(bottomHandler);
     top.onPointerDown.add(topHandler);
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
     expect(topHandler).toHaveBeenCalledTimes(1);
@@ -327,7 +336,7 @@ describe('InteractionManager — bubbling', () => {
       parentTargets.push(e.target);
       parentCurrentTargets.push(e.currentTarget);
     });
-    signals.onPointerDown.dispatch(makePointer({ x: 25, y: 25 }));
+    dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
     flushInteractions(im);
 
     expect(childTargets).toHaveLength(1);
@@ -365,7 +374,7 @@ describe('InteractionManager — stopPropagation', () => {
       e.stopPropagation();
     });
     parent.onPointerDown.add(parentHandler);
-    signals.onPointerDown.dispatch(makePointer({ x: 25, y: 25 }));
+    dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
     flushInteractions(im);
 
     expect(parentHandler).not.toHaveBeenCalled();
@@ -403,7 +412,7 @@ describe('InteractionManager — bubble passes through non-interactive ancestors
 
     child.onPointerDown.add(childHandler);
     grandparent.onPointerDown.add(grandparentHandler);
-    signals.onPointerDown.dispatch(makePointer({ x: 25, y: 25 }));
+    dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
     flushInteractions(im);
 
     expect(childHandler).toHaveBeenCalledTimes(1);
@@ -430,7 +439,7 @@ describe('InteractionManager — bubble passes through non-interactive ancestors
     const parentHandler = vi.fn();
 
     parent.onPointerDown.add(parentHandler);
-    signals.onPointerDown.dispatch(makePointer({ x: 25, y: 25 }));
+    dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
     flushInteractions(im);
 
     expect(parentHandler).toHaveBeenCalledTimes(1);
@@ -459,7 +468,7 @@ describe('InteractionManager — bubble passes through non-interactive ancestors
 
     parent.onPointerDown.add(event => event.stopPropagation());
     grandparent.onPointerDown.add(grandparentHandler);
-    signals.onPointerDown.dispatch(makePointer({ x: 25, y: 25 }));
+    dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
     flushInteractions(im);
 
     expect(grandparentHandler).not.toHaveBeenCalled();
@@ -496,12 +505,12 @@ describe('InteractionManager — pointerover / pointerout on move', () => {
     });
 
     // First move over A to establish lastHit
-    signals.onPointerMove.dispatch(makePointer({ x: 25, y: 25 }));
+    dispatchPointer(signals.onPointerMove, { x: 25, y: 25 });
     flushInteractions(im);
     order.length = 0; // reset after setup
 
     // Now move to B
-    signals.onPointerMove.dispatch(makePointer({ x: 80, y: 25 }));
+    dispatchPointer(signals.onPointerMove, { x: 80, y: 25 });
     flushInteractions(im);
 
     expect(order).toEqual(['A:out', 'B:over']);
@@ -526,12 +535,12 @@ describe('InteractionManager — pointerover / pointerout on move', () => {
     sprite.onPointerOut.add(outHandler);
     sprite.onPointerOver.add(overHandler);
 
-    signals.onPointerMove.dispatch(makePointer({ x: 25, y: 25 }));
+    dispatchPointer(signals.onPointerMove, { x: 25, y: 25 });
     flushInteractions(im);
     expect(overHandler).toHaveBeenCalledTimes(1);
 
     // Move off the sprite entirely — no node under the pointer any more.
-    signals.onPointerMove.dispatch(makePointer({ x: 500, y: 500 }));
+    dispatchPointer(signals.onPointerMove, { x: 500, y: 500 });
     flushInteractions(im);
 
     expect(outHandler).toHaveBeenCalledTimes(1);
@@ -571,10 +580,10 @@ describe('InteractionManager — multi-pointer', () => {
     });
 
     // Pointer 1 over A
-    signals.onPointerDown.dispatch(makePointer({ id: 1, x: 25, y: 25 }));
+    dispatchPointer(signals.onPointerDown, { id: 1, x: 25, y: 25 });
     flushInteractions(im);
     // Pointer 2 over B
-    signals.onPointerDown.dispatch(makePointer({ id: 2, x: 80, y: 25 }));
+    dispatchPointer(signals.onPointerDown, { id: 2, x: 80, y: 25 });
     flushInteractions(im);
 
     expect(aDownCount.count).toBe(1);
@@ -601,7 +610,7 @@ describe('InteractionManager — cursor', () => {
     sprite.cursor = 'pointer';
     scene.addChild(sprite);
 
-    signals.onPointerMove.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerMove, { x: 50, y: 50 });
     flushInteractions(im);
 
     expect(canvas.style.cursor).toBe('pointer');
@@ -620,11 +629,11 @@ describe('InteractionManager — cursor', () => {
     sprite.cursor = 'pointer';
     scene.addChild(sprite);
 
-    signals.onPointerMove.dispatch(makePointer({ id: 1, x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerMove, { id: 1, x: 50, y: 50 });
     flushInteractions(im);
     expect(canvas.style.cursor).toBe('pointer');
 
-    signals.onPointerLeave.dispatch(makePointer({ id: 1, x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerLeave, { id: 1, x: 50, y: 50 });
     flushInteractions(im);
     expect(canvas.style.cursor).toBe('');
 
@@ -650,7 +659,7 @@ describe('InteractionManager — tap', () => {
     const handler = vi.fn();
 
     sprite.onPointerTap.add(handler);
-    signals.onPointerTap.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerTap, { x: 50, y: 50 });
     flushInteractions(im);
 
     expect(handler).toHaveBeenCalledTimes(1);
@@ -683,7 +692,7 @@ describe('InteractionManager — destroy cleanup', () => {
     sprite.onPointerDown.add(handler);
     im.destroy();
 
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     // No flushInteractions — im is destroyed, so update() is also a no-op.
 
     expect(handler).not.toHaveBeenCalled();
@@ -751,23 +760,23 @@ describe('InteractionManager — drag and drop', () => {
     sprite.onDragEnd.add(dragEndHandler);
 
     // Pointer down only notes a candidate — no drag yet.
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
     expect(dragStartHandler).not.toHaveBeenCalled();
 
     // The first move past the threshold starts the drag and drags in one go.
-    signals.onPointerMove.dispatch(makePointer({ x: 70, y: 60, travelled: pastThreshold }));
+    dispatchPointer(signals.onPointerMove, { x: 70, y: 60, travelled: pastThreshold });
     flushInteractions(im);
     expect(dragStartHandler).toHaveBeenCalledTimes(1);
     expect(dragHandler).toHaveBeenCalledTimes(1);
 
     // Pointer up ends drag
-    signals.onPointerUp.dispatch(makePointer({ x: 70, y: 60, travelled: pastThreshold }));
+    dispatchPointer(signals.onPointerUp, { x: 70, y: 60, travelled: pastThreshold });
     flushInteractions(im);
     expect(dragEndHandler).toHaveBeenCalledTimes(1);
 
     // Further move should NOT fire drag events
-    signals.onPointerMove.dispatch(makePointer({ x: 90, y: 90, travelled: pastThreshold }));
+    dispatchPointer(signals.onPointerMove, { x: 90, y: 90, travelled: pastThreshold });
     flushInteractions(im);
     expect(dragHandler).toHaveBeenCalledTimes(1);
 
@@ -791,11 +800,11 @@ describe('InteractionManager — drag and drop', () => {
     scene.addChild(sprite);
 
     // Grab at (60, 60) — offset is (50-60, 50-60) = (-10, -10)
-    signals.onPointerDown.dispatch(makePointer({ x: 60, y: 60 }));
+    dispatchPointer(signals.onPointerDown, { x: 60, y: 60 });
     flushInteractions(im);
 
     // Move pointer to (100, 80) — expected node position: (100-10, 80-10) = (90, 70)
-    signals.onPointerMove.dispatch(makePointer({ x: 100, y: 80, travelled: pastThreshold }));
+    dispatchPointer(signals.onPointerMove, { x: 100, y: 80, travelled: pastThreshold });
     flushInteractions(im);
 
     expect(sprite.position.x).toBe(90);
@@ -824,11 +833,11 @@ describe('InteractionManager — drag and drop', () => {
     other.onPointerOver.add(otherOverHandler);
 
     // Start drag on dragged sprite
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
     // Move pointer into other sprite's bounds — should NOT fire pointerover on other
-    signals.onPointerMove.dispatch(makePointer({ x: 250, y: 50, travelled: pastThreshold }));
+    dispatchPointer(signals.onPointerMove, { x: 250, y: 50, travelled: pastThreshold });
     flushInteractions(im);
 
     expect(otherOverHandler).not.toHaveBeenCalled();
@@ -853,7 +862,7 @@ describe('InteractionManager — drag and drop', () => {
 
     sprite.onDragStart.add(dragStartHandler);
 
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
     expect(dragStartHandler).not.toHaveBeenCalled();
@@ -879,7 +888,7 @@ describe('InteractionManager — drag and drop', () => {
     sprite.onDragStart.add(dragStartHandler);
     sprite.onPointerDown.add(downHandler);
 
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
     expect(downHandler).not.toHaveBeenCalled();
@@ -906,20 +915,20 @@ describe('InteractionManager — drag and drop', () => {
     sprite.onDragEnd.add(dragEndHandler);
     sprite.onDrag.add(dragHandler);
 
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
-    signals.onPointerMove.dispatch(makePointer({ x: 50, y: 90, travelled: pastThreshold }));
+    dispatchPointer(signals.onPointerMove, { x: 50, y: 90, travelled: pastThreshold });
     flushInteractions(im);
     expect(dragHandler).toHaveBeenCalledTimes(1);
 
-    signals.onPointerCancel.dispatch(makePointer({ x: 50, y: 90, travelled: pastThreshold }));
+    dispatchPointer(signals.onPointerCancel, { x: 50, y: 90, travelled: pastThreshold });
     flushInteractions(im);
 
     expect(dragEndHandler).toHaveBeenCalledTimes(1);
 
     // Further move after cancel should NOT fire drag
-    signals.onPointerMove.dispatch(makePointer({ x: 60, y: 60, travelled: pastThreshold }));
+    dispatchPointer(signals.onPointerMove, { x: 60, y: 60, travelled: pastThreshold });
     flushInteractions(im);
     expect(dragHandler).toHaveBeenCalledTimes(1);
 
@@ -944,13 +953,13 @@ describe('InteractionManager — drag and drop', () => {
       dragTargets.push(e.currentTarget);
     });
 
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
-    signals.onPointerMove.dispatch(makePointer({ x: 55, y: 55, travelled: pastThreshold }));
+    dispatchPointer(signals.onPointerMove, { x: 55, y: 55, travelled: pastThreshold });
     flushInteractions(im);
 
-    signals.onPointerMove.dispatch(makePointer({ x: 60, y: 60, travelled: pastThreshold }));
+    dispatchPointer(signals.onPointerMove, { x: 60, y: 60, travelled: pastThreshold });
     flushInteractions(im);
 
     expect(dragTargets).toHaveLength(2);
@@ -983,13 +992,13 @@ describe('InteractionManager — drag and drop', () => {
     parent.onDrag.add(parentDrag);
     parent.onDragEnd.add(parentDragEnd);
 
-    signals.onPointerDown.dispatch(makePointer({ x: 25, y: 25 }));
+    dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
     flushInteractions(im);
 
-    signals.onPointerMove.dispatch(makePointer({ x: 30, y: 30, travelled: pastThreshold }));
+    dispatchPointer(signals.onPointerMove, { x: 30, y: 30, travelled: pastThreshold });
     flushInteractions(im);
 
-    signals.onPointerUp.dispatch(makePointer({ x: 30, y: 30, travelled: pastThreshold }));
+    dispatchPointer(signals.onPointerUp, { x: 30, y: 30, travelled: pastThreshold });
     flushInteractions(im);
 
     expect(parentDragStart).not.toHaveBeenCalled();
@@ -1022,17 +1031,17 @@ describe('InteractionManager — drag and drop', () => {
     spriteB.onPointerDown.add(bDown);
 
     // Start drag on A with pointer 1
-    signals.onPointerDown.dispatch(makePointer({ id: 1, x: 25, y: 25 }));
+    dispatchPointer(signals.onPointerDown, { id: 1, x: 25, y: 25 });
     flushInteractions(im);
 
     // Pointer 2 down on B — should fire normally (separate pointer)
-    signals.onPointerDown.dispatch(makePointer({ id: 2, x: 80, y: 25 }));
+    dispatchPointer(signals.onPointerDown, { id: 2, x: 80, y: 25 });
     flushInteractions(im);
 
     expect(bDown).toHaveBeenCalledTimes(1);
 
     // Move pointer 1 — only A's drag fires
-    signals.onPointerMove.dispatch(makePointer({ id: 1, x: 30, y: 30, travelled: pastThreshold }));
+    dispatchPointer(signals.onPointerMove, { id: 1, x: 30, y: 30, travelled: pastThreshold });
     flushInteractions(im);
 
     expect(aDrag).toHaveBeenCalledTimes(1);
@@ -1062,12 +1071,12 @@ describe('InteractionManager — multi-Application isolation', () => {
     // App B's pointer must NOT reach app A's node. Under the old global
     // singleton the node registered with whichever manager was constructed
     // last, breaking exactly this case.
-    b.signals.onPointerDown.dispatch(makePointer({ x: 25, y: 25 }));
+    dispatchPointer(b.signals.onPointerDown, { x: 25, y: 25 });
     imB.update();
     expect(down).not.toHaveBeenCalled();
 
     // Only app A's own pointer reaches it.
-    a.signals.onPointerDown.dispatch(makePointer({ x: 25, y: 25 }));
+    dispatchPointer(a.signals.onPointerDown, { x: 25, y: 25 });
     imA.update();
     expect(down).toHaveBeenCalledTimes(1);
 
@@ -1106,12 +1115,12 @@ describe('InteractionManager — interaction scope', () => {
     im.pushScope(modal);
 
     // Pointer over `outside` (not in the captured subtree) hits nothing.
-    signals.onPointerDown.dispatch(makePointer({ x: 250, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 250, y: 50 });
     flushInteractions(im);
     expect(outsideHandler).not.toHaveBeenCalled();
 
     // Pointer over `inside` (in the captured subtree) still hits.
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
     expect(insideHandler).toHaveBeenCalledTimes(1);
 
@@ -1144,7 +1153,7 @@ describe('InteractionManager — interaction scope', () => {
 
     im.popScope(token);
 
-    signals.onPointerDown.dispatch(makePointer({ x: 250, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 250, y: 50 });
     flushInteractions(im);
     expect(outsideHandler).toHaveBeenCalledTimes(1);
 
@@ -1182,7 +1191,7 @@ describe('InteractionManager — getHoveredNode', () => {
     sprite.interactive = true;
     scene.addChild(sprite);
 
-    signals.onPointerMove.dispatch(makePointer({ id: 7, x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerMove, { id: 7, x: 50, y: 50 });
     flushInteractions(im);
 
     expect(im.getHoveredNode(7)).toBe(sprite);
@@ -1213,7 +1222,7 @@ describe('InteractionManager — getHoveredNode', () => {
     sprite.interactive = true;
     scene.addChild(sprite);
 
-    signals.onPointerMove.dispatch(makePointer({ id: 1, x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerMove, { id: 1, x: 50, y: 50 });
     flushInteractions(im);
 
     expect(im.getHoveredNode()).toBe(sprite);
@@ -1255,13 +1264,13 @@ describe('InteractionManager — getCapturedNodes', () => {
     sprite.draggable = true;
     scene.addChild(sprite);
 
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
     // A press alone is only a candidate — capture starts with the drag.
     expect(im.getCapturedNodes()).toEqual([]);
 
-    signals.onPointerMove.dispatch(makePointer({ x: 90, y: 50, travelled: pastThreshold }));
+    dispatchPointer(signals.onPointerMove, { x: 90, y: 50, travelled: pastThreshold });
     flushInteractions(im);
 
     expect(im.getCapturedNodes()).toEqual([sprite]);
@@ -1341,7 +1350,7 @@ describe('InteractionManager — UI layer', () => {
     worldSprite.onPointerDown.add(worldHandler);
     uiSprite.onPointerDown.add(uiHandler);
 
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
     expect(uiHandler).toHaveBeenCalledTimes(1);
@@ -1374,7 +1383,7 @@ describe('InteractionManager — UI layer', () => {
 
     worldSprite.onPointerDown.add(worldHandler);
 
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
     expect(worldHandler).toHaveBeenCalledTimes(1);
@@ -1421,10 +1430,10 @@ describe('InteractionManager — UI layer', () => {
 
     uiSprite.onDrag.add(dragHandler);
 
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
-    signals.onPointerMove.dispatch(makePointer({ x: 60, y: 60, travelled: pastThreshold }));
+    dispatchPointer(signals.onPointerMove, { x: 60, y: 60, travelled: pastThreshold });
     flushInteractions(im);
 
     expect(dragHandler).toHaveBeenCalledTimes(1);
@@ -1454,10 +1463,10 @@ describe('InteractionManager — UI layer', () => {
 
     worldSprite.onDrag.add(dragHandler);
 
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
-    signals.onPointerMove.dispatch(makePointer({ x: 60, y: 60, travelled: pastThreshold }));
+    dispatchPointer(signals.onPointerMove, { x: 60, y: 60, travelled: pastThreshold });
     flushInteractions(im);
 
     expect(dragHandler).toHaveBeenCalledTimes(1);
@@ -1507,7 +1516,7 @@ describe('InteractionManager — no active scene', () => {
     const im = new InteractionManager(app);
 
     expect(() => {
-      signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+      dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
       flushInteractions(im);
     }).not.toThrow();
 
@@ -1561,7 +1570,7 @@ describe('InteractionManager — invisible nodes', () => {
 
     hidden.onPointerDown.add(handler);
 
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
     expect(handler).not.toHaveBeenCalled();
@@ -1595,8 +1604,8 @@ describe('InteractionManager — coalesced events', () => {
     sprite.onPointerMove.add(moveHandler);
 
     // Both dispatched BEFORE update() — coalesced into a single pending queue entry.
-    signals.onPointerDown.dispatch(makePointer({ id: 3, x: 50, y: 50 }));
-    signals.onPointerMove.dispatch(makePointer({ id: 3, x: 55, y: 55 }));
+    dispatchPointer(signals.onPointerDown, { id: 3, x: 50, y: 50 });
+    dispatchPointer(signals.onPointerMove, { id: 3, x: 55, y: 55 });
     flushInteractions(im);
 
     expect(downHandler).toHaveBeenCalledTimes(1);
@@ -1633,9 +1642,9 @@ describe('InteractionManager — coalesced events', () => {
     // InteractionManager._enqueue captures per phase. Down and Up share the
     // same stub position (25, 25) — still over `left` — while Move alone
     // reports (225, 25), over `right`; all three collapse into one flush.
-    signals.onPointerDown.dispatch(makePointer({ id: 9, x: 25, y: 25 }));
-    signals.onPointerMove.dispatch(makePointer({ id: 9, x: 225, y: 25 }));
-    signals.onPointerUp.dispatch(makePointer({ id: 9, x: 25, y: 25 }));
+    dispatchPointer(signals.onPointerDown, { id: 9, x: 25, y: 25 });
+    dispatchPointer(signals.onPointerMove, { id: 9, x: 225, y: 25 });
+    dispatchPointer(signals.onPointerUp, { id: 9, x: 25, y: 25 });
     flushInteractions(im);
 
     expect(leftDown).toHaveBeenCalledTimes(1);
@@ -1669,7 +1678,7 @@ describe('InteractionManager — events with no hit', () => {
     sprite.onPointerMove.add(handler);
 
     expect(() => {
-      signals.onPointerMove.dispatch(makePointer({ x: 500, y: 500 }));
+      dispatchPointer(signals.onPointerMove, { x: 500, y: 500 });
       flushInteractions(im);
     }).not.toThrow();
     expect(handler).not.toHaveBeenCalled();
@@ -1693,7 +1702,7 @@ describe('InteractionManager — events with no hit', () => {
 
     sprite.onPointerUp.add(handler);
 
-    signals.onPointerUp.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerUp, { x: 50, y: 50 });
     flushInteractions(im);
 
     expect(handler).toHaveBeenCalledTimes(1);
@@ -1709,7 +1718,7 @@ describe('InteractionManager — events with no hit', () => {
     im.attachRoot(scene.root);
 
     expect(() => {
-      signals.onPointerUp.dispatch(makePointer({ x: 500, y: 500 }));
+      dispatchPointer(signals.onPointerUp, { x: 500, y: 500 });
       flushInteractions(im);
     }).not.toThrow();
 
@@ -1723,7 +1732,7 @@ describe('InteractionManager — events with no hit', () => {
     im.attachRoot(scene.root);
 
     expect(() => {
-      signals.onPointerTap.dispatch(makePointer({ x: 500, y: 500 }));
+      dispatchPointer(signals.onPointerTap, { x: 500, y: 500 });
       flushInteractions(im);
     }).not.toThrow();
 
@@ -1737,9 +1746,9 @@ describe('InteractionManager — events with no hit', () => {
     im.attachRoot(scene.root);
 
     expect(() => {
-      signals.onPointerCancel.dispatch(makePointer({ id: 9, x: 500, y: 500 }));
+      dispatchPointer(signals.onPointerCancel, { id: 9, x: 500, y: 500 });
       flushInteractions(im);
-      signals.onPointerLeave.dispatch(makePointer({ id: 9, x: 500, y: 500 }));
+      dispatchPointer(signals.onPointerLeave, { id: 9, x: 500, y: 500 });
       flushInteractions(im);
     }).not.toThrow();
 
@@ -1770,7 +1779,7 @@ describe('InteractionManager — registration guards', () => {
     const handler = vi.fn();
 
     sprite.onPointerDown.add(handler);
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
     // Still fires exactly once — no duplicate registration/dispatch.
@@ -1821,7 +1830,7 @@ describe('InteractionManager — registration guards', () => {
     const handler = vi.fn();
 
     sprite.onPointerDown.add(handler);
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
     expect(handler).toHaveBeenCalledTimes(1);
@@ -1897,7 +1906,7 @@ describe('InteractionManager — dispatch gating', () => {
     const onDown = vi.fn();
     sprite.onPointerDown.add(onDown);
 
-    signals.onPointerDown.dispatch(makePointer({ x: 10, y: 10 }));
+    dispatchPointer(signals.onPointerDown, { x: 10, y: 10 });
     im.update();
 
     expect(onDown).not.toHaveBeenCalled();
@@ -1918,7 +1927,7 @@ describe('InteractionManager — dispatch gating', () => {
     const onDown = vi.fn();
     sprite.onPointerDown.add(onDown);
 
-    signals.onPointerDown.dispatch(makePointer({ x: 10, y: 10 }));
+    dispatchPointer(signals.onPointerDown, { x: 10, y: 10 });
     im.update();
 
     expect(onDown).toHaveBeenCalledTimes(1);
@@ -1942,7 +1951,7 @@ describe('InteractionManager — dispatch gating', () => {
     const onDown = vi.fn();
     sprite.onPointerDown.add(onDown);
 
-    signals.onPointerDown.dispatch(makePointer({ x: 10, y: 10 }));
+    dispatchPointer(signals.onPointerDown, { x: 10, y: 10 });
     im.update();
 
     expect(onDown).toHaveBeenCalledTimes(1);
@@ -1966,7 +1975,7 @@ describe('InteractionManager — dispatch gating', () => {
     const onDown = vi.fn();
     sprite.onPointerDown.add(onDown);
 
-    signals.onPointerDown.dispatch(makePointer({ x: 10, y: 10 }));
+    dispatchPointer(signals.onPointerDown, { x: 10, y: 10 });
     im.update();
     expect(onDown).not.toHaveBeenCalled();
 
@@ -1984,7 +1993,7 @@ describe('InteractionManager — dispatch gating', () => {
     const im = new InteractionManager(app);
 
     expect(() => {
-      signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+      dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
       im.update();
     }).not.toThrow();
 

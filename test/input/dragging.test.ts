@@ -42,23 +42,32 @@ class TestSprite extends Drawable {
 }
 
 interface Signals {
-  onPointerDown: Signal<[Pointer]>;
-  onPointerMove: Signal<[Pointer]>;
-  onPointerUp: Signal<[Pointer]>;
-  onPointerTap: Signal<[Pointer]>;
+  onPointerDown: Signal<[Pointer, number, number]>;
+  onPointerMove: Signal<[Pointer, number, number]>;
+  onPointerUp: Signal<[Pointer, number, number]>;
+  onPointerTap: Signal<[Pointer, number, number]>;
 }
 
 const makePointer = (x: number, y: number, travelled = 0): Pointer =>
   ({ id: 1, x, y, type: 'mouse', isPrimary: true, maxDistanceFromPress: travelled }) as unknown as Pointer;
 
+/** Dispatch a mock pointer through a mock signal with its own x/y, matching the real (pointer, x, y) shape. */
+const dispatchPointer = (signal: Signal<[Pointer, number, number]>, x: number, y: number, travelled = 0): Pointer => {
+  const pointer = makePointer(x, y, travelled);
+
+  signal.dispatch(pointer, x, y);
+
+  return pointer;
+};
+
 const createApp = (dragThreshold?: number): { app: Application; scene: Scene; signals: Signals; im: InteractionManager } => {
   const signals = {
-    onPointerDown: new Signal<[Pointer]>(),
-    onPointerMove: new Signal<[Pointer]>(),
-    onPointerUp: new Signal<[Pointer]>(),
-    onPointerTap: new Signal<[Pointer]>(),
-    onPointerCancel: new Signal<[Pointer]>(),
-    onPointerLeave: new Signal<[Pointer]>(),
+    onPointerDown: new Signal<[Pointer, number, number]>(),
+    onPointerMove: new Signal<[Pointer, number, number]>(),
+    onPointerUp: new Signal<[Pointer, number, number]>(),
+    onPointerTap: new Signal<[Pointer, number, number]>(),
+    onPointerCancel: new Signal<[Pointer, number, number]>(),
+    onPointerLeave: new Signal<[Pointer, number, number]>(),
     onContextMenu: new Signal<[Pointer]>(),
     onKeyDown: new Signal<[number]>(),
     onKeyUp: new Signal<[number]>(),
@@ -113,7 +122,7 @@ describe('drag threshold', () => {
     scene.addChild(sprite);
     sprite.onDragStart.add(started);
 
-    signals.onPointerDown.dispatch(makePointer(50, 50));
+    dispatchPointer(signals.onPointerDown, 50, 50);
     im.update();
 
     expect(started).not.toHaveBeenCalled();
@@ -132,10 +141,10 @@ describe('drag threshold', () => {
     sprite.onDragStart.add(started);
     sprite.onDrag.add(dragged);
 
-    signals.onPointerDown.dispatch(makePointer(50, 50));
+    dispatchPointer(signals.onPointerDown, 50, 50);
     im.update();
 
-    signals.onPointerMove.dispatch(makePointer(54, 52, 5));
+    dispatchPointer(signals.onPointerMove, 54, 52, 5);
     im.update();
 
     expect(started).not.toHaveBeenCalled();
@@ -153,10 +162,10 @@ describe('drag threshold', () => {
     scene.addChild(sprite);
     sprite.onDragStart.add(started);
 
-    signals.onPointerDown.dispatch(makePointer(50, 50));
+    dispatchPointer(signals.onPointerDown, 50, 50);
     im.update();
 
-    signals.onPointerMove.dispatch(makePointer(70, 50, 20));
+    dispatchPointer(signals.onPointerMove, 70, 50, 20);
     im.update();
 
     expect(started).toHaveBeenCalledTimes(1);
@@ -173,11 +182,11 @@ describe('drag threshold', () => {
     scene.addChild(sprite);
     sprite.onDragStart.add(started);
 
-    signals.onPointerDown.dispatch(makePointer(50, 50));
+    dispatchPointer(signals.onPointerDown, 50, 50);
     im.update();
-    signals.onPointerMove.dispatch(makePointer(70, 50, 20));
+    dispatchPointer(signals.onPointerMove, 70, 50, 20);
     im.update();
-    signals.onPointerMove.dispatch(makePointer(90, 50, 40));
+    dispatchPointer(signals.onPointerMove, 90, 50, 40);
     im.update();
 
     expect(started).toHaveBeenCalledTimes(1);
@@ -193,14 +202,14 @@ describe('drag threshold', () => {
     scene.addChild(sprite);
     sprite.onDragStart.add(started);
 
-    signals.onPointerDown.dispatch(makePointer(50, 50));
+    dispatchPointer(signals.onPointerDown, 50, 50);
     im.update();
 
-    signals.onPointerMove.dispatch(makePointer(70, 50, 20));
+    dispatchPointer(signals.onPointerMove, 70, 50, 20);
     im.update();
     expect(started).not.toHaveBeenCalled();
 
-    signals.onPointerMove.dispatch(makePointer(90, 50, 40));
+    dispatchPointer(signals.onPointerMove, 90, 50, 40);
     im.update();
     expect(started).toHaveBeenCalledTimes(1);
 
@@ -217,10 +226,10 @@ describe('tap after drag', () => {
     scene.addChild(sprite);
     sprite.onPointerTap.add(tapped);
 
-    signals.onPointerDown.dispatch(makePointer(50, 50));
+    dispatchPointer(signals.onPointerDown, 50, 50);
     im.update();
-    signals.onPointerUp.dispatch(makePointer(52, 50, 2));
-    signals.onPointerTap.dispatch(makePointer(52, 50, 2));
+    dispatchPointer(signals.onPointerUp, 52, 50, 2);
+    dispatchPointer(signals.onPointerTap, 52, 50, 2);
     im.update();
 
     expect(tapped).toHaveBeenCalledTimes(1);
@@ -238,13 +247,13 @@ describe('tap after drag', () => {
     sprite.onPointerTap.add(tapped);
     sprite.onDragEnd.add(ended);
 
-    signals.onPointerDown.dispatch(makePointer(50, 50));
+    dispatchPointer(signals.onPointerDown, 50, 50);
     im.update();
-    signals.onPointerMove.dispatch(makePointer(90, 50, 40));
+    dispatchPointer(signals.onPointerMove, 90, 50, 40);
     im.update();
 
-    signals.onPointerUp.dispatch(makePointer(90, 50, 40));
-    signals.onPointerTap.dispatch(makePointer(90, 50, 40));
+    dispatchPointer(signals.onPointerUp, 90, 50, 40);
+    dispatchPointer(signals.onPointerTap, 90, 50, 40);
     im.update();
 
     expect(ended).toHaveBeenCalledTimes(1);
@@ -266,10 +275,10 @@ describe('parent-local positioning', () => {
     parent.getWorldTransform();
 
     // Grab at world (50, 50) — parent-local (-50, 10), so the offset is (50, -10).
-    signals.onPointerDown.dispatch(makePointer(50, 50));
+    dispatchPointer(signals.onPointerDown, 50, 50);
     im.update();
 
-    signals.onPointerMove.dispatch(makePointer(150, 90, 108));
+    dispatchPointer(signals.onPointerMove, 150, 90, 108);
     im.update();
 
     // World (150, 90) is parent-local (50, 50); plus the grab offset → (100, 40).
@@ -289,11 +298,11 @@ describe('parent-local positioning', () => {
     parent.addChild(sprite);
     parent.getWorldTransform();
 
-    signals.onPointerDown.dispatch(makePointer(0, 0));
+    dispatchPointer(signals.onPointerDown, 0, 0);
     im.update();
 
     // 40 world pixels are 20 parent-local pixels under a 2× parent.
-    signals.onPointerMove.dispatch(makePointer(40, 40, 56));
+    dispatchPointer(signals.onPointerMove, 40, 40, 56);
     im.update();
 
     expect(sprite.position.x).toBeCloseTo(20);

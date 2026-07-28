@@ -7,7 +7,7 @@ import { Vector } from '#math/Vector';
 import type { PlatformAdapter, PlatformSubscription } from '#platform/PlatformAdapter';
 
 import type { ActionMap, ActionRecord } from './actions/ActionMap';
-import type { ActionSample } from './actions/types';
+import type { ActionSample, ChannelEvent } from './actions/types';
 import { Gamepad } from './Gamepad';
 import type { GamepadAxis } from './GamepadAxis';
 import type { GamepadButton } from './GamepadButton';
@@ -36,11 +36,16 @@ export type GamepadSlotStrategy = 'sticky' | 'compact';
 
 enum InputManagerFlag {
   None = 0,
-  KeyDown = 1 << 0,
-  KeyUp = 1 << 1,
-  MouseWheel = 1 << 2,
-  PointerUpdate = 1 << 3,
-  ContextMenu = 1 << 4,
+  KeyChange = 1 << 0,
+  MouseWheel = 1 << 1,
+  PointerUpdate = 1 << 2,
+  ContextMenu = 1 << 3,
+}
+
+/** One keyboard channel transition, in the exact order it happened. */
+interface KeyChannelEvent {
+  readonly channel: number;
+  readonly pressed: boolean;
 }
 
 /**
@@ -67,22 +72,19 @@ export class InputManager {
   private readonly platform: PlatformAdapter;
   private readonly channels: Float32Array = new Float32Array(ChannelSize.Container);
   /**
-   * Per-channel latch: `1` when the channel rose from zero at least once during
-   * this frame. Set as the platform events arrive and cleared only when the
-   * frame closes, so every reader within a frame sees the same answer — reading
-   * it does not consume it. This is what lets an action report a press/release
-   * edge for a tap the frame never sampled directly.
-   */
-  private readonly channelPressLatch: Uint8Array = new Uint8Array(ChannelSize.Container);
-  /** Per-channel latch for the opposite edge. See {@link InputManager.channelPressLatch}. */
-  private readonly channelReleaseLatch: Uint8Array = new Uint8Array(ChannelSize.Container);
-  /**
-   * Channel values as of the last edge check. Compared against the live buffer
-   * to detect the edges above — a frame-boundary snapshot could not, because
-   * both edges of a press that starts and ends between two frames would fall
-   * inside the gap.
+   * Channel values as of the last change check — compared against the live
+   * buffer to detect an actual change and avoid logging a redundant repeat.
    */
   private readonly channelsLast: Float32Array = new Float32Array(ChannelSize.Container);
+  /**
+   * Every channel write since the frame closed, in true chronological order.
+   * Set as platform events arrive, read by actions once per frame, and
+   * cleared only when the frame closes — the ordered record that lets an
+   * action replay its bound channels' real transition sequence instead of
+   * reconstructing it from independent, unordered per-channel bits. See
+   * {@link ActionSample}'s doc comment.
+   */
+  private readonly frameEvents: ChannelEvent[] = [];
   private readonly pointers = new Map<number, Pointer>();
   private readonly _gamepads: readonly [Gamepad, Gamepad, Gamepad, Gamepad];
   private readonly gamepadsByBrowserIndex = new Map<number, Gamepad>();
@@ -118,8 +120,8 @@ export class InputManager {
   };
   private readonly wheelOffset = new Vector();
   private readonly flags = new Flags<InputManagerFlag>();
-  private readonly channelsPressed: number[] = [];
-  private readonly channelsReleased: number[] = [];
+  /** Keyboard transitions since the last flush, in true chronological order (see updateEvents). */
+  private readonly keyEvents: KeyChannelEvent[] = [];
   private readonly gamepadDefinitions: GamepadDefinition[];
   private readonly slotStrategy: GamepadSlotStrategy;
 
@@ -140,14 +142,22 @@ export class InputManager {
   private readonly listeners: PlatformSubscription[] = [];
 
   public readonly onCanvasFocusChange = new Signal<[focused: boolean]>();
-  public readonly onPointerEnter = new Signal<[Pointer]>();
-  public readonly onPointerLeave = new Signal<[Pointer]>();
-  public readonly onPointerDown = new Signal<[Pointer]>();
-  public readonly onPointerMove = new Signal<[Pointer]>();
-  public readonly onPointerUp = new Signal<[Pointer]>();
-  public readonly onPointerTap = new Signal<[Pointer]>();
-  public readonly onPointerSwipe = new Signal<[Pointer]>();
-  public readonly onPointerCancel = new Signal<[Pointer]>();
+  /**
+   * Every pointer signal below carries the phase's own `(x, y)` explicitly,
+   * in design pixels, alongside the pointer — an immutable snapshot rather
+   * than a temporary rewind of {@link Pointer.position}. `pointer.x`/
+   * `pointer.y` always read the pointer's live, current position instead
+   * (see {@link Pointer.position}'s doc comment); use the `x`/`y` parameters
+   * for the position a specific phase actually happened at.
+   */
+  public readonly onPointerEnter = new Signal<[pointer: Pointer, x: number, y: number]>();
+  public readonly onPointerLeave = new Signal<[pointer: Pointer, x: number, y: number]>();
+  public readonly onPointerDown = new Signal<[pointer: Pointer, x: number, y: number]>();
+  public readonly onPointerMove = new Signal<[pointer: Pointer, x: number, y: number]>();
+  public readonly onPointerUp = new Signal<[pointer: Pointer, x: number, y: number]>();
+  public readonly onPointerTap = new Signal<[pointer: Pointer, x: number, y: number]>();
+  public readonly onPointerSwipe = new Signal<[pointer: Pointer, x: number, y: number]>();
+  public readonly onPointerCancel = new Signal<[pointer: Pointer, x: number, y: number]>();
   public readonly onMouseWheel = new Signal<[Vector]>();
   public readonly onKeyDown = new Signal<[number]>();
   public readonly onKeyUp = new Signal<[number]>();
@@ -220,8 +230,7 @@ export class InputManager {
 
     this.actionSample = {
       values: this.channels,
-      pressed: this.channelPressLatch,
-      released: this.channelReleaseLatch,
+      events: this.frameEvents,
       frameId: 0,
     };
     this.gestureRecognizer = new GestureRecognizer(pointerDistanceThreshold, this.onPinch, this.onRotate, this.onLongPress);
@@ -432,7 +441,7 @@ export class InputManager {
     }
 
     this.updateGamepads();
-    this._trackEdges(ChannelOffset.Gamepads, ChannelSize.Category);
+    this._recordChannelChanges(ChannelOffset.Gamepads, ChannelSize.Category);
 
     for (const binding of this.bindings) {
       binding.update(this.channels);
@@ -450,10 +459,10 @@ export class InputManager {
       this.updateEvents();
     }
 
-    // Close the frame: the edge latches are cleared here rather than where
-    // they are read — every reader within the frame must see the same answer.
-    this.channelPressLatch.fill(0);
-    this.channelReleaseLatch.fill(0);
+    // Close the frame: the ordered event log is cleared here rather than
+    // where it is read — every action within the frame must see the same
+    // sequence, and the next frame starts from an empty log.
+    this.frameEvents.length = 0;
   }
 
   /**
@@ -491,8 +500,8 @@ export class InputManager {
     this.actionMaps.clear();
     this.capturedKeyChannels.clear();
     this.gamepadsByBrowserIndex.clear();
-    this.channelsPressed.length = 0;
-    this.channelsReleased.length = 0;
+    this.keyEvents.length = 0;
+    this.frameEvents.length = 0;
     this.pointerSlots.clear();
     this.freeSlots.length = 0;
     this.wheelOffset.destroy();
@@ -569,32 +578,28 @@ export class InputManager {
   }
 
   /**
-   * Latch any zero-crossing edge `[base, base + length)` just crossed. Called
-   * right after a platform handler wrote into those channels, which is the
-   * only moment a sub-frame edge is still observable.
+   * Append an ordered event for every channel in `[base, base + length)`
+   * that actually changed since the last check. Called right after a
+   * platform handler wrote into those channels, which is the only moment a
+   * sub-frame change is still observable — a frame-boundary diff could not
+   * tell true order or intermediate values apart from a single net change.
    */
-  private _trackEdges(base: number, length: number): void {
-    const { channels, channelsLast, channelPressLatch, channelReleaseLatch } = this;
+  private _recordChannelChanges(base: number, length: number): void {
+    const { channels, channelsLast, frameEvents } = this;
 
     for (let i = base, end = base + length; i < end; i++) {
       const value = channels[i] ?? 0;
-      const previous = channelsLast[i] ?? 0;
 
-      if (previous === 0) {
-        if (value !== 0) {
-          channelPressLatch[i] = 1;
-        }
-      } else if (value === 0) {
-        channelReleaseLatch[i] = 1;
+      if ((channelsLast[i] ?? 0) !== value) {
+        channelsLast[i] = value;
+        frameEvents.push({ channel: i, value });
       }
-
-      channelsLast[i] = value;
     }
   }
 
-  /** Fold a pointer's whole 16-channel slot into the edge-latch buffers. */
-  private _trackPointerEdges(pointer: Pointer): void {
-    this._trackEdges(ChannelOffset.Pointers + pointer.slotIndex * pointerSlotSize, pointerSlotSize);
+  /** Fold a pointer's whole 16-channel slot into the ordered event log. */
+  private _recordPointerChanges(pointer: Pointer): void {
+    this._recordChannelChanges(ChannelOffset.Pointers + pointer.slotIndex * pointerSlotSize, pointerSlotSize);
   }
 
   private _releaseSlot(pointerId: number): void {
@@ -614,9 +619,9 @@ export class InputManager {
     const channel = ChannelOffset.Keyboard + event.keyCode;
 
     this.channels[channel] = 1;
-    this._trackEdges(channel, 1);
-    this.channelsPressed.push(channel);
-    this.flags.push(InputManagerFlag.KeyDown);
+    this._recordChannelChanges(channel, 1);
+    this.keyEvents.push({ channel, pressed: true });
+    this.flags.push(InputManagerFlag.KeyChange);
 
     if (this.capturedKeyChannels.has(channel)) {
       stopEvent(event);
@@ -631,9 +636,9 @@ export class InputManager {
     const channel = ChannelOffset.Keyboard + event.keyCode;
 
     this.channels[channel] = 0;
-    this._trackEdges(channel, 1);
-    this.channelsReleased.push(channel);
-    this.flags.push(InputManagerFlag.KeyUp);
+    this._recordChannelChanges(channel, 1);
+    this.keyEvents.push({ channel, pressed: false });
+    this.flags.push(InputManagerFlag.KeyChange);
 
     if (this.capturedKeyChannels.has(channel)) {
       stopEvent(event);
@@ -650,7 +655,7 @@ export class InputManager {
     const pointer = new Pointer(event, this._app, this.platform, this.channels, slot);
 
     this.pointers.set(event.pointerId, pointer);
-    this._trackPointerEdges(pointer);
+    this._recordPointerChanges(pointer);
     this.flags.push(InputManagerFlag.PointerUpdate);
   }
 
@@ -662,7 +667,7 @@ export class InputManager {
     }
 
     pointer.handleLeave(event);
-    this._trackPointerEdges(pointer);
+    this._recordPointerChanges(pointer);
     this.gestureRecognizer.onPointerLeave(pointer);
     this._releaseSlot(event.pointerId);
     this.flags.push(InputManagerFlag.PointerUpdate);
@@ -679,7 +684,7 @@ export class InputManager {
     }
 
     pointer.handlePress(event);
-    this._trackPointerEdges(pointer);
+    this._recordPointerChanges(pointer);
     this.gestureRecognizer.onPointerDown(pointer);
     this.flags.push(InputManagerFlag.PointerUpdate);
 
@@ -694,7 +699,7 @@ export class InputManager {
     }
 
     pointer.handleMove(event);
-    this._trackPointerEdges(pointer);
+    this._recordPointerChanges(pointer);
     this.gestureRecognizer.onPointerMove(pointer, this.pointerDistanceThreshold);
     this.flags.push(InputManagerFlag.PointerUpdate);
   }
@@ -707,7 +712,7 @@ export class InputManager {
     }
 
     pointer.handleRelease(event);
-    this._trackPointerEdges(pointer);
+    this._recordPointerChanges(pointer);
     this.gestureRecognizer.onPointerUp(pointer);
     this.flags.push(InputManagerFlag.PointerUpdate);
 
@@ -722,7 +727,7 @@ export class InputManager {
     }
 
     pointer.handleCancel(event);
-    this._trackPointerEdges(pointer);
+    this._recordPointerChanges(pointer);
     this.gestureRecognizer.onPointerCancel(pointer);
     this._releaseSlot(event.pointerId);
     this.flags.push(InputManagerFlag.PointerUpdate);
@@ -812,9 +817,9 @@ export class InputManager {
 
       if (this.channels[channel] !== 0) {
         this.channels[channel] = 0;
-        this._trackEdges(channel, 1);
-        this.channelsReleased.push(channel);
-        this.flags.push(InputManagerFlag.KeyUp);
+        this._recordChannelChanges(channel, 1);
+        this.keyEvents.push({ channel, pressed: false });
+        this.flags.push(InputManagerFlag.KeyChange);
       }
     }
   }
@@ -1000,20 +1005,19 @@ export class InputManager {
   }
 
   private updateEvents(): this {
-    if (this.flags.pop(InputManagerFlag.KeyDown)) {
-      for (const channel of this.channelsPressed) {
-        this.onKeyDown.dispatch(channel);
+    if (this.flags.pop(InputManagerFlag.KeyChange)) {
+      // In true arrival order — a Shift-up followed by a Tab-down must
+      // dispatch in that same order, or FocusController would still see
+      // Shift held when Tab's handler runs and misread it as Shift+Tab.
+      for (const event of this.keyEvents) {
+        if (event.pressed) {
+          this.onKeyDown.dispatch(event.channel);
+        } else {
+          this.onKeyUp.dispatch(event.channel);
+        }
       }
 
-      this.channelsPressed.length = 0;
-    }
-
-    if (this.flags.pop(InputManagerFlag.KeyUp)) {
-      for (const channel of this.channelsReleased) {
-        this.onKeyUp.dispatch(channel);
-      }
-
-      this.channelsReleased.length = 0;
+      this.keyEvents.length = 0;
     }
 
     if (this.flags.pop(InputManagerFlag.MouseWheel)) {
@@ -1031,9 +1035,7 @@ export class InputManager {
       this.contextMenuPointer = null;
 
       if (pointer !== null) {
-        pointer._enterPhase(pointer.contextMenuPosition);
         this.onContextMenu.dispatch(pointer);
-        pointer._exitPhase();
       }
     }
 
@@ -1041,62 +1043,54 @@ export class InputManager {
   }
 
   /**
-   * Dispatch this frame's pointer phases in semantic order
-   * (enter → down → move → up/tap/swipe → cancel → leave). Each phase is
-   * dispatched with the pointer's position rewound to where that phase
-   * actually happened, so a down-move-up sequence collapsed into one frame
-   * still hands every handler the right coordinates.
+   * Dispatch this frame's pointer phases in the exact chronological order
+   * {@link Pointer._phaseList} recorded them — not a fixed type order — so
+   * an Up followed by a Down within one frame dispatches in that same order
+   * rather than always Down-before-Up, and two discrete presses in one frame
+   * each get their own `onPointerDown` instead of collapsing into one.
    */
   private updatePointerEvents(): void {
     for (const pointer of this.pointers.values()) {
-      const phases = pointer._phases;
+      for (const phase of pointer._phaseList) {
+        switch (phase.flag) {
+          case PointerStateFlag.Over:
+            this.onPointerEnter.dispatch(pointer, phase.x, phase.y);
+            break;
 
-      if (phases === PointerStateFlag.None) {
-        continue;
-      }
+          case PointerStateFlag.Down:
+            this.onPointerDown.dispatch(pointer, phase.x, phase.y);
+            break;
 
-      if (phases & PointerStateFlag.Over) {
-        this.onPointerEnter.dispatch(pointer);
-      }
+          case PointerStateFlag.Move:
+            this.onPointerMove.dispatch(pointer, phase.x, phase.y);
+            break;
 
-      if (phases & PointerStateFlag.Down) {
-        pointer._enterPhase(pointer.pressPosition);
-        this.onPointerDown.dispatch(pointer);
-        pointer._exitPhase();
-      }
+          case PointerStateFlag.Up:
+            this.onPointerUp.dispatch(pointer, phase.x, phase.y);
 
-      if (phases & PointerStateFlag.Move) {
-        pointer._enterPhase(pointer.movePosition);
-        this.onPointerMove.dispatch(pointer);
-        pointer._exitPhase();
-      }
+            // A press that travelled far and came back is a swipe, not a tap —
+            // hence THIS press's own accumulated maximum, not the release distance.
+            if (phase.closedPress) {
+              if (phase.maxDistance < this.pointerDistanceThreshold) {
+                this.onPointerTap.dispatch(pointer, phase.x, phase.y);
+              } else {
+                this.onPointerSwipe.dispatch(pointer, phase.x, phase.y);
+              }
+            }
+            break;
 
-      if (phases & PointerStateFlag.Up) {
-        pointer._enterPhase(pointer.releasePosition);
-        this.onPointerUp.dispatch(pointer);
+          case PointerStateFlag.Cancel:
+            this.onPointerCancel.dispatch(pointer, phase.x, phase.y);
+            break;
 
-        // A press that travelled far and came back is a swipe, not a tap —
-        // hence the accumulated maximum rather than the release distance.
-        if (pointer._releaseCompletedPress) {
-          if (pointer.maxDistanceFromPress < this.pointerDistanceThreshold) {
-            this.onPointerTap.dispatch(pointer);
-          } else {
-            this.onPointerSwipe.dispatch(pointer);
-          }
+          case PointerStateFlag.Leave:
+            this.onPointerLeave.dispatch(pointer, phase.x, phase.y);
+            this.pointers.delete(pointer.id);
+            break;
+
+          default:
+            break;
         }
-
-        pointer._exitPhase();
-      }
-
-      if (phases & PointerStateFlag.Cancel) {
-        pointer._enterPhase(pointer.cancelPosition);
-        this.onPointerCancel.dispatch(pointer);
-        pointer._exitPhase();
-      }
-
-      if (phases & PointerStateFlag.Leave) {
-        this.onPointerLeave.dispatch(pointer);
-        this.pointers.delete(pointer.id);
       }
     }
   }
