@@ -2098,17 +2098,13 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   /**
-   * Return the packing scratch buffer backed by `state.partialUploadScratch`
-   * (grown on demand, never shrunk, kind-matched to `source`), sized to AT
-   * LEAST `length` — callers must bound their reads/writes to `length`
-   * themselves and upload via the `texSubImage2D` `srcOffset` overload rather
-   * than slicing a `length`-sized view. Reusing (and never subarray-ing) this
-   * buffer across every partial `DataTexture` upload — instead of allocating a
-   * fresh temporary array, or even a fresh view object, per sync — is what
-   * keeps a many-small-instances scene's (mesh bundles; barrier-heavy scenes)
-   * per-frame CPU garbage flat instead of scaling with flush count: each
-   * flush's transform (and now separate tint) sync would otherwise allocate
-   * its own throwaway packing buffer or view.
+   * Return a packing scratch view sized exactly `length`, backed by
+   * `state.partialUploadScratch` (grown on demand, never shrunk, kind-matched
+   * to `source`). Reusing this buffer across every partial `DataTexture`
+   * upload — instead of allocating a fresh temporary array per sync — is what
+   * keeps a barrier-heavy scene's per-frame CPU garbage flat instead of
+   * scaling with flush count: each flush's transform (and now separate tint)
+   * sync would otherwise allocate its own throwaway packing buffer.
    */
   private _acquirePartialUploadScratch(state: ManagedTextureState, source: Float32Array | Uint8Array, length: number): Float32Array | Uint8Array {
     const isFloat = source instanceof Float32Array;
@@ -2119,7 +2115,7 @@ export class WebGl2Backend implements RenderBackend {
       state.partialUploadScratch = scratch;
     }
 
-    return scratch;
+    return scratch.length === length ? scratch : scratch.subarray(0, length);
   }
 
   private _syncTexture(texture: Texture | RenderTexture): ManagedTextureState {
@@ -2163,31 +2159,29 @@ export class WebGl2Backend implements RenderBackend {
           this._accountant.recordTextureUpload(texture.width * texture.height * bytesPerPixel);
         } else {
           // Partial upload: pack a contiguous sub-region from the row-major
-          // buffer into a reusable scratch buffer (grown once, never
-          // reallocated — and never subarray-viewed either, see
-          // `_acquirePartialUploadScratch` — per call) that gl.texSubImage2D
-          // can read via its `srcOffset` overload.
+          // buffer into a reusable scratch view (grown once, never reallocated
+          // per call — see `_acquirePartialUploadScratch`) that gl.texSubImage2D
+          // can read.
           const channels = formatInfo.channels;
           const rowFloats = texture.width * channels;
           const subFloats = region.width * channels;
-          const length = region.width * region.height * channels;
-          const scratch = this._acquirePartialUploadScratch(state, texture.buffer, length);
+          const subView = this._acquirePartialUploadScratch(state, texture.buffer, region.width * region.height * channels);
 
           if (region.x === 0 && region.width === texture.width) {
             // Full-width rows are contiguous in the row-major buffer — one copy.
             const start = region.y * rowFloats;
 
-            scratch.set(texture.buffer.subarray(start, start + length));
+            subView.set(texture.buffer.subarray(start, start + subView.length));
           } else {
             for (let row = 0; row < region.height; row++) {
               const sourceStart = (region.y + row) * rowFloats + region.x * channels;
               const targetStart = row * subFloats;
 
-              scratch.set(texture.buffer.subarray(sourceStart, sourceStart + subFloats), targetStart);
+              subView.set(texture.buffer.subarray(sourceStart, sourceStart + subFloats), targetStart);
             }
           }
 
-          gl.texSubImage2D(gl.TEXTURE_2D, 0, region.x, region.y, region.width, region.height, formatInfo.format, formatInfo.type, scratch, 0);
+          gl.texSubImage2D(gl.TEXTURE_2D, 0, region.x, region.y, region.width, region.height, formatInfo.format, formatInfo.type, subView);
           this._accountant.recordTextureUpload(region.width * region.height * bytesPerPixel);
         }
 
