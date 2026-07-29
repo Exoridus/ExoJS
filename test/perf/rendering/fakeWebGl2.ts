@@ -138,7 +138,7 @@ export class GlRecorder {
   /** `blendFunc` calls — the backend only issues one per real blend-state change. */
   public blendChanges = 0;
   public scissorChanges = 0;
-  /** Transform-texture rows uploaded this frame (height of the width-3 rgba32f upload). */
+  /** Transform-texture rows uploaded this frame (height of the width-2 rgba32f upload). */
   public transformRows = 0;
   public transformUploadBytes = 0;
   /** Number of transform-texture uploads (zero when the frame's transforms are unchanged). */
@@ -366,8 +366,10 @@ export const createFakeWebGl2Context = (recorder: GlRecorder): WebGL2RenderingCo
     },
   };
 
-  // The transform texture is the only width-3 rgba32f upload (commitRect(0,0,3,count)):
-  // its height is the transform-row count uploaded this frame.
+  // The transform texture is the only width-2 rgba32f upload (commitRect(0,0,2,count)):
+  // its height is the transform-row count uploaded this frame. Tint now lives in its
+  // own width-1 rgba8 texture (see TransformBuffer's class doc) and is intentionally
+  // NOT folded into this transform-specific metric.
   const recordTextureUpload = (args: unknown[]): void => {
     // texImage2D(target, level, internalFormat, width, height, border, format, type, data?)
     // texSubImage2D(target, level, xoffset, yoffset, width, height, format, type, data?)
@@ -380,7 +382,7 @@ export const createFakeWebGl2Context = (recorder: GlRecorder): WebGL2RenderingCo
     recorder.textureUploads++;
     recorder.textureUploadBytes += bytes;
 
-    if (width === 3) {
+    if (width === 2) {
       recorder.transformUploads++;
       recorder.transformRows = Math.max(recorder.transformRows, typeof height === 'number' ? height : 0);
       recorder.transformUploadBytes += bytes;

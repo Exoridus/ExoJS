@@ -129,8 +129,8 @@ describe('structural — NineSlice', () => {
 
       expect(changed.transformUploads).toBe(1);
       expect(changed.transformRows).toBe(100);
-      // 100 transforms × 3 rgba32f texels × 16 bytes/texel = 4 800 bytes.
-      expect(changed.transformUploadBytes).toBe(100 * 48);
+      // 100 transforms × 2 rgba32f texels × 16 bytes/texel = 3 200 bytes.
+      expect(changed.transformUploadBytes).toBe(100 * 32);
 
       // Second post-mutation frame: hash stable → zero re-uploads.
       const steady = measureFrame(harness, root);

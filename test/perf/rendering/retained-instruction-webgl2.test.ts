@@ -153,9 +153,9 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
       const rows = bundle.transformTexture!.buffer;
 
       expect(bundle.transformRowCount).toBe(3);
-      expect([rows[0 * 12 + 4], rows[0 * 12 + 5]]).toEqual([10, 10]);
-      expect([rows[1 * 12 + 4], rows[1 * 12 + 5]]).toEqual([60, 60]);
-      expect([rows[2 * 12 + 4], rows[2 * 12 + 5]]).toEqual([110, 110]);
+      expect([rows[0 * 8 + 4], rows[0 * 8 + 5]]).toEqual([10, 10]);
+      expect([rows[1 * 8 + 4], rows[1 * 8 + 5]]).toEqual([60, 60]);
+      expect([rows[2 * 8 + 4], rows[2 * 8 + 5]]).toEqual([110, 110]);
 
       root.destroy();
     });
@@ -192,9 +192,9 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
 
       const rows = bundle.transformTexture!.buffer;
 
-      expect([rows[0 * 12 + 4], rows[0 * 12 + 5]]).toEqual([99, 99]); // moved child
-      expect([rows[1 * 12 + 4], rows[1 * 12 + 5]]).toEqual([60, 60]); // untouched
-      expect([rows[2 * 12 + 4], rows[2 * 12 + 5]]).toEqual([110, 110]); // untouched
+      expect([rows[0 * 8 + 4], rows[0 * 8 + 5]]).toEqual([99, 99]); // moved child
+      expect([rows[1 * 8 + 4], rows[1 * 8 + 5]]).toEqual([60, 60]); // untouched
+      expect([rows[2 * 8 + 4], rows[2 * 8 + 5]]).toEqual([110, 110]); // untouched
 
       root.destroy();
     });
@@ -269,7 +269,7 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
       const bundle = bundleOf(group);
 
       expect(bundle.generation).toBeGreaterThan(firstGeneration);
-      expect(bundle.transformTexture!.buffer[1 * 12 + 4]).toBe(80); // fresh row data
+      expect(bundle.transformTexture!.buffer[1 * 8 + 4]).toBe(80); // fresh row data
 
       const spliced = measureFrame(harness, root);
 
@@ -476,9 +476,9 @@ describe('WebGL2 retained instruction set: Slice 4b fast transform-row patch', (
       // position; its neighbours are untouched (O(k) sub-range, not a re-pack).
       const rows = bundleOf(group).transformTexture!.buffer;
 
-      expect([rows[1 * 12 + 4], rows[1 * 12 + 5]]).toEqual([80, 80]);
-      expect(rows[0 * 12 + 4]).toBe(10); // inside[0] unchanged
-      expect(rows[2 * 12 + 4]).toBe(110); // inside[2] unchanged
+      expect([rows[1 * 8 + 4], rows[1 * 8 + 5]]).toEqual([80, 80]);
+      expect(rows[0 * 8 + 4]).toBe(10); // inside[0] unchanged
+      expect(rows[2 * 8 + 4]).toBe(110); // inside[2] unchanged
 
       // And the fast tier keeps splicing on the next frame with no re-record.
       const steady = measureFrame(harness, root);

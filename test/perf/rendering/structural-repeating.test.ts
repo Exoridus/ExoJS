@@ -79,8 +79,8 @@ describe('structural — RepeatingSprite', () => {
 
         expect(changed.transformUploads).toBe(1);
         expect(changed.transformRows).toBe(100);
-        // 100 transforms × 48 bytes each.
-        expect(changed.transformUploadBytes).toBe(100 * 48);
+        // 100 transforms × 32 bytes each (2 rgba32f texels × 16 bytes/texel).
+        expect(changed.transformUploadBytes).toBe(100 * 32);
 
         // Second post-mutation frame: hash stable → zero re-uploads.
         const steady = measureFrame(harness, root);

@@ -99,6 +99,17 @@ interface ManagedTextureState {
   height: number;
   /** GPU bytes currently booked for this texture's storage (0 until first upload). */
   accountedBytes: number;
+  /**
+   * Reusable packing buffer for a partial `DataTexture` upload (see
+   * `_syncTexture`'s partial branch), sized to the largest region packed so
+   * far and never shrunk. Kept per-texture (not a shared backend scratch) so
+   * concurrently-tracked `DataTexture`s (e.g. the transform + tint pair, each
+   * syncing every flush of a barrier-heavy scene) never race over one buffer.
+   * `null` until the first partial upload; the array kind narrows to the
+   * texture's own buffer kind (`Float32Array` for `rgba32f`/`r32f`, `Uint8Array`
+   * for `rgba8`/`r8`) and never changes for a given texture instance.
+   */
+  partialUploadScratch: Float32Array | Uint8Array | null;
 }
 
 interface ManagedRenderTargetState {
@@ -1827,6 +1838,7 @@ export class WebGl2Backend implements RenderBackend {
         width: 0,
         height: 0,
         accountedBytes: 0,
+        partialUploadScratch: null,
       };
 
       this._textureStates.set(texture, state);
@@ -2085,6 +2097,27 @@ export class WebGl2Backend implements RenderBackend {
     gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
   }
 
+  /**
+   * Return a packing scratch view sized exactly `length`, backed by
+   * `state.partialUploadScratch` (grown on demand, never shrunk, kind-matched
+   * to `source`). Reusing this buffer across every partial `DataTexture`
+   * upload — instead of allocating a fresh temporary array per sync — is what
+   * keeps a barrier-heavy scene's per-frame CPU garbage flat instead of
+   * scaling with flush count: each flush's transform (and now separate tint)
+   * sync would otherwise allocate its own throwaway packing buffer.
+   */
+  private _acquirePartialUploadScratch(state: ManagedTextureState, source: Float32Array | Uint8Array, length: number): Float32Array | Uint8Array {
+    const isFloat = source instanceof Float32Array;
+    let scratch = state.partialUploadScratch;
+
+    if (scratch === null || scratch.length < length || isFloat !== (scratch instanceof Float32Array)) {
+      scratch = isFloat ? new Float32Array(length) : new Uint8Array(length);
+      state.partialUploadScratch = scratch;
+    }
+
+    return scratch.length === length ? scratch : scratch.subarray(0, length);
+  }
+
   private _syncTexture(texture: Texture | RenderTexture): ManagedTextureState {
     const gl = this._context;
     const state = this._getTextureState(texture);
@@ -2126,19 +2159,26 @@ export class WebGl2Backend implements RenderBackend {
           this._accountant.recordTextureUpload(texture.width * texture.height * bytesPerPixel);
         } else {
           // Partial upload: pack a contiguous sub-region from the row-major
-          // buffer into a temporary view that gl.texSubImage2D can read.
+          // buffer into a reusable scratch view (grown once, never reallocated
+          // per call — see `_acquirePartialUploadScratch`) that gl.texSubImage2D
+          // can read.
           const channels = formatInfo.channels;
           const rowFloats = texture.width * channels;
           const subFloats = region.width * channels;
-          const subView =
-            texture.buffer instanceof Float32Array
-              ? new Float32Array(region.width * region.height * channels)
-              : new Uint8Array(region.width * region.height * channels);
+          const subView = this._acquirePartialUploadScratch(state, texture.buffer, region.width * region.height * channels);
 
-          for (let row = 0; row < region.height; row++) {
-            const sourceStart = (region.y + row) * rowFloats + region.x * channels;
-            const targetStart = row * subFloats;
-            subView.set(texture.buffer.subarray(sourceStart, sourceStart + subFloats), targetStart);
+          if (region.x === 0 && region.width === texture.width) {
+            // Full-width rows are contiguous in the row-major buffer — one copy.
+            const start = region.y * rowFloats;
+
+            subView.set(texture.buffer.subarray(start, start + subView.length));
+          } else {
+            for (let row = 0; row < region.height; row++) {
+              const sourceStart = (region.y + row) * rowFloats + region.x * channels;
+              const targetStart = row * subFloats;
+
+              subView.set(texture.buffer.subarray(sourceStart, sourceStart + subFloats), targetStart);
+            }
           }
 
           gl.texSubImage2D(gl.TEXTURE_2D, 0, region.x, region.y, region.width, region.height, formatInfo.format, formatInfo.type, subView);
