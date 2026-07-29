@@ -119,15 +119,24 @@ export class FocusController implements FocusHooks {
    * outside `root` — a scope is a trap from the moment it activates, not
    * only once something inside it is explicitly focused. That prior focus is
    * remembered either way and restored by the matching {@link popScope}.
+   *
+   * The immediate blur only happens when `root` is already live (see
+   * {@link _isOwned}): pushing a scope for a root that isn't attached yet
+   * (e.g. a dialog subtree prepared before being added to the scene) must
+   * not blur current focus right now — there is nothing live to trap
+   * anything with yet. Once `root` does attach, it becomes the topmost live
+   * entry on this stack (it was just pushed last) and
+   * `InteractionManager._notifyNodeAdded` calls {@link _enforceActiveScopeTrap}
+   * for exactly this reason, engaging the trap at that point instead.
    */
   public pushScope(token: ScopeToken, root: RenderNode): void {
     const previousFocus = this._focused;
 
-    if (previousFocus !== null && !this._isInsideScope(previousFocus, root)) {
+    this._scopeStack.push({ token, root, previousFocus });
+
+    if (previousFocus !== null && this._isOwned(root) && !this._isInsideScope(previousFocus, root)) {
       this.blur();
     }
-
-    this._scopeStack.push({ token, root, previousFocus });
   }
 
   /**
@@ -348,26 +357,40 @@ export class FocusController implements FocusHooks {
     }
   }
 
-  /** Advance focus by `direction` (+1 next, -1 previous), wrapping around the scope. */
+  /**
+   * Advance focus by `direction` (+1 next, -1 previous), wrapping around the
+   * scope. {@link focus} is a silent no-op when its target turns out to be
+   * invalid (not focusable, not owned, or outside an active scope — see its
+   * own doc comment), so a single candidate is not enough: this walks
+   * forward through the candidate list, trying each in turn, and stops at
+   * the first one `focus()` actually applies. Bounded by `count` attempts so
+   * a list where every candidate is invalid cannot loop forever.
+   */
   private _step(direction: 1 | -1): void {
     const focusables = this._collectFocusables();
+    const count = focusables.length;
 
-    if (focusables.length === 0) {
+    if (count === 0) {
       return;
     }
 
     const currentIndex = this._focused === null ? -1 : focusables.indexOf(this._focused);
-    const count = focusables.length;
-    let nextIndex: number;
-    if (currentIndex === -1) {
-      nextIndex = direction === 1 ? 0 : count - 1;
-    } else {
-      nextIndex = (currentIndex + direction + count) % count;
-    }
+    let nextIndex = currentIndex === -1 ? (direction === 1 ? 0 : count - 1) : currentIndex;
 
-    const next = focusables[nextIndex];
-    if (next !== undefined) {
-      this.focus(next);
+    for (let attempt = 0; attempt < count; attempt++) {
+      if (currentIndex !== -1 || attempt > 0) {
+        nextIndex = (nextIndex + direction + count) % count;
+      }
+
+      const candidate = focusables[nextIndex];
+
+      if (candidate !== undefined) {
+        this.focus(candidate);
+
+        if (this._focused === candidate) {
+          return;
+        }
+      }
     }
   }
 
@@ -469,12 +492,20 @@ export class FocusController implements FocusHooks {
       .map(entry => entry.node);
   }
 
+  /**
+   * Recursively collect focusable, owned descendants of `node` (inclusive)
+   * into `out`. `this._isOwned(node)` gates collection the same way it gates
+   * {@link focus} itself — a node killed via a bare `destroy()` (no prior
+   * `removeChild()`, so it is still structurally reachable by this walk) or
+   * belonging to a different Application must not be Tab-reachable just
+   * because the tree walk still finds it.
+   */
   private _collectInto(node: RenderNode, out: RenderNode[]): void {
     if (!node.visible) {
       return;
     }
 
-    if (node.focusable) {
+    if (node.focusable && this._isOwned(node)) {
       out.push(node);
     }
 

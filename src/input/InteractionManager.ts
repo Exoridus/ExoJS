@@ -217,13 +217,18 @@ export class InteractionManager implements InteractionHooks {
   private readonly _stage: Stage;
 
   /**
-   * UI-layer interaction hooks: no-ops, so screen-fixed UI nodes are kept OUT
-   * of the world tree. The UI layer is hit-tested by a direct subtree walk
-   * in screen space (see {@link _resolveHit}); per-node signal dispatch still
-   * works because it reads the lazy node signals, not the tree.
+   * UI-layer interaction hooks: mostly no-ops, so screen-fixed UI nodes are
+   * kept OUT of the world tree. The UI layer is hit-tested by a direct
+   * subtree walk in screen space (see {@link _resolveHit}); per-node signal
+   * dispatch still works because it reads the lazy node signals, not the
+   * tree. `_notifyNodeAdded` is the one exception: it still needs to
+   * re-enforce the active scope's focus trap (see the real
+   * {@link _notifyNodeAdded}'s doc comment) since a UI scope root can be
+   * temporarily detached and reattached exactly like a world one — tree
+   * registration is the only part that doesn't apply here.
    */
   private readonly _uiInteraction: InteractionHooks = {
-    _notifyNodeAdded: () => {},
+    _notifyNodeAdded: () => this._focus._enforceActiveScopeTrap(),
     _notifyNodeRemoved: () => {},
     _notifyInteractiveChanged: () => {},
     _notifyBoundsInvalidated: () => {},

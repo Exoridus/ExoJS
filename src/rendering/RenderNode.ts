@@ -215,11 +215,18 @@ export abstract class RenderNode extends SceneNode {
   }
 
   /**
-   * Fired when a pointer requests a context menu over this node (right-click,
-   * long-press, context-menu key). Bubbles like the other pointer events, so a
-   * scene-wide fallback can listen on an ancestor. Carries no native event —
-   * whether the browser's own menu appears is decided by
-   * `ApplicationOptions.input.allowNativeContextMenu`, independently of this.
+   * Fired when a pointer requests a context menu over this node — right-click,
+   * or a long-press/touch gesture that has an attributable pointer. Bubbles
+   * like the other pointer events, so a scene-wide fallback can listen on an
+   * ancestor. Carries no native event — whether the browser's own menu
+   * appears is decided by `ApplicationOptions.input.allowNativeContextMenu`,
+   * independently of this.
+   *
+   * Requires an attributable pointer: a pointerless keyboard-only request
+   * (the context-menu key, or Shift+F10, with no pointer ever having touched
+   * the surface — see {@link ContextMenuRequest}'s doc comment) has nothing to
+   * hit-test or bubble with, so it never reaches this per-node event. It only
+   * ever reaches the engine-wide, scene-graph-independent `app.input.onContextMenu`.
    */
   public get onContextMenu(): Signal<[InteractionEvent]> {
     return this._interactionSignal('contextmenu');

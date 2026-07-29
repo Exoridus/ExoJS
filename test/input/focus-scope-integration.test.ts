@@ -263,6 +263,33 @@ describe('focus handling across push/pop', () => {
   });
 });
 
+describe('pushScope on a not-yet-live root', () => {
+  it('does not blur current focus until the pushed root actually attaches', () => {
+    const h = createHarness();
+    const trigger = focusableNode();
+    const modal = new Container(); // deliberately not attached to the scene yet
+    const insideModal = focusableNode();
+
+    modal.addChild(insideModal);
+    h.scene.root.addChild(trigger);
+    h.im.focus(trigger);
+
+    const token = h.im.pushScope(modal);
+
+    // `modal` is not live yet, so nothing is trapped by it — the blur check
+    // must not run just because a scope entry now exists.
+    expect(h.im.focused).toBe(trigger);
+
+    // Attaching `modal` makes it live, and re-enforces the trap immediately.
+    h.scene.root.addChild(modal);
+
+    expect(h.im.focused).toBeNull();
+
+    h.im.popScope(token);
+    h.im.destroy();
+  });
+});
+
 describe('nested app-level and scene-level scopes', () => {
   it('a scene-level scope pushed above an app-level one does not clobber the app scope on release', () => {
     const h = createHarness();

@@ -11,6 +11,7 @@ import type { Pointer } from '#input/Pointer';
 import { Keyboard } from '#input/types';
 import { Rectangle } from '#math/Rectangle';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
+import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 
 // Camera offset so world-space coordinates differ from screen-space ones; the
@@ -226,5 +227,70 @@ describe('Tab traversal without an explicit scope spans both scene layers', () =
 
     signals.onKeyDown.dispatch(Keyboard.Tab);
     expect(focus.focused).toBe(uiNode);
+  });
+});
+
+describe('UI scope reactivation re-enforces the focus trap immediately', () => {
+  test('blurs an escaped focus the instant a temporarily-detached UI scope root reattaches', () => {
+    const { scene, im } = createUIApp();
+    const modal = new Container();
+    const insideModal = new Container();
+    const outside = new Container();
+
+    insideModal.focusable = true;
+    outside.focusable = true;
+
+    modal.addChild(insideModal);
+    scene.ui.addChild(modal);
+    scene.ui.addChild(outside);
+
+    // Pushed (and later checked) through `im`, not the standalone `focus`
+    // returned by `createUIApp` — the scope trap this exercises is enforced
+    // by `InteractionManager`'s own internal FocusController, reached via
+    // `im.pushScope`/`im.focus`/`im.focused`, not a separately constructed one.
+    const token = im.pushScope(modal);
+
+    im.focus(insideModal);
+    expect(im.focused).toBe(insideModal);
+
+    // Detach the scope root WITHOUT popping its scope entry — it goes dead
+    // (see `FocusController._isOwned`'s doc comment), so it stops trapping
+    // anything until it reattaches.
+    scene.ui.removeChild(modal);
+
+    // While dead, nothing traps focus — a direct focus() call elsewhere succeeds.
+    im.focus(outside);
+    expect(im.focused).toBe(outside);
+
+    // Reattaching to the UI layer must re-enforce the trap immediately — this
+    // exercises InteractionManager's UI hook bundle specifically, since the
+    // UI layer never registers nodes into the world tree.
+    scene.ui.addChild(modal);
+
+    expect(im.focused).toBeNull();
+
+    im.popScope(token);
+  });
+});
+
+describe('UI Tab traversal excludes destroyed nodes', () => {
+  test('a bare destroy() UI node (no removeChild) is excluded from Tab traversal', () => {
+    const { scene, focus, signals } = createUIApp();
+    const a = new Container();
+    const b = new Container();
+
+    a.focusable = true;
+    b.focusable = true;
+    scene.ui.addChild(a);
+    scene.ui.addChild(b);
+
+    b.destroy(); // no removeChild — still structurally reachable by the tree walk
+
+    signals.onKeyDown.dispatch(Keyboard.Tab);
+    expect(focus.focused).toBe(a);
+
+    signals.onKeyDown.dispatch(Keyboard.Tab);
+    // Wraps back to `a` — the sole surviving candidate — `b` is never a stop.
+    expect(focus.focused).toBe(a);
   });
 });

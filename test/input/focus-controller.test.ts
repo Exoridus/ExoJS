@@ -212,6 +212,36 @@ describe('FocusController', () => {
     expect(focus.focused).toBe(a);
   });
 
+  test('Tab advances to the next valid candidate instead of stalling when the natural next one fails validation mid-step', () => {
+    const { scene, focus, onKeyDown } = createFocusApp();
+    const a = focusable();
+    const flaky = new Container();
+    const c = focusable();
+
+    scene.root.addChild(a).addChild(flaky).addChild(c);
+
+    // `flaky` looks focusable while `_collectFocusables()` walks the tree,
+    // but has stopped being focusable by the time `focus()` validates it —
+    // simulating the race `_step()` must not stall on.
+    let reads = 0;
+
+    Object.defineProperty(flaky, 'focusable', {
+      configurable: true,
+      get: (): boolean => {
+        reads++;
+
+        return reads === 1;
+      },
+    });
+
+    focus.focus(a);
+    onKeyDown.dispatch(Keyboard.Tab);
+
+    // A single `focus(next)` attempt would have silently no-opped on
+    // `flaky`, leaving focus stuck on `a`. Tab must land on `c` instead.
+    expect(focus.focused).toBe(c);
+  });
+
   test('Tab traversal honors tabIndex over document order', () => {
     const { scene, focus, onKeyDown } = createFocusApp();
     const first = focusable(1);
@@ -534,6 +564,25 @@ describe('FocusController — ownership hardening', () => {
     expect(focus.focused).toBe(inScene);
 
     focus.popScope(token);
+  });
+
+  test('a bare destroy() node (no removeChild) is excluded from Tab traversal even though the tree walk still finds it', () => {
+    const { scene, focus, onKeyDown } = createFocusApp();
+    const a = focusable();
+    const b = focusable();
+
+    scene.root.addChild(a).addChild(b);
+    b.destroy(); // no removeChild — still structurally reachable by the tree walk
+
+    onKeyDown.dispatch(Keyboard.Tab);
+
+    // Without the ownership check in `_collectInto`, `b` would still be
+    // collected and become the Tab target.
+    expect(focus.focused).toBe(a);
+
+    onKeyDown.dispatch(Keyboard.Tab);
+    // Wraps back to `a` — the sole surviving candidate — `b` is never a stop.
+    expect(focus.focused).toBe(a);
   });
 
   test('focus() rejects a scope-confined target once the scope root itself has been destroyed', () => {

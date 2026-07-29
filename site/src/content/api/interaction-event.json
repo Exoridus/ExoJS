@@ -1,6 +1,6 @@
 {
   "title": "InteractionEvent",
-  "description": "DOM-Event-shaped envelope dispatched by InteractionManager to interactive scene nodes. Bubbles up the *entire* parent chain — `target` stays pinned to the hit-deepest node while `currentTarget` advances to each ancestor, whether or not that ancestor is itself interactive. Handlers may call InteractionEvent.stopPropagation to halt the bubble. The envelope deliberately exposes no native `PointerEvent`: engine events are frame-synchronous and outlive the platform event they came from. It also has no `preventDefault` — a pointer event has no engine default behaviour to suppress, and suppressing a *browser* default after the fact is not possible.",
+  "description": "DOM-Event-shaped envelope dispatched by InteractionManager to interactive scene nodes. Bubbles up the *entire* parent chain — `target` stays pinned to the hit-deepest node while `currentTarget` advances to each ancestor, whether or not that ancestor is itself interactive. Handlers may call InteractionEvent.stopPropagation to halt the bubble. The envelope deliberately exposes no native `PointerEvent`: engine events are frame-synchronous and outlive the platform event they came from. It does have InteractionEvent.preventDefault, but only for suppressing this event's own engine-level default (currently: the automatic drag-candidate creation a `pointerdown` would otherwise start — see that method's own doc comment). It never suppresses a *browser*-native default (touch scrolling, text selection, the native context menu, ...); those are handled separately and synchronously at the `InputManager` platform-event boundary, before this engine-level event is even constructed.",
   "symbol": "InteractionEvent",
   "kind": "class",
   "subsystem": "input",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "DOM-Event-shaped envelope dispatched by InteractionManager to interactive scene nodes. Bubbles up the *entire* parent chain — `target` stays pinned to the hit-deepest node while `currentTarget` advances to each ancestor, whether or not that ancestor is itself interactive. Handlers may call InteractionEvent.stopPropagation to halt the bubble.",
-        "The envelope deliberately exposes no native `PointerEvent`: engine events are frame-synchronous and outlive the platform event they came from. It also has no `preventDefault` — a pointer event has no engine default behaviour to suppress, and suppressing a *browser* default after the fact is not possible."
+        "The envelope deliberately exposes no native `PointerEvent`: engine events are frame-synchronous and outlive the platform event they came from. It does have InteractionEvent.preventDefault, but only for suppressing this event's own engine-level default (currently: the automatic drag-candidate creation a `pointerdown` would otherwise start — see that method's own doc comment). It never suppresses a *browser*-native default (touch scrolling, text selection, the native context menu, ...); those are handled separately and synchronously at the `InputManager` platform-event boundary, before this engine-level event is even constructed."
       ],
       "importLine": "import { InteractionEvent } from '@codexo/exojs'",
       "sourceLink": null

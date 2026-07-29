@@ -27,9 +27,14 @@ export type InteractionEventType =
  * call {@link InteractionEvent.stopPropagation} to halt the bubble.
  *
  * The envelope deliberately exposes no native `PointerEvent`: engine events
- * are frame-synchronous and outlive the platform event they came from. It also
- * has no `preventDefault` — a pointer event has no engine default behaviour to
- * suppress, and suppressing a *browser* default after the fact is not possible.
+ * are frame-synchronous and outlive the platform event they came from. It
+ * does have {@link InteractionEvent.preventDefault}, but only for suppressing
+ * this event's own engine-level default (currently: the automatic
+ * drag-candidate creation a `pointerdown` would otherwise start — see that
+ * method's own doc comment). It never suppresses a *browser*-native default
+ * (touch scrolling, text selection, the native context menu, ...); those are
+ * handled separately and synchronously at the `InputManager` platform-event
+ * boundary, before this engine-level event is even constructed.
  */
 export class InteractionEvent {
   public readonly type: InteractionEventType;
