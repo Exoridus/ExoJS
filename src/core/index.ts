@@ -28,7 +28,7 @@ export type { PhasedSceneTransitionOptions, SceneTransitionPhaseContext, SceneTr
 export { PhasedSceneTransition } from './PhasedSceneTransition';
 export { Scene } from './Scene';
 export type { SceneInputAvailability, SceneInputBindingOptions } from './scene/SceneInputs';
-export type { InteractionCapture, InteractionObservation } from './scene/SceneInteraction';
+export type { InteractionObservation, InteractionScope } from './scene/SceneInteraction';
 export { SceneDirector } from './SceneDirector';
 export { SceneNode } from './SceneNode';
 export { SceneState } from './SceneState';

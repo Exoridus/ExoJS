@@ -151,14 +151,15 @@ const loadApplicationHarness = async (
   vi.doMock('#input/InputManager', () => ({
     InputManager: InputManagerMock,
   }));
-  vi.doMock('#input/FocusManager', () => ({
-    FocusManager: vi.fn(function () {
+  vi.doMock('#input/FocusController', () => ({
+    FocusController: vi.fn(function () {
       return {
         focused: null,
         focus: vi.fn(),
         blur: vi.fn(),
         pushScope: vi.fn(),
         popScope: vi.fn(),
+        clearScopes: vi.fn(),
         focusNext: vi.fn(),
         focusPrevious: vi.fn(),
         _notifyNodeRemoved: vi.fn(),
@@ -240,7 +241,7 @@ describe('Application', () => {
     rawApp['_documentVisible'] = true;
     rawApp['systems'] = systems;
     rawApp['scenes'] = sceneDirector;
-    rawApp['input'] = { _prepareFrame: vi.fn() };
+    rawApp['input'] = { _prepareFrame: vi.fn(), _finishInteractionFrame: vi.fn() };
     rawApp['interaction'] = { _prepareFrame: vi.fn() };
     rawApp['_audio'] = { _prepareFrame: vi.fn() };
     rawApp['tweens'] = { _prepareFrame: vi.fn() };
@@ -253,7 +254,9 @@ describe('Application', () => {
     rawApp['onFrame'] = { dispatch: vi.fn() };
     rawApp['onFixedFrame'] = { dispatch: vi.fn() };
 
-    const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
+    const rafSpy = vi.fn().mockReturnValue(1);
+
+    rawApp['platform'] = { requestFrame: rafSpy, cancelFrame: vi.fn() };
 
     app.update();
 
@@ -539,9 +542,10 @@ describe('Application', () => {
     };
     const activeClock = { stop: vi.fn() };
     const frameClock = { stop: vi.fn() };
-    const cancelSpy = vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined);
+    const cancelSpy = vi.fn();
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
+    rawApp['platform'] = { requestFrame: vi.fn().mockReturnValue(1), cancelFrame: cancelSpy };
     rawApp['_status'] = ApplicationStatus.Running;
     rawApp['_frameLoopActive'] = true;
     rawApp['_frameRequest'] = 99;
@@ -565,7 +569,6 @@ describe('Application', () => {
       sceneTeardownError,
     );
 
-    cancelSpy.mockRestore();
     consoleErrorSpy.mockRestore();
   });
 });

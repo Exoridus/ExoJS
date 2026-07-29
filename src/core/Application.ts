@@ -4,13 +4,14 @@ import type { Extension } from '#extensions/Extension';
 import { getGlobalSnapshotInternal } from '#extensions/ExtensionRegistry';
 import { materializeApplicationSystems, materializeAssetBindings, materializeRendererBindings, materializeSerializerBindings } from '#extensions/materialize';
 import { buildSnapshot, type ExtensionSnapshot } from '#extensions/snapshot';
-import { FocusManager } from '#input/FocusManager';
 import type { GamepadDefinition } from '#input/GamepadDefinitions';
 import type { GamepadSlotStrategy } from '#input/InputManager';
 import { InputManager } from '#input/InputManager';
 import { InteractionManager } from '#input/InteractionManager';
 import type { PointLike } from '#math/PointLike';
 import { Random } from '#math/Random';
+import { BrowserPlatform } from '#platform/BrowserPlatform';
+import type { PlatformAdapter, PlatformSubscription } from '#platform/PlatformAdapter';
 import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderError, type RenderErrorCode } from '#rendering/RenderError';
@@ -114,6 +115,25 @@ export interface InputApplicationOptions {
   gamepadDefinitions?: GamepadDefinition[];
   gamepadSlotStrategy?: GamepadSlotStrategy;
   pointerDistanceThreshold?: number;
+  /**
+   * Distance in design pixels a press must travel before it turns into a drag
+   * on a `draggable` node. Default `8`. Below it the press stays a click, so a
+   * draggable node can still be tapped without jittering.
+   */
+  dragThreshold?: number;
+  /**
+   * Let the browser show its own context menu over the canvas. Default
+   * `false` — a right-click is normally a game input, not a request for the
+   * browser's menu. Independent of the engine's own `contextmenu` event,
+   * which is routed through the scene graph either way.
+   */
+  allowNativeContextMenu?: boolean;
+  /**
+   * Let the browser start a text selection from a drag on the canvas. Default
+   * `false` — a drag is normally a game gesture, and a stray selection
+   * highlight over the canvas is almost never wanted.
+   */
+  allowTextSelection?: boolean;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- empty registry is a valid default
@@ -124,6 +144,18 @@ export interface ApplicationOptions<Registry extends SceneRegistryShape<Registry
   loader?: LoaderOptions;
   rendering?: RenderingApplicationOptions;
   input?: InputApplicationOptions;
+  /**
+   * Host seam the application runs on — surface focus and geometry, cursor,
+   * touch-action, pointer capture, gamepad polling, document visibility, frame
+   * scheduling, and input-event delivery. Defaults to a {@link BrowserPlatform}
+   * bound to the application's canvas.
+   *
+   * Pass your own to host the engine somewhere other than a plain DOM canvas,
+   * or to drive input and the frame loop from a test without monkey-patching
+   * globals. An injected adapter is *not* destroyed by
+   * {@link Application.destroy} — it stays yours to dispose.
+   */
+  platform?: PlatformAdapter;
   /** Seed for the per-Application {@link Application.random} RNG. Omit for a non-deterministic seed. */
   seed?: number;
   /**
@@ -262,6 +294,9 @@ const defaultInputSettings: Required<InputApplicationOptions> = {
   gamepadDefinitions: [],
   gamepadSlotStrategy: 'sticky',
   pointerDistanceThreshold: 10,
+  dragThreshold: 8,
+  allowNativeContextMenu: false,
+  allowTextSelection: false,
 };
 
 /**
@@ -292,9 +327,15 @@ const defaultInputSettings: Required<InputApplicationOptions> = {
 export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   public readonly options: ApplicationOptions<Registry>;
   public readonly canvas: HTMLCanvasElement;
+  /**
+   * The host seam this application runs on. Every part of the engine that has
+   * to reach outside its own state — input events, surface focus, cursor,
+   * pointer capture, gamepads, document visibility, frame scheduling — goes
+   * through this one adapter. See {@link ApplicationOptions.platform}.
+   */
+  public readonly platform: PlatformAdapter;
   public readonly loader: Loader;
   public readonly input: InputManager;
-  public readonly focus: FocusManager;
   public readonly interaction: InteractionManager;
   public readonly scenes: SceneDirector<Registry>;
   /** Per-Application seedable RNG. Isolated from other Applications and from the global `rand()`. */
@@ -368,7 +409,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   private _cursor = 'default';
   private _consecutiveFrameErrors = 0;
   private readonly _recentErrors: RecentErrorEntry[] = [];
-  private readonly _visibilityChangeHandler = this._onDocumentVisibilityChange.bind(this);
+  /** Whether {@link Application.platform} was created here — an injected one is not ours to destroy. */
+  private readonly _ownsPlatform: boolean;
+  private _visibilitySubscription: PlatformSubscription | null = null;
   private _resizeObserver: ResizeObserver | null = null;
   private _sizingMode: CanvasSizingMode = 'fixed';
   private readonly _audio: AudioManager = new AudioManager();
@@ -414,6 +457,11 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._sizingMode = canvasOptions.sizingMode ?? 'fixed';
     this._applySizingMode(this._sizingMode);
 
+    // Established before any subsystem, because input, interaction and the
+    // frame loop all read the host through it.
+    this._ownsPlatform = appSettings.platform === undefined;
+    this.platform = appSettings.platform ?? new BrowserPlatform(this.canvas);
+
     this.options = {
       clearColor: appSettings.clearColor ?? Color.cornflowerBlue,
       backend: appSettings.backend ?? defaultBackendConfig,
@@ -441,8 +489,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         gamepadDefinitions: inputOptions.gamepadDefinitions ?? [...defaultInputSettings.gamepadDefinitions],
         gamepadSlotStrategy: inputOptions.gamepadSlotStrategy ?? defaultInputSettings.gamepadSlotStrategy,
         pointerDistanceThreshold: inputOptions.pointerDistanceThreshold ?? defaultInputSettings.pointerDistanceThreshold,
+        dragThreshold: inputOptions.dragThreshold ?? defaultInputSettings.dragThreshold,
+        allowNativeContextMenu: inputOptions.allowNativeContextMenu ?? defaultInputSettings.allowNativeContextMenu,
+        allowTextSelection: inputOptions.allowTextSelection ?? defaultInputSettings.allowTextSelection,
       },
       hello: appSettings.hello ?? true,
+      platform: this.platform,
       ...(appSettings.seed !== undefined && { seed: appSettings.seed }),
       ...(appSettings.fixedTimeStep !== undefined && { fixedTimeStep: appSettings.fixedTimeStep }),
     };
@@ -468,7 +520,6 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._backend = this.createBackend(this._backendType, this._snapshot);
     this._rendering = new RenderingContext(this._backend);
     this.input = new InputManager(this);
-    this.focus = new FocusManager(this);
     this.interaction = new InteractionManager(this);
     this.scenes = new SceneDirector<Registry>(this, appSettings.scenes);
     this.random = new Random(this.options.seed);
@@ -481,10 +532,10 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
     this._startupClock.start();
 
-    if (typeof document !== 'undefined') {
-      this._documentVisible = document.visibilityState === 'visible';
-      document.addEventListener('visibilitychange', this._visibilityChangeHandler);
-    }
+    this._documentVisible = this.platform.documentVisible;
+    this._visibilitySubscription = this.platform.onVisibilityChange(visible => {
+      this._onPlatformVisibilityChange(visible);
+    });
 
     this.input.onCanvasFocusChange.add(focused => {
       this.onCanvasFocusChange.dispatch(focused);
@@ -777,7 +828,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    */
   private _startFrameLoop(): void {
     this._frameLoopActive = true;
-    this._frameRequest = requestAnimationFrame(this._updateHandler);
+    this._frameRequest = this.platform.requestFrame(this._updateHandler);
     this._frameClock.restart();
     this._fixed.reset();
     this._activeClock.start();
@@ -810,7 +861,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     }
 
     this._frameLoopActive = false;
-    cancelAnimationFrame(this._frameRequest);
+    this.platform.cancelFrame(this._frameRequest);
     this._activeClock.stop();
     this._frameClock.stop();
 
@@ -852,7 +903,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       if (this.pauseOnHidden && !this._documentVisible) {
         this._frameClock.restart();
         this._fixed.reset();
-        this._frameRequest = requestAnimationFrame(this._updateHandler);
+        this._frameRequest = this.platform.requestFrame(this._updateHandler);
 
         return this;
       }
@@ -877,7 +928,16 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         // Internal frame setup — not a public System phase. Same relative
         // order the core managers ticked in as (former) app systems.
         this.input._prepareFrame(frameDelta);
-        this.interaction._prepareFrame(frameDelta);
+
+        try {
+          this.interaction._prepareFrame(frameDelta);
+        } finally {
+          // Node-level dispatch above may still reference pointers InputManager
+          // flagged terminal this flush; only now is it safe to destroy them —
+          // and retirement must still run if a node handler just threw.
+          this.input._finishInteractionFrame();
+        }
+
         this._audio._prepareFrame(frameDelta);
         this.tweens._prepareFrame(frameDelta);
         this._rendering._prepareFrame(frameDelta);
@@ -933,7 +993,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         // RAF rescheduling always happens unless the guard halted the loop —
         // this is what keeps the canvas alive through a throwing frame.
         if (this._frameLoopActive) {
-          this._frameRequest = requestAnimationFrame(this._updateHandler);
+          this._frameRequest = this.platform.requestFrame(this._updateHandler);
           this._frameClock.restart();
           this._frameCount++;
         }
@@ -1207,7 +1267,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
-   * Set the canvas cursor. Strings are passed through to `canvas.style.cursor`
+   * Set the surface cursor. Strings are passed through to the platform
    * verbatim (CSS values like `'pointer'`, `'crosshair'`, or `url(...)`).
    * Image-based sources are rasterized to a `data:` URL via the shared
    * scratch canvas and used as the cursor image.
@@ -1220,7 +1280,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     }
 
     this._cursor = typeof source === 'string' ? source : `url(${canvasSourceToDataUrl(source)}), auto`;
-    this.canvas.style.cursor = this._cursor;
+    this.platform.setCursor(this._cursor);
 
     return this;
   }
@@ -1256,10 +1316,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   public destroy(): void {
     this._destroyed = true;
 
-    if (typeof document !== 'undefined') {
-      document.removeEventListener('visibilitychange', this._visibilityChangeHandler);
-    }
-
+    this._visibilitySubscription?.();
+    this._visibilitySubscription = null;
     this._resizeObserver?.disconnect();
     this._resizeObserver = null;
 
@@ -1294,7 +1352,6 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     }
 
     this.loader.destroy();
-    this.focus.destroy();
     this.systems.destroy();
     // Core managers are driven directly (not via `systems`, see the internal
     // prepare stage in `update()`), so they are torn down explicitly here, in
@@ -1305,6 +1362,13 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this.interaction.destroy();
     this.input.destroy();
     this._backend.destroy();
+
+    // Only an adapter this application created is ours to tear down; an
+    // injected one may outlive us or be shared.
+    if (this._ownsPlatform) {
+      this.platform.destroy();
+    }
+
     this._startupClock.destroy();
     this._activeClock.destroy();
     this._frameClock.destroy();
@@ -1318,9 +1382,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this.onError.destroy();
   }
 
-  private _onDocumentVisibilityChange(): void {
-    const visible = document.visibilityState === 'visible';
-
+  private _onPlatformVisibilityChange(visible: boolean): void {
     if (visible !== this._documentVisible) {
       this._documentVisible = visible;
       this.onVisibilityChange.dispatch(visible);

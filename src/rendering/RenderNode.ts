@@ -214,6 +214,24 @@ export abstract class RenderNode extends SceneNode {
     return this._interactionSignal('pointertap');
   }
 
+  /**
+   * Fired when a pointer requests a context menu over this node — right-click,
+   * or a long-press/touch gesture that has an attributable pointer. Bubbles
+   * like the other pointer events, so a scene-wide fallback can listen on an
+   * ancestor. Carries no native event — whether the browser's own menu
+   * appears is decided by `ApplicationOptions.input.allowNativeContextMenu`,
+   * independently of this.
+   *
+   * Requires an attributable pointer: a pointerless keyboard-only request
+   * (the context-menu key, or Shift+F10, with no pointer ever having touched
+   * the surface — see {@link ContextMenuRequest}'s doc comment) has nothing to
+   * hit-test or bubble with, so it never reaches this per-node event. It only
+   * ever reaches the engine-wide, scene-graph-independent `app.input.onContextMenu`.
+   */
+  public get onContextMenu(): Signal<[InteractionEvent]> {
+    return this._interactionSignal('contextmenu');
+  }
+
   /** Fired once when a drag gesture begins on this node. Does not bubble. */
   public get onDragStart(): Signal<[InteractionEvent]> {
     return this._interactionSignal('dragstart');
@@ -248,12 +266,14 @@ export abstract class RenderNode extends SceneNode {
 
   // Focus & keyboard. Like the interaction signals these are lazily
   // materialized — a node that never participates in focus allocates none.
-  // Routed by FocusManager (app.focus / stage.focus) to the focused node.
+  // Routed by app.interaction's focus controller to the focused node.
 
   /**
    * When `true`, this node can receive keyboard focus — via {@link focus},
-   * Tab traversal, or `app.focus.focus(node)` — and is delivered key events
-   * through {@link onKeyDown} / {@link onKeyUp} while focused.
+   * Tab traversal, or `app.interaction.focus(node)` — and is delivered key
+   * events through {@link onKeyDown} / {@link onKeyUp} while focused, or
+   * while any of its descendants holds focus (key events bubble up the
+   * parent chain like pointer {@link InteractionEvent}s do).
    *
    * @default false
    */
@@ -282,12 +302,12 @@ export abstract class RenderNode extends SceneNode {
     return (this._onBlur ??= new Signal<[RenderNode]>());
   }
 
-  /** Fired for each key pressed while this node holds focus. */
+  /** Fired for each key pressed while this node — or a descendant of it — holds focus. Bubbles; see {@link KeyEvent}. */
   public get onKeyDown(): Signal<[KeyEvent]> {
     return (this._onKeyDown ??= new Signal<[KeyEvent]>());
   }
 
-  /** Fired for each key released while this node holds focus. */
+  /** Fired for each key released while this node — or a descendant of it — holds focus. Bubbles; see {@link KeyEvent}. */
   public get onKeyUp(): Signal<[KeyEvent]> {
     return (this._onKeyUp ??= new Signal<[KeyEvent]>());
   }

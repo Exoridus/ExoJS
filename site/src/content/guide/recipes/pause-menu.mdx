@@ -90,7 +90,7 @@ Any filter you set in `init` or `togglePause` — the `BlurFilter` here — must
 </Callout>
 
 <Callout type="hint" title="Modal menus that must block clicks">
-This recipe's overlay is informational only — `scene.ui` widgets stay clickable regardless of pause state, which is fine here since nothing else is interactive underneath. For a menu that must swallow clicks so they never reach gameplay nodes beneath it, wrap it with `this.interaction.capture(this.pausePanel)` and release the returned handle on resume.
+This recipe's overlay is informational only — `scene.ui` widgets stay clickable regardless of pause state, which is fine here since nothing else is interactive underneath. For a menu that must swallow clicks so they never reach gameplay nodes beneath it, wrap it with `this.interaction.scope(this.pausePanel)` and release the returned handle on resume. An interaction scope is a real focus trap: it confines hit-testing, `Tab` traversal, and programmatic `focus(node)` calls to that subtree, blurs anything focused outside it the instant it activates, and restores that prior focus when it releases.
 </Callout>
 
 ## How pausing works

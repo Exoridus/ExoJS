@@ -6,12 +6,12 @@
   "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 38,
+  "memberCount": 40,
   "counts": {
     "constructors": 1,
-    "methods": 8,
+    "methods": 9,
     "properties": 8,
-    "events": 21
+    "events": 22
   },
   "sections": [
     {
@@ -86,6 +86,77 @@
       "id": "methods",
       "title": "Methods",
       "members": [
+        {
+          "name": "attach",
+          "signature": "attach(map: ActionMap<T>): ActionMap<T>",
+          "signatureTokens": [
+            {
+              "text": "attach",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "map",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ActionMap",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ActionMap",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "map",
+              "type": "ActionMap<T>",
+              "optional": false
+            }
+          ],
+          "returnType": "ActionMap<T>",
+          "description": "Start updating map every frame for the application's lifetime. Attaching a map that is already attached elsewhere moves it here. Call ActionMap.detach to stop, or use scene.inputs.attach for a map that should die with its scene."
+        },
         {
           "name": "destroy",
           "signature": "destroy(): void",
@@ -1342,6 +1413,47 @@
           "description": ""
         },
         {
+          "name": "onContextMenu",
+          "signature": "onContextMenu: Signal<[ContextMenuRequest]>",
+          "signatureTokens": [
+            {
+              "text": "onContextMenu",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ContextMenuRequest",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires whenever the platform's single native contextmenu event fires — right-click, the keyboard context-menu key, Shift+F10, and (on most touch browsers) a long-press all funnel through that one event, so there is exactly one source to listen to here regardless of which of them the user used. Independent of whether the browser's own menu was suppressed — see InputApplicationOptions.allowNativeContextMenu. This is the engine-wide fallback: it fires unconditionally, with no regard for the scene graph, so it is the right place for an application-level menu that should appear no matter what — or nothing — was under the pointer. Fires even when the request has no pointer to attribute itself to (a keyboard-only session that has never moved a mouse) — see ContextMenuRequest's doc comment for why the request carries its own coordinates instead of forcing the contract onto a Pointer. A request over a specific interactive node additionally bubbles as a scene-graph contextmenu InteractionEvent (see InteractionManager), which only fires when a node is actually hit and can be stopped with InteractionEvent.stopPropagation; use that one for a per-node menu instead. Do not confuse either with GestureRecognizer.onLongPress — a separate, purely informational touch/mouse-hold signal that never triggers this one on its own."
+        },
+        {
           "name": "onGamepadConnected",
           "signature": "onGamepadConnected: Signal<[Gamepad]>",
           "signatureTokens": [
@@ -1638,7 +1750,7 @@
         },
         {
           "name": "onPointerCancel",
-          "signature": "onPointerCancel: Signal<[Pointer]>",
+          "signature": "onPointerCancel: Signal<[pointer, x, y]>",
           "signatureTokens": [
             {
               "text": "onPointerCancel",
@@ -1661,7 +1773,23 @@
               "kind": "punctuation"
             },
             {
-              "text": "Pointer",
+              "text": "pointer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
               "kind": "type"
             },
             {
@@ -1679,7 +1807,7 @@
         },
         {
           "name": "onPointerDown",
-          "signature": "onPointerDown: Signal<[Pointer]>",
+          "signature": "onPointerDown: Signal<[pointer, x, y]>",
           "signatureTokens": [
             {
               "text": "onPointerDown",
@@ -1702,7 +1830,23 @@
               "kind": "punctuation"
             },
             {
-              "text": "Pointer",
+              "text": "pointer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
               "kind": "type"
             },
             {
@@ -1720,7 +1864,7 @@
         },
         {
           "name": "onPointerEnter",
-          "signature": "onPointerEnter: Signal<[Pointer]>",
+          "signature": "onPointerEnter: Signal<[pointer, x, y]>",
           "signatureTokens": [
             {
               "text": "onPointerEnter",
@@ -1743,7 +1887,23 @@
               "kind": "punctuation"
             },
             {
-              "text": "Pointer",
+              "text": "pointer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
               "kind": "type"
             },
             {
@@ -1757,11 +1917,11 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Every pointer signal below carries the phase's own (x, y) explicitly, in design pixels, alongside the pointer — an immutable snapshot rather than a temporary rewind of Pointer.position. pointer.x/ pointer.y always read the pointer's live, current position instead (see Pointer.position's doc comment); use the x/y parameters for the position a specific phase actually happened at."
         },
         {
           "name": "onPointerLeave",
-          "signature": "onPointerLeave: Signal<[Pointer]>",
+          "signature": "onPointerLeave: Signal<[pointer, x, y]>",
           "signatureTokens": [
             {
               "text": "onPointerLeave",
@@ -1784,7 +1944,23 @@
               "kind": "punctuation"
             },
             {
-              "text": "Pointer",
+              "text": "pointer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
               "kind": "type"
             },
             {
@@ -1802,7 +1978,7 @@
         },
         {
           "name": "onPointerMove",
-          "signature": "onPointerMove: Signal<[Pointer]>",
+          "signature": "onPointerMove: Signal<[pointer, x, y]>",
           "signatureTokens": [
             {
               "text": "onPointerMove",
@@ -1825,7 +2001,23 @@
               "kind": "punctuation"
             },
             {
-              "text": "Pointer",
+              "text": "pointer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
               "kind": "type"
             },
             {
@@ -1843,7 +2035,7 @@
         },
         {
           "name": "onPointerSwipe",
-          "signature": "onPointerSwipe: Signal<[Pointer]>",
+          "signature": "onPointerSwipe: Signal<[pointer, x, y]>",
           "signatureTokens": [
             {
               "text": "onPointerSwipe",
@@ -1866,7 +2058,23 @@
               "kind": "punctuation"
             },
             {
-              "text": "Pointer",
+              "text": "pointer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
               "kind": "type"
             },
             {
@@ -1884,7 +2092,7 @@
         },
         {
           "name": "onPointerTap",
-          "signature": "onPointerTap: Signal<[Pointer]>",
+          "signature": "onPointerTap: Signal<[pointer, x, y]>",
           "signatureTokens": [
             {
               "text": "onPointerTap",
@@ -1907,7 +2115,23 @@
               "kind": "punctuation"
             },
             {
-              "text": "Pointer",
+              "text": "pointer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
               "kind": "type"
             },
             {
@@ -1925,7 +2149,7 @@
         },
         {
           "name": "onPointerUp",
-          "signature": "onPointerUp: Signal<[Pointer]>",
+          "signature": "onPointerUp: Signal<[pointer, x, y]>",
           "signatureTokens": [
             {
               "text": "onPointerUp",
@@ -1948,7 +2172,23 @@
               "kind": "punctuation"
             },
             {
-              "text": "Pointer",
+              "text": "pointer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
               "kind": "type"
             },
             {

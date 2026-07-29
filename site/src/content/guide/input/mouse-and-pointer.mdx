@@ -162,12 +162,14 @@ pointer.isPrimary      // true for mouse or first finger to touch
 pointer.type           // 'mouse', 'touch', or 'pen'
 ```
 
-For hover-vs-drag discrimination, check `pointer.buttons` in `onPointerMove` — it fires for every movement, including when no button is pressed. The API reference documents the full property set including `pressure`, `tiltX`/`tiltY` (pen tilt), `startPos` (press-down position for tap/swipe logic), and `currentState`.
+For hover-vs-drag discrimination, check `pointer.down` in `onPointerMove` — it fires for every movement, including when no button is pressed. The API reference documents the full property set including `pressure`, `tiltX`/`tiltY` (pen tilt), `pressPosition`/`releasePosition`, `maxDistanceFromPress` (the press excursion tap/swipe logic is built on), and `currentState`.
+
+Every pointer also carries a per-frame snapshot that stays stable for the whole frame: `pressed`, `moved`, `released`, `cancelled`, `entered` and `exited` describe what happened since the last frame boundary, and `delta` spans that same interval. Several platform events of one kind collapse into a single frame phase, but no phase is lost — a press and release that both land between two frames set `pressed` and `released` on the same frame.
 
 ## When to use which
 
 - **Signal API** (`app.input.onPointerMove` etc.) for raw pointer data — position tracking, custom gesture detection, drawing apps.
-- **Binding API** (`this.inputs.onActive(Pointer.Left)` etc.) for simple button/binary state — holding mouse button to fire, right-click context menus.
+- **Binding API** (`this.inputs.onActive(PointerButton.Primary)` etc.) for simple button/binary state — holding mouse button to fire, right-click context menus.
 - **Interactive sprites** (`interactive`/`draggable`) for drag-and-drop and click-on-object behavior without manual hit testing.
 - **Gesture signals** (`onPinch`/`onRotate`/`onLongPress`) for map zoom/rotate and touch-hold menus.
 

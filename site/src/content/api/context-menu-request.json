@@ -1,0 +1,121 @@
+{
+  "title": "ContextMenuRequest",
+  "description": "A request to show a context menu, in design-space coordinates. Right-click, the keyboard context-menu key, and Shift+F10 all funnel into the same native `contextmenu` event — the latter two can fire with no pointer ever having touched the surface, so the request carries its own `x`/`y` rather than forcing the contract onto a Pointer. `pointer` is best-effort attribution (the primary tracked pointer, if any, at the moment of the request) for consumers that want it; it is `null` when no pointer exists to attribute the request to, which no longer prevents the request itself from firing.",
+  "symbol": "ContextMenuRequest",
+  "kind": "interface",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A request to show a context menu, in design-space coordinates. Right-click, the keyboard context-menu key, and Shift+F10 all funnel into the same native `contextmenu` event — the latter two can fire with no pointer ever having touched the surface, so the request carries its own `x`/`y` rather than forcing the contract onto a Pointer. `pointer` is best-effort attribution (the primary tracked pointer, if any, at the moment of the request) for consumers that want it; it is `null` when no pointer exists to attribute the request to, which no longer prevents the request itself from firing."
+      ],
+      "importLine": "import { ContextMenuRequest } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "pointer",
+          "signature": "pointer: Pointer | null",
+          "signatureTokens": [
+            {
+              "text": "pointer",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Pointer",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "x",
+          "signature": "x: number",
+          "signatureTokens": [
+            {
+              "text": "x",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "y",
+          "signature": "y: number",
+          "signatureTokens": [
+            {
+              "text": "y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/ContextMenuRequest.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/ContextMenuRequest.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/ContextMenuRequest.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/ContextMenuRequest.ts"
+}

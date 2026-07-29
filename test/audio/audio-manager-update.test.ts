@@ -86,10 +86,12 @@ describe('AudioManager.update()', () => {
   });
 
   // 4. Application.update() drives the internal prepare stage — input,
-  // interaction, audio, tweens, rendering, in that fixed relative order —
-  // ahead of fixed steps. The core managers are no longer app systems (they
-  // no longer occupy `app.systems`), so this stubs each manager's
-  // `_prepareFrame` directly rather than going through the registry.
+  // interaction, then input._finishInteractionFrame() (deferred pointer
+  // retirement, run once interaction dispatch has finished with them),
+  // audio, tweens, rendering, in that fixed relative order — ahead of fixed
+  // steps. The core managers are no longer app systems (they no longer
+  // occupy `app.systems`), so this stubs each manager's `_prepareFrame`
+  // directly rather than going through the registry.
   test('Application.update() drives the internal prepare stage in the historical core-manager order', async () => {
     vi.resetModules();
 
@@ -126,7 +128,7 @@ describe('AudioManager.update()', () => {
       _transitionPlacement: vi.fn(() => null),
       _renderTransition: vi.fn(),
     };
-    rawApp['input'] = prepareStub('input');
+    rawApp['input'] = { ...prepareStub('input'), _finishInteractionFrame: () => callOrder.push('finishInteraction') };
     rawApp['interaction'] = prepareStub('interaction');
     rawApp['_audio'] = prepareStub('audio');
     rawApp['tweens'] = prepareStub('tweens');
@@ -146,11 +148,11 @@ describe('AudioManager.update()', () => {
     rawApp['onFrame'] = { dispatch: vi.fn() };
     rawApp['onFixedFrame'] = { dispatch: vi.fn() };
 
-    vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
+    rawApp['platform'] = { requestFrame: vi.fn().mockReturnValue(1), cancelFrame: vi.fn() };
 
     app.update();
 
-    expect(callOrder).toEqual(['input', 'interaction', 'audio', 'tweens', 'rendering']);
+    expect(callOrder).toEqual(['input', 'interaction', 'finishInteraction', 'audio', 'tweens', 'rendering']);
 
     vi.resetModules();
   });

@@ -1,0 +1,124 @@
+{
+  "title": "AxisCompositeBinding",
+  "description": "Two opposing groups of sources forming one signed axis. `negative` and `positive` are the generic one-dimensional terms — use them for left/right, down/up, brake/throttle alike. Either side may be omitted for a one-sided axis.",
+  "symbol": "AxisCompositeBinding",
+  "kind": "interface",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Two opposing groups of sources forming one signed axis. `negative` and `positive` are the generic one-dimensional terms — use them for left/right, down/up, brake/throttle alike. Either side may be omitted for a one-sided axis."
+      ],
+      "importLine": "import { AxisCompositeBinding } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "negative",
+          "signature": "negative?: OneOrMany<InputChannel>",
+          "signatureTokens": [
+            {
+              "text": "negative",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OneOrMany",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputChannel",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "positive",
+          "signature": "positive?: OneOrMany<InputChannel>",
+          "signatureTokens": [
+            {
+              "text": "positive",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OneOrMany",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputChannel",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/actions/AxisAction.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/AxisAction.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/actions/AxisAction.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/AxisAction.ts"
+}

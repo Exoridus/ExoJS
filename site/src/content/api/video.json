@@ -6,12 +6,12 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 118,
+  "memberCount": 119,
   "counts": {
     "constructors": 1,
     "methods": 50,
     "properties": 52,
-    "events": 15
+    "events": 16
   },
   "sections": [
     {
@@ -2608,7 +2608,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "When true, this node can receive keyboard focus — via focus, Tab traversal, or app.focus.focus(node) — and is delivered key events through onKeyDown / onKeyUp while focused."
+          "description": "When true, this node can receive keyboard focus — via focus, Tab traversal, or app.interaction.focus(node) — and is delivered key events through onKeyDown / onKeyUp while focused, or while any of its descendants holds focus (key events bubble up the parent chain like pointer InteractionEvents do)."
         },
         {
           "name": "name",
@@ -3814,6 +3814,47 @@
           "description": "Fired when this node loses keyboard focus."
         },
         {
+          "name": "onContextMenu",
+          "signature": "onContextMenu: Signal<[InteractionEvent]>",
+          "signatureTokens": [
+            {
+              "text": "onContextMenu",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InteractionEvent",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fired when a pointer requests a context menu over this node — right-click, or a long-press/touch gesture that has an attributable pointer. Bubbles like the other pointer events, so a scene-wide fallback can listen on an ancestor. Carries no native event — whether the browser's own menu appears is decided by ApplicationOptions.input.allowNativeContextMenu, independently of this. Requires an attributable pointer: a pointerless keyboard-only request (the context-menu key, or Shift+F10, with no pointer ever having touched the surface — see ContextMenuRequest's doc comment) has nothing to hit-test or bubble with, so it never reaches this per-node event. It only ever reaches the engine-wide, scene-graph-independent app.input.onContextMenu."
+        },
+        {
           "name": "onDrag",
           "signature": "onDrag: Signal<[InteractionEvent]>",
           "signatureTokens": [
@@ -4016,7 +4057,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fired for each key pressed while this node holds focus."
+          "description": "Fired for each key pressed while this node — or a descendant of it — holds focus. Bubbles; see KeyEvent."
         },
         {
           "name": "onKeyUp",
@@ -4057,7 +4098,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fired for each key released while this node holds focus."
+          "description": "Fired for each key released while this node — or a descendant of it — holds focus. Bubbles; see KeyEvent."
         },
         {
           "name": "onPointerDown",

@@ -85,14 +85,15 @@ const loadOnFrameHarness = async (): Promise<OnFrameTestHarness> => {
       return { update: vi.fn(), destroy: vi.fn(), onKeyDown, onCanvasFocusChange };
     }),
   }));
-  vi.doMock('#input/FocusManager', () => ({
-    FocusManager: vi.fn(function () {
+  vi.doMock('#input/FocusController', () => ({
+    FocusController: vi.fn(function () {
       return {
         focused: null,
         focus: vi.fn(),
         blur: vi.fn(),
         pushScope: vi.fn(),
         popScope: vi.fn(),
+        clearScopes: vi.fn(),
         focusNext: vi.fn(),
         focusPrevious: vi.fn(),
         _notifyNodeRemoved: vi.fn(),
@@ -186,7 +187,7 @@ describe('Application.onFrame', () => {
     rawApp['_documentVisible'] = true;
     rawApp['systems'] = { _beginFrame: vi.fn(), _endFrame: vi.fn(), _fixedUpdate: vi.fn(), _update: vi.fn(), _draw: vi.fn() };
     rawApp['scenes'] = sceneDirector;
-    rawApp['input'] = { _prepareFrame: vi.fn() };
+    rawApp['input'] = { _prepareFrame: vi.fn(), _finishInteractionFrame: vi.fn() };
     rawApp['interaction'] = { _prepareFrame: vi.fn() };
     rawApp['_audio'] = { _prepareFrame: vi.fn() };
     rawApp['tweens'] = { _prepareFrame: vi.fn() };
@@ -199,7 +200,7 @@ describe('Application.onFrame', () => {
     rawApp['onFrame'] = onFrame;
     rawApp['onFixedFrame'] = { dispatch: vi.fn() };
 
-    vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
+    rawApp['platform'] = { requestFrame: vi.fn().mockReturnValue(1), cancelFrame: vi.fn() };
 
     app.update();
 

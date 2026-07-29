@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "InputChannel",
-          "signature": "GamepadButtonChannel | GamepadAxisChannel | Keyboard",
+          "signature": "GamepadButtonChannel | GamepadAxisChannel | PointerChannel | Keyboard | PointerButton",
           "signatureTokens": [
             {
               "text": "GamepadButtonChannel",
@@ -49,7 +49,23 @@
               "kind": "punctuation"
             },
             {
+              "text": "PointerChannel",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
               "text": "Keyboard",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerButton",
               "kind": "type"
             }
           ],

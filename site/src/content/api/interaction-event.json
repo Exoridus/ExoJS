@@ -1,16 +1,16 @@
 {
   "title": "InteractionEvent",
-  "description": "DOM-Event-shaped envelope dispatched by InteractionManager to interactive scene nodes. Bubbles up the parent chain — `target` stays pinned to the hit-deepest node while `currentTarget` advances to each ancestor that receives the event. Handlers may call InteractionEvent.stopPropagation to halt the bubble.",
+  "description": "DOM-Event-shaped envelope dispatched by InteractionManager to interactive scene nodes. Bubbles up the *entire* parent chain — `target` stays pinned to the hit-deepest node while `currentTarget` advances to each ancestor, whether or not that ancestor is itself interactive. Handlers may call InteractionEvent.stopPropagation to halt the bubble. The envelope deliberately exposes no native `PointerEvent`: engine events are frame-synchronous and outlive the platform event they came from. It does have InteractionEvent.preventDefault, but only for suppressing this event's own engine-level default (currently: the automatic drag-candidate creation a `pointerdown` would otherwise start — see that method's own doc comment). It never suppresses a *browser*-native default (touch scrolling, text selection, the native context menu, ...); those are handled separately and synchronously at the `InputManager` platform-event boundary, before this engine-level event is even constructed.",
   "symbol": "InteractionEvent",
   "kind": "class",
   "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 9,
+  "memberCount": 11,
   "counts": {
     "constructors": 1,
-    "methods": 1,
-    "properties": 7,
+    "methods": 2,
+    "properties": 8,
     "events": 0
   },
   "sections": [
@@ -19,7 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "DOM-Event-shaped envelope dispatched by InteractionManager to interactive scene nodes. Bubbles up the parent chain — `target` stays pinned to the hit-deepest node while `currentTarget` advances to each ancestor that receives the event. Handlers may call InteractionEvent.stopPropagation to halt the bubble."
+        "DOM-Event-shaped envelope dispatched by InteractionManager to interactive scene nodes. Bubbles up the *entire* parent chain — `target` stays pinned to the hit-deepest node while `currentTarget` advances to each ancestor, whether or not that ancestor is itself interactive. Handlers may call InteractionEvent.stopPropagation to halt the bubble.",
+        "The envelope deliberately exposes no native `PointerEvent`: engine events are frame-synchronous and outlive the platform event they came from. It does have InteractionEvent.preventDefault, but only for suppressing this event's own engine-level default (currently: the automatic drag-candidate creation a `pointerdown` would otherwise start — see that method's own doc comment). It never suppresses a *browser*-native default (touch scrolling, text selection, the native context menu, ...); those are handled separately and synchronously at the `InputManager` platform-event boundary, before this engine-level event is even constructed."
       ],
       "importLine": "import { InteractionEvent } from '@codexo/exojs'",
       "sourceLink": null
@@ -30,7 +31,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(type: InteractionEventType, target: RenderNode, pointer: Pointer, worldX: number, worldY: number): InteractionEvent",
+          "signature": "new(type: InteractionEventType, target: RenderNode, pointer: Pointer, x: number, y: number): InteractionEvent",
           "signatureTokens": [
             {
               "text": "new",
@@ -89,7 +90,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "worldX",
+              "text": "x",
               "kind": "param"
             },
             {
@@ -105,7 +106,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "worldY",
+              "text": "y",
               "kind": "param"
             },
             {
@@ -146,12 +147,12 @@
               "optional": false
             },
             {
-              "name": "worldX",
+              "name": "x",
               "type": "number",
               "optional": false
             },
             {
-              "name": "worldY",
+              "name": "y",
               "type": "number",
               "optional": false
             }
@@ -168,6 +169,35 @@
       "id": "methods",
       "title": "Methods",
       "members": [
+        {
+          "name": "preventDefault",
+          "signature": "preventDefault(): void",
+          "signatureTokens": [
+            {
+              "text": "preventDefault",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Suppress this event's own default engine behavior — currently meaningful only for pointerdown, where it suppresses the automatic creation (and so promotion) of a drag candidate for target, on a node whose own draggable would otherwise start one. Independent of InteractionEvent.stopPropagation: propagation still bubbles normally unless that is also called. Also independent of the browser's own native default (e.g. touch scrolling, text selection, the native context menu) — those are suppressed synchronously in InputManager, at the platform-event boundary, before this engine-level event is even constructed; calling this method has no effect on them."
+        },
         {
           "name": "stopPropagation",
           "signature": "stopPropagation(): void",
@@ -291,11 +321,11 @@
           "description": ""
         },
         {
-          "name": "worldX",
-          "signature": "worldX: number",
+          "name": "x",
+          "signature": "x: number",
           "signatureTokens": [
             {
-              "text": "worldX",
+              "text": "x",
               "kind": "name"
             },
             {
@@ -309,14 +339,14 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Canvas-space coordinates (same space as Pointer.x/y)."
+          "description": "Coordinates in target's own rendering layer — **not** a single fixed space. A hit inside the scene's UI layer reads in screen space (the same space RenderingContext.screenView maps into); a hit against the world tree reads in camera/world space (post pan/zoom/rotate — identical to screen space only at the default centered camera). This matches the space target.position/target.contains() already operate in for whichever layer target lives in, so the two always agree; it is deliberately not Pointer.x/Pointer.y, which is raw design-pixel space and does not track a panned or zoomed camera at all."
         },
         {
-          "name": "worldY",
-          "signature": "worldY: number",
+          "name": "y",
+          "signature": "y: number",
           "signatureTokens": [
             {
-              "text": "worldY",
+              "text": "y",
               "kind": "name"
             },
             {
@@ -330,7 +360,28 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "See InteractionEvent.x."
+        },
+        {
+          "name": "defaultPrevented",
+          "signature": "defaultPrevented: boolean",
+          "signatureTokens": [
+            {
+              "text": "defaultPrevented",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether InteractionEvent.preventDefault was called on this event."
         },
         {
           "name": "propagationStopped",

@@ -2,7 +2,32 @@ import type { Application } from '#core/Application';
 import { SceneInputs } from '#core/scene/SceneInputs';
 import { SceneState } from '#core/SceneState';
 import { Signal } from '#core/Signal';
+import { ActionMap } from '#input/actions/ActionMap';
+import { ButtonAction } from '#input/actions/ButtonAction';
+import type { ActionSample, ChannelEventBatch } from '#input/actions/types';
 import type { InputBinding } from '#input/InputBinding';
+import { ChannelSize, Keyboard } from '#input/types';
+
+/** A zeroed sample with a mutable `frameId`, for tests that only need a valid shape. */
+const createEmptySample = (): ActionSample => ({
+  values: new Float32Array(ChannelSize.Container),
+  batches: [],
+  frameId: 1,
+});
+
+/**
+ * Write `value` to `channel` on `sample`, also logging it as its own atomic
+ * `ChannelEventBatch` — mirrors what `InputManager._recordChannelChanges`
+ * does for a single-channel real write. A bare `sample.values[channel] =
+ * value` is not enough: `ButtonAction._update` replays `sample.batches`, not
+ * `values`, to detect its threshold-crossing edges in true order.
+ */
+let nextSequence = 1;
+const setChannel = (sample: ActionSample, channel: number, value: number): void => {
+  sample.values[channel] = value;
+  const sequence = nextSequence++;
+  (sample.batches as ChannelEventBatch[]).push({ channels: [{ channel, value }], sequence, timestamp: sequence });
+};
 
 interface StubBinding {
   onStart: Signal<[number]>;
@@ -345,5 +370,154 @@ describe('SceneInputs — destroy()', () => {
 
     expect(bindings[0]!.unbind).toHaveBeenCalledTimes(1);
     expect(bindings[1]!.unbind).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('SceneInputs action maps', () => {
+  const createMapStub = (): { app: Application; tracked: Set<unknown>; resyncSample: ActionSample; inputs: SceneInputs } => {
+    const tracked = new Set<unknown>();
+    // Real InputManager._resyncActionMap forwards to `map._resync(this.actionSample)` —
+    // mirrored here (against a zeroed sample by default) rather than a bare
+    // vi.fn(), so a test that only cares about tracking doesn't have to know
+    // resync exists, and one that cares about its effect can mutate this sample.
+    const resyncSample = createEmptySample();
+    const app = {
+      input: {
+        _trackActionMap: vi.fn((map: unknown) => void tracked.add(map)),
+        _detachActionMap: vi.fn((map: unknown) => void tracked.delete(map)),
+        _resyncActionMap: vi.fn((map: ActionMap) => void map._update(resyncSample)),
+        _currentBatchSequence: vi.fn((): number => 0),
+        _snapshotActionChannels: vi.fn((): Float32Array => new Float32Array(ChannelSize.Container)),
+      },
+      scenes: {
+        get _transitionGateOpen(): boolean {
+          return false;
+        },
+      },
+    } as unknown as Application;
+
+    return {
+      app,
+      tracked,
+      resyncSample,
+      inputs: new SceneInputs(
+        app,
+        () => SceneState.Active,
+        () => false,
+      ),
+    };
+  };
+
+  test('attaching a map registers it with the application input clock', () => {
+    const { tracked, inputs } = createMapStub();
+    const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+
+    expect(inputs.attach(map)).toBe(map);
+    expect(map.attached).toBe(true);
+    expect(tracked.has(map)).toBe(true);
+  });
+
+  test('suspend stops updates and clears action state', () => {
+    const { tracked, inputs } = createMapStub();
+    const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+    const sample = createEmptySample();
+
+    inputs.attach(map);
+    setChannel(sample, Keyboard.Space, 1);
+    map._update(sample);
+    expect(map.jump.active).toBe(true);
+
+    inputs.suspend();
+
+    expect(tracked.has(map)).toBe(false);
+    expect(map.jump.active).toBe(false);
+    expect(map.jump.pressed).toBe(false);
+  });
+
+  test('resume re-registers the map', () => {
+    const { tracked, inputs } = createMapStub();
+    const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+
+    inputs.attach(map);
+    inputs.suspend();
+    inputs.resume();
+
+    expect(tracked.has(map)).toBe(true);
+  });
+
+  test('resume resyncs a still-held action instead of producing a synthetic press', () => {
+    const { inputs, resyncSample } = createMapStub();
+    const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+    const sample = createEmptySample();
+
+    inputs.attach(map);
+    setChannel(sample, Keyboard.Space, 1); // key goes down
+    map._update(sample);
+    expect(map.jump.pressed).toBe(true);
+
+    inputs.suspend(); // reset while suspended — the key is still physically held
+    expect(map.jump.active).toBe(false);
+
+    // The key was never released — resume() sees it still held via the sample
+    // InputManager._resyncActionMap would pass (mirrored here through resyncSample).
+    resyncSample.values[Keyboard.Space] = 1;
+    inputs.resume();
+
+    expect(map.jump.active).toBe(true);
+    expect(map.jump.pressed).toBe(false); // resync, not a fresh press
+  });
+
+  test('resume leaves a released action inactive, not resurrected', () => {
+    const { inputs, resyncSample } = createMapStub();
+    const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+    const sample = createEmptySample();
+
+    inputs.attach(map);
+    setChannel(sample, Keyboard.Space, 1);
+    map._update(sample);
+
+    inputs.suspend(); // key is released while suspended
+    resyncSample.values[Keyboard.Space] = 0;
+    inputs.resume();
+
+    expect(map.jump.active).toBe(false);
+    expect(map.jump.pressed).toBe(false);
+  });
+
+  test('a map attached while suspended stays out of the update set until resume', () => {
+    const { tracked, inputs } = createMapStub();
+    const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+
+    inputs.suspend();
+    inputs.attach(map);
+    expect(tracked.has(map)).toBe(false);
+
+    inputs.resume();
+    expect(tracked.has(map)).toBe(true);
+  });
+
+  test('destroy detaches every tracked map', () => {
+    const { tracked, inputs } = createMapStub();
+    const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+
+    inputs.attach(map);
+    inputs.destroy();
+
+    expect(tracked.has(map)).toBe(false);
+    expect(map.attached).toBe(false);
+  });
+
+  test('detaching a map directly removes it from the scene facade too', () => {
+    const { tracked, inputs } = createMapStub();
+    const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+
+    inputs.attach(map);
+    map.detach();
+
+    expect(tracked.has(map)).toBe(false);
+
+    // A later suspend must not resurrect the detached map.
+    inputs.resume();
+    expect(tracked.has(map)).toBe(false);
   });
 });

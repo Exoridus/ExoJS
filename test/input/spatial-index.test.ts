@@ -2,12 +2,14 @@ import type { Application } from '#core/Application';
 import { Scene } from '#core/Scene';
 import { SceneState } from '#core/SceneState';
 import { Signal } from '#core/Signal';
+import type { ContextMenuRequest } from '#input/ContextMenuRequest';
 import type { InputManager } from '#input/InputManager';
 import type { InteractionEvent } from '#input/InteractionEvent';
 import { InteractionManager } from '#input/InteractionManager';
 import type { Pointer } from '#input/Pointer';
 import { Quadtree } from '#math/Quadtree';
 import { Rectangle } from '#math/Rectangle';
+import { BrowserPlatform } from '#platform/BrowserPlatform';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 
@@ -59,13 +61,22 @@ const makePointer = ({ id = 1, x = 0, y = 0 }: MockPointerOptions = {}): Pointer
   }) as unknown as Pointer;
 
 interface MockSignals {
-  onPointerDown: Signal<[Pointer]>;
-  onPointerMove: Signal<[Pointer]>;
-  onPointerUp: Signal<[Pointer]>;
-  onPointerTap: Signal<[Pointer]>;
-  onPointerCancel: Signal<[Pointer]>;
-  onPointerLeave: Signal<[Pointer]>;
+  onPointerDown: Signal<[Pointer, number, number]>;
+  onPointerMove: Signal<[Pointer, number, number]>;
+  onPointerUp: Signal<[Pointer, number, number]>;
+  onPointerTap: Signal<[Pointer, number, number]>;
+  onPointerCancel: Signal<[Pointer, number, number]>;
+  onPointerLeave: Signal<[Pointer, number, number]>;
 }
+
+/** Dispatch a mock pointer through a mock signal with its own x/y, matching the real (pointer, x, y) shape. */
+const dispatchPointer = (signal: Signal<[Pointer, number, number]>, opts: MockPointerOptions = {}): Pointer => {
+  const pointer = makePointer(opts);
+
+  signal.dispatch(pointer, opts.x ?? 0, opts.y ?? 0);
+
+  return pointer;
+};
 
 const createApp = (): {
   app: Application;
@@ -74,12 +85,16 @@ const createApp = (): {
   canvas: HTMLCanvasElement;
 } => {
   const signals: MockSignals = {
-    onPointerDown: new Signal<[Pointer]>(),
-    onPointerMove: new Signal<[Pointer]>(),
-    onPointerUp: new Signal<[Pointer]>(),
-    onPointerTap: new Signal<[Pointer]>(),
-    onPointerCancel: new Signal<[Pointer]>(),
-    onPointerLeave: new Signal<[Pointer]>(),
+    onPointerDown: new Signal<[Pointer, number, number]>(),
+    onPointerMove: new Signal<[Pointer, number, number]>(),
+    onPointerUp: new Signal<[Pointer, number, number]>(),
+    onPointerTap: new Signal<[Pointer, number, number]>(),
+    onPointerCancel: new Signal<[Pointer, number, number]>(),
+    onPointerLeave: new Signal<[Pointer, number, number]>(),
+    onContextMenu: new Signal<[ContextMenuRequest]>(),
+    // InteractionManager owns the focus controller, which listens for keys.
+    onKeyDown: new Signal<[number]>(),
+    onKeyUp: new Signal<[number]>(),
   };
 
   const canvas = document.createElement('canvas');
@@ -91,6 +106,7 @@ const createApp = (): {
 
   const app = {
     canvas,
+    platform: new BrowserPlatform(canvas),
     width: 800,
     height: 600,
     input: signals as unknown as InputManager,
@@ -416,7 +432,7 @@ describe('InteractionManager — spatial index: basic hit', () => {
     const handler = vi.fn();
 
     sprite.onPointerDown.add(handler);
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
     expect(handler).toHaveBeenCalledTimes(1);
@@ -440,7 +456,7 @@ describe('InteractionManager — spatial index: basic hit', () => {
     const handler = vi.fn();
 
     sprite.onPointerDown.add(handler);
-    signals.onPointerDown.dispatch(makePointer({ x: 200, y: 200 }));
+    dispatchPointer(signals.onPointerDown, { x: 200, y: 200 });
     flushInteractions(im);
 
     expect(handler).not.toHaveBeenCalled();
@@ -471,7 +487,7 @@ describe('InteractionManager — spatial index: z-order preserved', () => {
     bottom.onPointerDown.add(bottomHandler);
     top.onPointerDown.add(topHandler);
 
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
     // The spatial index uses insertion-order so "top" (added to scene last)
@@ -558,7 +574,7 @@ describe('InteractionManager — spatial index: transform mutation reflected at 
     sprite.onPointerDown.add(handler);
 
     // Initial query: hit inside original bounds.
-    signals.onPointerDown.dispatch(makePointer({ x: 25, y: 25 }));
+    dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
     flushInteractions(im);
     expect(handler).toHaveBeenCalledTimes(1);
 
@@ -567,7 +583,7 @@ describe('InteractionManager — spatial index: transform mutation reflected at 
     // Move sprite so it no longer covers (25, 25).
     sprite.setBounds(200, 200, 50, 50);
 
-    signals.onPointerDown.dispatch(makePointer({ x: 25, y: 25 }));
+    dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
     flushInteractions(im);
 
     // After move, (25,25) is outside bounds — handler must not fire.
@@ -601,7 +617,7 @@ describe('InteractionManager — spatial index: query results match recursive-wa
     spriteB.onPointerDown.add(bHandler);
 
     // Hit spriteA
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
     expect(aHandler).toHaveBeenCalledTimes(1);
     expect(bHandler).not.toHaveBeenCalled();
@@ -610,7 +626,7 @@ describe('InteractionManager — spatial index: query results match recursive-wa
     bHandler.mockClear();
 
     // Hit spriteB
-    signals.onPointerDown.dispatch(makePointer({ x: 250, y: 250 }));
+    dispatchPointer(signals.onPointerDown, { x: 250, y: 250 });
     flushInteractions(im);
     expect(bHandler).toHaveBeenCalledTimes(1);
     expect(aHandler).not.toHaveBeenCalled();

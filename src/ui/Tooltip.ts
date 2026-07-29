@@ -60,7 +60,13 @@ export class Tooltip {
   private _timer: ReturnType<typeof setTimeout> | null = null;
 
   private readonly _onPointerOver = (event: InteractionEvent): void => {
-    this._scheduleShow(event.worldX, event.worldY);
+    // `event.x`/`event.y` are in `target`'s own layer space (see
+    // InteractionEvent.x's doc) — this tooltip node is always parented to the
+    // UI layer (screen space), so positioning it directly from a WORLD-tree
+    // target's coordinates drifts once the camera pans, zooms, or rotates.
+    // Correct for a plain screen-fixed UI target; a follow-up is needed to
+    // route a world target's coordinates through `view.worldToScreen` first.
+    this._scheduleShow(event.x, event.y);
   };
 
   private readonly _onPointerOut = (): void => {

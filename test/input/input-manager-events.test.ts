@@ -13,6 +13,7 @@ import { GamepadButton } from '#input/GamepadButton';
 import { InputManager } from '#input/InputManager';
 import { Pointer } from '#input/Pointer';
 import { Keyboard } from '#input/types';
+import { BrowserPlatform } from '#platform/BrowserPlatform';
 
 // ---------------------------------------------------------------------------
 // Helpers (mirrors test/input/pointer-channels.test.ts conventions)
@@ -45,6 +46,7 @@ const createMockApp = (canvas: HTMLCanvasElement, pixelRatio = 1): Application =
 
   return {
     canvas,
+    platform: new BrowserPlatform(canvas),
     width: designWidth,
     height: designHeight,
     pixelRatio,
@@ -146,7 +148,7 @@ const withMockedGetGamepads = (run: (setSnapshot: (snapshot: Array<BrowserGamepa
 describe('InputManager — constructor option defaults', () => {
   test('falls back to defaults when app.options.input is entirely absent', () => {
     const canvas = createCanvas();
-    const app = { canvas, options: {} } as unknown as Application;
+    const app = { canvas, platform: new BrowserPlatform(canvas), options: {} } as unknown as Application;
     const im = new InputManager(app);
 
     expect(im.gamepadSlotStrategy).toBe('sticky');
@@ -359,6 +361,40 @@ describe('InputManager — keyboard', () => {
 
     im.destroy();
   });
+
+  test('a binding created while a key is already held reports its later release without fabricating a trigger', () => {
+    const { im, canvas } = createInputManager();
+    const onStart = vi.fn();
+    const onStop = vi.fn();
+    const onTrigger = vi.fn();
+
+    canvas.dispatchEvent(new FocusEvent('focus'));
+
+    // The physical press belongs to an earlier, already-closed frame. Its
+    // batch is gone by the time this binding starts observing, while the live
+    // channel correctly remains held.
+    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: Keyboard.Space } as KeyboardEventInit));
+    im.update();
+
+    const binding = im.onStart(Keyboard.Space, onStart, { threshold: 300 });
+
+    binding.onStop.add(onStop);
+    binding.onTrigger.add(onTrigger);
+
+    // The first post-construction batch is only the release. createBinding()
+    // must have captured the held construction baseline so this is a real
+    // stop, while the unknown pre-observation press time cannot become a tap.
+    window.dispatchEvent(new KeyboardEvent('keyup', { keyCode: Keyboard.Space } as KeyboardEventInit));
+    im.update();
+
+    expect(onStart).toHaveBeenCalledTimes(1);
+    expect(onStop).toHaveBeenCalledTimes(1);
+    expect(onTrigger).not.toHaveBeenCalled();
+    expect(binding.active).toBe(false);
+
+    binding.unbind();
+    im.destroy();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -544,9 +580,64 @@ describe('InputManager — pointer signal lifecycle', () => {
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'mouse', clientX: 10, clientY: 10, isPrimary: true });
     fire(canvas, 'pointerleave', { pointerId: 1, pointerType: 'mouse', clientX: 10, clientY: 10, isPrimary: true });
     im.update();
+    im._finishInteractionFrame();
 
     expect(onLeave).toHaveBeenCalledTimes(1);
     expect(im.getPrimaryPointerPosition()).toBeNull();
+
+    im.destroy();
+  });
+
+  test('a cancelled pointer does not linger in tracking — it is retired exactly like a leave', () => {
+    const { im, canvas } = createInputManager();
+
+    fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
+    fire(canvas, 'pointerdown', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
+    fire(canvas, 'pointercancel', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
+    im.update();
+    im._finishInteractionFrame();
+
+    expect(im.getPrimaryPointerPosition()).toBeNull();
+
+    // Its slot must be reusable immediately — a lingering cancelled pointer
+    // would otherwise permanently hold it hostage.
+    fire(canvas, 'pointerover', { pointerId: 2, pointerType: 'touch', clientX: 20, clientY: 20, isPrimary: true });
+    expect(ch(im, Pointer.Slot0Active)).toBe(1);
+
+    im.destroy();
+  });
+
+  test('leave then re-enter for the same pointerId before update() keeps both phases on one pointer, with no lost leave and no leaked object', () => {
+    const { im, canvas } = createInputManager();
+    const onLeave = vi.fn();
+    const onEnter = vi.fn();
+    const pointers = (im as unknown as { pointers: Map<number, Pointer> }).pointers;
+
+    fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'mouse', clientX: 10, clientY: 10, isPrimary: true });
+    im.update(); // settle the initial enter before the leave/re-enter batch below
+
+    const beforeReentry = pointers.get(1);
+
+    im.onPointerLeave.add(onLeave);
+    im.onPointerEnter.add(onEnter);
+
+    // Leave, then re-enter with the SAME pointerId — both before update() has
+    // had any chance to dispatch or retire the leave. A naive rebuild would
+    // construct a brand-new Pointer here, overwriting the map entry out from
+    // under the one still holding the undispatched Leave phase: the Leave
+    // would never dispatch, and the discarded object would leak.
+    fire(canvas, 'pointerleave', { pointerId: 1, pointerType: 'mouse', clientX: 10, clientY: 10, isPrimary: true });
+    fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'mouse', clientX: 15, clientY: 15, isPrimary: true });
+    im.update();
+
+    expect(onLeave).toHaveBeenCalledTimes(1);
+    expect(onEnter).toHaveBeenCalledTimes(1);
+    // The SAME Pointer object carried both phases — re-entry reused it rather
+    // than silently replacing it.
+    expect(pointers.get(1)).toBe(beforeReentry);
+    // Re-entering left this pointer's final state non-terminal, so it must
+    // not have been retired either.
+    expect(im.getPrimaryPointerPosition()).not.toBeNull();
 
     im.destroy();
   });
@@ -590,11 +681,16 @@ describe('InputManager — pointer signal lifecycle', () => {
     expect(ch(im, Pointer.Slot0Active)).toBe(1);
 
     // Two leaves in a row without an intervening update(): the pointer is
-    // still present in the internal map (removal happens on flush), so the
-    // handler runs twice, but the slot must only be released once.
+    // still present in the internal map and its slot is still reserved —
+    // both are only released together once update() dispatches the Leave
+    // phase and _finishInteractionFrame() actually retires it (see
+    // InputManager._retirePointer's doc comment) — so the handler runs
+    // twice, but retirement must only happen once.
     expect(() => {
       fire(canvas, 'pointerleave', { pointerId: 1, pointerType: 'touch', clientX: 1, clientY: 1, isPrimary: true });
       fire(canvas, 'pointerleave', { pointerId: 1, pointerType: 'touch', clientX: 1, clientY: 1, isPrimary: true });
+      im.update();
+      im._finishInteractionFrame();
     }).not.toThrow();
 
     // A newly arriving pointer must land in slot 0, not some slot beyond it —

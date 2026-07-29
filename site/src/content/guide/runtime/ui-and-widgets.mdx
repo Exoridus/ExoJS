@@ -145,7 +145,11 @@ field.onKeyDown.add(event => {
 });
 ```
 
-The per-application focus service, [`app.focus`](/ExoJS/en/api/focus-manager/), tracks the focused node, moves focus with `Tab` / `Shift+Tab`, activates a focused button on `Enter` / `Space`, and exposes `app.focus.focus(node)` to focus programmatically.
+RenderNode focus lives on [`app.interaction`](/ExoJS/en/api/interaction-manager/) alongside pointer routing: it tracks the focused node (`app.interaction.focused`), moves focus with `Tab` / `Shift+Tab` or with `focusNext()` / `focusPrevious()`, activates a focused button on `Enter` / `Space`, and exposes `app.interaction.focus(node)` / `app.interaction.blur()` to focus programmatically — `focus(node)` is a no-op if `node` sits outside an active interaction scope (see below), not only Tab traversal.
+
+Key events bubble from the focused node up through its entire ancestor chain, same as pointer events: a container can listen on `onKeyDown` for a key pressed anywhere inside it, without every descendant needing its own handler, and call `event.stopPropagation()` to halt the bubble early. `event.currentTarget` tracks whichever ancestor is dispatching; `event.target` stays pinned to the actually-focused node throughout.
+
+Do not confuse this with canvas focus — whether the browser is sending the page's keyboard input to the ExoJS canvas at all — which lives on `app.input.canvasFocused` and `app.input.onCanvasFocusChange`.
 
 ## Tooltips
 

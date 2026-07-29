@@ -1,6 +1,7 @@
 import type { Application } from '#core/Application';
 import { SceneState } from '#core/SceneState';
 import type { Destroyable } from '#core/types';
+import type { ScopeToken } from '#input/ScopeToken';
 import type { RenderNode } from '#rendering/RenderNode';
 
 /**
@@ -16,17 +17,17 @@ export interface InteractionObservation extends Destroyable {
 }
 
 /**
- * Handle returned by {@link SceneInteraction.capture}. While active, pointer
- * hit-testing is confined to the captured root's subtree. Call
- * {@link InteractionCapture.release} (or {@link InteractionCapture.destroy},
- * an alias) to end the capture — nested captures restore whichever capture
- * was active before this one, regardless of release order. Idempotent; also
+ * Handle returned by {@link SceneInteraction.scope}. While active, pointer
+ * hit-testing and Tab traversal are confined to the scoped root's subtree.
+ * Call {@link InteractionScope.release} (or {@link InteractionScope.destroy},
+ * an alias) to end the scope — nested scopes restore whichever scope was
+ * active before this one, regardless of release order. Idempotent; also
  * released automatically when the owning scene ends permanently.
  */
-export interface InteractionCapture extends Destroyable {
-  /** `true` until this capture is released. */
+export interface InteractionScope extends Destroyable {
+  /** `true` until this scope is released. */
   readonly active: boolean;
-  /** End this capture. Idempotent alias for {@link InteractionCapture.destroy}. */
+  /** End this scope. Idempotent alias for {@link InteractionScope.destroy}. */
   release(): void;
 }
 
@@ -37,10 +38,10 @@ interface TrackedObservation extends InteractionObservation {
   released: boolean;
 }
 
-interface TrackedCapture extends InteractionCapture {
+interface TrackedScope extends InteractionScope {
   readonly root: RenderNode;
-  /** Whether this capture is currently pushed onto `app.interaction`'s stack — false while created/left dormant. */
-  attached: boolean;
+  /** The live scope's token while pushed onto `app.interaction`'s stack, `null` while created/left dormant. */
+  token: ScopeToken | null;
   released: boolean;
 }
 
@@ -50,7 +51,7 @@ interface TrackedCapture extends InteractionCapture {
  * automatic wiring lives in the internal `SceneScope`, not here.
  * {@link SceneInteraction.observe} is the *explicit* path for additional
  * roots (e.g. a subtree rendered outside `scene.root`); {@link
- * SceneInteraction.capture} confines hit-testing to one subtree (modal
+ * SceneInteraction.scope} confines hit-testing and Tab traversal to one subtree (modal
  * dialogs, pause menus). Access via {@link Scene.interaction}.
  *
  * Delegates entirely to `app.interaction` — no second picking/dispatch
@@ -60,7 +61,7 @@ interface TrackedCapture extends InteractionCapture {
  * {@link InteractionManager.update} — not duplicated here.
  *
  * While the owning scope is not `Active` (`Preparing`, `Ready`, or
- * `Suspended`), `observe()`/`capture()` track their registration locally but
+ * `Suspended`), `observe()`/`scope()` track their registration locally but
  * never reach `app.interaction` — including a call made while already
  * `Suspended` (definition §4.2). {@link SceneInteraction.resume} attaches
  * everything not yet attached, in tracking order, on the next transition
@@ -68,7 +69,7 @@ interface TrackedCapture extends InteractionCapture {
  */
 export class SceneInteraction implements Destroyable {
   private readonly _observations = new Set<TrackedObservation>();
-  private readonly _captures: TrackedCapture[] = [];
+  private readonly _scopes: TrackedScope[] = [];
 
   public constructor(
     private readonly _app: Application,
@@ -110,38 +111,35 @@ export class SceneInteraction implements Destroyable {
   /**
    * Confine pointer hit-testing to `root`'s subtree until the returned
    * handle is released — a modal dialog, pause menu, or full-screen overlay
-   * that must swallow clicks outside itself. Nested captures use
-   * last-created priority; releasing any capture (not only the most recent)
-   * restores the stack to its state as if that capture had never been
+   * that must swallow clicks outside itself. Nested scopes use
+   * last-created priority; releasing any scope (not only the most recent)
+   * restores the stack to its state as if that scope had never been
    * created, preserving the relative order of the rest. Buffered until the
    * owning scope is `Active`, same as {@link SceneInteraction.observe}.
    */
-  public capture(root: RenderNode): InteractionCapture {
+  public scope(root: RenderNode): InteractionScope {
     const live = this._isLive();
+    const token = live ? this._app.interaction.pushScope(root) : null;
 
-    if (live) {
-      this._app.interaction.pushInputCapture(root);
-    }
-
-    const capture: TrackedCapture = {
+    const scope: TrackedScope = {
       root,
-      attached: live,
+      token,
       released: false,
-      release: () => this._releaseCapture(capture),
-      destroy: () => this._releaseCapture(capture),
+      release: () => this._releaseScope(scope),
+      destroy: () => this._releaseScope(scope),
       get active(): boolean {
         return !this.released;
       },
     };
 
-    this._captures.push(capture);
+    this._scopes.push(scope);
 
-    return capture;
+    return scope;
   }
 
   /**
    * Detach every currently-attached observation and pop every
-   * currently-attached capture off the manager's stack, without discarding
+   * currently-attached scope off the manager's stack, without discarding
    * local tracking — so {@link SceneInteraction.resume} can reattach exactly
    * the same set in the same order. A retained scene must not keep
    * receiving pointer dispatch alongside whichever scope is now active
@@ -157,18 +155,19 @@ export class SceneInteraction implements Destroyable {
       }
     }
 
-    for (let i = this._captures.length - 1; i >= 0; i--) {
-      const capture = this._captures[i]!;
-
-      if (capture.attached) {
-        this._app.interaction.popInputCapture();
-        capture.attached = false;
+    for (const scope of this._scopes) {
+      if (scope.token !== null) {
+        // A targeted release — InteractionManager.popScope finds this exact
+        // entry by its token wherever it sits, so entries can be released in
+        // ANY order here without disturbing the others; no rebuild needed.
+        this._app.interaction.popScope(scope.token);
+        scope.token = null;
       }
     }
   }
 
   /**
-   * Attach every observation and push every capture not currently attached
+   * Attach every observation and push every scope not currently attached
    * to `app.interaction`, in tracking order — covers both a fresh
    * activation flushing whatever was registered while dormant, and a
    * retention restore reinstating whatever {@link SceneInteraction.suspend}
@@ -183,10 +182,9 @@ export class SceneInteraction implements Destroyable {
       }
     }
 
-    for (const capture of this._captures) {
-      if (!capture.attached) {
-        this._app.interaction.pushInputCapture(capture.root);
-        capture.attached = true;
+    for (const scope of this._scopes) {
+      if (scope.token === null) {
+        scope.token = this._app.interaction.pushScope(scope.root);
       }
     }
   }
@@ -198,8 +196,8 @@ export class SceneInteraction implements Destroyable {
 
     this._observations.clear();
 
-    for (const capture of [...this._captures].reverse()) {
-      this._releaseCapture(capture);
+    for (const scope of [...this._scopes]) {
+      this._releaseScope(scope);
     }
   }
 
@@ -216,43 +214,22 @@ export class SceneInteraction implements Destroyable {
     }
   }
 
-  private _releaseCapture(capture: TrackedCapture): void {
-    if (capture.released) {
+  /**
+   * Release `scope`, wherever it sits in tracking order — released in ANY
+   * order relative to its siblings, since {@link InteractionManager.popScope}
+   * removes exactly this scope's own token, never anything above or below it.
+   */
+  private _releaseScope(scope: TrackedScope): void {
+    if (scope.released) {
       return;
     }
 
-    const index = this._captures.indexOf(capture);
+    scope.released = true;
+    this._scopes.splice(this._scopes.indexOf(scope), 1);
 
-    if (!capture.attached) {
-      // Never reached app.interaction (created while dormant, or currently
-      // detached by suspend()) — local bookkeeping only; the manager's
-      // stack was never touched for this capture in the first place.
-      capture.released = true;
-      this._captures.splice(index, 1);
-
-      return;
-    }
-
-    // Every capture from `index` onward is attached together in practice —
-    // captures only ever attach while genuinely Active, and suspend()
-    // detaches the entire array together, so a mix of attached/unattached
-    // entries above an attached one cannot arise. Pop every capture from
-    // the top down through (and including) this one, then re-push
-    // everything that was above it, in original order — restores the
-    // manager's stack as if `capture` had never existed.
-    const above = this._captures.slice(index + 1);
-
-    for (let i = this._captures.length - 1; i >= index; i--) {
-      this._app.interaction.popInputCapture();
-      this._captures[i]!.attached = false;
-    }
-
-    capture.released = true;
-    this._captures.splice(index, 1);
-
-    for (const entry of above) {
-      this._app.interaction.pushInputCapture(entry.root);
-      entry.attached = true;
+    if (scope.token !== null) {
+      this._app.interaction.popScope(scope.token);
+      scope.token = null;
     }
   }
 }

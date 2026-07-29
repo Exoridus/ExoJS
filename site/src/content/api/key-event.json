@@ -1,16 +1,16 @@
 {
   "title": "KeyEvent",
-  "description": "Envelope dispatched by FocusManager to the focused RenderNode for keyboard input. `channel` is the input channel of the key — compare it with the `Keyboard` constants (e.g. `event.channel === Keyboard.Enter`). A handler may call KeyEvent.preventDefault to suppress the FocusManager's built-in handling for this key (currently `Tab` focus traversal), letting the focused widget consume the key itself.",
+  "description": "Envelope dispatched by `app.interaction` to the focused RenderNode for keyboard input, then bubbled up its entire parent chain — same DOM-style shape as InteractionEvent: `target` stays pinned to the focused node while `currentTarget` advances to each ancestor, whether or not that ancestor is itself focusable. A handler may call KeyEvent.stopPropagation to halt the bubble early, e.g. a panel listening for `Escape` from any of its focused descendants without each one needing its own handler. `channel` is the input channel of the key — compare it with the `Keyboard` constants (e.g. `event.channel === Keyboard.Enter`). A handler may call KeyEvent.preventDefault to suppress ExoJS's own built-in handling for this key (currently `Tab` focus traversal), letting the focused widget consume the key itself. It affects engine behaviour only — the browser's own default was already decided synchronously when the platform event arrived, long before this envelope was dispatched.",
   "symbol": "KeyEvent",
   "kind": "class",
   "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 6,
+  "memberCount": 9,
   "counts": {
     "constructors": 1,
-    "methods": 1,
-    "properties": 4,
+    "methods": 2,
+    "properties": 6,
     "events": 0
   },
   "sections": [
@@ -19,8 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Envelope dispatched by FocusManager to the focused RenderNode for keyboard input. `channel` is the input channel of the key — compare it with the `Keyboard` constants (e.g. `event.channel === Keyboard.Enter`).",
-        "A handler may call KeyEvent.preventDefault to suppress the FocusManager's built-in handling for this key (currently `Tab` focus traversal), letting the focused widget consume the key itself."
+        "Envelope dispatched by `app.interaction` to the focused RenderNode for keyboard input, then bubbled up its entire parent chain — same DOM-style shape as InteractionEvent: `target` stays pinned to the focused node while `currentTarget` advances to each ancestor, whether or not that ancestor is itself focusable. A handler may call KeyEvent.stopPropagation to halt the bubble early, e.g. a panel listening for `Escape` from any of its focused descendants without each one needing its own handler.",
+        "`channel` is the input channel of the key — compare it with the `Keyboard` constants (e.g. `event.channel === Keyboard.Enter`).",
+        "A handler may call KeyEvent.preventDefault to suppress ExoJS's own built-in handling for this key (currently `Tab` focus traversal), letting the focused widget consume the key itself. It affects engine behaviour only — the browser's own default was already decided synchronously when the platform event arrived, long before this envelope was dispatched."
       ],
       "importLine": "import { KeyEvent } from '@codexo/exojs'",
       "sourceLink": null
@@ -154,7 +155,36 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Suppress the FocusManager's built-in handling (e.g. Tab traversal) for this key."
+          "description": "Suppress ExoJS's built-in handling (e.g. Tab traversal) for this key. Never affects the browser."
+        },
+        {
+          "name": "stopPropagation",
+          "signature": "stopPropagation(): void",
+          "signatureTokens": [
+            {
+              "text": "stopPropagation",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Halt further bubbling up the parent chain for this event."
         }
       ],
       "paragraphs": [],
@@ -187,6 +217,27 @@
           "description": "Input channel of the key — compare with the Keyboard.* channel constants."
         },
         {
+          "name": "currentTarget",
+          "signature": "currentTarget: RenderNode",
+          "signatureTokens": [
+            {
+              "text": "currentTarget",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderNode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The node currently dispatching this event during bubbling. Changes per bubble step."
+        },
+        {
           "name": "target",
           "signature": "target: RenderNode",
           "signatureTokens": [
@@ -205,7 +256,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The focused node this event was delivered to."
+          "description": "The node that held focus when this event fired. Stable across the bubble."
         },
         {
           "name": "type",
@@ -234,6 +285,27 @@
           "signatureTokens": [
             {
               "text": "defaultPrevented",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "propagationStopped",
+          "signature": "propagationStopped: boolean",
+          "signatureTokens": [
+            {
+              "text": "propagationStopped",
               "kind": "name"
             },
             {

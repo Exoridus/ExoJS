@@ -2,13 +2,16 @@
 import { Scene } from '#core/Scene';
 import { SceneState } from '#core/SceneState';
 import { Signal } from '#core/Signal';
+import type { ContextMenuRequest } from '#input/ContextMenuRequest';
 import type { InputManager } from '#input/InputManager';
 import type { InteractionEvent } from '#input/InteractionEvent';
 import { InteractionManager } from '#input/InteractionManager';
 import type { Pointer } from '#input/Pointer';
 import { Rectangle } from '#math/Rectangle';
+import { BrowserPlatform } from '#platform/BrowserPlatform';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
+import type { Geometry } from '#rendering/geometry/Geometry';
 
 // ---------------------------------------------------------------------------
 // Minimal concrete RenderNode subclass for tests
@@ -41,6 +44,27 @@ class TestSprite extends Drawable {
   }
 }
 
+/**
+ * A container whose world bounds are set directly, for deterministic
+ * `clipShape: null` tests. Named `_fixedBounds` (not `_bounds`) to avoid
+ * colliding with `SceneNode`'s own protected `_bounds` cache field, which is
+ * a `Bounds` instance, not a `Rectangle` — shadowing it silently corrupts the
+ * base class's own bounds machinery.
+ */
+class TestClipContainer extends Container {
+  private _fixedBounds = new Rectangle(0, 0, 0, 0);
+
+  public setClipBounds(left: number, top: number, width: number, height: number): this {
+    this._fixedBounds = new Rectangle(left, top, width, height);
+
+    return this;
+  }
+
+  public override getBounds(): Rectangle {
+    return this._fixedBounds;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Test helpers
 // ---------------------------------------------------------------------------
@@ -49,25 +73,40 @@ interface MockPointerOptions {
   id?: number;
   x?: number;
   y?: number;
+  /** Press excursion so far — what the drag threshold is compared against. */
+  travelled?: number;
 }
 
-const makePointer = ({ id = 1, x = 0, y = 0 }: MockPointerOptions = {}): Pointer =>
+const makePointer = ({ id = 1, x = 0, y = 0, travelled = 0 }: MockPointerOptions = {}): Pointer =>
   ({
     id,
     x,
     y,
     type: 'mouse',
     isPrimary: true,
+    maxDistanceFromPress: travelled,
   }) as unknown as Pointer;
 
+/** Distance comfortably past the default 8px drag threshold. */
+const pastThreshold = 40;
+
 interface MockSignals {
-  onPointerDown: Signal<[Pointer]>;
-  onPointerMove: Signal<[Pointer]>;
-  onPointerUp: Signal<[Pointer]>;
-  onPointerTap: Signal<[Pointer]>;
-  onPointerCancel: Signal<[Pointer]>;
-  onPointerLeave: Signal<[Pointer]>;
+  onPointerDown: Signal<[Pointer, number, number]>;
+  onPointerMove: Signal<[Pointer, number, number]>;
+  onPointerUp: Signal<[Pointer, number, number]>;
+  onPointerTap: Signal<[Pointer, number, number]>;
+  onPointerCancel: Signal<[Pointer, number, number]>;
+  onPointerLeave: Signal<[Pointer, number, number]>;
 }
+
+/** Dispatch a mock pointer through a mock signal with its own x/y, matching the real (pointer, x, y) shape. */
+const dispatchPointer = (signal: Signal<[Pointer, number, number]>, opts: MockPointerOptions = {}): Pointer => {
+  const pointer = makePointer(opts);
+
+  signal.dispatch(pointer, opts.x ?? 0, opts.y ?? 0);
+
+  return pointer;
+};
 
 /** Build a minimal Application mock wired to a real Scene root. */
 const createApp = (): {
@@ -77,12 +116,16 @@ const createApp = (): {
   canvas: HTMLCanvasElement;
 } => {
   const signals: MockSignals = {
-    onPointerDown: new Signal<[Pointer]>(),
-    onPointerMove: new Signal<[Pointer]>(),
-    onPointerUp: new Signal<[Pointer]>(),
-    onPointerTap: new Signal<[Pointer]>(),
-    onPointerCancel: new Signal<[Pointer]>(),
-    onPointerLeave: new Signal<[Pointer]>(),
+    onPointerDown: new Signal<[Pointer, number, number]>(),
+    onPointerMove: new Signal<[Pointer, number, number]>(),
+    onPointerUp: new Signal<[Pointer, number, number]>(),
+    onPointerTap: new Signal<[Pointer, number, number]>(),
+    onPointerCancel: new Signal<[Pointer, number, number]>(),
+    onPointerLeave: new Signal<[Pointer, number, number]>(),
+    onContextMenu: new Signal<[ContextMenuRequest]>(),
+    // InteractionManager owns the focus controller, which listens for keys.
+    onKeyDown: new Signal<[number]>(),
+    onKeyUp: new Signal<[number]>(),
   };
 
   const canvas = document.createElement('canvas');
@@ -92,6 +135,7 @@ const createApp = (): {
 
   const app = {
     canvas,
+    platform: new BrowserPlatform(canvas),
     width: 800,
     height: 600,
     input: signals as unknown as InputManager,
@@ -129,18 +173,23 @@ const createAppNoScene = (
   canvas: HTMLCanvasElement;
 } => {
   const signals: MockSignals = {
-    onPointerDown: new Signal<[Pointer]>(),
-    onPointerMove: new Signal<[Pointer]>(),
-    onPointerUp: new Signal<[Pointer]>(),
-    onPointerTap: new Signal<[Pointer]>(),
-    onPointerCancel: new Signal<[Pointer]>(),
-    onPointerLeave: new Signal<[Pointer]>(),
+    onPointerDown: new Signal<[Pointer, number, number]>(),
+    onPointerMove: new Signal<[Pointer, number, number]>(),
+    onPointerUp: new Signal<[Pointer, number, number]>(),
+    onPointerTap: new Signal<[Pointer, number, number]>(),
+    onPointerCancel: new Signal<[Pointer, number, number]>(),
+    onPointerLeave: new Signal<[Pointer, number, number]>(),
+    onContextMenu: new Signal<[ContextMenuRequest]>(),
+    // InteractionManager owns the focus controller, which listens for keys.
+    onKeyDown: new Signal<[number]>(),
+    onKeyUp: new Signal<[number]>(),
   };
 
   const canvas = document.createElement('canvas');
 
   const app = {
     canvas,
+    platform: new BrowserPlatform(canvas),
     width: overrides.width ?? 800,
     height: overrides.height ?? 600,
     input: signals as unknown as InputManager,
@@ -192,7 +241,7 @@ describe('InteractionManager — hit-test basics', () => {
     const handler = vi.fn();
 
     sprite.onPointerDown.add(handler);
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
     expect(handler).toHaveBeenCalledTimes(1);
@@ -214,7 +263,7 @@ describe('InteractionManager — hit-test basics', () => {
     const handler = vi.fn();
 
     sprite.onPointerDown.add(handler);
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
     expect(handler).not.toHaveBeenCalled();
@@ -235,7 +284,7 @@ describe('InteractionManager — hit-test basics', () => {
     const handler = vi.fn();
 
     sprite.onPointerDown.add(handler);
-    signals.onPointerDown.dispatch(makePointer({ x: 200, y: 200 }));
+    dispatchPointer(signals.onPointerDown, { x: 200, y: 200 });
     flushInteractions(im);
 
     expect(handler).not.toHaveBeenCalled();
@@ -267,7 +316,7 @@ describe('InteractionManager — z-order', () => {
 
     bottom.onPointerDown.add(bottomHandler);
     top.onPointerDown.add(topHandler);
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
     expect(topHandler).toHaveBeenCalledTimes(1);
@@ -310,7 +359,7 @@ describe('InteractionManager — bubbling', () => {
       parentTargets.push(e.target);
       parentCurrentTargets.push(e.currentTarget);
     });
-    signals.onPointerDown.dispatch(makePointer({ x: 25, y: 25 }));
+    dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
     flushInteractions(im);
 
     expect(childTargets).toHaveLength(1);
@@ -348,7 +397,7 @@ describe('InteractionManager — stopPropagation', () => {
       e.stopPropagation();
     });
     parent.onPointerDown.add(parentHandler);
-    signals.onPointerDown.dispatch(makePointer({ x: 25, y: 25 }));
+    dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
     flushInteractions(im);
 
     expect(parentHandler).not.toHaveBeenCalled();
@@ -362,8 +411,8 @@ describe('InteractionManager — stopPropagation', () => {
 // 5. Bubble stops at non-interactive parent
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — bubble stops at non-interactive parent', () => {
-  test('event does not reach grandparent through non-interactive parent', () => {
+describe('InteractionManager — bubble passes through non-interactive ancestors', () => {
+  test('event reaches grandparent through a non-interactive parent', () => {
     const { app, scene, signals } = createApp();
     const im = new InteractionManager(app);
     im.attachRoot(scene.root);
@@ -372,7 +421,9 @@ describe('InteractionManager — bubble stops at non-interactive parent', () => 
     const child = new TestSprite().setBounds(0, 0, 50, 50);
 
     grandparent.interactive = true;
-    parent.interactive = false; // non-interactive — chain breaks here
+    // A plain layout container in the middle of the path. `interactive`
+    // governs whether a node can be hit, not whether events may pass it.
+    parent.interactive = false;
     child.interactive = true;
 
     scene.root.addChild(grandparent);
@@ -384,10 +435,65 @@ describe('InteractionManager — bubble stops at non-interactive parent', () => 
 
     child.onPointerDown.add(childHandler);
     grandparent.onPointerDown.add(grandparentHandler);
-    signals.onPointerDown.dispatch(makePointer({ x: 25, y: 25 }));
+    dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
     flushInteractions(im);
 
     expect(childHandler).toHaveBeenCalledTimes(1);
+    expect(grandparentHandler).toHaveBeenCalledTimes(1);
+    expect(grandparentHandler.mock.calls[0]![0].target).toBe(child);
+
+    im.destroy();
+    grandparent.destroy();
+  });
+
+  test('a listener on the non-interactive parent itself still receives the event', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+    const parent = new Container();
+    const child = new TestSprite().setBounds(0, 0, 50, 50);
+
+    parent.interactive = false;
+    child.interactive = true;
+
+    scene.root.addChild(parent);
+    parent.addChild(child);
+
+    const parentHandler = vi.fn();
+
+    parent.onPointerDown.add(parentHandler);
+    dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
+    flushInteractions(im);
+
+    expect(parentHandler).toHaveBeenCalledTimes(1);
+
+    im.destroy();
+    parent.destroy();
+  });
+
+  test('stopPropagation on a non-interactive parent halts the walk', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+    const grandparent = new Container();
+    const parent = new Container();
+    const child = new TestSprite().setBounds(0, 0, 50, 50);
+
+    grandparent.interactive = true;
+    parent.interactive = false;
+    child.interactive = true;
+
+    scene.root.addChild(grandparent);
+    grandparent.addChild(parent);
+    parent.addChild(child);
+
+    const grandparentHandler = vi.fn();
+
+    parent.onPointerDown.add(event => event.stopPropagation());
+    grandparent.onPointerDown.add(grandparentHandler);
+    dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
+    flushInteractions(im);
+
     expect(grandparentHandler).not.toHaveBeenCalled();
 
     im.destroy();
@@ -422,12 +528,12 @@ describe('InteractionManager — pointerover / pointerout on move', () => {
     });
 
     // First move over A to establish lastHit
-    signals.onPointerMove.dispatch(makePointer({ x: 25, y: 25 }));
+    dispatchPointer(signals.onPointerMove, { x: 25, y: 25 });
     flushInteractions(im);
     order.length = 0; // reset after setup
 
     // Now move to B
-    signals.onPointerMove.dispatch(makePointer({ x: 80, y: 25 }));
+    dispatchPointer(signals.onPointerMove, { x: 80, y: 25 });
     flushInteractions(im);
 
     expect(order).toEqual(['A:out', 'B:over']);
@@ -452,17 +558,116 @@ describe('InteractionManager — pointerover / pointerout on move', () => {
     sprite.onPointerOut.add(outHandler);
     sprite.onPointerOver.add(overHandler);
 
-    signals.onPointerMove.dispatch(makePointer({ x: 25, y: 25 }));
+    dispatchPointer(signals.onPointerMove, { x: 25, y: 25 });
     flushInteractions(im);
     expect(overHandler).toHaveBeenCalledTimes(1);
 
     // Move off the sprite entirely — no node under the pointer any more.
-    signals.onPointerMove.dispatch(makePointer({ x: 500, y: 500 }));
+    dispatchPointer(signals.onPointerMove, { x: 500, y: 500 });
     flushInteractions(im);
 
     expect(outHandler).toHaveBeenCalledTimes(1);
     expect(overHandler).toHaveBeenCalledTimes(1); // unchanged — no new pointerover fired
     expect(im.getHoveredNode()).toBeNull();
+
+    im.destroy();
+    sprite.destroy();
+  });
+
+  test('a pointerout handler that destroys the incoming node suppresses its pointerover without throwing', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+    const spriteA = new TestSprite().setBounds(0, 0, 50, 50);
+    const spriteB = new TestSprite().setBounds(60, 0, 50, 50);
+
+    spriteA.interactive = true;
+    spriteB.interactive = true;
+    scene.addChild(spriteA);
+    scene.addChild(spriteB);
+
+    const bOver = vi.fn();
+
+    // A's own pointerout handler reaches out and destroys B — the node the
+    // SAME flush is about to dispatch pointerover on next.
+    spriteA.onPointerOut.add(() => spriteB.destroy());
+    spriteB.onPointerOver.add(bOver);
+
+    dispatchPointer(signals.onPointerMove, { x: 25, y: 25 });
+    flushInteractions(im);
+
+    expect(() => {
+      dispatchPointer(signals.onPointerMove, { x: 80, y: 25 });
+      flushInteractions(im);
+    }).not.toThrow();
+
+    expect(bOver).not.toHaveBeenCalled();
+
+    im.destroy();
+    spriteA.destroy();
+  });
+
+  test('a pointerover handler that destroys its own node leaves no stale hover entry behind', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+    const sprite = new TestSprite().setBounds(0, 0, 50, 50);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+    sprite.onPointerOver.add(() => sprite.destroy());
+
+    expect(() => {
+      dispatchPointer(signals.onPointerMove, { x: 25, y: 25 });
+      flushInteractions(im);
+    }).not.toThrow();
+
+    // The node that was just hovered destroyed itself from inside its own
+    // pointerover handler — it must not linger as the recorded hover target.
+    expect(im.getHoveredNode()).toBeNull();
+
+    im.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 6b. Phase-consistent coordinates
+// ---------------------------------------------------------------------------
+
+describe('InteractionManager — phase-consistent event coordinates', () => {
+  test('event.x/y are the phase-specific layer-space coordinates; event.pointer.x/y always read the live position', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+    const sprite = new TestSprite().setBounds(0, 0, 200, 200);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    let seenEventX: number | null = null;
+    let seenPointerX: number | null = null;
+
+    // The pointer's mock `x` is its LIVE field (set once, at dispatch time,
+    // by the test harness below) — a real Pointer always reads live too (see
+    // Pointer.position's own doc comment); it is deliberately not what a
+    // handler should read for "where did THIS phase happen".
+    sprite.onPointerDown.add(event => {
+      seenEventX = event.x;
+      seenPointerX = event.pointer.x;
+    });
+
+    const pointer = makePointer({ x: 50, y: 50 });
+
+    signals.onPointerDown.dispatch(pointer, 50, 50);
+    // Mutate the mock pointer's live field to a LATER value, exactly as a
+    // same-frame Move happening after Down would leave it — proving a
+    // handler reading event.x gets the Down phase's own coordinate (50)
+    // rather than silently observing the pointer's later, live position.
+    (pointer as unknown as { x: number }).x = 999;
+    flushInteractions(im);
+
+    expect(seenEventX).toBe(50);
+    expect(seenPointerX).toBe(999);
 
     im.destroy();
     sprite.destroy();
@@ -497,10 +702,10 @@ describe('InteractionManager — multi-pointer', () => {
     });
 
     // Pointer 1 over A
-    signals.onPointerDown.dispatch(makePointer({ id: 1, x: 25, y: 25 }));
+    dispatchPointer(signals.onPointerDown, { id: 1, x: 25, y: 25 });
     flushInteractions(im);
     // Pointer 2 over B
-    signals.onPointerDown.dispatch(makePointer({ id: 2, x: 80, y: 25 }));
+    dispatchPointer(signals.onPointerDown, { id: 2, x: 80, y: 25 });
     flushInteractions(im);
 
     expect(aDownCount.count).toBe(1);
@@ -527,7 +732,7 @@ describe('InteractionManager — cursor', () => {
     sprite.cursor = 'pointer';
     scene.addChild(sprite);
 
-    signals.onPointerMove.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerMove, { x: 50, y: 50 });
     flushInteractions(im);
 
     expect(canvas.style.cursor).toBe('pointer');
@@ -546,11 +751,11 @@ describe('InteractionManager — cursor', () => {
     sprite.cursor = 'pointer';
     scene.addChild(sprite);
 
-    signals.onPointerMove.dispatch(makePointer({ id: 1, x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerMove, { id: 1, x: 50, y: 50 });
     flushInteractions(im);
     expect(canvas.style.cursor).toBe('pointer');
 
-    signals.onPointerLeave.dispatch(makePointer({ id: 1, x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerLeave, { id: 1, x: 50, y: 50 });
     flushInteractions(im);
     expect(canvas.style.cursor).toBe('');
 
@@ -576,7 +781,16 @@ describe('InteractionManager — tap', () => {
     const handler = vi.fn();
 
     sprite.onPointerTap.add(handler);
-    signals.onPointerTap.dispatch(makePointer({ x: 50, y: 50 }));
+    // A tap only fires when this release resolves to the same node its own
+    // cycle's press landed on — see `_pressTargets`' doc comment — so a
+    // preceding press is required now, not just the release/tap signal. The
+    // real `InputManager` always dispatches `onPointerUp` immediately before
+    // a conditional `onPointerTap` for the SAME occurrence (see
+    // `InteractionJournalEntry.tap`'s doc comment) — `onPointerTap` folds its
+    // classification onto that Up entry rather than standing alone.
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
+    dispatchPointer(signals.onPointerUp, { x: 50, y: 50 });
+    dispatchPointer(signals.onPointerTap, { x: 50, y: 50 });
     flushInteractions(im);
 
     expect(handler).toHaveBeenCalledTimes(1);
@@ -587,6 +801,108 @@ describe('InteractionManager — tap', () => {
 
     im.destroy();
     sprite.destroy();
+  });
+});
+
+describe('InteractionManager — tap target semantics', () => {
+  test('a release that resolves to a different node than the press does not fire a tap on either', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+    const left = new TestSprite().setBounds(0, 0, 50, 50);
+    const right = new TestSprite().setBounds(50, 0, 50, 50);
+
+    left.interactive = true;
+    right.interactive = true;
+    scene.addChild(left);
+    scene.addChild(right);
+
+    const leftTap = vi.fn();
+    const rightTap = vi.fn();
+
+    left.onPointerTap.add(leftTap);
+    right.onPointerTap.add(rightTap);
+
+    // Press lands on `left`, a 2px sub-threshold shift lands the release on
+    // `right` instead — the press and release targets genuinely differ, even
+    // though nothing here would ever promote to a real drag.
+    dispatchPointer(signals.onPointerDown, { x: 49, y: 25 });
+    dispatchPointer(signals.onPointerUp, { x: 51, y: 25 });
+    dispatchPointer(signals.onPointerTap, { x: 51, y: 25 });
+    flushInteractions(im);
+
+    expect(leftTap).not.toHaveBeenCalled();
+    expect(rightTap).not.toHaveBeenCalled();
+
+    im.destroy();
+    left.destroy();
+    right.destroy();
+  });
+
+  test('a press target destroyed between press and release suppresses the tap without throwing', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    const tapped = vi.fn();
+
+    sprite.onPointerTap.add(tapped);
+
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
+    flushInteractions(im);
+
+    // Something unrelated to this pointer's own dispatch destroys the press
+    // target before its release ever arrives — a bare destroy(), no
+    // removeChild, the harder case (see `_isLive`'s doc comment).
+    sprite.destroy();
+
+    expect(() => {
+      dispatchPointer(signals.onPointerUp, { x: 50, y: 50 });
+      dispatchPointer(signals.onPointerTap, { x: 50, y: 50 });
+      flushInteractions(im);
+    }).not.toThrow();
+
+    expect(tapped).not.toHaveBeenCalled();
+
+    im.destroy();
+  });
+
+  test('preventDefault() on pointerdown suppresses automatic drag-candidate creation without stopping propagation', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+    const parent = new Container();
+    const child = new TestSprite().setBounds(0, 0, 100, 100);
+
+    child.interactive = true;
+    child.draggable = true;
+    parent.addChild(child);
+    scene.addChild(parent);
+
+    const parentDown = vi.fn();
+    const dragStart = vi.fn();
+
+    parent.onPointerDown.add(parentDown);
+    child.onPointerDown.add(event => event.preventDefault());
+    child.onDragStart.add(dragStart);
+
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
+    // 40 design pixels past the default 8px drag threshold — would promote a
+    // candidate to a real drag if one had been created.
+    dispatchPointer(signals.onPointerMove, { x: 90, y: 50 });
+    flushInteractions(im);
+
+    // Propagation is unaffected by preventDefault() — only stopPropagation()
+    // halts bubbling.
+    expect(parentDown).toHaveBeenCalledTimes(1);
+    expect(dragStart).not.toHaveBeenCalled();
+    expect(im.getCapturedNodes()).toEqual([]);
+
+    im.destroy();
   });
 });
 
@@ -609,7 +925,7 @@ describe('InteractionManager — destroy cleanup', () => {
     sprite.onPointerDown.add(handler);
     im.destroy();
 
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     // No flushInteractions — im is destroyed, so update() is also a no-op.
 
     expect(handler).not.toHaveBeenCalled();
@@ -657,7 +973,7 @@ describe('InteractionManager — drag and drop', () => {
     });
   };
 
-  test('dragstart fires on pointerdown; pointermove updates position; dragend fires on pointerup', () => {
+  test('dragstart waits for the threshold; pointermove drags; dragend fires on pointerup', () => {
     const { app, scene, signals, canvas } = createApp();
     mockPointerCapture(canvas);
     const im = new InteractionManager(app);
@@ -676,23 +992,24 @@ describe('InteractionManager — drag and drop', () => {
     sprite.onDrag.add(dragHandler);
     sprite.onDragEnd.add(dragEndHandler);
 
-    // Pointer down starts drag
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    // Pointer down only notes a candidate — no drag yet.
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
+    flushInteractions(im);
+    expect(dragStartHandler).not.toHaveBeenCalled();
+
+    // The first move past the threshold starts the drag and drags in one go.
+    dispatchPointer(signals.onPointerMove, { x: 70, y: 60, travelled: pastThreshold });
     flushInteractions(im);
     expect(dragStartHandler).toHaveBeenCalledTimes(1);
-
-    // Pointer move drags
-    signals.onPointerMove.dispatch(makePointer({ x: 70, y: 60 }));
-    flushInteractions(im);
     expect(dragHandler).toHaveBeenCalledTimes(1);
 
     // Pointer up ends drag
-    signals.onPointerUp.dispatch(makePointer({ x: 70, y: 60 }));
+    dispatchPointer(signals.onPointerUp, { x: 70, y: 60, travelled: pastThreshold });
     flushInteractions(im);
     expect(dragEndHandler).toHaveBeenCalledTimes(1);
 
     // Further move should NOT fire drag events
-    signals.onPointerMove.dispatch(makePointer({ x: 90, y: 90 }));
+    dispatchPointer(signals.onPointerMove, { x: 90, y: 90, travelled: pastThreshold });
     flushInteractions(im);
     expect(dragHandler).toHaveBeenCalledTimes(1);
 
@@ -716,11 +1033,11 @@ describe('InteractionManager — drag and drop', () => {
     scene.addChild(sprite);
 
     // Grab at (60, 60) — offset is (50-60, 50-60) = (-10, -10)
-    signals.onPointerDown.dispatch(makePointer({ x: 60, y: 60 }));
+    dispatchPointer(signals.onPointerDown, { x: 60, y: 60 });
     flushInteractions(im);
 
     // Move pointer to (100, 80) — expected node position: (100-10, 80-10) = (90, 70)
-    signals.onPointerMove.dispatch(makePointer({ x: 100, y: 80 }));
+    dispatchPointer(signals.onPointerMove, { x: 100, y: 80, travelled: pastThreshold });
     flushInteractions(im);
 
     expect(sprite.position.x).toBe(90);
@@ -749,11 +1066,11 @@ describe('InteractionManager — drag and drop', () => {
     other.onPointerOver.add(otherOverHandler);
 
     // Start drag on dragged sprite
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
     // Move pointer into other sprite's bounds — should NOT fire pointerover on other
-    signals.onPointerMove.dispatch(makePointer({ x: 250, y: 50 }));
+    dispatchPointer(signals.onPointerMove, { x: 250, y: 50, travelled: pastThreshold });
     flushInteractions(im);
 
     expect(otherOverHandler).not.toHaveBeenCalled();
@@ -778,7 +1095,7 @@ describe('InteractionManager — drag and drop', () => {
 
     sprite.onDragStart.add(dragStartHandler);
 
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
     expect(dragStartHandler).not.toHaveBeenCalled();
@@ -804,7 +1121,7 @@ describe('InteractionManager — drag and drop', () => {
     sprite.onDragStart.add(dragStartHandler);
     sprite.onPointerDown.add(downHandler);
 
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
     expect(downHandler).not.toHaveBeenCalled();
@@ -831,18 +1148,22 @@ describe('InteractionManager — drag and drop', () => {
     sprite.onDragEnd.add(dragEndHandler);
     sprite.onDrag.add(dragHandler);
 
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
-    signals.onPointerCancel.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerMove, { x: 50, y: 90, travelled: pastThreshold });
+    flushInteractions(im);
+    expect(dragHandler).toHaveBeenCalledTimes(1);
+
+    dispatchPointer(signals.onPointerCancel, { x: 50, y: 90, travelled: pastThreshold });
     flushInteractions(im);
 
     expect(dragEndHandler).toHaveBeenCalledTimes(1);
 
     // Further move after cancel should NOT fire drag
-    signals.onPointerMove.dispatch(makePointer({ x: 60, y: 60 }));
+    dispatchPointer(signals.onPointerMove, { x: 60, y: 60, travelled: pastThreshold });
     flushInteractions(im);
-    expect(dragHandler).not.toHaveBeenCalled();
+    expect(dragHandler).toHaveBeenCalledTimes(1);
 
     im.destroy();
     sprite.destroy();
@@ -865,13 +1186,17 @@ describe('InteractionManager — drag and drop', () => {
       dragTargets.push(e.currentTarget);
     });
 
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
-    signals.onPointerMove.dispatch(makePointer({ x: 55, y: 55 }));
+    // 40 design pixels from the press position — comfortably past the
+    // default 8px drag threshold, which InteractionManager now measures as
+    // real geometric distance from its own recorded press position rather
+    // than trusting a declared `travelled` value decoupled from x/y.
+    dispatchPointer(signals.onPointerMove, { x: 90, y: 50 });
     flushInteractions(im);
 
-    signals.onPointerMove.dispatch(makePointer({ x: 60, y: 60 }));
+    dispatchPointer(signals.onPointerMove, { x: 120, y: 50 });
     flushInteractions(im);
 
     expect(dragTargets).toHaveLength(2);
@@ -904,13 +1229,13 @@ describe('InteractionManager — drag and drop', () => {
     parent.onDrag.add(parentDrag);
     parent.onDragEnd.add(parentDragEnd);
 
-    signals.onPointerDown.dispatch(makePointer({ x: 25, y: 25 }));
+    dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
     flushInteractions(im);
 
-    signals.onPointerMove.dispatch(makePointer({ x: 30, y: 30 }));
+    dispatchPointer(signals.onPointerMove, { x: 30, y: 30, travelled: pastThreshold });
     flushInteractions(im);
 
-    signals.onPointerUp.dispatch(makePointer({ x: 30, y: 30 }));
+    dispatchPointer(signals.onPointerUp, { x: 30, y: 30, travelled: pastThreshold });
     flushInteractions(im);
 
     expect(parentDragStart).not.toHaveBeenCalled();
@@ -943,17 +1268,19 @@ describe('InteractionManager — drag and drop', () => {
     spriteB.onPointerDown.add(bDown);
 
     // Start drag on A with pointer 1
-    signals.onPointerDown.dispatch(makePointer({ id: 1, x: 25, y: 25 }));
+    dispatchPointer(signals.onPointerDown, { id: 1, x: 25, y: 25 });
     flushInteractions(im);
 
     // Pointer 2 down on B — should fire normally (separate pointer)
-    signals.onPointerDown.dispatch(makePointer({ id: 2, x: 80, y: 25 }));
+    dispatchPointer(signals.onPointerDown, { id: 2, x: 80, y: 25 });
     flushInteractions(im);
 
     expect(bDown).toHaveBeenCalledTimes(1);
 
-    // Move pointer 1 — only A's drag fires
-    signals.onPointerMove.dispatch(makePointer({ id: 1, x: 30, y: 30 }));
+    // Move pointer 1 — only A's drag fires. 45 design pixels from the press
+    // position, past the default 8px drag threshold (see the drag-target
+    // test above for why this needs real geometric distance now).
+    dispatchPointer(signals.onPointerMove, { id: 1, x: 70, y: 25 });
     flushInteractions(im);
 
     expect(aDrag).toHaveBeenCalledTimes(1);
@@ -961,6 +1288,47 @@ describe('InteractionManager — drag and drop', () => {
     im.destroy();
     spriteA.destroy();
     spriteB.destroy();
+  });
+
+  test('a first drag cycle followed by a new press in the same flush starts a fresh, independent second cycle', () => {
+    const { app, scene, signals, canvas } = createApp();
+    mockPointerCapture(canvas);
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    const sprite = new TestSprite().setBounds(0, 0, 200, 200);
+
+    sprite.interactive = true;
+    sprite.draggable = true;
+    scene.addChild(sprite);
+
+    const dragStarts = vi.fn();
+    const dragEnds = vi.fn();
+
+    sprite.onDragStart.add(dragStarts);
+    sprite.onDragEnd.add(dragEnds);
+
+    // Cycle 1: press, move 40px past the default 8px threshold (starts the
+    // drag), release (ends it).
+    dispatchPointer(signals.onPointerDown, { x: 10, y: 10 });
+    dispatchPointer(signals.onPointerMove, { x: 50, y: 10 });
+    dispatchPointer(signals.onPointerUp, { x: 50, y: 10 });
+
+    // Cycle 2: a brand-new press sharing the SAME flush — must register its
+    // own fresh candidate rather than being confused with cycle 1's
+    // just-ended drag, and its own move must promote its own independent
+    // second drag.
+    dispatchPointer(signals.onPointerDown, { x: 10, y: 10 });
+    dispatchPointer(signals.onPointerMove, { x: 50, y: 10 });
+    flushInteractions(im);
+
+    expect(dragStarts).toHaveBeenCalledTimes(2);
+    expect(dragEnds).toHaveBeenCalledTimes(1);
+    expect(im.getCapturedNodes()).toEqual([sprite]);
+
+    im.destroy();
+    sprite.destroy();
   });
 });
 
@@ -983,12 +1351,12 @@ describe('InteractionManager — multi-Application isolation', () => {
     // App B's pointer must NOT reach app A's node. Under the old global
     // singleton the node registered with whichever manager was constructed
     // last, breaking exactly this case.
-    b.signals.onPointerDown.dispatch(makePointer({ x: 25, y: 25 }));
+    dispatchPointer(b.signals.onPointerDown, { x: 25, y: 25 });
     imB.update();
     expect(down).not.toHaveBeenCalled();
 
     // Only app A's own pointer reaches it.
-    a.signals.onPointerDown.dispatch(makePointer({ x: 25, y: 25 }));
+    dispatchPointer(a.signals.onPointerDown, { x: 25, y: 25 });
     imA.update();
     expect(down).toHaveBeenCalledTimes(1);
 
@@ -1002,8 +1370,8 @@ describe('InteractionManager — multi-Application isolation', () => {
 // Modal input capture
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — input capture', () => {
-  test('confines hit-testing to the captured subtree; outside pointers hit nothing', () => {
+describe('InteractionManager — interaction scope', () => {
+  test('confines hit-testing to the scoped subtree; outside pointers hit nothing', () => {
     const { app, scene, signals } = createApp();
     const im = new InteractionManager(app);
     im.attachRoot(scene.root);
@@ -1024,15 +1392,15 @@ describe('InteractionManager — input capture', () => {
     inside.onPointerDown.add(insideHandler);
     outside.onPointerDown.add(outsideHandler);
 
-    im.pushInputCapture(modal);
+    im.pushScope(modal);
 
     // Pointer over `outside` (not in the captured subtree) hits nothing.
-    signals.onPointerDown.dispatch(makePointer({ x: 250, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 250, y: 50 });
     flushInteractions(im);
     expect(outsideHandler).not.toHaveBeenCalled();
 
     // Pointer over `inside` (in the captured subtree) still hits.
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
     expect(insideHandler).toHaveBeenCalledTimes(1);
 
@@ -1042,7 +1410,7 @@ describe('InteractionManager — input capture', () => {
     modal.destroy();
   });
 
-  test('popInputCapture restores hit-testing outside the previous subtree', () => {
+  test('popScope restores hit-testing outside the previous subtree', () => {
     const { app, scene, signals } = createApp();
     const im = new InteractionManager(app);
     im.attachRoot(scene.root);
@@ -1061,10 +1429,11 @@ describe('InteractionManager — input capture', () => {
 
     outside.onPointerDown.add(outsideHandler);
 
-    im.pushInputCapture(modal);
-    im.popInputCapture();
+    const token = im.pushScope(modal);
 
-    signals.onPointerDown.dispatch(makePointer({ x: 250, y: 50 }));
+    im.popScope(token);
+
+    dispatchPointer(signals.onPointerDown, { x: 250, y: 50 });
     flushInteractions(im);
     expect(outsideHandler).toHaveBeenCalledTimes(1);
 
@@ -1072,6 +1441,77 @@ describe('InteractionManager — input capture', () => {
     inside.destroy();
     outside.destroy();
     modal.destroy();
+  });
+
+  test('a scope root removed via removeChild without popping the scope is skipped: hit-testing falls through to the real scene graph instead of staying confined to the detached subtree', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+
+    const modal = new Container();
+    const inside = new TestSprite().setBounds(0, 0, 100, 100);
+    const outside = new TestSprite().setBounds(200, 0, 100, 100);
+
+    inside.interactive = true;
+    outside.interactive = true;
+    modal.addChild(inside);
+    scene.addChild(modal);
+    scene.addChild(outside);
+
+    const outsideHandler = vi.fn();
+
+    outside.onPointerDown.add(outsideHandler);
+    im.pushScope(modal);
+
+    // Detach the scope root itself — without popping the scope.
+    scene.removeChild(modal);
+
+    dispatchPointer(signals.onPointerDown, { x: 250, y: 50 });
+    flushInteractions(im);
+
+    // The dead scope no longer hit-tests its own (now detached) subtree, nor
+    // does it keep blocking the real scene graph — `outside` is reachable.
+    expect(outsideHandler).toHaveBeenCalledTimes(1);
+
+    im.destroy();
+    inside.destroy();
+    outside.destroy();
+    modal.destroy();
+  });
+
+  test("a scope root belonging to a different Application is skipped: hit-testing falls through to this Application's own real scene graph", () => {
+    const a = createApp();
+    const b = createApp();
+    const imA = new InteractionManager(a.app);
+    const imB = new InteractionManager(b.app);
+
+    imA.attachRoot(a.scene.root);
+    imB.attachRoot(b.scene.root);
+
+    // A caller mistake: app A's manager is scoped to a root that only ever
+    // had a stage installed by app B.
+    imA.pushScope(b.scene.root);
+
+    const sprite = new TestSprite().setBounds(0, 0, 50, 50);
+
+    sprite.interactive = true;
+    a.scene.addChild(sprite);
+
+    const down = vi.fn();
+
+    sprite.onPointerDown.add(down);
+
+    // The cross-Application scope root is dead from app A's perspective, so
+    // it neither hit-tests app B's subtree through app A's manager nor blocks
+    // app A's own real scene graph.
+    dispatchPointer(a.signals.onPointerDown, { x: 25, y: 25 });
+    flushInteractions(imA);
+
+    expect(down).toHaveBeenCalledTimes(1);
+
+    imA.destroy();
+    imB.destroy();
+    sprite.destroy();
   });
 });
 
@@ -1102,7 +1542,7 @@ describe('InteractionManager — getHoveredNode', () => {
     sprite.interactive = true;
     scene.addChild(sprite);
 
-    signals.onPointerMove.dispatch(makePointer({ id: 7, x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerMove, { id: 7, x: 50, y: 50 });
     flushInteractions(im);
 
     expect(im.getHoveredNode(7)).toBe(sprite);
@@ -1133,7 +1573,7 @@ describe('InteractionManager — getHoveredNode', () => {
     sprite.interactive = true;
     scene.addChild(sprite);
 
-    signals.onPointerMove.dispatch(makePointer({ id: 1, x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerMove, { id: 1, x: 50, y: 50 });
     flushInteractions(im);
 
     expect(im.getHoveredNode()).toBe(sprite);
@@ -1175,7 +1615,13 @@ describe('InteractionManager — getCapturedNodes', () => {
     sprite.draggable = true;
     scene.addChild(sprite);
 
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
+    flushInteractions(im);
+
+    // A press alone is only a candidate — capture starts with the drag.
+    expect(im.getCapturedNodes()).toEqual([]);
+
+    dispatchPointer(signals.onPointerMove, { x: 90, y: 50, travelled: pastThreshold });
     flushInteractions(im);
 
     expect(im.getCapturedNodes()).toEqual([sprite]);
@@ -1190,7 +1636,7 @@ describe('InteractionManager — getCapturedNodes', () => {
 // ---------------------------------------------------------------------------
 
 describe('InteractionManager — detachRoot', () => {
-  test('blurs focus, clears the capture stack, unregisters interactive nodes, and clears the subtree stage', () => {
+  test('blurs focus, clears the scope stack, unregisters interactive nodes, and clears the subtree stage', () => {
     const { app, scene } = createApp();
     const im = new InteractionManager(app);
 
@@ -1201,13 +1647,17 @@ describe('InteractionManager — detachRoot', () => {
     sprite.interactive = true;
     scene.addChild(sprite);
 
-    im.pushInputCapture(scene.root);
+    im.pushScope(scene.root);
 
     expect(sprite._getStage()).not.toBeNull();
 
+    sprite.focusable = true;
+    im.focus(sprite);
+    expect(im.focused).toBe(sprite);
+
     im.detachRoot(scene.root);
 
-    expect(app.focus.blur).toHaveBeenCalledTimes(1);
+    expect(im.focused).toBeNull();
 
     // Interactive nodes were unregistered — the quadtree is torn down.
     expect(im._getDebugQuadtree()).toBeNull();
@@ -1215,8 +1665,8 @@ describe('InteractionManager — detachRoot', () => {
     // The subtree's stage was cleared — nodes are no longer routed anywhere.
     expect(sprite._getStage()).toBeNull();
 
-    // The (stale) capture pushed above was cleared, not merely shadowed.
-    expect((im as unknown as { _captureStack: unknown[] })._captureStack).toHaveLength(0);
+    // The (stale) scope pushed above was cleared, not merely shadowed.
+    expect((im as unknown as { _scopeStack: unknown[] })._scopeStack).toHaveLength(0);
 
     im.destroy();
     sprite.destroy();
@@ -1251,7 +1701,7 @@ describe('InteractionManager — UI layer', () => {
     worldSprite.onPointerDown.add(worldHandler);
     uiSprite.onPointerDown.add(uiHandler);
 
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
     expect(uiHandler).toHaveBeenCalledTimes(1);
@@ -1284,7 +1734,7 @@ describe('InteractionManager — UI layer', () => {
 
     worldSprite.onPointerDown.add(worldHandler);
 
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
     expect(worldHandler).toHaveBeenCalledTimes(1);
@@ -1331,10 +1781,10 @@ describe('InteractionManager — UI layer', () => {
 
     uiSprite.onDrag.add(dragHandler);
 
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
-    signals.onPointerMove.dispatch(makePointer({ x: 60, y: 60 }));
+    dispatchPointer(signals.onPointerMove, { x: 60, y: 60, travelled: pastThreshold });
     flushInteractions(im);
 
     expect(dragHandler).toHaveBeenCalledTimes(1);
@@ -1364,10 +1814,10 @@ describe('InteractionManager — UI layer', () => {
 
     worldSprite.onDrag.add(dragHandler);
 
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
-    signals.onPointerMove.dispatch(makePointer({ x: 60, y: 60 }));
+    dispatchPointer(signals.onPointerMove, { x: 60, y: 60, travelled: pastThreshold });
     flushInteractions(im);
 
     expect(dragHandler).toHaveBeenCalledTimes(1);
@@ -1417,7 +1867,7 @@ describe('InteractionManager — no active scene', () => {
     const im = new InteractionManager(app);
 
     expect(() => {
-      signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+      dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
       flushInteractions(im);
     }).not.toThrow();
 
@@ -1452,7 +1902,7 @@ describe('InteractionManager — no active scene', () => {
 // ---------------------------------------------------------------------------
 
 describe('InteractionManager — invisible nodes', () => {
-  test('an invisible interactive node inside a captured subtree is skipped by hit-testing', () => {
+  test('an invisible interactive node inside a scoped subtree is skipped by hit-testing', () => {
     const { app, scene, signals } = createApp();
     const im = new InteractionManager(app);
 
@@ -1465,13 +1915,13 @@ describe('InteractionManager — invisible nodes', () => {
     hidden.visible = false;
     modal.addChild(hidden);
     scene.addChild(modal);
-    im.pushInputCapture(modal);
+    im.pushScope(modal);
 
     const handler = vi.fn();
 
     hidden.onPointerDown.add(handler);
 
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
     expect(handler).not.toHaveBeenCalled();
@@ -1479,6 +1929,156 @@ describe('InteractionManager — invisible nodes', () => {
     im.destroy();
     hidden.destroy();
     modal.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Render-correct picking: hard clips bound descendant hits
+// ---------------------------------------------------------------------------
+
+describe('InteractionManager — clip-aware hit-testing', () => {
+  test('a Rectangle clipShape bounds descendant hits in the indexed (world) hit-test path', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+
+    const clipper = new TestClipContainer();
+    const child = new TestSprite().setBounds(0, 0, 100, 100);
+
+    clipper.clip = true;
+    clipper.clipShape = new Rectangle(0, 0, 50, 50);
+    child.interactive = true;
+    clipper.addChild(child);
+    scene.addChild(clipper);
+
+    const handler = vi.fn();
+    child.onPointerDown.add(handler);
+
+    dispatchPointer(signals.onPointerDown, { x: 75, y: 75 });
+    flushInteractions(im);
+    expect(handler).not.toHaveBeenCalled();
+
+    dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
+    flushInteractions(im);
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    im.destroy();
+    child.destroy();
+    clipper.destroy();
+  });
+
+  test("a null clipShape falls back to the clip node's own world bounds in the indexed path", () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+
+    const clipper = new TestClipContainer().setClipBounds(0, 0, 50, 50);
+    const child = new TestSprite().setBounds(0, 0, 100, 100);
+
+    clipper.clip = true;
+    clipper.clipShape = null;
+    child.interactive = true;
+    clipper.addChild(child);
+    scene.addChild(clipper);
+
+    const handler = vi.fn();
+    child.onPointerDown.add(handler);
+
+    dispatchPointer(signals.onPointerDown, { x: 75, y: 75 });
+    flushInteractions(im);
+    expect(handler).not.toHaveBeenCalled();
+
+    dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
+    flushInteractions(im);
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    im.destroy();
+    child.destroy();
+    clipper.destroy();
+  });
+
+  test('a Rectangle clipShape bounds descendant hits in the scoped/recursive hit-test path', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+
+    const clipper = new TestClipContainer();
+    const child = new TestSprite().setBounds(0, 0, 100, 100);
+
+    clipper.clip = true;
+    clipper.clipShape = new Rectangle(0, 0, 50, 50);
+    child.interactive = true;
+    clipper.addChild(child);
+    scene.addChild(clipper);
+    im.pushScope(clipper);
+
+    const handler = vi.fn();
+    child.onPointerDown.add(handler);
+
+    dispatchPointer(signals.onPointerDown, { x: 75, y: 75 });
+    flushInteractions(im);
+    expect(handler).not.toHaveBeenCalled();
+
+    dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
+    flushInteractions(im);
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    im.destroy();
+    child.destroy();
+    clipper.destroy();
+  });
+
+  test('clip bounds only descendants — a clipped node is still hit through its own (unclipped) contains() check', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    sprite.clip = true;
+    sprite.clipShape = new Rectangle(0, 0, 10, 10);
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    const handler = vi.fn();
+    sprite.onPointerDown.add(handler);
+
+    // Inside the sprite's own bounds but well outside its (descendant-only) clipShape.
+    dispatchPointer(signals.onPointerDown, { x: 75, y: 75 });
+    flushInteractions(im);
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    im.destroy();
+    sprite.destroy();
+  });
+
+  test('a Geometry clipShape does not bound descendant hits — documented non-pixel-hit-test contract', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+
+    const clipper = new TestClipContainer().setClipBounds(0, 0, 10, 10);
+    const child = new TestSprite().setBounds(0, 0, 100, 100);
+
+    clipper.clip = true;
+    clipper.clipShape = {} as unknown as Geometry;
+    child.interactive = true;
+    clipper.addChild(child);
+    scene.addChild(clipper);
+
+    const handler = vi.fn();
+    child.onPointerDown.add(handler);
+
+    // Well outside the clipper's tiny bounds — a Rectangle clip would block this,
+    // but a Geometry (stencil) clip has no cheap point-in-silhouette test and is
+    // intentionally not enforced by hit-testing.
+    dispatchPointer(signals.onPointerDown, { x: 75, y: 75 });
+    flushInteractions(im);
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    im.destroy();
+    child.destroy();
+    clipper.destroy();
   });
 });
 
@@ -1505,12 +2105,171 @@ describe('InteractionManager — coalesced events', () => {
     sprite.onPointerMove.add(moveHandler);
 
     // Both dispatched BEFORE update() — coalesced into a single pending queue entry.
-    signals.onPointerDown.dispatch(makePointer({ id: 3, x: 50, y: 50 }));
-    signals.onPointerMove.dispatch(makePointer({ id: 3, x: 55, y: 55 }));
+    dispatchPointer(signals.onPointerDown, { id: 3, x: 50, y: 50 });
+    dispatchPointer(signals.onPointerMove, { id: 3, x: 55, y: 55 });
     flushInteractions(im);
 
     expect(downHandler).toHaveBeenCalledTimes(1);
     expect(moveHandler).toHaveBeenCalledTimes(1);
+
+    im.destroy();
+    sprite.destroy();
+  });
+
+  test('each coalesced phase hit-tests against the node it actually happened over, not a shared position', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    const left = new TestSprite().setBounds(0, 0, 50, 50);
+    const right = new TestSprite().setBounds(200, 0, 50, 50);
+
+    left.interactive = true;
+    right.interactive = true;
+    scene.addChild(left);
+    scene.addChild(right);
+
+    const leftDown = vi.fn();
+    const rightMove = vi.fn();
+    const leftUp = vi.fn();
+
+    left.onPointerDown.add(leftDown);
+    right.onPointerMove.add(rightMove);
+    left.onPointerUp.add(leftUp);
+
+    // A mock pointer carries only ONE (x, y) — makePointer's `x`/`y` become
+    // whatever pointer.x/y read AT dispatch time, which is exactly what
+    // InteractionManager._enqueue captures per phase. Down and Up share the
+    // same stub position (25, 25) — still over `left` — while Move alone
+    // reports (225, 25), over `right`; all three collapse into one flush.
+    dispatchPointer(signals.onPointerDown, { id: 9, x: 25, y: 25 });
+    dispatchPointer(signals.onPointerMove, { id: 9, x: 225, y: 25 });
+    dispatchPointer(signals.onPointerUp, { id: 9, x: 25, y: 25 });
+    flushInteractions(im);
+
+    expect(leftDown).toHaveBeenCalledTimes(1);
+    expect(rightMove).toHaveBeenCalledTimes(1);
+    expect(leftUp).toHaveBeenCalledTimes(1);
+
+    im.destroy();
+    left.destroy();
+    right.destroy();
+  });
+});
+
+describe('InteractionManager — ordered phase processing', () => {
+  test('an Up dispatched before a Down in one flush fires in that true order, not always Down-before-Up', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    const order: string[] = [];
+
+    sprite.onPointerUp.add(() => order.push('up'));
+    sprite.onPointerDown.add(() => order.push('down'));
+
+    // Signal dispatch order is the source of truth InteractionManager must
+    // preserve end-to-end — an aggregated bitmask cannot represent this at
+    // all, since it always processed Down before Up regardless.
+    dispatchPointer(signals.onPointerUp, { x: 50, y: 50 });
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
+    flushInteractions(im);
+
+    expect(order).toEqual(['up', 'down']);
+
+    im.destroy();
+    sprite.destroy();
+  });
+
+  test('Down→Up→Down in one flush fires all three in that order, not collapsed to one Down', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    const order: string[] = [];
+
+    sprite.onPointerDown.add(() => order.push('down'));
+    sprite.onPointerUp.add(() => order.push('up'));
+
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
+    dispatchPointer(signals.onPointerUp, { x: 50, y: 50 });
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
+    flushInteractions(im);
+
+    expect(order).toEqual(['down', 'up', 'down']);
+
+    im.destroy();
+    sprite.destroy();
+  });
+
+  test('two full press/release cycles in one flush stay two cycles, not one aggregated pair', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    const downs = vi.fn();
+    const ups = vi.fn();
+
+    sprite.onPointerDown.add(downs);
+    sprite.onPointerUp.add(ups);
+
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
+    dispatchPointer(signals.onPointerUp, { x: 50, y: 50 });
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
+    dispatchPointer(signals.onPointerUp, { x: 50, y: 50 });
+    flushInteractions(im);
+
+    expect(downs).toHaveBeenCalledTimes(2);
+    expect(ups).toHaveBeenCalledTimes(2);
+
+    im.destroy();
+    sprite.destroy();
+  });
+
+  test('a context-menu request between two pointer phases keeps its position relative to them', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    const order: string[] = [];
+
+    sprite.onPointerDown.add(() => order.push('down'));
+    sprite.onContextMenu.add(() => order.push('contextmenu'));
+    sprite.onPointerMove.add(() => order.push('move'));
+
+    const pointer = makePointer({ x: 50, y: 50 });
+
+    signals.onPointerDown.dispatch(pointer, 50, 50);
+    signals.onContextMenu.dispatch({ x: 50, y: 50, pointer });
+    signals.onPointerMove.dispatch(pointer, 50, 50);
+    flushInteractions(im);
+
+    expect(order).toEqual(['down', 'contextmenu', 'move']);
 
     im.destroy();
     sprite.destroy();
@@ -1538,7 +2297,7 @@ describe('InteractionManager — events with no hit', () => {
     sprite.onPointerMove.add(handler);
 
     expect(() => {
-      signals.onPointerMove.dispatch(makePointer({ x: 500, y: 500 }));
+      dispatchPointer(signals.onPointerMove, { x: 500, y: 500 });
       flushInteractions(im);
     }).not.toThrow();
     expect(handler).not.toHaveBeenCalled();
@@ -1562,7 +2321,7 @@ describe('InteractionManager — events with no hit', () => {
 
     sprite.onPointerUp.add(handler);
 
-    signals.onPointerUp.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerUp, { x: 50, y: 50 });
     flushInteractions(im);
 
     expect(handler).toHaveBeenCalledTimes(1);
@@ -1578,7 +2337,7 @@ describe('InteractionManager — events with no hit', () => {
     im.attachRoot(scene.root);
 
     expect(() => {
-      signals.onPointerUp.dispatch(makePointer({ x: 500, y: 500 }));
+      dispatchPointer(signals.onPointerUp, { x: 500, y: 500 });
       flushInteractions(im);
     }).not.toThrow();
 
@@ -1592,7 +2351,7 @@ describe('InteractionManager — events with no hit', () => {
     im.attachRoot(scene.root);
 
     expect(() => {
-      signals.onPointerTap.dispatch(makePointer({ x: 500, y: 500 }));
+      dispatchPointer(signals.onPointerTap, { x: 500, y: 500 });
       flushInteractions(im);
     }).not.toThrow();
 
@@ -1606,9 +2365,9 @@ describe('InteractionManager — events with no hit', () => {
     im.attachRoot(scene.root);
 
     expect(() => {
-      signals.onPointerCancel.dispatch(makePointer({ id: 9, x: 500, y: 500 }));
+      dispatchPointer(signals.onPointerCancel, { id: 9, x: 500, y: 500 });
       flushInteractions(im);
-      signals.onPointerLeave.dispatch(makePointer({ id: 9, x: 500, y: 500 }));
+      dispatchPointer(signals.onPointerLeave, { id: 9, x: 500, y: 500 });
       flushInteractions(im);
     }).not.toThrow();
 
@@ -1639,7 +2398,7 @@ describe('InteractionManager — registration guards', () => {
     const handler = vi.fn();
 
     sprite.onPointerDown.add(handler);
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
     // Still fires exactly once — no duplicate registration/dispatch.
@@ -1690,7 +2449,7 @@ describe('InteractionManager — registration guards', () => {
     const handler = vi.fn();
 
     sprite.onPointerDown.add(handler);
-    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
     expect(handler).toHaveBeenCalledTimes(1);
@@ -1766,7 +2525,7 @@ describe('InteractionManager — dispatch gating', () => {
     const onDown = vi.fn();
     sprite.onPointerDown.add(onDown);
 
-    signals.onPointerDown.dispatch(makePointer({ x: 10, y: 10 }));
+    dispatchPointer(signals.onPointerDown, { x: 10, y: 10 });
     im.update();
 
     expect(onDown).not.toHaveBeenCalled();
@@ -1787,7 +2546,7 @@ describe('InteractionManager — dispatch gating', () => {
     const onDown = vi.fn();
     sprite.onPointerDown.add(onDown);
 
-    signals.onPointerDown.dispatch(makePointer({ x: 10, y: 10 }));
+    dispatchPointer(signals.onPointerDown, { x: 10, y: 10 });
     im.update();
 
     expect(onDown).toHaveBeenCalledTimes(1);
@@ -1811,7 +2570,7 @@ describe('InteractionManager — dispatch gating', () => {
     const onDown = vi.fn();
     sprite.onPointerDown.add(onDown);
 
-    signals.onPointerDown.dispatch(makePointer({ x: 10, y: 10 }));
+    dispatchPointer(signals.onPointerDown, { x: 10, y: 10 });
     im.update();
 
     expect(onDown).toHaveBeenCalledTimes(1);
@@ -1835,7 +2594,7 @@ describe('InteractionManager — dispatch gating', () => {
     const onDown = vi.fn();
     sprite.onPointerDown.add(onDown);
 
-    signals.onPointerDown.dispatch(makePointer({ x: 10, y: 10 }));
+    dispatchPointer(signals.onPointerDown, { x: 10, y: 10 });
     im.update();
     expect(onDown).not.toHaveBeenCalled();
 
@@ -1853,7 +2612,7 @@ describe('InteractionManager — dispatch gating', () => {
     const im = new InteractionManager(app);
 
     expect(() => {
-      signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+      dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
       im.update();
     }).not.toThrow();
 

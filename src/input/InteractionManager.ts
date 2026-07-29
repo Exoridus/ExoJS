@@ -7,37 +7,112 @@ import type { Time } from '#core/Time';
 import { DynamicAabbTree } from '#math/DynamicAabbTree';
 import { Matrix } from '#math/Matrix';
 import type { PointLike } from '#math/PointLike';
+import { Rectangle } from '#math/Rectangle';
+import { getDistance } from '#math/utils';
+import type { PlatformAdapter } from '#platform/PlatformAdapter';
 import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 
+import type { ContextMenuRequest } from './ContextMenuRequest';
+import { FocusController } from './FocusController';
 import type { InteractionEventType } from './InteractionEvent';
 import { InteractionEvent } from './InteractionEvent';
 import type { Pointer } from './Pointer';
+import { createScopeToken, type ScopeToken } from './ScopeToken';
 
 // ---------------------------------------------------------------------------
 // Internal types
 // ---------------------------------------------------------------------------
 
-const enum PointerEventFlag {
-  None = 0,
-  Down = 1 << 0,
-  Move = 1 << 1,
-  Up = 1 << 2,
-  Tap = 1 << 3,
-  Cancel = 1 << 4,
-  Leave = 1 << 5,
+/** Fallback drag threshold in design pixels, used when the application did not set one. */
+const defaultDragThreshold = 8;
+
+/**
+ * Which discrete signal a queued {@link InteractionJournalEntry} corresponds
+ * to — the same shape {@link InputManager}'s own signals dispatch in,
+ * appended to one flat, globally ordered journal exactly as its signal
+ * handler fires rather than folded into a bitmask, or grouped per pointer
+ * (see {@link InteractionJournalEntry}'s doc comment for why that
+ * distinction matters). There is no separate `Tap` kind: a tap is a
+ * classification folded onto its own `Up` entry (see
+ * {@link InteractionJournalEntry.tap}'s doc comment) rather than a second,
+ * independently-ordered entry that would have to be matched back up with
+ * the `Up` that produced it.
+ */
+const enum InteractionPhaseKind {
+  Down,
+  Move,
+  Up,
+  ContextMenu,
+  Cancel,
+  Leave,
 }
 
-interface PointerQueue {
-  pointer: Pointer;
-  events: number; // bitfield of PointerEventFlag
+/**
+ * One queued occurrence, in the exact GLOBAL chronological position
+ * {@link InteractionManager}'s own signal handler appended it — spanning
+ * every tracked pointer AND every context-menu request together in one flat
+ * sequence, mirroring {@link InputManager}'s own journal one layer up (see
+ * that class's `JournalEntry` doc comment for why a flat, cross-pointer
+ * structure is required: per-pointer buffering, drained one pointer's whole
+ * list at a time, cannot represent `P1 Down -> P2 Down -> P1 Up` in that true
+ * order). `_drainJournal` walks entries sequentially, running the full
+ * drag/hit-test state machine once per ENTRY rather than once per pointer —
+ * the only way two press/release cycles sharing one flush stay two cycles,
+ * and a same-flush Up-before-Down dispatches in that true order instead of
+ * always Down-before-Up. `x`/`y` are design-space, captured at enqueue time
+ * (the phase's own coordinates, per {@link InputManager}'s per-phase
+ * dispatch) rather than read back later from whichever position the pointer
+ * has since moved to.
+ */
+interface InteractionJournalEntry {
+  readonly kind: InteractionPhaseKind;
+  readonly pointer: Pointer;
+  readonly x: number;
+  readonly y: number;
+  /**
+   * `Up` only. `InputManager` dispatches `onPointerUp` then, synchronously
+   * and immediately after, conditionally `onPointerTap` — nothing else runs
+   * in between, so by the time `_handlePointerTap` fires, the entry this
+   * SAME pointer's `onPointerUp` handler just pushed is guaranteed to still
+   * be the journal's own last entry; `_handlePointerTap` mutates it in place
+   * (`tap = true`) instead of pushing an independent `Tap` entry. This is
+   * what lets the `Up` case close the press cycle (`_pressTargets`)
+   * UNCONDITIONALLY, whether or not a tap actually resulted — a swipe (no
+   * `onPointerTap` ever fires for one) must close the cycle exactly the same
+   * as a tap does, or the NEXT, unrelated press cycle would read a stale
+   * target (see `_pressTargets`' own doc comment).
+   */
+  tap: boolean;
 }
 
 interface DragState {
   pointerId: number;
   node: RenderNode;
+  /** Grab offset in the node's PARENT-LOCAL space, so dragging survives a transformed parent. */
   offsetX: number;
   offsetY: number;
+  /**
+   * `false` while the press is only a drag candidate — the pointer has not
+   * travelled past the drag threshold yet, so no `dragstart` fired, no pointer
+   * capture is held, and a release still counts as a tap.
+   */
+  active: boolean;
+  /** Set for the one frame the drag was promoted, so `dragstart` fires exactly once. */
+  started: boolean;
+  /**
+   * Design-space position of the Down that registered this candidate —
+   * THIS press cycle's own origin, in the same coordinate space
+   * {@link Pointer.maxDistanceFromPress} is measured in. Excursion is
+   * tracked here rather than read off the live pointer: two press/release
+   * cycles can share one flush, and by the time this candidate's own Move
+   * entries are processed, `pointer.maxDistanceFromPress` may already
+   * reflect a LATER cycle's excursion instead of this one's.
+   */
+  pressX: number;
+  pressY: number;
+  /** Largest distance from `pressX`/`pressY` reached by a Move entry processed for THIS candidate so far — this cycle's own excursion. */
+  maxDistance: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -46,7 +121,6 @@ interface DragState {
 
 interface IndexedNode {
   node: RenderNode;
-  order: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -62,8 +136,23 @@ interface IndexedNode {
  * Dispatches {@link InteractionEvent}s of every type in
  * {@link InteractionEventType}: `pointerdown` / `pointerup` /
  * `pointermove` / `pointerover` / `pointerout` / `pointertap` /
- * `dragstart` / `drag` / `dragend`. Drag events are derived from
- * threshold-based pointer movement after a `pointerdown`.
+ * `contextmenu` / `dragstart` / `drag` / `dragend`. A `pointerdown` on a
+ * draggable node only marks a drag candidate; the drag begins once the
+ * pointer travels past `ApplicationOptions.input.dragThreshold`.
+ *
+ * The `contextmenu` event here only fires when a specific interactive node
+ * is actually under the pointer; a request over empty space, or one your
+ * handler never stops, still reaches `app.input.onContextMenu` — the
+ * engine-wide fallback, unconditional and scene-graph-independent. See that
+ * Signal's own doc comment for the full two-tier picture.
+ *
+ * Hit-testing honors a hard `RenderNode.clip` bound to `null` (the node's own
+ * world bounds) or a `Rectangle` clipShape — a descendant outside either is
+ * never a hit, matching the renderer's own scissor path. A `Geometry`
+ * (stencil) clipShape and `RenderNode.mask` (alpha masking) are NOT accounted
+ * for: both affect only what is *painted*, not what is *hit-tested*, and an
+ * interactive descendant under either stays hittable across its ancestor's
+ * full, unclipped bounds. See {@link _isWithinClip}'s doc comment.
  *
  * Constructed automatically by {@link Application}; you do not instantiate
  * this class yourself.
@@ -88,12 +177,16 @@ export class InteractionManager implements InteractionHooks {
   // invalidation reaching them. They are deliberately kept OUT of the
   // world-space tree (whose bounds would go stale on every group move —
   // the camera-pan flagship case) and hit-tested by a linear scan through
-  // `_containsWorldPoint`, which reads the live group matrix. Maps node ->
-  // insertion order (shared counter with the tree for z-tiebreaks).
-  private readonly _anchoredNodes = new Map<RenderNode, number>();
+  // `_containsWorldPoint`, which reads the live group matrix.
+  private readonly _anchoredNodes = new Set<RenderNode>();
 
   // Scratch for inverting a group's world matrix during hit-testing.
   private readonly _anchorInverse = new Matrix();
+
+  // Scratch ancestor paths for `_comparePaintOrder`, reused across comparisons
+  // so picking allocates nothing per pointer event.
+  private readonly _pathA: RenderNode[] = [];
+  private readonly _pathB: RenderNode[] = [];
 
   // One-shot dev diagnostic: interactive nodes under an engaged boundary.
   private _devAnchoredWarned = false;
@@ -120,20 +213,22 @@ export class InteractionManager implements InteractionHooks {
   // under in `_groupWorldDescendants` (for O(1) removal on re-index/unregister).
   private readonly _nodeBoundaryGroup = new Map<RenderNode, RenderNode>();
 
-  // Running insertion-order counter used to break hit-test ties.
-  private _orderCounter = 0;
-
   /** This manager's service bundle, installed on a scene root via {@link attachRoot}. */
   private readonly _stage: Stage;
 
   /**
-   * UI-layer interaction hooks: no-ops, so screen-fixed UI nodes are kept OUT
-   * of the world tree. The UI layer is hit-tested by a direct subtree walk
-   * in screen space (see {@link _resolveHit}); per-node signal dispatch still
-   * works because it reads the lazy node signals, not the tree.
+   * UI-layer interaction hooks: mostly no-ops, so screen-fixed UI nodes are
+   * kept OUT of the world tree. The UI layer is hit-tested by a direct
+   * subtree walk in screen space (see {@link _resolveHit}); per-node signal
+   * dispatch still works because it reads the lazy node signals, not the
+   * tree. `_notifyNodeAdded` is the one exception: it still needs to
+   * re-enforce the active scope's focus trap (see the real
+   * {@link _notifyNodeAdded}'s doc comment) since a UI scope root can be
+   * temporarily detached and reattached exactly like a world one — tree
+   * registration is the only part that doesn't apply here.
    */
   private readonly _uiInteraction: InteractionHooks = {
-    _notifyNodeAdded: () => {},
+    _notifyNodeAdded: () => this._focus._enforceActiveScopeTrap(),
     _notifyNodeRemoved: () => {},
     _notifyInteractiveChanged: () => {},
     _notifyBoundsInvalidated: () => {},
@@ -146,8 +241,14 @@ export class InteractionManager implements InteractionHooks {
   /** Maps pointerId → the deepest interactive RenderNode that pointer is currently over. */
   private readonly _lastHit = new Map<number, RenderNode>();
 
-  /** Pending per-pointer event queues, filled by signal handlers each frame. */
-  private readonly _pending = new Map<number, PointerQueue>();
+  /**
+   * Pending occurrences since the last flush, filled by signal handlers each
+   * frame — one flat, globally ordered journal spanning every pointer AND
+   * every context-menu request, rather than a per-pointer bucket (see
+   * {@link InteractionJournalEntry}'s doc comment for why that distinction
+   * matters).
+   */
+  private readonly _journal: InteractionJournalEntry[] = [];
 
   /** Active pointer captures set up by drag-start. Maps pointerId → the captured node. */
   private readonly _capturedPointers = new Map<number, RenderNode>();
@@ -156,25 +257,54 @@ export class InteractionManager implements InteractionHooks {
   private readonly _drags = new Map<number, DragState>();
 
   /**
-   * Modal input-capture stack. While non-empty, hit-testing is confined to the
-   * topmost root's subtree, so a modal dialog shields the nodes beneath it.
+   * The node a pointer's CURRENT press cycle actually went down on. Recorded
+   * on Down (any interactive hit, not only a draggable one — unlike
+   * {@link _drags}), consulted by the matching Tap entry to decide whether a
+   * tap fires at all: a release must resolve to this SAME, still-live node,
+   * not merely whatever happens to be under the pointer at release time.
    */
-  private readonly _captureStack: RenderNode[] = [];
+  private readonly _pressTargets = new Map<number, RenderNode>();
+
+  /**
+   * Interaction-scope stack. While non-empty, hit-testing and focus traversal
+   * are confined to the topmost entry's subtree, so a modal dialog shields
+   * the nodes beneath it. Each entry is keyed by a stable {@link ScopeToken}
+   * (not by `root` — two scopes can legitimately share a root) so a specific
+   * entry can be released with a targeted splice wherever it sits, instead of
+   * popping and rebuilding everything above it.
+   */
+  private readonly _scopeStack: Array<{ token: ScopeToken; root: RenderNode }> = [];
+
+  /** Keyboard focus for this application. Public access goes through this manager. */
+  private readonly _focus: FocusController;
+
+  /** Distance in design pixels a press must travel before it becomes a drag. */
+  private readonly _dragThreshold: number;
+
+  /** Scratch for inverting a parent's world matrix while positioning a dragged node. */
+  private readonly _dragInverse = new Matrix();
+
+  /** Platform seam for cursor and pointer capture — the same adapter `app.input` runs on. */
+  private readonly _platform: PlatformAdapter;
 
   /** Whether any pointer enqueued events since the last update(). */
   private _dirty = false;
 
-  private readonly _onPointerDownHandler: (pointer: Pointer) => void;
-  private readonly _onPointerMoveHandler: (pointer: Pointer) => void;
-  private readonly _onPointerUpHandler: (pointer: Pointer) => void;
-  private readonly _onPointerTapHandler: (pointer: Pointer) => void;
-  private readonly _onPointerCancelHandler: (pointer: Pointer) => void;
-  private readonly _onPointerLeaveHandler: (pointer: Pointer) => void;
+  private readonly _onPointerDownHandler: (pointer: Pointer, x: number, y: number) => void;
+  private readonly _onPointerMoveHandler: (pointer: Pointer, x: number, y: number) => void;
+  private readonly _onPointerUpHandler: (pointer: Pointer, x: number, y: number) => void;
+  private readonly _onPointerTapHandler: (pointer: Pointer, x: number, y: number) => void;
+  private readonly _onPointerCancelHandler: (pointer: Pointer, x: number, y: number) => void;
+  private readonly _onPointerLeaveHandler: (pointer: Pointer, x: number, y: number) => void;
+  private readonly _onContextMenuHandler: (request: ContextMenuRequest) => void;
 
   public constructor(app: Application) {
     this._app = app;
-    this._stage = { interaction: this, focus: app.focus, app };
-    this._uiStage = { interaction: this._uiInteraction, focus: app.focus, app };
+    this._focus = new FocusController(app);
+    this._dragThreshold = app.options?.input?.dragThreshold ?? defaultDragThreshold;
+    this._platform = app.platform;
+    this._stage = { interaction: this, focus: this._focus, app };
+    this._uiStage = { interaction: this._uiInteraction, focus: this._focus, app };
 
     this._onPointerDownHandler = this._handlePointerDown.bind(this);
     this._onPointerMoveHandler = this._handlePointerMove.bind(this);
@@ -182,6 +312,7 @@ export class InteractionManager implements InteractionHooks {
     this._onPointerTapHandler = this._handlePointerTap.bind(this);
     this._onPointerCancelHandler = this._handlePointerCancel.bind(this);
     this._onPointerLeaveHandler = this._handlePointerLeave.bind(this);
+    this._onContextMenuHandler = this._handleContextMenu.bind(this);
 
     app.input.onPointerDown.add(this._onPointerDownHandler);
     app.input.onPointerMove.add(this._onPointerMoveHandler);
@@ -189,6 +320,7 @@ export class InteractionManager implements InteractionHooks {
     app.input.onPointerTap.add(this._onPointerTapHandler);
     app.input.onPointerCancel.add(this._onPointerCancelHandler);
     app.input.onPointerLeave.add(this._onPointerLeaveHandler);
+    app.input.onContextMenu.add(this._onContextMenuHandler);
   }
 
   /**
@@ -225,20 +357,75 @@ export class InteractionManager implements InteractionHooks {
     return [...this._capturedPointers.values()];
   }
 
-  /**
-   * Confine pointer hit-testing to `root`'s subtree until a matching
-   * {@link popInputCapture}. Pointer events outside the subtree hit nothing, so
-   * a modal dialog (optionally with a full-screen backdrop to swallow clicks)
-   * shields the interactive nodes beneath it. Captures stack — the most
-   * recently pushed root wins.
-   */
-  public pushInputCapture(root: RenderNode): void {
-    this._captureStack.push(root);
+  /** The node that currently holds keyboard focus, or `null`. */
+  public get focused(): RenderNode | null {
+    return this._focus.focused;
   }
 
-  /** Release the most recently pushed input capture (see {@link pushInputCapture}). */
-  public popInputCapture(): void {
-    this._captureStack.pop();
+  /**
+   * Move keyboard focus to `node`. No-op when `node` is already focused or is
+   * not {@link RenderNode.focusable}. Fires `onBlur` on the previously focused
+   * node, then `onFocus` on `node`.
+   */
+  public focus(node: RenderNode): void {
+    this._focus.focus(node);
+  }
+
+  /** Clear keyboard focus, or only clear it when `node` currently holds it. */
+  public blur(node?: RenderNode): void {
+    this._focus.blur(node);
+  }
+
+  /** Move focus to the next focusable node of the active scope, in Tab order. */
+  public focusNext(): void {
+    this._focus.focusNext();
+  }
+
+  /** Move focus to the previous focusable node of the active scope, in Tab order. */
+  public focusPrevious(): void {
+    this._focus.focusPrevious();
+  }
+
+  /**
+   * Confine interaction to `root`'s subtree until it is released via
+   * {@link popScope} with the returned token. Pointer events outside the
+   * subtree hit nothing, Tab traversal stays inside it, and — since the
+   * scope is a real focus trap — so does every programmatic
+   * {@link InteractionManager.focus} call; a modal dialog (optionally with a
+   * full-screen backdrop to swallow clicks) shields everything beneath it.
+   * Scopes stack — the most recently pushed one wins — and nest freely with
+   * scopes pushed at any other level (app-wide or scene-scoped alike).
+   *
+   * A scope is not what makes a node interactive; `node.interactive = true`
+   * alone does that. Nor is it the browser pointer-capture taken during a
+   * drag, which is a private implementation detail. Prefer
+   * `scene.interaction.scope()` when the scope should end with its scene.
+   */
+  public pushScope(root: RenderNode): ScopeToken {
+    const token = createScopeToken();
+
+    this._scopeStack.push({ token, root });
+    this._focus.pushScope(token, root);
+
+    return token;
+  }
+
+  /**
+   * Release the scope `token` identifies — a targeted removal wherever it
+   * sits in the stack, never a rebuild of the entries above or below it (see
+   * {@link pushScope}). Idempotent: releasing an already-released or unknown
+   * token is a no-op, so a caller never needs to track whether it already let
+   * go of a scope.
+   */
+  public popScope(token: ScopeToken): void {
+    const index = this._scopeStack.findIndex(entry => entry.token === token);
+
+    if (index === -1) {
+      return;
+    }
+
+    this._scopeStack.splice(index, 1);
+    this._focus.popScope(token);
   }
 
   /**
@@ -260,11 +447,14 @@ export class InteractionManager implements InteractionHooks {
     this._app.input.onPointerTap.remove(this._onPointerTapHandler);
     this._app.input.onPointerCancel.remove(this._onPointerCancelHandler);
     this._app.input.onPointerLeave.remove(this._onPointerLeaveHandler);
+    this._app.input.onContextMenu.remove(this._onContextMenuHandler);
     this._lastHit.clear();
-    this._pending.clear();
+    this._journal.length = 0;
     this._capturedPointers.clear();
     this._drags.clear();
-    this._captureStack.length = 0;
+    this._pressTargets.clear();
+    this._scopeStack.length = 0;
+    this._focus.destroy();
     this._interactiveNodes.clear();
     this._staleNodes.clear();
     this._proxies.clear();
@@ -306,18 +496,13 @@ export class InteractionManager implements InteractionHooks {
     this._dirty = false;
 
     if (gated) {
-      this._pending.clear();
+      this._journal.length = 0;
 
       return;
     }
 
     this._flushStaleEntries();
-
-    for (const queue of this._pending.values()) {
-      this._processQueue(queue);
-    }
-
-    this._pending.clear();
+    this._drainJournal();
     this._updateCursor();
   }
 
@@ -351,29 +536,83 @@ export class InteractionManager implements InteractionHooks {
    * Unbind a root node: unregister its interactive nodes and clear the stage
    * from the subtree. Called automatically for a scene's structural root by
    * its `SceneScope` when the scene ends permanently.
+   *
+   * Releases only scopes rooted inside `root`'s own subtree, and blurs focus
+   * only if the focused node lives inside it — an app-wide scope, or one
+   * belonging to a different (e.g. retained) scene, must survive this scene
+   * detaching entirely untouched. A global wipe here would break the
+   * "scopes nest freely at any level" guarantee {@link pushScope} documents.
    * @internal
    */
   public detachRoot(root: RenderNode): void {
-    this._app.focus.blur();
-    this._captureStack.length = 0;
+    this._removeScopesInSubtree(root);
+    this._focus._notifyNodeRemoved(root);
     this._notifyNodeRemoved(root);
     root._setStage(null);
+  }
+
+  /** Whether `node` is `root` itself or lives somewhere in its subtree. */
+  private _isDescendantOrSelf(node: RenderNode, root: RenderNode): boolean {
+    let current: RenderNode | null = node;
+
+    while (current !== null) {
+      if (current === root) {
+        return true;
+      }
+
+      current = current.parent;
+    }
+
+    return false;
+  }
+
+  /**
+   * Remove only the scope entries rooted inside `root`'s own subtree from
+   * {@link _scopeStack}, popping each through {@link FocusController.popScope}
+   * so focus reacts the same way it would for an explicit `popScope` call.
+   * Shared by {@link detachRoot} (world layer) and {@link detachUIRoot} (UI
+   * layer) so both tear down scopes identically.
+   */
+  private _removeScopesInSubtree(root: RenderNode): void {
+    for (let i = this._scopeStack.length - 1; i >= 0; i--) {
+      const entry = this._scopeStack[i];
+
+      if (entry !== undefined && this._isDescendantOrSelf(entry.root, root)) {
+        this._scopeStack.splice(i, 1);
+        this._focus.popScope(entry.token);
+      }
+    }
   }
 
   /**
    * Bind a scene's UI layer to this manager. Installs the UI stage (no-op world
    * hooks, shared focus) so its nodes route focus here but stay out of the world
    * tree; the layer is hit-tested by a direct walk in screen space.
+   *
+   * Also re-enforces the active scope's focus trap (mirroring
+   * {@link _notifyNodeAdded}): a fully-built UI subtree — e.g. a modal with its
+   * own already-pushed scope, assembled entirely while detached — never passes
+   * through `addChild`'s own notification on this boundary, so without this
+   * call its trap would only engage on the next unrelated focus change.
    * @internal
    */
   // eslint-disable-next-line @typescript-eslint/naming-convention -- UI is an acronym (cf. HTMLText)
   public attachUIRoot(root: Container): void {
     root._setStage(this._uiStage);
+    this._focus._enforceActiveScopeTrap();
   }
 
-  /** Unbind a scene's UI layer. @internal */
+  /**
+   * Unbind a scene's UI layer, mirroring {@link detachRoot}: releases only
+   * scopes rooted inside `root`'s own subtree and blurs focus if it currently
+   * lives inside it. World-tree interactive-node unregistration doesn't apply
+   * here — UI nodes were never registered through that path.
+   * @internal
+   */
   // eslint-disable-next-line @typescript-eslint/naming-convention -- UI is an acronym (cf. HTMLText)
   public detachUIRoot(root: Container): void {
+    this._removeScopesInSubtree(root);
+    this._focus._notifyNodeRemoved(root);
     root._setStage(null);
   }
 
@@ -384,7 +623,12 @@ export class InteractionManager implements InteractionHooks {
 
   /**
    * Called when a subtree rooted at `node` has been added to the scene.
-   * Walks the subtree and registers any interactive nodes found.
+   * Walks the subtree and registers any interactive nodes found, then
+   * re-enforces the active scope's focus trap — a scope root reattaching
+   * after being temporarily detached (see
+   * {@link FocusController._activeScopeRoot}'s doc comment) may have just
+   * become live again, and whatever holds focus outside it must not wait
+   * for the next explicit {@link focus} call to be blurred.
    *
    * @internal
    */
@@ -394,6 +638,8 @@ export class InteractionManager implements InteractionHooks {
         this._registerNode(n);
       }
     }
+
+    this._focus._enforceActiveScopeTrap();
   }
 
   /**
@@ -462,42 +708,100 @@ export class InteractionManager implements InteractionHooks {
   // Signal handlers — only enqueue flags, never hit-test
   // ---------------------------------------------------------------------------
 
-  private _handlePointerDown(pointer: Pointer): void {
-    this._enqueue(pointer, PointerEventFlag.Down);
+  private _handlePointerDown(pointer: Pointer, x: number, y: number): void {
+    this._enqueuePhase(pointer, InteractionPhaseKind.Down, x, y);
   }
 
-  private _handlePointerMove(pointer: Pointer): void {
-    this._enqueue(pointer, PointerEventFlag.Move);
+  private _handlePointerMove(pointer: Pointer, x: number, y: number): void {
+    this._enqueuePhase(pointer, InteractionPhaseKind.Move, x, y);
   }
 
-  private _handlePointerUp(pointer: Pointer): void {
-    this._enqueue(pointer, PointerEventFlag.Up);
+  private _handlePointerUp(pointer: Pointer, x: number, y: number): void {
+    this._enqueuePhase(pointer, InteractionPhaseKind.Up, x, y);
   }
 
-  private _handlePointerTap(pointer: Pointer): void {
-    this._enqueue(pointer, PointerEventFlag.Tap);
+  /**
+   * No entry of its own — see {@link InteractionJournalEntry.tap}'s doc
+   * comment. `InputManager` dispatches `onPointerUp` then, synchronously and
+   * immediately after, conditionally `onPointerTap` for the SAME occurrence,
+   * so the journal's own last entry is guaranteed to still be the `Up` this
+   * pointer's `onPointerUp` handler just pushed; mutated in place rather than
+   * appended as an independent entry.
+   */
+  private _handlePointerTap(pointer: Pointer, _x: number, _y: number): void {
+    const journal = this._journal;
+    const last = journal[journal.length - 1];
+
+    // Matched by id, not object identity — the true correlation key every
+    // other per-pointer map in this class (`_pressTargets`, `_lastHit`,
+    // `_drags`, ...) already uses, and the one real `InputManager` itself
+    // guarantees stays stable for a pointer's whole lifetime even though a
+    // fresh `Pointer`-shaped object could in principle arrive per dispatch.
+    if (last !== undefined && last.kind === InteractionPhaseKind.Up && last.pointer.id === pointer.id) {
+      last.tap = true;
+    }
   }
 
-  private _handlePointerCancel(pointer: Pointer): void {
-    this._enqueue(pointer, PointerEventFlag.Cancel);
-  }
-
-  private _handlePointerLeave(pointer: Pointer): void {
-    this._enqueue(pointer, PointerEventFlag.Leave);
-  }
-
-  private _enqueue(pointer: Pointer, flag: PointerEventFlag): void {
-    let q = this._pending.get(pointer.id);
-
-    if (!q) {
-      q = { pointer, events: 0 };
-      this._pending.set(pointer.id, q);
-    } else {
-      // Refresh to latest pointer ref (same object usually, but be defensive).
-      q.pointer = pointer;
+  /**
+   * Node-level `contextmenu` routing is inherently pointer-shaped — every
+   * {@link InteractionEvent} carries a {@link Pointer} — so a request with no
+   * pointer attached (a keyboard-only session; see
+   * {@link ContextMenuRequest}'s doc comment) has no per-node event to
+   * dispatch. `app.input.onContextMenu`, the scene-graph-independent
+   * fallback, still fires unconditionally regardless — see that Signal's own
+   * doc comment.
+   *
+   * Enqueued into the SAME flat, globally ordered journal as every pointer's
+   * other phases — fired here means it is appended right where `InputManager`
+   * dispatched it relative to any phase already queued this flush, for ANY
+   * pointer, preserving their true relative order rather than routing
+   * context-menu requests through a separate, disconnected slot.
+   */
+  private _handleContextMenu(request: ContextMenuRequest): void {
+    if (request.pointer === null) {
+      return;
     }
 
-    q.events |= flag;
+    this._enqueuePhase(request.pointer, InteractionPhaseKind.ContextMenu, request.x, request.y);
+  }
+
+  private _handlePointerCancel(pointer: Pointer, x: number, y: number): void {
+    this._enqueuePhase(pointer, InteractionPhaseKind.Cancel, x, y);
+  }
+
+  private _handlePointerLeave(pointer: Pointer, x: number, y: number): void {
+    this._enqueuePhase(pointer, InteractionPhaseKind.Leave, x, y);
+  }
+
+  /**
+   * Append `kind` at `(x, y)` to the flat, globally ordered journal — passed
+   * explicitly by the `InputManager` signal for that exact phase, an
+   * immutable snapshot rather than a value read back off the pointer (which
+   * always reads live; see {@link Pointer.position}'s doc comment). Two
+   * `Move` entries coalesce ONLY when they are immediately adjacent in this
+   * GLOBAL order for the SAME pointer id, mirroring {@link InputManager}'s
+   * own rule one layer up: `P1 Move, P2 Move, P1 Move` stays three entries (a
+   * `P2` entry sits between the two `P1` moves), so a caller dispatching two
+   * raw moves back to back for the SAME pointer, with nothing from any other
+   * pointer in between, cannot desync InteractionManager's journal from what
+   * a real `InputManager` would ever actually produce; every other phase, or
+   * a `Move` separated from the last one by any other kind or pointer, is its
+   * own entry. Matched by `pointer.id` rather than object identity — the same
+   * correlation key every other per-pointer map in this class already uses.
+   */
+  private _enqueuePhase(pointer: Pointer, kind: InteractionPhaseKind, x: number, y: number): void {
+    const journal = this._journal;
+    const lastIndex = journal.length - 1;
+    const last = journal[lastIndex];
+
+    if (kind === InteractionPhaseKind.Move && last !== undefined && last.kind === InteractionPhaseKind.Move && last.pointer.id === pointer.id) {
+      journal[lastIndex] = { kind, pointer, x, y, tap: false };
+      this._dirty = true;
+
+      return;
+    }
+
+    journal.push({ kind, pointer, x, y, tap: false });
     this._dirty = true;
   }
 
@@ -505,136 +809,563 @@ export class InteractionManager implements InteractionHooks {
   // Per-frame queue processing
   // ---------------------------------------------------------------------------
 
-  private _processQueue(queue: PointerQueue): void {
-    const { pointer, events } = queue;
-    const { id } = pointer;
+  /**
+   * Drain the WHOLE flat journal for this flush in one pass, strictly in the
+   * GLOBAL order {@link InputManager} dispatched it — the true fix for the
+   * defect BOTH the aggregated-bitmask design AND a per-pointer-bucketed
+   * queue had: an Up→Down within one flush dispatched Down-before-Up
+   * regardless (bitmasks cannot represent order), two full press/release
+   * cycles in one flush collapsed onto a single shared position (only one
+   * `x`/`y` per phase TYPE existed), and — the defect a per-pointer bucket
+   * still had even once each bucket was itself correctly ordered — a
+   * DIFFERENT pointer's phases in between (`P1 Down -> P2 Down -> P1 Up`)
+   * were silently reordered to all of `P1`'s phases before any of `P2`'s.
+   * Each entry runs the FULL drag/hit-test state machine for itself —
+   * hit-testing and dispatching at its OWN coordinates, captured by
+   * {@link _enqueuePhase} at the moment that phase actually happened — so a
+   * fast down-move-up collapsed into one flush still lands each event on the
+   * node that was actually there, and two cycles sharing a flush stay two
+   * independent cycles: the second Down starts a fresh candidate only once
+   * the first's Up has completed the first (`_drags`/`_capturedPointers` are
+   * cleared by then), and a Move's drag-threshold excursion is measured from
+   * ITS OWN candidate's press position (see {@link DragState.pressX}'s doc
+   * comment), never the live pointer's, which could already reflect a later
+   * cycle sharing the same flush.
+   *
+   * Hover tracking is the one exception to per-entry processing: it
+   * deliberately follows each pointer's live, end-of-flush position — "what
+   * is currently hovered" has no per-entry meaning — so, for every DISTINCT
+   * pointer that had at least one entry this flush, it runs once, after every
+   * entry (for every pointer, and every context-menu request) has been
+   * processed, reflecting this flush's true final state per pointer (skipped
+   * for a pointer whose OWN entries ended in a Cancel/Leave, which dispatches
+   * its own `pointerout` fallback instead, or while a drag is active, since
+   * the dragged node stays "hovered" by definition). Deferring every
+   * pointer's hover step to after the FULL journal drains, rather than right
+   * after that pointer's own last entry, is behaviorally identical — hover
+   * state is keyed per pointer id and nothing about it is retroactively
+   * changed by a DIFFERENT pointer's entries processing in between — while
+   * keeping the drain itself a single, flat, strictly-ordered pass.
+   */
+  private _drainJournal(): void {
+    // Capture the complete failed batch up front. If a user handler throws,
+    // Application's frame guard propagates the error but the interaction
+    // manager must fail closed: never retain a half-consumed journal, drag,
+    // press target, hover target, or pointer capture that can be replayed on a
+    // later frame after InputManager has already retired the Pointer object.
+    const touchedIds = new Set<number>();
 
-    // Resolve the hit node and the coordinate space it lives in. A captured
-    // pointer short-circuits hit-testing; otherwise the screen-fixed UI layer
-    // is tried before the camera-space world (see _resolveHit). Coordinates
-    // follow the hit's layer (UI = screen space, world = camera space) so
-    // dragging and event positions agree with node positions — correct under
-    // pixelRatio > 1, letterboxing, and a panned / zoomed / rotated camera.
-    const captured = this._capturedPointers.get(id) ?? null;
-    let hit: RenderNode | null;
-    let x: number;
-    let y: number;
-
-    if (captured !== null) {
-      const coords = this._pointerCoords(pointer, this._isUINode(captured));
-
-      hit = captured;
-      x = coords.x;
-      y = coords.y;
-    } else {
-      const resolved = this._resolveHit(pointer);
-
-      hit = resolved.node;
-      x = resolved.x;
-      y = resolved.y;
+    for (const entry of this._journal) {
+      touchedIds.add(entry.pointer.id);
     }
 
-    // --- Over / Out transitions ---
-    // Skip while a drag is active for this pointer — the dragged node
-    // stays "hovered" by definition and we don't want spurious events.
-    const drag = this._drags.get(id) ?? null;
-    const last = this._lastHit.get(id) ?? null;
-    const isExitEvent = (events & (PointerEventFlag.Cancel | PointerEventFlag.Leave)) !== 0;
-
-    if (captured === null && hit !== last && !isExitEvent) {
-      if (last !== null) {
-        this._dispatchBubble(new InteractionEvent('pointerout', last, pointer, x, y));
+    try {
+      this._drainJournalUnsafe();
+    } catch (error) {
+      // A handler may have enqueued additional interaction entries
+      // re-entrantly before throwing. Include those ids in the same failed
+      // batch cleanup before discarding the journal.
+      for (const entry of this._journal) {
+        touchedIds.add(entry.pointer.id);
       }
 
-      if (hit !== null) {
-        this._dispatchBubble(new InteractionEvent('pointerover', hit, pointer, x, y));
+      this._journal.length = 0;
+
+      for (const id of touchedIds) {
+        this._endDrag(id);
+        this._pressTargets.delete(id);
+        this._lastHit.delete(id);
       }
 
-      this._setLastHit(id, hit);
+      // Keep the host cursor consistent with the now-cleared capture/hover
+      // state, while preserving the original user-handler exception.
+      try {
+        this._updateCursor();
+      } catch {
+        // Preserve the original dispatch failure.
+      }
+
+      throw error;
     }
+  }
 
-    // --- Down ---
-    if ((events & PointerEventFlag.Down) !== 0) {
-      if (hit !== null) {
-        this._dispatchBubble(new InteractionEvent('pointerdown', hit, pointer, x, y));
+  /** Unchecked implementation wrapped by {@link _drainJournal}. */
+  private _drainJournalUnsafe(): void {
+    const journal = this._journal;
+    const touchedOrder: Pointer[] = [];
+    const sawExit = new Map<number, boolean>();
 
-        // Start drag if node is draggable and no existing drag for this pointer.
-        if (hit.draggable && !this._drags.has(id)) {
-          const offsetX = hit.position.x - x;
-          const offsetY = hit.position.y - y;
+    for (const entry of journal) {
+      const { pointer, x: phaseX, y: phaseY } = entry;
+      const { id } = pointer;
 
-          this._drags.set(id, { pointerId: id, node: hit, offsetX, offsetY });
-          this._capturedPointers.set(id, hit);
+      if (!sawExit.has(id)) {
+        sawExit.set(id, false);
+        touchedOrder.push(pointer);
+      }
 
-          try {
-            this._app.canvas.setPointerCapture(id);
-          } catch {
-            // Best-effort — jsdom and some browsers may not support this.
+      switch (entry.kind) {
+        case InteractionPhaseKind.Down: {
+          const { node: hit, x, y } = this._resolvePhase(phaseX, phaseY, this._currentCapture(id));
+
+          if (hit !== null) {
+            const event = new InteractionEvent('pointerdown', hit, pointer, x, y);
+
+            this._dispatchBubble(event);
+
+            // The handler just run may have destroyed or detached `hit`
+            // itself — see `_isLive`'s doc comment — so neither the press
+            // target nor a drag candidate may be created on a node that is
+            // already gone.
+            if (this._isLive(hit)) {
+              // Recorded regardless of draggability — unlike the drag
+              // candidate below — so a tap can fire on any interactive node.
+              this._pressTargets.set(id, hit);
+
+              // preventDefault() suppresses only automatic drag-candidate
+              // creation (and so promotion); it does not stop bubbling —
+              // see InteractionEvent.preventDefault's own doc comment.
+              if (!event.defaultPrevented) {
+                this._registerDragCandidate(id, hit, x, y, phaseX, phaseY);
+              }
+            }
           }
 
-          this._dispatchDirect(new InteractionEvent('dragstart', hit, pointer, x, y), hit._peekInteractionSignal('dragstart'));
+          break;
         }
+
+        case InteractionPhaseKind.Move: {
+          // Excursion and promotion run BEFORE hit-testing THIS move, so a
+          // Down and a past-threshold Move colliding in the very same entry
+          // sequence still promotes on this same evaluation — the pointermove
+          // dispatched below, and the reposition in `_advanceDragOnMove`,
+          // already see the captured node rather than waiting a step behind.
+          this._advanceDragExcursion(id, phaseX, phaseY);
+          this._promoteDragCandidate(id);
+
+          const captured = this._currentCapture(id);
+          const { node: hit, x, y } = this._resolvePhase(phaseX, phaseY, captured);
+
+          this._advanceDragOnMove(id, pointer, x, y);
+
+          // dragstart, just dispatched by _advanceDragOnMove, may have
+          // destroyed the dragged node — which IS `hit` while a drag is
+          // active, since _resolvePhase short-circuits to the captured node.
+          if (hit !== null && this._isLive(hit)) {
+            this._dispatchBubble(new InteractionEvent('pointermove', hit, pointer, x, y));
+          }
+
+          this._dispatchDragTick(id, pointer, x, y);
+          break;
+        }
+
+        case InteractionPhaseKind.Up: {
+          // Frozen BEFORE the pointerup dispatch below, not read back from
+          // `_drags` afterward: a pointerup handler that removes its own
+          // dragged node (e.g. `removeChild()`) purges `_drags` for it
+          // synchronously (see `_unregisterNode`'s doc comment), which would
+          // otherwise make a REAL drag look, after the fact, like it was
+          // never active — wrongly letting the tap below fire on whatever
+          // node a fresh hit-test now finds underneath the one that just
+          // disappeared.
+          const dragWasActive = this._drags.get(id)?.active ?? false;
+          const { node: hit, x, y } = this._resolvePhase(phaseX, phaseY, this._currentCapture(id));
+
+          if (hit !== null && this._isLive(hit)) {
+            this._dispatchBubble(new InteractionEvent('pointerup', hit, pointer, x, y));
+          }
+
+          this._completeDrag(id, pointer, x, y);
+
+          // Closed HERE, unconditionally — whether or not `entry.tap` ends up
+          // true below — so a swipe (no `onPointerTap` ever fires for one) or
+          // any other Up that does not resolve to a tap still ends this
+          // pointer's press cycle exactly like a tap does. Leaving this only
+          // to a (now-removed) separate Tap case would leak the target into
+          // the NEXT, unrelated press cycle whenever no tap ever arrived to
+          // close it — see `_pressTargets`' own doc comment.
+          const pressTarget = this._pressTargets.get(id) ?? null;
+
+          this._pressTargets.delete(id);
+
+          // A press that turned into a real drag is not also a tap.
+          // Otherwise, a tap fires only when THIS release resolves to the
+          // SAME, still-live node the cycle's own Down landed on — not merely
+          // whatever a fresh hit-test finds at the release coordinates — and
+          // targets that press node specifically. Re-resolved fresh (rather
+          // than reusing `hit`/`x`/`y` above) because `_completeDrag` just run
+          // may have released capture, changing what a hit-test at these same
+          // coordinates now resolves to.
+          if (entry.tap && !dragWasActive && pressTarget !== null && this._isLive(pressTarget)) {
+            const tapHit = this._resolvePhase(phaseX, phaseY, this._currentCapture(id));
+
+            if (tapHit.node === pressTarget) {
+              this._dispatchBubble(new InteractionEvent('pointertap', pressTarget, pointer, tapHit.x, tapHit.y));
+            }
+          }
+
+          break;
+        }
+
+        case InteractionPhaseKind.ContextMenu: {
+          const { node: hit, x, y } = this._resolvePhase(phaseX, phaseY, this._currentCapture(id));
+
+          if (hit !== null && this._isLive(hit)) {
+            this._dispatchBubble(new InteractionEvent('contextmenu', hit, pointer, x, y));
+          }
+
+          break;
+        }
+
+        case InteractionPhaseKind.Cancel:
+        case InteractionPhaseKind.Leave: {
+          sawExit.set(id, true);
+
+          const { x, y } = this._resolvePhase(phaseX, phaseY, this._currentCapture(id));
+
+          if (!this._completeDrag(id, pointer, x, y)) {
+            const last = this._lastHit.get(id) ?? null;
+
+            if (last !== null && this._isLive(last)) {
+              this._dispatchBubble(new InteractionEvent('pointerout', last, pointer, x, y));
+            }
+          }
+
+          this._lastHit.delete(id);
+          this._pressTargets.delete(id);
+          break;
+        }
+
+        default:
+          break;
       }
     }
 
-    // --- Move ---
-    if ((events & PointerEventFlag.Move) !== 0) {
-      if (drag !== null) {
-        // Auto-position the dragged node, preserving the grab offset.
-        drag.node.position.x = x + drag.offsetX;
-        drag.node.position.y = y + drag.offsetY;
+    journal.length = 0;
+
+    for (const pointer of touchedOrder) {
+      const { id } = pointer;
+
+      if ((sawExit.get(id) ?? false) || this._currentCapture(id) !== null) {
+        continue;
       }
 
-      if (hit !== null) {
-        this._dispatchBubble(new InteractionEvent('pointermove', hit, pointer, x, y));
-      }
+      const { node: hit, x, y } = this._resolvePhase(pointer.x, pointer.y, null);
+      const last = this._lastHit.get(id) ?? null;
 
-      if (drag !== null) {
-        this._dispatchDirect(new InteractionEvent('drag', drag.node, pointer, x, y), drag.node._peekInteractionSignal('drag'));
+      if (hit !== last) {
+        if (last !== null && this._isLive(last)) {
+          this._dispatchBubble(new InteractionEvent('pointerout', last, pointer, x, y));
+        }
+
+        // The pointerout handler just run on `last` may have destroyed or
+        // detached `hit` (a different node) before it gets its own dispatch.
+        if (hit !== null && this._isLive(hit)) {
+          this._dispatchBubble(new InteractionEvent('pointerover', hit, pointer, x, y));
+        }
+
+        // Either dispatch just above — pointerout on `last`, or `hit`'s own
+        // pointerover handler removing/destroying itself — may have left
+        // `hit` no longer live; re-checked one final time immediately before
+        // it is ever recorded, so no stale hover entry survives either case.
+        this._setLastHit(id, hit !== null && this._isLive(hit) ? hit : null);
       }
     }
+  }
 
-    // --- Up ---
-    if ((events & PointerEventFlag.Up) !== 0) {
-      if (hit !== null) {
-        this._dispatchBubble(new InteractionEvent('pointerup', hit, pointer, x, y));
-      }
+  /**
+   * Drag state machine, step 1.5: fold one Move entry's design-space
+   * position into its candidate's own excursion (see
+   * {@link DragState.pressX}'s doc comment for why this cannot be read off
+   * the live pointer). No-ops once a candidate is already an active drag —
+   * the threshold was already crossed, and design-space excursion beyond
+   * that point has no further effect on the state machine.
+   */
+  private _advanceDragExcursion(id: number, x: number, y: number): void {
+    const drag = this._drags.get(id) ?? null;
 
-      if (drag !== null) {
-        this._dispatchDirect(new InteractionEvent('dragend', drag.node, pointer, x, y), drag.node._peekInteractionSignal('dragend'));
+    if (drag === null || drag.active) {
+      return;
+    }
+
+    const distance = getDistance(drag.pressX, drag.pressY, x, y);
+
+    if (distance > drag.maxDistance) {
+      drag.maxDistance = distance;
+    }
+  }
+
+  /**
+   * Drag state machine, step 2: turn a candidate into a real drag once ITS
+   * OWN accumulated excursion (see {@link _advanceDragExcursion}) has passed
+   * the threshold. Uses the candidate's accumulated excursion rather than
+   * its current distance, so a drag that wanders out and back still counts.
+   * Called once per Move entry, immediately after `_advanceDragExcursion`
+   * folds that same entry's position in — so a Down and a past-threshold
+   * Move sharing one flush still promote on that Move's own evaluation,
+   * never waiting for a later flush because no candidate existed yet when
+   * promotion was checked.
+   */
+  private _promoteDragCandidate(id: number): void {
+    const drag = this._drags.get(id) ?? null;
+
+    if (drag === null) {
+      return;
+    }
+
+    // The candidate's node died (destroyed without removeChild, or removed
+    // by some other path) before it ever became a real drag — drop the
+    // stale candidate rather than promoting it. See `_isLive`'s doc comment.
+    if (!this._isLive(drag.node)) {
+      this._drags.delete(id);
+
+      return;
+    }
+
+    if (drag.active || drag.maxDistance <= this._dragThreshold) {
+      return;
+    }
+
+    drag.active = true;
+    drag.started = true;
+    this._capturedPointers.set(id, drag.node);
+    this._platform.capturePointer(id);
+  }
+
+  /**
+   * Drag state machine, step 1: note a fresh candidate on a qualifying
+   * press. Not yet a drag — committing here would jitter every click on a
+   * draggable node and swallow its tap; see {@link _promoteDragCandidate}
+   * for that. `layerX`/`layerY` (this Down's resolved hit-test coordinates)
+   * seed the parent-local grab offset; `designX`/`designY` (this Down's own
+   * raw design-space position) seed this candidate's own excursion origin —
+   * see {@link DragState.pressX}'s doc comment for why that must be
+   * design-space and specific to THIS press cycle.
+   */
+  private _registerDragCandidate(id: number, hit: RenderNode, layerX: number, layerY: number, designX: number, designY: number): void {
+    if (!hit.draggable || this._drags.has(id)) {
+      return;
+    }
+
+    const local = this._toParentLocal(hit, layerX, layerY);
+
+    this._drags.set(id, {
+      pointerId: id,
+      node: hit,
+      offsetX: hit.position.x - local.x,
+      offsetY: hit.position.y - local.y,
+      active: false,
+      started: false,
+      pressX: designX,
+      pressY: designY,
+      maxDistance: 0,
+    });
+  }
+
+  /**
+   * Drag state machine, step 3: fire `dragstart` exactly once, on the frame
+   * {@link _promoteDragCandidate} just promoted the candidate, then
+   * reposition the dragged node for every frame the drag stays active —
+   * preserving the grab offset in the node's own parent-local space.
+   */
+  private _advanceDragOnMove(id: number, pointer: Pointer, x: number, y: number): void {
+    const drag = this._drags.get(id) ?? null;
+
+    if (drag === null) {
+      return;
+    }
+
+    if (!this._isLive(drag.node)) {
+      this._endDrag(id);
+
+      return;
+    }
+
+    if (drag.started) {
+      drag.started = false;
+      this._dispatchDirect(new InteractionEvent('dragstart', drag.node, pointer, x, y), drag.node._peekInteractionSignal('dragstart'));
+
+      // The dragstart handler just run may have destroyed/detached the node —
+      // no stale drag state may keep moving/capturing/referencing it.
+      if (!this._isLive(drag.node)) {
         this._endDrag(id);
+
+        return;
       }
     }
 
-    // --- Tap ---
-    if ((events & PointerEventFlag.Tap) !== 0) {
-      if (hit !== null) {
-        this._dispatchBubble(new InteractionEvent('pointertap', hit, pointer, x, y));
-      }
+    if (drag.active) {
+      const local = this._toParentLocal(drag.node, x, y);
+
+      drag.node.position.x = local.x + drag.offsetX;
+      drag.node.position.y = local.y + drag.offsetY;
+    }
+  }
+
+  /** Drag state machine, step 3 continued: the `drag` event, dispatched after `pointermove` (matching DOM-ish ordering). */
+  private _dispatchDragTick(id: number, pointer: Pointer, x: number, y: number): void {
+    const drag = this._drags.get(id) ?? null;
+
+    if (drag === null || !drag.active) {
+      return;
     }
 
-    // --- Cancel / Leave ---
-    if (isExitEvent) {
-      if (drag !== null) {
-        this._dispatchDirect(new InteractionEvent('dragend', drag.node, pointer, x, y), drag.node._peekInteractionSignal('dragend'));
-        this._endDrag(id);
-      } else if (last !== null) {
-        this._dispatchBubble(new InteractionEvent('pointerout', last, pointer, x, y));
-      }
+    // The pointermove dispatch just run (or dragstart, for the frame the
+    // drag was promoted) may have destroyed/detached the node.
+    if (!this._isLive(drag.node)) {
+      this._endDrag(id);
 
-      this._lastHit.delete(id);
+      return;
     }
+
+    this._dispatchDirect(new InteractionEvent('drag', drag.node, pointer, x, y), drag.node._peekInteractionSignal('drag'));
+
+    // The `drag` handler just run may itself have destroyed/detached the
+    // node — leave no stale capture/drag state referencing it around for a
+    // caller to observe before the next phase happens to re-check.
+    if (!this._isLive(drag.node)) {
+      this._endDrag(id);
+    }
+  }
+
+  /**
+   * Drag state machine, step 4: end whatever drag state exists for `id`. A
+   * real (promoted) drag fires `dragend` before its capture is released; a
+   * candidate that never got promoted is simply dropped — it was never a
+   * drag, so nothing needs undoing beyond forgetting it. Returns whether an
+   * ACTIVE drag actually ended (dragend fired) — that is what suppresses a
+   * following pointertap, and (for an exit event) what skips the fallback
+   * pointerout.
+   */
+  private _completeDrag(id: number, pointer: Pointer, x: number, y: number): boolean {
+    const drag = this._drags.get(id) ?? null;
+
+    if (drag === null) {
+      return false;
+    }
+
+    const wasActive = drag.active;
+
+    // The pointerup dispatch just run may have destroyed/detached the node —
+    // still tear down capture/state below regardless, but a destroyed node
+    // gets no further event dispatched on it.
+    if (wasActive && this._isLive(drag.node)) {
+      this._dispatchDirect(new InteractionEvent('dragend', drag.node, pointer, x, y), drag.node._peekInteractionSignal('dragend'));
+    }
+
+    this._endDrag(id);
+
+    return wasActive;
+  }
+
+  /**
+   * Map a pointer position into the space `node.position` is expressed in.
+   * The dragged node's coordinates are parent-local, while the pointer arrives
+   * in world (or screen, for UI) space; without this a node under a scaled,
+   * rotated or offset parent drifts away from the cursor. Under an engaged
+   * transform group the chain is group-local, so the point is rebased through
+   * the anchor first, exactly as {@link _containsWorldPoint} does.
+   */
+  private _toParentLocal(node: RenderNode, x: number, y: number): { x: number; y: number } {
+    const parent = node.parent;
+
+    if (parent === null) {
+      return { x, y };
+    }
+
+    let localX = x;
+    let localY = y;
+    const anchor = node._resolveTransformGroupAnchor();
+
+    if (anchor !== null) {
+      const toGroup = anchor.getWorldTransform().getInverse(this._anchorInverse);
+
+      localX = toGroup.a * x + toGroup.b * y + toGroup.x;
+      localY = toGroup.c * x + toGroup.d * y + toGroup.y;
+    }
+
+    const inverse = parent.getWorldTransform().getInverse(this._dragInverse);
+
+    return {
+      x: inverse.a * localX + inverse.b * localY + inverse.x,
+      y: inverse.c * localX + inverse.d * localY + inverse.y,
+    };
   }
 
   private _endDrag(pointerId: number): void {
     this._drags.delete(pointerId);
     this._capturedPointers.delete(pointerId);
+    this._platform.releasePointer(pointerId);
+  }
 
-    try {
-      this._app.canvas.releasePointerCapture(pointerId);
-    } catch {
-      // Releasing an already-released pointer throws in some browsers; swallow it.
+  /**
+   * Whether `node` is still safe to act on — not destroyed, and currently
+   * attached to a stage — one installed by THIS Application, or (per
+   * {@link Stage.app}'s own doc comment) a lightweight stub stage that does
+   * not declare an owner at all, which every production stage does. Rejects
+   * a different Application's node, one never attached to any stage, and one
+   * already removed, exactly like {@link FocusController._isOwned}. A user
+   * handler run synchronously during THIS flush's own dispatch may have
+   * destroyed or detached (`removeChild`) the very node an earlier-resolved
+   * `hit`/drag reference points at; every dispatch site re-checks this
+   * immediately before acting on such a reference rather than trusting it
+   * for the rest of the flush.
+   *
+   * `removeChild` alone already unregisters a node synchronously (see
+   * {@link _unregisterNode}), but `destroy()` without a prior `removeChild`
+   * does not — the node stays fully hit-testable and its bare presence in
+   * `_interactiveNodes` would not catch that case, so this checks
+   * `destroyed` and stage ownership directly instead.
+   */
+  private _isLive(node: RenderNode): boolean {
+    const stage = node._getStage();
+
+    return !node.destroyed && stage !== null && (stage.app === undefined || stage.app === this._app);
+  }
+
+  /**
+   * The nearest active scope root that is still live — walking down the
+   * stack skips any entry whose root died (destroyed or detached) since it
+   * was pushed, rather than either continuing to hit-test its now-detached
+   * subtree or letting it permanently block the real scene graph once the
+   * live entry beneath it (or none at all) should take over. Entries are not
+   * eagerly removed from the stack here: a root only temporarily detached
+   * (e.g. mid-reparent within the same Application) is revalidated fresh on
+   * the next call rather than being discarded — see
+   * {@link FocusController._activeScopeRoot}, which mirrors this exactly for
+   * focus/traversal.
+   */
+  private _activeScopeRoot(): RenderNode | null {
+    for (let i = this._scopeStack.length - 1; i >= 0; i--) {
+      const root = this._scopeStack[i]!.root;
+
+      if (this._isLive(root)) {
+        return root;
+      }
     }
+
+    return null;
+  }
+
+  /**
+   * The node currently holding pointer-capture for `id`, re-read fresh
+   * immediately before each phase rather than cached once per flush — an
+   * earlier phase in the SAME flush may have ended the drag for real
+   * (`_completeDrag`), or a handler dispatched moments ago may have
+   * destroyed/detached the captured node directly. Either way, a stale
+   * capture is dropped here (ending the drag) rather than being handed to
+   * the next phase as if it were still valid.
+   */
+  private _currentCapture(id: number): RenderNode | null {
+    const node = this._capturedPointers.get(id) ?? null;
+
+    if (node !== null && !this._isLive(node)) {
+      this._endDrag(id);
+
+      return null;
+    }
+
+    return node;
   }
 
   // ---------------------------------------------------------------------------
@@ -642,23 +1373,36 @@ export class InteractionManager implements InteractionHooks {
   // ---------------------------------------------------------------------------
 
   /**
-   * Resolve the hit node and its coordinate space for a fresh pointer. An
-   * active modal capture confines hit-testing to its subtree; otherwise the
-   * screen-fixed UI layer is tried first (screen space), then the camera world.
+   * Resolve the hit node and its coordinate space for a design-space point.
+   * An active interaction scope confines hit-testing to its subtree — unless
+   * the scope root or one of its OWN ancestors (outside the scoped subtree)
+   * is invisible, in which case the whole scoped subtree is not actually
+   * painted either and nothing inside it can be a legitimate hit target.
+   * Without a scope, the screen-fixed UI layer is tried first (screen space),
+   * then the camera world.
+   *
+   * Takes an explicit `(x, y)` rather than reading a `Pointer` so callers can
+   * resolve each phase (press / move / release / context menu) against its
+   * own coordinates instead of whichever position the pointer ends the frame
+   * at — see {@link InteractionJournalEntry}'s doc comment.
    */
-  private _resolveHit(pointer: Pointer): { node: RenderNode | null; x: number; y: number } {
-    const capture = this._captureStack.at(-1);
+  private _resolveHit(x: number, y: number): { node: RenderNode | null; x: number; y: number } {
+    const scope = this._activeScopeRoot();
 
-    if (capture !== undefined) {
-      const coords = this._pointerCoords(pointer, this._isUINode(capture));
+    if (scope !== null) {
+      const coords = this._designToLayerSpace(x, y, this._isUINode(scope));
 
-      return { node: this._hitTestNode(capture, coords.x, coords.y), x: coords.x, y: coords.y };
+      if (!this._isHittable(scope)) {
+        return { node: null, x: coords.x, y: coords.y };
+      }
+
+      return { node: this._hitTestNode(scope, coords.x, coords.y), x: coords.x, y: coords.y };
     }
 
     const uiRoot = this._app.scenes.currentScene?._peekUI() ?? null;
 
     if (uiRoot !== null) {
-      const ui = this._app.rendering.screenView.screenToWorld(pointer.x, pointer.y);
+      const ui = this._app.rendering.screenView.screenToWorld(x, y);
       const uiHit = this._hitTestNode(uiRoot, ui.x, ui.y);
 
       if (uiHit !== null) {
@@ -666,16 +1410,31 @@ export class InteractionManager implements InteractionHooks {
       }
     }
 
-    const world = this._app.rendering.view.screenToWorld(pointer.x, pointer.y);
+    const world = this._app.rendering.view.screenToWorld(x, y);
 
     return { node: this._hitTest(world.x, world.y), x: world.x, y: world.y };
   }
 
-  /** Map a design-space pointer into either the screen-fixed UI view or the camera world. */
-  private _pointerCoords(pointer: Pointer, ui: boolean): PointLike {
+  /**
+   * Resolve `(x, y)` against either a captured node (hit-testing
+   * short-circuited — the node stays the target for every phase of an active
+   * drag, wherever the pointer strays) or a fresh hit-test.
+   */
+  private _resolvePhase(x: number, y: number, captured: RenderNode | null): { node: RenderNode | null; x: number; y: number } {
+    if (captured !== null) {
+      const coords = this._designToLayerSpace(x, y, this._isUINode(captured));
+
+      return { node: captured, x: coords.x, y: coords.y };
+    }
+
+    return this._resolveHit(x, y);
+  }
+
+  /** Map a design-space point into either the screen-fixed UI view or the camera world. */
+  private _designToLayerSpace(x: number, y: number, ui: boolean): PointLike {
     const view = ui ? this._app.rendering.screenView : this._app.rendering.view;
 
-    return view.screenToWorld(pointer.x, pointer.y);
+    return view.screenToWorld(x, y);
   }
 
   /** Whether `node` lives inside the active scene's UI layer. */
@@ -715,30 +1474,174 @@ export class InteractionManager implements InteractionHooks {
   }
 
   private _hitTestIndexed(x: number, y: number): RenderNode | null {
-    let bestOrder = -1;
     let bestNode: RenderNode | null = null;
 
-    // Track the best (highest-order) hit directly in the query callback, so no
-    // intermediate candidate array is needed. World-aware contains, not the raw
-    // group-local one: a node indexed in world space could have gained a
-    // boundary ancestor since insertion.
+    // Keep only the topmost candidate as the query walks, so no intermediate
+    // array is needed. World-aware contains, not the raw group-local one: a
+    // node indexed in world space could have gained a boundary ancestor since
+    // insertion.
     this._tree!.queryPoint(x, y, indexed => {
-      if (indexed.order > bestOrder && this._containsWorldPoint(indexed.node, x, y)) {
-        bestOrder = indexed.order;
-        bestNode = indexed.node;
+      const node = indexed.node;
+
+      if (this._beatsBest(node, bestNode, x, y)) {
+        bestNode = node;
       }
     });
 
     // Group-anchored nodes live outside the tree (see `_anchoredNodes`):
-    // exact hit-test through the live group matrix, same z-tiebreak.
-    for (const [node, order] of this._anchoredNodes) {
-      if (order > bestOrder && this._containsWorldPoint(node, x, y)) {
-        bestOrder = order;
+    // exact hit-test through the live group matrix, same ordering rule.
+    for (const node of this._anchoredNodes) {
+      if (this._beatsBest(node, bestNode, x, y)) {
         bestNode = node;
       }
     }
 
     return bestNode;
+  }
+
+  /** Whether `candidate` is a hit that paints above the best node found so far. */
+  private _beatsBest(candidate: RenderNode, best: RenderNode | null, x: number, y: number): boolean {
+    if (best !== null && this._comparePaintOrder(candidate, best) <= 0) {
+      return false;
+    }
+
+    return this._isHittable(candidate) && this._containsWorldPoint(candidate, x, y) && this._isWithinAncestorClips(candidate, x, y);
+  }
+
+  /**
+   * Whether world point `(x, y)` falls inside `clipNode`'s own clip region.
+   * `clipShape === null` or a `Rectangle` are both world-space (see
+   * {@link RenderNode.clip}'s doc comment) and so are directly evaluable here
+   * with a plain rectangle-containment test, matching
+   * {@link RenderPlanBuilder}'s own `ClipKind.Rect` classification.
+   *
+   * A `Geometry` clipShape uses the stencil path and has no cheap point-in-
+   * silhouette test available here; hit-testing deliberately does not
+   * attempt one — an interactive descendant under a `Geometry`-clipped
+   * ancestor stays hittable across the ancestor's full (unclipped) bounds.
+   * This is a documented gap, not a silent one: geometry clips and alpha
+   * masks ({@link RenderNode.mask}) both affect only what is *painted*, not
+   * what is *hit-tested*.
+   */
+  private _isWithinClip(clipNode: RenderNode, x: number, y: number): boolean {
+    const shape = clipNode.clipShape;
+
+    if (shape === null) {
+      return clipNode.getBounds().contains(x, y);
+    }
+
+    if (shape instanceof Rectangle) {
+      return shape.contains(x, y);
+    }
+
+    return true;
+  }
+
+  /**
+   * Whether `(x, y)` clears every clipping ancestor above `node`, so a hit
+   * candidate found through the spatial index (which bypasses the recursive
+   * parent-child walk `_hitTestNode` uses) is bounded exactly like the
+   * visible render output for hard (`Rectangle`/`null`) clip shapes.
+   */
+  private _isWithinAncestorClips(node: RenderNode, x: number, y: number): boolean {
+    let current = node.parent;
+
+    while (current !== null) {
+      if (current.clip && !this._isWithinClip(current, x, y)) {
+        return false;
+      }
+
+      current = current.parent;
+    }
+
+    return true;
+  }
+
+  /**
+   * A node is only a hit target while it and every ancestor up to the root is
+   * visible. The spatial index deliberately keeps hidden nodes registered —
+   * `visible = false` does not unregister — so the check has to happen here.
+   */
+  private _isHittable(node: RenderNode): boolean {
+    let current: RenderNode | null = node;
+
+    while (current !== null) {
+      if (!current.visible) {
+        return false;
+      }
+
+      current = current.parent;
+    }
+
+    return true;
+  }
+
+  /**
+   * Order two nodes the way the renderer paints them: positive when `a` is
+   * drawn after (visually above) `b`, negative when before, `0` when the two
+   * are the same node or live in unrelated trees.
+   *
+   * The comparison is hierarchical, matching how the render plan is built:
+   * find the nearest common ancestor, then compare the two branches that
+   * diverge there by local `zIndex` and, on a tie, document order. A deeply
+   * nested node therefore cannot escape the scope of its ancestors no matter
+   * how high its own `zIndex` — exactly the constraint the renderer imposes,
+   * and the reason a single comparison needs no global sort.
+   *
+   * When one node is an ancestor of the other, the descendant paints later: a
+   * container renders its own content before its children.
+   */
+  private _comparePaintOrder(a: RenderNode, b: RenderNode): number {
+    if (a === b) {
+      return 0;
+    }
+
+    const pathA = this._collectAncestorPath(a, this._pathA);
+    const pathB = this._collectAncestorPath(b, this._pathB);
+    const shared = Math.min(pathA.length, pathB.length);
+    let depth = 0;
+
+    while (depth < shared && pathA[depth] === pathB[depth]) {
+      depth++;
+    }
+
+    if (depth === pathA.length) {
+      return -1;
+    }
+
+    if (depth === pathB.length) {
+      return 1;
+    }
+
+    const branchA = pathA[depth]!;
+    const branchB = pathB[depth]!;
+
+    if (branchA.zIndex !== branchB.zIndex) {
+      return branchA.zIndex - branchB.zIndex;
+    }
+
+    // Same z within the same scope — document order decides, as it does in
+    // `RenderPlanOptimizer`'s `seq` tiebreak. A null parent means the two nodes
+    // sit in unrelated trees and are not comparable.
+    const parent = branchA.parent;
+
+    return parent === null ? 0 : parent.getChildIndex(branchA) - parent.getChildIndex(branchB);
+  }
+
+  /** Fill `out` with the root-to-node ancestor chain and return it. */
+  private _collectAncestorPath(node: RenderNode, out: RenderNode[]): RenderNode[] {
+    out.length = 0;
+
+    let current: RenderNode | null = node;
+
+    while (current !== null) {
+      out.push(current);
+      current = current.parent;
+    }
+
+    out.reverse();
+
+    return out;
   }
 
   /**
@@ -766,16 +1669,24 @@ export class InteractionManager implements InteractionHooks {
     return node.contains(groupX, groupY);
   }
 
-  // Walk children in REVERSE order (top z-order first). Recurse into Container children even
-  // when the container itself isn't interactive (so children can be hit through a non-interactive parent).
-  // Return the FIRST (deepest, top-most) interactive node whose contains(x, y) returns true.
+  /**
+   * Walk children back-to-front in paint order (topmost first) and return the
+   * first interactive node containing the point. Recurses into containers that
+   * are not interactive themselves, so a child can still be hit through a
+   * plain layout parent.
+   */
   private _hitTestNode(node: RenderNode, x: number, y: number): RenderNode | null {
     if (!node.visible) {
       return null;
     }
 
-    if (node instanceof Container) {
-      const children = node.children;
+    // A hard clip bounds descendants exactly like the visible render output
+    // (see `_isWithinClip`'s doc comment): a point outside it cannot hit
+    // anything nested inside, so the whole subtree is skipped rather than
+    // recursed into. The node's own hit-test below is unaffected — `clip`
+    // only bounds descendants, never the clipping node itself.
+    if (node instanceof Container && (!node.clip || this._isWithinClip(node, x, y))) {
+      const children = this._childrenInPaintOrder(node);
 
       for (let i = children.length - 1; i >= 0; i--) {
         const child = children[i];
@@ -796,6 +1707,30 @@ export class InteractionManager implements InteractionHooks {
     }
 
     return null;
+  }
+
+  /**
+   * Children in the order the renderer paints them. Returns the live child list
+   * untouched in the common case where every sibling shares a `zIndex` — the
+   * same shortcut `RenderPlanOptimizer` takes with `hasMixedZ` — and allocates
+   * a sorted copy only when the z values actually differ. The sort is stable,
+   * so equal z keeps document order.
+   */
+  private _childrenInPaintOrder(container: Container): readonly RenderNode[] {
+    const children = container.children;
+    const first = children[0];
+
+    if (first === undefined) {
+      return children;
+    }
+
+    for (let i = 1; i < children.length; i++) {
+      if (children[i]!.zIndex !== first.zIndex) {
+        return [...children].sort((left, right) => left.zIndex - right.zIndex);
+      }
+    }
+
+    return children;
   }
 
   // ---------------------------------------------------------------------------
@@ -823,7 +1758,12 @@ export class InteractionManager implements InteractionHooks {
 
   /**
    * Unregister an interactive node: remove from the tree and tracking
-   * set. Dispose the tree when it becomes empty.
+   * set. Dispose the tree when it becomes empty. Also purges any per-pointer
+   * reference to `node` — a node can be removed from the scene (destroyed,
+   * reparented out, or simply unregistered) while it is mid-hover, mid-drag,
+   * or holding pointer capture; without this, `node` would stay orphaned in
+   * `_lastHit`/`_drags`/`_capturedPointers` and every future frame would keep
+   * dragging/hit-testing/repositioning a node no longer in the tree.
    */
   private _unregisterNode(node: RenderNode): void {
     if (!this._interactiveNodes.has(node)) {
@@ -842,11 +1782,33 @@ export class InteractionManager implements InteractionHooks {
     }
 
     this._proxies.delete(node);
+    this._purgePointerReferences(node);
 
     if (this._interactiveNodes.size === 0 && this._tree !== null) {
       this._tree.destroy();
       this._tree = null;
-      this._orderCounter = 0;
+    }
+  }
+
+  /** Drop every per-pointer reference to `node` — see {@link _unregisterNode}'s doc comment. */
+  private _purgePointerReferences(node: RenderNode): void {
+    for (const [pointerId, hit] of this._lastHit) {
+      if (hit === node) {
+        this._lastHit.delete(pointerId);
+      }
+    }
+
+    for (const [pointerId, target] of this._pressTargets) {
+      if (target === node) {
+        this._pressTargets.delete(pointerId);
+      }
+    }
+
+    // Snapshot first — _endDrag deletes from `_drags` as it goes.
+    for (const [pointerId, drag] of [...this._drags]) {
+      if (drag.node === node) {
+        this._endDrag(pointerId);
+      }
     }
   }
 
@@ -855,7 +1817,7 @@ export class InteractionManager implements InteractionHooks {
    * (their group-local bounds are useless as world-space tree keys and
    * would go stale on every group move), everything else into the tree.
    */
-  private _insertNode(node: RenderNode, order: number = this._orderCounter++): void {
+  private _insertNode(node: RenderNode): void {
     if (this._tree === null) {
       return;
     }
@@ -865,7 +1827,7 @@ export class InteractionManager implements InteractionHooks {
     this._clearGroupMembership(node);
 
     if (node._resolveTransformGroupAnchor() !== null) {
-      this._anchoredNodes.set(node, order);
+      this._anchoredNodes.add(node);
 
       if (__DEV__) {
         this._warnAnchoredInteractive(node);
@@ -875,7 +1837,7 @@ export class InteractionManager implements InteractionHooks {
     }
 
     const bounds = node.getBounds();
-    const proxy = this._tree.insert(bounds.left, bounds.top, bounds.right, bounds.bottom, { node, order });
+    const proxy = this._tree.insert(bounds.left, bounds.top, bounds.right, bounds.bottom, { node });
 
     this._proxies.set(node, proxy);
 
@@ -956,7 +1918,6 @@ export class InteractionManager implements InteractionHooks {
 
     for (const node of this._staleNodes) {
       const proxy = this._proxies.get(node);
-      const order = this._orderFor(node, proxy);
 
       if (proxy !== undefined) {
         this._tree.remove(proxy);
@@ -965,19 +1926,10 @@ export class InteractionManager implements InteractionHooks {
       this._proxies.delete(node);
       this._anchoredNodes.delete(node);
 
-      this._insertNode(node, order);
+      this._insertNode(node);
     }
 
     this._staleNodes.clear();
-  }
-
-  /** Insertion order to preserve on re-index: tree payload, else anchored, else fresh. */
-  private _orderFor(node: RenderNode, proxy: number | undefined): number {
-    if (proxy !== undefined && this._tree !== null) {
-      return this._tree.payloadOf(proxy).order;
-    }
-
-    return this._anchoredNodes.get(node) ?? this._orderCounter++;
   }
 
   /**
@@ -1030,23 +1982,25 @@ export class InteractionManager implements InteractionHooks {
   // Dispatch helpers
   // ---------------------------------------------------------------------------
 
+  /**
+   * Walk the event from its target up through every ancestor. `interactive`
+   * decides whether a node can be *hit*, not whether an event may pass through
+   * it — a plain layout container in the middle of the path must not silently
+   * cut a listener on the node above it off from the event. Propagation ends
+   * only at the root or at an explicit {@link InteractionEvent.stopPropagation}.
+   */
   private _dispatchBubble(event: InteractionEvent): void {
     let current: RenderNode | null = event.target;
 
-    while (current !== null && !event.propagationStopped) {
+    while (current !== null) {
       event.currentTarget = current;
-      const signal = this._signalFor(event.type, current);
-
-      signal?.dispatch(event);
+      this._signalFor(event.type, current)?.dispatch(event);
 
       if (event.propagationStopped) {
         break;
       }
 
-      // Walk up to interactive ancestor only (parent must opt in to receive bubble).
-      const parent: Container | null = current.parent;
-
-      current = parent !== null && parent.interactive ? parent : null;
+      current = current.parent;
     }
   }
 
@@ -1096,6 +2050,6 @@ export class InteractionManager implements InteractionHooks {
       }
     }
 
-    this._app.canvas.style.cursor = cursor ?? '';
+    this._platform.setCursor(cursor ?? '');
   }
 }

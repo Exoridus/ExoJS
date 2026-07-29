@@ -4,6 +4,7 @@ import { GamepadButton } from '#input/GamepadButton';
 import { GamepadMappingFamily } from '#input/GamepadMapping';
 import type { GamepadSlotStrategy } from '#input/InputManager';
 import { InputManager } from '#input/InputManager';
+import { BrowserPlatform } from '#platform/BrowserPlatform';
 
 type BrowserGamepad = NonNullable<ReturnType<Navigator['getGamepads']>[number]>;
 
@@ -23,6 +24,7 @@ const createInputManager = (slotStrategy: GamepadSlotStrategy = 'sticky'): Input
   const canvas = document.createElement('canvas');
   const app = {
     canvas,
+    platform: new BrowserPlatform(canvas),
     options: {
       input: {
         gamepadDefinitions: [],

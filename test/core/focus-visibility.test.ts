@@ -10,6 +10,7 @@ interface FocusVisibilityHarness {
   readonly inputManagerMock: {
     update: MockInstance;
     _prepareFrame: MockInstance;
+    _finishInteractionFrame: MockInstance;
     destroy: MockInstance;
     canvasFocused: boolean;
     onCanvasFocusChange: Signal<[focused: boolean]>;
@@ -39,6 +40,7 @@ const loadHarness = async (): Promise<FocusVisibilityHarness> => {
   const inputManagerMock = {
     update: vi.fn(),
     _prepareFrame: vi.fn(),
+    _finishInteractionFrame: vi.fn(),
     destroy: vi.fn(),
     canvasFocused: false,
     onCanvasFocusChange,
@@ -114,14 +116,15 @@ const loadHarness = async (): Promise<FocusVisibilityHarness> => {
       return inputManagerMock;
     }),
   }));
-  vi.doMock('#input/FocusManager', () => ({
-    FocusManager: vi.fn(function () {
+  vi.doMock('#input/FocusController', () => ({
+    FocusController: vi.fn(function () {
       return {
         focused: null,
         focus: vi.fn(),
         blur: vi.fn(),
         pushScope: vi.fn(),
         popScope: vi.fn(),
+        clearScopes: vi.fn(),
         focusNext: vi.fn(),
         focusPrevious: vi.fn(),
         _notifyNodeRemoved: vi.fn(),

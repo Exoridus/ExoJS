@@ -413,7 +413,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Set the canvas cursor. Strings are passed through to canvas.style.cursor verbatim (CSS values like 'pointer', 'crosshair', or url(...)). Image-based sources are rasterized to a data: URL via the shared scratch canvas and used as the cursor image."
+          "description": "Set the surface cursor. Strings are passed through to the platform verbatim (CSS values like 'pointer', 'crosshair', or url(...)). Image-based sources are rasterized to a data: URL via the shared scratch canvas and used as the cursor image."
         },
         {
           "name": "start",
@@ -801,27 +801,6 @@
           "description": ""
         },
         {
-          "name": "focus",
-          "signature": "focus: FocusManager",
-          "signatureTokens": [
-            {
-              "text": "focus",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "FocusManager",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
           "name": "input",
           "signature": "input: InputManager",
           "signatureTokens": [
@@ -937,6 +916,27 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "platform",
+          "signature": "platform: PlatformAdapter",
+          "signatureTokens": [
+            {
+              "text": "platform",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PlatformAdapter",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The host seam this application runs on. Every part of the engine that has to reach outside its own state — input events, surface focus, cursor, pointer capture, gamepads, document visibility, frame scheduling — goes through this one adapter. See ApplicationOptions.platform."
         },
         {
           "name": "random",
