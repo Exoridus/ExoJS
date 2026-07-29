@@ -928,7 +928,16 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         // Internal frame setup — not a public System phase. Same relative
         // order the core managers ticked in as (former) app systems.
         this.input._prepareFrame(frameDelta);
-        this.interaction._prepareFrame(frameDelta);
+
+        try {
+          this.interaction._prepareFrame(frameDelta);
+        } finally {
+          // Node-level dispatch above may still reference pointers InputManager
+          // flagged terminal this flush; only now is it safe to destroy them —
+          // and retirement must still run if a node handler just threw.
+          this.input._finishInteractionFrame();
+        }
+
         this._audio._prepareFrame(frameDelta);
         this.tweens._prepareFrame(frameDelta);
         this._rendering._prepareFrame(frameDelta);

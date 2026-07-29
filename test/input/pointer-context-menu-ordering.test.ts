@@ -143,10 +143,20 @@ const destroyHarness = (h: Harness): void => {
   h.input.destroy();
 };
 
-/** One full app-update tick: input first, then interaction — matching Application.update's real order. */
+/**
+ * One full app-update tick: input first, then interaction — matching
+ * `Application.update`'s real order, including the deferred pointer
+ * retirement finalized only after interaction dispatch has fully drained
+ * (even if a node handler throws).
+ */
 const tick = (h: Harness): void => {
   h.input.update();
-  h.interaction.update();
+
+  try {
+    h.interaction.update();
+  } finally {
+    h.input._finishInteractionFrame();
+  }
 };
 
 const fire = (canvas: HTMLCanvasElement, type: string, init: PointerEventInit): PointerEvent => {
@@ -332,8 +342,17 @@ describe('InputManager — context-menu ordering and queuing (Bug B)', () => {
 
     expect(receivedPointer).toBe(pointer);
     expect(wasAlreadyDestroyedWhenMenuFired).toBe(false);
-    // Retirement happens in the pass AFTER the whole journal has drained —
-    // by the time update() itself returns, the pointer IS gone.
+    // InputManager's OWN journal drain only flags the pointer as PENDING
+    // retirement now — InteractionManager still owns queued node-level
+    // events (e.g. app-level onContextMenu subscribers aside, a real node's
+    // onContextMenu handler) that reference this same Pointer, and those only
+    // dispatch in ITS pass, which runs strictly after this input.update().
+    expect(destroySpy).not.toHaveBeenCalled();
+    expect(pointers.has(1)).toBe(true);
+
+    // Only once the interaction-dispatch boundary has been explicitly closed
+    // does retirement actually run.
+    input._finishInteractionFrame();
     expect(destroySpy).toHaveBeenCalledTimes(1);
     expect(pointers.has(1)).toBe(false);
 
@@ -381,6 +400,119 @@ describe('InteractionManager — cross-pointer order preserved end-to-end (Bug C
     destroyHarness(h);
     spriteA.destroy();
     spriteB.destroy();
+  });
+
+  test('a node-level contextmenu handler after Leave in the same flush receives a live Pointer, retired only after interaction dispatch finishes', () => {
+    const h = createHarness();
+    const { canvas, scene, input } = h;
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    const pointers = (input as unknown as { pointers: Map<number, Pointer> }).pointers;
+
+    fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'mouse', clientX: 25, clientY: 25, isPrimary: true });
+    tick(h);
+
+    const pointer = pointers.get(1)!;
+    const destroySpy = vi.spyOn(pointer, 'destroy');
+    let destroyedInsideHandler: boolean | null = null;
+
+    sprite.onContextMenu.add(() => {
+      destroyedInsideHandler = destroySpy.mock.calls.length > 0;
+    });
+
+    fire(canvas, 'pointerleave', { pointerId: 1, pointerType: 'mouse', clientX: 25, clientY: 25, isPrimary: true });
+    fireContextMenu(canvas, 25, 25);
+    tick(h);
+
+    expect(destroyedInsideHandler).toBe(false);
+    expect(destroySpy).toHaveBeenCalledTimes(1);
+    expect(pointers.has(1)).toBe(false);
+
+    destroyHarness(h);
+    sprite.destroy();
+  });
+
+  test('pointer retirement still finalizes when a node-level handler throws during interaction dispatch', () => {
+    const h = createHarness();
+    const { canvas, scene, input, interaction } = h;
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    const pointers = (input as unknown as { pointers: Map<number, Pointer> }).pointers;
+
+    fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'mouse', clientX: 25, clientY: 25, isPrimary: true });
+    tick(h);
+
+    const pointer = pointers.get(1)!;
+    const destroySpy = vi.spyOn(pointer, 'destroy');
+
+    sprite.onContextMenu.add(() => {
+      throw new Error('expected handler failure');
+    });
+
+    fire(canvas, 'pointerleave', { pointerId: 1, pointerType: 'mouse', clientX: 25, clientY: 25, isPrimary: true });
+    fireContextMenu(canvas, 25, 25);
+
+    input.update();
+    try {
+      interaction.update();
+    } catch {
+      // Expected: this focused harness lets the node handler's throw
+      // propagate; Application.ts's real `try/finally` is what this test's
+      // own `finally` block below stands in for.
+    } finally {
+      input._finishInteractionFrame();
+    }
+
+    expect(destroySpy).toHaveBeenCalledTimes(1);
+    expect(pointers.has(1)).toBe(false);
+
+    destroyHarness(h);
+    sprite.destroy();
+  });
+
+  test('same-id reentry synchronously during interaction dispatch revives the pointer instead of letting the finalize pass destroy it', () => {
+    const h = createHarness();
+    const { canvas, scene, input } = h;
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    const pointers = (input as unknown as { pointers: Map<number, Pointer> }).pointers;
+
+    fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'mouse', clientX: 25, clientY: 25, isPrimary: true });
+    tick(h);
+
+    const pointer = pointers.get(1)!;
+    const destroySpy = vi.spyOn(pointer, 'destroy');
+
+    // The node's own onContextMenu handler — dispatched during THIS tick's
+    // interaction pass for the request queued below, which resolves against
+    // a fresh hit test rather than the `_lastHit` cache — synchronously
+    // re-enters the SAME pointerId (a rapid leave/re-enter flicker) before
+    // the retirement boundary closes.
+    sprite.onContextMenu.add(() => {
+      fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'mouse', clientX: 25, clientY: 25, isPrimary: true });
+    });
+
+    fire(canvas, 'pointerleave', { pointerId: 1, pointerType: 'mouse', clientX: 25, clientY: 25, isPrimary: true });
+    fireContextMenu(canvas, 25, 25);
+    tick(h);
+
+    // Reentry revived the SAME Pointer object (no longer terminal) — the
+    // finalize pass must not destroy it just because it was pending at the
+    // start of the flush.
+    expect(destroySpy).not.toHaveBeenCalled();
+    expect(pointers.get(1)).toBe(pointer);
+
+    destroyHarness(h);
+    sprite.destroy();
   });
 });
 

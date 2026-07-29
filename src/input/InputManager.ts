@@ -142,6 +142,12 @@ export class InputManager {
    */
   private _batchSequence = 0;
   private readonly pointers = new Map<number, Pointer>();
+  /**
+   * Terminal (Leave/Cancelled) pointers this flush identified, held back from
+   * {@link _retirePointer} until {@link _finishInteractionFrame} runs. See
+   * that method's doc comment for why retirement itself must wait.
+   */
+  private readonly pendingPointerRetirements = new Set<Pointer>();
   private readonly _gamepads: readonly [Gamepad, Gamepad, Gamepad, Gamepad];
   private readonly gamepadsByBrowserIndex = new Map<number, Gamepad>();
   private readonly bindings: Set<InputBinding> = new Set<InputBinding>();
@@ -582,6 +588,7 @@ export class InputManager {
     }
 
     this.pointers.clear();
+    this.pendingPointerRetirements.clear();
 
     for (const pad of this._gamepads) {
       pad.destroy();
@@ -1292,8 +1299,46 @@ export class InputManager {
 
     for (const pointer of [...this.pointers.values()]) {
       if (pointer.currentState === PointerState.OutsideCanvas || pointer.currentState === PointerState.Cancelled) {
+        this.pendingPointerRetirements.add(pointer);
+      }
+    }
+  }
+
+  /**
+   * Finalize retirement of every pointer {@link _drainJournal} identified as
+   * terminal this flush, once `InteractionManager` has fully drained its own
+   * node-level dispatch for the frame. `InputManager._drainJournal` only
+   * flags a terminal pointer as PENDING — it must not destroy it itself,
+   * because `InteractionManager._prepareFrame` (a separate top-level call the
+   * app's frame loop makes right after `InputManager._prepareFrame` returns)
+   * still has queued node-level events — e.g. a `contextmenu` request — that
+   * reference that same `Pointer` object and dispatch only during ITS OWN
+   * pass. Destroying the pointer any earlier would hand a node handler an
+   * already-destroyed `Pointer`.
+   *
+   * Called from `Application`'s frame loop in a `finally` block around
+   * `interaction._prepareFrame()`, so retirement still runs even if a node
+   * handler throws.
+   *
+   * Re-validates BOTH that a pending pointer is still genuinely terminal AND
+   * that it's still the live map entry for its id before destroying it — a
+   * node handler running during `InteractionManager._prepareFrame` can
+   * synchronously drive a same-`pointerId` re-entry (see
+   * {@link handlePointerOver}'s doc comment) that replaces the map entry with
+   * a fresh, non-terminal `Pointer` for that same id; that new object must
+   * never be torn down here.
+   *
+   * @internal
+   */
+  public _finishInteractionFrame(): void {
+    for (const pointer of this.pendingPointerRetirements) {
+      const stillTerminal = pointer.currentState === PointerState.OutsideCanvas || pointer.currentState === PointerState.Cancelled;
+
+      if (stillTerminal && this.pointers.get(pointer.id) === pointer) {
         this._retirePointer(pointer);
       }
     }
+
+    this.pendingPointerRetirements.clear();
   }
 }

@@ -273,6 +273,90 @@ describe('UI scope reactivation re-enforces the focus trap immediately', () => {
   });
 });
 
+describe('attachUIRoot / detachUIRoot mirror attachRoot / detachRoot exactly (minus world-tree registration)', () => {
+  test('a UI subtree built entirely while detached — modal, scope, and all — engages its trap the instant attachUIRoot runs', () => {
+    const { scene, im } = createUIApp();
+    const ui = scene.ui;
+    const modal = new Container();
+    const insideModal = new Container();
+    const outside = new Container();
+
+    insideModal.focusable = true;
+    outside.focusable = true;
+    scene.addChild(outside);
+
+    im.detachUIRoot(ui);
+
+    // Assembled — including its own scope — entirely while `ui` is detached,
+    // then attached as one whole unit. `addChild`'s own per-node
+    // notification never fires here because `ui` isn't on the stage yet.
+    modal.addChild(insideModal);
+    ui.addChild(modal);
+
+    const token = im.pushScope(modal);
+
+    im.focus(outside);
+    expect(im.focused).toBe(outside);
+
+    im.attachUIRoot(ui);
+
+    // The trap engages from attachUIRoot itself, not from the next
+    // unrelated focus() call.
+    expect(im.focused).toBeNull();
+
+    im.popScope(token);
+  });
+
+  test('detachUIRoot blurs focus living inside the UI subtree and removes only scopes rooted there', () => {
+    const { scene, im } = createUIApp();
+    const ui = scene.ui;
+    const modal = new Container();
+    const insideModal = new Container();
+    const worldNode = new Container();
+
+    insideModal.focusable = true;
+    modal.addChild(insideModal);
+    ui.addChild(modal);
+    scene.addChild(worldNode);
+
+    const worldToken = im.pushScope(worldNode);
+    const uiToken = im.pushScope(modal);
+
+    im.focus(insideModal);
+    expect(im.focused).toBe(insideModal);
+
+    im.detachUIRoot(ui);
+
+    expect(im.focused).toBeNull();
+
+    // The foreign world scope survives detachUIRoot untouched and is still
+    // independently poppable; popping the UI scope's own (already-removed)
+    // token is a no-op, per popScope's idempotency contract.
+    expect(() => im.popScope(worldToken)).not.toThrow();
+    expect(() => im.popScope(uiToken)).not.toThrow();
+  });
+
+  test('repeated attach/detach of the same UI root is idempotent and never corrupts a foreign scope', () => {
+    const { scene, im } = createUIApp();
+    const ui = scene.ui;
+    const modal = new Container();
+    const worldNode = new Container();
+
+    modal.focusable = true;
+    ui.addChild(modal);
+    scene.addChild(worldNode);
+
+    const worldToken = im.pushScope(worldNode);
+
+    im.detachUIRoot(ui);
+    im.attachUIRoot(ui);
+    im.detachUIRoot(ui);
+    im.attachUIRoot(ui);
+
+    expect(() => im.popScope(worldToken)).not.toThrow();
+  });
+});
+
 describe('UI Tab traversal excludes destroyed nodes', () => {
   test('a bare destroy() UI node (no removeChild) is excluded from Tab traversal', () => {
     const { scene, focus, signals } = createUIApp();

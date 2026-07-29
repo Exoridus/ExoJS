@@ -545,15 +545,7 @@ export class InteractionManager implements InteractionHooks {
    * @internal
    */
   public detachRoot(root: RenderNode): void {
-    for (let i = this._scopeStack.length - 1; i >= 0; i--) {
-      const entry = this._scopeStack[i];
-
-      if (entry !== undefined && this._isDescendantOrSelf(entry.root, root)) {
-        this._scopeStack.splice(i, 1);
-        this._focus.popScope(entry.token);
-      }
-    }
-
+    this._removeScopesInSubtree(root);
     this._focus._notifyNodeRemoved(root);
     this._notifyNodeRemoved(root);
     root._setStage(null);
@@ -575,19 +567,52 @@ export class InteractionManager implements InteractionHooks {
   }
 
   /**
+   * Remove only the scope entries rooted inside `root`'s own subtree from
+   * {@link _scopeStack}, popping each through {@link FocusController.popScope}
+   * so focus reacts the same way it would for an explicit `popScope` call.
+   * Shared by {@link detachRoot} (world layer) and {@link detachUIRoot} (UI
+   * layer) so both tear down scopes identically.
+   */
+  private _removeScopesInSubtree(root: RenderNode): void {
+    for (let i = this._scopeStack.length - 1; i >= 0; i--) {
+      const entry = this._scopeStack[i];
+
+      if (entry !== undefined && this._isDescendantOrSelf(entry.root, root)) {
+        this._scopeStack.splice(i, 1);
+        this._focus.popScope(entry.token);
+      }
+    }
+  }
+
+  /**
    * Bind a scene's UI layer to this manager. Installs the UI stage (no-op world
    * hooks, shared focus) so its nodes route focus here but stay out of the world
    * tree; the layer is hit-tested by a direct walk in screen space.
+   *
+   * Also re-enforces the active scope's focus trap (mirroring
+   * {@link _notifyNodeAdded}): a fully-built UI subtree — e.g. a modal with its
+   * own already-pushed scope, assembled entirely while detached — never passes
+   * through `addChild`'s own notification on this boundary, so without this
+   * call its trap would only engage on the next unrelated focus change.
    * @internal
    */
   // eslint-disable-next-line @typescript-eslint/naming-convention -- UI is an acronym (cf. HTMLText)
   public attachUIRoot(root: Container): void {
     root._setStage(this._uiStage);
+    this._focus._enforceActiveScopeTrap();
   }
 
-  /** Unbind a scene's UI layer. @internal */
+  /**
+   * Unbind a scene's UI layer, mirroring {@link detachRoot}: releases only
+   * scopes rooted inside `root`'s own subtree and blurs focus if it currently
+   * lives inside it. World-tree interactive-node unregistration doesn't apply
+   * here — UI nodes were never registered through that path.
+   * @internal
+   */
   // eslint-disable-next-line @typescript-eslint/naming-convention -- UI is an acronym (cf. HTMLText)
   public detachUIRoot(root: Container): void {
+    this._removeScopesInSubtree(root);
+    this._focus._notifyNodeRemoved(root);
     root._setStage(null);
   }
 
