@@ -22,9 +22,10 @@ const createEmptySample = (): ActionSample => ({
  * value` is not enough: `ButtonAction._update` replays `sample.batches`, not
  * `values`, to detect its threshold-crossing edges in true order.
  */
+let nextSequence = 1;
 const setChannel = (sample: ActionSample, channel: number, value: number): void => {
   sample.values[channel] = value;
-  (sample.batches as ChannelEventBatch[]).push({ channels: [{ channel, value }] });
+  (sample.batches as ChannelEventBatch[]).push({ channels: [{ channel, value }], sequence: nextSequence++ });
 };
 
 interface StubBinding {
@@ -384,6 +385,7 @@ describe('SceneInputs action maps', () => {
         _trackActionMap: vi.fn((map: unknown) => void tracked.add(map)),
         _detachActionMap: vi.fn((map: unknown) => void tracked.delete(map)),
         _resyncActionMap: vi.fn((map: ActionMap) => void map._update(resyncSample)),
+        _currentBatchSequence: vi.fn((): number => 0),
       },
       scenes: {
         get _transitionGateOpen(): boolean {

@@ -10,8 +10,17 @@ import { ChannelSize } from '#input/types';
 
 const makeChannels = (): Float32Array => new Float32Array(ChannelSize.Container);
 
+/**
+ * Monotonic counter mirroring `InputManager`'s own `_batchSequence` — shared
+ * across every `batchOf()` call in this file so sequence numbers stay
+ * globally increasing, exactly like the real thing. Tests that care about a
+ * specific watermark boundary read this via `nextSequence()` instead.
+ */
+let sequenceCounter = 0;
+const nextSequence = (): number => ++sequenceCounter;
+
 /** One atomic batch touching a single channel — mirrors `InputManager._recordChannelChanges` for a single-channel write. */
-const batchOf = (channel: number, value: number): ChannelEventBatch => ({ channels: [{ channel, value }] });
+const batchOf = (channel: number, value: number, sequence = nextSequence()): ChannelEventBatch => ({ channels: [{ channel, value }], sequence });
 
 describe('InputBinding — construction defaults', () => {
   test('channels-only constructor call uses the default threshold and a null detacher', () => {
@@ -294,6 +303,131 @@ describe('InputBinding — batch-based frame truth', () => {
     expect(binding.active).toBe(true);
 
     binding.unbind();
+  });
+});
+
+describe('InputBinding — construction watermark (observation boundary)', () => {
+  test('a batch recorded before construction seeds the baseline instead of replaying as an edge', () => {
+    const stale = batchOf(4, 1); // happened before this binding existed
+    const binding = new InputBinding([4], {}, null, stale.sequence); // watermark = right after the stale batch
+    const channels = makeChannels();
+    const onStart = vi.fn();
+
+    binding.onStart.add(onStart);
+
+    channels[4] = 1; // buffer still reflects the stale press
+    binding.update(channels, [stale]);
+
+    // The batch is filtered out (it predates the watermark), so the binding
+    // seeds from the LIVE buffer instead — it still correctly reports
+    // active/onStart because the source really is held, but via the seed
+    // path, not a replayed edge.
+    expect(onStart).toHaveBeenCalledTimes(1);
+    expect(binding.active).toBe(true);
+  });
+
+  test('a full press+release recorded before construction is not replayed at all', () => {
+    const press = batchOf(5, 1);
+    const release = batchOf(5, 0);
+    const binding = new InputBinding([5], {}, null, release.sequence); // watermark after both stale batches
+    const channels = makeChannels();
+    const onStart = vi.fn();
+    const onStop = vi.fn();
+
+    binding.onStart.add(onStart);
+    binding.onStop.add(onStop);
+
+    channels[5] = 0; // already released again by the time this binding exists
+    binding.update(channels, [press, release]);
+
+    expect(onStart).not.toHaveBeenCalled();
+    expect(onStop).not.toHaveBeenCalled();
+    expect(binding.active).toBe(false);
+  });
+
+  test('a full press+release recorded strictly after construction still fires onStart/onStop/onTrigger on the very first update() call', () => {
+    const unrelated = batchOf(6, 1); // arbitrary pre-construction activity on the same channel index space
+    const binding = new InputBinding([7], {}, null, unrelated.sequence);
+    const channels = makeChannels();
+    const onStart = vi.fn();
+    const onStop = vi.fn();
+    const onTrigger = vi.fn();
+
+    binding.onStart.add(onStart);
+    binding.onStop.add(onStop);
+    binding.onTrigger.add(onTrigger);
+
+    const press = batchOf(7, 1); // sequence > watermark: happened after construction
+    const release = batchOf(7, 0);
+
+    channels[7] = 0; // buffer already back to released by the time update() is first called
+    binding.update(channels, [unrelated, press, release]);
+
+    expect(onStart).toHaveBeenCalledTimes(1);
+    expect(onStop).toHaveBeenCalledTimes(1);
+    expect(onTrigger).toHaveBeenCalledTimes(1);
+  });
+
+  test('a press before construction that is released after construction still reports the release, with no spurious onStart', () => {
+    const stalePress = batchOf(8, 1); // held before this binding existed
+    const binding = new InputBinding([8], {}, null, stalePress.sequence);
+    const channels = makeChannels();
+    const onStart = vi.fn();
+    const onStop = vi.fn();
+
+    binding.onStart.add(onStart);
+    binding.onStop.add(onStop);
+
+    const release = batchOf(8, 0); // released after construction, still within the same first update() call
+
+    channels[8] = 0;
+    binding.update(channels, [stalePress, release]);
+
+    // The stale press seeds the baseline as already-active (onStart fires
+    // once, for the SEEDED state, not the filtered-out batch) and the
+    // post-construction release is a genuine replayed edge.
+    expect(onStart).toHaveBeenCalledTimes(1);
+    expect(onStop).toHaveBeenCalledTimes(1);
+    expect(binding.active).toBe(false);
+  });
+});
+
+describe('InputBinding — onActive dispatch granularity', () => {
+  test('a frame whose only batches touch OTHER channels still re-confirms onActive exactly once while held', () => {
+    const binding = new InputBinding([1], { threshold: 100000 });
+    const channels = makeChannels();
+    const onActive = vi.fn();
+
+    binding.onActive.add(onActive);
+
+    channels[1] = 1;
+    binding.update(channels, []); // baseline: active
+    expect(onActive).toHaveBeenCalledTimes(1);
+
+    binding.update(channels, [batchOf(99, 1)]); // unrelated channel changes, this binding untouched
+
+    expect(onActive).toHaveBeenCalledTimes(2);
+    expect(binding.active).toBe(true);
+  });
+
+  test('several own-channel batches that stay continuously active fire onActive exactly once for the call', () => {
+    const binding = new InputBinding([1], { threshold: 100000 });
+    const channels = makeChannels();
+    const onStart = vi.fn();
+    const onActive = vi.fn();
+
+    binding.onStart.add(onStart);
+    binding.onActive.add(onActive);
+
+    binding.update(channels); // baseline: inactive
+
+    // Three batches in one call, all keeping the channel active (analog
+    // jitter) — never crossing back to 0 in between.
+    binding.update(channels, [batchOf(1, 0.6), batchOf(1, 0.8), batchOf(1, 0.7)]);
+
+    expect(onStart).toHaveBeenCalledTimes(1);
+    expect(onActive).toHaveBeenCalledTimes(1);
+    expect(binding.active).toBe(true);
   });
 });
 

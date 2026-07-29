@@ -5,6 +5,7 @@
  */
 
 import type { Application } from '#core/Application';
+import type { ActionMapOwner } from '#input/actions/ActionMap';
 import { ActionMap } from '#input/actions/ActionMap';
 import { AxisAction } from '#input/actions/AxisAction';
 import { ButtonAction } from '#input/actions/ButtonAction';
@@ -34,8 +35,9 @@ const createSample = (): {
   frame: () => void;
 } => {
   const values = new Float32Array(ChannelSize.Container);
-  const batches: Array<{ channels: ChannelEvent[] }> = [];
+  const batches: Array<{ channels: ChannelEvent[]; sequence: number }> = [];
   const sample: ActionSample = { values, batches, frameId: 1 };
+  let sequence = 0;
 
   return {
     sample,
@@ -45,7 +47,7 @@ const createSample = (): {
       }
 
       values[channel] = value;
-      batches.push({ channels: [{ channel, value }] });
+      batches.push({ channels: [{ channel, value }], sequence: ++sequence });
     },
     setBatch: (writes: ReadonlyArray<readonly [channel: number, value: number]>): void => {
       const channels: ChannelEvent[] = [];
@@ -60,7 +62,7 @@ const createSample = (): {
       }
 
       if (channels.length > 0) {
-        batches.push({ channels });
+        batches.push({ channels, sequence: ++sequence });
       }
     },
     frame: (): void => {
@@ -465,8 +467,21 @@ describe('ActionMap', () => {
     expect(controls.jump.pressed).toBe(false);
   });
 
-  it.each(['actions', 'attached', 'detach', '_owner', '_attach', '_update', '_reset'])('rejects a reserved action name: "%s"', name => {
-    expect(() => new ActionMap({ [name]: new ButtonAction(Keyboard.Space) })).toThrow(/reserved/i);
+  it.each(['actions', 'attached', 'detach', '_owner', '_ownership', '_attach', '_armBaseline', '_update', '_reset', 'constructor', 'prototype'])(
+    'rejects a reserved action name: "%s"',
+    name => {
+      expect(() => new ActionMap({ [name]: new ButtonAction(Keyboard.Space) })).toThrow(/reserved/i);
+    },
+  );
+
+  it('rejects a `__proto__` action name (prototype-pollution vector via Object.assign)', () => {
+    // Object literal syntax special-cases a LITERAL `__proto__:` key as a
+    // prototype-set, not an own enumerable property, so `Object.entries`
+    // would never see it — a computed key produces a genuine own property
+    // instead, exercising the actual `Object.assign(this, actions)` hazard.
+    const action = new ButtonAction(Keyboard.Space);
+
+    expect(() => new ActionMap({ ['__proto__']: action })).toThrow(/reserved/i);
   });
 
   it('rejects reusing the same action instance across two different maps', () => {
@@ -481,6 +496,19 @@ describe('ActionMap', () => {
     const jump = new ButtonAction(Keyboard.Space);
 
     expect(() => new ActionMap({ jump, alias: jump })).toThrow(/already belongs to another ActionMap/i);
+  });
+
+  it('a map that fails to construct never permanently claims the actions it validated before the failure', () => {
+    const jump = new ButtonAction(Keyboard.Space);
+    const crash = new ButtonAction(Keyboard.A);
+
+    // `crash` collides with a reserved name, so this whole construction
+    // throws — `jump`, validated earlier in the same call, must NOT end up
+    // permanently claimed by a map that was never actually built.
+    expect(() => new ActionMap({ jump, actions: crash })).toThrow(/reserved/i);
+
+    // `jump` must still be free to use in a real map.
+    expect(() => new ActionMap({ jump })).not.toThrow();
   });
 
   it('resync leaves a still-held action active without a synthetic press', () => {
@@ -518,6 +546,84 @@ describe('ActionMap', () => {
 
     expect(jump.released).toBe(true);
     expect(jump.active).toBe(false);
+  });
+
+  it("attaching mid-frame does not replay a batch already sitting in the owner's log from before the attach", () => {
+    const { sample, set } = createSample();
+    const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+
+    // Activity recorded into the shared batch log BEFORE this map attaches —
+    // e.g. another consumer's channel changing earlier in the same real
+    // frame's processing, ahead of this map ever being asked to watch.
+    set(Keyboard.Space, 1);
+
+    const watermarkAtAttach = sample.batches.at(-1)!.sequence;
+    const owner: ActionMapOwner = {
+      _detachActionMap: (): void => undefined,
+      _currentBatchSequence: (): number => watermarkAtAttach,
+    };
+
+    map._attach(owner);
+
+    // More activity arrives AFTER attach, still within the very same real
+    // frame's batch log (never cleared mid-frame).
+    set(Keyboard.A, 1);
+
+    map._update(sample);
+
+    // Space was already held BEFORE this map started watching — seeded as
+    // an already-active baseline, not a synthetic press.
+    expect(map.jump.active).toBe(true);
+    expect(map.jump.pressed).toBe(false);
+  });
+
+  it('attaching mid-frame still replays a batch pushed after the attach, within the same real frame', () => {
+    const { sample, set } = createSample();
+    const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+
+    set(Keyboard.A, 1); // unrelated activity, purely to advance the shared log before attach
+
+    const watermarkAtAttach = sample.batches.at(-1)!.sequence;
+    const owner: ActionMapOwner = {
+      _detachActionMap: (): void => undefined,
+      _currentBatchSequence: (): number => watermarkAtAttach,
+    };
+
+    map._attach(owner);
+
+    set(Keyboard.Space, 1); // happens strictly after attach, same real frame
+
+    map._update(sample);
+
+    expect(map.jump.active).toBe(true);
+    expect(map.jump.pressed).toBe(true);
+  });
+
+  it('a second attach to a different owner re-arms the watermark against the NEW owner, independent of the first', () => {
+    const { sample, set } = createSample();
+    const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+
+    set(Keyboard.Space, 1);
+
+    const firstOwner: ActionMapOwner = {
+      _detachActionMap: (): void => undefined,
+      _currentBatchSequence: (): number => 0, // arbitrary — never queried after the second attach below
+    };
+    const secondOwner: ActionMapOwner = {
+      _detachActionMap: (): void => undefined,
+      _currentBatchSequence: (): number => sample.batches.at(-1)!.sequence, // "now" — after the pre-existing press above
+    };
+
+    map._attach(firstOwner);
+    map._attach(secondOwner); // moves before ever being updated under the first owner
+
+    map._update(sample);
+
+    // The watermark in effect is the SECOND owner's, captured at the second
+    // attach — the pre-existing press is seeded as already-active, not a
+    // synthetic press, exactly as a fresh single attach would see it.
+    expect(map.jump.active).toBe(true);
+    expect(map.jump.pressed).toBe(false);
   });
 });
 

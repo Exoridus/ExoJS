@@ -89,6 +89,18 @@ export class SceneInputs implements Destroyable {
   }
 
   /**
+   * Forwards to the underlying `InputManager` — see
+   * `InputManager._currentBatchSequence`'s doc comment. Implementing this
+   * lets a map attached here (rather than directly on `app.input`) get the
+   * same mid-frame-attach protection.
+   *
+   * @internal
+   */
+  public _currentBatchSequence(): number {
+    return this._app.input._currentBatchSequence();
+  }
+
+  /**
    * Fire `callback` on the channel's press edge (value crosses above the
    * threshold), gated by `options.when` (default `'active'`) and the
    * director's transition gate. Unbound automatically when the owning scene

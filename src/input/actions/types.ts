@@ -44,10 +44,19 @@ export interface ChannelEvent {
  * transitions with a transient (never-actually-true) state in between. See
  * {@link ButtonAction._update}.
  *
+ * `sequence` is a globally monotonic counter stamped by the owning
+ * {@link InputManager} when the batch is pushed — never reset alongside the
+ * per-frame batch log itself. It is the watermark an {@link ActionOwnership}
+ * or a fresh {@link InputBinding} uses to tell a batch that predates the
+ * moment it started observing (still sitting in the same real frame's shared
+ * log from earlier, unrelated activity) apart from one that arrived after —
+ * see {@link ActionOwnership.arm}.
+ *
  * @internal
  */
 export interface ChannelEventBatch {
   readonly channels: readonly ChannelEvent[];
+  readonly sequence: number;
 }
 
 /**
@@ -94,6 +103,7 @@ export interface ActionSample {
 export class ActionOwnership {
   private _sample: ActionSample | null = null;
   private _frameId = -1;
+  private _watermark = 0;
 
   /**
    * Resolve `sample` against whichever owner last drove this map.
@@ -124,6 +134,38 @@ export class ActionOwnership {
     this._frameId = sample.frameId;
 
     return 'baseline';
+  }
+
+  /**
+   * Record the batch-sequence watermark as of the moment this map started
+   * (or resumed) observing its current owner — called from
+   * {@link ActionMapBase._attach} and from `InputManager._resyncActionMap`.
+   * The next `resolve()` call that returns `'baseline'` uses it, via
+   * {@link filterBatches}, to replay only batches pushed at-or-after this
+   * moment, discarding anything still sitting in the same real frame's
+   * shared log from BEFORE this map started watching — see
+   * {@link ChannelEventBatch}'s doc comment.
+   */
+  public arm(watermark: number): void {
+    this._watermark = watermark;
+  }
+
+  /**
+   * `sample` with its batches restricted to those pushed after this
+   * ownership's current watermark. Called only on a `'baseline'`
+   * resolution — a `'frame'` resolution's batches are, by construction,
+   * always newer than any watermark that could still be relevant, so
+   * filtering them would be a no-op performed every single frame.
+   */
+  public filterBatches(sample: ActionSample): ActionSample {
+    const { batches } = sample;
+    const filtered = batches.filter(batch => batch.sequence > this._watermark);
+
+    if (filtered.length === batches.length) {
+      return sample;
+    }
+
+    return { values: sample.values, batches: filtered, frameId: sample.frameId };
   }
 
   /** Forget the current owner, as if this map had never been sampled. */

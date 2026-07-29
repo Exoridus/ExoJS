@@ -66,16 +66,30 @@ export class InputBinding {
   private readonly _detacher: InternalChannelDetacher | null;
   /** Last known value of each bound channel, in `channels` order — the replay baseline `update` advances. */
   private readonly _channelValues: Float32Array;
-  /** `false` until the first `update()` call, which always baselines from the live buffer directly — see `update`'s doc comment. */
+  /**
+   * Batch-sequence watermark as of construction — see
+   * {@link ChannelEventBatch}'s doc comment. Only consulted on the very
+   * first `update()` call that supplies batches at all: it filters out any
+   * batch pushed BEFORE this binding existed, still sitting in the owner's
+   * shared per-frame log from earlier activity, while still replaying one
+   * pushed after construction even on that same first call (a full
+   * press-then-release that happens strictly after `new InputBinding(...)`
+   * but is only first observed on its first `update()` must still fire
+   * `onStart`/`onStop`/`onTrigger` — not be silently swallowed the way a
+   * bare live-value read on that first call would).
+   */
+  private readonly _watermark: number;
+  /** `false` until the first `update()` call — see `update`'s doc comment. */
   private _seeded = false;
   private _value = 0;
   private _unbound = false;
 
-  public constructor(channels: readonly number[], options: InputBindingOptions = {}, detacher: InternalChannelDetacher | null = null) {
+  public constructor(channels: readonly number[], options: InputBindingOptions = {}, detacher: InternalChannelDetacher | null = null, watermark = 0) {
     this.channels = channels;
     this._triggerTimer = new Timer(Time.fromMilliseconds(options.threshold ?? InputBinding.defaultTriggerThreshold));
     this._detacher = detacher;
     this._channelValues = new Float32Array(channels.length);
+    this._watermark = watermark;
   }
 
   /** Last value sampled this frame. 0 when inactive. */
@@ -92,21 +106,23 @@ export class InputBinding {
    * Read the latest channel state and dispatch the appropriate Signals.
    * Called once per frame by the owning manager.
    *
-   * `batches` — when supplied and this binding has already seeded itself
-   * once before — is replayed in true order, evaluating the aggregate value
-   * once per whole batch (see {@link ChannelEventBatch}'s doc comment), so a
-   * full activate-then-release within a single frame still fires
-   * `onStart`/`onStop`/`onTrigger` instead of being invisible to a
-   * once-per-frame snapshot of `channels`. Omitted entirely by callers with
-   * no ordered history of their own (e.g. {@link Gamepad}'s per-slot
-   * bindings) — falls back to reading `channels` directly, exactly as
-   * before, which is also what the very FIRST call ever does regardless of
-   * `batches`: a fresh binding baselines from the live buffer with no
-   * synthetic edge, then only reports real transitions relative to that
-   * baseline as later batches replay — a channel already active before this
-   * binding started observing correctly reports `onStart` immediately on
-   * that first call, exactly as the previous once-per-frame design always
-   * did, not a regression to guard against here.
+   * `batches`, when supplied, is replayed in true order, evaluating the
+   * aggregate value once per whole batch (see {@link ChannelEventBatch}'s
+   * doc comment), so a full activate-then-release within a single frame
+   * still fires `onStart`/`onStop`/`onTrigger` instead of being invisible to
+   * a once-per-frame snapshot of `channels`. Omitted entirely by callers
+   * with no ordered history of their own (e.g. {@link Gamepad}'s per-slot
+   * bindings) — falls back to reading `channels` directly, on every call,
+   * exactly as before.
+   *
+   * The very first call that DOES supply batches filters them against
+   * {@link _watermark} first (see its own doc comment) — anything that
+   * predates construction seeds this binding's baseline from the live
+   * buffer with no synthetic edge, exactly as a plain live-value read always
+   * did, while anything after is replayed for real transitions, even on
+   * that very first call. A frame with no batch touching this binding's own
+   * channels — before or after seeding — still evaluates once, so a source
+   * held continuously active keeps firing {@link onActive} every real frame.
    *
    * @internal
    */
@@ -115,17 +131,112 @@ export class InputBinding {
       return;
     }
 
-    if (!this._seeded || batches === undefined || batches.length === 0) {
+    if (batches === undefined) {
       this._seeded = true;
 
       for (let i = 0; i < this.channels.length; i++) {
         this._channelValues[i] = channels[this.channels[i]!] ?? 0;
       }
 
-      this._evaluateTransition();
+      this._replayOrEvaluate([]);
 
       return;
     }
+
+    const relevant = this._seeded ? batches : batches.filter(batch => batch.sequence > this._watermark);
+
+    if (!this._seeded) {
+      this._seeded = true;
+      this._seedUntouchedChannels(channels, batches, relevant);
+
+      if (relevant.length > 0) {
+        // Establish the seeded baseline's active/inactive state (dispatching
+        // `onStart` if the seed reveals an already-active source, exactly as
+        // a plain live-value read always did) BEFORE replaying `relevant` on
+        // top of it — otherwise a channel seeded active from a pre-watermark
+        // batch (see `_seedUntouchedChannels`) would look, to the replay
+        // below, like it started this call at 0, and a genuine release
+        // within `relevant` would go undetected for want of a prior `onStart`
+        // to release FROM. A no-op when the seed left everything at 0.
+        this._applyEdge();
+      }
+    }
+
+    this._replayOrEvaluate(relevant);
+  }
+
+  /**
+   * Seed every bound channel `relevant` (the batches this call will actually
+   * replay) does NOT touch, directly from the live buffer — with no
+   * synthetic edge, exactly like a plain live-value read. A channel `relevant`
+   * DOES touch is instead seeded from the last value a PRE-watermark batch
+   * (one filtered out of `relevant`, in `allBatches`) gave it, if any — so a
+   * press recorded before this binding existed and released after it is
+   * still seen as a real release rather than starting the replay from an
+   * assumed 0 (see `update`'s doc comment on the follow-up `_applyEdge`
+   * call). Left at 0 when NEITHER exists, matching the same accepted
+   * assumption `ButtonAction._seedUntouchedChannels` makes for a channel
+   * with no prior baseline to seed from at all.
+   */
+  private _seedUntouchedChannels(channels: Float32Array, allBatches: readonly ChannelEventBatch[], relevant: readonly ChannelEventBatch[]): void {
+    const relevantSet = new Set(relevant);
+    const touchedByRelevant = new Set<number>();
+    const preWatermarkValue = new Map<number, number>();
+
+    for (const batch of relevant) {
+      for (const event of batch.channels) {
+        touchedByRelevant.add(event.channel);
+      }
+    }
+
+    for (const batch of allBatches) {
+      if (relevantSet.has(batch)) {
+        continue;
+      }
+
+      for (const event of batch.channels) {
+        preWatermarkValue.set(event.channel, event.value);
+      }
+    }
+
+    for (let i = 0; i < this.channels.length; i++) {
+      const channel = this.channels[i]!;
+
+      if (!touchedByRelevant.has(channel)) {
+        this._channelValues[i] = channels[channel] ?? 0;
+        continue;
+      }
+
+      const preValue = preWatermarkValue.get(channel);
+
+      if (preValue !== undefined) {
+        this._channelValues[i] = preValue;
+      }
+    }
+  }
+
+  /**
+   * Replay `batches` — already filtered to whatever this call should see —
+   * applying each to `_channelValues` and checking for a real threshold
+   * crossing once per batch that actually touched a bound channel (never
+   * mid-batch; see {@link ChannelEventBatch}'s doc comment). An empty
+   * `batches` (nothing to replay this call, or none of it touched a bound
+   * channel) still performs exactly one crossing check against the CURRENT
+   * `_channelValues` — the same thing a plain once-per-frame read would do —
+   * so a channel seeded active on this very call, or one simply held active
+   * with nothing new to report, is still detected correctly.
+   *
+   * `onActive` fires once per real crossing INTO the active state (alongside
+   * `onStart`), plus, if the call ends active without ever crossing into it
+   * this call (held continuously from before, or only OTHER channels'
+   * batches arrived), exactly once more at the end — never once per
+   * individual batch that merely keeps an already-active value active,
+   * which would over-fire for a source whose magnitude jitters across
+   * several batches within one frame without ever actually releasing.
+   */
+  private _replayOrEvaluate(batches: readonly ChannelEventBatch[]): void {
+    let activeDispatched = false;
+    let anyEdgeChecked = false;
 
     for (const batch of batches) {
       let touchedBoundChannel = false;
@@ -141,14 +252,39 @@ export class InputBinding {
         touchedBoundChannel = true;
       }
 
-      if (touchedBoundChannel) {
-        this._evaluateTransition();
+      if (!touchedBoundChannel) {
+        continue;
       }
+
+      anyEdgeChecked = true;
+
+      if (this._applyEdge()) {
+        activeDispatched = true;
+      }
+    }
+
+    if (!anyEdgeChecked && this._applyEdge()) {
+      activeDispatched = true;
+    }
+
+    if (!activeDispatched && this._value !== 0) {
+      this.onActive.dispatch(this._value);
     }
   }
 
-  /** Recompute the aggregate value from `_channelValues` and dispatch a transition if the active/inactive state changed. */
-  private _evaluateTransition(): void {
+  /**
+   * Recompute the aggregate value from `_channelValues` and dispatch a
+   * transition only on a REAL crossing — `onStart` (paired with `onActive`)
+   * on 0 → nonzero, `onStop` (and `onTrigger`, if within the tap window) on
+   * nonzero → 0. A value that stays on the same side of zero (still active,
+   * still inactive) dispatches nothing here; see {@link _replayOrEvaluate}
+   * for the once-per-call `onActive` re-confirmation that covers that case
+   * instead.
+   *
+   * @returns `true` iff this call dispatched `onActive` (the entering
+   * crossing), so the caller knows not to dispatch it again.
+   */
+  private _applyEdge(): boolean {
     let value = 0;
 
     for (let i = 0; i < this._channelValues.length; i++) {
@@ -162,13 +298,18 @@ export class InputBinding {
     this._value = value;
 
     if (value !== 0) {
-      if (!this._triggerTimer.running) {
-        this._triggerTimer.restart();
-        this.onStart.dispatch(value);
+      if (this._triggerTimer.running) {
+        return false;
       }
 
+      this._triggerTimer.restart();
+      this.onStart.dispatch(value);
       this.onActive.dispatch(value);
-    } else if (this._triggerTimer.running) {
+
+      return true;
+    }
+
+    if (this._triggerTimer.running) {
       this.onStop.dispatch(0);
 
       if (!this._triggerTimer.expired) {
@@ -177,6 +318,8 @@ export class InputBinding {
 
       this._triggerTimer.stop();
     }
+
+    return false;
   }
 
   /**

@@ -10,20 +10,20 @@ export type Action = ButtonAction | AxisAction | VectorAction;
 /** The shape an {@link ActionMap} is built from. */
 export type ActionRecord = Readonly<Record<string, Action>>;
 
-/** Owner an action map detaches itself from. @internal */
+/**
+ * Owner an action map detaches itself from. @internal
+ *
+ * `_currentBatchSequence` is optional so a stub/legacy owner still satisfies
+ * this interface: {@link ActionMapBase._attach} falls back to `0` when it is
+ * absent, which reproduces the OLD (pre-watermark) behavior for that owner —
+ * replay every batch in the first post-attach sample rather than filtering
+ * out anything that predates the attach. A real owner (an `InputManager`)
+ * always implements it.
+ */
 export interface ActionMapOwner {
   _detachActionMap(map: ActionMapBase<ActionRecord>): void;
+  _currentBatchSequence?(): number;
 }
-
-/**
- * Own members of {@link ActionMapBase} — the constructor assigns every action
- * directly onto the instance (`Object.assign(this, actions)`), so an action
- * named after one of these would silently overwrite it (`actions` collapsing
- * from the internal array to a single Action being the most damaging: it
- * breaks `_update`/`_reset` for every action the map owns, not just the
- * colliding one) instead of throwing anywhere near the mistake.
- */
-const reservedActionMapNames: ReadonlySet<string> = new Set(['actions', 'attached', 'detach', '_owner', '_attach', '_update', '_reset']);
 
 /**
  * Every action instance ever bound into an {@link ActionMap}, for the
@@ -35,22 +35,27 @@ const reservedActionMapNames: ReadonlySet<string> = new Set(['actions', 'attache
 const claimedActions = new WeakSet<Action>();
 
 /**
- * Claim `action` for a map being constructed, under `name`. Throws
- * immediately — not a runtime warning — the moment the SAME instance would
- * end up reachable from more than one map, or twice under different names
- * in the same one: either would silently corrupt whichever map samples it
- * second, since an action carries frame-to-frame edge memory that assumes a
- * single, exclusive caller.
+ * Assert `action` (declared under `name`) is claimable by a map under
+ * construction, given the OTHER actions already validated earlier in the
+ * same call (`pending`). Throws immediately — not a runtime warning — the
+ * moment the SAME instance would end up reachable from more than one map, or
+ * twice under different names in the same one: either would silently
+ * corrupt whichever map samples it second, since an action carries
+ * frame-to-frame edge memory that assumes a single, exclusive caller.
+ *
+ * Deliberately read-only: {@link ActionMapBase}'s constructor validates
+ * every entry with this BEFORE committing any of them to the module-level
+ * `claimedActions` set, so a later entry failing validation never leaves an
+ * earlier one permanently — and incorrectly — marked claimed for a map that
+ * was never actually built.
  */
-function claimAction(action: Action, name: string): void {
-  if (claimedActions.has(action)) {
+function assertClaimable(action: Action, name: string, pending: ReadonlySet<Action>): void {
+  if (claimedActions.has(action) || pending.has(action)) {
     throw new Error(
       `ActionMap: the action bound to "${name}" already belongs to another ActionMap (or is used twice, or under another name, in this one). ` +
         'Each Action instance belongs to exactly one ActionMap for its whole lifetime — construct a separate instance per map instead.',
     );
   }
-
-  claimedActions.add(action);
 }
 
 /**
@@ -95,14 +100,26 @@ class ActionMapBase<T extends ActionRecord> {
   private readonly _ownership = new ActionOwnership();
 
   public constructor(actions: T) {
-    for (const [name, action] of Object.entries(actions)) {
+    const entries = Object.entries(actions);
+    // Validated but not yet committed to the module-level `claimedActions`
+    // set — see `assertClaimable`'s doc comment for why the two passes below
+    // must not be collapsed into one.
+    const pending = new Set<Action>();
+
+    for (const [name, action] of entries) {
       if (reservedActionMapNames.has(name)) {
         throw new Error(
           `ActionMap: "${name}" collides with ActionMap's own API and cannot be used as an action name. Reserved names: ${[...reservedActionMapNames].sort().join(', ')}.`,
         );
       }
 
-      claimAction(action, name);
+      assertClaimable(action, name, pending);
+      pending.add(action);
+    }
+
+    // Every entry validated clean — now, and only now, commit them all.
+    for (const action of pending) {
+      claimedActions.add(action);
     }
 
     this.actions = Object.values(actions);
@@ -131,13 +148,30 @@ class ActionMapBase<T extends ActionRecord> {
 
   /**
    * Bind this map to an owner. Detaches from a previous owner first, so a map
-   * is only ever updated once per frame.
+   * is only ever updated once per frame. Arms the ownership watermark against
+   * the owner's CURRENT batch sequence — see {@link ActionOwnership.arm} —
+   * so the baseline `_update` call this attach leads to replays only
+   * activity that happened after this very moment, not whatever the owner's
+   * shared batch log already held from earlier in the same real frame.
    *
    * @internal
    */
   public _attach(owner: ActionMapOwner): void {
     this.detach();
     this._owner = owner;
+    this._ownership.arm(owner._currentBatchSequence?.() ?? 0);
+  }
+
+  /**
+   * Re-arm the ownership watermark without a fresh `_attach` — used by
+   * `InputManager._resyncActionMap` (scene resume), which resyncs a map that
+   * stays with the SAME owner throughout a suspend/resume cycle and so never
+   * goes through `_attach` again.
+   *
+   * @internal
+   */
+  public _armBaseline(watermark: number): void {
+    this._ownership.arm(watermark);
   }
 
   /**
@@ -150,6 +184,13 @@ class ActionMapBase<T extends ActionRecord> {
    * for a first-ever attach — never recorded a channel's already-current
    * value in the first place, and — for a genuine owner change — belong to
    * an unrelated buffer.
+   *
+   * A `'baseline'` resolution additionally restricts the batches handed to
+   * every action to those at-or-after the ownership's watermark (see
+   * {@link ActionOwnership.filterBatches}), so a map attached or resynced
+   * partway through the CURRENT real frame does not replay activity that was
+   * already sitting in the owner's shared batch log before it started
+   * watching.
    *
    * @internal
    */
@@ -170,8 +211,10 @@ class ActionMapBase<T extends ActionRecord> {
       }
     }
 
+    const effectiveSample = resolution === 'baseline' ? this._ownership.filterBatches(sample) : sample;
+
     for (const action of this.actions) {
-      action._update(sample);
+      action._update(effectiveSample);
     }
   }
 
@@ -184,6 +227,34 @@ class ActionMapBase<T extends ActionRecord> {
     this._ownership.reset();
   }
 }
+
+/**
+ * Names an action cannot be declared under — the constructor assigns every
+ * action directly onto the instance (`Object.assign(this, actions)`), so an
+ * action named after one of these would silently overwrite it (`actions`
+ * collapsing from the internal array to a single Action being the most
+ * damaging: it breaks `_update`/`_reset` for every action the map owns, not
+ * just the colliding one) instead of throwing anywhere near the mistake.
+ *
+ * `Object.getOwnPropertyNames(ActionMapBase.prototype)` covers everything
+ * declared as a prototype member — `constructor`, `attached`, `detach`,
+ * `_attach`, `_armBaseline`, `_update`, `_reset` — but class FIELDS
+ * (`actions`, `_owner`, `_ownership`) are assigned per-instance in the
+ * constructor, never on the prototype, so reflection alone cannot see them;
+ * they are listed explicitly instead. `__proto__` and `prototype` are listed
+ * for the same reason `constructor` already is: an action map built from
+ * attacker- or tool-generated config (modding, a level editor's save format)
+ * must reject them exactly like any other collision rather than silently
+ * reaching into the prototype chain via `Object.assign`.
+ */
+const reservedActionMapNames: ReadonlySet<string> = new Set([
+  'actions',
+  '_owner',
+  '_ownership',
+  '__proto__',
+  'prototype',
+  ...Object.getOwnPropertyNames(ActionMapBase.prototype),
+]);
 
 /**
  * Constructing an `ActionMap` returns the map's own members *and* the actions

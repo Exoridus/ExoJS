@@ -131,6 +131,16 @@ export class InputManager {
    * per-channel bits. See {@link ActionSample}'s doc comment.
    */
   private readonly frameBatches: ChannelEventBatch[] = [];
+  /**
+   * Monotonic counter stamped onto every {@link ChannelEventBatch} pushed
+   * into {@link frameBatches} — unlike `frameBatches` itself, NEVER reset
+   * once a frame closes. The watermark an {@link ActionMapBase._attach} (or
+   * `InputBinding`'s own constructor) snapshots the CURRENT value of to tell
+   * a batch that predates the moment it started observing — still sitting in
+   * the shared log from earlier in the same real frame — apart from one that
+   * arrived after. See {@link ChannelEventBatch}'s doc comment.
+   */
+  private _batchSequence = 0;
   private readonly pointers = new Map<number, Pointer>();
   private readonly _gamepads: readonly [Gamepad, Gamepad, Gamepad, Gamepad];
   private readonly gamepadsByBrowserIndex = new Map<number, Gamepad>();
@@ -437,6 +447,17 @@ export class InputManager {
   }
 
   /**
+   * Current value of the monotonic batch-sequence counter — the watermark an
+   * {@link ActionMapOwner} hands to an {@link ActionMapBase} on `_attach`.
+   * See {@link _batchSequence}'s doc comment.
+   *
+   * @internal
+   */
+  public _currentBatchSequence(): number {
+    return this._batchSequence;
+  }
+
+  /**
    * Eagerly re-baseline `map` against this frame's real channel state,
    * without treating a still-held source as a fresh press. Used by
    * {@link SceneInputs.resume}, immediately after a preceding
@@ -445,11 +466,16 @@ export class InputManager {
    * the correct state. `_update` forwards straight through here: with the
    * map's ownership tracker already reset, it resolves to the SAME baseline
    * path a fresh attach or a genuine handoff would (see
-   * {@link ButtonAction._update}'s doc comment).
+   * {@link ButtonAction._update}'s doc comment). Re-arms the watermark first
+   * (see {@link ActionMapBase._armBaseline}) since this map stays with the
+   * SAME owner across the suspend/resume cycle and so never goes through
+   * `_attach` again — without this, a resume triggered partway through the
+   * current real frame could replay batches that predate the resume.
    *
    * @internal
    */
   public _resyncActionMap(map: ActionMap): void {
+    map._armBaseline(this._batchSequence);
     map._update(this.actionSample);
   }
 
@@ -596,7 +622,7 @@ export class InputManager {
     const list: readonly InputChannel[] = Array.isArray(channel) ? channel : [channel];
     const slot = options.gamepadSlot ?? 0;
     const resolved = list.map(c => resolveGamepadSlotChannel(c, slot));
-    const binding = new InputBinding(resolved, options, this.bindingDetacher);
+    const binding = new InputBinding(resolved, options, this.bindingDetacher, this._batchSequence);
     this.bindings.add(binding);
 
     for (const ch of resolved) {
@@ -663,7 +689,7 @@ export class InputManager {
     }
 
     if (batch !== null) {
-      frameBatches.push({ channels: batch });
+      frameBatches.push({ channels: batch, sequence: ++this._batchSequence });
     }
   }
 
