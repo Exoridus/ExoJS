@@ -39,8 +39,6 @@ enum InputManagerFlag {
   None = 0,
   KeyChange = 1 << 0,
   MouseWheel = 1 << 1,
-  PointerUpdate = 1 << 2,
-  ContextMenu = 1 << 3,
 }
 
 /** One keyboard channel transition, in the exact order it happened. */
@@ -48,6 +46,50 @@ interface KeyChannelEvent {
   readonly channel: number;
   readonly pressed: boolean;
 }
+
+/**
+ * One pointer phase, recorded in the EXACT global arrival order across every
+ * tracked pointer — not merely ordered within its own pointer's sub-sequence.
+ * See {@link JournalEntry}'s doc comment for why this has to be a single flat
+ * structure rather than one list per pointer.
+ */
+interface PointerJournalEntry {
+  readonly kind: 'pointer';
+  readonly pointer: Pointer;
+  readonly flag: PointerStateFlag;
+  readonly x: number;
+  readonly y: number;
+  /** `Up` only: whether this release closed an actual press (not a stray `pointerup`). */
+  readonly closedPress: boolean;
+  /** `Up` only: the press excursion accumulated during the press THIS release closed. */
+  readonly maxDistance: number;
+}
+
+/** A context-menu request, recorded in the exact position it arrived relative to every pointer phase. */
+interface ContextMenuJournalEntry {
+  readonly kind: 'contextmenu';
+  readonly request: ContextMenuRequest;
+}
+
+/**
+ * One real-world pointer occurrence — a single pointer phase OR a single
+ * context-menu request — in the exact chronological order the platform
+ * raised it, spanning every tracked pointer AND every context-menu request
+ * together in one flat sequence. Appended directly at the raw DOM handler
+ * call sites (`handlePointerOver`/`handlePointerDown`/`handlePointerMove`/
+ * `handlePointerUp`/`handlePointerLeave`/`handlePointerCancel`/
+ * `handleContextMenu`) — the only place true arrival order across different
+ * pointers (and interleaved with a context-menu request) is still
+ * observable. Reconstructing it afterward from each {@link Pointer}'s own
+ * per-pointer phase list cannot recover an interleaving like
+ * `P1 Down -> P2 Down -> P1 Up`: per-pointer buffering, dispatched one
+ * pointer's whole list at a time, would silently turn that into
+ * `P1 Down, P1 Up, P2 Down`. Drained once per frame by
+ * {@link InputManager._drainJournal}, in this same order, then cleared —
+ * mirroring {@link InputManager.keyEvents}'s own append/drain/clear
+ * lifecycle, just for pointers and context-menu requests together.
+ */
+type JournalEntry = PointerJournalEntry | ContextMenuJournalEntry;
 
 /**
  * Owns the unified input pipeline for an {@link Application}: keyboard
@@ -139,8 +181,12 @@ export class InputManager {
   private pointerDistanceThreshold: number;
   private readonly allowNativeContextMenu: boolean;
   private readonly allowTextSelection: boolean;
-  /** Context-menu request recorded since the last frame, if any. */
-  private contextMenuRequest: ContextMenuRequest | null = null;
+  /**
+   * Every pointer phase and context-menu request since the last flush, in
+   * true global chronological arrival order — see {@link JournalEntry}'s doc
+   * comment.
+   */
+  private readonly journal: JournalEntry[] = [];
 
   /** Platform subscriptions held for the manager's lifetime, undone on destroy. */
   private readonly listeners: PlatformSubscription[] = [];
@@ -467,7 +513,7 @@ export class InputManager {
       map._update(this.actionSample);
     }
 
-    if (this.flags.value !== InputManagerFlag.None) {
+    if (this.flags.value !== InputManagerFlag.None || this.journal.length > 0) {
       this.updateEvents();
     }
 
@@ -514,6 +560,7 @@ export class InputManager {
     this.gamepadsByBrowserIndex.clear();
     this.keyEvents.length = 0;
     this.frameBatches.length = 0;
+    this.journal.length = 0;
     this.pointerSlots.clear();
     this.freeSlots.length = 0;
     this.wheelOffset.destroy();
@@ -637,13 +684,13 @@ export class InputManager {
   /**
    * Fully retire a pointer whose FINAL state this flush is terminal (left
    * the canvas, or was cancelled): drop its map entry and slot TOGETHER, and
-   * `destroy()` it. Checked once per pointer, after its entire phase list
-   * has dispatched (see {@link updatePointerEvents}) — never mid-dispatch,
-   * and never at the raw platform-event handler that first observed the
+   * `destroy()` it. Checked once per pointer, after the WHOLE global journal
+   * has dispatched (see {@link _drainJournal}) — never mid-dispatch, and
+   * never at the raw platform-event handler that first observed the
    * Leave/Cancel. Releasing the slot any earlier would let a DIFFERENT
    * pointerId's `pointerover` claim it later the SAME flush while this
-   * pointer's own Leave/Cancel phase is still sitting undispatched in its
-   * phase list — corrupting the shared channel slot both would then be
+   * pointer's own Leave/Cancel entry is still sitting undispatched in the
+   * journal — corrupting the shared channel slot both would then be
    * writing into. A same-flush re-entry (see {@link handlePointerOver}'s doc
    * comment) leaves this pointer's final state something other than
    * terminal, so it is correctly skipped here rather than retired out from
@@ -709,7 +756,7 @@ export class InputManager {
     if (existing !== undefined) {
       existing.handleEnter(event);
       this._recordPointerChanges(existing);
-      this.flags.push(InputManagerFlag.PointerUpdate);
+      this._pushPointerPhase(existing, PointerStateFlag.Over, existing.x, existing.y);
 
       return;
     }
@@ -724,7 +771,7 @@ export class InputManager {
 
     this.pointers.set(event.pointerId, pointer);
     this._recordPointerChanges(pointer);
-    this.flags.push(InputManagerFlag.PointerUpdate);
+    this._pushPointerPhase(pointer, PointerStateFlag.Over, pointer.x, pointer.y);
   }
 
   private handlePointerLeave(event: PointerEvent): void {
@@ -737,7 +784,7 @@ export class InputManager {
     pointer.handleLeave(event);
     this._recordPointerChanges(pointer);
     this.gestureRecognizer.onPointerLeave(pointer);
-    this.flags.push(InputManagerFlag.PointerUpdate);
+    this._pushPointerPhase(pointer, PointerStateFlag.Leave, pointer.x, pointer.y);
   }
 
   private handlePointerDown(event: PointerEvent): void {
@@ -753,7 +800,7 @@ export class InputManager {
     pointer.handlePress(event);
     this._recordPointerChanges(pointer);
     this.gestureRecognizer.onPointerDown(pointer);
-    this.flags.push(InputManagerFlag.PointerUpdate);
+    this._pushPointerPhase(pointer, PointerStateFlag.Down, pointer.x, pointer.y);
 
     stopEvent(event);
   }
@@ -768,7 +815,7 @@ export class InputManager {
     pointer.handleMove(event);
     this._recordPointerChanges(pointer);
     this.gestureRecognizer.onPointerMove(pointer, this.pointerDistanceThreshold);
-    this.flags.push(InputManagerFlag.PointerUpdate);
+    this._pushPointerPhase(pointer, PointerStateFlag.Move, pointer.x, pointer.y);
   }
 
   private handlePointerUp(event: PointerEvent): void {
@@ -778,10 +825,11 @@ export class InputManager {
       return;
     }
 
-    pointer.handleRelease(event);
+    const { closedPress, maxDistance } = pointer.handleRelease(event);
+
     this._recordPointerChanges(pointer);
     this.gestureRecognizer.onPointerUp(pointer);
-    this.flags.push(InputManagerFlag.PointerUpdate);
+    this._pushPointerPhase(pointer, PointerStateFlag.Up, pointer.x, pointer.y, closedPress, maxDistance);
 
     stopEvent(event);
   }
@@ -796,7 +844,30 @@ export class InputManager {
     pointer.handleCancel(event);
     this._recordPointerChanges(pointer);
     this.gestureRecognizer.onPointerCancel(pointer);
-    this.flags.push(InputManagerFlag.PointerUpdate);
+    this._pushPointerPhase(pointer, PointerStateFlag.Cancel, pointer.x, pointer.y);
+  }
+
+  /**
+   * Append one pointer phase to the global journal in the exact order it
+   * arrived — see {@link JournalEntry}'s doc comment. Two `Move` entries
+   * coalesce ONLY when they are immediately adjacent in this GLOBAL order for
+   * the SAME pointer: `P1 Move, P2 Move, P1 Move` stays three entries (a `P2`
+   * entry sits between the two `P1` moves), while `P1 Move, P1 Move` collapses
+   * into the latest — several platform moves in a row for one pointer are
+   * never individually meaningful.
+   */
+  private _pushPointerPhase(pointer: Pointer, flag: PointerStateFlag, x: number, y: number, closedPress = false, maxDistance = 0): void {
+    const { journal } = this;
+    const lastIndex = journal.length - 1;
+    const last = journal[lastIndex];
+
+    if (flag === PointerStateFlag.Move && last !== undefined && last.kind === 'pointer' && last.flag === PointerStateFlag.Move && last.pointer === pointer) {
+      journal[lastIndex] = { kind: 'pointer', pointer, flag, x, y, closedPress: false, maxDistance: 0 };
+
+      return;
+    }
+
+    journal.push({ kind: 'pointer', pointer, flag, x, y, closedPress, maxDistance });
   }
 
   /**
@@ -811,6 +882,13 @@ export class InputManager {
    * native event with no pointer ever having touched the surface, so a
    * missing pointer must not suppress the request itself. `_primaryPointer()`
    * is still attached when one exists, as best-effort attribution only.
+   *
+   * Appended to the SAME global journal every pointer phase goes through
+   * (never a single overwritable slot — see {@link JournalEntry}'s doc
+   * comment), so two requests arriving in one frame both survive as separate
+   * entries, and this request's position relative to any pointer phase
+   * already queued this flush reflects the platform's true arrival order
+   * rather than a fixed type-order.
    */
   private handleContextMenu(event: MouseEvent): void {
     if (!this.allowNativeContextMenu) {
@@ -818,9 +896,9 @@ export class InputManager {
     }
 
     const { x, y } = computeDesignPoint(this._app, this.platform, event.clientX, event.clientY);
+    const request: ContextMenuRequest = { x, y, pointer: this._primaryPointer() };
 
-    this.contextMenuRequest = { x, y, pointer: this._primaryPointer() };
-    this.flags.push(InputManagerFlag.ContextMenu);
+    this.journal.push({ kind: 'contextmenu', request });
   }
 
   /** The pointer a canvas-level event without a pointerId should be attributed to. */
@@ -1088,82 +1166,88 @@ export class InputManager {
       this.wheelOffset.set(0, 0);
     }
 
-    if (this.flags.pop(InputManagerFlag.PointerUpdate)) {
-      this.updatePointerEvents();
-    }
-
-    if (this.flags.pop(InputManagerFlag.ContextMenu)) {
-      const request = this.contextMenuRequest;
-
-      this.contextMenuRequest = null;
-
-      // Fires regardless of `request.pointer` — see this signal's own doc
-      // comment for why a missing pointer must not swallow the request.
-      if (request !== null) {
-        this.onContextMenu.dispatch(request);
-      }
+    if (this.journal.length > 0) {
+      this._drainJournal();
     }
 
     return this;
   }
 
   /**
-   * Dispatch this frame's pointer phases in the exact chronological order
-   * {@link Pointer._phaseList} recorded them — not a fixed type order — so
-   * an Up followed by a Down within one frame dispatches in that same order
-   * rather than always Down-before-Up, and two discrete presses in one frame
-   * each get their own `onPointerDown` instead of collapsing into one.
+   * Dispatch this frame's pointer phases AND context-menu requests in the
+   * exact global chronological order {@link journal} recorded them — not a
+   * fixed type order, and not grouped per pointer — so `P1 Down -> P2 Down ->
+   * P1 Up` dispatches in exactly that order, an Up followed by a Down within
+   * one frame dispatches in that same order rather than always
+   * Down-before-Up, two discrete presses in one frame each get their own
+   * `onPointerDown` instead of collapsing into one, and a context-menu
+   * request dispatches relative to whichever pointer phases it actually
+   * arrived between rather than always after every pointer phase.
    *
    * Retirement (see {@link _retirePointer}'s doc comment) is checked in a
    * SEPARATE pass afterward, once per pointer, keyed on that pointer's FINAL
-   * state for the flush — never mid-phase-list. A Leave phase sitting
-   * anywhere but last in the list (a same-flush re-entry followed it) must
-   * not have its object/slot torn down while a later `Over` phase for that
-   * SAME pointer is still waiting to dispatch.
+   * state for the flush — never mid-journal. A Leave entry sitting anywhere
+   * but last for its pointer (a same-flush re-entry followed it) must not
+   * have its object/slot torn down while a later `Over` entry for that SAME
+   * pointer, or a context-menu request attributed to it, is still waiting to
+   * dispatch — and a request attributed to a pointer that left/was cancelled
+   * earlier this SAME flush is guaranteed to see that still-live Pointer
+   * object here, never an already-retired one.
    */
-  private updatePointerEvents(): void {
-    for (const pointer of this.pointers.values()) {
-      for (const phase of pointer._phaseList) {
-        switch (phase.flag) {
-          case PointerStateFlag.Over:
-            this.onPointerEnter.dispatch(pointer, phase.x, phase.y);
-            break;
+  private _drainJournal(): void {
+    const { journal } = this;
 
-          case PointerStateFlag.Down:
-            this.onPointerDown.dispatch(pointer, phase.x, phase.y);
-            break;
+    for (const entry of journal) {
+      if (entry.kind === 'contextmenu') {
+        // Fires regardless of `request.pointer` — see this signal's own doc
+        // comment for why a missing pointer must not swallow the request.
+        this.onContextMenu.dispatch(entry.request);
+        continue;
+      }
 
-          case PointerStateFlag.Move:
-            this.onPointerMove.dispatch(pointer, phase.x, phase.y);
-            break;
+      const { pointer, x, y } = entry;
 
-          case PointerStateFlag.Up:
-            this.onPointerUp.dispatch(pointer, phase.x, phase.y);
+      switch (entry.flag) {
+        case PointerStateFlag.Over:
+          this.onPointerEnter.dispatch(pointer, x, y);
+          break;
 
-            // A press that travelled far and came back is a swipe, not a tap —
-            // hence THIS press's own accumulated maximum, not the release distance.
-            if (phase.closedPress) {
-              if (phase.maxDistance < this.pointerDistanceThreshold) {
-                this.onPointerTap.dispatch(pointer, phase.x, phase.y);
-              } else {
-                this.onPointerSwipe.dispatch(pointer, phase.x, phase.y);
-              }
+        case PointerStateFlag.Down:
+          this.onPointerDown.dispatch(pointer, x, y);
+          break;
+
+        case PointerStateFlag.Move:
+          this.onPointerMove.dispatch(pointer, x, y);
+          break;
+
+        case PointerStateFlag.Up:
+          this.onPointerUp.dispatch(pointer, x, y);
+
+          // A press that travelled far and came back is a swipe, not a tap —
+          // hence THIS press's own accumulated maximum, not the release distance.
+          if (entry.closedPress) {
+            if (entry.maxDistance < this.pointerDistanceThreshold) {
+              this.onPointerTap.dispatch(pointer, x, y);
+            } else {
+              this.onPointerSwipe.dispatch(pointer, x, y);
             }
-            break;
+          }
+          break;
 
-          case PointerStateFlag.Cancel:
-            this.onPointerCancel.dispatch(pointer, phase.x, phase.y);
-            break;
+        case PointerStateFlag.Cancel:
+          this.onPointerCancel.dispatch(pointer, x, y);
+          break;
 
-          case PointerStateFlag.Leave:
-            this.onPointerLeave.dispatch(pointer, phase.x, phase.y);
-            break;
+        case PointerStateFlag.Leave:
+          this.onPointerLeave.dispatch(pointer, x, y);
+          break;
 
-          default:
-            break;
-        }
+        default:
+          break;
       }
     }
+
+    journal.length = 0;
 
     for (const pointer of [...this.pointers.values()]) {
       if (pointer.currentState === PointerState.OutsideCanvas || pointer.currentState === PointerState.Cancelled) {

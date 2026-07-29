@@ -353,7 +353,15 @@ export class Pointer {
     this._pushPhase(PointerStateFlag.Move);
   }
 
-  public handleRelease(event: PointerEvent): void {
+  /**
+   * Returns this release's own tap/swipe classification data — whether it
+   * closed an actual press, and that press's accumulated excursion — so the
+   * caller (the raw `pointerup` handler, the only place true global arrival
+   * order across pointers is still observable) can fold it directly onto the
+   * journal entry it builds for this occurrence, rather than reading it back
+   * off internal state that a later phase in the same flush could overwrite.
+   */
+  public handleRelease(event: PointerEvent): { closedPress: boolean; maxDistance: number } {
     this.handleEvent(event);
     this.releasePosition.copy(this.position);
 
@@ -364,6 +372,8 @@ export class Pointer {
     this._currentState = PointerState.Released;
     this._writeChannels(true);
     this._pushPhase(PointerStateFlag.Up, closedPress, maxDistance);
+
+    return { closedPress, maxDistance };
   }
 
   public handleCancel(event: PointerEvent): void {

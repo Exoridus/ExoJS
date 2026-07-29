@@ -783,8 +783,13 @@ describe('InteractionManager — tap', () => {
     sprite.onPointerTap.add(handler);
     // A tap only fires when this release resolves to the same node its own
     // cycle's press landed on — see `_pressTargets`' doc comment — so a
-    // preceding press is required now, not just the release/tap signal.
+    // preceding press is required now, not just the release/tap signal. The
+    // real `InputManager` always dispatches `onPointerUp` immediately before
+    // a conditional `onPointerTap` for the SAME occurrence (see
+    // `InteractionJournalEntry.tap`'s doc comment) — `onPointerTap` folds its
+    // classification onto that Up entry rather than standing alone.
     dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
+    dispatchPointer(signals.onPointerUp, { x: 50, y: 50 });
     dispatchPointer(signals.onPointerTap, { x: 50, y: 50 });
     flushInteractions(im);
 
