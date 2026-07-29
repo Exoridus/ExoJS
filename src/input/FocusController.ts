@@ -160,24 +160,24 @@ export class FocusController implements FocusHooks {
    * next call rather than being discarded.
    */
   private _activeScopeRoot(): RenderNode | null {
-    for (let i = this._scopeStack.length - 1; i >= 0; i--) {
-      const root = this._scopeStack[i]!.root;
+    const index = this._topmostLiveScopeIndex();
 
-      if (this._isOwned(root)) {
-        return root;
-      }
-    }
-
-    return null;
+    return index === -1 ? null : this._scopeStack[index]!.root;
   }
 
   /**
    * Release the scope identified by `token`, wherever it sits in the stack —
    * a targeted removal, never a rebuild of the entries around it. Only
-   * popping the topmost (currently active) scope affects focus: whatever was
-   * focused when that scope was pushed is restored, provided it is still
-   * focusable and — if another scope is now active underneath — still inside
-   * that scope; otherwise focus is cleared rather than left somewhere the
+   * popping the EFFECTIVELY active scope affects focus — the topmost entry
+   * whose root is still live, not necessarily the last physical array
+   * entry: an entry above it that already died (its root destroyed or
+   * detached) was never really the one focus was trapped by, so popping
+   * something BELOW a dead entry must still be recognized as ending the
+   * true active scope, and popping a dead entry itself must not restore
+   * focus as though it had been active. Whatever was focused when the
+   * popped scope was pushed is restored, provided it is still focusable
+   * and — if another scope is now active underneath — still inside that
+   * scope; otherwise focus is cleared rather than left somewhere the
    * newly-active scope does not own. Releasing a scope buried under others
    * (see {@link InteractionScope.release}'s any-order contract) changes
    * nothing about current focus, since the actually-active scope above it is
@@ -190,12 +190,23 @@ export class FocusController implements FocusHooks {
       return;
     }
 
-    const wasActive = index === this._scopeStack.length - 1;
+    const wasEffectivelyActive = index === this._topmostLiveScopeIndex();
     const [entry] = this._scopeStack.splice(index, 1);
 
-    if (wasActive && entry) {
+    if (wasEffectivelyActive && entry) {
       this._restoreFocusAfterPop(entry.previousFocus);
     }
+  }
+
+  /** Index of the topmost entry whose root is still live, or `-1` if none is. See {@link _activeScopeRoot}. */
+  private _topmostLiveScopeIndex(): number {
+    for (let i = this._scopeStack.length - 1; i >= 0; i--) {
+      if (this._isOwned(this._scopeStack[i]!.root)) {
+        return i;
+      }
+    }
+
+    return -1;
   }
 
   /** Move focus to the next focusable node in the active scope (Tab order). */
@@ -206,6 +217,32 @@ export class FocusController implements FocusHooks {
   /** Move focus to the previous focusable node in the active scope (Shift+Tab order). */
   public focusPrevious(): void {
     this._step(-1);
+  }
+
+  /**
+   * Re-enforce the active scope's focus trap right now, rather than waiting
+   * for the next explicit {@link focus} call to notice — called by
+   * {@link InteractionManager._notifyNodeAdded} whenever a subtree attaches
+   * to the scene, since a scope root that was temporarily detached (and so
+   * not actively trapping anything — see {@link _activeScopeRoot}'s doc
+   * comment) may have just become live again. Blurs the currently focused
+   * node if it now sits outside the (possibly newly reactivated) active
+   * scope.
+   *
+   * @internal
+   */
+  public _enforceActiveScopeTrap(): void {
+    const activeScope = this._activeScopeRoot();
+
+    if (activeScope === null) {
+      return;
+    }
+
+    const focused = this._focused;
+
+    if (focused !== null && !this._isInsideScope(focused, activeScope)) {
+      this.blur();
+    }
   }
 
   /** @internal — clear focus when a focused node (or an ancestor of it) leaves the tree. */
@@ -372,24 +409,63 @@ export class FocusController implements FocusHooks {
   }
 
   /**
-   * Collect the focusable nodes of the active scope (the topmost pushed scope,
-   * else the active scene root) in Tab order: ascending `tabIndex`, ties broken
-   * by document (tree) order.
+   * Collect the focusable nodes of the active scope in Tab order: ascending
+   * `tabIndex`, ties broken by document (tree) order. A scope confines
+   * traversal to its own single subtree, whichever layer it lives in — a
+   * modal has no business reaching into the other layer. Without an active
+   * scope, traversal spans BOTH of the scene's layers — `scene.ui` AND
+   * `scene.root` — since a screen-fixed UI button and a world node are both
+   * legitimately Tab-reachable at the same time; `tabIndex` orders across
+   * them exactly as it does within either alone, and a tie between a UI
+   * node and a world node favors the UI one (it paints on top and is the
+   * more likely intended stop).
    */
   private _collectFocusables(): RenderNode[] {
-    const root: RenderNode | null = this._activeScopeRoot() ?? this._app.scenes.currentScene?.root ?? null;
+    const scope = this._activeScopeRoot();
 
-    if (root === null) {
+    if (scope !== null) {
+      const collected: RenderNode[] = [];
+
+      this._collectInto(scope, collected);
+
+      return this._sortFocusables(collected.map(node => ({ node, isUi: false })));
+    }
+
+    const scene = this._app.scenes.currentScene;
+
+    if (scene === null) {
       return [];
     }
 
-    const collected: RenderNode[] = [];
+    const entries: Array<{ node: RenderNode; isUi: boolean }> = [];
+    const uiRoot = scene._peekUI();
 
-    this._collectInto(root, collected);
+    if (uiRoot !== null) {
+      const uiNodes: RenderNode[] = [];
 
-    return collected
-      .map((node, index) => ({ node, index }))
-      .sort((a, b) => a.node.tabIndex - b.node.tabIndex || a.index - b.index)
+      this._collectInto(uiRoot, uiNodes);
+
+      for (const node of uiNodes) {
+        entries.push({ node, isUi: true });
+      }
+    }
+
+    const worldNodes: RenderNode[] = [];
+
+    this._collectInto(scene.root, worldNodes);
+
+    for (const node of worldNodes) {
+      entries.push({ node, isUi: false });
+    }
+
+    return this._sortFocusables(entries);
+  }
+
+  /** Sort by ascending `tabIndex`; ties favor a UI-layer entry over a world one, then fall back to collection (document) order. */
+  private _sortFocusables(entries: ReadonlyArray<{ readonly node: RenderNode; readonly isUi: boolean }>): RenderNode[] {
+    return entries
+      .map((entry, index) => ({ ...entry, index }))
+      .sort((a, b) => a.node.tabIndex - b.node.tabIndex || Number(b.isUi) - Number(a.isUi) || a.index - b.index)
       .map(entry => entry.node);
   }
 

@@ -191,3 +191,40 @@ describe('UI interaction routing', () => {
     expect(keys).toEqual([Keyboard.Enter]);
   });
 });
+
+describe('Tab traversal without an explicit scope spans both scene layers', () => {
+  test('a UI node and a world node are both Tab-reachable in one traversal', () => {
+    const { scene, focus, signals } = createUIApp();
+    const uiNode = new TestSprite().setBounds(0, 0, 10, 10);
+    const worldNode = new TestSprite().setBounds(0, 0, 10, 10);
+
+    uiNode.focusable = true;
+    uiNode.tabIndex = 0;
+    worldNode.focusable = true;
+    worldNode.tabIndex = 1;
+    scene.ui.addChild(uiNode);
+    scene.addChild(worldNode);
+
+    signals.onKeyDown.dispatch(Keyboard.Tab);
+    expect(focus.focused).toBe(uiNode);
+
+    signals.onKeyDown.dispatch(Keyboard.Tab);
+    expect(focus.focused).toBe(worldNode);
+  });
+
+  test('on an equal tabIndex, the UI layer wins the tie over the world layer', () => {
+    const { scene, focus, signals } = createUIApp();
+    const uiNode = new TestSprite().setBounds(0, 0, 10, 10);
+    const worldNode = new TestSprite().setBounds(0, 0, 10, 10);
+
+    uiNode.focusable = true;
+    worldNode.focusable = true;
+    // World node added first, so document order alone would favor it — the
+    // UI-layer tie-break must still win.
+    scene.addChild(worldNode);
+    scene.ui.addChild(uiNode);
+
+    signals.onKeyDown.dispatch(Keyboard.Tab);
+    expect(focus.focused).toBe(uiNode);
+  });
+});

@@ -11,6 +11,7 @@ import { Rectangle } from '#math/Rectangle';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
+import type { Geometry } from '#rendering/geometry/Geometry';
 
 // ---------------------------------------------------------------------------
 // Minimal concrete RenderNode subclass for tests
@@ -40,6 +41,27 @@ class TestSprite extends Drawable {
   /** Override getBounds() so the persistent spatial index can locate the node. */
   public override getBounds(): Rectangle {
     return new Rectangle(this._left, this._top, this._width, this._height);
+  }
+}
+
+/**
+ * A container whose world bounds are set directly, for deterministic
+ * `clipShape: null` tests. Named `_fixedBounds` (not `_bounds`) to avoid
+ * colliding with `SceneNode`'s own protected `_bounds` cache field, which is
+ * a `Bounds` instance, not a `Rectangle` — shadowing it silently corrupts the
+ * base class's own bounds machinery.
+ */
+class TestClipContainer extends Container {
+  private _fixedBounds = new Rectangle(0, 0, 0, 0);
+
+  public setClipBounds(left: number, top: number, width: number, height: number): this {
+    this._fixedBounds = new Rectangle(left, top, width, height);
+
+    return this;
+  }
+
+  public override getBounds(): Rectangle {
+    return this._fixedBounds;
   }
 }
 
@@ -1902,6 +1924,156 @@ describe('InteractionManager — invisible nodes', () => {
     im.destroy();
     hidden.destroy();
     modal.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Render-correct picking: hard clips bound descendant hits
+// ---------------------------------------------------------------------------
+
+describe('InteractionManager — clip-aware hit-testing', () => {
+  test('a Rectangle clipShape bounds descendant hits in the indexed (world) hit-test path', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+
+    const clipper = new TestClipContainer();
+    const child = new TestSprite().setBounds(0, 0, 100, 100);
+
+    clipper.clip = true;
+    clipper.clipShape = new Rectangle(0, 0, 50, 50);
+    child.interactive = true;
+    clipper.addChild(child);
+    scene.addChild(clipper);
+
+    const handler = vi.fn();
+    child.onPointerDown.add(handler);
+
+    dispatchPointer(signals.onPointerDown, { x: 75, y: 75 });
+    flushInteractions(im);
+    expect(handler).not.toHaveBeenCalled();
+
+    dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
+    flushInteractions(im);
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    im.destroy();
+    child.destroy();
+    clipper.destroy();
+  });
+
+  test("a null clipShape falls back to the clip node's own world bounds in the indexed path", () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+
+    const clipper = new TestClipContainer().setClipBounds(0, 0, 50, 50);
+    const child = new TestSprite().setBounds(0, 0, 100, 100);
+
+    clipper.clip = true;
+    clipper.clipShape = null;
+    child.interactive = true;
+    clipper.addChild(child);
+    scene.addChild(clipper);
+
+    const handler = vi.fn();
+    child.onPointerDown.add(handler);
+
+    dispatchPointer(signals.onPointerDown, { x: 75, y: 75 });
+    flushInteractions(im);
+    expect(handler).not.toHaveBeenCalled();
+
+    dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
+    flushInteractions(im);
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    im.destroy();
+    child.destroy();
+    clipper.destroy();
+  });
+
+  test('a Rectangle clipShape bounds descendant hits in the scoped/recursive hit-test path', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+
+    const clipper = new TestClipContainer();
+    const child = new TestSprite().setBounds(0, 0, 100, 100);
+
+    clipper.clip = true;
+    clipper.clipShape = new Rectangle(0, 0, 50, 50);
+    child.interactive = true;
+    clipper.addChild(child);
+    scene.addChild(clipper);
+    im.pushScope(clipper);
+
+    const handler = vi.fn();
+    child.onPointerDown.add(handler);
+
+    dispatchPointer(signals.onPointerDown, { x: 75, y: 75 });
+    flushInteractions(im);
+    expect(handler).not.toHaveBeenCalled();
+
+    dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
+    flushInteractions(im);
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    im.destroy();
+    child.destroy();
+    clipper.destroy();
+  });
+
+  test('clip bounds only descendants — a clipped node is still hit through its own (unclipped) contains() check', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    sprite.clip = true;
+    sprite.clipShape = new Rectangle(0, 0, 10, 10);
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    const handler = vi.fn();
+    sprite.onPointerDown.add(handler);
+
+    // Inside the sprite's own bounds but well outside its (descendant-only) clipShape.
+    dispatchPointer(signals.onPointerDown, { x: 75, y: 75 });
+    flushInteractions(im);
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    im.destroy();
+    sprite.destroy();
+  });
+
+  test('a Geometry clipShape does not bound descendant hits — documented non-pixel-hit-test contract', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+
+    const clipper = new TestClipContainer().setClipBounds(0, 0, 10, 10);
+    const child = new TestSprite().setBounds(0, 0, 100, 100);
+
+    clipper.clip = true;
+    clipper.clipShape = {} as unknown as Geometry;
+    child.interactive = true;
+    clipper.addChild(child);
+    scene.addChild(clipper);
+
+    const handler = vi.fn();
+    child.onPointerDown.add(handler);
+
+    // Well outside the clipper's tiny bounds — a Rectangle clip would block this,
+    // but a Geometry (stencil) clip has no cheap point-in-silhouette test and is
+    // intentionally not enforced by hit-testing.
+    dispatchPointer(signals.onPointerDown, { x: 75, y: 75 });
+    flushInteractions(im);
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    im.destroy();
+    child.destroy();
+    clipper.destroy();
   });
 });
 

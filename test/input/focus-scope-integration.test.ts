@@ -299,6 +299,79 @@ describe('nested app-level and scene-level scopes', () => {
   });
 });
 
+describe('effectively-active scope truth (topmost LIVE entry, not physical stack position)', () => {
+  it('still restores focus when the popped scope sits beneath a dead (never-popped) entry', () => {
+    const h = createHarness();
+    const trigger = focusableNode();
+    const outer = new Container();
+    const outerInside = focusableNode();
+    const deadRoot = new Container();
+
+    outer.addChild(outerInside);
+    h.scene.root.addChild(trigger);
+    h.scene.root.addChild(outer);
+    h.scene.root.addChild(deadRoot);
+
+    h.im.focus(trigger);
+
+    const outerToken = h.im.pushScope(outer);
+
+    h.im.focus(outerInside);
+
+    const deadToken = h.im.pushScope(deadRoot);
+
+    // Destroy the scope root directly (no removeChild) so its stack entry
+    // goes stale without ever being popped — see `_isOwned`'s doc comment.
+    deadRoot.destroy();
+
+    // `outer`'s entry now sits BENEATH the dead `deadRoot` entry on the
+    // stack — popping it must still be recognized as ending the
+    // effectively-active scope (the topmost LIVE entry), not dismissed
+    // just because it is no longer the last physical array slot.
+    h.im.popScope(outerToken);
+
+    expect(h.im.focused).toBe(trigger);
+
+    h.im.popScope(deadToken);
+    h.im.destroy();
+  });
+});
+
+describe('scope reactivation re-enforces the focus trap immediately', () => {
+  it('blurs an escaped focus the instant a temporarily-detached scope reattaches', () => {
+    const h = createHarness();
+    const modal = new Container();
+    const insideModal = focusableNode();
+    const outside = focusableNode();
+
+    modal.addChild(insideModal);
+    h.scene.root.addChild(modal);
+    h.scene.root.addChild(outside);
+
+    const token = h.im.pushScope(modal);
+
+    h.im.focus(insideModal);
+
+    // Detach the scope root WITHOUT popping its scope entry — it goes dead
+    // (see `_isOwned`'s doc comment), so it stops trapping anything until
+    // it reattaches.
+    h.scene.root.removeChild(modal);
+
+    // While dead, nothing traps focus — a direct focus() call elsewhere succeeds.
+    h.im.focus(outside);
+    expect(h.im.focused).toBe(outside);
+
+    // Reattaching must re-enforce the trap immediately, not wait for the
+    // next explicit focus() call to notice the escape.
+    h.scene.root.addChild(modal);
+
+    expect(h.im.focused).toBeNull();
+
+    h.im.popScope(token);
+    h.im.destroy();
+  });
+});
+
 describe('detachRoot ownership', () => {
   it('does not release a foreign scope pushed outside the detached subtree', () => {
     const h = createHarness();
