@@ -514,6 +514,50 @@ describe('InteractionManager — cross-pointer order preserved end-to-end (Bug C
     destroyHarness(h);
     sprite.destroy();
   });
+
+  test('a throwing node handler discards the failed interaction batch and leaves no stale state to replay', () => {
+    const h = createHarness();
+    const { canvas, scene, input, interaction } = h;
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    sprite.interactive = true;
+    sprite.draggable = true;
+    scene.addChild(sprite);
+
+    fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'mouse', clientX: 25, clientY: 25, isPrimary: true });
+    tick(h);
+
+    const thrower = (): void => {
+      throw new Error('expected handler failure');
+    };
+
+    sprite.onPointerDown.add(thrower);
+
+    fire(canvas, 'pointerdown', { pointerId: 1, pointerType: 'mouse', clientX: 25, clientY: 25, isPrimary: true });
+    fire(canvas, 'pointermove', { pointerId: 1, pointerType: 'mouse', clientX: 60, clientY: 25, isPrimary: true });
+
+    input.update();
+    expect(() => interaction.update()).toThrow('expected handler failure');
+    input._finishInteractionFrame();
+
+    expect(interaction.getCapturedNodes()).toEqual([]);
+    expect(interaction.getHoveredNode(1)).toBeNull();
+
+    sprite.onPointerDown.remove(thrower);
+
+    // A new event must not replay the failed Down/Move batch or inherit its
+    // drag candidate/capture. Only this fresh context-menu occurrence fires.
+    const contextMenu = vi.fn();
+    sprite.onContextMenu.add(contextMenu);
+    fireContextMenu(canvas, 25, 25);
+    tick(h);
+
+    expect(contextMenu).toHaveBeenCalledTimes(1);
+    expect(interaction.getCapturedNodes()).toEqual([]);
+
+    destroyHarness(h);
+    sprite.destroy();
+  });
 });
 
 // ---------------------------------------------------------------------------

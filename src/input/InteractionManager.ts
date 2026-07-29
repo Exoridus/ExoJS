@@ -848,6 +848,49 @@ export class InteractionManager implements InteractionHooks {
    * keeping the drain itself a single, flat, strictly-ordered pass.
    */
   private _drainJournal(): void {
+    // Capture the complete failed batch up front. If a user handler throws,
+    // Application's frame guard propagates the error but the interaction
+    // manager must fail closed: never retain a half-consumed journal, drag,
+    // press target, hover target, or pointer capture that can be replayed on a
+    // later frame after InputManager has already retired the Pointer object.
+    const touchedIds = new Set<number>();
+
+    for (const entry of this._journal) {
+      touchedIds.add(entry.pointer.id);
+    }
+
+    try {
+      this._drainJournalUnsafe();
+    } catch (error) {
+      // A handler may have enqueued additional interaction entries
+      // re-entrantly before throwing. Include those ids in the same failed
+      // batch cleanup before discarding the journal.
+      for (const entry of this._journal) {
+        touchedIds.add(entry.pointer.id);
+      }
+
+      this._journal.length = 0;
+
+      for (const id of touchedIds) {
+        this._endDrag(id);
+        this._pressTargets.delete(id);
+        this._lastHit.delete(id);
+      }
+
+      // Keep the host cursor consistent with the now-cleared capture/hover
+      // state, while preserving the original user-handler exception.
+      try {
+        this._updateCursor();
+      } catch {
+        // Preserve the original dispatch failure.
+      }
+
+      throw error;
+    }
+  }
+
+  /** Unchecked implementation wrapped by {@link _drainJournal}. */
+  private _drainJournalUnsafe(): void {
     const journal = this._journal;
     const touchedOrder: Pointer[] = [];
     const sawExit = new Map<number, boolean>();

@@ -109,22 +109,27 @@ export class Signal<Args extends unknown[] = []> {
 
     this._dispatching = true;
 
-    for (let i = 0; i < length; i++) {
-      this._handlers[i]!(...params);
-    }
-
-    this._dispatching = false;
-
-    if (this._pendingRemoves !== null) {
-      for (const handler of this._pendingRemoves) {
-        const index = this._handlers.indexOf(handler);
-
-        if (index !== -1) {
-          removeArrayItems(this._handlers, index, 1);
-        }
+    try {
+      for (let i = 0; i < length; i++) {
+        this._handlers[i]!(...params);
       }
+    } finally {
+      // A normal dispatch deliberately propagates listener exceptions, but
+      // the emitter's own bookkeeping must never remain stuck in its
+      // mid-dispatch state when that happens.
+      this._dispatching = false;
 
-      this._pendingRemoves = null;
+      if (this._pendingRemoves !== null) {
+        for (const handler of this._pendingRemoves) {
+          const index = this._handlers.indexOf(handler);
+
+          if (index !== -1) {
+            removeArrayItems(this._handlers, index, 1);
+          }
+        }
+
+        this._pendingRemoves = null;
+      }
     }
 
     return this;

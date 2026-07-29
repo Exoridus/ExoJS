@@ -81,6 +81,28 @@ describe('Signal', () => {
 
     expect(received).toEqual([[42, 'hello']]);
   });
+
+  it('restores normal dispatch bookkeeping when a listener throws', () => {
+    const signal = new Signal();
+    const thrower = (): void => {
+      signal.remove(thrower);
+      throw new Error('boom');
+    };
+
+    signal.add(thrower);
+
+    expect(() => signal.dispatch()).toThrow('boom');
+
+    // The self-removal was deferred while dispatching, but must have been
+    // flushed by finally even though the listener aborted dispatch.
+    expect(signal.has(thrower)).toBe(false);
+
+    const survivor = vi.fn();
+
+    signal.add(survivor);
+    expect(() => signal.dispatch()).not.toThrow();
+    expect(survivor).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('dispatchIsolated', () => {
