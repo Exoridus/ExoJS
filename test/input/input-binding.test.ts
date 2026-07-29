@@ -19,8 +19,20 @@ const makeChannels = (): Float32Array => new Float32Array(ChannelSize.Container)
 let sequenceCounter = 0;
 const nextSequence = (): number => ++sequenceCounter;
 
+/**
+ * Monotonic counter mirroring `InputManager`'s own `getPreciseTime()` stamp —
+ * distinct from `sequenceCounter` so tests can freely set an explicit
+ * timestamp (a real source-event time) independent of the ordering-only
+ * `sequence` field.
+ */
+let timestampCounter = 0;
+
 /** One atomic batch touching a single channel — mirrors `InputManager._recordChannelChanges` for a single-channel write. */
-const batchOf = (channel: number, value: number, sequence = nextSequence()): ChannelEventBatch => ({ channels: [{ channel, value }], sequence });
+const batchOf = (channel: number, value: number, sequence = nextSequence(), timestamp = ++timestampCounter): ChannelEventBatch => ({
+  channels: [{ channel, value }],
+  sequence,
+  timestamp,
+});
 
 describe('InputBinding — construction defaults', () => {
   test('channels-only constructor call uses the default threshold and a null detacher', () => {
@@ -186,7 +198,14 @@ describe('InputBinding — update() lifecycle signals', () => {
 });
 
 describe('InputBinding — batch-based frame truth', () => {
-  test('a full activate-then-deactivate within one update() call fires onStart, onActive, onStop and onTrigger — invisible to a once-per-frame snapshot', () => {
+  test('a full activate-then-deactivate within one update() fires transition signals but no final-state onActive', () => {
+    // `onActive` is a final-frame-state signal (see `_replayOrEvaluate`'s doc
+    // comment): it means "this binding is active right now, at the end of
+    // this call" — a press-then-release within one call never appeared
+    // active to a once-per-frame observer, so it must fire onStart/onStop
+    // (and, within the threshold, onTrigger) but NOT onActive at all. This
+    // replaces a prior assertion that expected onActive once here, which
+    // encoded the old (incorrect) per-crossing semantic instead.
     const binding = new InputBinding([1], { threshold: 100000 }); // effectively never expires
     const channels = makeChannels();
     const onStart = vi.fn();
@@ -208,9 +227,67 @@ describe('InputBinding — batch-based frame truth', () => {
     binding.update(channels, [batchOf(1, 1), batchOf(1, 0)]);
 
     expect(onStart).toHaveBeenCalledTimes(1);
-    expect(onActive).toHaveBeenCalledTimes(1);
+    expect(onActive).not.toHaveBeenCalled();
     expect(onStop).toHaveBeenCalledTimes(1);
     expect(onTrigger).toHaveBeenCalledTimes(1);
+
+    binding.unbind();
+  });
+
+  test('uses source-event timestamps rather than replay speed for the trigger window', () => {
+    const binding = new InputBinding([1], { threshold: 300 });
+    const channels = makeChannels();
+    const onStart = vi.fn();
+    const onStop = vi.fn();
+    const onTrigger = vi.fn();
+
+    binding.onStart.add(onStart);
+    binding.onStop.add(onStop);
+    binding.onTrigger.add(onTrigger);
+    binding.update(channels); // baseline
+
+    channels[1] = 0;
+    // The press and release "really" happened 500ms apart (100ms and 600ms)
+    // even though both batches are replayed back-to-back in this single,
+    // synchronous update() call — the trigger must be judged against that
+    // real 500ms gap, not however many microseconds this call took to run.
+    binding.update(channels, [batchOf(1, 1, nextSequence(), 100), batchOf(1, 0, nextSequence(), 600)]);
+
+    expect(onStart).toHaveBeenCalledTimes(1);
+    expect(onStop).toHaveBeenCalledTimes(1);
+    expect(onTrigger).not.toHaveBeenCalled();
+
+    binding.unbind();
+  });
+
+  test('dispatches onActive exactly once when several sub-frame cycles end active', () => {
+    const binding = new InputBinding([1], { threshold: 100000 });
+    const channels = makeChannels();
+    const onActive = vi.fn();
+
+    binding.onActive.add(onActive);
+    binding.update(channels); // baseline: inactive
+
+    channels[1] = 1;
+    // press, release, press again — all within one call, ending active.
+    binding.update(channels, [batchOf(1, 1), batchOf(1, 0), batchOf(1, 1)]);
+
+    expect(onActive).toHaveBeenCalledTimes(1);
+
+    binding.unbind();
+  });
+
+  test('does not dispatch onActive when a sub-frame press-release ends inactive', () => {
+    const binding = new InputBinding([1]);
+    const channels = makeChannels();
+    const onActive = vi.fn();
+
+    binding.onActive.add(onActive);
+    binding.update(channels); // baseline: inactive
+
+    binding.update(channels, [batchOf(1, 1), batchOf(1, 0)]);
+
+    expect(onActive).not.toHaveBeenCalled();
 
     binding.unbind();
   });

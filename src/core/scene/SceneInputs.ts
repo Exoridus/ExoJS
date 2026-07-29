@@ -101,6 +101,18 @@ export class SceneInputs implements Destroyable {
   }
 
   /**
+   * Forwards to the underlying `InputManager` — see
+   * `InputManager._snapshotActionChannels`'s doc comment. Lets a map
+   * attached here get the same attach-time baseline truth as one attached
+   * directly on `app.input`.
+   *
+   * @internal
+   */
+  public _snapshotActionChannels(): Float32Array {
+    return this._app.input._snapshotActionChannels();
+  }
+
+  /**
    * Fire `callback` on the channel's press edge (value crosses above the
    * threshold), gated by `options.when` (default `'active'`) and the
    * director's transition gate. Unbound automatically when the owning scene

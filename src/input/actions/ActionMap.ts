@@ -23,6 +23,14 @@ export type ActionRecord = Readonly<Record<string, Action>>;
 export interface ActionMapOwner {
   _detachActionMap(map: ActionMapBase<ActionRecord>): void;
   _currentBatchSequence?(): number;
+  /**
+   * Immutable snapshot of every live channel at the observation boundary
+   * (attach or resync) — optional for the same reason
+   * `_currentBatchSequence` is: a stub/legacy owner without it reproduces
+   * the OLD (watermark-only) behavior, see {@link ActionOwnership.arm}'s doc
+   * comment. A real owner (an `InputManager`) always implements it.
+   */
+  _snapshotActionChannels?(): Float32Array;
 }
 
 /**
@@ -100,6 +108,12 @@ class ActionMapBase<T extends ActionRecord> {
   private readonly _ownership = new ActionOwnership();
 
   public constructor(actions: T) {
+    // Reads every enumerable getter on `actions` exactly once. Neither
+    // `this.actions` nor the instance assignment below may touch `actions`
+    // again after this line — a getter that is not perfectly idempotent (or
+    // that intentionally throws on a second read) would otherwise silently
+    // observe a different value, or throw, purely as a side effect of how
+    // many times this constructor happens to read it.
     const entries = Object.entries(actions);
     // Validated but not yet committed to the module-level `claimedActions`
     // set — see `assertClaimable`'s doc comment for why the two passes below
@@ -122,8 +136,8 @@ class ActionMapBase<T extends ActionRecord> {
       claimedActions.add(action);
     }
 
-    this.actions = Object.values(actions);
-    Object.assign(this, actions);
+    this.actions = entries.map(([, action]) => action);
+    Object.assign(this, Object.fromEntries(entries));
   }
 
   /** `true` while this map is attached to an input owner and being updated. */
@@ -159,7 +173,7 @@ class ActionMapBase<T extends ActionRecord> {
   public _attach(owner: ActionMapOwner): void {
     this.detach();
     this._owner = owner;
-    this._ownership.arm(owner._currentBatchSequence?.() ?? 0);
+    this._ownership.arm(owner._currentBatchSequence?.() ?? 0, owner._snapshotActionChannels?.() ?? null);
   }
 
   /**
@@ -170,8 +184,8 @@ class ActionMapBase<T extends ActionRecord> {
    *
    * @internal
    */
-  public _armBaseline(watermark: number): void {
-    this._ownership.arm(watermark);
+  public _armBaseline(watermark: number, baselineValues: Float32Array | null = null): void {
+    this._ownership.arm(watermark, baselineValues);
   }
 
   /**
@@ -190,7 +204,17 @@ class ActionMapBase<T extends ActionRecord> {
    * {@link ActionOwnership.filterBatches}), so a map attached or resynced
    * partway through the CURRENT real frame does not replay activity that was
    * already sitting in the owner's shared batch log before it started
-   * watching.
+   * watching. Before that replay, it first seeds every action from the
+   * ownership's own attach-moment channel snapshot (see
+   * {@link ActionOwnership.takeBaselineSample}) with no batches at all — a
+   * watermark alone tells an action which batches to SKIP, but a channel a
+   * skipped batch touches is thereby excluded from that action's own
+   * live-value seed too, so without this snapshot pass a channel held
+   * before attach and released by the very next real batch would seed from
+   * a synthetic zero instead of its true held value, silently swallowing
+   * the release. This snapshot pass leaves every action `_seeded`, so the
+   * following real-batch pass takes the normal incremental-replay path —
+   * nothing else conditional is needed in the action classes themselves.
    *
    * @internal
    */
@@ -208,6 +232,14 @@ class ActionMapBase<T extends ActionRecord> {
       // see ButtonAction._reset's doc comment.
       for (const action of this.actions) {
         action._reset();
+      }
+
+      const baselineSample = this._ownership.takeBaselineSample(sample);
+
+      if (baselineSample !== null) {
+        for (const action of this.actions) {
+          action._update(baselineSample);
+        }
       }
     }
 
@@ -246,6 +278,13 @@ class ActionMapBase<T extends ActionRecord> {
  * attacker- or tool-generated config (modding, a level editor's save format)
  * must reject them exactly like any other collision rather than silently
  * reaching into the prototype chain via `Object.assign`.
+ *
+ * `Object.getOwnPropertyNames(Object.prototype)` covers the remaining gap:
+ * `toString`, `valueOf`, `hasOwnProperty`, `__defineGetter__`, and friends
+ * are never declared on `ActionMapBase.prototype` itself, but an action
+ * named after one of them would still shadow the real, inherited method on
+ * this very instance via `Object.assign`, silently breaking anything that
+ * calls it.
  */
 const reservedActionMapNames: ReadonlySet<string> = new Set([
   'actions',
@@ -254,6 +293,7 @@ const reservedActionMapNames: ReadonlySet<string> = new Set([
   '__proto__',
   'prototype',
   ...Object.getOwnPropertyNames(ActionMapBase.prototype),
+  ...Object.getOwnPropertyNames(Object.prototype),
 ]);
 
 /**

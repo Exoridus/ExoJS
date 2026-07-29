@@ -52,11 +52,21 @@ export interface ChannelEvent {
  * log from earlier, unrelated activity) apart from one that arrived after —
  * see {@link ActionOwnership.arm}.
  *
+ * `timestamp` is the monotonic (`performance.now()`-based) real-world time
+ * the underlying source event occurred — NOT the later, unrelated moment a
+ * consumer happens to replay this batch. A binding or action that measured
+ * its tap/trigger window against replay time instead would see an
+ * arbitrarily short (or long) elapsed time whenever several batches queued
+ * up and get replayed together in one synchronous call, since replaying two
+ * batches back-to-back always takes microseconds regardless of how far
+ * apart the real source events were.
+ *
  * @internal
  */
 export interface ChannelEventBatch {
   readonly channels: readonly ChannelEvent[];
   readonly sequence: number;
+  readonly timestamp: number;
 }
 
 /**
@@ -104,6 +114,12 @@ export class ActionOwnership {
   private _sample: ActionSample | null = null;
   private _frameId = -1;
   private _watermark = 0;
+  /**
+   * Full channel-buffer snapshot captured at the moment this ownership was
+   * last armed — consumed exactly once by {@link takeBaselineSample}. See
+   * {@link arm}'s doc comment for why a watermark alone is not enough.
+   */
+  private _baselineValues: Float32Array | null = null;
 
   /**
    * Resolve `sample` against whichever owner last drove this map.
@@ -137,17 +153,52 @@ export class ActionOwnership {
   }
 
   /**
-   * Record the batch-sequence watermark as of the moment this map started
-   * (or resumed) observing its current owner — called from
-   * {@link ActionMapBase._attach} and from `InputManager._resyncActionMap`.
-   * The next `resolve()` call that returns `'baseline'` uses it, via
-   * {@link filterBatches}, to replay only batches pushed at-or-after this
-   * moment, discarding anything still sitting in the same real frame's
-   * shared log from BEFORE this map started watching — see
-   * {@link ChannelEventBatch}'s doc comment.
+   * Record the batch-sequence watermark — and, when the owner can supply one
+   * (see {@link ActionMapOwner._snapshotActionChannels}), a full channel
+   * snapshot — as of the moment this map started (or resumed) observing its
+   * current owner. Called from {@link ActionMapBase._attach} and from
+   * `InputManager._resyncActionMap`. The next `resolve()` call that returns
+   * `'baseline'` uses the watermark, via {@link filterBatches}, to replay
+   * only batches pushed at-or-after this moment, discarding anything still
+   * sitting in the same real frame's shared log from BEFORE this map started
+   * watching — see {@link ChannelEventBatch}'s doc comment. `baselineValues`
+   * is consumed once, via {@link takeBaselineSample}, to seed every action's
+   * true attach-moment state BEFORE those filtered batches are replayed on
+   * top of it: a watermark alone tells an action which batches to skip, but
+   * a channel a skipped batch touches is thereby excluded from that action's
+   * own live-value seed too (see `ButtonAction._seedUntouchedChannels`'s doc
+   * comment), so without this snapshot a channel held before attach and
+   * released by the very next real batch would seed from a synthetic zero
+   * instead of its true held value, silently swallowing the release.
+   *
+   * Also unconditionally forgets whichever `ActionSample` this ownership
+   * last resolved against: reattaching to the SAME owner (same long-lived
+   * `ActionSample` instance) is still a brand-new observation boundary, and
+   * without this reset the next `resolve()` could read the old, still-cached
+   * `_sample`/`_frameId` and incorrectly answer `'duplicate'` or `'frame'`
+   * instead of `'baseline'`, silently skipping the re-seed this very call is
+   * trying to arm.
    */
-  public arm(watermark: number): void {
+  public arm(watermark: number, baselineValues: Float32Array | null = null): void {
     this._watermark = watermark;
+    this._baselineValues = baselineValues;
+    this._sample = null;
+    this._frameId = -1;
+  }
+
+  /**
+   * Consume (single-use) the channel snapshot this ownership was last armed
+   * with, as a synthetic, batch-free `ActionSample` sharing `sample`'s
+   * `frameId`. Returns `null` when no snapshot was supplied — a stub/legacy
+   * owner without {@link ActionMapOwner._snapshotActionChannels} — in which
+   * case the caller falls back to the pre-existing watermark-only behavior.
+   */
+  public takeBaselineSample(sample: ActionSample): ActionSample | null {
+    const values = this._baselineValues;
+
+    this._baselineValues = null;
+
+    return values === null ? null : { values, batches: [], frameId: sample.frameId };
   }
 
   /**
@@ -172,6 +223,7 @@ export class ActionOwnership {
   public reset(): void {
     this._sample = null;
     this._frameId = -1;
+    this._baselineValues = null;
   }
 }
 

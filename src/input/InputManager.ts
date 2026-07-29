@@ -1,7 +1,7 @@
 import type { Application } from '#core/Application';
 import { Signal } from '#core/Signal';
 import type { Time } from '#core/Time';
-import { stopEvent } from '#core/utils';
+import { getPreciseTime, stopEvent } from '#core/utils';
 import { Flags } from '#math/Flags';
 import { Vector } from '#math/Vector';
 import type { PlatformAdapter, PlatformSubscription } from '#platform/PlatformAdapter';
@@ -458,6 +458,21 @@ export class InputManager {
   }
 
   /**
+   * Immutable snapshot of every live channel right now — the attach-moment
+   * truth an {@link ActionOwnership} seeds every action from before it
+   * replays any watermark-filtered batches on top. See
+   * {@link ActionMapOwner._snapshotActionChannels}'s doc comment.
+   *
+   * @internal
+   */
+  public _snapshotActionChannels(): Float32Array {
+    // `.slice()` (not a spread) deliberately — a spread of a typed array
+    // yields a plain `number[]`, not a `Float32Array`.
+    // eslint-disable-next-line unicorn/prefer-spread
+    return this.channels.slice();
+  }
+
+  /**
    * Eagerly re-baseline `map` against this frame's real channel state,
    * without treating a still-held source as a fresh press. Used by
    * {@link SceneInputs.resume}, immediately after a preceding
@@ -475,7 +490,7 @@ export class InputManager {
    * @internal
    */
   public _resyncActionMap(map: ActionMap): void {
-    map._armBaseline(this._batchSequence);
+    map._armBaseline(this._batchSequence, this._snapshotActionChannels());
     map._update(this.actionSample);
   }
 
@@ -689,7 +704,7 @@ export class InputManager {
     }
 
     if (batch !== null) {
-      frameBatches.push({ channels: batch, sequence: ++this._batchSequence });
+      frameBatches.push({ channels: batch, sequence: ++this._batchSequence, timestamp: getPreciseTime() });
     }
   }
 

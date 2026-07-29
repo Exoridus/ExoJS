@@ -1,6 +1,5 @@
 import { Signal } from '#core/Signal';
-import { Time } from '#core/Time';
-import { Timer } from '#core/Timer';
+import { getPreciseTime } from '#core/utils';
 
 import type { ChannelEventBatch } from './actions/types';
 import type { GamepadAxisChannel } from './GamepadAxis';
@@ -62,7 +61,17 @@ export class InputBinding {
   public readonly onStop = new Signal<[number]>();
   public readonly onTrigger = new Signal<[number]>();
 
-  private readonly _triggerTimer: Timer;
+  /** Tap-window for `onTrigger`, in milliseconds — see the constructor's `options.threshold`. */
+  private readonly _triggerThreshold: number;
+  /**
+   * Source-event timestamp ({@link ChannelEventBatch.timestamp}-compatible)
+   * of the activation edge currently in progress. `null` while inactive, or
+   * while active from a seed whose true activation time predates this
+   * binding's own observation window and so is unknowable (see
+   * `_seedUntouchedChannels`) — a `null` activation timestamp can never
+   * produce an `onTrigger`, see `_applyEdge`.
+   */
+  private _activationTimestamp: number | null = null;
   private readonly _detacher: InternalChannelDetacher | null;
   /** Last known value of each bound channel, in `channels` order — the replay baseline `update` advances. */
   private readonly _channelValues: Float32Array;
@@ -86,7 +95,7 @@ export class InputBinding {
 
   public constructor(channels: readonly number[], options: InputBindingOptions = {}, detacher: InternalChannelDetacher | null = null, watermark = 0) {
     this.channels = channels;
-    this._triggerTimer = new Timer(Time.fromMilliseconds(options.threshold ?? InputBinding.defaultTriggerThreshold));
+    this._triggerThreshold = options.threshold ?? InputBinding.defaultTriggerThreshold;
     this._detacher = detacher;
     this._channelValues = new Float32Array(channels.length);
     this._watermark = watermark;
@@ -138,7 +147,11 @@ export class InputBinding {
         this._channelValues[i] = channels[this.channels[i]!] ?? 0;
       }
 
-      this._replayOrEvaluate([]);
+      // This path never replays an ordered batch history at all (see this
+      // method's own doc comment) — every call is a live, single-instant
+      // read, exactly like the pre-timestamp design, so "now" is always the
+      // correct occurred-at for whatever edge this read reveals.
+      this._replayOrEvaluate([], getPreciseTime());
 
       return;
     }
@@ -158,11 +171,16 @@ export class InputBinding {
         // below, like it started this call at 0, and a genuine release
         // within `relevant` would go undetected for want of a prior `onStart`
         // to release FROM. A no-op when the seed left everything at 0.
-        this._applyEdge();
+        //
+        // The seed's true activation time predates this binding's own
+        // observation window and so is unknowable — pass `null` rather than
+        // fabricating "now", so a release replayed below can never produce a
+        // spurious `onTrigger` for a press this binding never actually saw.
+        this._applyEdge(null);
       }
     }
 
-    this._replayOrEvaluate(relevant);
+    this._replayOrEvaluate(relevant, getPreciseTime());
   }
 
   /**
@@ -226,16 +244,17 @@ export class InputBinding {
    * so a channel seeded active on this very call, or one simply held active
    * with nothing new to report, is still detected correctly.
    *
-   * `onActive` fires once per real crossing INTO the active state (alongside
-   * `onStart`), plus, if the call ends active without ever crossing into it
-   * this call (held continuously from before, or only OTHER channels'
-   * batches arrived), exactly once more at the end — never once per
-   * individual batch that merely keeps an already-active value active,
-   * which would over-fire for a source whose magnitude jitters across
-   * several batches within one frame without ever actually releasing.
+   * `onActive` is a final-frame-state signal, not a per-crossing one: it
+   * fires at most ONCE per call, unconditionally, iff this binding is active
+   * once every edge for this call has been processed — never once per
+   * individual crossing into the active state, which would over-fire for a
+   * source that presses, releases, and presses again within one call (it
+   * should read as one continuous active session by the time this call
+   * returns, not two), and never at all for a source that presses and fully
+   * releases again within the same call (it should never have appeared
+   * active to a once-per-frame observer in the first place).
    */
-  private _replayOrEvaluate(batches: readonly ChannelEventBatch[]): void {
-    let activeDispatched = false;
+  private _replayOrEvaluate(batches: readonly ChannelEventBatch[], fallbackTimestamp: number): void {
     let anyEdgeChecked = false;
 
     for (const batch of batches) {
@@ -257,34 +276,40 @@ export class InputBinding {
       }
 
       anyEdgeChecked = true;
-
-      if (this._applyEdge()) {
-        activeDispatched = true;
-      }
+      this._applyEdge(batch.timestamp);
     }
 
-    if (!anyEdgeChecked && this._applyEdge()) {
-      activeDispatched = true;
+    if (!anyEdgeChecked) {
+      this._applyEdge(fallbackTimestamp);
     }
 
-    if (!activeDispatched && this._value !== 0) {
+    if (this._value !== 0) {
       this.onActive.dispatch(this._value);
     }
   }
 
   /**
    * Recompute the aggregate value from `_channelValues` and dispatch a
-   * transition only on a REAL crossing — `onStart` (paired with `onActive`)
-   * on 0 → nonzero, `onStop` (and `onTrigger`, if within the tap window) on
-   * nonzero → 0. A value that stays on the same side of zero (still active,
-   * still inactive) dispatches nothing here; see {@link _replayOrEvaluate}
-   * for the once-per-call `onActive` re-confirmation that covers that case
-   * instead.
+   * transition only on a REAL crossing — `onStart` on 0 → nonzero, `onStop`
+   * on nonzero → 0. A value that stays on the same side of zero (still
+   * active, still inactive) dispatches nothing here; see
+   * {@link _replayOrEvaluate} for the once-per-call `onActive`
+   * final-state signal that covers that case instead.
    *
-   * @returns `true` iff this call dispatched `onActive` (the entering
-   * crossing), so the caller knows not to dispatch it again.
+   * `onTrigger` fires on the release edge only when both the activation and
+   * this release carry a known, real source-event `occurredAt` (see
+   * `_activationTimestamp`'s doc comment) AND their difference is within the
+   * tap threshold — measured against the source events' own timestamps, not
+   * however long replaying them happened to take, so two old batches
+   * replayed back-to-back in one call are judged by how far apart they
+   * REALLY occurred, not by the microseconds this call took to run.
+   *
+   * @param occurredAt the real source-event time this edge check corresponds
+   * to, or `null` when it originates from a seeded baseline with no known
+   * real activation time.
    */
-  private _applyEdge(): boolean {
+  private _applyEdge(occurredAt: number | null): void {
+    const wasActive = this._value !== 0;
     let value = 0;
 
     for (let i = 0; i < this._channelValues.length; i++) {
@@ -297,29 +322,25 @@ export class InputBinding {
 
     this._value = value;
 
-    if (value !== 0) {
-      if (this._triggerTimer.running) {
-        return false;
-      }
-
-      this._triggerTimer.restart();
+    if (!wasActive && value !== 0) {
+      this._activationTimestamp = occurredAt;
       this.onStart.dispatch(value);
-      this.onActive.dispatch(value);
 
-      return true;
+      return;
     }
 
-    if (this._triggerTimer.running) {
+    if (wasActive && value === 0) {
       this.onStop.dispatch(0);
 
-      if (!this._triggerTimer.expired) {
+      const activatedAt = this._activationTimestamp;
+      const duration = activatedAt !== null && occurredAt !== null ? occurredAt - activatedAt : -1;
+
+      if (duration >= 0 && duration < this._triggerThreshold) {
         this.onTrigger.dispatch(0);
       }
 
-      this._triggerTimer.stop();
+      this._activationTimestamp = null;
     }
-
-    return false;
   }
 
   /**
@@ -332,7 +353,6 @@ export class InputBinding {
 
     this._unbound = true;
     this._detacher?.detach(this);
-    this._triggerTimer.destroy();
     this.onStart.destroy();
     this.onActive.destroy();
     this.onStop.destroy();

@@ -25,7 +25,8 @@ const createEmptySample = (): ActionSample => ({
 let nextSequence = 1;
 const setChannel = (sample: ActionSample, channel: number, value: number): void => {
   sample.values[channel] = value;
-  (sample.batches as ChannelEventBatch[]).push({ channels: [{ channel, value }], sequence: nextSequence++ });
+  const sequence = nextSequence++;
+  (sample.batches as ChannelEventBatch[]).push({ channels: [{ channel, value }], sequence, timestamp: sequence });
 };
 
 interface StubBinding {
@@ -386,6 +387,7 @@ describe('SceneInputs action maps', () => {
         _detachActionMap: vi.fn((map: unknown) => void tracked.delete(map)),
         _resyncActionMap: vi.fn((map: ActionMap) => void map._update(resyncSample)),
         _currentBatchSequence: vi.fn((): number => 0),
+        _snapshotActionChannels: vi.fn((): Float32Array => new Float32Array(ChannelSize.Container)),
       },
       scenes: {
         get _transitionGateOpen(): boolean {

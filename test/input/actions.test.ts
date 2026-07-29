@@ -35,7 +35,7 @@ const createSample = (): {
   frame: () => void;
 } => {
   const values = new Float32Array(ChannelSize.Container);
-  const batches: Array<{ channels: ChannelEvent[]; sequence: number }> = [];
+  const batches: Array<{ channels: ChannelEvent[]; sequence: number; timestamp: number }> = [];
   const sample: ActionSample = { values, batches, frameId: 1 };
   let sequence = 0;
 
@@ -47,7 +47,8 @@ const createSample = (): {
       }
 
       values[channel] = value;
-      batches.push({ channels: [{ channel, value }], sequence: ++sequence });
+      const next = ++sequence;
+      batches.push({ channels: [{ channel, value }], sequence: next, timestamp: next });
     },
     setBatch: (writes: ReadonlyArray<readonly [channel: number, value: number]>): void => {
       const channels: ChannelEvent[] = [];
@@ -62,7 +63,8 @@ const createSample = (): {
       }
 
       if (channels.length > 0) {
-        batches.push({ channels, sequence: ++sequence });
+        const next = ++sequence;
+        batches.push({ channels, sequence: next, timestamp: next });
       }
     },
     frame: (): void => {
@@ -467,12 +469,25 @@ describe('ActionMap', () => {
     expect(controls.jump.pressed).toBe(false);
   });
 
-  it.each(['actions', 'attached', 'detach', '_owner', '_ownership', '_attach', '_armBaseline', '_update', '_reset', 'constructor', 'prototype'])(
-    'rejects a reserved action name: "%s"',
-    name => {
-      expect(() => new ActionMap({ [name]: new ButtonAction(Keyboard.Space) })).toThrow(/reserved/i);
-    },
-  );
+  it.each([
+    'actions',
+    'attached',
+    'detach',
+    '_owner',
+    '_ownership',
+    '_attach',
+    '_armBaseline',
+    '_update',
+    '_reset',
+    'constructor',
+    'prototype',
+    'toString',
+    'valueOf',
+    'hasOwnProperty',
+    '__defineGetter__',
+  ])('rejects a reserved action name: "%s"', name => {
+    expect(() => new ActionMap({ [name]: new ButtonAction(Keyboard.Space) })).toThrow(/reserved/i);
+  });
 
   it('rejects a `__proto__` action name (prototype-pollution vector via Object.assign)', () => {
     // Object literal syntax special-cases a LITERAL `__proto__:` key as a
@@ -509,6 +524,26 @@ describe('ActionMap', () => {
 
     // `jump` must still be free to use in a real map.
     expect(() => new ActionMap({ jump })).not.toThrow();
+  });
+
+  it('reads each action getter exactly once before committing claims', () => {
+    const jump = new ButtonAction(Keyboard.Space);
+    let reads = 0;
+    const source = Object.defineProperty({}, 'jump', {
+      enumerable: true,
+      get: () => {
+        reads++;
+
+        if (reads > 1) {
+          throw new Error('getter read twice');
+        }
+
+        return jump;
+      },
+    });
+
+    expect(() => new ActionMap(source as { jump: ButtonAction })).not.toThrow();
+    expect(reads).toBe(1);
   });
 
   it('resync leaves a still-held action active without a synthetic press', () => {
@@ -766,6 +801,58 @@ describe('ActionMap × InputManager lifecycle', () => {
 
     im.update(0 as never);
     expect(map.jump.pressed).toBe(false); // still just held, no fresh edge
+
+    im.destroy();
+  });
+
+  it('reports release when a key was held before attach and released after attach before the next update', () => {
+    const im = createManager();
+    const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+    const canvas = (im as unknown as { platform: BrowserPlatform }).platform.surface;
+
+    canvas.dispatchEvent(new FocusEvent('focus'));
+    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: Keyboard.Space } as KeyboardEventInit));
+
+    im.attach(map);
+
+    // Released strictly after attach, but still before the map is ever
+    // updated — a watermark alone would exclude this channel from the
+    // action's live-value seed (it IS touched by a post-watermark batch)
+    // without the attach-moment snapshot supplying its true held value, so
+    // the release would look like an already-0 channel instead of a real
+    // 1 → 0 transition.
+    window.dispatchEvent(new KeyboardEvent('keyup', { keyCode: Keyboard.Space } as KeyboardEventInit));
+    im.update(0 as never);
+
+    expect(map.jump.active).toBe(false);
+    expect(map.jump.pressed).toBe(false);
+    expect(map.jump.released).toBe(true);
+
+    im.destroy();
+  });
+
+  it('reattaching to the same InputManager forces a fresh baseline resolution', () => {
+    const im = createManager();
+    const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+    const canvas = (im as unknown as { platform: BrowserPlatform }).platform.surface;
+
+    canvas.dispatchEvent(new FocusEvent('focus'));
+    im.attach(map);
+    im.update(0 as never);
+
+    map.detach();
+    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: Keyboard.Space } as KeyboardEventInit));
+
+    // Reattaching to the SAME owner reuses the SAME long-lived ActionSample
+    // object. Without `ActionOwnership.arm` forgetting the previously
+    // resolved sample/frameId, this could resolve as a stale 'frame' instead
+    // of 'baseline' and skip the re-seed entirely, misreporting the
+    // already-held key as a brand-new press.
+    im.attach(map);
+    im.update(0 as never);
+
+    expect(map.jump.active).toBe(true);
+    expect(map.jump.pressed).toBe(false);
 
     im.destroy();
   });
