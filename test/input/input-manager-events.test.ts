@@ -546,6 +546,7 @@ describe('InputManager — pointer signal lifecycle', () => {
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'mouse', clientX: 10, clientY: 10, isPrimary: true });
     fire(canvas, 'pointerleave', { pointerId: 1, pointerType: 'mouse', clientX: 10, clientY: 10, isPrimary: true });
     im.update();
+    im._finishInteractionFrame();
 
     expect(onLeave).toHaveBeenCalledTimes(1);
     expect(im.getPrimaryPointerPosition()).toBeNull();
@@ -560,6 +561,7 @@ describe('InputManager — pointer signal lifecycle', () => {
     fire(canvas, 'pointerdown', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
     fire(canvas, 'pointercancel', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
     im.update();
+    im._finishInteractionFrame();
 
     expect(im.getPrimaryPointerPosition()).toBeNull();
 
@@ -646,14 +648,15 @@ describe('InputManager — pointer signal lifecycle', () => {
 
     // Two leaves in a row without an intervening update(): the pointer is
     // still present in the internal map and its slot is still reserved —
-    // both are only released together once update() actually dispatches the
-    // Leave phase and retires it (see InputManager._retirePointer's doc
-    // comment) — so the handler runs twice, but retirement must only happen
-    // once.
+    // both are only released together once update() dispatches the Leave
+    // phase and _finishInteractionFrame() actually retires it (see
+    // InputManager._retirePointer's doc comment) — so the handler runs
+    // twice, but retirement must only happen once.
     expect(() => {
       fire(canvas, 'pointerleave', { pointerId: 1, pointerType: 'touch', clientX: 1, clientY: 1, isPrimary: true });
       fire(canvas, 'pointerleave', { pointerId: 1, pointerType: 'touch', clientX: 1, clientY: 1, isPrimary: true });
       im.update();
+      im._finishInteractionFrame();
     }).not.toThrow();
 
     // A newly arriving pointer must land in slot 0, not some slot beyond it —
