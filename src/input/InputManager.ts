@@ -644,7 +644,13 @@ export class InputManager {
     const list: readonly InputChannel[] = Array.isArray(channel) ? channel : [channel];
     const slot = options.gamepadSlot ?? 0;
     const resolved = list.map(c => resolveGamepadSlotChannel(c, slot));
-    const binding = new InputBinding(resolved, options, this.bindingDetacher, this._batchSequence);
+    const constructionBaseline = new Float32Array(resolved.length);
+
+    for (let i = 0; i < resolved.length; i++) {
+      constructionBaseline[i] = this.channels[resolved[i]!] ?? 0;
+    }
+
+    const binding = new InputBinding(resolved, options, this.bindingDetacher, this._batchSequence, constructionBaseline);
     this.bindings.add(binding);
 
     for (const ch of resolved) {

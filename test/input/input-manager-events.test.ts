@@ -361,6 +361,40 @@ describe('InputManager — keyboard', () => {
 
     im.destroy();
   });
+
+  test('a binding created while a key is already held reports its later release without fabricating a trigger', () => {
+    const { im, canvas } = createInputManager();
+    const onStart = vi.fn();
+    const onStop = vi.fn();
+    const onTrigger = vi.fn();
+
+    canvas.dispatchEvent(new FocusEvent('focus'));
+
+    // The physical press belongs to an earlier, already-closed frame. Its
+    // batch is gone by the time this binding starts observing, while the live
+    // channel correctly remains held.
+    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: Keyboard.Space } as KeyboardEventInit));
+    im.update();
+
+    const binding = im.onStart(Keyboard.Space, onStart, { threshold: 300 });
+
+    binding.onStop.add(onStop);
+    binding.onTrigger.add(onTrigger);
+
+    // The first post-construction batch is only the release. createBinding()
+    // must have captured the held construction baseline so this is a real
+    // stop, while the unknown pre-observation press time cannot become a tap.
+    window.dispatchEvent(new KeyboardEvent('keyup', { keyCode: Keyboard.Space } as KeyboardEventInit));
+    im.update();
+
+    expect(onStart).toHaveBeenCalledTimes(1);
+    expect(onStop).toHaveBeenCalledTimes(1);
+    expect(onTrigger).not.toHaveBeenCalled();
+    expect(binding.active).toBe(false);
+
+    binding.unbind();
+    im.destroy();
+  });
 });
 
 // ---------------------------------------------------------------------------

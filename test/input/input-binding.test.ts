@@ -467,6 +467,52 @@ describe('InputBinding — construction watermark (observation boundary)', () =>
     expect(onStop).toHaveBeenCalledTimes(1);
     expect(binding.active).toBe(false);
   });
+
+  test('a source held since a previous frame and released after construction reports the release', () => {
+    const channels = makeChannels();
+    const constructionBaseline = new Float32Array([1]);
+    const binding = new InputBinding([8], {}, null, 0, constructionBaseline);
+    const onStart = vi.fn();
+    const onStop = vi.fn();
+    const onTrigger = vi.fn();
+
+    binding.onStart.add(onStart);
+    binding.onStop.add(onStop);
+    binding.onTrigger.add(onTrigger);
+
+    // Space/channel 8 was already held at construction, but its press batch
+    // belonged to an earlier frame and is no longer present in this frame's
+    // shared log. The first post-construction event is therefore only the
+    // release — the exact case a watermark without a snapshot cannot recover.
+    channels[8] = 0;
+    binding.update(channels, [batchOf(8, 0)]);
+
+    expect(onStart).toHaveBeenCalledTimes(1);
+    expect(onStop).toHaveBeenCalledTimes(1);
+    expect(onTrigger).not.toHaveBeenCalled();
+    expect(binding.active).toBe(false);
+
+    binding.unbind();
+  });
+
+  test('an attach-time held baseline never fabricates a trigger on a later prompt release', () => {
+    const channels = makeChannels();
+    const constructionBaseline = new Float32Array([1]);
+    const binding = new InputBinding([8], { threshold: 300 }, null, 0, constructionBaseline);
+    const onTrigger = vi.fn();
+
+    binding.onTrigger.add(onTrigger);
+
+    channels[8] = 1;
+    binding.update(channels, []); // baseline activation time predates observation
+
+    channels[8] = 0;
+    binding.update(channels, [batchOf(8, 0, nextSequence(), 100)]);
+
+    expect(onTrigger).not.toHaveBeenCalled();
+
+    binding.unbind();
+  });
 });
 
 describe('InputBinding — onActive dispatch granularity', () => {

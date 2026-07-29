@@ -88,17 +88,31 @@ export class InputBinding {
    * bare live-value read on that first call would).
    */
   private readonly _watermark: number;
+  /**
+   * Values of this binding's resolved channels at the exact construction
+   * boundary, in the same order as {@link channels}. Supplied by
+   * {@link InputManager.createBinding}; direct/internal callers may omit it
+   * and retain the legacy watermark reconstruction fallback.
+   */
+  private readonly _constructionBaseline: Float32Array | null;
   /** `false` until the first `update()` call — see `update`'s doc comment. */
   private _seeded = false;
   private _value = 0;
   private _unbound = false;
 
-  public constructor(channels: readonly number[], options: InputBindingOptions = {}, detacher: InternalChannelDetacher | null = null, watermark = 0) {
+  public constructor(
+    channels: readonly number[],
+    options: InputBindingOptions = {},
+    detacher: InternalChannelDetacher | null = null,
+    watermark = 0,
+    constructionBaseline: Float32Array | null = null,
+  ) {
     this.channels = channels;
     this._triggerThreshold = options.threshold ?? InputBinding.defaultTriggerThreshold;
     this._detacher = detacher;
     this._channelValues = new Float32Array(channels.length);
     this._watermark = watermark;
+    this._constructionBaseline = constructionBaseline;
   }
 
   /** Last value sampled this frame. 0 when inactive. */
@@ -157,9 +171,11 @@ export class InputBinding {
     }
 
     const relevant = this._seeded ? batches : batches.filter(batch => batch.sequence > this._watermark);
+    let fallbackTimestamp: number | null = getPreciseTime();
 
     if (!this._seeded) {
       this._seeded = true;
+      fallbackTimestamp = null;
       this._seedUntouchedChannels(channels, batches, relevant);
 
       if (relevant.length > 0) {
@@ -180,23 +196,22 @@ export class InputBinding {
       }
     }
 
-    this._replayOrEvaluate(relevant, getPreciseTime());
+    this._replayOrEvaluate(relevant, fallbackTimestamp);
   }
 
   /**
    * Seed every bound channel `relevant` (the batches this call will actually
    * replay) does NOT touch, directly from the live buffer — with no
    * synthetic edge, exactly like a plain live-value read. A channel `relevant`
-   * DOES touch is instead seeded from the last value a PRE-watermark batch
-   * (one filtered out of `relevant`, in `allBatches`) gave it, if any — so a
-   * press recorded before this binding existed and released after it is
-   * still seen as a real release rather than starting the replay from an
-   * assumed 0 (see `update`'s doc comment on the follow-up `_applyEdge`
-   * call). Left at 0 when NEITHER exists, matching the same accepted
-   * assumption `ButtonAction._seedUntouchedChannels` makes for a channel
-   * with no prior baseline to seed from at all.
+   * DOES touch is seeded from the exact construction-time snapshot when the
+   * real InputManager supplied one. That closes the case a watermark alone
+   * cannot reconstruct: a source held since a PREVIOUS frame (there is no
+   * stale press batch left in this frame's log), followed by its first
+   * post-construction release batch. Legacy/direct callers without a snapshot
+   * fall back to the last PRE-watermark batch value, if any.
    */
   private _seedUntouchedChannels(channels: Float32Array, allBatches: readonly ChannelEventBatch[], relevant: readonly ChannelEventBatch[]): void {
+    const constructionBaseline = this._constructionBaseline;
     const relevantSet = new Set(relevant);
     const touchedByRelevant = new Set<number>();
     const preWatermarkValue = new Map<number, number>();
@@ -221,7 +236,12 @@ export class InputBinding {
       const channel = this.channels[i]!;
 
       if (!touchedByRelevant.has(channel)) {
-        this._channelValues[i] = channels[channel] ?? 0;
+        this._channelValues[i] = constructionBaseline?.[i] ?? channels[channel] ?? 0;
+        continue;
+      }
+
+      if (constructionBaseline !== null) {
+        this._channelValues[i] = constructionBaseline[i] ?? 0;
         continue;
       }
 
@@ -254,7 +274,7 @@ export class InputBinding {
    * releases again within the same call (it should never have appeared
    * active to a once-per-frame observer in the first place).
    */
-  private _replayOrEvaluate(batches: readonly ChannelEventBatch[], fallbackTimestamp: number): void {
+  private _replayOrEvaluate(batches: readonly ChannelEventBatch[], fallbackTimestamp: number | null): void {
     let anyEdgeChecked = false;
 
     for (const batch of batches) {
