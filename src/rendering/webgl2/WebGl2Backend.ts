@@ -2110,7 +2110,7 @@ export class WebGl2Backend implements RenderBackend {
     const isFloat = source instanceof Float32Array;
     let scratch = state.partialUploadScratch;
 
-    if (scratch === null || scratch.length < length || isFloat !== (scratch instanceof Float32Array)) {
+    if (scratch === null || scratch.length < length || isFloat !== scratch instanceof Float32Array) {
       scratch = isFloat ? new Float32Array(length) : new Uint8Array(length);
       state.partialUploadScratch = scratch;
     }
