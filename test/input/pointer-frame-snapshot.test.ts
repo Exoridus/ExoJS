@@ -323,44 +323,44 @@ describe('ordered channel event log', () => {
       .filter(e => e.channel === (Keyboard.Space as number))
       .map(e => e.value);
 
-  const focusAndPress = (keyCode: number): void => {
+  const focusAndPress = (code: string): void => {
     canvas.dispatchEvent(new FocusEvent('focus'));
-    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode } as KeyboardEventInit));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code }));
   };
 
   it('records a press then a release in that true order within one frame', () => {
-    focusAndPress(32);
-    window.dispatchEvent(new KeyboardEvent('keyup', { keyCode: 32 } as KeyboardEventInit));
+    focusAndPress('Space');
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space' }));
 
     expect(forSpace(im)).toEqual([1, 0]);
   });
 
   it('records a release then a fresh press in that true order', () => {
-    focusAndPress(32);
+    focusAndPress('Space');
     im.update(0 as never);
 
-    window.dispatchEvent(new KeyboardEvent('keyup', { keyCode: 32 } as KeyboardEventInit));
-    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: 32 } as KeyboardEventInit));
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
 
     expect(forSpace(im)).toEqual([0, 1]);
   });
 
   it('does not consume the log when it is read mid-frame', () => {
-    focusAndPress(32);
+    focusAndPress('Space');
 
     expect(forSpace(im)).toEqual([1]);
     expect(forSpace(im)).toEqual([1]);
   });
 
   it('clears the log once the frame closes', () => {
-    focusAndPress(32);
+    focusAndPress('Space');
     im.update(0 as never);
 
     expect(forSpace(im)).toEqual([]);
   });
 
   it('does not log a repeat write of the same value', () => {
-    focusAndPress(32);
+    focusAndPress('Space');
     im.update(0 as never);
     im.update(0 as never); // still held, no new platform event
 
@@ -371,7 +371,7 @@ describe('ordered channel event log', () => {
 describe('keyboard dispatch order', () => {
   it('dispatches a Shift-up followed by a Tab-down in that true order, not grouped by type', () => {
     canvas.dispatchEvent(new FocusEvent('focus'));
-    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: 16 } as KeyboardEventInit)); // Shift down
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'ShiftLeft' })); // Shift down
     im.update(0 as never);
 
     const seen: Array<{ channel: number; pressed: boolean }> = [];
@@ -383,8 +383,8 @@ describe('keyboard dispatch order', () => {
     // "all keydowns before all keyups" dispatch order would report Tab's
     // keydown before Shift's keyup, letting a Tab handler still see Shift
     // as held.
-    window.dispatchEvent(new KeyboardEvent('keyup', { keyCode: 16 } as KeyboardEventInit));
-    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: 9 } as KeyboardEventInit)); // Tab down
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'ShiftLeft' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab' })); // Tab down
     im.update(0 as never);
 
     expect(seen).toEqual([

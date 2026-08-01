@@ -241,6 +241,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "isAdvancedBlendMode",
   "isAudioContextReady",
   "isPowerOfTwo",
+  "keyboardChannelFromCode",
   "lerp",
   "logger",
   "maxPointers",

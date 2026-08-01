@@ -9,7 +9,7 @@ import Callout from '../../../components/Callout.astro';
 
 # Keyboard & actions
 
-ExoJS maps keys to numeric channels via the [`Keyboard`](/ExoJS/en/api/keyboard/) enum. `Keyboard.Space` is channel 32, `Keyboard.A` is 65, `Keyboard.Left` is 37. Values follow the browser's legacy `KeyboardEvent.keyCode` mapping. Keys only fire while the canvas has focus; when focus leaves, all held keys are released automatically.
+ExoJS maps keys to numeric channels via the [`Keyboard`](/ExoJS/en/api/keyboard/) enum. A member names a **physical key position**, resolved from the browser's layout-independent `KeyboardEvent.code` — `Keyboard.A` is the key at the QWERTY "A" position on every layout, the one an AZERTY keyboard prints "Q" on, so a WASD binding stays the same physical square under the player's hand. The names describe the US-QWERTY legend, not the character the key produces; use DOM text input for typed characters, dead keys, and IME composition. The channel numbers themselves are opaque values — do not assume they equal any `keyCode`. Keys only fire while the canvas has focus; when focus leaves, all held keys are released automatically.
 
 ## Scene-scoped bindings
 
@@ -141,7 +141,7 @@ Keyboard.F1 .. Keyboard.F12
 Keyboard.NumPad0 .. Keyboard.NumPad9
 ```
 
-The full list includes punctuation, brackets, and navigation keys. All values match the browser's legacy `KeyboardEvent.keyCode` map used by ExoJS.
+The full list includes punctuation, brackets, and navigation keys. Punctuation members carry the glyph a US-QWERTY keyboard prints on that key (`Keyboard.Colon`, `Keyboard.Tilde`, `Keyboard.OpenBracket`, …) — the name is the US legend, the binding is the position, so on a QWERTZ keyboard `Keyboard.Colon` is the key printed "ö". A modifier is one channel per role, not per side: `ShiftLeft` and `ShiftRight` both drive `Keyboard.Shift`. Keys ExoJS does not track (media keys, IME/language keys) drive no channel at all. To resolve a raw DOM event yourself — in a rebinding UI, say — use `keyboardChannelFromCode(event.code)`.
 
 ## Canvas focus
 
