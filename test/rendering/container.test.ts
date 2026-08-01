@@ -324,8 +324,17 @@ describe('Container paint-order cache', () => {
     d.zIndex = 5;
 
     // a/c share z=0 and keep their relative document order; b/d share z=5 and
-    // do the same — a stable sort, not merely "sorted by z".
-    expect(container._childrenInPaintOrder()).toEqual([a, c, b, d]);
+    // do the same — a stable sort, not merely "sorted by z". Asserted by
+    // IDENTITY (not `toEqual`): `a`/`c` (and `b`/`d`) are otherwise
+    // indistinguishable `DummyDrawable` instances, so a structural-equality
+    // assertion here would pass even for a wrongly-swapped tie (e.g.
+    // `[c, a, d, b]`) and silently fail to verify stability at all.
+    const order = container._childrenInPaintOrder();
+
+    expect(order[0]).toBe(a);
+    expect(order[1]).toBe(c);
+    expect(order[2]).toBe(b);
+    expect(order[3]).toBe(d);
   });
 
   test('repeated reads reuse the exact same paint-order snapshot when nothing changed', () => {
@@ -387,6 +396,36 @@ describe('Container paint-order cache', () => {
     mutate(container);
 
     expect(container._childrenInPaintOrder()).not.toBe(before);
+  });
+
+  test('reparenting a child (addChild onto a new parent) invalidates BOTH the old and new parent caches', () => {
+    const containerA = new Container();
+    const containerB = new Container();
+    const staying = new DummyDrawable();
+    const moving = new DummyDrawable();
+    const existing = new DummyDrawable();
+
+    containerA.addChild(staying);
+    containerA.addChild(moving);
+    containerB.addChild(existing);
+    // Force the sorted branch on both sides so the cached views are
+    // genuinely populated (not merely the `.children` passthrough).
+    moving.zIndex = 5;
+    existing.zIndex = 5;
+
+    const beforeA = containerA._childrenInPaintOrder();
+    const beforeB = containerB._childrenInPaintOrder();
+
+    // addChild() on containerB detaches `moving` from containerA first
+    // (Container.addChildAt: `if (child.parent) child.parent.removeChild(child);`),
+    // so this single call must invalidate both containers' caches.
+    containerB.addChild(moving);
+
+    expect(containerA._childrenInPaintOrder()).not.toBe(beforeA);
+    expect(containerA.children).toEqual([staying]);
+    expect(containerB._childrenInPaintOrder()).not.toBe(beforeB);
+    expect(containerB.children).toEqual([existing, moving]);
+    expect(moving.parent).toBe(containerB);
   });
 
   test('a child zIndex change invalidates its parent document-order, paint-order, and child-index caches', () => {

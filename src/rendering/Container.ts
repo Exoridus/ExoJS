@@ -187,7 +187,13 @@ export class Container extends RenderNode {
 
   public getChildIndex(child: RenderNode): number {
     if (this._childIndexView === null) {
-      this._childIndexView = new Map(this._children.map((entry, index) => [entry, index]));
+      const map = new Map<RenderNode, number>();
+
+      for (let i = 0; i < this._children.length; i++) {
+        map.set(this._children[i]!, i);
+      }
+
+      this._childIndexView = map;
     }
     const index = this._childIndexView.get(child);
     if (index === undefined) {

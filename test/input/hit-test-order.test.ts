@@ -411,7 +411,7 @@ describe('renderer / hit-test agreement', () => {
     im.destroy();
   });
 
-  it('repeated picks against the same wide, overlapping sibling set never re-sort — same node every time', () => {
+  it('repeated picks against the same wide, overlapping sibling set return the same node every time, and the renderer agrees', () => {
     const { app, scene, signals } = createApp();
     const im = new InteractionManager(app);
 
