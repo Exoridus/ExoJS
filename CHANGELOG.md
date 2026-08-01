@@ -336,7 +336,12 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
   matching the request). When the key's payload is already resident, the retry
   re-runs `parse()` against it rather than refetching — so a value ref whose
   own `parse()` failed re-fails honestly instead of stranding at `'loading'`
-  with no fetch in flight.
+  with no fetch in flight. A leaf that was never adopted before counts as a
+  retry too: a second scene claiming the same catalog after the first load
+  failed handed the loader a brand-new `'idle'` leaf, which joined the failed
+  key, flipped to `'loading'`, and hung there because nothing restarted the
+  fetch. Whether an adoption is a retry is now decided by the source's own
+  failed handles, not by the state of whichever leaf asked.
 - **`Loader.inspect()` reports `'failed'`, not `'ready'`,** for a value key
   whose fetch succeeded but whose own `parse()` failed: the raw payload is
   stored either way, so a resident payload alone never means "readable".

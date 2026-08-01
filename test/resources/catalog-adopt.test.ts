@@ -431,6 +431,67 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2); // exactly ONE retry fetch heals both — no duplicate
   });
 
+  test('adopting a BRAND-NEW leaf for a key whose earlier load FAILED retries the key instead of stranding the new leaf', async () => {
+    const { fetchMock, succeed } = togglableImageFetch();
+    const loader = createCoreLoader();
+
+    const first = createLeaf('texture', 'scene-handoff.png') as Texture;
+
+    loader._adopt(first, Symbol('scene-a'));
+    await expect(first.loaded).rejects.toThrow();
+    expect(first.loadState).toBe('failed');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // A second scene claiming the same catalog hands over a leaf that was never
+    // adopted before: 'idle', never 'failed'. What failed is the KEY, and
+    // nothing else will ever restart it — no fetch is in flight and
+    // `_storeResource` never runs for it — so the joining leaf must drive the
+    // retry off its FAILED SIBLING, not off its own prior state.
+    succeed();
+
+    const fresh = createLeaf('texture', 'scene-handoff.png') as Texture;
+
+    loader._adopt(fresh, Symbol('scene-b'));
+
+    expect(fresh.loadState).toBe('loading');
+    expect(fetchMock).toHaveBeenCalledTimes(2); // re-armed AND refetched — never 'loading' with nothing in flight
+    expect(loader.inspect().find(r => r.source === 'scene-handoff.png')).toMatchObject({ state: 'loading', inFlight: true });
+
+    // A THIRD brand-new leaf joining in the SAME tick must not fetch again: the
+    // adopt above already re-armed every sibling, so no handle reads 'failed'.
+    const alsoFresh = createLeaf('texture', 'scene-handoff.png') as Texture;
+
+    loader._adopt(alsoFresh, Symbol('scene-c'));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    await expect(fresh.loaded).resolves.toBe(fresh);
+    expect(fresh.loadState).toBe('ready');
+    expect(alsoFresh.loadState).toBe('ready');
+    expect(first.loadState).toBe('ready'); // the originally-failed leaf heals in place too
+    expect(fetchMock).toHaveBeenCalledTimes(2); // exactly ONE retry fetch served all three
+    expect(loader.inspect().find(r => r.source === 'scene-handoff.png')).toMatchObject({ state: 'ready', inFlight: false });
+  });
+
+  test('a BRAND-NEW leaf adopted onto a still-broken failed key fails honestly again instead of hanging in loading', async () => {
+    const { fetchMock } = togglableImageFetch();
+    const loader = createCoreLoader();
+
+    const first = createLeaf('texture', 'still-down.png') as Texture;
+
+    loader._adopt(first, Symbol('scene-a'));
+    await expect(first.loaded).rejects.toThrow();
+
+    const fresh = createLeaf('texture', 'still-down.png') as Texture;
+
+    loader._adopt(fresh, Symbol('scene-b')); // source is still down
+
+    await expect(fresh.loaded).rejects.toThrow();
+    expect(fresh.loadState).toBe('failed'); // an honest re-failure, not a silent hang
+    expect(first.loadState).toBe('failed');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(loader.inspect().find(r => r.source === 'still-down.png')).toMatchObject({ state: 'failed', inFlight: false });
+  });
+
   test('re-adopting a failed seamless leaf with { background: true } queues the retry instead of fetching immediately', async () => {
     const { fetchMock, succeed } = togglableImageFetch();
     const loader = createCoreLoader();

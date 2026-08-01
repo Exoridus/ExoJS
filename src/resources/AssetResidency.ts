@@ -487,6 +487,7 @@ export class AssetResidency {
 
     const deferredEntry = this._deferred.get(key);
     const stored = this._resources.get(ctor)?.get(meta.src);
+    const adapter = this._typeRegistry.getSeamlessAdapter(ctor);
 
     if (deferredEntry === undefined && stored === undefined) {
       this._createDeferredEntry(key, handle, meta.opts);
@@ -514,41 +515,55 @@ export class AssetResidency {
       // donor was itself registered here at store time, so the entry already
       // exists (its representative stays canonical); the co-handle only ever
       // joins, never displaces it.
-      const adapter = this._typeRegistry.getSeamlessAdapter(ctor);
-
       adapter?.fill(handle, stored);
 
       const entry = deferredEntry ?? this._createDeferredEntry(key, stored as object, meta.opts);
 
       this._addDeferredHandle(key, entry, handle);
     } else if (deferredEntry !== undefined && stored === undefined && !deferredEntry.handles.has(handle)) {
-      // A distinct handle is in flight for this key and nothing is stored yet:
-      // join the key's handle set so `_storeResource` fills THIS handle too
-      // (§7 multi-handle fill). A conflicting FETCH option (source-keyed decode
-      // can't differ) warns; differing per-handle sampler options are fine
-      // (each handle carries its own).
-      //
-      // KNOWN GAP: "in flight" is assumed here, never checked. If the key's
-      // earlier load already FAILED, nothing is in flight and nothing restarts
-      // one — the retry below only fires when the ADOPTED handle was itself
-      // 'failed', which a brand-new leaf never is. Such a leaf is flipped
-      // 'idle' → 'loading' at the top of this method and then hangs there.
-      // Healing it needs the retry to key off the SIBLING handles' state
-      // instead of the adopted handle's own prior state.
+      // Another handle already holds this key and nothing is stored yet: join
+      // the key's handle set so `_storeResource` fills THIS handle too (§7
+      // multi-handle fill). The key's fetch may be in flight or may have ended
+      // in failure — the retry below covers the latter. A conflicting FETCH
+      // option (source-keyed decode can't differ) warns; differing per-handle
+      // sampler options are fine (each handle carries its own).
       this._addDeferredHandle(key, deferredEntry, handle);
       this._warnOnFetchOptionConflict(ctor, meta.src, key, deferredEntry.options, meta.opts);
     }
     // else: the SAME handle re-adopted, or already filled — a no-op.
 
-    if (retryingFailedLeaf && stored === undefined && deferredEntry !== undefined) {
-      const adapter = this._typeRegistry.getSeamlessAdapter(ctor);
-      if (adapter !== undefined) {
-        for (const candidate of deferredEntry.handles) {
-          if (adapter.stateOf(candidate) === 'failed') adapter.begin(candidate);
-        }
-        if (background) this._enqueueBackgroundFetch(ctor, meta.src, deferredEntry.options);
-        else this._startSeamlessFetch(ctor, meta.src, deferredEntry.options);
+    // Retry of a key that already failed. Being a retry is a property of the
+    // KEY, not of the adopted handle: a brand-new leaf is 'idle' (re-armed to
+    // 'loading' at the top of this method), never 'failed', yet joining a key
+    // whose earlier load failed — a second scene claiming the same catalog does
+    // exactly this — is every bit as much a retry request. Nothing else would
+    // restart such a key: its fetch already settled into failure, so
+    // `_storeResource` never runs for it and the joining handle would sit in
+    // 'loading' forever.
+    // Reading the SIBLINGS after the join above is equivalent to reading them
+    // before it: by this point the adopted handle is 'loading' either way, so
+    // its own failure only ever surfaces through `retryingFailedLeaf`.
+    //
+    // Only reached when the key already has a deferred entry: the
+    // `deferredEntry === undefined && stored === undefined` branch above
+    // returns after starting its own fetch, so no key is ever fetched twice in
+    // one adopt. Two handles joining a failed key in the same tick fetch once
+    // too — the first adopt re-arms every failed sibling, so the second finds
+    // none.
+    //
+    // A key whose payload is already stored needs no retry, unlike a value key:
+    // `_storeResource` re-arms and fills EVERY non-'ready' handle of the key
+    // before storing, and the `stored !== undefined` branch above fills a
+    // newly-adopted handle in place from the stored donor. A seamless adapter's
+    // `fill()` is a plain in-place transplant with no per-handle `parse()` that
+    // could reject a payload the fetch delivered, so handle state and
+    // `_resources` cannot diverge the way a ref's can.
+    if (stored === undefined && deferredEntry !== undefined && adapter !== undefined && (retryingFailedLeaf || this._hasFailedHandle(deferredEntry, adapter))) {
+      for (const candidate of deferredEntry.handles) {
+        if (adapter.stateOf(candidate) === 'failed') adapter.begin(candidate);
       }
+      if (background) this._enqueueBackgroundFetch(ctor, meta.src, deferredEntry.options);
+      else this._startSeamlessFetch(ctor, meta.src, deferredEntry.options);
     }
 
     this._claim(key, ctor, meta.src, claimer);
@@ -699,6 +714,25 @@ export class AssetResidency {
 
     entry.handles.add(handle);
     this._deferredFinalization.register(handle, key);
+  }
+
+  /**
+   * Does any live handle registered for a seamless key sit in `'failed'`? Then
+   * the key's last attempt ended in failure, and an adoption joining it is a
+   * retry — whatever state the adopted handle itself was in. Restarting is
+   * harmless in the one case where a fetch IS already running past a `'failed'`
+   * straggler ({@link _getSeamless} re-arms only the representative):
+   * {@link _loadSingle} dedupes on the key's in-flight entry, and the straggler
+   * needed the re-arm regardless.
+   */
+  private _hasFailedHandle(entry: { readonly handles: WeakHandleSet }, adapter: SeamlessAdapter<unknown>): boolean {
+    for (const handle of entry.handles) {
+      if (adapter.stateOf(handle) === 'failed') {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /**
