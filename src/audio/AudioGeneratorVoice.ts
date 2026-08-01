@@ -157,6 +157,11 @@ export class AudioGeneratorVoice extends BaseVoice implements RatePitched {
     panner.connect(this._output);
   }
 
+  protected override _routeDirect(): void {
+    this._envelopeGain.disconnect();
+    this._envelopeGain.connect(this._output);
+  }
+
   protected override _teardownSource(): void {
     this._oscillator.onended = null;
     try {

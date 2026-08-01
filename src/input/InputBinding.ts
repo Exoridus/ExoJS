@@ -7,6 +7,47 @@ import type { GamepadButtonChannel } from './GamepadButton';
 import type { PointerChannel } from './Pointer';
 import type { Keyboard, PointerButton } from './types';
 
+// Deliberately co-located with this file rather than the root barrel
+// (`src/index.ts`): this is the only file in the package that references
+// `typeof Symbol.dispose`, and the emitted `InputBinding.d.ts` carries that
+// reference directly (see `disposeSymbol` below). A consumer entering
+// through a subpath other than the root (`@codexo/exojs/renderer-sdk`,
+// `/debug`, `/extensions`) reaches `InputBinding.d.ts` WITHOUT the root
+// `index.d.ts` ever being part of their program, so an augmentation declared
+// only there would leave `Symbol.dispose` undefined for that consumer.
+// Declaring it here instead means every entry point that transitively pulls
+// in `InputBinding.d.ts` gets it — including the root barrel, since
+// `index.d.ts` re-exports `#input/index` → `InputBinding.d.ts` anyway.
+// Duplicate `unique symbol` interface merging across this file and
+// TypeScript's own `lib.esnext.disposable.d.ts` (pulled in transitively by
+// `@types/node`, see the cast comment below) does not conflict — both
+// declare the identical shape and merge into one property.
+declare global {
+  interface SymbolConstructor {
+    readonly dispose: unique symbol;
+  }
+
+  interface Disposable {
+    [Symbol.dispose](): void;
+  }
+}
+
+// Cast required: under a tsconfig without `@types/node` in scope (this
+// package's own `examples`/`type-tests` lanes, and many browser-only
+// consumers), nothing pulls in TypeScript's real `esnext.disposable` lib, so
+// `Symbol.dispose` is typed purely from the ambient declaration above and
+// `Symbol.for(...)`'s plain `symbol` return widens the union — the assertion
+// re-narrows it back down. Under a project that DOES have `@types/node`
+// (this repo's own root tsconfig), the real lib already narrows the union on
+// its own, which is why this looks "unnecessary" to a linter resolving
+// against that project specifically.
+//
+// The `?? Symbol.for('Symbol.dispose')` fallback matters at RUNTIME, not
+// just for typing: see this file's `[disposeSymbol]` doc comment for what it
+// requires of the environment.
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- necessary under any tsconfig without `@types/node`'s `esnext.disposable` lib reference; see comment above.
+const disposeSymbol: typeof Symbol.dispose = (Symbol.dispose ?? Symbol.for('Symbol.dispose')) as typeof Symbol.dispose;
+
 /** Channel a single {@link InputBinding} can subscribe to. */
 export type InputChannel = GamepadButtonChannel | GamepadAxisChannel | PointerChannel | Keyboard | PointerButton;
 
@@ -39,12 +80,11 @@ interface InternalChannelDetacher {
  * proxy).
  *
  * Construct via the owner's `onStart` / `onActive` / `onStop` /
- * `onTrigger` factory methods rather than `new InputBinding(...)` directly.
+ * `onTrigger` factory methods rather than `new InputBinding(...)` directly —
+ * the returned binding is caller-owned from that point on.
  *
  * Lifecycle: a binding lives until {@link unbind} is called, the owner
  * disposes it, or — for scene-bound bindings — the scene unloads.
- *
- * @internal
  */
 export class InputBinding {
   /**
@@ -361,6 +401,27 @@ export class InputBinding {
 
       this._activationTimestamp = null;
     }
+  }
+
+  /**
+   * Explicit Resource Management alias for {@link unbind} — enables
+   * `using binding = input.onStart(...)`. Idempotent, same as `unbind`
+   * itself: disposing a binding that is already unbound (manually, or
+   * because a tracking owner like `SceneInputs` unbound it first on scene
+   * teardown) is a no-op, so mixing `using` with a manual `unbind()` call in
+   * either order is safe. Only caller-owned binding handles expose this
+   * protocol; engine-owned managers and nodes do not become
+   * caller-disposable.
+   *
+   * Runtime `using` support requires the environment to provide a real
+   * `Symbol.dispose`, or a `Symbol.for('Symbol.dispose')`-registry polyfill
+   * installed before this module is imported (see the `disposeSymbol`
+   * fallback above) — without either, this method is installed under a key
+   * `using`'s lowering will never look up. Plain `unbind()` has no such
+   * requirement.
+   */
+  public [disposeSymbol](): void {
+    this.unbind();
   }
 
   /**

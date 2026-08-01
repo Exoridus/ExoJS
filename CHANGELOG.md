@@ -125,6 +125,48 @@ transition: sharedFade }` or a per-phase `{ enter, exit }` pair). Data and
   the same catalog reaching a composition twice (a diamond) deduplicates.
   `extend()` derives a catalog from a base, adding keys and deliberately
   overriding existing ones without mutating the base.
+- **`ChordAction` and `SequenceAction`.** Two new action kinds alongside
+  `ButtonAction`/`AxisAction`/`VectorAction`. `ChordAction` is active while
+  every channel of a chord is held at once (`new ChordAction('Control+S')`,
+  `new ChordAction([GamepadButton.LeftShoulder, GamepadButton.RightShoulder])`)
+  and exposes the same `active`/`pressed`/`released` triad as `ButtonAction`.
+  `SequenceAction` recognizes an ordered pattern (`new
+SequenceAction('Up>Up>Down>Down>Left>Right>Left>Right>B>A', { maxGap: 800 })`),
+  exposing `triggered` for the one frame the final step completes plus
+  `progress`. In a string pattern `+` joins the channels of one step and `>`
+  advances to the next; tokens resolve as case-insensitive `Keyboard` enum
+  names — a shortcut syntax for enum lookups, never text or IME input. The
+  array forms (`InputChord`, `InputSequence`) take pointer and gamepad channels
+  too. `SequenceActionOptions` adds `maxGap` (default `600`ms), `timeout`
+  (`3000`ms) and `resetOnMismatch` (`true`); both kinds also accept the shared
+  `threshold`/`gamepadSlot`. Both read the same ordered per-batch input journal
+  as `ButtonAction`, so one atomic platform batch never invents an order
+  between two channels that changed together. New exports: `ChordAction`,
+  `SequenceAction`, `ChordBinding`, `SequenceBinding`, `SequenceActionOptions`,
+  `InputChord`, `InputSequence`.
+- **`when` on a scene-owned `ActionMap`** — `scene.inputs.attach(map, { when:
+'active' | 'paused' | 'always' })` (`SceneActionMapOptions`, default
+  `'active'`) applies the same availability policy the binding-level `when`
+  option already had, through the same suspend/transition-gate/pause checks. On
+  losing availability the map resets its actions once and goes inert; on
+  regaining it, the ownership watermark and channel baseline are re-armed, so a
+  key held across the gap resyncs as already-active instead of surfacing a
+  synthetic press.
+- **`Loader.inspect()` and `AssetInspection`.** A frozen, key-sorted snapshot
+  array describing every claimed `(type, source)` key — `{ key, type, source,
+state, claims, inFlight, background }` — for diagnostics and support bundles.
+  `claims` counts distinct claim scopes (the same refcount `release()` uses),
+  not consumer handles or `get()` calls, and `state` never reports a settled
+  row as still queued.
+- **Native JS protocol conformance.** `Container` implements `Symbol.iterator`
+  (`for (const child of container)`) over the same frozen document-order
+  snapshot `container.children` returns. `InputBinding` — a caller-owned
+  handle — implements `Symbol.dispose` as an idempotent alias of `unbind()`, so
+  `using binding = app.input.onStart(...)` unbinds at scope exit; the package
+  ships the `SymbolConstructor.dispose`/`Disposable` global augmentation, so
+  `using` type-checks under `es2022` without consumers bumping `lib`/`target`.
+- **`FadeSceneTransitionOptions`** is exported from the root and
+  `core/transitions` barrels (previously unnameable by consumers).
 
 ### Changed
 
@@ -148,7 +190,7 @@ data?)` or `app.start('game', data?)`; `app.scene.setScene(instance, opts)`
   resolving via an undocumented `retained → preloaded → active` priority.
 - **BREAKING — the `transition` option no longer accepts a config object.**
   `{ transition: { type: 'fade', duration: 250 } }` →
-  `{ transition: new FadeSceneTransition(undefined, { duration: 250 }) }` — note
+  `{ transition: new FadeSceneTransition({ duration: 250 }) }` — note
   `duration` is now milliseconds, not seconds. `SceneTransition` is a class
   (abstract base + `FadeSceneTransition`/`CrossFadeSceneTransition`/
   `SlideSceneTransition`/`PhasedSceneTransition`), not a union type.
@@ -190,6 +232,39 @@ c.removeChild(x); kids` still contains `x`) — it does not update
   public setter is removed; reparenting happens exclusively through the
   same `Container` mutation methods, which now use an internal
   `_setParent()` path.
+- **BREAKING — `FadeSceneTransition`'s constructor is options-only.** `new
+FadeSceneTransition(color?, options?)` → `new
+FadeSceneTransition(options?)`, with the color folded in as
+  `FadeSceneTransitionOptions.color` (default `Color.black`) alongside
+  `duration`/`easing`/`placement`. The old positional pair silently
+  misassigned an options-only argument to the `color` parameter, so the
+  documented `new FadeSceneTransition({ duration: 300 })` left `color`
+  permanently `undefined` instead of defaulting. Migrate `new
+FadeSceneTransition(Color.white, { duration: 300 })` → `new
+FadeSceneTransition({ color: Color.white, duration: 300 })`.
+- **BREAKING (runtime) — `Loader.release(object)` now throws** when the
+  argument has no claim identity it can resolve, where it previously did
+  nothing at all. The supported forms are unchanged (a handle/value-ref from
+  `get()`, an `Asset` descriptor, an `Assets` catalog, a catalog leaf, or the
+  `(type, source)` pair), and releasing an unclaimed or already-released one
+  of those stays an idempotent no-op. What now throws is anything else — most
+  importantly a **resolved non-leaf resource** (one loaded with
+  `load(Asset.type('bmFont', …))`, or unpacked by `loadContainer()`) and any
+  object the loader has never seen. Such a call still type-checks against the
+  `release(handle: object)` overload, so it starts throwing at runtime in a
+  previously working application: switch it to `release(asset)` or
+  `release(type, source)`. The check depends only on whether the object is a
+  handle this loader ever issued, never on live claim bookkeeping, so the same
+  object's outcome cannot change with unrelated teardown ordering.
+- **BREAKING — a value asset's `parse()` must be synchronous.** A `parse`
+  returning a thenable now fails that ref with an explicit contract error
+  instead of misreading the promise itself as the parsed value. Move
+  asynchronous work into the asset handler's load phase.
+- **Gesture occurrences (pinch/rotate/long-press) are queued on the input
+  frame journal** and dispatched at the frame boundary in true platform-event
+  order, instead of synchronously off the raw `pointermove`/timer callback.
+  Handlers that relied on running mid-event now run on the next frame
+  boundary, in order relative to the pointer phases that produced them.
 
 ### Removed
 
@@ -210,6 +285,16 @@ c.removeChild(x); kids` still contains `x`) — it does not update
   `unload(catalog)` was already just a release of each leaf and maps directly to
   `release(catalog)`; the hard, claim-forgetting reset is now internal-only.
 
+### Performance
+
+- **`Container` caches its paint order and child-index lookups.**
+  `InteractionManager` re-sorted every container's children on every single
+  hit-test call, and `getChildIndex()` did a linear `indexOf` scan on every
+  call (including from `swapChildren`/`setChildIndex`). Both are now cached on
+  `Container` itself — the paint-order snapshot skips the sort entirely while
+  every sibling shares a `zIndex` — invalidated by each structural mutator, and
+  by a child's `zIndex` write for the paint order alone.
+
 ### Fixed
 
 - **`SceneInteraction.suspend()`/`resume()`** now actually detach/reattach
@@ -224,9 +309,52 @@ c.removeChild(x); kids` still contains `x`) — it does not update
   longer aborts the remaining listeners or corrupts the `Signal`'s internal
   dispatch state — every listener runs, a throw is reported through
   `Application.onError` per-listener instead of propagating.
+- **Multi-touch gesture recognition.** A lifted touch (`pointerup`) was never
+  removed from the two-touch set, so the remaining touch's next move still
+  attempted (broken) two-touch processing; the rotation delta was a naive
+  subtraction, so a move across the ±180° seam (`+179°` → `-179°`) reported
+  `-358°` instead of `+2°`; and `InputManager` reused the recognizer's own
+  scratch center `Vector` for its dispatch instead of owning one.
+- **Spatial audio voice lifecycle and math.** A duplicate same-timestamp
+  velocity sample no longer erases real movement (while a genuinely later
+  stationary tick still zeroes it); the Doppler ratio actively restores to `1`
+  when the factor drops to `0` or the source becomes coincident with the
+  listener, instead of leaving a stale shift applied; `refDistance`,
+  `maxDistance`, `rolloffFactor`, cone angles/gain, and `velocity` clamp to the
+  Web Audio `PannerNode`'s valid ranges and reject `NaN`/`±Infinity` instead of
+  propagating them into the graph, with `refDistance`/`maxDistance` clamped
+  independently (coupling them could force the two equal and divide by zero in
+  the default `'linear'` distance model); and clearing `position`/`follow` now
+  genuinely de-spatializes a voice — the panner is disconnected, the direct
+  source-to-output route restored, and the voice unregistered from the
+  per-frame tick set — rather than leaving a silently-still-wired panner
+  running.
+- **A failed catalog leaf can be retried.** Re-adopting one via
+  `get()`/`load()` was a silent no-op, leaving it `'failed'` forever; it is now
+  a retry request that re-arms the leaf, heals every co-handle/value-ref
+  sharing its key, and re-drives exactly one fetch (foreground or background,
+  matching the request). When the key's payload is already resident, the retry
+  re-runs `parse()` against it rather than refetching — so a value ref whose
+  own `parse()` failed re-fails honestly instead of stranding at `'loading'`
+  with no fetch in flight. A leaf that was never adopted before counts as a
+  retry too: a second scene claiming the same catalog after the first load
+  failed handed the loader a brand-new `'idle'` leaf, which joined the failed
+  key, flipped to `'loading'`, and hung there because nothing restarted the
+  fetch. Whether an adoption is a retry is now decided by the source's own
+  failed handles, not by the state of whichever leaf asked.
+- **`Loader.inspect()` reports `'failed'`, not `'ready'`,** for a value key
+  whose fetch succeeded but whose own `parse()` failed: the raw payload is
+  stored either way, so a resident payload alone never means "readable".
+- **A child's `zIndex` write no longer invalidates `Container.children`.** It
+  changes neither document order nor any child index, so the `children`
+  snapshot keeps the reference stability its contract promises and the
+  paint-order view alone is recomputed.
 
 ### Docs
 
+- Added the **Chords and sequences** input guide chapter covering
+  `ChordAction`/`SequenceAction` pattern syntax, timing options, and their
+  interaction with the scene availability gate.
 - Migrated `examples/`, `@codexo/exojs-react`, the `create-exo-app`
   game-starter template, and the `runtime`/`recipes`/`integrations` guides to
   the `change()`/`restore()`/`unload()`/`preload()` navigation API and the

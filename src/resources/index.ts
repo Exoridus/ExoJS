@@ -12,6 +12,7 @@ export type {
   KindByPath,
 } from './AssetDefinitions';
 export { AssetRef } from './AssetRef';
+export type { AssetInspection } from './AssetResidency';
 export type { AnyAssets, InferAssetsEntries } from './Assets';
 export { Assets } from './Assets';
 export type { AssetStatus } from './AssetStatus';

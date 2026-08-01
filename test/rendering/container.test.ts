@@ -296,3 +296,188 @@ describe('Container children view', () => {
     expect(seenDuringBlur!.length).toBe(0);
   });
 });
+
+// `_childrenInPaintOrder`/`_invalidateChildOrder`/the `getChildIndex` map cache
+// move InteractionManager's per-hit-test sort onto Container itself. These
+// tests pin down the cache's own correctness independent of any one consumer.
+describe('Container paint-order cache', () => {
+  test('equal zIndex returns the same reference as the document-order view — no allocation, no sort', () => {
+    const container = new Container();
+    container.addChild(new DummyDrawable());
+    container.addChild(new DummyDrawable());
+
+    expect(container._childrenInPaintOrder()).toBe(container.children);
+  });
+
+  test('mixed zIndex sorts by z ascending, ties broken by document order (stable sort)', () => {
+    const container = new Container();
+    const a = new DummyDrawable();
+    const b = new DummyDrawable();
+    const c = new DummyDrawable();
+    const d = new DummyDrawable();
+
+    container.addChild(a);
+    container.addChild(b);
+    container.addChild(c);
+    container.addChild(d);
+    b.zIndex = 5;
+    d.zIndex = 5;
+
+    // a/c share z=0 and keep their relative document order; b/d share z=5 and
+    // do the same — a stable sort, not merely "sorted by z". Asserted by
+    // IDENTITY (not `toEqual`): `a`/`c` (and `b`/`d`) are otherwise
+    // indistinguishable `DummyDrawable` instances, so a structural-equality
+    // assertion here would pass even for a wrongly-swapped tie (e.g.
+    // `[c, a, d, b]`) and silently fail to verify stability at all.
+    const order = container._childrenInPaintOrder();
+
+    expect(order[0]).toBe(a);
+    expect(order[1]).toBe(c);
+    expect(order[2]).toBe(b);
+    expect(order[3]).toBe(d);
+  });
+
+  test('repeated reads reuse the exact same paint-order snapshot when nothing changed', () => {
+    const container = new Container();
+    const a = new DummyDrawable();
+    const b = new DummyDrawable();
+
+    container.addChild(a);
+    container.addChild(b);
+    b.zIndex = 3; // force the sorted (non-passthrough) branch
+
+    const first = container._childrenInPaintOrder();
+
+    expect(container._childrenInPaintOrder()).toBe(first);
+    expect(container._childrenInPaintOrder()).toBe(first);
+  });
+
+  test('does not re-sort on repeated reads of a wide, mixed-z sibling set', () => {
+    const container = new Container();
+    const siblings = Array.from({ length: 50 }, () => new DummyDrawable());
+
+    for (const sibling of siblings) {
+      container.addChild(sibling);
+    }
+    siblings[10]!.zIndex = 7; // force the mixed-z sorted branch
+
+    const sortSpy = vi.spyOn(Array.prototype, 'sort');
+
+    try {
+      for (let i = 0; i < 10; i++) {
+        container._childrenInPaintOrder();
+      }
+
+      // A cache that silently re-sorted on every read (the bug this cache
+      // exists to remove) would call sort 10 times here, not 1.
+      expect(sortSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      sortSpy.mockRestore();
+    }
+  });
+
+  test.each([
+    { name: 'addChild', mutate: (c: Container) => c.addChild(new DummyDrawable()) },
+    { name: 'removeChildAt', mutate: (c: Container) => c.removeChildAt(0) },
+    { name: 'removeChildren', mutate: (c: Container) => c.removeChildren() },
+    { name: 'setChildIndex', mutate: (c: Container) => c.setChildIndex(c.getChildAt(1), 0) },
+    { name: 'swapChildren', mutate: (c: Container) => c.swapChildren(c.getChildAt(0), c.getChildAt(1)) },
+  ])('invalidates the cached paint-order view on $name', ({ mutate }) => {
+    const container = new Container();
+    const a = new DummyDrawable();
+    const b = new DummyDrawable();
+
+    container.addChild(a);
+    container.addChild(b);
+    b.zIndex = 5; // force the sorted branch so the cached view differs from `.children`
+
+    const before = container._childrenInPaintOrder();
+
+    mutate(container);
+
+    expect(container._childrenInPaintOrder()).not.toBe(before);
+  });
+
+  test('reparenting a child (addChild onto a new parent) invalidates BOTH the old and new parent caches', () => {
+    const containerA = new Container();
+    const containerB = new Container();
+    const staying = new DummyDrawable();
+    const moving = new DummyDrawable();
+    const existing = new DummyDrawable();
+
+    containerA.addChild(staying);
+    containerA.addChild(moving);
+    containerB.addChild(existing);
+    // Force the sorted branch on both sides so the cached views are
+    // genuinely populated (not merely the `.children` passthrough).
+    moving.zIndex = 5;
+    existing.zIndex = 5;
+
+    const beforeA = containerA._childrenInPaintOrder();
+    const beforeB = containerB._childrenInPaintOrder();
+
+    // addChild() on containerB detaches `moving` from containerA first
+    // (Container.addChildAt: `if (child.parent) child.parent.removeChild(child);`),
+    // so this single call must invalidate both containers' caches.
+    containerB.addChild(moving);
+
+    expect(containerA._childrenInPaintOrder()).not.toBe(beforeA);
+    expect(containerA.children).toEqual([staying]);
+    expect(containerB._childrenInPaintOrder()).not.toBe(beforeB);
+    expect(containerB.children).toEqual([existing, moving]);
+    expect(moving.parent).toBe(containerB);
+  });
+
+  test('a child zIndex change invalidates the paint-order cache ONLY, leaving the document-order snapshot stable', () => {
+    const container = new Container();
+    const a = new DummyDrawable();
+    const b = new DummyDrawable();
+
+    container.addChild(a);
+    container.addChild(b);
+
+    const childrenBefore = container.children;
+    const paintBefore = container._childrenInPaintOrder();
+
+    expect(container.getChildIndex(b)).toBe(1); // populate the child-index cache
+
+    a.zIndex = 9;
+
+    // A zIndex write changes neither document order nor any child index, so
+    // the `children` snapshot must keep the reference stability its own doc
+    // comment promises ("the same array reference until the next STRUCTURAL
+    // change") — only the paint order actually became stale.
+    expect(container.children).toBe(childrenBefore);
+    expect(container._childrenInPaintOrder()).not.toBe(paintBefore);
+    expect(container._childrenInPaintOrder()).toEqual([b, a]);
+    // Document order itself is untouched by a zIndex change.
+    expect(container.getChildIndex(a)).toBe(0);
+    expect(container.getChildIndex(b)).toBe(1);
+  });
+
+  test('changing zIndex on a node with no parent is a no-op, not a crash', () => {
+    const root = new DummyDrawable();
+
+    expect(() => {
+      root.zIndex = 5;
+    }).not.toThrow();
+  });
+
+  test('getChildIndex stays correct after a structural mutation invalidates the cached index map', () => {
+    const container = new Container();
+    const a = new DummyDrawable();
+    const b = new DummyDrawable();
+    const c = new DummyDrawable();
+
+    container.addChild(a);
+    container.addChild(b);
+    container.addChild(c);
+
+    expect(container.getChildIndex(c)).toBe(2); // populate the cache
+
+    container.removeChildAt(0); // removes `a`; `b`/`c` shift down
+
+    expect(container.getChildIndex(b)).toBe(0);
+    expect(container.getChildIndex(c)).toBe(1);
+  });
+});

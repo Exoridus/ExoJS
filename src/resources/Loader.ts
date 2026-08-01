@@ -17,7 +17,7 @@ import type {
 import { createLeaf, getAssetKind } from './assetKindRegistry';
 import { _readMeta, type CatalogResourceLeaf, type CatalogValueLeaf } from './assetMeta';
 import type { AssetRef } from './AssetRef';
-import { AssetResidency, type AssetResidencySignals } from './AssetResidency';
+import { type AssetInspection, AssetResidency, type AssetResidencySignals } from './AssetResidency';
 import { _normalizeEntry, type Assets, AssetsImpl, type InferAssetsProperties } from './Assets';
 import { AssetTypeRegistry, type HandlerEntry } from './AssetTypeRegistry';
 import { CacheFirstStrategy } from './CacheFirstStrategy';
@@ -779,20 +779,31 @@ export class Loader {
    * not-yet-started background entry is dropped from the queue.
    *
    * Accepts the deferred handle / value-ref returned by {@link get}, an
-   * {@link Asset} descriptor, a whole {@link Assets} catalog, or the
-   * `(type, source)` pair. Releasing an unclaimed or unknown asset is a no-op,
-   * and releasing twice is idempotent.
+   * {@link Asset} descriptor, a whole {@link Assets} catalog, a catalog leaf, or
+   * the `(type, source)` pair. Releasing an unclaimed asset — a valid descriptor,
+   * catalog, or catalog leaf that was never adopted/loaded — is a no-op, and
+   * releasing twice is idempotent.
+   *
+   * The `release(handle)` form resolves the key via an internal handle → key map
+   * that is populated ONLY for adopted seamless handles and value-refs (i.e. a
+   * catalog leaf that has actually been adopted via {@link get}/{@link load}). A
+   * materialized-but-never-adopted catalog leaf is recognized by its meta stamp
+   * and stays an idempotent no-op. A handle this loader has EVER issued also
+   * stays a no-op even if its claim/key bookkeeping was separately forgotten by
+   * an internal hard reset — the fail-loud check is deliberately independent of
+   * that state, so the same handle never throws or not depending on unrelated
+   * internal teardown ordering.
+   *
+   * Anything else — a resolved non-leaf resource (one loaded with
+   * `load(Asset.type('bmFont', …))`, or unpacked by {@link loadContainer}), or an
+   * arbitrary object this loader has never seen — has no claim identity
+   * `release()` can resolve, and **throws** naming the supported forms instead of
+   * silently discarding the call. Use the `release(asset)` or `release(type, source)`
+   * form for a non-leaf resource.
    *
    * Only this loader's app-lifetime claim is dropped. A claim held by another
    * scope — a scene's `scene.loader`, which releases on scene teardown — is
    * never touched, so one owner can never free another owner's assets.
-   *
-   * @remarks The `release(handle)` form resolves the key via an internal handle
-   * → key map that is populated ONLY for seamless handles and value-refs. A
-   * non-leaf asset (one loaded with `load(Asset.type('bmFont', …))`, or unpacked
-   * by {@link loadContainer}) has no such entry, so `release(handle)` silently
-   * can't find its key and won't drop the claim — use the `release(asset)` or
-   * `release(type, source)` form for those.
    */
   public release(handle: object): void;
   public release<T>(asset: Asset<T>): void;
@@ -832,6 +843,17 @@ export class Loader {
 
     if (key !== undefined) {
       this._release(key, this._rootClaimer);
+      return;
+    }
+
+    // A materialized catalog leaf (meta stamp) or a handle/ref residency has
+    // EVER issued — even one whose claim/key bookkeeping was since forgotten by
+    // an internal hard reset — has a real, just-currently-unclaimed identity:
+    // stay a no-op. This check is deliberately state-independent, so the same
+    // object never throws or not depending on unrelated internal teardown
+    // ordering that happened since it was handed out.
+    if (_readMeta(handleOrType) === undefined && !this._residency._wasEverRegisteredHandle(handleOrType)) {
+      throw new Error('Loader.release(): this object has no claim identity. Release its descriptor, catalog leaf/catalog, or the (type, source) pair instead.');
     }
   }
 
@@ -849,6 +871,21 @@ export class Loader {
    */
   public keyFor(resource: object): { readonly type: AssetConstructor; readonly source: string } | null {
     return this._residency._keyFor(resource);
+  }
+
+  /**
+   * Read-only, detached snapshot of every key this loader currently has a
+   * claim on — one {@link AssetInspection} row per claimed `(type, source)`
+   * key, sorted by key. Intended for diagnostics, support bundles, and
+   * developer tooling: the returned array and every row are frozen, so
+   * mutating (or attempting to mutate) the snapshot never touches residency,
+   * and no internal `Set`, claim symbol, or live handle/ref object is exposed
+   * — every field is plain data.
+   *
+   * @see {@link AssetInspection} for what each row reports.
+   */
+  public inspect(): readonly AssetInspection[] {
+    return this._residency._inspect();
   }
 
   /**

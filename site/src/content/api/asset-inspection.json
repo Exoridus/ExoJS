@@ -1,0 +1,229 @@
+{
+  "title": "AssetInspection",
+  "description": "One row of Loader.inspect's diagnostic snapshot: everything a developer needs to reason about a single claimed `(type, source)` key without reaching into `Loader`'s private residency bookkeeping — its lifecycle state, how many independent claim scopes hold it, and whether its fetch is queued, in flight, or settled. Every row is plain, frozen data: numbers, strings, booleans, and the asset's constructor token — never a `Set`, a claim symbol, or a live handle/ref object, so nothing returned here can be used to mutate residency state.",
+  "symbol": "AssetInspection",
+  "kind": "interface",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 7,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "One row of Loader.inspect's diagnostic snapshot: everything a developer needs to reason about a single claimed `(type, source)` key without reaching into `Loader`'s private residency bookkeeping — its lifecycle state, how many independent claim scopes hold it, and whether its fetch is queued, in flight, or settled. Every row is plain, frozen data: numbers, strings, booleans, and the asset's constructor token — never a `Set`, a claim symbol, or a live handle/ref object, so nothing returned here can be used to mutate residency state."
+      ],
+      "importLine": "import { AssetInspection } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "background",
+          "signature": "background: boolean",
+          "signatureTokens": [
+            {
+              "text": "background",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true only while this key is genuinely parked in the low-priority background queue — always in lockstep with state === 'queued', and never true on a row whose state has already settled to 'ready' or 'failed'."
+        },
+        {
+          "name": "claims",
+          "signature": "claims: number",
+          "signatureTokens": [
+            {
+              "text": "claims",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The number of distinct claim scopes currently holding this key — the same refcount Loader.release() decrements and that reaches zero to evict. This is a scope count, not a count of consumer handles/refs or get() calls: several handles sharing one scope, or several get() calls for the same source, still report 1 here."
+        },
+        {
+          "name": "inFlight",
+          "signature": "inFlight: boolean",
+          "signatureTokens": [
+            {
+              "text": "inFlight",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true while a fetch for this key is actively in flight (network request or handler load)."
+        },
+        {
+          "name": "key",
+          "signature": "key: string",
+          "signatureTokens": [
+            {
+              "text": "key",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The normalized (type, source) residency key this row describes — the same key Loader's internal claim/dedup maps use."
+        },
+        {
+          "name": "source",
+          "signature": "source: string",
+          "signatureTokens": [
+            {
+              "text": "source",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The literal source/path this key was claimed under (an alias, not necessarily a URL)."
+        },
+        {
+          "name": "state",
+          "signature": "state: \"idle\" | \"loading\" | \"ready\" | \"failed\" | \"queued\"",
+          "signatureTokens": [
+            {
+              "text": "state",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"idle\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"loading\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"ready\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"failed\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"queued\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Where this key currently sits in the load lifecycle: 'idle' (claimed but its fetch has not started), 'queued' (parked in the low-priority background lane), 'loading' (fetch in flight), 'ready' (payload resident and readable), or 'failed' (the last fetch attempt errored). A row reports exactly one of these five, chosen by priority: a 'failed' or 'ready' outcome always wins over 'queued'/'loading', so a row can never claim to be both settled and still pending. A key can have more than one live handle/ref sharing it — multiple Assets.from() leaves or get() calls joined onto the same source, whose individual outcomes CAN diverge (e.g. one ref's parse() throws while a sibling ref's succeeds; AssetRef._fill fails only the ref whose parse threw). state reports the REPRESENTATIVE handle/ref's outcome — the first one registered for this key — not an aggregate across every handle/ref sharing it; a divergent sibling's outcome is not visible here."
+        },
+        {
+          "name": "type",
+          "signature": "type: AssetConstructor",
+          "signatureTokens": [
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetConstructor",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The asset type constructor this key was claimed under."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/AssetResidency.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/AssetResidency.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/AssetResidency.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/AssetResidency.ts"
+}

@@ -1,6 +1,6 @@
 {
   "title": "Action",
-  "description": "Any of the three action kinds an ActionMap can hold.",
+  "description": "Any action kind an ActionMap can hold.",
   "symbol": "Action",
   "kind": "type",
   "subsystem": "input",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Any of the three action kinds an ActionMap can hold."
+        "Any action kind an ActionMap can hold."
       ],
       "importLine": "import { Action } from '@codexo/exojs'",
       "sourceLink": null
@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "Action",
-          "signature": "ButtonAction | AxisAction | VectorAction",
+          "signature": "ButtonAction | AxisAction | VectorAction | ChordAction | SequenceAction",
           "signatureTokens": [
             {
               "text": "ButtonAction",
@@ -50,6 +50,22 @@
             },
             {
               "text": "VectorAction",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ChordAction",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SequenceAction",
               "kind": "type"
             }
           ],

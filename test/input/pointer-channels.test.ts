@@ -333,8 +333,15 @@ describe('Gesture — pinch', () => {
     // First move establishes the distance baseline.
     pointerMove(canvas, { pointerId: 1, pointerType: 'touch', clientX: 100, clientY: 300, isPrimary: true });
 
-    // Second move increases the distance → pinch fires.
+    // Second move increases the distance → pinch fires. The gesture is queued
+    // onto InputManager's frame journal (to preserve true event order relative
+    // to the pointer-move phase that produced it), so it only dispatches on
+    // the next update(), not synchronously.
     pointerMove(canvas, { pointerId: 1, pointerType: 'touch', clientX: 50, clientY: 300, isPrimary: true });
+
+    expect(pinchSpy).not.toHaveBeenCalled();
+
+    im.update(0 as never);
 
     expect(pinchSpy).toHaveBeenCalledTimes(1);
     const [scale] = pinchSpy.mock.calls[0] as [number, unknown];
@@ -393,6 +400,13 @@ describe('Gesture — long press', () => {
     expect(longPressSpy).not.toHaveBeenCalled();
 
     vi.advanceTimersByTime(600);
+
+    // The long-press occurrence is queued onto the frame journal rather than
+    // dispatched from the timer callback directly, so it only fires on the
+    // next update() (the next frame boundary), not the instant the timer elapses.
+    expect(longPressSpy).not.toHaveBeenCalled();
+
+    im.update(0 as never);
 
     expect(longPressSpy).toHaveBeenCalledTimes(1);
 

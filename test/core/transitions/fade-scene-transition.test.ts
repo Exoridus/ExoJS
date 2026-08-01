@@ -81,11 +81,23 @@ describe('FadeSceneTransition', () => {
 
   test('accepts a custom color and options', () => {
     const customColor = new Color(255, 0, 0, 1);
-    const fade = new FadeSceneTransition(customColor, { duration: 500, easing: Ease.cubicOut });
+    const fade = new FadeSceneTransition({ color: customColor, duration: 500, easing: Ease.cubicOut, placement: 'screen' });
 
     expect(fade.color).toBe(customColor);
     expect(fade.duration).toBe(500);
     expect(fade.easing).toBe(Ease.cubicOut);
+    expect(fade.placement).toBe('screen');
+  });
+
+  // The regression this whole options-only break was for: under the old
+  // (color, options) positional signature, this call silently misassigned
+  // the options object to `color` instead of defaulting it — leaving both
+  // assertions below false.
+  test('options-only call with color omitted keeps the color default alongside the supplied option', () => {
+    const fade = new FadeSceneTransition({ duration: 300 });
+
+    expect(fade.color.equals(Color.black)).toBe(true);
+    expect(fade.duration).toBe(300);
   });
 
   test('getPhaseRequirements: none/direct for both phases (no texture, no snapshot)', () => {

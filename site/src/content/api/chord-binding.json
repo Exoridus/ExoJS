@@ -1,0 +1,71 @@
+{
+  "title": "ChordBinding",
+  "description": "A binding accepted by ChordAction: a `'+'`-joined string of case-insensitive Keyboard token names (`'Control+S'`), or an InputChord array of channels required together directly.",
+  "symbol": "ChordBinding",
+  "kind": "type",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A binding accepted by ChordAction: a `'+'`-joined string of case-insensitive Keyboard token names (`'Control+S'`), or an InputChord array of channels required together directly."
+      ],
+      "importLine": "import { ChordBinding } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "ChordBinding",
+          "signature": "string | InputChord",
+          "signatureTokens": [
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputChord",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/actions/ChordAction.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/ChordAction.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/actions/ChordAction.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/ChordAction.ts"
+}

@@ -1,3 +1,4 @@
+import type { LoadStateValue } from '#core/LoadState';
 import { logger } from '#core/logging';
 import type { Signal } from '#core/Signal';
 
@@ -22,6 +23,60 @@ export interface AssetResidencySignals {
   readonly onProgress: Signal<[loaded: number, total: number]>;
   readonly onLoaded: Signal<[type: AssetConstructor, alias: string, resource: unknown]>;
   readonly onError: Signal<[type: AssetConstructor, alias: string, error: Error]>;
+}
+
+/**
+ * One row of {@link Loader.inspect}'s diagnostic snapshot: everything a
+ * developer needs to reason about a single claimed `(type, source)` key
+ * without reaching into `Loader`'s private residency bookkeeping — its
+ * lifecycle state, how many independent claim scopes hold it, and whether its
+ * fetch is queued, in flight, or settled. Every row is plain, frozen data:
+ * numbers, strings, booleans, and the asset's constructor token — never a
+ * `Set`, a claim symbol, or a live handle/ref object, so nothing returned here
+ * can be used to mutate residency state.
+ */
+export interface AssetInspection {
+  /** The normalized `(type, source)` residency key this row describes — the same key `Loader`'s internal claim/dedup maps use. */
+  readonly key: string;
+  /** The asset type constructor this key was claimed under. */
+  readonly type: AssetConstructor;
+  /** The literal source/path this key was claimed under (an alias, not necessarily a URL). */
+  readonly source: string;
+  /**
+   * Where this key currently sits in the load lifecycle: `'idle'` (claimed
+   * but its fetch has not started), `'queued'` (parked in the low-priority
+   * background lane), `'loading'` (fetch in flight), `'ready'` (payload
+   * resident and readable), or `'failed'` (the last fetch attempt errored).
+   * A row reports exactly one of these five, chosen by priority: a `'failed'`
+   * or `'ready'` outcome always wins over `'queued'`/`'loading'`, so a row can
+   * never claim to be both settled and still pending.
+   *
+   * A key can have more than one live handle/ref sharing it — multiple
+   * `Assets.from()` leaves or `get()` calls joined onto the same source, whose
+   * individual outcomes CAN diverge (e.g. one ref's `parse()` throws while a
+   * sibling ref's succeeds; `AssetRef._fill` fails only the ref whose `parse`
+   * threw). `state` reports the REPRESENTATIVE handle/ref's outcome — the
+   * first one registered for this key — not an aggregate across every
+   * handle/ref sharing it; a divergent sibling's outcome is not visible here.
+   */
+  readonly state: 'idle' | 'queued' | 'loading' | 'ready' | 'failed';
+  /**
+   * The number of distinct claim scopes currently holding this key — the same
+   * refcount `Loader.release()` decrements and that reaches zero to evict.
+   * This is a scope count, not a count of consumer handles/refs or `get()`
+   * calls: several handles sharing one scope, or several `get()` calls for
+   * the same source, still report `1` here.
+   */
+  readonly claims: number;
+  /** `true` while a fetch for this key is actively in flight (network request or handler load). */
+  readonly inFlight: boolean;
+  /**
+   * `true` only while this key is genuinely parked in the low-priority
+   * background queue — always in lockstep with `state === 'queued'`, and
+   * never `true` on a row whose `state` has already settled to `'ready'` or
+   * `'failed'`.
+   */
+  readonly background: boolean;
 }
 
 /**
@@ -70,6 +125,12 @@ export class AssetResidency {
   private readonly _claims = new Map<string, { scopes: Set<symbol>; type: AssetConstructor; source: string }>();
   private readonly _evicted = new Set<string>();
   private readonly _handleKeys = new WeakMap<object, string>();
+  // Every handle/ref residency has EVER registered under a key — a WeakSet, so
+  // it never needs pruning and never retains a dead handle. Unlike `_handleKeys`,
+  // this is never deleted from (not even by `_forgetKey`/`unloadAll`'s hard
+  // reset), so `Loader.release()`'s "was this ever a real handle" check stays
+  // true regardless of unrelated unload/reset ordering that happened since.
+  private readonly _everRegisteredHandles = new WeakSet();
 
   private _concurrency: number;
   private _backgroundQueue: QueueEntry[] = [];
@@ -83,6 +144,99 @@ export class AssetResidency {
     this._decoder = decoder;
     this._signals = signals;
     this._concurrency = concurrency;
+  }
+
+  /** Read-only, detached snapshot for diagnostics and support bundles. @internal */
+  public _inspect(): readonly AssetInspection[] {
+    const backgroundKeys = new Set(this._backgroundQueue.map(entry => this._typeRegistry._key(entry.type, entry.alias)));
+    const rows: AssetInspection[] = [];
+
+    for (const [key, claim] of this._claims) {
+      const stored = this._resources.get(claim.type)?.has(claim.source) ?? false;
+      const identityKey = this._aliasKeyToIdentityKey.get(key);
+      const inFlight = this._inFlight.has(key) || (identityKey !== undefined && this._inFlightByIdentity.has(identityKey));
+      // Raw queue membership only — a settled row must never report `background: true`
+      // (see below), so this is an INPUT to `state`, not the field's own value.
+      const queuedInBackground = backgroundKeys.has(key);
+      const handleState = this._inspectHandleState(key, claim.type);
+      const state = this._inspectState({ stored, handleState, queuedInBackground, inFlight });
+
+      rows.push(
+        Object.freeze({
+          key,
+          type: claim.type,
+          source: claim.source,
+          state,
+          claims: claim.scopes.size,
+          inFlight,
+          // Derived from `state`, not from raw queue membership: a producer that
+          // stores a payload without draining the background queue first (e.g. a
+          // container injecting the same (type, source) directly) must never
+          // leave a settled row also reporting `background: true`.
+          background: state === 'queued',
+        }),
+      );
+    }
+
+    // A plain codepoint comparison, not `localeCompare`: the sort order is part
+    // of a diagnostic snapshot's contract and must not vary by ICU locale/runtime.
+    rows.sort((left, right) => {
+      if (left.key < right.key) return -1;
+      if (left.key > right.key) return 1;
+      return 0;
+    });
+    return Object.freeze(rows);
+  }
+
+  /** The load-lifecycle state of whatever handle/ref is registered for `key`, or `undefined` if none is. Backs {@link _inspect}. */
+  private _inspectHandleState(key: string, type: AssetConstructor): LoadStateValue | undefined {
+    const ref: AssetRef<unknown> | undefined = this._refs.get(key)?.refs.values().next().value;
+
+    if (ref !== undefined) {
+      return ref.state;
+    }
+
+    const deferred = this._deferred.get(key)?.handles.first();
+    const adapter = this._typeRegistry.getSeamlessAdapter(type);
+
+    return deferred !== undefined && adapter !== undefined ? adapter.stateOf(deferred) : undefined;
+  }
+
+  /**
+   * Resolve one {@link AssetInspection} row's `state`, by priority: a `'failed'`
+   * handle/ref always wins over a merely-`stored` payload. This matters for a
+   * value key: `_storeResource` stores the raw fetched payload unconditionally,
+   * even when the ref's OWN `parse()` step subsequently failed it (e.g. a
+   * thenable rejected by the synchronous-parse contract) — so `stored` alone
+   * cannot be trusted to mean "readable". A failed/settled outcome then always
+   * wins over `'queued'`/`'loading'`, so a row can never claim to be both
+   * settled and still pending. Backs {@link _inspect}.
+   */
+  private _inspectState(input: {
+    stored: boolean;
+    handleState: LoadStateValue | undefined;
+    queuedInBackground: boolean;
+    inFlight: boolean;
+  }): AssetInspection['state'] {
+    const { stored, handleState, queuedInBackground, inFlight } = input;
+
+    if (handleState === 'failed') {
+      return 'failed';
+    }
+
+    if (stored) {
+      return 'ready';
+    }
+
+    if (queuedInBackground) {
+      return 'queued';
+    }
+
+    if (inFlight || handleState === 'loading') {
+      return 'loading';
+    }
+
+    return handleState === 'ready' ? 'ready' : 'idle';
   }
 
   // -----------------------------------------------------------------------
@@ -249,21 +403,29 @@ export class AssetResidency {
       throw new Error(`Loader._adopt: no constructor registered for type "${meta.kind}".`);
     }
 
-    // A freshly-created catalog leaf is 'idle' until adopted; entering residency
-    // here transitions it to 'loading' (asset-system v2 §7). A re-adopted handle
-    // already loading/ready/failed is left untouched.
+    // A freshly-created catalog leaf is 'idle' until adopted. A failed leaf
+    // is a retry request and must be re-armed before the shared fetch restarts.
     const leafState = (handle as { _loadState?: { value: string; begin(): void } })._loadState;
-    if (leafState?.value === 'idle') leafState.begin();
+    const retryingFailedLeaf = leafState?.value === 'failed';
+    if (leafState?.value === 'idle' || retryingFailedLeaf) leafState.begin();
 
     const key = this._typeRegistry._key(ctor, meta.src);
 
     if (handle instanceof AssetRef) {
+      // The generic re-arm above only re-enters 'loading' on the shared
+      // `_loadState` — it does not clear a value ref's OWN `_value`/`_hasValue`
+      // (only `AssetRef._begin()` does). `_fail()` never clears them either, so a
+      // ref that was 'ready' before a LATER failure (`_onTrackedFailure` fails
+      // every ref of a key regardless of its prior state) carries a stale value
+      // behind the `'loading'` gate until this fuller reset runs.
+      if (retryingFailedLeaf) handle._begin();
+
       const existingRef = this._refs.get(key);
       const stored = this._resources.get(ctor)?.get(meta.src);
 
       if (existingRef === undefined) {
         this._refs.set(key, { refs: new Set([handle]), options: meta.opts });
-        this._handleKeys.set(handle, key);
+        this._registerHandle(handle, key);
 
         // Mirrors _getRef's stored-fast-path: a value already sitting in
         // `_resources` (stored elsewhere before this leaf was adopted) fills
@@ -281,15 +443,42 @@ export class AssetResidency {
         // fill). If the value already converged, fill immediately; otherwise a
         // conflicting FETCH option (source-keyed decode can't differ) warns.
         existingRef.refs.add(handle);
-        this._handleKeys.set(handle, key);
+        this._registerHandle(handle, key);
 
         if (stored !== undefined) {
-          handle._fill(stored);
+          // A retry re-fills the key's whole ref set (this one included) below.
+          if (!retryingFailedLeaf) handle._fill(stored);
         } else {
           this._warnOnFetchOptionConflict(ctor, meta.src, key, existingRef.options, meta.opts);
         }
       }
       // else: the SAME ref re-adopted — Set membership makes this a no-op.
+
+      // Retry of a leaf whose key already has a ref entry. The
+      // `existingRef === undefined` branch above already fetched (or filled)
+      // for a brand-new entry, and its guard makes it mutually exclusive with
+      // this block, so no key is ever fetched twice in one adopt.
+      if (retryingFailedLeaf && existingRef !== undefined) {
+        if (stored === undefined) {
+          for (const ref of existingRef.refs) if (ref.state === 'failed') ref._begin();
+          if (background) this._enqueueBackgroundFetch(ctor, meta.src, existingRef.options);
+          else this._startRefFetch(ctor, meta.src, existingRef.options);
+        } else {
+          // The payload is already resident, so there is nothing to refetch:
+          // re-filling IS the retry here. `_resources` and `_refs` legitimately
+          // diverge — a ref's own `parse()` can reject a payload that fetched
+          // fine — so re-running `parse()` against the stored payload yields an
+          // honest re-failure or a success, where handling this case by refetch
+          // alone would leave every re-armed ref in 'loading' with no fetch in
+          // flight, forever. Mirrors _storeResource's fill loop: an
+          // already-'ready' ref is left untouched.
+          for (const ref of existingRef.refs) {
+            if (ref.state === 'ready') continue;
+            if (ref.state === 'failed') ref._begin();
+            ref._fill(stored);
+          }
+        }
+      }
 
       this._claim(key, ctor, meta.src, claimer);
 
@@ -298,6 +487,7 @@ export class AssetResidency {
 
     const deferredEntry = this._deferred.get(key);
     const stored = this._resources.get(ctor)?.get(meta.src);
+    const adapter = this._typeRegistry.getSeamlessAdapter(ctor);
 
     if (deferredEntry === undefined && stored === undefined) {
       this._createDeferredEntry(key, handle, meta.opts);
@@ -325,23 +515,56 @@ export class AssetResidency {
       // donor was itself registered here at store time, so the entry already
       // exists (its representative stays canonical); the co-handle only ever
       // joins, never displaces it.
-      const adapter = this._typeRegistry.getSeamlessAdapter(ctor);
-
       adapter?.fill(handle, stored);
 
       const entry = deferredEntry ?? this._createDeferredEntry(key, stored as object, meta.opts);
 
       this._addDeferredHandle(key, entry, handle);
     } else if (deferredEntry !== undefined && stored === undefined && !deferredEntry.handles.has(handle)) {
-      // A distinct handle is in flight for this key and nothing is stored yet:
-      // join the key's handle set so `_storeResource` fills THIS handle too
-      // (§7 multi-handle fill — this is the former silent hang). A conflicting
-      // FETCH option (source-keyed decode can't differ) warns; differing
-      // per-handle sampler options are fine (each handle carries its own).
+      // Another handle already holds this key and nothing is stored yet: join
+      // the key's handle set so `_storeResource` fills THIS handle too (§7
+      // multi-handle fill). The key's fetch may be in flight or may have ended
+      // in failure — the retry below covers the latter. A conflicting FETCH
+      // option (source-keyed decode can't differ) warns; differing per-handle
+      // sampler options are fine (each handle carries its own).
       this._addDeferredHandle(key, deferredEntry, handle);
       this._warnOnFetchOptionConflict(ctor, meta.src, key, deferredEntry.options, meta.opts);
     }
     // else: the SAME handle re-adopted, or already filled — a no-op.
+
+    // Retry of a key that already failed. Being a retry is a property of the
+    // KEY, not of the adopted handle: a brand-new leaf is 'idle' (re-armed to
+    // 'loading' at the top of this method), never 'failed', yet joining a key
+    // whose earlier load failed — a second scene claiming the same catalog does
+    // exactly this — is every bit as much a retry request. Nothing else would
+    // restart such a key: its fetch already settled into failure, so
+    // `_storeResource` never runs for it and the joining handle would sit in
+    // 'loading' forever.
+    // Reading the SIBLINGS after the join above is equivalent to reading them
+    // before it: by this point the adopted handle is 'loading' either way, so
+    // its own failure only ever surfaces through `retryingFailedLeaf`.
+    //
+    // Only reached when the key already has a deferred entry: the
+    // `deferredEntry === undefined && stored === undefined` branch above
+    // returns after starting its own fetch, so no key is ever fetched twice in
+    // one adopt. Two handles joining a failed key in the same tick fetch once
+    // too — the first adopt re-arms every failed sibling, so the second finds
+    // none.
+    //
+    // A key whose payload is already stored needs no retry, unlike a value key:
+    // `_storeResource` re-arms and fills EVERY non-'ready' handle of the key
+    // before storing, and the `stored !== undefined` branch above fills a
+    // newly-adopted handle in place from the stored donor. A seamless adapter's
+    // `fill()` is a plain in-place transplant with no per-handle `parse()` that
+    // could reject a payload the fetch delivered, so handle state and
+    // `_resources` cannot diverge the way a ref's can.
+    if (stored === undefined && deferredEntry !== undefined && adapter !== undefined && (retryingFailedLeaf || this._hasFailedHandle(deferredEntry, adapter))) {
+      for (const candidate of deferredEntry.handles) {
+        if (adapter.stateOf(candidate) === 'failed') adapter.begin(candidate);
+      }
+      if (background) this._enqueueBackgroundFetch(ctor, meta.src, deferredEntry.options);
+      else this._startSeamlessFetch(ctor, meta.src, deferredEntry.options);
+    }
 
     this._claim(key, ctor, meta.src, claimer);
   }
@@ -423,7 +646,7 @@ export class AssetResidency {
     const ref = new AssetRef<unknown>();
 
     this._refs.set(key, { refs: new Set([ref]), options });
-    this._handleKeys.set(ref, key);
+    this._registerHandle(ref, key);
 
     const stored = this._resources.get(type)?.get(source);
 
@@ -450,6 +673,19 @@ export class AssetResidency {
   // -----------------------------------------------------------------------
 
   /**
+   * Wire the reverse `handle → key` lookup and mark `handle` as a real,
+   * residency-issued handle/ref for the lifetime of the object — the latter
+   * (`_everRegisteredHandles`) is never cleared, unlike `_handleKeys`, which
+   * {@link _forgetKey} (via {@link unloadAll}/{@link _unloadOne}) deletes for a
+   * settled key. The single choke point for every site that used to call
+   * `_handleKeys.set(...)` directly.
+   */
+  private _registerHandle(handle: object, key: string): void {
+    this._handleKeys.set(handle, key);
+    this._everRegisteredHandles.add(handle);
+  }
+
+  /**
    * Register a fresh deferred entry for `key` holding `handle` weakly, wire the
    * reverse `handle → key` lookup, and arm GC pruning. Returns the entry so the
    * caller can add further co-handles.
@@ -458,7 +694,7 @@ export class AssetResidency {
     const entry = { handles: new WeakHandleSet(handle), options };
 
     this._deferred.set(key, entry);
-    this._handleKeys.set(handle, key);
+    this._registerHandle(handle, key);
     this._deferredFinalization.register(handle, key);
 
     return entry;
@@ -470,7 +706,7 @@ export class AssetResidency {
    * @internal
    */
   public _addDeferredHandle(key: string, entry: { readonly handles: WeakHandleSet }, handle: object): void {
-    this._handleKeys.set(handle, key);
+    this._registerHandle(handle, key);
 
     if (entry.handles.has(handle)) {
       return;
@@ -478,6 +714,25 @@ export class AssetResidency {
 
     entry.handles.add(handle);
     this._deferredFinalization.register(handle, key);
+  }
+
+  /**
+   * Does any live handle registered for a seamless key sit in `'failed'`? Then
+   * the key's last attempt ended in failure, and an adoption joining it is a
+   * retry — whatever state the adopted handle itself was in. Restarting is
+   * harmless in the one case where a fetch IS already running past a `'failed'`
+   * straggler ({@link _getSeamless} re-arms only the representative):
+   * {@link _loadSingle} dedupes on the key's in-flight entry, and the straggler
+   * needed the re-arm regardless.
+   */
+  private _hasFailedHandle(entry: { readonly handles: WeakHandleSet }, adapter: SeamlessAdapter<unknown>): boolean {
+    for (const handle of entry.handles) {
+      if (adapter.stateOf(handle) === 'failed') {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /**
@@ -1233,6 +1488,19 @@ export class AssetResidency {
    */
   public _getHandleKey(handle: object): string | undefined {
     return this._handleKeys.get(handle);
+  }
+
+  /**
+   * Whether `handle` was ever registered as a live deferred handle / value-ref
+   * by this residency — regardless of whether its key has since been forgotten
+   * by {@link _forgetKey} (which deletes from `_handleKeys` but never from this
+   * WeakSet). Backs `Loader.release(handle)`'s fail-loud check: a handle
+   * `get()` once handed out must stay a releasable no-op even after an
+   * unrelated internal hard reset, so the throw only fires for an object
+   * residency never saw at all. @internal
+   */
+  public _wasEverRegisteredHandle(handle: object): boolean {
+    return this._everRegisteredHandles.has(handle);
   }
 
   // -----------------------------------------------------------------------

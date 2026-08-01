@@ -151,6 +151,11 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
     panner.connect(this._output);
   }
 
+  protected override _routeDirect(): void {
+    this._sourceNode.disconnect();
+    this._sourceNode.connect(this._output);
+  }
+
   protected override _teardownSource(): void {
     this._element.removeEventListener('ended', this._onEnded);
     this._clearUnlockHandler();

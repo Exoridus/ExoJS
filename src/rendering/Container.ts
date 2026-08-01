@@ -27,11 +27,14 @@ import { RenderNode } from './RenderNode';
  * @stable
  */
 export class Container extends RenderNode {
-  // Subclasses mutating this directly must also set `_childrenView = null`,
-  // or the public `children` snapshot silently desyncs from the true list.
+  // Subclasses mutating this directly must also call `_invalidateChildOrder()`,
+  // or the public `children` snapshot (and the paint-order/child-index caches
+  // derived from it) silently desyncs from the true list.
   protected readonly _children: RenderNode[] = [];
   private _retainedPlan: RetainedPlanCache | null = null;
   private _childrenView: readonly RenderNode[] | null = null;
+  private _paintChildrenView: readonly RenderNode[] | null = null;
+  private _childIndexView: ReadonlyMap<RenderNode, number> | null = null;
 
   /**
    * Snapshot of the current children in document order. Frozen and cached —
@@ -46,6 +49,48 @@ export class Container extends RenderNode {
    */
   public get children(): readonly RenderNode[] {
     return (this._childrenView ??= Object.freeze([...this._children]));
+  }
+
+  /** Cached renderer-compatible child order. @internal */
+  public _childrenInPaintOrder(): readonly RenderNode[] {
+    if (this._paintChildrenView !== null) return this._paintChildrenView;
+    const children = this.children;
+    const first = children[0];
+    if (first === undefined) return (this._paintChildrenView = children);
+    for (let i = 1; i < children.length; i++) {
+      if (children[i]!.zIndex !== first.zIndex) {
+        return (this._paintChildrenView = Object.freeze([...children].sort((a, b) => a.zIndex - b.zIndex)));
+      }
+    }
+    return (this._paintChildrenView = children);
+  }
+
+  /** Invalidate document-order, paint-order and child-index views. @internal */
+  public _invalidateChildOrder(): void {
+    this._childrenView = null;
+    this._paintChildrenView = null;
+    this._childIndexView = null;
+  }
+
+  /**
+   * Invalidate only the paint-order view — for a child's `zIndex` write, which
+   * reorders painting but leaves document order and every child index exactly
+   * as they were, so the {@link children} snapshot stays valid (and keeps its
+   * documented reference stability).
+   * @internal
+   */
+  public _invalidatePaintOrder(): void {
+    this._paintChildrenView = null;
+  }
+
+  /**
+   * Iterate the same frozen, cached document-order snapshot {@link children}
+   * returns — mutating the container after obtaining this iterator does not
+   * change what it yields (see {@link children}'s doc comment for the full
+   * snapshot/invalidation contract).
+   */
+  public [Symbol.iterator](): IterableIterator<RenderNode> {
+    return this.children[Symbol.iterator]();
   }
 
   public get width(): number {
@@ -133,7 +178,7 @@ export class Container extends RenderNode {
 
     child._setParent(this);
     this._children.splice(index, 0, child);
-    this._childrenView = null;
+    this._invalidateChildOrder();
     this.invalidateCache();
     this._markStructureDirty();
 
@@ -153,7 +198,7 @@ export class Container extends RenderNode {
 
       this._children[firstIndex] = secondChild;
       this._children[secondIndex] = firstChild;
-      this._childrenView = null;
+      this._invalidateChildOrder();
       this.invalidateCache();
       this._markStructureDirty();
     }
@@ -162,12 +207,19 @@ export class Container extends RenderNode {
   }
 
   public getChildIndex(child: RenderNode): number {
-    const index = this._children.indexOf(child);
+    if (this._childIndexView === null) {
+      const map = new Map<RenderNode, number>();
 
-    if (index === -1) {
+      for (let i = 0; i < this._children.length; i++) {
+        map.set(this._children[i]!, i);
+      }
+
+      this._childIndexView = map;
+    }
+    const index = this._childIndexView.get(child);
+    if (index === undefined) {
       throw new Error('Drawable is not a child of the container.');
     }
-
     return index;
   }
 
@@ -179,7 +231,7 @@ export class Container extends RenderNode {
     removeArrayItems(this._children, this.getChildIndex(child), 1);
 
     this._children.splice(index, 0, child);
-    this._childrenView = null;
+    this._invalidateChildOrder();
     this.invalidateCache();
     this._markStructureDirty();
 
@@ -214,7 +266,7 @@ export class Container extends RenderNode {
     // before any of the notify calls below can run user code (e.g. an
     // onBlur handler) that reads `container.children` — otherwise that read
     // would observe a stale snapshot still containing `child`.
-    this._childrenView = null;
+    this._invalidateChildOrder();
 
     if (child?.parent === this) {
       // Cascade bounds up BEFORE clearing parent so the walk reaches this node.
@@ -261,7 +313,7 @@ export class Container extends RenderNode {
     }
 
     removeArrayItems(this._children, begin, range);
-    this._childrenView = null;
+    this._invalidateChildOrder();
     this.invalidateCache();
     this._markStructureDirty();
 

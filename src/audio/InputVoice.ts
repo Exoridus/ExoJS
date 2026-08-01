@@ -90,6 +90,11 @@ export class InputVoice extends BaseVoice {
     panner.connect(this._output);
   }
 
+  protected override _routeDirect(): void {
+    this._sourceNode.disconnect();
+    this._sourceNode.connect(this._output);
+  }
+
   protected override _teardownSource(): void {
     this._sourceNode.disconnect();
   }

@@ -510,6 +510,18 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                 examples: ['input/gamepad', 'input/multi-gamepad'],
                 apiLinks: ['gamepad', 'input-manager'],
             },
+            {
+                slug: 'chords-and-sequences',
+                level: 'intermediate',
+                learningGoals: [
+                    'require several channels held at once with ChordAction',
+                    'recognize ordered command patterns with SequenceAction',
+                    'tune maxGap/timeout and restart-on-mismatch behavior',
+                ],
+                prerequisites: ['input/keyboard-and-actions'],
+                examples: ['input/action-mapping', 'input/key-rebinding'],
+                apiLinks: ['chord-action', 'sequence-action', 'action-map'],
+            },
         ],
     },
     {

@@ -1,0 +1,83 @@
+{
+  "title": "InputSequence",
+  "description": "An ordered list of SequenceAction pattern steps. Each entry is either a single InputChannel (a one-channel step) or a nested InputChord (several channels required together for that one step) — the array-form equivalent of a `'>'`-separated, `'+'`-joined string pattern such as `'Down>Down+Right>Right'`.",
+  "symbol": "InputSequence",
+  "kind": "type",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "An ordered list of SequenceAction pattern steps. Each entry is either a single InputChannel (a one-channel step) or a nested InputChord (several channels required together for that one step) — the array-form equivalent of a `'>'`-separated, `'+'`-joined string pattern such as `'Down>Down+Right>Right'`."
+      ],
+      "importLine": "import { InputSequence } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "InputSequence",
+          "signature": "ReadonlyArray<InputChannel | InputChord>",
+          "signatureTokens": [
+            {
+              "text": "ReadonlyArray",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputChannel",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputChord",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/actions/pattern.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/pattern.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/actions/pattern.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/pattern.ts"
+}

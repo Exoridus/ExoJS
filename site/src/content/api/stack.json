@@ -6,10 +6,10 @@
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 109,
+  "memberCount": 110,
   "counts": {
     "constructors": 1,
-    "methods": 51,
+    "methods": 52,
     "properties": 43,
     "events": 14
   },
@@ -314,6 +314,47 @@
           "params": [],
           "returnType": "void",
           "description": "Re-derive origin from the fractional anchor and the CURRENT local bounds. Uses local (untransformed) bounds on purpose: the transform multiplies the origin by scale itself, so deriving from world bounds would double-apply scale whenever the anchor is set after scaling. Subclasses whose local bounds change after construction (e.g. a sprite switching to a texture sub-frame) must call this to keep an anchored node anchored."
+        },
+        {
+          "name": "[iterator]",
+          "signature": "[iterator](): IterableIterator<RenderNode>",
+          "signatureTokens": [
+            {
+              "text": "[iterator]",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "IterableIterator",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderNode",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": "IterableIterator<RenderNode>",
+          "description": "Iterate the same frozen, cached document-order snapshot children returns — mutating the container after obtaining this iterator does not change what it yields (see children's doc comment for the full snapshot/invalidation contract)."
         },
         {
           "name": "addChild",

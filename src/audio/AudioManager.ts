@@ -179,6 +179,11 @@ export class AudioManager {
     this._spatial.add(voice);
   }
 
+  /** Internal: stop ticking a voice that returned to a direct graph. */
+  public _unregisterSpatial(voice: SpatialVoice): void {
+    this._spatial.delete(voice);
+  }
+
   /** Internal: called by Application when visibility changes. */
   public _applyVisibility(visible: boolean): void {
     if (this._muteOnHidden) {

@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(color: Color, options: PhasedSceneTransitionOptions): FadeSceneTransition",
+          "signature": "new(options: FadeSceneTransitionOptions): FadeSceneTransition",
           "signatureTokens": [
             {
               "text": "new",
@@ -38,22 +38,6 @@
             },
             {
               "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "color",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Color",
-              "kind": "type"
-            },
-            {
-              "text": ", ",
               "kind": "punctuation"
             },
             {
@@ -65,7 +49,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "PhasedSceneTransitionOptions",
+              "text": "FadeSceneTransitionOptions",
               "kind": "type"
             },
             {
@@ -83,18 +67,13 @@
           ],
           "params": [
             {
-              "name": "color",
-              "type": "Color",
-              "optional": false
-            },
-            {
               "name": "options",
-              "type": "PhasedSceneTransitionOptions",
+              "type": "FadeSceneTransitionOptions",
               "optional": false
             }
           ],
           "returnType": "FadeSceneTransition",
-          "description": ""
+          "description": "Create a FadeSceneTransition."
         }
       ],
       "paragraphs": [],

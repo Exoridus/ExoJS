@@ -7,8 +7,10 @@
 
 import {
   createSpatialSmoothingSettings,
+  createVelocitySample,
   DEFAULT_SPATIAL_SMOOTHING,
   DEFAULT_TELEPORT_THRESHOLD,
+  deriveVelocity,
   POSITION_EPSILON,
   SmoothedAudioParam,
   type SpatialSmoothingSettings,
@@ -129,5 +131,47 @@ describe('SmoothedAudioParam', () => {
 
     expect(p.setValueAtTime).toHaveBeenCalledWith(110, 0.016);
     expect(p.setTargetAtTime).not.toHaveBeenCalled();
+  });
+});
+
+describe('deriveVelocity', () => {
+  test('a duplicate same-timestamp tick does not erase a just-derived velocity', () => {
+    const sample = createVelocitySample();
+
+    deriveVelocity(sample, 0, 0, 0); // first sample — seeds lastPosition, no velocity yet
+    deriveVelocity(sample, 100, 0, 1); // real movement over 1 second
+    expect(sample.x).toBe(100);
+    expect(sample.y).toBe(0);
+
+    // A second tick at the exact same position AND the exact same
+    // AudioContext.currentTime (e.g. an explicit `voice.position = …` write
+    // immediately followed by the manager's per-frame tick, both landing in
+    // the same render quantum) must not stomp the velocity just derived.
+    deriveVelocity(sample, 100, 0, 1);
+    expect(sample.x).toBe(100);
+    expect(sample.y).toBe(0);
+  });
+
+  test('a genuinely later stationary tick still zeroes the derived velocity', () => {
+    const sample = createVelocitySample();
+
+    deriveVelocity(sample, 0, 0, 0);
+    deriveVelocity(sample, 100, 0, 1);
+    expect(sample.x).toBe(100);
+
+    // Same position as the last sample, but a distinctly LATER timestamp —
+    // the source has genuinely stopped moving, so the derived velocity must
+    // now zero out rather than keep coasting on the last non-zero value.
+    deriveVelocity(sample, 100, 0, 2);
+    expect(sample.x).toBe(0);
+    expect(sample.y).toBe(0);
+  });
+
+  test('the very first sample seeds position with zero velocity', () => {
+    const sample = createVelocitySample();
+    deriveVelocity(sample, 42, -7, 5);
+    expect(sample.x).toBe(0);
+    expect(sample.y).toBe(0);
+    expect(sample.lastPosition).toEqual({ x: 42, y: -7 });
   });
 });

@@ -1,11 +1,13 @@
 import type { AxisAction } from './AxisAction';
 import type { ButtonAction } from './ButtonAction';
+import type { ChordAction } from './ChordAction';
+import type { SequenceAction } from './SequenceAction';
 import type { ActionSample } from './types';
 import { ActionOwnership } from './types';
 import type { VectorAction } from './VectorAction';
 
-/** Any of the three action kinds an {@link ActionMap} can hold. */
-export type Action = ButtonAction | AxisAction | VectorAction;
+/** Any action kind an {@link ActionMap} can hold. */
+export type Action = ButtonAction | AxisAction | VectorAction | ChordAction | SequenceAction;
 
 /** The shape an {@link ActionMap} is built from. */
 export type ActionRecord = Readonly<Record<string, Action>>;
@@ -106,6 +108,8 @@ class ActionMapBase<T extends ActionRecord> {
 
   private _owner: ActionMapOwner | null = null;
   private readonly _ownership = new ActionOwnership();
+  private _availability: (() => boolean) | null = null;
+  private _wasAvailable = true;
 
   public constructor(actions: T) {
     // Reads every enumerable getter on `actions` exactly once. Neither
@@ -157,6 +161,8 @@ class ActionMapBase<T extends ActionRecord> {
     }
 
     this._owner = null;
+    this._availability = null;
+    this._wasAvailable = true;
     owner._detachActionMap(this);
   }
 
@@ -170,9 +176,11 @@ class ActionMapBase<T extends ActionRecord> {
    *
    * @internal
    */
-  public _attach(owner: ActionMapOwner): void {
+  public _attach(owner: ActionMapOwner, availability: (() => boolean) | null = null): void {
     this.detach();
     this._owner = owner;
+    this._availability = availability;
+    this._wasAvailable = true;
     this._ownership.arm(owner._currentBatchSequence?.() ?? 0, owner._snapshotActionChannels?.() ?? null);
   }
 
@@ -219,6 +227,24 @@ class ActionMapBase<T extends ActionRecord> {
    * @internal
    */
   public _update(sample: ActionSample): void {
+    const available = this._availability?.() ?? true;
+
+    if (!available) {
+      if (this._wasAvailable) {
+        this._reset();
+      }
+      this._wasAvailable = false;
+      return;
+    }
+
+    if (!this._wasAvailable) {
+      const owner = this._owner;
+      this._wasAvailable = true;
+      if (owner !== null) {
+        this._ownership.arm(owner._currentBatchSequence?.() ?? 0, owner._snapshotActionChannels?.() ?? null);
+      }
+    }
+
     const resolution = this._ownership.resolve(sample);
 
     if (resolution === 'duplicate') {
@@ -271,10 +297,11 @@ class ActionMapBase<T extends ActionRecord> {
  * `Object.getOwnPropertyNames(ActionMapBase.prototype)` covers everything
  * declared as a prototype member — `constructor`, `attached`, `detach`,
  * `_attach`, `_armBaseline`, `_update`, `_reset` — but class FIELDS
- * (`actions`, `_owner`, `_ownership`) are assigned per-instance in the
- * constructor, never on the prototype, so reflection alone cannot see them;
- * they are listed explicitly instead. `__proto__` and `prototype` are listed
- * for the same reason `constructor` already is: an action map built from
+ * (`actions`, `_owner`, `_ownership`, `_availability`, `_wasAvailable`) are
+ * assigned per-instance in the constructor, never on the prototype, so
+ * reflection alone cannot see them; they are listed explicitly instead.
+ * `__proto__` and `prototype` are listed for the same reason `constructor`
+ * already is: an action map built from
  * attacker- or tool-generated config (modding, a level editor's save format)
  * must reject them exactly like any other collision rather than silently
  * reaching into the prototype chain via `Object.assign`.
@@ -290,6 +317,8 @@ const reservedActionMapNames: ReadonlySet<string> = new Set([
   'actions',
   '_owner',
   '_ownership',
+  '_availability',
+  '_wasAvailable',
   '__proto__',
   'prototype',
   ...Object.getOwnPropertyNames(ActionMapBase.prototype),

@@ -102,6 +102,7 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
   private _coneInnerAngle = 360;
   private _coneOuterAngle = 360;
   private _coneOuterGain = 0;
+  private _dopplerActive = false;
   private readonly _smoothOrientX = new SmoothedAudioParam();
   private readonly _smoothOrientY = new SmoothedAudioParam();
   private readonly _smoothOrientZ = new SmoothedAudioParam();
@@ -239,6 +240,7 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
         this._position.destroy();
         this._position = null;
       }
+      this._disableSpatializationIfUnused();
       return;
     }
 
@@ -265,6 +267,8 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
     if (node !== null) {
       this._ensurePanner();
       this._tickSpatial();
+    } else {
+      this._disableSpatializationIfUnused();
     }
   }
 
@@ -284,7 +288,15 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
   }
 
   public set refDistance(value: number) {
-    const clamped = Math.max(0, value);
+    // Clamped to strictly positive — refDistance = 0 divides by zero in the
+    // 'exponential' distance model, (d / refDistance) ^ -rolloffFactor. Not
+    // coupled to maxDistance: forcing the two to stay ordered would silently
+    // create a maxDistance === refDistance state, which divides by zero in
+    // the default 'linear' model instead. An out-of-order pair is left to
+    // the caller — no worse than the pre-existing possibility of setting
+    // both to the same value directly.
+    const safe = Number.isFinite(value) ? value : this._spatialConfig.refDistance;
+    const clamped = Math.max(Number.EPSILON, safe);
     this._spatialConfig.refDistance = clamped;
     if (this._panner !== null) {
       this._panner.refDistance = clamped;
@@ -296,7 +308,11 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
   }
 
   public set maxDistance(value: number) {
-    const clamped = Math.max(0, value);
+    // Clamped to strictly positive per the PannerNode spec (a non-positive
+    // maxDistance throws RangeError in a real browser) — independent of
+    // refDistance, see the note on that setter above.
+    const safe = Number.isFinite(value) ? value : this._spatialConfig.maxDistance;
+    const clamped = Math.max(Number.EPSILON, safe);
     this._spatialConfig.maxDistance = clamped;
     if (this._panner !== null) {
       this._panner.maxDistance = clamped;
@@ -308,7 +324,8 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
   }
 
   public set rolloffFactor(value: number) {
-    const clamped = Math.max(0, value);
+    const safe = Number.isFinite(value) ? value : this._spatialConfig.rolloffFactor;
+    const clamped = Math.max(0, safe);
     this._spatialConfig.rolloffFactor = clamped;
     if (this._panner !== null) {
       this._panner.rolloffFactor = clamped;
@@ -340,9 +357,11 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
   }
 
   public set coneInnerAngle(value: number) {
-    this._coneInnerAngle = value;
+    const safe = Number.isFinite(value) ? value : this._coneInnerAngle;
+    const clamped = clamp(safe, 0, 360);
+    this._coneInnerAngle = clamped;
     if (this._panner !== null) {
-      this._panner.coneInnerAngle = value;
+      this._panner.coneInnerAngle = clamped;
     }
   }
 
@@ -351,9 +370,11 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
   }
 
   public set coneOuterAngle(value: number) {
-    this._coneOuterAngle = value;
+    const safe = Number.isFinite(value) ? value : this._coneOuterAngle;
+    const clamped = clamp(safe, 0, 360);
+    this._coneOuterAngle = clamped;
     if (this._panner !== null) {
-      this._panner.coneOuterAngle = value;
+      this._panner.coneOuterAngle = clamped;
     }
   }
 
@@ -362,9 +383,11 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
   }
 
   public set coneOuterGain(value: number) {
-    this._coneOuterGain = value;
+    const safe = Number.isFinite(value) ? value : this._coneOuterGain;
+    const clamped = clamp(safe, 0, 1);
+    this._coneOuterGain = clamped;
     if (this._panner !== null) {
-      this._panner.coneOuterGain = value;
+      this._panner.coneOuterGain = clamped;
     }
   }
 
@@ -383,6 +406,11 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
       this._explicitVelocity = false;
       return;
     }
+
+    // Reject a non-finite component outright (no partial write) — an
+    // explicit NaN/±Infinity velocity would otherwise feed straight into the
+    // Doppler ratio calculation. Keep whatever velocity was in effect before.
+    if (!Number.isFinite(value.x) || !Number.isFinite(value.y)) return;
 
     if (this._velocity === null) {
       this._velocity = new Vector(value.x, value.y);
@@ -460,7 +488,10 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
    * not the formula itself.
    */
   private _tickDoppler(x: number, y: number, now: number, settings: SpatialSmoothingSettings): void {
-    if (settings.dopplerFactor === 0) return;
+    if (settings.dopplerFactor <= 0) {
+      this._setDopplerRatio(1);
+      return;
+    }
 
     let vx: number;
     let vy: number;
@@ -479,7 +510,10 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
     const dy = y - listener.position.y;
     const distance = Math.hypot(dx, dy);
     // Coincident with the listener — no defined line of sight to project onto.
-    if (distance < POSITION_EPSILON) return;
+    if (distance < POSITION_EPSILON) {
+      this._setDopplerRatio(1);
+      return;
+    }
 
     const ux = dx / distance;
     const uy = dy / distance;
@@ -490,8 +524,20 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
     // Positive = listener moving toward the source along the same line.
     const listenerApproachSpeed = listenerVelocity.x * ux + listenerVelocity.y * uy;
 
-    const rawRatio = 1 + settings.dopplerFactor * ((listenerApproachSpeed - sourceRecedeSpeed) / settings.speedOfSound);
-    this._applyDopplerRate(clamp(rawRatio, MIN_DOPPLER_RATIO, MAX_DOPPLER_RATIO));
+    const speedOfSound = Math.max(POSITION_EPSILON, settings.speedOfSound);
+    const rawRatio = 1 + settings.dopplerFactor * ((listenerApproachSpeed - sourceRecedeSpeed) / speedOfSound);
+    this._setDopplerRatio(clamp(rawRatio, MIN_DOPPLER_RATIO, MAX_DOPPLER_RATIO));
+  }
+
+  private _setDopplerRatio(ratio: number): void {
+    // A single backstop against every possible NaN source feeding the ratio
+    // calculation (explicit or derived velocity, a NaN/zero `speedOfSound` on
+    // the shared settings object, ...) — falls back to the neutral ratio
+    // rather than ever writing a non-finite value to a live AudioParam.
+    const safeRatio = Number.isFinite(ratio) ? ratio : 1;
+    if (safeRatio === 1 && !this._dopplerActive) return;
+    this._dopplerActive = safeRatio !== 1;
+    this._applyDopplerRate(safeRatio);
   }
 
   /**
@@ -613,6 +659,32 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
     }
   }
 
+  private _disableSpatializationIfUnused(): void {
+    if (this._position !== null || this._followNode !== null || this._panner === null) return;
+    const panner = this._panner;
+    this._routeDirect();
+    panner.disconnect();
+    this._panner = null;
+    this._setDopplerRatio(1);
+    this._velocitySample.lastPosition = null;
+    this._velocitySample.lastTime = 0;
+    this._velocitySample.x = 0;
+    this._velocitySample.y = 0;
+    this._smoothX.reset();
+    this._smoothY.reset();
+    this._smoothZ.reset();
+    // Also forget the last-written orientation so a future panner (a distinct
+    // AudioParam instance) gets a fresh snap instead of a skipped write that
+    // happens to match this smoother's stale `_last` from the old panner.
+    this._smoothOrientX.reset();
+    this._smoothOrientY.reset();
+    this._smoothOrientZ.reset();
+    if (this._spatialRegistered) {
+      this._spatialRegistered = false;
+      this._manager._unregisterSpatial(this);
+    }
+  }
+
   /**
    * Called once on natural end or explicit {@link BaseVoice.stop}. Idempotent —
    * subsequent calls are no-ops once `_ended` is set.
@@ -647,6 +719,11 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
     }
     this._followNode = null;
 
+    if (this._spatialRegistered) {
+      this._spatialRegistered = false;
+      this._manager._unregisterSpatial(this);
+    }
+
     this.onEnd.dispatch();
     this.onEnd.destroy();
   }
@@ -657,6 +734,9 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
    * `source → panner → output`.
    */
   protected abstract _routeThroughPanner(panner: PannerNode): void;
+
+  /** Restore the direct source-to-output route. */
+  protected abstract _routeDirect(): void;
 
   /** Stop and disconnect the voice's source node(s). Called once from `_finish`. */
   protected abstract _teardownSource(): void;
