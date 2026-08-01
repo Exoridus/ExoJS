@@ -249,11 +249,11 @@ export class AssetResidency {
       throw new Error(`Loader._adopt: no constructor registered for type "${meta.kind}".`);
     }
 
-    // A freshly-created catalog leaf is 'idle' until adopted; entering residency
-    // here transitions it to 'loading' (asset-system v2 §7). A re-adopted handle
-    // already loading/ready/failed is left untouched.
+    // A freshly-created catalog leaf is 'idle' until adopted. A failed leaf
+    // is a retry request and must be re-armed before the shared fetch restarts.
     const leafState = (handle as { _loadState?: { value: string; begin(): void } })._loadState;
-    if (leafState?.value === 'idle') leafState.begin();
+    const retryingFailedLeaf = leafState?.value === 'failed';
+    if (leafState?.value === 'idle' || retryingFailedLeaf) leafState.begin();
 
     const key = this._typeRegistry._key(ctor, meta.src);
 
@@ -290,6 +290,12 @@ export class AssetResidency {
         }
       }
       // else: the SAME ref re-adopted — Set membership makes this a no-op.
+
+      if (retryingFailedLeaf && stored === undefined && existingRef !== undefined) {
+        for (const ref of existingRef.refs) if (ref.state === 'failed') ref._begin();
+        if (background) this._enqueueBackgroundFetch(ctor, meta.src, existingRef.options);
+        else this._startRefFetch(ctor, meta.src, existingRef.options);
+      }
 
       this._claim(key, ctor, meta.src, claimer);
 
@@ -342,6 +348,17 @@ export class AssetResidency {
       this._warnOnFetchOptionConflict(ctor, meta.src, key, deferredEntry.options, meta.opts);
     }
     // else: the SAME handle re-adopted, or already filled — a no-op.
+
+    if (retryingFailedLeaf && stored === undefined && deferredEntry !== undefined) {
+      const adapter = this._typeRegistry.getSeamlessAdapter(ctor);
+      if (adapter !== undefined) {
+        for (const candidate of deferredEntry.handles) {
+          if (adapter.stateOf(candidate) === 'failed') adapter.begin(candidate);
+        }
+        if (background) this._enqueueBackgroundFetch(ctor, meta.src, deferredEntry.options);
+        else this._startSeamlessFetch(ctor, meta.src, deferredEntry.options);
+      }
+    }
 
     this._claim(key, ctor, meta.src, claimer);
   }
