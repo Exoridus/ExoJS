@@ -18,6 +18,13 @@ import { Rectangle } from '#math/Rectangle';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
+import { RenderEntryKind } from '#rendering/plan/RenderCommand';
+import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
+import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import type { RenderNode } from '#rendering/RenderNode';
+import { createRenderStats } from '#rendering/RenderStats';
+import { RenderTarget } from '#rendering/RenderTarget';
 
 class TestSprite extends Drawable {
   private _left = 0;
@@ -103,6 +110,49 @@ const overlapping = (): TestSprite => {
   sprite.interactive = true;
 
   return sprite;
+};
+
+/** Minimal `RenderBackend` for collect-only use — no draw ever actually runs. */
+const createBuildBackend = (): { backend: RenderBackend; destroy: () => void } => {
+  const target = new RenderTarget(320, 200, true);
+
+  return {
+    backend: { view: target.view, stats: createRenderStats() } as unknown as RenderBackend,
+    destroy: () => target.destroy(),
+  };
+};
+
+/**
+ * Build and optimize an actual render plan for `root` and return the LAST
+ * (i.e. visually topmost, for a set of overlapping opaque quads) direct-child
+ * draw's node — the same thing the renderer paints on top. A `Container` root
+ * collects as a single wrapping Group entry, so the draws under test live in
+ * that nested scope, not the pass root itself.
+ */
+const topmostPaintedNode = (root: Container): RenderNode | null => {
+  const { backend, destroy } = createBuildBackend();
+
+  try {
+    const builder = RenderPlanBuilder.acquire();
+
+    try {
+      const plan = builder.build(root, backend);
+
+      RenderPlanOptimizer.optimize(plan);
+
+      const passRoot = plan.passes[0]!.root;
+      const wrapper = passRoot.entries[0];
+      const scope = wrapper?.kind === RenderEntryKind.Group ? wrapper.scope : passRoot;
+      const draws = scope.entries.filter(entry => entry.kind === RenderEntryKind.Draw);
+      const last = draws[draws.length - 1];
+
+      return last?.kind === RenderEntryKind.Draw ? last.command.drawable : null;
+    } finally {
+      RenderPlanBuilder.release(builder);
+    }
+  } finally {
+    destroy();
+  }
 };
 
 describe('siblings', () => {
@@ -314,6 +364,74 @@ describe('scoped hit-testing', () => {
     expect(pick(im, signals, scene, 50, 50)).toBe(above);
 
     im.popScope(token);
+    im.destroy();
+  });
+});
+
+// Paint-order cache regression coverage: the renderer's actual draw order,
+// the indexed (spatial-tree) hit-test path, and the scoped/recursive
+// (`_hitTestNode` walking `Container._childrenInPaintOrder()`) hit-test path
+// must all agree on which overlapping node is topmost — they now all read
+// the SAME cached ordering instead of three independent sorts.
+describe('renderer / hit-test agreement', () => {
+  it('the renderer, the indexed hit-test path, and the scoped hit-test path all pick the same topmost sibling', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    const below = overlapping();
+    const middle = overlapping();
+    const above = overlapping();
+
+    // Document order deliberately scrambled relative to paint order — only
+    // zIndex may decide who paints (and gets picked) on top.
+    middle.zIndex = 5;
+    above.zIndex = 10;
+    scene.root.addChild(middle);
+    scene.root.addChild(above);
+    scene.root.addChild(below);
+
+    // Indexed path: every sprite here is `interactive`, so InteractionManager
+    // already built its spatial-index tree and `_hitTest` takes `_hitTestIndexed`.
+    expect(pick(im, signals, scene, 50, 50)).toBe(above);
+
+    // Scoped (recursive) path: pushing a scope forces `_hitTestNode`, which
+    // walks `Container._childrenInPaintOrder()` directly instead of the tree.
+    const token = im.pushScope(scene.root);
+
+    expect(pick(im, signals, scene, 50, 50)).toBe(above);
+
+    im.popScope(token);
+
+    // Renderer: an actual, optimized render plan for the same tree paints
+    // the same node last (topmost).
+    expect(topmostPaintedNode(scene.root)).toBe(above);
+
+    im.destroy();
+  });
+
+  it('repeated picks against the same wide, overlapping sibling set never re-sort — same node every time', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    const siblings = Array.from({ length: 20 }, () => overlapping());
+
+    for (const sibling of siblings) {
+      scene.root.addChild(sibling);
+    }
+    siblings[7]!.zIndex = 3;
+
+    const top = siblings[7]!;
+
+    for (let i = 0; i < 5; i++) {
+      expect(pick(im, signals, scene, 50, 50)).toBe(top);
+    }
+
+    expect(topmostPaintedNode(scene.root)).toBe(top);
+
     im.destroy();
   });
 });

@@ -1717,20 +1717,7 @@ export class InteractionManager implements InteractionHooks {
    * so equal z keeps document order.
    */
   private _childrenInPaintOrder(container: Container): readonly RenderNode[] {
-    const children = container.children;
-    const first = children[0];
-
-    if (first === undefined) {
-      return children;
-    }
-
-    for (let i = 1; i < children.length; i++) {
-      if (children[i]!.zIndex !== first.zIndex) {
-        return [...children].sort((left, right) => left.zIndex - right.zIndex);
-      }
-    }
-
-    return children;
+    return container._childrenInPaintOrder();
   }
 
   // ---------------------------------------------------------------------------
