@@ -56,7 +56,7 @@ init() {
     this.inputs.onStop(Keyboard.S,    () => { this.move.down  = 0; });
 }
 
-update(delta) {
+update(delta: Time) {
     const speed = 280 * delta.seconds;
     const dx = (this.move.right - this.move.left) * speed;
     const dy = (this.move.down - this.move.up) * speed;
@@ -119,7 +119,7 @@ _rebindJump() {
     this.jumpDirty = false;
 }
 
-update(delta) {
+update(delta: Time) {
     this._rebindJump();
     // ... apply jumpVelocity ...
 }
@@ -191,9 +191,14 @@ Scene-scoped bindings from `this.inputs` are cleaned up when the scene unloads, 
 </Callout>
 
 ```ts
-import { GamepadAxis, GamepadButton, Keyboard, Scene, Sprite } from '@codexo/exojs';
+import { GamepadAxis, GamepadButton, Keyboard, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
 
 class PlayerScene extends Scene {
+    private sprite!: Sprite;
+    private keys!: { left: number; right: number; up: number; down: number };
+    private stick!: { x: number; y: number };
+    private jumpImpulse!: number;
+
     async load() {
         await this.loader.load('image/hero.png');
     }
@@ -248,7 +253,7 @@ class PlayerScene extends Scene {
         });
     }
 
-    update(delta) {
+    update(delta: Time) {
         // Best input wins: prefer the device with the larger magnitude
         const keyX = this.keys.right - this.keys.left;
         const keyY = this.keys.down - this.keys.up;
@@ -263,7 +268,7 @@ class PlayerScene extends Scene {
         this.jumpImpulse = Math.min(0, this.jumpImpulse + 800 * delta.seconds);
     }
 
-    draw(context) {
+    draw(context: RenderingContext) {
         context.backend.clear();
         context.render(this.sprite);
     }
@@ -304,7 +309,7 @@ init() {
     // Consume actions once in update, then reset
 }
 
-update(delta) {
+update(delta: Time) {
     if (this.actions.pause) {
         this.togglePause();       // pauses/resumes via app.scenes + shows/hides the pause overlay on scene.ui
         this.actions.pause = 0;

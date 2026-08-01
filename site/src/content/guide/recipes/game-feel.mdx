@@ -91,7 +91,7 @@ Each pattern is fire-and-forget — call `.start()` inside an event handler and 
 For held actions — thrust, charging, spinning up — continuous feedback creates presence:
 
 ```ts
-update(delta) {
+update(delta: Time) {
     const thrustMag = Math.hypot(this.thrust.x, this.thrust.y);
 
     if (thrustMag > 0.05) {

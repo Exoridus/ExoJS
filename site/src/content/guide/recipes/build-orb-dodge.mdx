@@ -46,12 +46,12 @@ The game uses two scenes: `PlayScene` drives the active game loop, `GameOverScen
 Define a constant set for canvas dimensions and game parameters at the top so both scenes can reference them:
 
 ```ts no-check
-const CANVAS_WIDTH = 800;
-const CANVAS_HEIGHT = 600;
-const PLAYER_RADIUS = 18;
-const PLAYER_SPEED = 260;
-const ORB_RADIUS = 14;
-const SPAWN_INTERVAL = 1.2;
+const CANVAS_WIDTH: number = 800;
+const CANVAS_HEIGHT: number = 600;
+const PLAYER_RADIUS: number = 18;
+const PLAYER_SPEED: number = 260;
+const ORB_RADIUS: number = 14;
+const SPAWN_INTERVAL: number = 1.2;
 ```
 
 A scene has four lifecycle hooks — override the ones you need:
@@ -66,6 +66,15 @@ The player is a filled circle drawn with `Graphics`. Keyboard movement uses `thi
 
 ```ts
 init() {
+    const CANVAS_WIDTH: number = 800;
+    const CANVAS_HEIGHT: number = 600;
+    const PLAYER_RADIUS: number = 18;
+    const PLAYER_SPEED: number = 260;
+    const ORB_RADIUS: number = 14;
+    const ORB_SPEED_MIN: number = 80;
+    const ORB_SPEED_MAX: number = 200;
+    const SPAWN_INTERVAL: number = 1.2;
+
     this.world = new Container();
 
     this.player = new Graphics();
@@ -89,7 +98,12 @@ Bindings registered through `this.inputs` auto-dispose when the scene is destroy
 In `update`, normalize the direction vector so diagonal movement is not faster than cardinal movement, then clamp the position inside the canvas:
 
 ```ts
-update(delta) {
+update(delta: Time) {
+    const CANVAS_WIDTH: number = 800;
+    const CANVAS_HEIGHT: number = 600;
+    const PLAYER_RADIUS: number = 18;
+    const PLAYER_SPEED: number = 260;
+
     const mag = Math.hypot(this.dx, this.dy) || 1;
     if (this.dx !== 0 || this.dy !== 0) {
         this.px += (this.dx / mag) * PLAYER_SPEED * delta.seconds;
@@ -109,6 +123,12 @@ Orbs are created dynamically during `update` on a timer. Each orb spawns just ou
 
 ```ts
 spawnOrb() {
+    const CANVAS_WIDTH: number = 800;
+    const CANVAS_HEIGHT: number = 600;
+    const ORB_RADIUS: number = 14;
+    const ORB_SPEED_MIN: number = 80;
+    const ORB_SPEED_MAX: number = 200;
+
     const danger = Math.random() < 0.4;
     // pick a random edge (0=top, 1=right, 2=bottom, 3=left)
     const side = Math.floor(Math.random() * 4);
@@ -167,7 +187,7 @@ Orbs that leave the canvas are also removed. After the loop, if `gameEnded` is t
 Score and elapsed time sit on top of the world as plain `Text` nodes — rendered after `context.render(this.world)` so they always appear in front:
 
 ```ts
-draw(context) {
+draw(context: RenderingContext) {
     context.backend.clear();
     context.render(this.world);
     context.render(this.scoreText);

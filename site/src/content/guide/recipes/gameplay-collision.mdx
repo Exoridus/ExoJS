@@ -134,6 +134,12 @@ The sign convention: `projectionN` points **from shapeB toward shapeA** (away fr
 `shape.contains(x, y)` returns `true` if the world-space point is inside the shape. Every shape implements it:
 
 ```ts
+import { Rectangle, Vector } from '@codexo/exojs';
+
+const enemyHitbox: Rectangle = new Rectangle(0, 0, 100, 100);
+const pointer: Vector = new Vector(0, 0);
+function selectEnemy(): void {}
+
 if (enemyHitbox.contains(pointer.x, pointer.y)) {
     selectEnemy();
 }

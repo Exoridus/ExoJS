@@ -42,7 +42,7 @@ A blank or black canvas usually means one of the following:
 **`context.render()` is missing from `draw`.** Every frame you need to both clear the backend and explicitly render your scene graph root:
 
 ```ts
-draw(context) {
+draw(context: RenderingContext) {
     context.backend.clear();
     context.render(this.root);
 }
@@ -71,9 +71,9 @@ draw(backend) {
 The current API passes a render context, not a bare backend, and renders nodes through the context rather than calling `render` on the node itself:
 
 ```ts
-draw(context) {
+draw(context: RenderingContext) {
     context.backend.clear();
-    context.render(sprite);
+    context.render(this.root);
 }
 ```
 

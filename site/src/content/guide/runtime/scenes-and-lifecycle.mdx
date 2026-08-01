@@ -18,18 +18,18 @@ The split between application and scene matters: the application is the long-liv
 A scene is a class that extends `Scene`. Override the hooks you need; leave the rest at their defaults:
 
 ```ts
-import { Scene } from '@codexo/exojs';
+import { RenderingContext, Scene, Time } from '@codexo/exojs';
 
 class TitleScene extends Scene {
     init() {
         // build state
     }
 
-    update(delta) {
+    update(delta: Time) {
         // per-frame logic
     }
 
-    draw(context) {
+    draw(context: RenderingContext) {
         // per-frame rendering
         context.backend.clear();
     }
@@ -77,6 +77,8 @@ Every scene has a built-in `scene.ui` layer that sits screen-fixed above the sce
 import { Label, ProgressBar, Scene } from '@codexo/exojs';
 
 class GameScene extends Scene {
+    private healthBar!: ProgressBar;
+
     init() {
         const title = new Label('Score: 0', { fontSize: 22 });
         title.anchorIn(this.ui, 'top-left', 18, 14);
@@ -103,6 +105,9 @@ A pause overlay is just nodes on `scene.ui` that you show and hide in response t
 import { Keyboard, Label, Panel, Scene } from '@codexo/exojs';
 
 class GameScene extends Scene {
+    private pausePanel!: Panel;
+    private pauseLabel!: Label;
+
     init() {
         // Pause overlay — hidden until paused
         this.pausePanel = new Panel({ width: 360, height: 120, cornerRadius: 12 });
@@ -197,7 +202,7 @@ The `init` hook runs once per scene-start. If you start the scene again later it
 `update` runs once per real frame, so its `delta` varies with the display's refresh rate and any hitches. `fixedUpdate` is the other logic hook: the engine runs it a constant number of times per second — independent of frame rate — before `update`:
 
 ```ts
-fixedUpdate(delta) {
+fixedUpdate(delta: Time) {
     this.world.step(delta.seconds);
 }
 ```
@@ -228,7 +233,7 @@ fixedUpdate() {
     this.world.step(1 / 60); // moves the body; the binding updates this.hero.x
 }
 
-draw(context) {
+draw(context: RenderingContext) {
     const alpha = this.app.frameAlpha;
     const renderX = this.hero.prevX + (this.hero.x - this.hero.prevX) * alpha;
     this.hero.setPosition(renderX, this.hero.y);
@@ -244,7 +249,7 @@ If you don't need buttery-smooth motion, ignore `frameAlpha` — most scenes nev
 The `update` hook runs once per frame, before `draw`. The argument carries the elapsed time since the previous frame:
 
 ```ts
-update(delta) {
+update(delta: Time) {
     this.hero.rotate(120 * delta.seconds);
 }
 ```
@@ -256,7 +261,7 @@ Multiplying by `delta.seconds` keeps motion frame-rate independent. The same cod
 This is the hook with the most surprising default: **`draw` does nothing if you don't override it.** The engine never auto-traverses the scene graph for you.
 
 ```ts
-draw(context) {
+draw(context: RenderingContext) {
     context.backend.clear();
     context.render(this.root);
 }
@@ -271,7 +276,7 @@ ExoJS never auto-renders the tree. If `draw` is missing or omits `context.render
 The trade-off is that you can render selectively when you need to:
 
 ```ts
-draw(context) {
+draw(context: RenderingContext) {
     context.backend.clear();
     context.render(this.world);
 

@@ -21,7 +21,9 @@ Each filter you attach re-renders that node's output once more per frame — a t
 Filters go on the drawable. The array is processed in order — filter 0 receives the node's raw render, filter 1 receives filter 0's output, and so on:
 
 ```ts
-import { BlurFilter, Color, ColorFilter } from '@codexo/exojs';
+import { BlurFilter, Color, ColorFilter, Sprite } from '@codexo/exojs';
+
+let sprite: Sprite;
 
 const blur = new BlurFilter({ radius: 3, quality: 2 });
 const tint = new ColorFilter(new Color(140, 210, 255));

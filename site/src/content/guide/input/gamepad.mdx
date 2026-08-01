@@ -164,16 +164,19 @@ Aggregate channels are bipolar — they preserve the full signed range and apply
 Not every controller has every button or axis. A detached Joy-Con has no right stick; a basic pad has no paddles. Use `hasChannel()` to gate optional bindings:
 
 ```ts
-if (pad.hasChannel(GamepadAxis.RightStickX)) {
-    pad.onActive(GamepadAxis.RightStickX, value => {
-        this.camera.rotate(value * 2);
-    });
-}
+init() {
+    const pad = this.app.input.getGamepad(0);
+    if (pad.hasChannel(GamepadAxis.RightStickX)) {
+        pad.onActive(GamepadAxis.RightStickX, value => {
+            this.camera.rotate(value * 2);
+        });
+    }
 
-if (pad.hasChannel(GamepadButton.Paddle1)) {
-    pad.onActive(GamepadButton.Paddle1, value => {
-        this.player.dash();
-    });
+    if (pad.hasChannel(GamepadButton.Paddle1)) {
+        pad.onActive(GamepadButton.Paddle1, value => {
+            this.player.dash();
+        });
+    }
 }
 ```
 
@@ -184,17 +187,20 @@ Binding to a channel the pad doesn't declare is harmless — the listener simply
 The Web Gamepad API exposes dual-rumble actuators on most modern controllers. Check support and trigger effects:
 
 ```ts
-if (pad.canVibrate) {
-    pad.vibrate({
-        duration: 200,           // ms
-        weakMagnitude: 0.5,     // low-frequency rumble 0..1
-        strongMagnitude: 0.8,   // high-frequency rumble 0..1
-        startDelay: 0,
-    });
-}
+init() {
+    const pad = this.app.input.getGamepad(0);
+    if (pad.canVibrate) {
+        pad.vibrate({
+            duration: 200,           // ms
+            weakMagnitude: 0.5,     // low-frequency rumble 0..1
+            strongMagnitude: 0.8,   // high-frequency rumble 0..1
+            startDelay: 0,
+        });
+    }
 
-// Stop rumble early
-pad.stopVibration();
+    // Stop rumble early
+    pad.stopVibration();
+}
 ```
 
 `vibrate()` is async and resolves when the effect finishes or is cancelled. Call `stopVibration()` to cut a running effect short (e.g. when the player releases a trigger). Both methods are silent no-ops on unsupported hardware.
@@ -217,13 +223,13 @@ The `gamepads` array is populated before `init` runs, but the browser's gamepad 
 
 ```ts
 init() {
-    const pad = app.input.firstConnectedGamepad;
+    const pad = this.app.input.firstConnectedGamepad;
 
     if (pad) {
         this.bindPad(pad);
     }
 
-    app.input.onGamepadConnected.add(p => {
+    this.app.input.onGamepadConnected.add(p => {
         if (!this._activePad) this.bindPad(p);
     });
 }

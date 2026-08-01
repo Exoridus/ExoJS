@@ -24,14 +24,14 @@ init() {
     this.player = new Sprite(this.loader.get('image/hero.png'));
 }
 
-update(delta) {
+update(delta: Time) {
     // ... move player based on input ...
 
     // Camera follows player
     this._view.setCenter(this.player.position.x, this.player.position.y);
 }
 
-draw(context) {
+draw(context: RenderingContext) {
     context.backend.clear();
     context.render(this.worldLayer, { view: this._view });
 }
@@ -40,9 +40,11 @@ draw(context) {
 For smooth following, lerp the camera center instead of snapping:
 
 ```ts
-this._cameraX += (this.player.x - this._cameraX) * 5 * delta.seconds;
-this._cameraY += (this.player.y - this._cameraY) * 5 * delta.seconds;
-this._view.setCenter(this._cameraX, this._cameraY);
+update(delta: Time) {
+    this._cameraX += (this.player.x - this._cameraX) * 5 * delta.seconds;
+    this._cameraY += (this.player.y - this._cameraY) * 5 * delta.seconds;
+    this._view.setCenter(this._cameraX, this._cameraY);
+}
 ```
 
 The multiplier controls how quickly the camera catches up. Higher values = snappier. This is a simple exponential ease — no tween needed.
@@ -66,7 +68,7 @@ init() {
     });
 }
 
-draw(context) {
+draw(context: RenderingContext) {
     context.backend.clear();
     for (const layer of this._layers) {
         const offsetX = (400 - this._pointer.x) * layer.speed;
@@ -88,7 +90,7 @@ A layer that only fills the viewport shows its edge the moment parallax shifts i
 For side-scrolling games, offset background layers relative to the camera position rather than the pointer:
 
 ```ts
-draw(context) {
+draw(context: RenderingContext) {
     context.backend.clear();
 
     // Background — moves at 30% of camera speed

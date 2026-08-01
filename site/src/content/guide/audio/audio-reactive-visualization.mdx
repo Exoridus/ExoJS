@@ -26,9 +26,14 @@ An `AudioAnalyser` wraps a Web Audio `AnalyserNode` and exposes frequency and ti
 
 ```ts
 import { Asset, AudioStream, Scene } from '@codexo/exojs';
+import type { Time } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 
 class VisualizerScene extends Scene {
+    private music!: AudioStream;
+    private analyser!: AudioAnalyser;
+    private spectrum!: Uint8Array;
+
     async load() {
         this.music = await this.loader.load(Asset.type('music', 'audio/track.ogg'));
     }
@@ -41,7 +46,7 @@ class VisualizerScene extends Scene {
         this.analyser.source = this.app.audio.music;
     }
 
-    update(delta) {
+    update(delta: Time) {
         this.spectrum = this.analyser.getSpectrum();
     }
 }
@@ -65,7 +70,9 @@ The raw FFT returns N bins linearly spaced from 0 Hz to the Nyquist frequency (h
 The mel and log methods accept an optional `bands` parameter (default 32) and frequency range (`fMin`/`fMax`, default 20 Hz to 20 kHz, clamped to Nyquist). The filterbanks are built once per `(bands, fMin, fMax, fftSize)` combination and cached on the analyser instance — subsequent calls at the same parameters are just a weighted sum.
 
 ```ts
-update(delta) {
+import { Time } from '@codexo/exojs';
+
+update(delta: Time) {
     const mel32 = this.analyser.getSpectrumMel(null, { bands: 32 });
     // mel32[0] is the lowest mel band, mel32[31] is the highest
 
@@ -86,6 +93,8 @@ update(delta) {
 The event signals — `onBeat`, `onDownbeat`, `onBarStart`, `onTempoChange` — fire when the worklet processor detects a beat and dispatches a message to the main thread. Use them for one-shot side effects: spawning a particle burst, triggering a screen flash, advancing a sequencer:
 
 ```ts
+import { BeatDetector } from '@codexo/exojs-audio-fx';
+
 this.detector = new BeatDetector();
 this.detector.source = this.app.audio.music;
 
@@ -193,9 +202,16 @@ Here is a complete scene that combines an analyser-driven bar graph with beat-tr
 ```ts
 import { Asset, Application, AudioStream,
     Color, Graphics, Scene } from '@codexo/exojs';
+import type { RenderingContext, Time } from '@codexo/exojs';
 import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
 
 class AudioReactiveScene extends Scene {
+    private music!: AudioStream;
+    private analyser!: AudioAnalyser;
+    private detector!: BeatDetector;
+    private bars!: Graphics;
+    private _bg!: Color;
+
     async load() {
         this.music = await this.loader.load(Asset.type('music', 'audio/track.ogg'));
     }
@@ -214,7 +230,7 @@ class AudioReactiveScene extends Scene {
         this._bg = new Color(20, 24, 30, 1);
     }
 
-    update(delta) {
+    update(delta: Time) {
         const bands = this.analyser.getSpectrumMel(null, { bands: 32 });
         const { width, height } = this.app.canvas;
         const barW = width / bands.length;
@@ -239,7 +255,7 @@ class AudioReactiveScene extends Scene {
         this._bg = new Color(20, 24, Math.round(30 + this.detector.pulse * 60), 1);
     }
 
-    draw(context) {
+    draw(context: RenderingContext) {
         context.backend.clear(this._bg);
         context.render(this.bars);
     }

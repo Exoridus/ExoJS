@@ -17,7 +17,7 @@ The building blocks — `RenderTexture` and `Filter` — are covered in their ow
 The minimal pattern: render your scene into a `RenderTexture`, apply a filter, display the result. Build the pipeline once in `init`, then run it each frame with `pipeline.execute(context)`:
 
 ```ts
-import { BlurFilter, CallbackRenderPass, Color, Container, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
+import { BlurFilter, CallbackRenderPass, Color, Container, RenderNodePass, RenderingContext, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
 
 class PostProcessScene extends Scene {
     private sceneRt!: RenderTexture;
@@ -43,7 +43,7 @@ class PostProcessScene extends Scene {
             .addPass(new RenderNodePass(this.final, { clear: Color.black }));
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         this.pipeline.execute(context);
     }
 }
@@ -60,7 +60,7 @@ That pipeline is already three passes — scene render, blur, composite. Post-pr
 Bloom requires two renderings of the same scene: one at normal brightness (the base), one with only the bright parts tinted and blurred (the glow). The glow is composited additively over the base. Because the same sprite is drawn twice with different tints, each off-screen step is a `CallbackRenderPass` that sets the tint before rendering:
 
 ```ts
-import { BlendModes, BlurFilter, CallbackRenderPass, Color, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
+import { BlendModes, BlurFilter, CallbackRenderPass, Color, RenderingContext, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
 
 class BloomScene extends Scene {
     private baseRt!: RenderTexture;
@@ -113,7 +113,7 @@ class BloomScene extends Scene {
             .addPass(new RenderNodePass(this.glowSprite));
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         this.pipeline.execute(context);
     }
 }
@@ -126,7 +126,7 @@ The two glow/base passes each set a tint on the shared `bunny` sprite, then rend
 Instead of a single filter, pass the output through a chain — one `CallbackRenderPass` per filter step, bracketed by a scene render and a composite:
 
 ```ts
-import { BlurFilter, CallbackRenderPass, Color, ColorFilter, Graphics, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
+import { BlurFilter, CallbackRenderPass, Color, ColorFilter, Graphics, RenderingContext, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
 
 class FilterChainScene extends Scene {
     private scene!: Graphics;
@@ -158,7 +158,7 @@ class FilterChainScene extends Scene {
             .addPass(new RenderNodePass(this.final, { clear: Color.black }));
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         this.pipeline.execute(context);
     }
 }
@@ -171,7 +171,7 @@ Each `filter.apply()` call is one additional render pass. For a chain of N filte
 Reuse a render target as its own input to create motion trails. The feedback pass deliberately omits `clear`, so the decayed previous frame accumulates instead of being wiped:
 
 ```ts
-import { CallbackRenderPass, Color, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
+import { CallbackRenderPass, Color, RenderingContext, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
 
 class TrailScene extends Scene {
     private feedbackRt!: RenderTexture;
@@ -202,7 +202,7 @@ class TrailScene extends Scene {
             .addPass(new RenderNodePass(this.final, { clear: Color.black }));
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         this.pipeline.execute(context);
     }
 }

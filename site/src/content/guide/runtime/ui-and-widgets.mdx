@@ -159,6 +159,8 @@ A `Tooltip` attaches to any `interactive` node and shows a small text label near
 import { Button, Scene, Tooltip } from '@codexo/exojs';
 
 class ShopScene extends Scene {
+    private tooltip!: Tooltip;
+
     init() {
         const upgrade = new Button({ label: 'Upgrade', width: 160, height: 44 });
         upgrade.interactive = true;
@@ -180,6 +182,9 @@ A pause menu is the canonical combination: freeze the world with `app.scenes.pau
 import { Keyboard, Label, Panel, Scene } from '@codexo/exojs';
 
 class GameScene extends Scene {
+    private pausePanel!: Panel;
+    private pauseLabel!: Label;
+
     init() {
         this.pausePanel = new Panel({ width: 420, height: 140, cornerRadius: 18 });
         this.pausePanel.anchorIn(this.ui, 'center');

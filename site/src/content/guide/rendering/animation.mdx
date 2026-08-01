@@ -54,7 +54,7 @@ State is readable at `tween.state`: `'idle'`, `'active'`, `'paused'`, `'stopped'
 ### Callbacks
 
 ```ts
-this.app.tweens.create(sprite)
+this.app.tweens.create(this.sprite)
     .to({ rotation: 360 }, 2)
     .onStart(() => console.log('started'))
     .onUpdate(t => console.log(`progress: ${t}`))
@@ -172,8 +172,8 @@ Calling `start()` on an active tween restarts it from zero. To replace a running
 ```ts
 // Interrupt the current move and slide to a new position
 this._activeTween?.stop();
-this._activeTween = this.app.tweens.create(sprite.position)
-    .to({ x: newTarget }, 0.3)
+this._activeTween = this.app.tweens.create(this.sprite.position)
+    .to({ x: this._newTarget }, 0.3)
     .easing(Ease.cubicOut)
     .start();
 ```
@@ -260,7 +260,7 @@ player.onComplete.add(clip => {
 Call `player.update(delta)` each frame. The delta can be a `Time` object (from the scene's `update`) or a number in milliseconds:
 
 ```ts
-update(delta) {
+update(delta: Time) {
     this.player.update(delta);
 }
 ```

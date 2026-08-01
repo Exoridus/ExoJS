@@ -16,8 +16,11 @@ A sprite needs a texture. The shortest path from file to visible quad:
 
 ```ts
 import { Scene, Sprite } from '@codexo/exojs';
+import type { RenderingContext } from '@codexo/exojs';
 
 class MyScene extends Scene {
+    private hero!: Sprite;
+
     async load() {
         await this.loader.load('image/hero.png');
     }
@@ -27,7 +30,7 @@ class MyScene extends Scene {
         this.addChild(this.hero);
     }
 
-    draw(context) {
+    draw(context: RenderingContext) {
         context.backend.clear();
         context.render(this.root);
     }

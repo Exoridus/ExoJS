@@ -83,7 +83,14 @@ import ts from 'typescript';
 const REPO_ROOT = join(import.meta.dirname, '..');
 const GUIDE_DIR = join(REPO_ROOT, 'site', 'src', 'content', 'guide');
 const SRC_DIR = join(REPO_ROOT, 'src');
-const OUT_DIR = join(REPO_ROOT, '.workspace', 'generated', 'guide-typecheck');
+// Both overridable so several people (or agents) can iterate on disjoint guide
+// folders at once without racing each other's output directory, which this
+// script wipes on every run.
+const OUT_DIR = join(REPO_ROOT, process.env.GUIDE_SNIPPET_OUT ?? join('.workspace', 'generated', 'guide-typecheck'));
+const FOLDER_FILTER = (process.env.GUIDE_SNIPPET_FOLDERS ?? '')
+  .split(',')
+  .map(name => name.trim())
+  .filter(name => name.length > 0);
 
 const CHECKED_LANGS = new Set(['ts', 'tsx', 'typescript', 'js', 'javascript']);
 
@@ -617,7 +624,7 @@ const FREE_IDENTIFIER_RE = /(?<![.\w$])([A-Za-z_$][\w$]*)/g;
  * PascalCase names may be used in type position too (`orb: OrbData`), so
  * they get a merging `type X = any;` alongside the value declaration. */
 function anyFallbackDecl(name: string): string[] {
-  return /^[A-Z]/.test(name) ? [`var ${name};`, `type ${name} = any;`] : [`var ${name};`];
+  return /^[A-Z]/.test(name) ? [`var ${name}: any;`, `type ${name} = any;`] : [`var ${name}: any;`];
 }
 
 function collectFreeIdentifiers(memberTexts: string[]): Set<string> {
@@ -677,7 +684,15 @@ mkdirSync(OUT_DIR, { recursive: true });
 
 const coreExportNames = computeCoreExportNames();
 
-const files = walkMdx(GUIDE_DIR);
+const files = walkMdx(GUIDE_DIR).filter(file => {
+  if (FOLDER_FILTER.length === 0) {
+    return true;
+  }
+
+  const folder = relative(GUIDE_DIR, file).replaceAll('\\', '/').split('/')[0];
+
+  return folder !== undefined && FOLDER_FILTER.includes(folder);
+});
 let extracted = 0;
 let skippedMeta = 0;
 let skippedPartial = 0;

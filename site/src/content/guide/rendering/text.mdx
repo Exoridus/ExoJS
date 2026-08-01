@@ -24,7 +24,9 @@ const label = new Text('Hello', {
 The second argument is a `TextOptions` object — a flat merge of [`TextStyleOptions`](/ExoJS/en/api/text-style/) (visual appearance) and `LayoutOptions` (flow and overflow). All properties are optional and have defaults. The live `TextStyle` is stored as `text.style`; mutating its fields is cheap and is applied automatically before the next render pass — no manual rebuild call is needed:
 
 ```ts
-import { Color } from '@codexo/exojs';
+import { Color, Text } from '@codexo/exojs';
+
+const label = new Text('Hello', { fillColor: Color.black, fontSize: 24 });
 
 label.style.fontSize = 32;            // rebuilds the glyph mesh on the next draw
 label.style.fillColor = Color.tomato; // updates only the mesh tint — no atlas work

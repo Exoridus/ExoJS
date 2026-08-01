@@ -449,7 +449,7 @@ The lifecycle guarantees that:
 `this.loader.load(...)` (or `this.app.loader.load(...)` for an app-lifetime claim) works any time, not just inside the `load` hook. A computed path isn't a string literal, so use `Asset.type('texture', ...)`:
 
 ```ts
-async _changeLevel(levelName) {
+async _changeLevel(levelName: string) {
     const bg = await this.app.loader.load(
         Asset.type('texture', `image/levels/${levelName}.png`)
     );

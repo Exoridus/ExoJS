@@ -23,16 +23,25 @@ One analyser for frequency data, one beat detector for rhythm, one particle syst
 
 ```ts
 import { Asset, Application, AudioStream,
-    Scene, View, Vector, Color, Ease } from '@codexo/exojs';
-import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
+    Scene, Texture, Time, RenderingContext, View, Vector, Color, Ease } from '@codexo/exojs';
+
+import { AudioAnalyser, BeatDetector, BeatInfo } from '@codexo/exojs-audio-fx';
 import {
     AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant,
     particlesExtension, ParticleSystem,
 } from '@codexo/exojs-particles';
-
 const app = new Application({ extensions: [particlesExtension] });
 
 class AudioReactiveScene extends Scene {
+    private music!: AudioStream;
+    private particleTexture!: Texture;
+    private analyser!: AudioAnalyser;
+    private detector!: BeatDetector;
+    private _bg!: Color;
+    private particles!: ParticleSystem;
+    private burst!: BurstSpawn;
+    private view!: View;
+
     async load() {
         const [music, particleTexture] = await Promise.all([
             this.loader.load(Asset.type('music', 'audio/track.ogg')),
@@ -71,7 +80,7 @@ class AudioReactiveScene extends Scene {
         });
     }
 
-    update(delta) {
+    update(delta: Time) {
         this.view.update(delta.milliseconds);
         this.particles.update(delta);
 
@@ -85,7 +94,7 @@ class AudioReactiveScene extends Scene {
         );
     }
 
-    draw(context) {
+    draw(context: RenderingContext) {
         context.backend.clear(this._bg);
         context.render(this.particles, { view: this.view });
     }
@@ -108,7 +117,7 @@ this.detector.onBarStart.add(() => {
 });
 
 // Mid-band → particle tint cycling
-this.detector.onBeat.add(info => {
+this.detector.onBeat.add((info: BeatInfo) => {
     if (info.beatInBar === 2 || info.beatInBar === 4) {
         this.burst.config.tint = new Constant(
             info.beatInBar === 2 ? Color.orange : Color.skyBlue
@@ -125,7 +134,7 @@ this.detector.onBeat.add(info => {
 For frequency-driven shake (low-end rumble instead of discrete hits), lerp the view center by the low-band energy in `update`:
 
 ```ts
-update(delta) {
+update(delta: Time) {
     const { low } = this.analyser.getLowMidHigh();
     const shakeX = (Math.random() - 0.5) * low * 20;
     const shakeY = (Math.random() - 0.5) * low * 20;

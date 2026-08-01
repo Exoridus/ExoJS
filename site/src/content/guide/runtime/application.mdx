@@ -57,7 +57,7 @@ import { Application, Color } from '@codexo/exojs';
 
 const app = new Application();
 
-function onLowHealth(isLow) {
+function onLowHealth(isLow: boolean) {
     app.clearColor = isLow ? Color.darkRed : Color.cornflowerBlue;
 }
 ```
@@ -134,10 +134,10 @@ const app = new Application({
 The frame loop only runs once you give the application a scene to run:
 
 ```ts
-import { Application, Scene } from '@codexo/exojs';
+import { Application, RenderingContext, Scene } from '@codexo/exojs';
 
 class HelloScene extends Scene {
-    draw(context) {
+    draw(context: RenderingContext) {
         context.backend.clear();
     }
 }

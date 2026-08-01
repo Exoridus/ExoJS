@@ -40,7 +40,7 @@ init() {
         .setTint(new Color(255, 180, 120));
 }
 
-update(delta) {
+update(delta: Time) {
     // Move players independently...
     this._leftPlayer.move(/* WASD */);
     this._rightPlayer.move(/* Arrows */);
@@ -50,7 +50,7 @@ update(delta) {
     this._rightView.setCenter(this._rightPlayer.position.x, this._rightPlayer.position.y);
 }
 
-draw(context) {
+draw(context: RenderingContext) {
     context.backend.clear();
 
     // Render left view

@@ -70,7 +70,9 @@ Build the geometry once in `Scene.init` and keep it — it carries no transform,
 `drawGeometry(geometry, transform, options?)` draws the geometry with `transform` as its raw world matrix. The matrix is taken verbatim as `a, b, c, d, tx, ty` — there is no position / rotation / scale / origin composition the way a node would apply. You build the world matrix yourself, which is the point: full control, zero overhead.
 
 ```ts
-draw(context) {
+import type { RenderingContext } from '@codexo/exojs';
+
+draw(context: RenderingContext) {
     context.backend.clear();
 
     // A row of the same triangle, each at a different position, rotation,
@@ -112,7 +114,9 @@ const batch = new RenderBatch(sparkGeometry);
 Each frame, rebuild the instances and submit the batch. `clear` resets the instance count but **keeps** the pooled per-instance storage, so a steady-state batch allocates nothing across frames. `add` **copies** the transform and tint, so you can reuse one scratch `Matrix` for every instance:
 
 ```ts
-draw(context) {
+import type { RenderingContext } from '@codexo/exojs';
+
+draw(context: RenderingContext) {
     context.backend.clear();
 
     this.batch.clear();

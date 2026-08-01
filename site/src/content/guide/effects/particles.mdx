@@ -197,11 +197,11 @@ system.addDeathModule(new SpawnOnDeath(
 `ParticleSystem` is a `Drawable` — it renders itself when you call `context.render(system)` in `draw`. Call `system.update(delta)` in your scene's `update`:
 
 ```ts
-update(delta) {
+update(delta: Time) {
     this.system.update(delta);
 }
 
-draw(context) {
+draw(context: RenderingContext) {
     context.backend.clear();
     context.render(this.system);
 }

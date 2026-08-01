@@ -144,9 +144,9 @@ const alarm = app.audio.play(alarmLoop, {
 `voice.follow(node)` keeps `position` in sync with a tracked node every frame, but it does **not** touch `orientation` — a rotating emitter's facing direction has no single obvious source (a turret's barrel and its base may rotate independently, for instance), so this stays an explicit, per-frame assignment you own:
 
 ```ts
-update(delta) {
-    voice.follow(this.turret);          // position tracks automatically...
-    voice.orientation = this.turret.rotation; // ...orientation does not
+update(delta: Time) {
+    this.voice.follow(this.turret);          // position tracks automatically...
+    this.voice.orientation = this.turret.rotation; // ...orientation does not
 }
 ```
 </Callout>
@@ -187,11 +187,11 @@ init() {
     this.app.audio.listener.target = this.player;
 }
 
-update(delta) {
+update(delta: Time) {
     // ... game logic ...
 
-    if (pickupCollected) {
-        this.app.audio.play(this.pickupSfx, { position: { x: item.x, y: item.y } });
+    if (this.pickupCollected) {
+        this.app.audio.play(this.pickupSfx, { position: { x: this.item.x, y: this.item.y } });
     }
 }
 ```

@@ -21,7 +21,7 @@ Reach for `CallbackRenderPass` for almost all custom draw work — it slots into
 </Callout>
 
 ```ts
-import { CallbackRenderPass, Color, Graphics, RenderNodePass, RenderPipeline, Scene, Sprite } from '@codexo/exojs';
+import { CallbackRenderPass, Color, Graphics, RenderingContext, RenderNodePass, RenderPipeline, Scene, Sprite, Time } from '@codexo/exojs';
 
 class CustomPassScene extends Scene {
     private back!: Sprite;
@@ -49,11 +49,11 @@ class CustomPassScene extends Scene {
             .addPass(new RenderNodePass(this.front)); // draws on top
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         this.angle += delta.seconds * 2.2;
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         this.pipeline.execute(context);
     }
 }

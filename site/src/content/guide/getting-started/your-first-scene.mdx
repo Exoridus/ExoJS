@@ -20,10 +20,10 @@ This chapter builds one from scratch: a single sprite, centered on the canvas, r
 The smallest viable scene has just a `draw` method. The application calls it every frame; the scene tells the backend what to put on screen:
 
 ```ts
-import { Application, Scene } from '@codexo/exojs';
+import { Application, type RenderingContext, Scene } from '@codexo/exojs';
 
 class HelloScene extends Scene {
-    draw(context) {
+    draw(context: RenderingContext) {
         context.backend.clear();
     }
 }
@@ -73,7 +73,7 @@ A sprite's default anchor is its top-left corner. `setPosition(width / 2, height
 Override `update` to advance state once per frame. The `delta` argument carries the elapsed time since the previous frame; multiplying transforms by `delta.seconds` makes motion frame-rate independent:
 
 ```ts
-update(delta) {
+update(delta: Time) {
     this.sprite.rotate(120 * delta.seconds);
 }
 ```

@@ -38,7 +38,7 @@ init() {
     this.done = false;
 }
 
-update(delta) {
+update(delta: Time) {
     if (this.done) return;
 
     this.timer += delta.seconds;
@@ -86,15 +86,16 @@ A radial progress ring using a custom shader filter and a tween. The shader draw
 
 ```ts
 init() {
+    const progressGlsl: string = '';
     this.progress = { v: 0 };
-    this.label = new Text('0%', { fillColor: Color.white, fontSize: 42 });
-    this.label.setPosition(360, 410);
+this.label = new Text('0%', { fillColor: Color.white, fontSize: 42 });
+this.label.setPosition(360, 410);
 
-    this.ring = new Sprite(this.loader.get('image/uv.png')).setScale(2.2);
-    this.filter = new WebGl2ShaderFilter({
-        fragmentSource: progressGlsl,
-        uniforms: { uProgress: 0 },
-    });
+this.ring = new Sprite(this.loader.get('image/uv.png')).setScale(2.2);
+this.filter = new WebGl2ShaderFilter({
+    fragmentSource: progressGlsl as string,
+    uniforms: { uProgress: 0 },
+});
     this.ring.filters = [this.filter];
 
     this.app.tweens.create(this.progress)
