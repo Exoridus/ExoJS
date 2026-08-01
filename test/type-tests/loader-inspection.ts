@@ -1,4 +1,4 @@
-import { type AssetInspection,Loader } from '../../src/index';
+import { type AssetInspection, Loader } from '../../src/index';
 
 const loader = new Loader();
 const snapshot: readonly AssetInspection[] = loader.inspect();

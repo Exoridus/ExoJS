@@ -72,7 +72,7 @@ export class AssetRef<T> {
     try {
       const parsed = this._parse ? this._parse(raw) : raw;
       if (typeof (parsed as { then?: unknown } | null)?.then === 'function') {
-        throw new Error('Asset parse() must be synchronous in ExoJS 0.16. Move asynchronous work into the asset handler load phase.');
+        throw new Error('Asset parse() must be synchronous. Move asynchronous work into the asset handler load phase.');
       }
       value = parsed as T;
     } catch (error) {

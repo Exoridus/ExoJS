@@ -794,12 +794,16 @@ export class Loader {
    * → key map that is populated ONLY for adopted seamless handles and value-refs
    * (i.e. a catalog leaf that has actually been adopted via {@link get}/{@link load}).
    * A materialized-but-never-adopted catalog leaf is recognized by its meta stamp
-   * and stays an idempotent no-op. Anything else with no entry in that map — a
-   * resolved non-leaf resource (one loaded with `load(Asset.type('bmFont', …))`,
-   * or unpacked by {@link loadContainer}), or an arbitrary object — has no claim
-   * identity `release()` can resolve, and **throws** naming the supported forms
-   * instead of silently discarding the call. Use the `release(asset)` or
-   * `release(type, source)` form for a non-leaf resource.
+   * and stays an idempotent no-op. A handle this loader has EVER issued also stays
+   * a no-op even if its claim/key bookkeeping was separately forgotten by an
+   * internal hard reset — the fail-loud check is deliberately independent of that
+   * state, so the same handle never throws or not depending on unrelated internal
+   * teardown ordering. Anything else — a resolved non-leaf resource (one loaded with
+   * `load(Asset.type('bmFont', …))`, or unpacked by {@link loadContainer}), or an
+   * arbitrary object this loader has never seen — has no claim identity
+   * `release()` can resolve, and **throws** naming the supported forms instead of
+   * silently discarding the call. Use the `release(asset)` or `release(type, source)`
+   * form for a non-leaf resource.
    */
   public release(handle: object): void;
   public release<T>(asset: Asset<T>): void;
@@ -842,7 +846,13 @@ export class Loader {
       return;
     }
 
-    if (_readMeta(handleOrType) === undefined) {
+    // A materialized catalog leaf (meta stamp) or a handle/ref residency has
+    // EVER issued — even one whose claim/key bookkeeping was since forgotten by
+    // an internal hard reset — has a real, just-currently-unclaimed identity:
+    // stay a no-op. This check is deliberately state-independent, so the same
+    // object never throws or not depending on unrelated internal teardown
+    // ordering that happened since it was handed out.
+    if (_readMeta(handleOrType) === undefined && !this._residency._wasEverRegisteredHandle(handleOrType)) {
       throw new Error('Loader.release(): this object has no claim identity. Release its descriptor, catalog leaf/catalog, or the (type, source) pair instead.');
     }
   }

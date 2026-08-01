@@ -117,7 +117,10 @@ describe('Loader.release() fail-loud contract', () => {
   test('supported release identities are unchanged: descriptor, catalog, (type, source), and an adopted handle all still clear their claim', async () => {
     const loader = createCoreLoader();
     mockFetchImage();
-    vi.stubGlobal('createImageBitmap', vi.fn(async () => ({ width: 1, height: 1 })));
+    vi.stubGlobal(
+      'createImageBitmap',
+      vi.fn(async () => ({ width: 1, height: 1 })),
+    );
 
     const hasRow = (source: string): boolean => loader.inspect().some(row => row.source === source);
 
@@ -147,6 +150,28 @@ describe('Loader.release() fail-loud contract', () => {
     expect(hasRow('d.png')).toBe(true);
     loader.release(handle);
     expect(hasRow('d.png')).toBe(false);
+  });
+
+  test('stays a no-op for a handle get() once returned, even after an internal hard reset forgets its claim/key bookkeeping', async () => {
+    const loader = createCoreLoader();
+    mockFetchImage();
+    vi.stubGlobal(
+      'createImageBitmap',
+      vi.fn(async () => ({ width: 1, height: 1 })),
+    );
+
+    const handle = loader.get('hero.png');
+    await handle.loaded;
+
+    // AssetResidency.unloadAll() is a deliberately-internal hard reset (NOT
+    // exposed on Loader — release()/`_releaseScope()` are the only public
+    // teardown verbs) that forgets claim/handle bookkeeping entirely, the same
+    // way existing tests reach it via direct residency access.
+    (loader as unknown as { _residency: { unloadAll(): void } })._residency.unloadAll();
+
+    // The throw must depend only on whether THIS object is a real handle —
+    // never on unrelated internal state that changed since it was handed out.
+    expect(() => loader.release(handle)).not.toThrow();
   });
 });
 
@@ -267,7 +292,10 @@ describe('Loader.inspect() snapshot contract', () => {
   test('claims counts distinct claim scopes, not consumer handles or get() calls', async () => {
     const loader = createCoreLoader();
     mockFetchImage();
-    vi.stubGlobal('createImageBitmap', vi.fn(async () => ({ width: 1, height: 1 })));
+    vi.stubGlobal(
+      'createImageBitmap',
+      vi.fn(async () => ({ width: 1, height: 1 })),
+    );
     const sceneScope = Symbol('scene');
 
     const handle = loader.get('hero.png'); // root scope
@@ -277,6 +305,26 @@ describe('Loader.inspect() snapshot contract', () => {
 
     const row = loader.inspect().find(r => r.source === 'hero.png');
     expect(row?.claims).toBe(2);
+  });
+
+  test('reports failed, not ready, for a value key whose fetch succeeded but whose parse() violated the synchronous contract', async () => {
+    const loader = createCoreLoader();
+    mockFetchText('raw-payload');
+
+    // `_storeResource` stores the raw fetched payload into `_resources`
+    // unconditionally, even though this leaf's own `parse()` step fails it via
+    // the new synchronous-parse check — `stored` alone must not be read as
+    // "readable" for a diagnostic snapshot.
+    const catalog = Assets.from({
+      bad: { type: 'text', source: 'note.txt', parse: () => Promise.resolve('nope') as unknown as string },
+    });
+
+    await loader.load(catalog).catch(() => undefined);
+
+    expect(catalog.bad.state).toBe('failed');
+
+    const row = loader.inspect().find(r => r.source === 'note.txt');
+    expect(row?.state).toBe('failed');
   });
 
   test('never reports background:true for a row that has already settled', () => {
