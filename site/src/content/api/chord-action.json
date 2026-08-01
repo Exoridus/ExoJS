@@ -1,0 +1,276 @@
+{
+  "title": "ChordAction",
+  "description": "Button-like action active while every channel in a chord is held at once — `Control+S`, a modifier held alongside a gamepad button, and so on. Exposes the same `active`/`pressed`/`released` triad as ButtonAction, but the aggregate is the AND of every bound channel instead of the strongest of a set of alternatives. A string binding resolves `+`-joined tokens as case-insensitive Keyboard enum names (`'Control+S'`, `'control+s'`). This is a shortcut list syntax for enum lookups, not text or IME input — it never decodes typed characters, dead keys, or composed input, and rejects any token that is not a known `Keyboard` member. Use an array of InputChannels directly to include pointer or gamepad channels, or for a sequence with more than one step, use SequenceAction.",
+  "symbol": "ChordAction",
+  "kind": "class",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 1,
+    "methods": 2,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Button-like action active while every channel in a chord is held at once — `Control+S`, a modifier held alongside a gamepad button, and so on. Exposes the same `active`/`pressed`/`released` triad as ButtonAction, but the aggregate is the AND of every bound channel instead of the strongest of a set of alternatives.",
+        "A string binding resolves `+`-joined tokens as case-insensitive Keyboard enum names (`'Control+S'`, `'control+s'`). This is a shortcut list syntax for enum lookups, not text or IME input — it never decodes typed characters, dead keys, or composed input, and rejects any token that is not a known `Keyboard` member. Use an array of InputChannels directly to include pointer or gamepad channels, or for a sequence with more than one step, use SequenceAction."
+      ],
+      "importLine": "import { ChordAction } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(binding: ChordBinding, options: ActionOptions): ChordAction",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "binding",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ChordBinding",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ActionOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ChordAction",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "binding",
+              "type": "ChordBinding",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "ActionOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "ChordAction",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "_reset",
+          "signature": "_reset(): void",
+          "signatureTokens": [
+            {
+              "text": "_reset",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "_update",
+          "signature": "_update(sample: ActionSample): void",
+          "signatureTokens": [
+            {
+              "text": "_update",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "sample",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ActionSample",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "sample",
+              "type": "ActionSample",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "active",
+          "signature": "active: boolean",
+          "signatureTokens": [
+            {
+              "text": "active",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "pressed",
+          "signature": "pressed: boolean",
+          "signatureTokens": [
+            {
+              "text": "pressed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "released",
+          "signature": "released: boolean",
+          "signatureTokens": [
+            {
+              "text": "released",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/actions/ChordAction.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/ChordAction.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/actions/ChordAction.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/ChordAction.ts"
+}

@@ -1,0 +1,197 @@
+{
+  "title": "SequenceActionOptions",
+  "description": "",
+  "symbol": "SequenceActionOptions",
+  "kind": "interface",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [],
+      "importLine": "import { SequenceActionOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "gamepadSlot",
+          "signature": "gamepadSlot?: 0 | 1 | 2 | 3",
+          "signatureTokens": [
+            {
+              "text": "gamepadSlot",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "0",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "1",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "2",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "3",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Resolve gamepad channels against this slot (0..3) instead of the primary pad. Non-gamepad channels are unaffected. See ActionOptions.gamepadSlot."
+        },
+        {
+          "name": "maxGap",
+          "signature": "maxGap?: number",
+          "signatureTokens": [
+            {
+              "text": "maxGap",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Maximum source-event gap between completed steps, in milliseconds. Checked against ChannelEventBatch.timestamp when the next relevant event arrives. Default 600."
+        },
+        {
+          "name": "resetOnMismatch",
+          "signature": "resetOnMismatch?: boolean",
+          "signatureTokens": [
+            {
+              "text": "resetOnMismatch",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Reset when an unrelated tracked channel enters. Default true."
+        },
+        {
+          "name": "threshold",
+          "signature": "threshold?: number",
+          "signatureTokens": [
+            {
+              "text": "threshold",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Magnitude a step's channel value must exceed to count as held. Defaults to 0. See ActionOptions.threshold."
+        },
+        {
+          "name": "timeout",
+          "signature": "timeout?: number",
+          "signatureTokens": [
+            {
+              "text": "timeout",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Maximum source-event duration from first to final step, in milliseconds. Default 3000."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/actions/SequenceAction.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/SequenceAction.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/actions/SequenceAction.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/SequenceAction.ts"
+}

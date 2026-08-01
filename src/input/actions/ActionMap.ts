@@ -1,11 +1,13 @@
 import type { AxisAction } from './AxisAction';
 import type { ButtonAction } from './ButtonAction';
+import type { ChordAction } from './ChordAction';
+import type { SequenceAction } from './SequenceAction';
 import type { ActionSample } from './types';
 import { ActionOwnership } from './types';
 import type { VectorAction } from './VectorAction';
 
-/** Any of the three action kinds an {@link ActionMap} can hold. */
-export type Action = ButtonAction | AxisAction | VectorAction;
+/** Any action kind an {@link ActionMap} can hold. */
+export type Action = ButtonAction | AxisAction | VectorAction | ChordAction | SequenceAction;
 
 /** The shape an {@link ActionMap} is built from. */
 export type ActionRecord = Readonly<Record<string, Action>>;

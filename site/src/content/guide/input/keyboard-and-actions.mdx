@@ -391,7 +391,7 @@ the scene ends, and its actions are reset across a suspend so a key held while
 the scene was away does not read as a fresh press on resume. Use
 `app.input.attach(map)` for a map that should live as long as the application.
 
-### The three action kinds
+### The action kinds
 
 - **`ButtonAction`** — `value` (0..1), `active`, `pressed`, `released`. Sources
   may be digital or analog; the strongest one wins. `pressed` and `released`
@@ -403,6 +403,9 @@ the scene was away does not read as a fresh press on resume. Use
 - **`VectorAction`** — a 2D `value`, from `{ x, y }` stick axes or from
   `{ up, down, left, right }` buttons. The result is clamped to unit length, so
   a digital diagonal is no faster than a cardinal direction.
+- **`ChordAction`** and **`SequenceAction`** — several channels required at
+  once, or in order. Covered in their own chapter,
+  [Chords and sequences](/ExoJS/en/guide/input/chords-and-sequences/).
 
 Pass one binding directly or several as an array; options are always a separate
 second argument (`new ButtonAction(GamepadButton.RightTrigger, { threshold: 0.5 })`).

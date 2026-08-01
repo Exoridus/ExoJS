@@ -1,7 +1,7 @@
 {
-  "title": "Action",
-  "description": "Any action kind an ActionMap can hold.",
-  "symbol": "Action",
+  "title": "InputSequence",
+  "description": "",
+  "symbol": "InputSequence",
   "kind": "type",
   "subsystem": "input",
   "importPath": "@codexo/exojs",
@@ -18,10 +18,8 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Any action kind an ActionMap can hold."
-      ],
-      "importLine": "import { Action } from '@codexo/exojs'",
+      "paragraphs": [],
+      "importLine": "import { InputSequence } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -29,11 +27,19 @@
       "title": "Definition",
       "members": [
         {
-          "name": "Action",
-          "signature": "ButtonAction | AxisAction | VectorAction | ChordAction | SequenceAction",
+          "name": "InputSequence",
+          "signature": "ReadonlyArray<InputChannel | InputChord>",
           "signatureTokens": [
             {
-              "text": "ButtonAction",
+              "text": "ReadonlyArray",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputChannel",
               "kind": "type"
             },
             {
@@ -41,32 +47,12 @@
               "kind": "punctuation"
             },
             {
-              "text": "AxisAction",
+              "text": "InputChord",
               "kind": "type"
             },
             {
-              "text": " | ",
+              "text": ">",
               "kind": "punctuation"
-            },
-            {
-              "text": "VectorAction",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "ChordAction",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "SequenceAction",
-              "kind": "type"
             }
           ],
           "params": [],
@@ -85,11 +71,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/input/actions/ActionMap.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/ActionMap.ts"
+        "label": "src/input/actions/pattern.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/pattern.ts"
       }
     }
   ],
-  "sourcePath": "src/input/actions/ActionMap.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/ActionMap.ts"
+  "sourcePath": "src/input/actions/pattern.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/pattern.ts"
 }
