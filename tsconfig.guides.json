@@ -5,8 +5,20 @@
   // fenced blocks into .workspace/generated/guide-typecheck/ and this config
   // type-checks them against the engine source (no build required).
   //
-  // `strict` is off so untyped guide parameters (draw(context), update(delta))
-  // do not add noise. The gate reliably catches:
+  // `strict` is off so a guide snippet is not buried under null-checking noise
+  // that has nothing to do with drift, but `noImplicitAny` is ON: TypeScript
+  // never infers an override's parameter types from the base class, so an
+  // unannotated parameter is invisible to every other setting. That one flag is
+  // what gives this gate teeth.
+  //
+  // Note this combination is deliberately NOT a subset of the library's own
+  // config — under it, `[]` and a bare `undefined` become implicit `any`, which
+  // full `strict` does not. Since the paths below map the engine onto its
+  // sources, a plain `tsc -p` would report those in engine and package files.
+  // scripts/typecheck-guides.ts therefore reports only snippet diagnostics; the
+  // library has its own, stricter gate.
+  //
+  // The gate reliably catches:
   //   - removed/renamed exports:  import { MeshShader } → module error
   //   - stale constructor options: new Application({ width }) → excess-property error
   //   - stale TextStyle keys:  { fill: 'white' } → excess-property error
@@ -27,6 +39,7 @@
     "checkJs": true,
     "noEmit": true,
     "strict": false,
+    "noImplicitAny": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
