@@ -21,7 +21,7 @@ Three systems run in parallel, each driven by a different facet of the audio ana
 
 One analyser for frequency data, one beat detector for rhythm, one particle system for visual feedback:
 
-```js
+```ts
 import { Asset, Application, AudioStream,
     Scene, View, Vector, Color, Ease } from '@codexo/exojs';
 import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
@@ -96,7 +96,7 @@ class AudioReactiveScene extends Scene {
 
 The pattern scales by adding more independent listeners, each reacting to a different audio facet:
 
-```js
+```ts
 // Bar start → tween chain on a central logo
 this.detector.onBarStart.add(() => {
     this.app.tweens.create(this.logo.scale)
@@ -124,7 +124,7 @@ this.detector.onBeat.add(info => {
 
 For frequency-driven shake (low-end rumble instead of discrete hits), lerp the view center by the low-band energy in `update`:
 
-```js
+```ts
 update(delta) {
     const { low } = this.analyser.getLowMidHigh();
     const shakeX = (Math.random() - 0.5) * low * 20;

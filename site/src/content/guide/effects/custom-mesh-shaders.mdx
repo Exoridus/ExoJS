@@ -28,7 +28,7 @@ A custom shader filter ([`WebGl2ShaderFilter`](/ExoJS/en/api/web-gl2-shader-filt
 
 Build a `ShaderSource` from the shader text, then wrap it in a `MeshMaterial` with the initial uniform values. At least one language source is required on the `ShaderSource`. Pass `glsl` for WebGL2, `wgsl` for WebGPU, or both for cross-backend meshes:
 
-```js
+```ts
 import { MeshMaterial, ShaderSource } from '@codexo/exojs';
 
 const waveMaterial = new MeshMaterial({
@@ -167,7 +167,7 @@ You can omit any of them. If your fragment shader ignores the texture and sample
 
 Anything you put in `MeshMaterial.uniforms` is set after the auto-binds. Mutate the `uniforms` map between frames to drive animated effects:
 
-```js
+```ts
 update(delta) {
     this.waveMaterial.uniforms.u_time = this.clock.elapsedSeconds;
     this.waveMaterial.uniforms.u_waveAmp = 10 + this.detector.pulse * 15;
@@ -191,7 +191,7 @@ When a uniform is spelled differently across your two shader sources it silently
 
 Pass a `MeshMaterial` in the mesh constructor's `material` option:
 
-```js
+```ts
 import { Mesh, MeshMaterial, ShaderSource } from '@codexo/exojs';
 
 // A minimal stand-in material — see the Construction section for the full
@@ -249,7 +249,7 @@ When a mesh is destroyed, its `MeshMaterial` is left untouched. The material out
 
 When you write shaders for both GLSL and WGSL, keeping uniform names synchronized across languages becomes a manual task. The reflection helpers live on the `ShaderSource`, reachable through `material.shader`. `getDeclaredUniforms()` reflects uniform declarations from each language's source via lightweight regex parsing. Companion method `detectUniformDrift()` compares the two and reports names that appear in only one language:
 
-```js
+```ts
 const drift = waveMaterial.shader.detectUniformDrift();
 // drift.onlyInGlsl → ['u_waveAmp']
 // drift.onlyInWgsl → ['u_displacement']
@@ -257,7 +257,7 @@ const drift = waveMaterial.shader.detectUniformDrift();
 
 Auto-bound uniforms (`u_projection`, `u_translation`, `u_tint`, `u_texture`, `u_mesh`) are excluded from the comparison — they are intentionally declared differently across languages. Use `detectUniformDrift` in a CI check to catch typos and mismatches:
 
-```js no-check
+```ts no-check
 import assert from 'node:assert';
 
 const drift = waveMaterial.shader.detectUniformDrift();

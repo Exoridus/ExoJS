@@ -11,7 +11,7 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 ## A minimal text node
 
-```js
+```ts
 import { Color, Text } from '@codexo/exojs';
 
 const label = new Text('Hello', {
@@ -23,7 +23,7 @@ const label = new Text('Hello', {
 
 The second argument is a `TextOptions` object — a flat merge of [`TextStyleOptions`](/ExoJS/en/api/text-style/) (visual appearance) and `LayoutOptions` (flow and overflow). All properties are optional and have defaults. The live `TextStyle` is stored as `text.style`; mutating its fields is cheap and is applied automatically before the next render pass — no manual rebuild call is needed:
 
-```js
+```ts
 import { Color } from '@codexo/exojs';
 
 label.style.fontSize = 32;            // rebuilds the glyph mesh on the next draw
@@ -34,7 +34,7 @@ label.style.fillColor = Color.tomato; // updates only the mesh tint — no atlas
 
 System fonts (Arial, Times New Roman, etc.) work immediately. For custom web fonts, load one via `Asset.type('font', ...)` in the scene's `load` hook — fonts aren't a seamless type, so a bare path isn't enough; an explicit descriptor is required even for a literal path, and `family` is a required option:
 
-```js
+```ts
 async load() {
     await this.loader.load(Asset.type('font', 'font/MyFont.woff2', { family: 'MyFont' }));
 }
@@ -91,7 +91,7 @@ Glyphs are rasterized into the shared SDF atlas; the mesh tint is initialized fr
 
 Multiline text works by embedding `\n` characters in the string:
 
-```js
+```ts
 import { Color, Text } from '@codexo/exojs';
 
 const dialog = new Text('Line one\nLine two\nLine three', {
@@ -103,7 +103,7 @@ const dialog = new Text('Line one\nLine two\nLine three', {
 
 To wrap long runs automatically, set `maxWidth` (in pixels) — lines that exceed it break at word boundaries. Add `breakWords: true` to also split individual words that are wider than `maxWidth`:
 
-```js
+```ts
 import { Color, Text } from '@codexo/exojs';
 
 const longString = 'A long run of text that wraps automatically once it exceeds the layout width.';
@@ -120,7 +120,7 @@ const wrapped = new Text(longString, {
 
 The `align` property controls horizontal positioning relative to the `Text` node's local origin:
 
-```js
+```ts
 import { Color, Text } from '@codexo/exojs';
 
 const centered = new Text('Centered Title', {
@@ -137,7 +137,7 @@ A center-aligned text node at `(400, 20)` centers its glyphs horizontally around
 
 `Text` extends `Container`, so it carries position, rotation, scale, origin, and anchor. You can rotate text, tint the whole node, apply filters, and nest it inside other containers:
 
-```js
+```ts
 this.hud = new Container();
 this.scoreLabel = new Text('Score: 0', { fillColor: Color.white, fontSize: 24 });
 this.scoreLabel.setPosition(10, 10);

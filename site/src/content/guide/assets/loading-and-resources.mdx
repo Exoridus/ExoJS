@@ -40,7 +40,7 @@ When in doubt, start with a bare path string. Reach for `Assets.from` when asset
 
 The path _is_ the identity — a bare string resolves directly to the finished asset, with its type inferred from the extension:
 
-```js
+```ts
 async load() {
     const texture = await this.loader.load('image/hero.png');
     this.hero = new Sprite(texture);
@@ -53,7 +53,7 @@ There's no separate alias step: call `this.loader.get('image/hero.png')` again a
 
 When you need several assets of the same type, load them in parallel and keep the returned instances:
 
-```js
+```ts
 async load() {
     [this.hero, this.ground, this.coin] = await Promise.all([
         this.loader.load('image/hero.png'),
@@ -100,7 +100,7 @@ const music = await this.app.loader.load(Asset.type('music', 'audio/theme.ogg'))
 
 When a scene needs different asset types, load them in parallel with `Promise.all`:
 
-```js
+```ts
 async load() {
     [this.sky, this.ambient, this.coin, this.jump, this.levels] = await Promise.all([
         this.loader.load('image/sky.png'),
@@ -124,7 +124,7 @@ For value assets such as `Json` (and `TextAsset`, `CsvAsset`, and the other data
 
 Build mixed groups with `Assets.from(...)`. This is the canonical catalog API; the old inline-record `loader.load({ alias: config })` call shape has been removed.
 
-```js
+```ts
 const SceneAssets = Assets.from({
     hero: 'image/hero.png',
     click: Asset.type('sound', 'audio/click.ogg'),
@@ -156,7 +156,7 @@ export const TitleAssets = Assets.from({
 
 Every property is a real, usable handle _before_ any loader touches it — `TitleAssets.logo` is already a `Texture` (in the `'loading'` state), and `TitleAssets.config` is already an `AssetRef`. Load the whole catalog, then read the same properties:
 
-```js
+```ts
 // Fetches every entry and heals each handle in place
 await this.loader.load(TitleAssets);
 
@@ -175,7 +175,7 @@ TitleAssets.config; // AssetRef<{ startLevel: string }>
 
 `Assets` also exposes an `.entries` record for iteration and inspection. To load several existing catalogs concurrently, keep their types intact and start both queues:
 
-```js
+```ts
 await Promise.all([this.loader.load(CommonAssets), this.loader.load(TitleAssets)]);
 ```
 
@@ -231,7 +231,7 @@ An override is a new declaration, so composing a derived catalog back together w
 
 Every `loader.load(...)` call returns a `LoadingQueue<T>`. It implements `PromiseLike<T>`, so `await` and `Promise.all` both work. It also exposes per-queue progress via `onProgress`:
 
-```js
+```ts
 const loading = this.loader.load(TitleAssets);
 
 loading.onProgress.add(progress => {
@@ -252,7 +252,7 @@ const title = await loading;
 
 Start two queues simultaneously and wait for both:
 
-```js
+```ts
 const [title, game] = await Promise.all([this.loader.load(TitleAssets), this.loader.load(GameAssets)]);
 ```
 
@@ -260,7 +260,7 @@ Each queue tracks its own progress independently. The result tuple is typed: `ti
 
 A practical startup pattern — show the title screen as soon as title assets are ready, while game assets continue loading in the background:
 
-```js
+```ts
 async load() {
     const titleQueue = this.loader.load(TitleAssets);
     const gameQueue  = this.loader.load(GameAssets);
@@ -293,7 +293,7 @@ async load() {
 
 Because the batch is shared, `total` can grow mid-flight: if a new `loader.load(...)` call starts while others are still pending, its assets are added to the same running total rather than starting a fresh count at 0. That is exactly what you want for a boot screen — one progress bar that stays accurate no matter how many scenes or systems kick off loads concurrently.
 
-```js
+```ts
 class BootScene extends Scene {
   init() {
     this.app.loader.onLoadStart.add((key, url) => {
@@ -331,7 +331,7 @@ app-level `stop()`/`destroy()` mid-load, are both real cases. Check
 signals in `unload()` so a listener from a torn-down scene never fires
 `change()` against a Director that has since moved on:
 
-```js
+```ts
 class BootScene extends Scene {
   init() {
     this._onLoadComplete = () => {
@@ -386,7 +386,7 @@ interface AssetStatus {
 }
 ```
 
-```js
+```ts
 const tex = this.loader.get('hero.png'); // synchronous for a valid, registered suffix
 
 if (tex.ready) {
@@ -400,7 +400,7 @@ await tex.loaded; // Promise<this> — resolves once ready, rejects on failure
 
 The same `.state` / `.ready` / `.error` / `.loaded` contract applies to `AssetRef` values such as JSON or text — read `.value` once `.ready` is `true`:
 
-```js
+```ts
 const config = this.loader.get('data/config.json'); // AssetRef<unknown>
 await config.loaded;
 console.log(config.value.startLevel);
@@ -410,7 +410,7 @@ console.log(config.value.startLevel);
 
 `this.app.loader.release(...)` drops your claim on an asset; the object itself keeps its identity and heals back to `'loading'` if you `get()` the same source again. It accepts a handle, an `Asset` descriptor, a whole catalog, or a `(type, source)` pair. Releasing a valid form that was never claimed — a descriptor you never loaded, a catalog leaf you never adopted — is a harmless no-op, and releasing twice is always idempotent:
 
-```js
+```ts
 this.app.loader.release(TitleAssets); // releases every leaf in the catalog
 this.app.loader.release(logo); // a single handle from get()
 ```
@@ -448,7 +448,7 @@ The lifecycle guarantees that:
 
 `this.loader.load(...)` (or `this.app.loader.load(...)` for an app-lifetime claim) works any time, not just inside the `load` hook. A computed path isn't a string literal, so use `Asset.type('texture', ...)`:
 
-```js
+```ts
 async _changeLevel(levelName) {
     const bg = await this.app.loader.load(
         Asset.type('texture', `image/levels/${levelName}.png`)
@@ -479,7 +479,7 @@ export const Level1Assets = Assets.from({
 
 Load the menu catalog once and keep it resident, then load level catalogs as the player progresses:
 
-```js
+```ts
 // In the menu scene
 async load() {
     await this.loader.load(MenuAssets);
@@ -499,7 +499,7 @@ Loading is idempotent: a catalog whose leaves are already resident resolves imme
 
 `loader.load(catalog)` returns a `LoadingQueue` — attach `onProgress` for a per-catalog bar, exactly as in [Progress and parallel loading](#progress-and-parallel-loading):
 
-```js
+```ts
 const loading = this.app.loader.load(Level1Assets);
 
 loading.onProgress.add(p => {
@@ -515,7 +515,7 @@ For one screen that reflects every load regardless of how many catalogs are in f
 
 Awaiting a catalog rejects if any leaf fails. Wrap the await and read each leaf's status channel to find which one — a failed seamless handle still renders a visible "missing" fallback, so the scene keeps running:
 
-```js
+```ts
 try {
   await this.app.loader.load(Level1Assets);
 } catch {
@@ -532,7 +532,7 @@ There is no separate bundle error type — every leaf carries its own `.state` /
 
 To fetch a catalog ahead of time without blocking the current scene, pass `{ background: true }`. Every leaf is still claimed and heals in place, but its fetch is routed through a low-priority queue while the frame loop keeps running:
 
-```js
+```ts
 // Kick off the next level while the player is still in this one
 this.app.loader.load(Level2Assets, { background: true });
 ```
@@ -543,7 +543,7 @@ A backgrounded leaf is boosted to fetch immediately if something `get()`s or for
 
 By default the loader fetches from the network every session. To persist processed assets across sessions, pass an `IndexedDbStore`:
 
-```js
+```ts
 import { Loader, IndexedDbStore } from '@codexo/exojs';
 
 const loader = new Loader({
@@ -554,7 +554,7 @@ const loader = new Loader({
 
 When constructing the loader through `Application`, pass `LoaderOptions` under the `loader` key:
 
-```js
+```ts
 const app = new Application({
   loader: {
     basePath: '/assets/',
@@ -575,7 +575,7 @@ The cache above persists _loaded assets_. For **user save data** (settings, prof
 - [`IndexedDbKeyValueStore`](/ExoJS/en/api/indexed-db-key-value-store/) — IndexedDB via structured clone: large, async, stores `Blob`s and `ArrayBuffer`s natively.
 - [`MemoryStore`](/ExoJS/en/api/memory-store/) — in-memory and ephemeral, for tests and throwaway data.
 
-```js
+```ts
 import { WebStorageStore } from '@codexo/exojs';
 
 const saves = new WebStorageStore(localStorage, { prefix: 'my-game:' });
@@ -647,7 +647,7 @@ Supply an optional `getIdentityKey(req)` on the handler to control in-flight ded
 
 Install the binding by passing it on an [`Extension`](/ExoJS/en/api/extension/) to `ApplicationOptions.extensions`. Once installed, the type works everywhere the built-ins do:
 
-```js
+```ts
 // Dynamic path or explicit reference
 const field = await this.loader.load(Asset.type('heightField', 'maps/level-1.hf'));
 

@@ -14,7 +14,7 @@ A HUD (heads-up display) renders UI elements on top of the game world — health
 
 Add HUD elements directly to `scene.ui` instead of creating a separate overlay scene. The world (game nodes, sprites, graphics) lives under `scene.root`; the HUD (labels, progress bars, panels) lives on `scene.ui` and is composited on top automatically — no extra scene or stack needed.
 
-```js
+```ts
 class GameScene extends Scene {
     init() {
         this._angle = 0;
@@ -42,7 +42,7 @@ class GameScene extends Scene {
 
 Start the scene as normal — `scene.ui` is rendered automatically:
 
-```js
+```ts
 const game = new GameScene();
 await app.start(game);
 ```
@@ -62,7 +62,7 @@ A mini-map is a special HUD element: it needs a second `View` to render the worl
 Inside a `{ target }` render redirect, issue your draws through `context.backend` directly. A `context.render(node)` call there resets the active view back to the camera, so the off-screen capture would render from the wrong viewpoint.
 </Callout>
 
-```js
+```ts
 // In GameScene.init: build the capture pass once.
 const miniRt = new RenderTexture(260, 260);
 const capturePass = new CallbackRenderPass(

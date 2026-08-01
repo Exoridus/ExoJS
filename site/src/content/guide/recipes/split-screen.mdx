@@ -14,7 +14,7 @@ Split screen renders the same scene from two (or more) camera viewpoints into se
 
 Create two `View` objects. Each gets its own viewport rectangle — the left view covers the left half of the canvas, the right view covers the right half. In `draw`, set the backend's active view, render the shared world, swap views, render again:
 
-```js
+```ts
 init() {
     const { width, height } = this.app.canvas;
 
@@ -84,7 +84,7 @@ This means you can have objects visible in both views (a shared flag, a power-up
 
 Two players on one keyboard means binding different key sets to each player — WASD for player 1, arrow keys for player 2 — both registered via the same scene's `this.inputs`. For gamepad co-op, bind each pad slot to a different player:
 
-```js
+```ts
 const pad0 = this.app.input.getGamepad(0);
 pad0.onActive(GamepadAxis.LeftStickX, v => { this._player1.move.x = v; });
 

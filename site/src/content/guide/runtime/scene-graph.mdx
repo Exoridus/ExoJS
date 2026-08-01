@@ -16,7 +16,7 @@ Two key types: [`RenderNode`](/ExoJS/en/api/render-node/) is the abstract base f
 
 Every scene starts with one container already in place — `this.root`. Adding a node via `this.addChild(...)` is shorthand for `this.root.addChild(...)`:
 
-```js
+```ts
 init() {
     this.hero = new Sprite(this.loader.get('hero.png'));
     this.coin = new Sprite(this.loader.get('coin.png'));
@@ -28,7 +28,7 @@ init() {
 
 For larger scenes, build sub-containers and add nodes to them instead:
 
-```js
+```ts
 init() {
     this.world = new Container();
     this.hud = new Container();
@@ -47,7 +47,7 @@ Containers can be added, removed, and moved between parents at any time. The hie
 
 When a parent transforms, its children move with it. If you set the parent's position to `(100, 0)` and a child's position to `(20, 0)`, the child renders at world position `(120, 0)`:
 
-```js
+```ts
 this.player = new Container();
 this.player.setPosition(100, 0);
 
@@ -73,7 +73,7 @@ Skew (shear) slants the local shape along one or both axes without scaling or ro
 
 Both are in degrees, consistent with `rotation`. Use the compound setter when setting both at once:
 
-```js
+```ts
 hero.skewX = 15;           // lean right 15°
 hero.skewY = -5;           // tilt top-left slightly
 
@@ -93,7 +93,7 @@ Common uses:
 
 Children render in the order they were added. The first child drawn ends up at the back; the last child drawn ends up on top. To put a sprite in front of another, add it later — or change its position in the parent's child list:
 
-```js
+```ts
 this.world.addChild(this.background);
 this.world.addChild(this.player);    // drawn over background
 this.world.addChild(this.foreground); // drawn over player
@@ -109,7 +109,7 @@ Children paint in the order you add them — last added sits on top. For depth t
 
 The container API covers the common cases:
 
-```js
+```ts
 parent.addChild(child);              // append (variadic — pass multiple)
 parent.addChildAt(child, index);     // insert at a specific index
 parent.removeChild(child);           // remove by reference
@@ -135,7 +135,7 @@ Each level is independent: rotating the player rotates everything inside it with
 
 Each render node has a `mask` property that clips its rendering to a shape. The mask source can be a `Rectangle`, a `Texture`, another `RenderNode`, or `null` (no mask). Masks are applied during render, not during transform — children of a masked container are still positioned normally, but only the visible region is drawn.
 
-```js
+```ts
 import { Rectangle } from '@codexo/exojs';
 
 this.viewport = new Container();

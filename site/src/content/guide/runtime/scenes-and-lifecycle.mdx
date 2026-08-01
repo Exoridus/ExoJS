@@ -17,7 +17,7 @@ The split between application and scene matters: the application is the long-liv
 
 A scene is a class that extends `Scene`. Override the hooks you need; leave the rest at their defaults:
 
-```js
+```ts
 import { Scene } from '@codexo/exojs';
 
 class TitleScene extends Scene {
@@ -44,7 +44,7 @@ Scene structure stays in your code. State lives on `this`, organized however you
 
 Register the scene's constructor and hand it to `app.start`; the application takes over:
 
-```js
+```ts
 const app = new Application({ scenes: { TitleScene } });
 app.start(TitleScene);
 ```
@@ -55,7 +55,7 @@ From this point on, the application runs the scene's `update` and `draw` once pe
 
 Most non-trivial projects have more than one scene. The application owns a scene director (`app.scenes`) that drives the active scene. Use `change` to swap in a new scene, and register scene constructors up front so `change` knows which classes are valid targets:
 
-```js
+```ts
 const app = new Application({ scenes: { GameScene } });
 
 // Replace the active scene with a fresh instance
@@ -73,7 +73,7 @@ For a typical app: a `MenuScene` calls `this.app.scenes.change(GameScene)` when 
 
 Every scene has a built-in `scene.ui` layer that sits screen-fixed above the scene's world content. Nodes added to `scene.ui` are always rendered on top — no explicit render call in `draw` required — and they are anchored relative to the canvas, not the world.
 
-```js
+```ts
 import { Label, ProgressBar, Scene } from '@codexo/exojs';
 
 class GameScene extends Scene {
@@ -99,7 +99,7 @@ To freeze a scene without leaving it — the canonical pause menu — call `app.
 
 A pause overlay is just nodes on `scene.ui` that you show and hide in response to the state change:
 
-```js
+```ts
 import { Keyboard, Label, Panel, Scene } from '@codexo/exojs';
 
 class GameScene extends Scene {
@@ -162,7 +162,7 @@ You override the hooks you need. Empty hooks like `update` and `draw` do nothing
 
 The `load` hook is the async setup hook. Use it to register everything the scene needs and await the loader:
 
-```js
+```ts
 import { Scene } from '@codexo/exojs';
 
 class GameScene extends Scene {
@@ -181,7 +181,7 @@ The application doesn't call `init` until this promise resolves, so by the time 
 
 The `init` hook is where you create the scene's actual objects. Read a previously-loaded asset via `this.loader`:
 
-```js
+```ts
 init() {
     this.hero = new Sprite(this.loader.get('image/hero.png'));
     this.hero.setAnchor(0.5);
@@ -196,7 +196,7 @@ The `init` hook runs once per scene-start. If you start the scene again later it
 
 `update` runs once per real frame, so its `delta` varies with the display's refresh rate and any hitches. `fixedUpdate` is the other logic hook: the engine runs it a constant number of times per second — independent of frame rate — before `update`:
 
-```js
+```ts
 fixedUpdate(delta) {
     this.world.step(delta.seconds);
 }
@@ -204,7 +204,7 @@ fixedUpdate(delta) {
 
 Behind the scenes, the application accumulates each frame's elapsed time and drains it in fixed-size chunks — `1 / 60` s by default, configurable via `fixedTimeStep` (seconds) on the `Application` constructor options:
 
-```js
+```ts
 const app = new Application({ fixedTimeStep: 1 / 30 });
 ```
 
@@ -222,7 +222,7 @@ Because `fixedUpdate` calls don't line up one-to-one with rendered frames, there
 
 **`frameAlpha` is not applied automatically** — the scene graph never interpolates itself. It exists for you to read and use if you want smooth visual motion between fixed steps: keep the previous and current fixed-step positions and lerp between them by `frameAlpha` when you draw.
 
-```js
+```ts
 fixedUpdate() {
     this.hero.prevX = this.hero.x;
     this.world.step(1 / 60); // moves the body; the binding updates this.hero.x
@@ -243,7 +243,7 @@ If you don't need buttery-smooth motion, ignore `frameAlpha` — most scenes nev
 
 The `update` hook runs once per frame, before `draw`. The argument carries the elapsed time since the previous frame:
 
-```js
+```ts
 update(delta) {
     this.hero.rotate(120 * delta.seconds);
 }
@@ -255,7 +255,7 @@ Multiplying by `delta.seconds` keeps motion frame-rate independent. The same cod
 
 This is the hook with the most surprising default: **`draw` does nothing if you don't override it.** The engine never auto-traverses the scene graph for you.
 
-```js
+```ts
 draw(context) {
     context.backend.clear();
     context.render(this.root);
@@ -270,7 +270,7 @@ ExoJS never auto-renders the tree. If `draw` is missing or omits `context.render
 
 The trade-off is that you can render selectively when you need to:
 
-```js
+```ts
 draw(context) {
     context.backend.clear();
     context.render(this.world);
@@ -289,7 +289,7 @@ When a frame grows into a sequence of distinct phases — render the world, capt
 
 Scenes receive input through `this.inputs`, which proxies to the application's input manager. Register bindings in `init`:
 
-```js
+```ts
 init() {
     this.inputs.onTrigger(Keyboard.Space, () => {
         this.player.jump();

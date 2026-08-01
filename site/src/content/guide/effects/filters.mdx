@@ -20,7 +20,7 @@ Each filter you attach re-renders that node's output once more per frame — a t
 
 Filters go on the drawable. The array is processed in order — filter 0 receives the node's raw render, filter 1 receives filter 0's output, and so on:
 
-```js
+```ts
 import { BlurFilter, Color, ColorFilter } from '@codexo/exojs';
 
 const blur = new BlurFilter({ radius: 3, quality: 2 });
@@ -45,7 +45,7 @@ Set `cacheAsBitmap = true` on a filtered subtree that doesn't change each frame:
 
 A box blur, not a shader — it works by rendering the input texture multiple times at symmetric pixel offsets with additive blending. Higher quality produces more offset samples per axis and a smoother result at the cost of more draw calls:
 
-```js
+```ts
 const blur = new BlurFilter({ radius: 4, quality: 2 });
 sprite.filters = [blur];
 
@@ -60,7 +60,7 @@ blur.quality = 3;
 
 Multiplies the rendered output by a tint color. The simplest filter — one multiplicative blend:
 
-```js
+```ts
 const color = new ColorFilter(new Color(255, 160, 120));
 sprite.filters = [color];
 
@@ -77,7 +77,7 @@ Maps every pixel through a Look-Up Table texture. Two modes:
 - **1D LUT** (palette): `N×1` texture, indexed by a single channel. Palette cycling, posterisation, indexed-color effects.
 - **3D LUT** (color grading): `N²×N` unwrapped cube texture with trilinear interpolation. Cinematic color grading, film stock emulation, tone mapping.
 
-```js no-check
+```ts no-check
 import { LutFilter } from '@codexo/exojs';
 
 // From a DaVinci/OBS/Photoshop-exported PNG strip
@@ -95,7 +95,7 @@ filter.setLut(differentLutTexture);
 
 `WebGl2ShaderFilter` and `WebGpuShaderFilter` accept a fragment shader source and an optional uniforms map. They render a fullscreen quad and execute the shader against the filter input texture:
 
-```js no-check
+```ts no-check
 import { WebGl2ShaderFilter } from '@codexo/exojs';
 
 const waveFilter = new WebGl2ShaderFilter({
@@ -133,7 +133,7 @@ Both auto-bind `uTexture` (the filter input) and `uResolution` (output dimension
 
 Filters on a `Container` apply to the container's entire rendered subtree — every child is drawn into an off-screen target first, then the filter chain processes that target. A blur on a container blurs all children together, not individually:
 
-```js
+```ts
 const world = new Container();
 world.filters = [new BlurFilter({ radius: 2 })];
 world.addChild(hero);   // hero is drawn into container's RT, then blurred

@@ -39,7 +39,7 @@ Every render backend exposes a `view` property. The view defines how world space
 
 Set the center to `(400, 300)` and the size to `(800, 600)`, and the canvas shows the world from `(0, 0)` to `(800, 600)`. Move the center to `(400, 600)` and the camera scrolls down by 300 pixels' worth of world.
 
-```js
+```ts
 draw(context) {
     context.view.setCenter(400, 300);
     context.view.resize(800, 600);
@@ -55,7 +55,7 @@ You don't usually configure the view by hand — it tracks the canvas size autom
 
 The view supports following a target. The target can be any object with `x` and `y` properties — typically a scene node, but a plain `{x, y}` object works too:
 
-```js
+```ts
 draw(context) {
     context.view.follow(this.player);
 
@@ -70,7 +70,7 @@ Following keeps the view centered on the target while the scene renders. Call `c
 
 The `setZoom(z)` method scales how much world fits inside the view. `setZoom(2)` means the view shows half as much world as it normally would (everything looks twice as big). `setZoom(0.5)` does the opposite (everything looks zoomed out). The `zoomIn(amount)` and `zoomOut(amount)` helpers adjust relative to the current zoom.
 
-```js
+```ts
 init() {
     this.zoom = 1;
 
@@ -100,7 +100,7 @@ A handful of misalignments come up regularly:
 
 The active view can be swapped on every frame. Used together with viewports, this gives you split-screen, picture-in-picture, and minimap rendering — render the world once with one view configuration into one viewport, then again with a different configuration into another:
 
-```js
+```ts
 draw(context) {
     context.backend.clear();
 

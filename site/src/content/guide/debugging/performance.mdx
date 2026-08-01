@@ -15,7 +15,7 @@ Performance in ExoJS is about three things: how many drawables you push per fram
 
 Before making changes, measure. The [`PerformanceLayer`](/ExoJS/en/api/performance-layer/) from `@codexo/exojs/debug` gives you FPS, frame time, draw-call count, and node count in real time:
 
-```js
+```ts
 import { DebugOverlay } from '@codexo/exojs/debug';
 
 const debug = new DebugOverlay(app);
@@ -42,7 +42,7 @@ Every filter on a drawable adds one render pass for that drawable. A container w
 
 The [`RenderPassInspectorLayer`](/ExoJS/en/api/render-pass-inspector-layer/) shows exactly who is adding passes. Enable it during development when frame time rises and you suspect filter overhead:
 
-```js
+```ts
 import { RenderPassInspectorLayer } from '@codexo/exojs/debug';
 // See 7.6 Render pipeline debugging for setup
 ```
@@ -89,7 +89,7 @@ Nodes that fall entirely outside the current `View`'s viewport are skipped by th
 
 The automatic check calls `getBounds()`, which for a `Container` walks every visible child and unions their bounds — for a complex `Graphics` node or a container with hundreds of children, that walk runs every frame even when the node's on-screen footprint is trivial to reason about. Set `cullArea` to a `Rectangle` and the cull check uses it directly instead of computing bounds:
 
-```js
+```ts
 import { Color, Container, Graphics, Rectangle } from '@codexo/exojs';
 
 // A debris field built from hundreds of small Graphics children — walking

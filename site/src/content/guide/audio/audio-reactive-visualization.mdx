@@ -24,7 +24,7 @@ Both the analyser and the beat detector connect as parallel taps. They never aff
 
 An `AudioAnalyser` wraps a Web Audio `AnalyserNode` and exposes frequency and time-domain data. You point it at a source, then call its getters each frame:
 
-```js
+```ts
 import { Asset, AudioStream, Scene } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 
@@ -64,7 +64,7 @@ The raw FFT returns N bins linearly spaced from 0 Hz to the Nyquist frequency (h
 
 The mel and log methods accept an optional `bands` parameter (default 32) and frequency range (`fMin`/`fMax`, default 20 Hz to 20 kHz, clamped to Nyquist). The filterbanks are built once per `(bands, fMin, fMax, fftSize)` combination and cached on the analyser instance — subsequent calls at the same parameters are just a weighted sum.
 
-```js
+```ts
 update(delta) {
     const mel32 = this.analyser.getSpectrumMel(null, { bands: 32 });
     // mel32[0] is the lowest mel band, mel32[31] is the highest
@@ -85,7 +85,7 @@ update(delta) {
 
 The event signals — `onBeat`, `onDownbeat`, `onBarStart`, `onTempoChange` — fire when the worklet processor detects a beat and dispatches a message to the main thread. Use them for one-shot side effects: spawning a particle burst, triggering a screen flash, advancing a sequencer:
 
-```js
+```ts
 this.detector = new BeatDetector();
 this.detector.source = this.app.audio.music;
 
@@ -107,7 +107,7 @@ For continuous animation — something that smoothly decays between beats rather
 
 These are all pure derivations from the detector's internal state — they do not allocate, do not fire events, and are safe to call every frame:
 
-```js
+```ts
 import { Color } from '@codexo/exojs';
 
 update(delta) {
@@ -150,7 +150,7 @@ A scrolling spectrogram rewrites just one column per frame. `commitRect(x, y, wi
 
 A simple scrolling spectrogram:
 
-```js
+```ts
 import { DataTexture, Sprite } from '@codexo/exojs';
 
 init() {
@@ -190,7 +190,7 @@ For ring-buffer patterns where only the newest column changes, `commitRect(col, 
 
 Here is a complete scene that combines an analyser-driven bar graph with beat-triggered background color changes:
 
-```js
+```ts
 import { Asset, Application, AudioStream,
     Color, Graphics, Scene } from '@codexo/exojs';
 import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';

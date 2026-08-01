@@ -19,7 +19,7 @@ This chapter builds one from scratch: a single sprite, centered on the canvas, r
 
 The smallest viable scene has just a `draw` method. The application calls it every frame; the scene tells the backend what to put on screen:
 
-```js
+```ts
 import { Application, Scene } from '@codexo/exojs';
 
 class HelloScene extends Scene {
@@ -72,7 +72,7 @@ A sprite's default anchor is its top-left corner. `setPosition(width / 2, height
 
 Override `update` to advance state once per frame. The `delta` argument carries the elapsed time since the previous frame; multiplying transforms by `delta.seconds` makes motion frame-rate independent:
 
-```js
+```ts
 update(delta) {
     this.sprite.rotate(120 * delta.seconds);
 }
@@ -84,7 +84,7 @@ This rotates the sprite at 120 degrees per second regardless of whether the brow
 
 The `app.canvas` property is a regular `HTMLCanvasElement`. In a real page, you place it wherever your layout needs it:
 
-```js
+```ts
 document.getElementById('scene').append(app.canvas);
 ```
 

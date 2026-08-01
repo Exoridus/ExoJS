@@ -58,7 +58,7 @@ Resizing the surface does not move what you already positioned. A sprite centere
 
 The example calls `layout()` every frame from `update`, which is simple and always correct. For heavier layouts, subscribe to `app.onResize` instead and recompute only when the size actually changes:
 
-```js no-check
+```ts no-check
 init() {
     this.layout();
     app.onResize.add(() => this.layout());
@@ -71,7 +71,7 @@ Either approach works — poll in `update` for small scenes, react to `onResize`
 
 The manual `app.resize` + `onResize` pattern above works well when you compute the size yourself. For the common cases — filling a container, scaling a fixed-resolution canvas to fit, or letterboxing — pass `canvas.sizingMode` instead and let the application manage the CSS and `ResizeObserver` for you:
 
-```js
+```ts
 import { Application } from '@codexo/exojs';
 
 const app = new Application({
@@ -90,7 +90,7 @@ Assign `app.sizingMode` at any time to switch strategies on the fly — swap to 
 
 `sizingMode` is also a live, runtime-settable property — not just a constructor option. Assigning `app.sizingMode` re-applies the strategy immediately: it disconnects any previous `ResizeObserver` and installs the new mode's CSS/observer. That makes it easy to switch strategies in response to user actions, for example filling the screen on fullscreen entry and returning to a fixed size on exit:
 
-```js
+```ts
 import { Application } from '@codexo/exojs';
 
 const app = new Application({

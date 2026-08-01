@@ -18,7 +18,7 @@ A `View` controls what portion of the world is visible. To make the camera follo
 Snapping `view.setCenter` onto the player every frame feels rigid. Ease it instead — `cur += (target - cur) * k * dt` — so the camera trails slightly and catches up smoothly, no tween needed.
 </Callout>
 
-```js
+```ts
 init() {
     this._view = new View(400, 300, 800, 600);
     this.player = new Sprite(this.loader.get('image/hero.png'));
@@ -39,7 +39,7 @@ draw(context) {
 
 For smooth following, lerp the camera center instead of snapping:
 
-```js
+```ts
 this._cameraX += (this.player.x - this._cameraX) * 5 * delta.seconds;
 this._cameraY += (this.player.y - this._cameraY) * 5 * delta.seconds;
 this._view.setCenter(this._cameraX, this._cameraY);
@@ -51,7 +51,7 @@ The multiplier controls how quickly the camera catches up. Higher values = snapp
 
 For menu screens, background effects, or mouse-driven depth, offset layers proportionally to the pointer position relative to the screen center:
 
-```js
+```ts
 init() {
     // Three layers at different depths
     this._layers = [0.15, 0.35, 0.6].map(speed => {
@@ -87,7 +87,7 @@ A layer that only fills the viewport shows its edge the moment parallax shifts i
 
 For side-scrolling games, offset background layers relative to the camera position rather than the pointer:
 
-```js
+```ts
 draw(context) {
     context.backend.clear();
 
@@ -116,7 +116,7 @@ The layer position is set relative to the camera center *before* rendering. Sinc
 
 Parallax layers need to be wider than the viewport, or you see edges when the camera shifts. For tiled backgrounds, draw the tile pattern across a range that extends beyond the viewport boundaries by at least the maximum parallax offset:
 
-```js
+```ts
 const viewW = 800;
 const maxOffset = viewW * 0.3; // 30% for the slowest layer
 const totalW = viewW + maxOffset * 2;

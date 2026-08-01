@@ -15,7 +15,7 @@ ExoJS ships five diagnostic layers in the `@codexo/exojs/debug` optional entrypo
 
 The [`DebugOverlay`](/ExoJS/en/api/debug-overlay/) is the entry point. Create one against your application, toggle individual layers by setting their `visible` flag:
 
-```js
+```ts
 import { DebugOverlay } from '@codexo/exojs/debug';
 
 const debug = new DebugOverlay(app);
@@ -48,7 +48,7 @@ Press F1 or set `debug.layers.performance.visible = true` to enable it.
 
 The [`BoundingBoxesLayer`](/ExoJS/en/api/bounding-boxes-layer/) draws colored rectangle outlines around every visible `RenderNode` with non-zero bounds. Each node's outline hue cycles by its `zIndex` — adjacent z-indices get visually distinct colors. This layer renders in world space, so boxes move and rotate with the scene:
 
-```js
+```ts
 debug.layers.boundingBoxes.visible = true;  // or F2
 ```
 
@@ -68,7 +68,7 @@ The [`HitTestLayer`](/ExoJS/en/api/hit-test-layer/) color-codes interactive node
 
 This layer renders in world space. Combined with `debug.layers.pointerStack.visible` (F4), which lists which nodes are under the cursor in a screen-space panel, you can trace the full hit-test path from pointer position to interactive node:
 
-```js
+```ts
 debug.layers.hitTest.visible = true;       // or F3
 debug.layers.pointerStack.visible = true;  // or F4
 ```
@@ -85,7 +85,7 @@ Debug layers have zero overhead when their `visible` flag is `false` — `DebugO
 
 Separately from the visual overlays above, ExoJS ships a message-first [`Logger`](/ExoJS/en/api/logger/) in the core module — no special entrypoint required. The engine uses it internally (for example, `Application` logs unexpected failures with `source: 'Application'`), and it's available for your own code too. A ready-to-use default instance, `logger`, is exported alongside the class:
 
-```js
+```ts
 import { logger } from '@codexo/exojs';
 
 logger.debug('Bundle "level-1" queued', { source: 'assets' });
@@ -104,7 +104,7 @@ Only `Error` survives a production build — `Debug`, `Info` and `Warning` are s
 
 To capture log entries yourself — for an in-game console, telemetry, or a custom debug panel — register a sink with `addSink`. It returns an unsubscribe function:
 
-```js
+```ts
 import { logger, LogSeverity } from '@codexo/exojs';
 
 const unsubscribe = logger.addSink((entry) => {
@@ -119,7 +119,7 @@ unsubscribe();
 
 For warnings that could otherwise repeat every frame (a stale asset reference checked in `update`, say), pass `once` — the entry is dropped after the first call for a given key, at any severity:
 
-```js
+```ts
 update(delta) {
     if (this.texture.width > 4096) {
         logger.warn('Texture exceeds 4096px — this may hurt performance on mobile GPUs.', { source: 'rendering', once: 'huge-texture' });
@@ -150,7 +150,7 @@ The panel does not show drawables with zero filters — they are invisible to th
 
 Import from the debug entrypoint, construct against the application, subscribe to `app.onFrame`, and toggle visibility:
 
-```js
+```ts
 import { Scene, View } from '@codexo/exojs';
 import { RenderPassInspectorLayer } from '@codexo/exojs/debug';
 
@@ -192,7 +192,7 @@ The screen-space view swap is necessary because `RenderPassInspectorLayer` retur
 
 If you only need the data and not the built-in panel, read `inspector.entries` and `inspector.totalPasses` directly — the `update` call is still required to populate the entry snapshot:
 
-```js
+```ts
 update(delta) {
     // ... game logic ...
 

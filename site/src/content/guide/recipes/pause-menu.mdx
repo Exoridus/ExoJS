@@ -18,7 +18,7 @@ One scene, one UI layer. The pause overlay (a `Panel` + `Label`) lives on `scene
 `app.tweens` keeps advancing even while the scene is paused — only `update()` and scene-level systems freeze. That is what lets a blur ramp or menu transition animate smoothly over the frozen world.
 </Callout>
 
-```js
+```ts
 class GameScene extends Scene {
     init() {
         this.player = new Sprite(this.loader.get('image/hero.png'));
@@ -112,7 +112,7 @@ The `destroy` hook clears the blur filter from `scene.root`. Without this, the f
 
 If the pause menu offers options like "Return to main menu" or "Quit", use `app.scenes.change(...)` to navigate away — it unloads the current scene and loads the next one, optionally with a fade transition:
 
-```js
+```ts
 // Inside a resume button's onClick handler:
 resumeButton.onClick.add(() => {
     this.togglePause(); // unpause first

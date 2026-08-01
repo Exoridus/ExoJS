@@ -13,7 +13,7 @@ In-canvas UI means text boxes, dialog panels, progress indicators, and interacti
 
 A dialog system shows text one character at a time, accompanied by a subtle sound. It's built from three primitives: a `Text` node for the dialog text, a `Sound` for the character tick, and a timer (or tween) to drive the reveal:
 
-```js
+```ts
 init() {
     this.lines = [
         'Commander, the anomaly has entered low orbit.',
@@ -60,7 +60,7 @@ update(delta) {
 
 A click advances to the next line or skips the current reveal to show the full line immediately:
 
-```js
+```ts
 this.app.input.onPointerTap.add(() => {
     const line = this.lines[this.lineIndex];
 
@@ -84,7 +84,7 @@ The pattern is self-contained: the scene owns the dialog state, `update` drives 
 
 A radial progress ring using a custom shader filter and a tween. The shader draws a circular arc — a `uProgress` uniform controls how much of the circle is filled. A tween drives `uProgress` from 0 to 1:
 
-```js
+```ts
 init() {
     this.progress = { v: 0 };
     this.label = new Text('0%', { fillColor: Color.white, fontSize: 42 });

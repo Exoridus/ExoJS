@@ -16,7 +16,7 @@ This chapter covers what the detector does and the events it fires. The next cha
 
 The detector taps a live audio source — an `AudioBus`, a `Voice`, an `AudioNode`, or a `MediaStream` — as a parallel branch that does not affect the source's main signal chain. It does not accept a `Sound`/`AudioStream` descriptor; tap the bus the audio plays through (e.g. `app.audio.music`) or the individual `Voice` you got back from `play()`:
 
-```js
+```ts
 import { Asset, AudioStream } from '@codexo/exojs';
 import { BeatDetector } from '@codexo/exojs-audio-fx';
 
@@ -29,7 +29,7 @@ detector.source = this.app.audio.music; // the bus the track plays through
 
 You can also pass the source as a constructor option, or point it at a single voice:
 
-```js
+```ts
 const voice = this.app.audio.play(track, { loop: true });
 const detector = new BeatDetector({ source: voice });
 ```
@@ -40,7 +40,7 @@ The detector runs its own FFT inside the worklet processor. No `AudioAnalyser` i
 
 Two read-only getters give you the detector's current tempo estimate:
 
-```js
+```ts
 update(delta) {
     const bpm = this.detector.tempo;           // 0 before lock-in
     const confidence = this.detector.confidence; // 0..1
@@ -49,7 +49,7 @@ update(delta) {
 
 `tempo` returns 0 until the detector has enough data to lock onto a stable beat. `confidence` rises as the beat grid stabilises. The `onTempoChange` signal fires when the detector settles on a new tempo:
 
-```js
+```ts
 detector.onTempoChange.add((newBpm, oldBpm) => {
     console.log(`Tempo changed from ${oldBpm} to ${newBpm} BPM`);
 });
@@ -70,7 +70,7 @@ Four signals fire at discrete moments in the music:
 
 Use `onBeat` for things that should happen on every beat — a sprite pulses, a particle burst fires, a UI element flashes:
 
-```js
+```ts
 detector.onBeat.add(info => {
     this.pulse = 0.3;
     this.particleBurst.reset();
@@ -83,7 +83,7 @@ detector.onBeat.add(info => {
 
 Use `onDownbeat` for events that should only fire on the "one" — a brighter flash, a bar-level visual change, a camera shake:
 
-```js
+```ts
 detector.onDownbeat.add(info => {
     this.barFlash = 0.5;
 });
@@ -91,7 +91,7 @@ detector.onDownbeat.add(info => {
 
 `BeatInfo` carries `isDownbeat` and `beatInBar` so you can use the general `onBeat` signal and filter inside the callback:
 
-```js
+```ts
 detector.onBeat.add(info => {
     if (info.isDownbeat) {
         // big effect on beat 1
@@ -105,7 +105,7 @@ detector.onBeat.add(info => {
 
 The detector exposes read-only state you can poll every frame:
 
-```js
+```ts
 detector.tempo              // BPM, or 0 before lock
 detector.confidence         // 0..1 locking quality
 detector.beatPhase          // 0..1 phase within current beat
@@ -129,7 +129,7 @@ Beats arrive `'provisional'` first — low-latency and ideal for snappy visual r
 
 The detector attempts 4/4 vs. 3/4 time-signature detection when `enableTimeSignatureDetection` is `true` (the default). Set it `false` in the constructor to lock to 4/4:
 
-```js
+```ts
 const detector = new BeatDetector({
     enableTimeSignatureDetection: false,
 });
@@ -147,7 +147,7 @@ Beat/state messages are posted from the worklet and handled asynchronously on th
 
 Construction options with their defaults:
 
-```js
+```ts
 const detector = new BeatDetector({
     minBpm: 50,                            // minimum detectable tempo
     maxBpm: 300,                           // maximum detectable tempo
@@ -170,7 +170,7 @@ const detector = new BeatDetector({
 
 Create one detector per scene (or share across scenes if the same source persists). Destroy it when you're done:
 
-```js
+```ts
 destroy() {
     this.detector.destroy();
 }

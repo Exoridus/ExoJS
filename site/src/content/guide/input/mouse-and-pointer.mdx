@@ -27,7 +27,7 @@ The application's input manager emits these pointer signals:
 
 Each signal's callback receives the `Pointer` instance:
 
-```js
+```ts
 app.input.onPointerMove.add(pointer => {
     this.crosshair.position.set(pointer.x, pointer.y);
 });
@@ -47,7 +47,7 @@ The pointer's `position` is in canvas-local pixel space — `(0, 0)` is the top-
 
 `Pointer.X`, `Pointer.Y`, and `Pointer.Active` are channel constants that always reference the primary pointer (normally the mouse, or the first finger to touch). These can be used with the binding API just like keyboard channels:
 
-```js
+```ts
 this.inputs.onActive(Pointer.Active, () => {
     this.isPointing = true;
 });
@@ -62,7 +62,7 @@ The signal-style API (`app.input.onPointerMove`) is typically more ergonomic for
 
 Each pointer gets a slot index (0–15). Per-slot channel constants let you track individual fingers for multi-touch:
 
-```js
+```ts
 import { Pointer } from '@codexo/exojs';
 
 // Slot 1 (second finger)
@@ -73,7 +73,7 @@ this.inputs.onActive(Pointer.Slot1X, value => {
 
 For most multi-touch use cases, tracking pointer instances by ID via the signal API is simpler:
 
-```js
+```ts
 init() {
     this.pointers = new Map();
 
@@ -101,7 +101,7 @@ init() {
 
 The input manager includes built-in gesture recognizers for common multi-touch patterns:
 
-```js
+```ts
 app.input.onPinch.add((scale, center) => {
     // scale > 1 = spreading fingers, scale < 1 = pinching
     this.camera.zoom *= scale;
@@ -124,7 +124,7 @@ These are high-level events built on top of the raw pointer signals. They track 
 
 Pointer positions are in **design space** (`0..app.width` × `0..app.height`), independent of device pixel ratio or how the canvas is displayed. To map them into scene world coordinates — for placing objects, selecting units, or aiming — pass them through the active view's `screenToWorld`, which undoes the camera's pan / zoom / rotation:
 
-```js
+```ts
 const world = this._view.screenToWorld(pointer.x, pointer.y);
 // world.x, world.y are now in scene world space
 ```
@@ -137,7 +137,7 @@ For raw canvas backing-store pixels — e.g. an off-screen render target at a di
 
 A `Sprite` (or any `RenderNode`) can be made interactive and draggable directly:
 
-```js
+```ts
 init() {
     this.sprite = new Sprite(this.loader.get('image/hero.png'));
     this.sprite.setAnchor(0.5);
@@ -154,7 +154,7 @@ Setting `interactive = true` makes the sprite participate in hit testing. Settin
 
 The `Pointer` instance passed to every signal callback carries the properties you typically need:
 
-```js
+```ts
 pointer.x, pointer.y   // design-space pixel position (0..app.width, 0..app.height)
 pointer.position       // Vector with current x and y
 pointer.buttons        // bitmask: 1=left, 2=right, 4=middle
