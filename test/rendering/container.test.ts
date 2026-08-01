@@ -1,5 +1,4 @@
 ﻿import type { Application } from '#core/Application';
-import { logger } from '#core/logging';
 import { SceneNode } from '#core/SceneNode';
 import type { InteractionHooks, Stage } from '#core/Stage';
 import { FocusController } from '#input/FocusController';
@@ -148,40 +147,35 @@ describe('Container', () => {
     expect(container.children).toEqual([third, first, second]);
   });
 
-  // Using a destroyed node is otherwise silent — warn once (dev only) at
-  // the attach site, the earliest clear signal of use-after-destroy. Asserted
-  // through a sink (which honours the logger's `once` dedup), not a warn spy
-  // (which would count calls before dedup).
+  // Attaching an already-destroyed node used to be silent in production — a
+  // __DEV__-only warning fired, then the node was linked into the tree anyway.
+  // The engine is pre-1.0 and favours clean breaks, so use-after-destroy is
+  // now rejected via `invariant`, which throws in EVERY build (unlike the
+  // __DEV__-stripped `assert`) — see `invariant`'s contract in `#core/dev`.
   describe('destroyed-child guard', () => {
-    let entries: string[];
-    let removeSink: () => void;
-
-    beforeEach(() => {
-      logger._resetOnce(); // fresh once-state per test (dedup is process-wide)
-      entries = [];
-      removeSink = logger.addSink(e => entries.push(e.message));
-    });
-
-    afterEach(() => removeSink());
-
-    const destroyedCount = (): number => entries.filter(m => m.includes('destroyed')).length;
-
-    test('warns exactly once even when multiple destroyed nodes are attached', () => {
+    test('addChild throws when the child was already destroy()ed', () => {
       const container = new Container();
+      const child = new DummyDrawable();
+      child.destroy();
 
-      for (let i = 0; i < 3; i++) {
-        const child = new DummyDrawable();
-        child.destroy();
-        container.addChild(child);
-      }
-
-      expect(destroyedCount()).toBe(1); // once, despite 3 destroyed attaches
+      expect(() => container.addChild(child)).toThrow(/destroy/i);
     });
 
-    test('does not warn when a live node is added', () => {
-      new Container().addChild(new DummyDrawable());
+    test('addChildAt throws and leaves the container and the destroyed node untouched', () => {
+      const container = new Container();
+      const survivor = new DummyDrawable();
+      container.addChild(survivor);
 
-      expect(destroyedCount()).toBe(0);
+      const destroyedChild = new DummyDrawable();
+      destroyedChild.destroy();
+
+      expect(() => container.addChildAt(destroyedChild, 0)).toThrow(/destroy/i);
+      expect(container.children).toEqual([survivor]);
+      expect(destroyedChild.parent).toBeNull();
+    });
+
+    test('does not throw when a live node is added', () => {
+      expect(() => new Container().addChild(new DummyDrawable())).not.toThrow();
     });
   });
 });

@@ -1,5 +1,4 @@
 import { invariant } from '#core/dev';
-import { logger } from '#core/logging';
 import type { Stage } from '#core/Stage';
 import { removeArrayItems } from '#core/utils';
 import { RenderEntryKind } from '#rendering/plan/RenderCommand';
@@ -139,8 +138,9 @@ export class Container extends RenderNode {
 
   /**
    * Insert `child` at `index` in the child list. The child is detached
-   * from any previous parent first. Throws if `index` is out of bounds.
-   * Self-as-child is a no-op.
+   * from any previous parent first. Throws if `index` is out of bounds, if
+   * `child` has already been `destroy()`ed, or if `child` is an ancestor of
+   * this container (would create a cycle). Self-as-child is a no-op.
    */
   public addChildAt(child: RenderNode, index: number): this {
     if (index < 0 || index > this._children.length) {
@@ -151,15 +151,17 @@ export class Container extends RenderNode {
       return this;
     }
 
-    // Attaching an already-destroyed node is otherwise silent — it renders
-    // nothing (the collect dev-guard skips it) or replays freed state. Warn once
-    // in dev at the attach site, the earliest clear use-after-destroy signal.
-    if (__DEV__ && child.destroyed) {
-      logger.warn(
-        'Container.addChild(): the child has already been destroy()ed — using a destroyed node is a no-op at best and stale state at worst. Create a fresh node instead of re-adding a destroyed one.',
-        { source: 'rendering', once: 'container:add-destroyed-child' },
-      );
-    }
+    // Attaching an already-destroyed node used to be silent in production: it
+    // rendered nothing (the collect dev-guard skips it) or replayed freed
+    // state, and only a __DEV__-only warning ever fired — the check evaporated
+    // in production builds while the node was linked into the tree regardless.
+    // pre-1.0 favours a clean break over a use-after-destroy that half-works,
+    // so this is an always-on rejection (like the cycle guard below), not a
+    // dev diagnostic.
+    invariant(
+      !child.destroyed,
+      'Container.addChild(): cannot attach a child that has already been destroy()ed — its pooled state (transform/bounds) is gone, so reusing it renders nothing or replays stale state. Create a fresh node instead of re-adding a destroyed one.',
+    );
 
     // Reject reparenting an ancestor of this container as a child: it would
     // close a cycle in the scene graph, and every recursive walk over it

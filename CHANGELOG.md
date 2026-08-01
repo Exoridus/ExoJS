@@ -352,6 +352,14 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
   changes neither document order nor any child index, so the `children`
   snapshot keeps the reference stability its contract promises and the
   paint-order view alone is recomputed.
+- **`Container.addChild()`/`addChildAt()` reject an already-`destroy()`ed
+  child** instead of linking it into the tree anyway. The prior guard only
+  warned, and only under `__DEV__` — a production build attached the
+  destroyed node silently, where it either rendered nothing (skipped by the
+  render-plan collect step) or replayed freed transform/bounds state. The
+  check is now an always-on `invariant` throw, matching the existing
+  ancestor-cycle guard, so a use-after-destroy attach fails the same way in
+  every build instead of degrading quietly in production only.
 
 ### Docs
 

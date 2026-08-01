@@ -475,7 +475,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Insert child at index in the child list. The child is detached from any previous parent first. Throws if index is out of bounds. Self-as-child is a no-op."
+          "description": "Insert child at index in the child list. The child is detached from any previous parent first. Throws if index is out of bounds, if child has already been destroy()ed, or if child is an ancestor of this container (would create a cycle). Self-as-child is a no-op."
         },
         {
           "name": "addFilter",
