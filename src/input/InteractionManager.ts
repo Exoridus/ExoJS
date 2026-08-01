@@ -1686,7 +1686,7 @@ export class InteractionManager implements InteractionHooks {
     // recursed into. The node's own hit-test below is unaffected — `clip`
     // only bounds descendants, never the clipping node itself.
     if (node instanceof Container && (!node.clip || this._isWithinClip(node, x, y))) {
-      const children = this._childrenInPaintOrder(node);
+      const children = node._childrenInPaintOrder();
 
       for (let i = children.length - 1; i >= 0; i--) {
         const child = children[i];
@@ -1707,17 +1707,6 @@ export class InteractionManager implements InteractionHooks {
     }
 
     return null;
-  }
-
-  /**
-   * Children in the order the renderer paints them. Returns the live child list
-   * untouched in the common case where every sibling shares a `zIndex` — the
-   * same shortcut `RenderPlanOptimizer` takes with `hasMixedZ` — and allocates
-   * a sorted copy only when the z values actually differ. The sort is stable,
-   * so equal z keeps document order.
-   */
-  private _childrenInPaintOrder(container: Container): readonly RenderNode[] {
-    return container._childrenInPaintOrder();
   }
 
   // ---------------------------------------------------------------------------

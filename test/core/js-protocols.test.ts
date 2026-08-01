@@ -10,21 +10,6 @@ class TestNode extends RenderNode {}
 const disposeKey = Symbol.dispose ?? Symbol.for('Symbol.dispose');
 
 describe('JavaScript protocols', () => {
-  test('ActionMap iterates actions in declaration order', () => {
-    const jump = new ButtonAction(Keyboard.Space);
-    const pause = new ButtonAction(Keyboard.Escape);
-    const map = new ActionMap({ jump, pause });
-
-    // Identity checks, not `toEqual` — two freshly constructed `ButtonAction`s
-    // start out structurally identical, so a deep-equality assertion here
-    // would pass even if iteration silently returned clones instead of the
-    // exact instances the map was built from.
-    const iterated = [...map];
-    expect(iterated).toHaveLength(2);
-    expect(iterated[0]).toBe(jump);
-    expect(iterated[1]).toBe(pause);
-  });
-
   test('Container iteration is a stable document-order snapshot', () => {
     const container = new Container();
     const first = new TestNode();
@@ -35,8 +20,9 @@ describe('JavaScript protocols', () => {
     const iterator = container[Symbol.iterator]();
     container.addChild(later);
 
-    // Identity checks — see the ActionMap test above for why `toEqual` would
-    // be vacuous against interchangeable blank `TestNode` instances.
+    // Identity checks, not `toEqual` — interchangeable blank `TestNode`
+    // instances are structurally identical, so a deep-equality assertion would
+    // pass even if iteration silently yielded clones or the wrong nodes.
     const snapshot = [...iterator];
     expect(snapshot).toHaveLength(2);
     expect(snapshot[0]).toBe(first);
@@ -97,7 +83,10 @@ describe('JavaScript protocols', () => {
     expect(Symbol.iterator in container).toBe(true);
     expect(disposeKey in container).toBe(false);
 
-    expect(Symbol.iterator in map).toBe(true);
+    // An ActionMap is deliberately NOT iterable: `map.actions` already exposes
+    // the same array in the same order, and an iterator yielding the `Action`
+    // union has no member a consumer could use without narrowing.
+    expect(Symbol.iterator in map).toBe(false);
     expect(disposeKey in map).toBe(false);
   });
 });

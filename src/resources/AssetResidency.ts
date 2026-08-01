@@ -446,17 +446,38 @@ export class AssetResidency {
         this._registerHandle(handle, key);
 
         if (stored !== undefined) {
-          handle._fill(stored);
+          // A retry re-fills the key's whole ref set (this one included) below.
+          if (!retryingFailedLeaf) handle._fill(stored);
         } else {
           this._warnOnFetchOptionConflict(ctor, meta.src, key, existingRef.options, meta.opts);
         }
       }
       // else: the SAME ref re-adopted — Set membership makes this a no-op.
 
-      if (retryingFailedLeaf && stored === undefined && existingRef !== undefined) {
-        for (const ref of existingRef.refs) if (ref.state === 'failed') ref._begin();
-        if (background) this._enqueueBackgroundFetch(ctor, meta.src, existingRef.options);
-        else this._startRefFetch(ctor, meta.src, existingRef.options);
+      // Retry of a leaf whose key already has a ref entry. The
+      // `existingRef === undefined` branch above already fetched (or filled)
+      // for a brand-new entry, and its guard makes it mutually exclusive with
+      // this block, so no key is ever fetched twice in one adopt.
+      if (retryingFailedLeaf && existingRef !== undefined) {
+        if (stored === undefined) {
+          for (const ref of existingRef.refs) if (ref.state === 'failed') ref._begin();
+          if (background) this._enqueueBackgroundFetch(ctor, meta.src, existingRef.options);
+          else this._startRefFetch(ctor, meta.src, existingRef.options);
+        } else {
+          // The payload is already resident, so there is nothing to refetch:
+          // re-filling IS the retry here. `_resources` and `_refs` legitimately
+          // diverge — a ref's own `parse()` can reject a payload that fetched
+          // fine — so re-running `parse()` against the stored payload yields an
+          // honest re-failure or a success, where handling this case by refetch
+          // alone would leave every re-armed ref in 'loading' with no fetch in
+          // flight, forever. Mirrors _storeResource's fill loop: an
+          // already-'ready' ref is left untouched.
+          for (const ref of existingRef.refs) {
+            if (ref.state === 'ready') continue;
+            if (ref.state === 'failed') ref._begin();
+            ref._fill(stored);
+          }
+        }
       }
 
       this._claim(key, ctor, meta.src, claimer);
@@ -503,9 +524,17 @@ export class AssetResidency {
     } else if (deferredEntry !== undefined && stored === undefined && !deferredEntry.handles.has(handle)) {
       // A distinct handle is in flight for this key and nothing is stored yet:
       // join the key's handle set so `_storeResource` fills THIS handle too
-      // (§7 multi-handle fill — this is the former silent hang). A conflicting
-      // FETCH option (source-keyed decode can't differ) warns; differing
-      // per-handle sampler options are fine (each handle carries its own).
+      // (§7 multi-handle fill). A conflicting FETCH option (source-keyed decode
+      // can't differ) warns; differing per-handle sampler options are fine
+      // (each handle carries its own).
+      //
+      // KNOWN GAP: "in flight" is assumed here, never checked. If the key's
+      // earlier load already FAILED, nothing is in flight and nothing restarts
+      // one — the retry below only fires when the ADOPTED handle was itself
+      // 'failed', which a brand-new leaf never is. Such a leaf is flipped
+      // 'idle' → 'loading' at the top of this method and then hangs there.
+      // Healing it needs the retry to key off the SIBLING handles' state
+      // instead of the adopted handle's own prior state.
       this._addDeferredHandle(key, deferredEntry, handle);
       this._warnOnFetchOptionConflict(ctor, meta.src, key, deferredEntry.options, meta.opts);
     }

@@ -782,28 +782,28 @@ export class Loader {
    * {@link Asset} descriptor, a whole {@link Assets} catalog, a catalog leaf, or
    * the `(type, source)` pair. Releasing an unclaimed asset — a valid descriptor,
    * catalog, or catalog leaf that was never adopted/loaded — is a no-op, and
-   * releasing twice is idempotent. An object that is none of those forms (no
-   * claim identity at all) throws instead of silently doing nothing — see
-   * `@remarks`.
+   * releasing twice is idempotent.
    *
-   * Only this loader's app-lifetime claim is dropped. A claim held by another
-   * scope — a scene's `scene.loader`, which releases on scene teardown — is
-   * never touched, so one owner can never free another owner's assets.
+   * The `release(handle)` form resolves the key via an internal handle → key map
+   * that is populated ONLY for adopted seamless handles and value-refs (i.e. a
+   * catalog leaf that has actually been adopted via {@link get}/{@link load}). A
+   * materialized-but-never-adopted catalog leaf is recognized by its meta stamp
+   * and stays an idempotent no-op. A handle this loader has EVER issued also
+   * stays a no-op even if its claim/key bookkeeping was separately forgotten by
+   * an internal hard reset — the fail-loud check is deliberately independent of
+   * that state, so the same handle never throws or not depending on unrelated
+   * internal teardown ordering.
    *
-   * @remarks The `release(handle)` form resolves the key via an internal handle
-   * → key map that is populated ONLY for adopted seamless handles and value-refs
-   * (i.e. a catalog leaf that has actually been adopted via {@link get}/{@link load}).
-   * A materialized-but-never-adopted catalog leaf is recognized by its meta stamp
-   * and stays an idempotent no-op. A handle this loader has EVER issued also stays
-   * a no-op even if its claim/key bookkeeping was separately forgotten by an
-   * internal hard reset — the fail-loud check is deliberately independent of that
-   * state, so the same handle never throws or not depending on unrelated internal
-   * teardown ordering. Anything else — a resolved non-leaf resource (one loaded with
+   * Anything else — a resolved non-leaf resource (one loaded with
    * `load(Asset.type('bmFont', …))`, or unpacked by {@link loadContainer}), or an
    * arbitrary object this loader has never seen — has no claim identity
    * `release()` can resolve, and **throws** naming the supported forms instead of
    * silently discarding the call. Use the `release(asset)` or `release(type, source)`
    * form for a non-leaf resource.
+   *
+   * Only this loader's app-lifetime claim is dropped. A claim held by another
+   * scope — a scene's `scene.loader`, which releases on scene teardown — is
+   * never touched, so one owner can never free another owner's assets.
    */
   public release(handle: object): void;
   public release<T>(asset: Asset<T>): void;

@@ -327,6 +327,31 @@ describe('Loader.inspect() snapshot contract', () => {
     expect(row?.state).toBe('failed');
   });
 
+  test('keeps a re-claimed parse-failed value leaf honestly failed instead of stranding it in loading', async () => {
+    const loader = createCoreLoader();
+    mockFetchText('raw-payload');
+
+    const catalog = Assets.from({
+      bad: { type: 'text', source: 'note.txt', parse: () => Promise.resolve('nope') as unknown as string },
+    });
+
+    await loader.load(catalog).catch(() => undefined);
+    expect(catalog.bad.state).toBe('failed');
+
+    // Re-claiming the same leaf (routinely: a second scene claiming the same
+    // catalog) is a retry, and here `_resources` holds a raw payload while
+    // `_refs` holds a ref its OWN `parse()` failed — the one case where the two
+    // legitimately diverge. The retry must re-run `parse()` against the stored
+    // payload and fail again honestly; refetch-gating the retry on "nothing
+    // stored" left the ref re-armed to 'loading' with no fetch in flight, so it
+    // never settled again and `inspect()` read the stored payload as 'ready'.
+    loader.get(catalog.bad);
+
+    expect(catalog.bad.state).toBe('failed');
+    await expect(catalog.bad.loaded).rejects.toThrow(/parse\(\) must be synchronous/);
+    expect(loader.inspect().find(r => r.source === 'note.txt')?.state).toBe('failed');
+  });
+
   test('never reports background:true for a row that has already settled', () => {
     // A producer that stores a payload for a (type, source) key directly —
     // `loadContainer()`'s injection path calls `_storeResource` without going

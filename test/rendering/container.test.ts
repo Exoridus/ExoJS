@@ -428,7 +428,7 @@ describe('Container paint-order cache', () => {
     expect(moving.parent).toBe(containerB);
   });
 
-  test('a child zIndex change invalidates its parent document-order, paint-order, and child-index caches', () => {
+  test('a child zIndex change invalidates the paint-order cache ONLY, leaving the document-order snapshot stable', () => {
     const container = new Container();
     const a = new DummyDrawable();
     const b = new DummyDrawable();
@@ -443,7 +443,11 @@ describe('Container paint-order cache', () => {
 
     a.zIndex = 9;
 
-    expect(container.children).not.toBe(childrenBefore);
+    // A zIndex write changes neither document order nor any child index, so
+    // the `children` snapshot must keep the reference stability its own doc
+    // comment promises ("the same array reference until the next STRUCTURAL
+    // change") — only the paint order actually became stale.
+    expect(container.children).toBe(childrenBefore);
     expect(container._childrenInPaintOrder()).not.toBe(paintBefore);
     expect(container._childrenInPaintOrder()).toEqual([b, a]);
     // Document order itself is untouched by a zIndex change.

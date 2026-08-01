@@ -73,6 +73,17 @@ export class Container extends RenderNode {
   }
 
   /**
+   * Invalidate only the paint-order view — for a child's `zIndex` write, which
+   * reorders painting but leaves document order and every child index exactly
+   * as they were, so the {@link children} snapshot stays valid (and keeps its
+   * documented reference stability).
+   * @internal
+   */
+  public _invalidatePaintOrder(): void {
+    this._paintChildrenView = null;
+  }
+
+  /**
    * Iterate the same frozen, cached document-order snapshot {@link children}
    * returns — mutating the container after obtaining this iterator does not
    * change what it yields (see {@link children}'s doc comment for the full
