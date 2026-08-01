@@ -160,7 +160,7 @@
           ],
           "params": [],
           "returnType": "IterableIterator<RenderNode>",
-          "description": "Iterate a stable document-order snapshot."
+          "description": "Iterate the same frozen, cached document-order snapshot children returns — mutating the container after obtaining this iterator does not change what it yields (see children's doc comment for the full snapshot/invalidation contract)."
         },
         {
           "name": "addChild",

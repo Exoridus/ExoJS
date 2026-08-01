@@ -10,6 +10,12 @@
  *     `moduleResolution: bundler` — exactly the resolution Vite/esbuild use —
  *     against the shipped `.d.ts`. Combined with `attw`'s `bundler 🟢` this is
  *     the Vite-consumer proof without needing Vite installed.
+ *   - TypeScript subpath entry: the same type-check again, but through a
+ *     documented subpath (`@codexo/exojs/renderer-sdk`) in its OWN program
+ *     that never imports the root barrel. A root-barrel import anywhere in
+ *     the same program would pull in whatever ambient globals the root's
+ *     `.d.ts` carries and mask a defect that only affects a consumer whose
+ *     program never reaches it.
  *
  * Fully offline: the only runtime dependency in the set (@codexo/exojs-tiled →
  * @codexo/exojs-tilemap) is satisfied by the tilemap tarball installed
@@ -49,7 +55,7 @@ const run = (command: string, args: string[], cwd: string): { code: number; outp
   }
 };
 
-const CONSUMER_TS = `import { ActionMap, Application, ButtonAction, Container, Keyboard, Scene, type InputBinding } from '@codexo/exojs';
+const CONSUMER_TS = `import { ActionMap, Application, ButtonAction, Container, Keyboard, Scene } from '@codexo/exojs';
 import { ParticleSystem, particlesExtension } from '@codexo/exojs-particles';
 import { TileMap, tilemapExtension } from '@codexo/exojs-tilemap';
 import { TiledMap, tiledExtension } from '@codexo/exojs-tiled';
@@ -61,12 +67,17 @@ import { LdtkMap, ldtkExtension } from '@codexo/exojs-ldtk';
 
 export class DemoScene extends Scene {}
 
-export function verifyCoreProtocols(binding: InputBinding, container: Container): void {
+export function verifyCoreProtocols(container: Container): void {
     const actions = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
     for (const action of actions) void action;
     for (const child of container) void child;
 
-    using ownedBinding = binding;
+    // The binding is constructed (and therefore owned) right here, not
+    // accepted as a parameter — \`using\` disposes what this scope created,
+    // mirroring \`InputManager.onStart\`'s own "manual lifecycle" contract
+    // rather than disposing a caller's binding out from under them.
+    const app = new Application();
+    using ownedBinding = app.input.onStart(Keyboard.Space, () => {});
     void ownedBinding.active;
 }
 
@@ -101,6 +112,38 @@ const CONSUMER_TSCONFIG = JSON.stringify(
       types: [],
     },
     include: ['consumer.ts'],
+  },
+  null,
+  2,
+);
+
+// Entering through a documented SUBPATH — never the root barrel — in its
+// OWN program (a separate tsconfig/include, not merely a separate import
+// line in `CONSUMER_TS`). A root-barrel import anywhere in the same
+// TypeScript program would pull in whatever ambient declarations the root
+// barrel's `.d.ts` carries and mask a defect that only affects a consumer
+// whose program never includes it — exactly the shape of bug this lane
+// exists to catch (a `declare global` augmentation the shipped `.d.ts` tree
+// needs from a file OTHER than the one a subpath consumer actually reaches).
+// `renderer-sdk` is the documented path for writing a custom renderer.
+const CONSUMER_SUBPATH_TS = `import { AbstractWebGl2Renderer } from '@codexo/exojs/renderer-sdk';
+
+export type CustomRendererBase = typeof AbstractWebGl2Renderer;
+`;
+
+const CONSUMER_SUBPATH_TSCONFIG = JSON.stringify(
+  {
+    compilerOptions: {
+      module: 'esnext',
+      moduleResolution: 'bundler',
+      target: 'es2022',
+      lib: ['es2022', 'dom', 'dom.iterable'],
+      strict: true,
+      noEmit: true,
+      skipLibCheck: false,
+      types: [],
+    },
+    include: ['consumer-subpath.ts'],
   },
   null,
   2,
@@ -190,6 +233,17 @@ export const verifyExternalConsumers = (tarballs: string[]): { ok: boolean; cons
       name: 'TypeScript bundler-resolution type-check',
       ok: tsc.code === 0,
       detail: tsc.code === 0 ? undefined : tsc.output.trim().split('\n').slice(-5).join(' '),
+    });
+
+    // 4. TypeScript subpath-entry type-check, in a program that never
+    // includes the root barrel — see `CONSUMER_SUBPATH_TS`'s doc comment.
+    writeFileSync(join(consumerDir, 'consumer-subpath.ts'), CONSUMER_SUBPATH_TS);
+    writeFileSync(join(consumerDir, 'tsconfig.subpath.json'), CONSUMER_SUBPATH_TSCONFIG);
+    const tscSubpath = run('node', [tscBin, '--noEmit', '-p', 'tsconfig.subpath.json'], consumerDir);
+    checks.push({
+      name: 'TypeScript subpath-entry (renderer-sdk) type-check',
+      ok: tscSubpath.code === 0,
+      detail: tscSubpath.code === 0 ? undefined : tscSubpath.output.trim().split('\n').slice(-5).join(' '),
     });
 
     return { ok: checks.every(c => c.ok), consumerDir, checks };

@@ -72,7 +72,12 @@ export class Container extends RenderNode {
     this._childIndexView = null;
   }
 
-  /** Iterate a stable document-order snapshot. */
+  /**
+   * Iterate the same frozen, cached document-order snapshot {@link children}
+   * returns — mutating the container after obtaining this iterator does not
+   * change what it yields (see {@link children}'s doc comment for the full
+   * snapshot/invalidation contract).
+   */
   public [Symbol.iterator](): IterableIterator<RenderNode> {
     return this.children[Symbol.iterator]();
   }
