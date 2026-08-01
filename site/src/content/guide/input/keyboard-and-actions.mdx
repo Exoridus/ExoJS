@@ -141,7 +141,34 @@ Keyboard.F1 .. Keyboard.F12
 Keyboard.NumPad0 .. Keyboard.NumPad9
 ```
 
-The full list includes punctuation, brackets, and navigation keys. Punctuation members carry the glyph a US-QWERTY keyboard prints on that key (`Keyboard.Colon`, `Keyboard.Tilde`, `Keyboard.OpenBracket`, …) — the name is the US legend, the binding is the position, so on a QWERTZ keyboard `Keyboard.Colon` is the key printed "ö". A modifier is one channel per role, not per side: `ShiftLeft` and `ShiftRight` both drive `Keyboard.Shift`. Keys ExoJS does not track (media keys, IME/language keys) drive no channel at all. To resolve a raw DOM event yourself — in a rebinding UI, say — use `keyboardChannelFromCode(event.code)`.
+The full list includes punctuation, brackets, and navigation keys. Punctuation members carry the glyph a US-QWERTY keyboard prints on that key (`Keyboard.Colon`, `Keyboard.Tilde`, `Keyboard.OpenBracket`, …) — the name is the US legend, the binding is the position, so on a QWERTZ keyboard `Keyboard.Colon` is the key printed "ö". Keys ExoJS does not track (media keys, IME/language keys) drive no channel at all. To resolve a raw DOM event yourself — in a rebinding UI, say — use `keyboardChannelFromCode(event.code)`; for a modifier this returns the side-specific channel (see below), never the aggregate.
+
+### Modifier sides
+
+Every modifier exposes both a side-specific channel and an aggregate one:
+
+```
+Keyboard.ShiftLeft    Keyboard.ShiftRight    Keyboard.Shift    (aggregate)
+Keyboard.ControlLeft  Keyboard.ControlRight  Keyboard.Control  (aggregate)
+Keyboard.AltLeft      Keyboard.AltRight      Keyboard.Alt      (aggregate)
+Keyboard.MetaLeft     Keyboard.MetaRight     Keyboard.Meta     (aggregate)
+```
+
+Bind to the aggregate (`Keyboard.Control`) for a normal game binding — it is
+active whenever either physical key is held, and releasing one side while the
+other stays down keeps it active. Bind to a side-specific channel
+(`Keyboard.ControlLeft`) only when you genuinely need to tell the two keys
+apart, such as a key-press visualizer or a rebinding UI. `onKeyDown`/`onKeyUp`
+always report the side-specific channel that was actually pressed — the
+aggregate is buffer state an action reads, not something that fires its own
+signal, so one physical key press is still exactly one `onKeyDown` dispatch.
+
+`ChordAction`/`SequenceAction` string patterns also accept a few shorthand
+aliases for the modifier and `Escape` tokens: `Ctrl` for `Control`, `Cmd` /
+`Command` / `Super` for `Meta`, `Opt` for `Alt`, and `Esc` for `Escape` — so
+`'Ctrl+K'` and `'Control+K'` are equivalent. Aliases are a string-pattern
+convenience only; array bindings always use the `Keyboard` enum member
+directly.
 
 ## Canvas focus
 

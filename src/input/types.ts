@@ -77,8 +77,14 @@ export enum PointerButton {
  * The values are opaque channel indices inside the keyboard category — do not
  * assume they equal any `keyCode`.
  *
- * Each modifier is ONE channel covering both physical sides: `ShiftLeft` and
- * `ShiftRight` both drive {@link Keyboard.Shift}.
+ * Each modifier has both a side-specific channel (`ShiftLeft`, `ShiftRight`,
+ * `ControlLeft`, `ControlRight`, `AltLeft`, `AltRight`, `MetaLeft`,
+ * `MetaRight`) and an aggregate one (`Shift`, `Control`, `Alt`, `Meta`) that
+ * is active whenever either side is held — the aggregate is what a game
+ * binding wants ("was Control held", regardless of which hand), while the
+ * side-specific channels exist for a key-press visualizer or a rebinding UI
+ * that needs to tell the two physical keys apart. Releasing one side while
+ * the other stays held keeps the aggregate active.
  *
  * @example
  * ```ts
@@ -89,11 +95,26 @@ export enum Keyboard {
   Backspace = ChannelOffset.Keyboard + 8,
   Tab = ChannelOffset.Keyboard + 9,
   Enter = ChannelOffset.Keyboard + 13,
+  /** Aggregate: active while either {@link ShiftLeft} or {@link ShiftRight} is held. */
   Shift = ChannelOffset.Keyboard + 16,
+  /** Aggregate: active while either {@link ControlLeft} or {@link ControlRight} is held. */
   Control = ChannelOffset.Keyboard + 17,
+  /** Aggregate: active while either {@link AltLeft} or {@link AltRight} is held. */
   Alt = ChannelOffset.Keyboard + 18,
   Pause = ChannelOffset.Keyboard + 19,
   CapsLock = ChannelOffset.Keyboard + 20,
+  /** Physical left `Shift` key. Also drives the aggregate {@link Shift} channel. */
+  ShiftLeft = ChannelOffset.Keyboard + 21,
+  /** Physical right `Shift` key. Also drives the aggregate {@link Shift} channel. */
+  ShiftRight = ChannelOffset.Keyboard + 22,
+  /** Physical left `Control` key. Also drives the aggregate {@link Control} channel. */
+  ControlLeft = ChannelOffset.Keyboard + 23,
+  /** Physical right `Control` key. Also drives the aggregate {@link Control} channel. */
+  ControlRight = ChannelOffset.Keyboard + 24,
+  /** Physical left `Alt` key. Also drives the aggregate {@link Alt} channel. */
+  AltLeft = ChannelOffset.Keyboard + 25,
+  /** Physical right `Alt` key. Also drives the aggregate {@link Alt} channel. */
+  AltRight = ChannelOffset.Keyboard + 26,
   Escape = ChannelOffset.Keyboard + 27,
   Space = ChannelOffset.Keyboard + 32,
   PageUp = ChannelOffset.Keyboard + 33,
@@ -144,8 +165,13 @@ export enum Keyboard {
   X = ChannelOffset.Keyboard + 88,
   Y = ChannelOffset.Keyboard + 89,
   Z = ChannelOffset.Keyboard + 90,
+  /** Aggregate: active while either {@link MetaLeft} or {@link MetaRight} is held. */
   Meta = ChannelOffset.Keyboard + 91,
   ContextMenu = ChannelOffset.Keyboard + 93,
+  /** Physical left `Meta`/`Cmd`/`Windows` key. Also drives the aggregate {@link Meta} channel. */
+  MetaLeft = ChannelOffset.Keyboard + 94,
+  /** Physical right `Meta`/`Cmd`/`Windows` key. Also drives the aggregate {@link Meta} channel. */
+  MetaRight = ChannelOffset.Keyboard + 95,
   NumPad0 = ChannelOffset.Keyboard + 96,
   NumPad1 = ChannelOffset.Keyboard + 97,
   NumPad2 = ChannelOffset.Keyboard + 98,

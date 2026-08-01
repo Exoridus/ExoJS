@@ -388,7 +388,7 @@ describe('keyboard dispatch order', () => {
     im.update(0 as never);
 
     expect(seen).toEqual([
-      { channel: Keyboard.Shift, pressed: false },
+      { channel: Keyboard.ShiftLeft, pressed: false },
       { channel: Keyboard.Tab, pressed: true },
     ]);
   });

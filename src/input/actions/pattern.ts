@@ -26,6 +26,25 @@ const keyboardByName = new Map<string, number>(
     .map(([name, value]) => [name.toLowerCase(), value]),
 );
 
+/**
+ * Shorthand aliases for a string pattern token, resolved on top of the
+ * reflexive {@link Keyboard} member table above — `'Ctrl+K'` and
+ * `'Control+K'` are equivalent. Array bindings are unaffected: an alias is a
+ * string-pattern-only convenience, never a second {@link Keyboard} member.
+ */
+const keyboardAliases: ReadonlyArray<readonly [alias: string, canonical: keyof typeof Keyboard]> = [
+  ['ctrl', 'Control'],
+  ['cmd', 'Meta'],
+  ['command', 'Meta'],
+  ['super', 'Meta'],
+  ['opt', 'Alt'],
+  ['esc', 'Escape'],
+];
+
+for (const [alias, canonical] of keyboardAliases) {
+  keyboardByName.set(alias, Keyboard[canonical]);
+}
+
 function resolveToken(token: string, owner: PatternOwner, patternText: string): number {
   const normalized = token
     .trim()

@@ -191,13 +191,32 @@ describe('FocusController', () => {
     onKeyDown.dispatch(Keyboard.Tab);
     expect(focus.focused).toBe(c);
 
-    onKeyDown.dispatch(Keyboard.Shift);
+    // The real InputManager dispatches onKeyDown/onKeyUp with the
+    // side-specific channel only (see Keyboard's own doc comment) — never
+    // the aggregate Shift channel directly — so either physical Shift key
+    // must be recognized here.
+    onKeyDown.dispatch(Keyboard.ShiftRight);
     onKeyDown.dispatch(Keyboard.Tab);
     expect(focus.focused).toBe(b);
 
-    onKeyUp.dispatch(Keyboard.Shift);
+    onKeyUp.dispatch(Keyboard.ShiftRight);
     onKeyDown.dispatch(Keyboard.Tab);
     expect(focus.focused).toBe(c);
+  });
+
+  test('either physical Shift key (left or right) triggers Shift+Tab reverse navigation', () => {
+    const { scene, focus, onKeyDown, onKeyUp } = createFocusApp();
+    const a = focusable();
+    const b = focusable();
+
+    scene.root.addChild(a).addChild(b);
+    focus.focus(b);
+
+    onKeyDown.dispatch(Keyboard.ShiftLeft);
+    onKeyDown.dispatch(Keyboard.Tab);
+    expect(focus.focused).toBe(a);
+
+    onKeyUp.dispatch(Keyboard.ShiftLeft);
   });
 
   test('Tab wraps around the scope', () => {

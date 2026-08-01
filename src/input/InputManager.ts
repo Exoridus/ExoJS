@@ -17,7 +17,7 @@ import { builtInGamepadDefinitions, resolveGamepadDefinition } from './GamepadDe
 import { type GestureJournalEvent, GestureRecognizer } from './GestureRecognizer';
 import type { InputBindingOptions, InputChannel } from './InputBinding';
 import { InputBinding } from './InputBinding';
-import { keyboardChannelFromCode } from './keyboardCodes';
+import { keyboardChannelFromCode, keyboardModifierChannelInfo } from './keyboardCodes';
 import { computeDesignPoint, Pointer, PointerState, PointerStateFlag } from './Pointer';
 import { ChannelOffset, ChannelSize, maxPointers, pointerSlotSize, resolveGamepadSlotChannel } from './types';
 
@@ -765,6 +765,12 @@ export class InputManager {
    * key with no channel of its own (media and IME/language keys, and the empty
    * `code` a soft keyboard reports) is ignored outright rather than writing
    * into an arbitrary slot.
+   *
+   * For a modifier, `channel` is the SIDE-SPECIFIC channel and this also
+   * writes the aggregate channel (`ShiftLeft` -> also sets `Shift`) — see
+   * {@link keyboardModifierChannelInfo}. `keyEvents`/`onKeyDown` only ever see
+   * the side channel: the aggregate is buffer state an action reads, not a
+   * signal of its own, keeping one physical event equal to one dispatch.
    */
   private handleKeyDown(event: KeyboardEvent): void {
     if (!this.canvasFocusedValue) {
@@ -779,15 +785,31 @@ export class InputManager {
 
     this.channels[channel] = 1;
     this._recordChannelChanges(channel, 1);
+
+    const modifier = keyboardModifierChannelInfo(channel);
+    let capturedByAggregate = false;
+
+    if (modifier !== undefined) {
+      this.channels[modifier.aggregate] = 1;
+      this._recordChannelChanges(modifier.aggregate, 1);
+      capturedByAggregate = this.capturedKeyChannels.has(modifier.aggregate);
+    }
+
     this.keyEvents.push({ channel, pressed: true });
     this.flags.push(InputManagerFlag.KeyChange);
 
-    if (this.capturedKeyChannels.has(channel)) {
+    if (capturedByAggregate || this.capturedKeyChannels.has(channel)) {
       stopEvent(event);
     }
   }
 
-  /** Physical-key resolution and unmapped-key handling exactly as in {@link handleKeyDown}. */
+  /**
+   * Physical-key resolution and unmapped-key handling exactly as in
+   * {@link handleKeyDown}. For a modifier, the aggregate channel is set to
+   * the SIBLING side's current value rather than unconditionally cleared —
+   * releasing left `Control` while right `Control` is still held must not
+   * clear {@link Keyboard.Control} — see {@link keyboardModifierChannelInfo}.
+   */
   private handleKeyUp(event: KeyboardEvent): void {
     if (!this.canvasFocusedValue) {
       return;
@@ -801,10 +823,20 @@ export class InputManager {
 
     this.channels[channel] = 0;
     this._recordChannelChanges(channel, 1);
+
+    const modifier = keyboardModifierChannelInfo(channel);
+    let capturedByAggregate = false;
+
+    if (modifier !== undefined) {
+      this.channels[modifier.aggregate] = this.channels[modifier.sibling] ?? 0;
+      this._recordChannelChanges(modifier.aggregate, 1);
+      capturedByAggregate = this.capturedKeyChannels.has(modifier.aggregate);
+    }
+
     this.keyEvents.push({ channel, pressed: false });
     this.flags.push(InputManagerFlag.KeyChange);
 
-    if (this.capturedKeyChannels.has(channel)) {
+    if (capturedByAggregate || this.capturedKeyChannels.has(channel)) {
       stopEvent(event);
     }
   }

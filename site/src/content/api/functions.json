@@ -805,7 +805,7 @@
             }
           ],
           "returnType": "Keyboard | undefined",
-          "description": "Resolve a KeyboardEvent.code to its Keyboard channel, or undefined for a key ExoJS does not track (media and IME/language keys, and the empty code a soft keyboard reports). This is the single seam between the platform's physical-key identity and the engine's channel model — see Keyboard for what \"physical\" means here and why keyCode is never used. Useful in a rebinding UI that has a raw DOM event rather than an engine channel; InputManager.onKeyDown already reports the resolved channel."
+          "description": "Resolve a KeyboardEvent.code to its Keyboard channel, or undefined for a key ExoJS does not track (media and IME/language keys, and the empty code a soft keyboard reports). This is the single seam between the platform's physical-key identity and the engine's channel model — see Keyboard for what \"physical\" means here and why keyCode is never used. For a modifier this returns the SIDE-SPECIFIC channel ('ShiftLeft' → Keyboard.ShiftLeft), never the aggregate — InputManager writes the aggregate channel alongside it on every keydown/keyup. Useful in a rebinding UI that has a raw DOM event rather than an engine channel; InputManager.onKeyDown already reports the resolved channel."
         },
         {
           "name": "lerp",

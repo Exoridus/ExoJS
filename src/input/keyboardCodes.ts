@@ -16,11 +16,14 @@ import { Keyboard } from './types';
  * keyboard prints on it (`'Semicolon'` → {@link Keyboard.Colon}) rather than
  * under a matching name.
  *
- * Both physical sides of a modifier deliberately share one channel
- * (`ShiftLeft`/`ShiftRight` → {@link Keyboard.Shift}); the legacy `OSLeft`/
- * `OSRight` spellings some browsers still emit alias onto
- * {@link Keyboard.Meta}. Codes with no entry here (media keys, IME/language
- * keys, and the empty `code` reported by soft keyboards) drive no channel.
+ * A modifier resolves to its SIDE-SPECIFIC channel here (`'ShiftLeft'` →
+ * {@link Keyboard.ShiftLeft}, not the aggregate {@link Keyboard.Shift}) —
+ * {@link InputManager} derives the aggregate from it via
+ * {@link modifierChannelInfo}. The legacy `OSLeft`/`OSRight` spellings some
+ * browsers still emit alias onto {@link Keyboard.MetaLeft}/
+ * {@link Keyboard.MetaRight}. Codes with no entry here (media keys,
+ * IME/language keys, and the empty `code` reported by soft keyboards) drive
+ * no channel.
  */
 const channelsByCode = new Map<string, Keyboard>([
   // Alphanumeric block.
@@ -87,17 +90,19 @@ const channelsByCode = new Map<string, Keyboard>([
   ['CapsLock', Keyboard.CapsLock],
   ['ContextMenu', Keyboard.ContextMenu],
 
-  // Modifiers — both sides fold onto one channel.
-  ['ShiftLeft', Keyboard.Shift],
-  ['ShiftRight', Keyboard.Shift],
-  ['ControlLeft', Keyboard.Control],
-  ['ControlRight', Keyboard.Control],
-  ['AltLeft', Keyboard.Alt],
-  ['AltRight', Keyboard.Alt],
-  ['MetaLeft', Keyboard.Meta],
-  ['MetaRight', Keyboard.Meta],
-  ['OSLeft', Keyboard.Meta],
-  ['OSRight', Keyboard.Meta],
+  // Modifiers — each side resolves to its own channel; see
+  // `modifierChannelInfo` for how the aggregate channel is derived from it.
+  ['ShiftLeft', Keyboard.ShiftLeft],
+  ['ShiftRight', Keyboard.ShiftRight],
+  ['ControlLeft', Keyboard.ControlLeft],
+  ['ControlRight', Keyboard.ControlRight],
+  ['AltLeft', Keyboard.AltLeft],
+  ['AltRight', Keyboard.AltRight],
+  ['MetaLeft', Keyboard.MetaLeft],
+  ['MetaRight', Keyboard.MetaRight],
+  // Legacy spellings some browsers still emit for the Meta key.
+  ['OSLeft', Keyboard.MetaLeft],
+  ['OSRight', Keyboard.MetaRight],
 
   // Navigation and editing.
   ['ArrowLeft', Keyboard.Left],
@@ -160,6 +165,10 @@ const channelsByCode = new Map<string, Keyboard>([
  * {@link Keyboard} for what "physical" means here and why `keyCode` is never
  * used.
  *
+ * For a modifier this returns the SIDE-SPECIFIC channel (`'ShiftLeft'` →
+ * {@link Keyboard.ShiftLeft}), never the aggregate — {@link InputManager}
+ * writes the aggregate channel alongside it on every keydown/keyup.
+ *
  * Useful in a rebinding UI that has a raw DOM event rather than an engine
  * channel; {@link InputManager.onKeyDown} already reports the resolved channel.
  *
@@ -174,4 +183,46 @@ const channelsByCode = new Map<string, Keyboard>([
  */
 export function keyboardChannelFromCode(code: string): Keyboard | undefined {
   return channelsByCode.get(code);
+}
+
+/**
+ * A modifier's side-specific channel's aggregate and sibling — the two facts
+ * {@link InputManager} needs to keep both channel kinds in sync. `aggregate`
+ * is the OR-channel written alongside a side channel (`ShiftLeft` ->
+ * `Shift`). `sibling` is the other physical side of the same modifier,
+ * consulted on release: the aggregate is set to the sibling's CURRENT value
+ * rather than unconditionally cleared, so releasing left `Control` while
+ * right `Control` is still held leaves {@link Keyboard.Control} active.
+ *
+ * @internal
+ */
+interface ModifierChannelInfo {
+  readonly aggregate: Keyboard;
+  readonly sibling: Keyboard;
+}
+
+/**
+ * Side-specific modifier channel → {@link ModifierChannelInfo}. Every
+ * modifier side channel from {@link channelsByCode} has an entry; every other
+ * channel (non-modifier keys) has none, which is how {@link InputManager}
+ * tells a plain key apart from a modifier side.
+ */
+const modifierChannelInfo = new Map<Keyboard, ModifierChannelInfo>([
+  [Keyboard.ShiftLeft, { aggregate: Keyboard.Shift, sibling: Keyboard.ShiftRight }],
+  [Keyboard.ShiftRight, { aggregate: Keyboard.Shift, sibling: Keyboard.ShiftLeft }],
+  [Keyboard.ControlLeft, { aggregate: Keyboard.Control, sibling: Keyboard.ControlRight }],
+  [Keyboard.ControlRight, { aggregate: Keyboard.Control, sibling: Keyboard.ControlLeft }],
+  [Keyboard.AltLeft, { aggregate: Keyboard.Alt, sibling: Keyboard.AltRight }],
+  [Keyboard.AltRight, { aggregate: Keyboard.Alt, sibling: Keyboard.AltLeft }],
+  [Keyboard.MetaLeft, { aggregate: Keyboard.Meta, sibling: Keyboard.MetaRight }],
+  [Keyboard.MetaRight, { aggregate: Keyboard.Meta, sibling: Keyboard.MetaLeft }],
+]);
+
+/**
+ * Look up `channel`'s {@link ModifierChannelInfo}, or `undefined` when
+ * `channel` is not a side-specific modifier channel (every non-modifier key,
+ * and the aggregate channels themselves). @internal
+ */
+export function keyboardModifierChannelInfo(channel: Keyboard): ModifierChannelInfo | undefined {
+  return modifierChannelInfo.get(channel);
 }

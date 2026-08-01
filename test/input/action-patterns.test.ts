@@ -189,6 +189,23 @@ describe('ChordAction', () => {
   test('rejects an unknown keyboard token with a ChordAction-labeled message', () => {
     expect(() => new ChordAction('Control+Nope')).toThrow(/ChordAction: unknown keyboard token/);
   });
+
+  test.each([
+    ['Ctrl', Keyboard.Control],
+    ['Cmd', Keyboard.Meta],
+    ['Command', Keyboard.Meta],
+    ['Super', Keyboard.Meta],
+    ['Opt', Keyboard.Alt],
+    ['Esc', Keyboard.Escape],
+  ])('alias token %s resolves to the same channel as its canonical spelling', (alias, canonical) => {
+    const driver = createSample();
+    const action = new ChordAction(alias);
+
+    driver.batch(10, [[canonical, 1]]);
+    action._update(driver.sample);
+
+    expect(action.active).toBe(true);
+  });
 });
 
 describe('SequenceAction', () => {
