@@ -458,7 +458,24 @@ export class AssetResidency {
       // `existingRef === undefined` branch above already fetched (or filled)
       // for a brand-new entry, and its guard makes it mutually exclusive with
       // this block, so no key is ever fetched twice in one adopt.
-      if (retryingFailedLeaf && existingRef !== undefined) {
+      //
+      // Like the seamless path below, the retry is decided from the KEY, not
+      // from the adopted ref: a brand-new ref is 'idle' (re-armed to 'loading'
+      // above), never 'failed', yet joining a key whose earlier load failed is
+      // every bit as much a retry request. Without the sibling check such a ref
+      // would join the set, find no stored payload, and sit in 'loading'
+      // forever — its fetch already settled into failure, so `_storeResource`
+      // never runs for the key and nothing else would ever restart it.
+      // Reading the siblings after the join above is equivalent to reading them
+      // before it: the adopted ref is 'loading' by now either way, so its own
+      // failure only ever surfaces through `retryingFailedLeaf`.
+      //
+      // Gated on `stored === undefined` so this only ever ADDS the missing
+      // refetch. A key whose payload is resident takes the re-fill branch below
+      // solely on the adopted ref's own retry, unchanged: a ref's `parse()` can
+      // reject a payload that fetched fine, and re-running it for every joining
+      // ref would turn an unrelated adopt into a silent re-parse of the set.
+      if (existingRef !== undefined && (retryingFailedLeaf || (stored === undefined && this._hasFailedRef(existingRef)))) {
         if (stored === undefined) {
           for (const ref of existingRef.refs) if (ref.state === 'failed') ref._begin();
           if (background) this._enqueueBackgroundFetch(ctor, meta.src, existingRef.options);
@@ -728,6 +745,22 @@ export class AssetResidency {
   private _hasFailedHandle(entry: { readonly handles: WeakHandleSet }, adapter: SeamlessAdapter<unknown>): boolean {
     for (const handle of entry.handles) {
       if (adapter.stateOf(handle) === 'failed') {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Value-ref twin of {@link _hasFailedHandle}: does any ref registered for a
+   * value key sit in `'failed'`? Then the key's last attempt ended in failure
+   * and an adoption joining it is a retry, whatever state the adopted ref
+   * itself was in.
+   */
+  private _hasFailedRef(entry: { readonly refs: ReadonlySet<AssetRef<unknown>> }): boolean {
+    for (const ref of entry.refs) {
+      if (ref.state === 'failed') {
         return true;
       }
     }

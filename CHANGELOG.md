@@ -286,6 +286,22 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
   keys that previously had no name. New `keyboardChannelFromCode(code)`
   resolves a raw DOM `code` to its channel for rebinding UIs that work off DOM
   events.
+- **BREAKING — `Scene.init`, the frame hooks and the `System` phases must be
+  synchronous, enforced by the type system and by a hard failure in every
+  build.** `Scene.init`/`fixedUpdate`/`update`/`draw` and
+  `SystemMethods.fixedUpdate`/`update`/`draw` now return `Synchronous`
+  instead of `void`, so `override async update()` is a compile error — a bare
+  `void` return type could never reject it, because TypeScript accepts any
+  return type against a `void`-returning signature. Only thenables are
+  rejected; `void` and the engine's fluent `update(delta): this` convention
+  still compile unchanged. At runtime a hook that returns a thenable now
+  throws a lifecycle error naming the owner, the hook and the remedy, in
+  **production as well as development** — previously an async `init()` was a
+  dev-only activation failure and an async frame hook a dev-only warning, so
+  the same broken override silently dropped its timing and swallowed its
+  errors in a production build. Move asynchronous work into `Scene.load()`,
+  which the engine awaits once per activation. `Scene.load()`/`Scene.unload()`
+  are unchanged and stay asynchronous.
 
 ### Removed
 
@@ -362,7 +378,10 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
   failed handed the loader a brand-new `'idle'` leaf, which joined the failed
   key, flipped to `'loading'`, and hung there because nothing restarted the
   fetch. Whether an adoption is a retry is now decided by the source's own
-  failed handles, not by the state of whichever leaf asked.
+  failed handles, not by the state of whichever leaf asked — and that holds for
+  seamless handles and value refs (`AssetRef`) alike, so a second scene
+  re-claiming a previously-failed JSON/text/binary asset recovers instead of
+  hanging.
 - **`Loader.inspect()` reports `'failed'`, not `'ready'`,** for a value key
   whose fetch succeeded but whose own `parse()` failed: the raw payload is
   stored either way, so a resident payload alone never means "readable".
@@ -370,6 +389,14 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
   changes neither document order nor any child index, so the `children`
   snapshot keeps the reference stability its contract promises and the
   paint-order view alone is recomputed.
+- **`Container.addChild()`/`addChildAt()` reject an already-`destroy()`ed
+  child** instead of linking it into the tree anyway. The prior guard only
+  warned, and only under `__DEV__` — a production build attached the
+  destroyed node silently, where it either rendered nothing (skipped by the
+  render-plan collect step) or replayed freed transform/bounds state. The
+  check is now an always-on `invariant` throw, matching the existing
+  ancestor-cycle guard, so a use-after-destroy attach fails the same way in
+  every build instead of degrading quietly in production only.
 
 ### Docs
 
@@ -380,6 +407,11 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
   game-starter template, and the `runtime`/`recipes`/`integrations` guides to
   the `change()`/`restore()`/`unload()`/`preload()` navigation API and the
   class-based `SceneTransition`/`PhasedSceneTransition` system.
+- Fixed a batch of guide chapters across `assets`/`audio`/`debugging`/`effects`/
+  `getting-started`/`input`/`recipes`/`rendering`/`runtime` that still taught
+  the removed `load(loader)`/`init(loader)` scene-hook signature; samples now
+  match `load(data)`/`init(data)` and reach the loader through `this.loader`
+  (scene-scoped) or `this.app.loader` (application-lifetime).
 
 ## [0.15.2] - 2026-07-04
 

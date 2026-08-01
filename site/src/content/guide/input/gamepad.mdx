@@ -216,7 +216,7 @@ Per-pad bindings are the typical choice for game logic — the player number map
 The `gamepads` array is populated before `init` runs, but the browser's gamepad API only reports connected pads after a button press on some platforms (a browser security restriction). In `init`, check `app.input.connectedGamepads`; if empty, wait for the `onGamepadConnected` signal:
 
 ```js
-init(loader) {
+init() {
     const pad = app.input.firstConnectedGamepad;
 
     if (pad) {

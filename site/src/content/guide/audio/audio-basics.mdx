@@ -31,10 +31,10 @@ Both types are loaded through the `Loader`, like textures, then played through `
 import { Asset, AudioStream, Scene } from '@codexo/exojs';
 
 class AudioScene extends Scene {
-    async load(loader) {
+    async load() {
         const [laser, theme] = await Promise.all([
-            loader.load('audio/laser.ogg'),
-            loader.load(Asset.type('music', 'audio/theme.ogg')),
+            this.loader.load('audio/laser.ogg'),
+            this.loader.load(Asset.type('music', 'audio/theme.ogg')),
         ]);
         this.laser = laser;
         this.theme = theme;
@@ -140,7 +140,7 @@ Pass `{ toVolume }` to fade the incoming voice to something other than full, and
 For rapid-fire SFX (gunshots, footsteps, UI clicks), set `poolSize` higher and use the default FIFO strategy:
 
 ```js
-const gunshot = loader.get('audio/gunshot.ogg');
+const gunshot = this.loader.get('audio/gunshot.ogg');
 gunshot.poolSize = 24;
 
 // ... hold spacebar to fire rapidly ...

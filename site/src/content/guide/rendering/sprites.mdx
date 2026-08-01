@@ -18,12 +18,12 @@ A sprite needs a texture. The shortest path from file to visible quad:
 import { Scene, Sprite } from '@codexo/exojs';
 
 class MyScene extends Scene {
-    async load(loader) {
-        await loader.load('image/hero.png');
+    async load() {
+        await this.loader.load('image/hero.png');
     }
 
-    init(loader) {
-        this.hero = new Sprite(loader.get('image/hero.png'));
+    init() {
+        this.hero = new Sprite(this.loader.get('image/hero.png'));
         this.addChild(this.hero);
     }
 
@@ -43,10 +43,10 @@ A sprite's position places its anchor point in the parent's coordinate space. By
 `setAnchor(0.5)` centers the anchor at the sprite's middle, making `setPosition(400, 300)` place the sprite's center at `(400, 300)`:
 
 ```js
-init(loader) {
+init() {
     const { width, height } = this.app.canvas;
 
-    this.hero = new Sprite(loader.get('image/hero.png'));
+    this.hero = new Sprite(this.loader.get('image/hero.png'));
     this.hero.setAnchor(0.5);
     this.hero.setPosition(width / 2, height / 2);
     this.addChild(this.hero);
@@ -169,7 +169,7 @@ The `animations` map feeds into `AnimatedSprite.fromSpritesheet()`, covered in t
 // Video as a sprite texture
 import { Asset, RenderTexture, Sprite, Video } from '@codexo/exojs';
 
-const video = await loader.load(Asset.type('video', 'intro.mp4'));
+const video = await this.loader.load(Asset.type('video', 'intro.mp4'));
 const sprite = new Sprite(video.texture);
 
 // A RenderTexture (offscreen render) as a sprite texture

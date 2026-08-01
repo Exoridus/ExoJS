@@ -33,7 +33,7 @@ class TiledInfiniteMapScene extends Scene {
     private hudTimer = 0;
     private hud!: ReturnType<typeof mountControls>;
 
-    override async init(): Promise<void> {
+    override async load(): Promise<void> {
         const source = await this.loader.load(Asset.type('tiledMap', 'json/maps/drift-fields.tmj'));
         const runtimeMap = source.toTileMap();
 

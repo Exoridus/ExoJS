@@ -19,9 +19,9 @@ Snapping `view.setCenter` onto the player every frame feels rigid. Ease it inste
 </Callout>
 
 ```js
-init(loader) {
+init() {
     this._view = new View(400, 300, 800, 600);
-    this.player = new Sprite(loader.get('image/hero.png'));
+    this.player = new Sprite(this.loader.get('image/hero.png'));
 }
 
 update(delta) {
@@ -52,7 +52,7 @@ The multiplier controls how quickly the camera catches up. Higher values = snapp
 For menu screens, background effects, or mouse-driven depth, offset layers proportionally to the pointer position relative to the screen center:
 
 ```js
-init(loader) {
+init() {
     // Three layers at different depths
     this._layers = [0.15, 0.35, 0.6].map(speed => {
         const g = new Graphics();

@@ -125,7 +125,7 @@ For shapes that do not change, create the `Graphics` once in `init` and never ca
 Because `Graphics` extends `Container`, it inherits position, rotation, scale, and origin. A single `Graphics` object with several drawn shapes behaves as a group — rotating the `Graphics` rotates all its shape children together:
 
 ```js
-init(loader) {
+init() {
     this.group = new Graphics();
     this.group.fillColor = Color.goldenrod;
     this.group.drawCircle(-40, 0, 20);

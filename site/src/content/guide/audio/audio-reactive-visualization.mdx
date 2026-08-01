@@ -29,8 +29,8 @@ import { Asset, AudioStream, Scene } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 
 class VisualizerScene extends Scene {
-    async load(loader) {
-        this.music = await loader.load(Asset.type('music', 'audio/track.ogg'));
+    async load() {
+        this.music = await this.loader.load(Asset.type('music', 'audio/track.ogg'));
     }
 
     init() {
@@ -153,7 +153,7 @@ A simple scrolling spectrogram:
 ```js
 import { DataTexture, Sprite } from '@codexo/exojs';
 
-init(loader) {
+init() {
     this.analyser = new AudioAnalyser({ fftSize: 512 });
     this.analyser.source = this.app.audio.music;
 
@@ -196,8 +196,8 @@ import { Asset, Application, AudioStream,
 import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
 
 class AudioReactiveScene extends Scene {
-    async load(loader) {
-        this.music = await loader.load(Asset.type('music', 'audio/track.ogg'));
+    async load() {
+        this.music = await this.loader.load(Asset.type('music', 'audio/track.ogg'));
     }
 
     init() {

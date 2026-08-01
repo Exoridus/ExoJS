@@ -20,7 +20,7 @@ class BossIntroCinematicScene extends Scene {
     private width = 0;
     private height = 0;
 
-    override async init(): Promise<void> {
+    override async load(): Promise<void> {
         const app = this.app;
         if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const { width, height } = app.canvas;

@@ -14,13 +14,13 @@ In-canvas UI means text boxes, dialog panels, progress indicators, and interacti
 A dialog system shows text one character at a time, accompanied by a subtle sound. It's built from three primitives: a `Text` node for the dialog text, a `Sound` for the character tick, and a timer (or tween) to drive the reveal:
 
 ```js
-init(loader) {
+init() {
     this.lines = [
         'Commander, the anomaly has entered low orbit.',
         'All wings hold formation and await my signal.',
     ];
 
-    this.portrait = new Sprite(loader.get('image/portrait.png'))
+    this.portrait = new Sprite(this.loader.get('image/portrait.png'))
         .setAnchor(0.5).setScale(1.7).setPosition(170, 420);
 
     this.box = new Text('', {
@@ -30,7 +30,7 @@ init(loader) {
     });
     this.box.setPosition(270, 360);
 
-    this.beep = loader.get('audio/beep.ogg');
+    this.beep = this.loader.get('audio/beep.ogg');
 
     this.lineIndex = 0;
     this.chars = 0;
@@ -85,12 +85,12 @@ The pattern is self-contained: the scene owns the dialog state, `update` drives 
 A radial progress ring using a custom shader filter and a tween. The shader draws a circular arc — a `uProgress` uniform controls how much of the circle is filled. A tween drives `uProgress` from 0 to 1:
 
 ```js
-init(loader) {
+init() {
     this.progress = { v: 0 };
     this.label = new Text('0%', { fillColor: Color.white, fontSize: 42 });
     this.label.setPosition(360, 410);
 
-    this.ring = new Sprite(loader.get('image/uv.png')).setScale(2.2);
+    this.ring = new Sprite(this.loader.get('image/uv.png')).setScale(2.2);
     this.filter = new WebGl2ShaderFilter({
         fragmentSource: progressGlsl,
         uniforms: { uProgress: 0 },

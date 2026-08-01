@@ -28,7 +28,7 @@ Each returns an `InputBinding` you can call `.unbind()` on to detach early. The 
 import { Keyboard, Scene } from '@codexo/exojs';
 
 class GameScene extends Scene {
-    init(loader) {
+    init() {
         this.inputs.onTrigger(Keyboard.Space, () => {
             this.player.jump();
         });
@@ -43,7 +43,7 @@ class GameScene extends Scene {
 For held-key patterns — movement, continuous actions — use `onActive`/`onStop` to track a boolean flag, then consume it in `update`:
 
 ```js
-init(loader) {
+init() {
     this.move = { left: 0, right: 0, up: 0, down: 0 };
 
     this.inputs.onActive(Keyboard.A, () => { this.move.left  = 1; });
@@ -89,7 +89,7 @@ These are raw — no threshold, no auto-disposal. Use them for global shortcuts 
 The `onKeyDown` signal accepts a callback that receives the raw channel number. This is the mechanism for letting the player remap controls at runtime:
 
 ```js
-init(loader) {
+init() {
     this.jumpChannel = Keyboard.Space;
     this.rebindRequested = false;
     this.jumpDirty = true;
@@ -194,12 +194,12 @@ Scene-scoped bindings from `this.inputs` are cleaned up when the scene unloads, 
 import { GamepadAxis, GamepadButton, Keyboard, Scene, Sprite } from '@codexo/exojs';
 
 class PlayerScene extends Scene {
-    async load(loader) {
-        await loader.load('image/hero.png');
+    async load() {
+        await this.loader.load('image/hero.png');
     }
 
-    init(loader) {
-        this.sprite = new Sprite(loader.get('image/hero.png'))
+    init() {
+        this.sprite = new Sprite(this.loader.get('image/hero.png'))
             .setAnchor(0.5)
             .setPosition(400, 300);
 
@@ -277,7 +277,7 @@ The "best input wins" logic — `Math.abs(this.stick.x) > Math.abs(keyX)` — pi
 A clean pattern for larger projects is to centralise input state in a small plain object and let each device category write into it:
 
 ```js
-init(loader) {
+init() {
     // One source of truth for movement intent
     this.move = { x: 0, y: 0 };
     this.actions = { jump: 0, interact: 0, pause: 0 };
@@ -326,7 +326,7 @@ This keeps input handling in one location, makes it easy to add a third device (
 Scene-scoped bindings (`this.inputs.onTrigger(...)`) are automatically disposed when the scene's `destroy` runs. Per-pad bindings (`pad.onTrigger(...)`) are not — they live on the `Gamepad` instance, which outlives any single scene. Store per-pad bindings in an array and unbind them in `destroy`:
 
 ```js
-init(loader) {
+init() {
     this._padBindings = [];
     const pad = this.app.input.getGamepad(0);
 

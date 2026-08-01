@@ -14,9 +14,9 @@ The contract is simple: declare what you need during `load`, await the loader, a
 
 ## The loader instance
 
-Every application owns one loader, available as `app.loader`. The same instance is passed into a scene's `load(loader)` and `init(loader)` hooks. You can also access it directly from any scene as `this.app.loader` once the scene has been registered.
+Every application owns one loader, available as `app.loader`. Inside a scene, reach it two ways: `this.loader` — a scene-scoped claim view whose assets release automatically when the scene ends — and `this.app.loader` — the same underlying application-lifetime instance, for assets that must outlive the scene.
 
-For most scenes you don't need to think about ownership — just use the `loader` argument in `load` and `init`.
+For most scenes you don't need to think about ownership — just use `this.loader` in `load` and `init`.
 
 ## Choose the form that fits
 
@@ -24,7 +24,7 @@ The loader offers several forms. Pick the smallest one that covers your case:
 
 | Form                                                                                        | Best for                                                                      |
 | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `loader.load('hero.png')`                                                                   | One asset, path doubles as its identity — no alias needed                     |
+| `this.loader.load('hero.png')`                                                               | One asset, path doubles as its identity — no alias needed                     |
 | `Asset.type('texture', path)` / `Asset.type('sound', path)` / `Asset.type<T>('json', path)` | The path is computed at runtime (not a literal), or you want an explicit type |
 | `Assets.from({ hero: 'hero.png', … })`                                                      | A reusable, named group of assets shared across scenes                        |
 | `Assets.from({ hero: 'hero.png', music: Asset.type('music', path) })`                       | Mixed types and type-specific options in one catalog                          |
@@ -32,7 +32,7 @@ The loader offers several forms. Pick the smallest one that covers your case:
 When in doubt, start with a bare path string. Reach for `Assets.from` when assets belong together, and `Asset.type(...)` whenever the path isn't a string literal or the type should be explicit.
 
 <Callout type="hint" title="Load different types together, not one await at a time">
-  Awaiting loads sequentially makes each one wait for the previous download to finish. Group independent `loader.load(...)` calls in a single `Promise.all` so
+  Awaiting loads sequentially makes each one wait for the previous download to finish. Group independent `this.loader.load(...)` calls in a single `Promise.all` so
   unrelated resource types fetch concurrently.
 </Callout>
 
@@ -41,34 +41,34 @@ When in doubt, start with a bare path string. Reach for `Assets.from` when asset
 The path _is_ the identity — a bare string resolves directly to the finished asset, with its type inferred from the extension:
 
 ```js
-async load(loader) {
-    const texture = await loader.load('image/hero.png');
+async load() {
+    const texture = await this.loader.load('image/hero.png');
     this.hero = new Sprite(texture);
 }
 ```
 
-There's no separate alias step: call `loader.get('image/hero.png')` again anywhere later — same string, same `Texture` instance. Leaf-capable types such as `texture`, `sound`, `json`, and `text` resolve this way from their file extension. Types that can't be inferred from a path (`music`, `video`, `bmFont`, `font`, …) need an explicit descriptor — see [`Asset.type(...)`](#dynamic-paths-and-non-seamless-types) below.
+There's no separate alias step: call `this.loader.get('image/hero.png')` again anywhere later — same string, same `Texture` instance. Leaf-capable types such as `texture`, `sound`, `json`, and `text` resolve this way from their file extension. Types that can't be inferred from a path (`music`, `video`, `bmFont`, `font`, …) need an explicit descriptor — see [`Asset.type(...)`](#dynamic-paths-and-non-seamless-types) below.
 
 ## Homogeneous batch
 
 When you need several assets of the same type, load them in parallel and keep the returned instances:
 
 ```js
-async load(loader) {
+async load() {
     [this.hero, this.ground, this.coin] = await Promise.all([
-        loader.load('image/hero.png'),
-        loader.load('image/ground.png'),
-        loader.load('image/coin.png'),
+        this.loader.load('image/hero.png'),
+        this.loader.load('image/ground.png'),
+        this.loader.load('image/coin.png'),
     ]);
 }
 ```
 
 The `loader.basePath` option in `ApplicationOptions` prepends a base prefix to all relative paths, so these resolve to e.g. `assets/image/hero.png`.
 
-Because the path is the identity, `loader.get('image/hero.png')` returns the very same `Texture` instance from anywhere else in your code — `init`, a later scene, a system — as long as the string matches.
+Because the path is the identity, the same source path returns the very same `Texture` instance from anywhere else in your code — `this.loader.get('image/hero.png')` from `init`, a later scene, or `app.loader.get(...)` from a system — as long as the string matches.
 
 <Callout type="hint" title="get() returns synchronously for a valid leaf type">
-  For a registered seamless or value suffix, `loader.get(...)` returns synchronously — even before the fetch finishes. Ask for a valid path you haven't loaded
+  For a registered seamless or value suffix, `this.loader.get(...)` returns synchronously — even before the fetch finishes. Ask for a valid path you haven't loaded
   yet and you get a placeholder handle/ref immediately, which then heals once the network request resolves. Invalid input or a missing type/handler still throws
   synchronously. Check `.ready` / `.state` for asynchronous fetch outcomes (see [Status channel](#status-channel-instead-of-throwing) below).
 </Callout>
@@ -87,13 +87,13 @@ async _changeLevel(levelName: string) {
 }
 
 // Non-leaf types do not have a bare-path form, even for a literal path
-const music = await loader.load(Asset.type('music', 'audio/theme.ogg'));
+const music = await this.app.loader.load(Asset.type('music', 'audio/theme.ogg'));
 ```
 
 <Callout type="hint" title="get(Asset.type(...)) is the dynamic-path escape hatch">
-  For seamless and value types, `loader.get(Asset.type(type, dynamicPath))` returns a handle or `AssetRef` immediately and starts the asynchronous load. Capture
+  For seamless and value types, `this.loader.get(Asset.type(type, dynamicPath))` returns a handle or `AssetRef` immediately and starts the asynchronous load. Capture
   that returned object: each descriptor call creates a fresh leaf, although the backend fetch is still deduplicated. Non-leaf types have no synchronous handle
-  and must use `await loader.load(Asset.type(...))`.
+  and must use `await this.loader.load(Asset.type(...))`.
 </Callout>
 
 ## Multiple resource types in parallel
@@ -101,17 +101,17 @@ const music = await loader.load(Asset.type('music', 'audio/theme.ogg'));
 When a scene needs different asset types, load them in parallel with `Promise.all`:
 
 ```js
-async load(loader) {
+async load() {
     [this.sky, this.ambient, this.coin, this.jump, this.levels] = await Promise.all([
-        loader.load('image/sky.png'),
-        loader.load(Asset.type('music', 'audio/ambient.ogg')),
-        loader.load('audio/coin.wav'),
-        loader.load('audio/jump.wav'),
-        loader.load('data/levels.json'),
+        this.loader.load('image/sky.png'),
+        this.loader.load(Asset.type('music', 'audio/ambient.ogg')),
+        this.loader.load('audio/coin.wav'),
+        this.loader.load('audio/jump.wav'),
+        this.loader.load('data/levels.json'),
     ]);
 }
 
-init(loader) {
+init() {
     this.sky = new Sprite(this.sky);
 }
 ```
@@ -130,15 +130,15 @@ const SceneAssets = Assets.from({
     click: Asset.type('sound', 'audio/click.ogg'),
 });
 
-async load(loader) {
-    const { hero, click } = await loader.load(SceneAssets);
+async load() {
+    const { hero, click } = await this.loader.load(SceneAssets);
 
     this.hero  = new Sprite(hero);
     this.click = click;
 }
 ```
 
-The result is an object whose keys match the input and whose values are the resolved resource instances directly — no separate `get()` step needed, though `loader.get('image/hero.png')` / `loader.get('audio/click.ogg')` still work afterward since the source path remains the identity.
+The result is an object whose keys match the input and whose values are the resolved resource instances directly — no separate `get()` step needed, though `this.loader.get('image/hero.png')` / `this.loader.get('audio/click.ogg')` still work afterward since the source path remains the identity.
 
 ## Reusable asset references
 
@@ -158,7 +158,7 @@ Every property is a real, usable handle _before_ any loader touches it — `Titl
 
 ```js
 // Fetches every entry and heals each handle in place
-await loader.load(TitleAssets);
+await this.loader.load(TitleAssets);
 
 // Same objects as before load() — now populated
 this.logo = new Sprite(TitleAssets.logo);
@@ -176,7 +176,7 @@ TitleAssets.config; // AssetRef<{ startLevel: string }>
 `Assets` also exposes an `.entries` record for iteration and inspection. To load several existing catalogs concurrently, keep their types intact and start both queues:
 
 ```js
-await Promise.all([loader.load(CommonAssets), loader.load(TitleAssets)]);
+await Promise.all([this.loader.load(CommonAssets), this.loader.load(TitleAssets)]);
 ```
 
 The key `'entries'` is reserved and will throw if you try to use it as an asset name inside an `Assets` container.
@@ -232,7 +232,7 @@ An override is a new declaration, so composing a derived catalog back together w
 Every `loader.load(...)` call returns a `LoadingQueue<T>`. It implements `PromiseLike<T>`, so `await` and `Promise.all` both work. It also exposes per-queue progress via `onProgress`:
 
 ```js
-const loading = loader.load(TitleAssets);
+const loading = this.loader.load(TitleAssets);
 
 loading.onProgress.add(progress => {
   bar.value = progress.loaded / progress.total;
@@ -253,7 +253,7 @@ const title = await loading;
 Start two queues simultaneously and wait for both:
 
 ```js
-const [title, game] = await Promise.all([loader.load(TitleAssets), loader.load(GameAssets)]);
+const [title, game] = await Promise.all([this.loader.load(TitleAssets), this.loader.load(GameAssets)]);
 ```
 
 Each queue tracks its own progress independently. The result tuple is typed: `title` has the shape of `TitleAssets`, `game` has the shape of `GameAssets`.
@@ -261,9 +261,9 @@ Each queue tracks its own progress independently. The result tuple is typed: `ti
 A practical startup pattern — show the title screen as soon as title assets are ready, while game assets continue loading in the background:
 
 ```js
-async load(loader) {
-    const titleQueue = loader.load(TitleAssets);
-    const gameQueue  = loader.load(GameAssets);
+async load() {
+    const titleQueue = this.loader.load(TitleAssets);
+    const gameQueue  = this.loader.load(GameAssets);
 
     titleQueue.onProgress.add((p) => {
         this._titleProgress = p.loaded / p.total;
@@ -295,27 +295,27 @@ Because the batch is shared, `total` can grow mid-flight: if a new `loader.load(
 
 ```js
 class BootScene extends Scene {
-  init(loader) {
-    loader.onLoadStart.add((key, url) => {
+  init() {
+    this.app.loader.onLoadStart.add((key, url) => {
       this.progressBar.visible = true;
     });
 
-    loader.onLoadProgress.add((loaded, total, key) => {
+    this.app.loader.onLoadProgress.add((loaded, total, key) => {
       this.progressBar.value = loaded / total;
     });
 
-    loader.onLoadError.add((key, error) => {
+    this.app.loader.onLoadError.add((key, error) => {
       console.warn(`Failed to load "${key}":`, error);
       // onLoadComplete still fires once the rest of the batch settles
     });
 
-    loader.onLoadComplete.add(() => {
+    this.app.loader.onLoadComplete.add(() => {
       this.progressBar.visible = false;
       this._enterGame();
     });
 
     // Trigger loads from anywhere — the signals above see all of them
-    loader.load(TitleAssets);
+    this.loader.load(TitleAssets);
   }
 }
 ```
@@ -333,24 +333,24 @@ signals in `unload()` so a listener from a torn-down scene never fires
 
 ```js
 class BootScene extends Scene {
-  init(loader) {
+  init() {
     this._onLoadComplete = () => {
       this.progressBar.visible = false;
       this._enterGame();
     };
 
-    loader.onLoadStart.add((key, url) => {
+    this.app.loader.onLoadStart.add((key, url) => {
       this.progressBar.visible = true;
     });
-    loader.onLoadProgress.add((loaded, total, key) => {
+    this.app.loader.onLoadProgress.add((loaded, total, key) => {
       this.progressBar.value = loaded / total;
     });
-    loader.onLoadError.add((key, error) => {
+    this.app.loader.onLoadError.add((key, error) => {
       console.warn(`Failed to load "${key}":`, error);
     });
-    loader.onLoadComplete.add(this._onLoadComplete);
+    this.app.loader.onLoadComplete.add(this._onLoadComplete);
 
-    loader.load(TitleAssets);
+    this.loader.load(TitleAssets);
   }
 
   unload() {
@@ -387,7 +387,7 @@ interface AssetStatus {
 ```
 
 ```js
-const tex = loader.get('hero.png'); // synchronous for a valid, registered suffix
+const tex = this.loader.get('hero.png'); // synchronous for a valid, registered suffix
 
 if (tex.ready) {
   // draw it
@@ -401,18 +401,18 @@ await tex.loaded; // Promise<this> — resolves once ready, rejects on failure
 The same `.state` / `.ready` / `.error` / `.loaded` contract applies to `AssetRef` values such as JSON or text — read `.value` once `.ready` is `true`:
 
 ```js
-const config = loader.get('data/config.json'); // AssetRef<unknown>
+const config = this.loader.get('data/config.json'); // AssetRef<unknown>
 await config.loaded;
 console.log(config.value.startLevel);
 ```
 
-`get()` returns before network work settles. A later load failure moves the handle/ref to `'failed'`, rejects its `.loaded` promise, and is reported through `loader.onError`; calling `get()` again retries and can heal that same source-keyed handle. By contrast, the awaitable returned by `load()` rejects at the call site on failure and reports the same `Error` through `loader.onError`. Invalid input or a missing type/handler is a synchronous configuration error for either API. A catalog entry's optional `parse` transform must be synchronous — if it returns a Promise (or anything else thenable), the ref it belongs to fails with an explicit error instead of silently awaiting it; do any asynchronous decoding inside the asset handler's load phase instead.
+`get()` returns before network work settles. A later load failure moves the handle/ref to `'failed'`, rejects its `.loaded` promise, and is reported through `this.app.loader.onError`; calling `get()` again retries and can heal that same source-keyed handle. By contrast, the awaitable returned by `load()` rejects at the call site on failure and reports the same `Error` through `this.app.loader.onError`. Invalid input or a missing type/handler is a synchronous configuration error for either API. A catalog entry's optional `parse` transform must be synchronous — if it returns a Promise (or anything else thenable), the ref it belongs to fails with an explicit error instead of silently awaiting it; do any asynchronous decoding inside the asset handler's load phase instead.
 
-`loader.release(...)` drops your claim on an asset; the object itself keeps its identity and heals back to `'loading'` if you `get()` the same source again. It accepts a handle, an `Asset` descriptor, a whole catalog, or a `(type, source)` pair. Releasing a valid form that was never claimed — a descriptor you never loaded, a catalog leaf you never adopted — is a harmless no-op, and releasing twice is always idempotent:
+`this.app.loader.release(...)` drops your claim on an asset; the object itself keeps its identity and heals back to `'loading'` if you `get()` the same source again. It accepts a handle, an `Asset` descriptor, a whole catalog, or a `(type, source)` pair. Releasing a valid form that was never claimed — a descriptor you never loaded, a catalog leaf you never adopted — is a harmless no-op, and releasing twice is always idempotent:
 
 ```js
-loader.release(TitleAssets); // releases every leaf in the catalog
-loader.release(logo); // a single handle from get()
+this.app.loader.release(TitleAssets); // releases every leaf in the catalog
+this.app.loader.release(logo); // a single handle from get()
 ```
 
 Releasing only ever drops _your_ claim. Assets loaded through `scene.loader` belong to that scene and are released when it ends, so releasing at app level can never pull an asset out from under a scene that still needs it. The payload is evicted once the last owner lets go.
@@ -425,13 +425,13 @@ Releasing only ever drops _your_ claim. Assets loaded through `scene.loader` bel
 
 <Callout type="hint" title="Non-seamless types have no placeholder">
   Types that aren't seamless — `AudioStream`, `Video`, `BmFont`, `FontAsset`, and custom types — have no placeholder to hand back, so there's nothing to `get()`
-  speculatively. Load them by reference and hold onto the resolved value: `const music = await loader.load(Asset.type('music', 'audio/theme.ogg'))`. There is no
+  speculatively. Load them by reference and hold onto the resolved value: `const music = await this.loader.load(Asset.type('music', 'audio/theme.ogg'))`. There is no
   `has()`/`peek()` guard — for a seamless handle read `.ready` / `.state`; for a non-seamless resource, `await` the load (or its returned handle's `.loaded`
   promise) before you use it.
 </Callout>
 
 <Callout type="hint" title="Inspecting what's currently loaded">
-  `loader.inspect()` returns a frozen, sorted snapshot — one row per claimed asset, with its state, claim count, and whether it's in flight or still queued in
+  `this.app.loader.inspect()` returns a frozen, sorted snapshot — one row per claimed asset, with its state, claim count, and whether it's in flight or still queued in
   the background — for debugging or a support bundle. It's read-only: nothing you do with the returned array changes what's actually loaded.
 </Callout>
 
@@ -439,14 +439,14 @@ Releasing only ever drops _your_ claim. Assets loaded through `scene.loader` bel
 
 The lifecycle guarantees that:
 
-- Inside `load`, you can `await loader.load(...)` to fetch assets.
+- Inside `load`, you can `await this.loader.load(...)` to fetch assets.
 - `init` runs once `load` is complete — it is safe to read assets there, and every seamless handle you loaded is already `.ready`.
-- After `init`, the same `loader` is still available. Subsequent calls to `loader.get('same/path.png')` from `update`, `draw`, or other places return the same instance.
-- Calling `loader.get('a/path/you-never-loaded.png')` from anywhere kicks off the fetch itself and hands back a `'loading'` placeholder — check `.ready` before relying on the payload being present.
+- After `init`, `this.loader` is still available. Subsequent calls to `this.loader.get('same/path.png')` from `update`, `draw`, or other places return the same instance.
+- Calling `this.loader.get('a/path/you-never-loaded.png')` from anywhere kicks off the fetch itself and hands back a `'loading'` placeholder — check `.ready` before relying on the payload being present.
 
 ## Loading on demand
 
-`loader.load(...)` works any time, not just inside the `load` hook. A computed path isn't a string literal, so use `Asset.type('texture', ...)`:
+`this.loader.load(...)` (or `this.app.loader.load(...)` for an app-lifetime claim) works any time, not just inside the `load` hook. A computed path isn't a string literal, so use `Asset.type('texture', ...)`:
 
 ```js
 async _changeLevel(levelName) {
@@ -481,8 +481,8 @@ Load the menu catalog once and keep it resident, then load level catalogs as the
 
 ```js
 // In the menu scene
-async load(loader) {
-    await loader.load(MenuAssets);
+async load() {
+    await this.loader.load(MenuAssets);
 }
 
 // Later, when entering gameplay
@@ -493,14 +493,14 @@ async _enterLevel1() {
 }
 ```
 
-Loading is idempotent: a catalog whose leaves are already resident resolves immediately without re-fetching, so you can call `loader.load(Level1Assets)` again from anywhere without a guard. Treat catalog names and their keys as part of your project's asset contract.
+Loading is idempotent: a catalog whose leaves are already resident resolves immediately without re-fetching, so you can call `this.app.loader.load(Level1Assets)` again from anywhere without a guard. Treat catalog names and their keys as part of your project's asset contract.
 
 ### Progress for a loading screen
 
 `loader.load(catalog)` returns a `LoadingQueue` — attach `onProgress` for a per-catalog bar, exactly as in [Progress and parallel loading](#progress-and-parallel-loading):
 
 ```js
-const loading = loader.load(Level1Assets);
+const loading = this.app.loader.load(Level1Assets);
 
 loading.onProgress.add(p => {
   this.bar.value = p.loaded / p.total;
@@ -517,7 +517,7 @@ Awaiting a catalog rejects if any leaf fails. Wrap the await and read each leaf'
 
 ```js
 try {
-  await loader.load(Level1Assets);
+  await this.app.loader.load(Level1Assets);
 } catch {
   if (Level1Assets.tiles.state === 'failed') {
     console.warn('tiles failed:', Level1Assets.tiles.error);
@@ -534,10 +534,10 @@ To fetch a catalog ahead of time without blocking the current scene, pass `{ bac
 
 ```js
 // Kick off the next level while the player is still in this one
-loader.load(Level2Assets, { background: true });
+this.app.loader.load(Level2Assets, { background: true });
 ```
 
-A backgrounded leaf is boosted to fetch immediately if something `get()`s or foreground-`load()`s it before the queue reaches it — so there's nothing to guard against. Request it in the background early, then `await loader.load(Level2Assets)` when you actually need it and it resolves as soon as the in-flight fetch finishes. `loader.awaitBackground()` resolves once the background queue has fully drained.
+A backgrounded leaf is boosted to fetch immediately if something `get()`s or foreground-`load()`s it before the queue reaches it — so there's nothing to guard against. Request it in the background early, then `await this.app.loader.load(Level2Assets)` when you actually need it and it resolves as soon as the in-flight fetch finishes. `this.app.loader.awaitBackground()` resolves once the background queue has fully drained.
 
 ## Caching and IndexedDB
 
@@ -649,14 +649,14 @@ Install the binding by passing it on an [`Extension`](/ExoJS/en/api/extension/) 
 
 ```js
 // Dynamic path or explicit reference
-const field = await loader.load(Asset.type('heightField', 'maps/level-1.hf'));
+const field = await this.loader.load(Asset.type('heightField', 'maps/level-1.hf'));
 
 // Or grouped in a catalog
 const World = Assets.from({ level1: Asset.type('heightField', 'maps/level-1.hf') });
 ```
 
 <Callout type="hint" title="Bare-path inference is opt-in">
-`Asset.type('heightField', ...)` always works. To *also* allow a bare `loader.load('maps/level-1.hf')` (extension-inferred), the type must be **leaf-capable** — either a value type (`isValue: true`) or a resource with a `seamless` adapter that heals in place — and it must declare its file suffixes. Register them on the descriptor and mirror the suffix→type mapping in the type system:
+`Asset.type('heightField', ...)` always works. To *also* allow a bare `this.loader.load('maps/level-1.hf')` (extension-inferred), the type must be **leaf-capable** — either a value type (`isValue: true`) or a resource with a `seamless` adapter that heals in place — and it must declare its file suffixes. Register them on the descriptor and mirror the suffix→type mapping in the type system:
 
 ```ts no-check
 export const heightFieldBinding = defineAsset({

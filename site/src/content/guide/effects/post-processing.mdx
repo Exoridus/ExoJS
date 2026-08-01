@@ -72,12 +72,12 @@ class BloomScene extends Scene {
     private blur!: BlurFilter;
     private pipeline!: RenderPipeline;
 
-    override init(loader): void {
+    override init(): void {
         this.baseRt = new RenderTexture(800, 600);
         this.glowRt = new RenderTexture(800, 600);
         this.blurredRt = new RenderTexture(800, 600);
 
-        this.bunny = new Sprite(loader.get('image/bunny.png')).setAnchor(0.5);
+        this.bunny = new Sprite(this.loader.get('image/bunny.png')).setAnchor(0.5);
         this.baseSprite = new Sprite(this.baseRt);
         this.glowSprite = new Sprite(this.blurredRt)
             .setTint(new Color(255, 255, 255, 0.8))
@@ -180,11 +180,11 @@ class TrailScene extends Scene {
     private final!: Sprite;
     private pipeline!: RenderPipeline;
 
-    override init(loader): void {
+    override init(): void {
         this.feedbackRt = new RenderTexture(800, 600);
         this.decay = new Sprite(this.feedbackRt)
             .setTint(new Color(255, 255, 255, 0.93)); // 93% opaque = 7% fade per frame
-        this.hero = new Sprite(loader.get('image/hero.png')).setAnchor(0.5);
+        this.hero = new Sprite(this.loader.get('image/hero.png')).setAnchor(0.5);
         this.final = new Sprite(this.feedbackRt);
 
         this.pipeline = new RenderPipeline()
