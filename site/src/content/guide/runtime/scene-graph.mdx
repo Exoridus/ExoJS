@@ -17,9 +17,9 @@ Two key types: [`RenderNode`](/ExoJS/en/api/render-node/) is the abstract base f
 Every scene starts with one container already in place — `this.root`. Adding a node via `this.addChild(...)` is shorthand for `this.root.addChild(...)`:
 
 ```js
-init(loader) {
-    this.hero = new Sprite(loader.get('hero.png'));
-    this.coin = new Sprite(loader.get('coin.png'));
+init() {
+    this.hero = new Sprite(this.loader.get('hero.png'));
+    this.coin = new Sprite(this.loader.get('coin.png'));
 
     this.addChild(this.hero);
     this.addChild(this.coin);
@@ -29,12 +29,12 @@ init(loader) {
 For larger scenes, build sub-containers and add nodes to them instead:
 
 ```js
-init(loader) {
+init() {
     this.world = new Container();
     this.hud = new Container();
 
-    this.world.addChild(new Sprite(loader.get('level.png')));
-    this.hud.addChild(new Sprite(loader.get('health-bar.png')));
+    this.world.addChild(new Sprite(this.loader.get('level.png')));
+    this.hud.addChild(new Sprite(this.loader.get('health-bar.png')));
 
     this.addChild(this.world);
     this.addChild(this.hud);
@@ -51,8 +51,8 @@ When a parent transforms, its children move with it. If you set the parent's pos
 this.player = new Container();
 this.player.setPosition(100, 0);
 
-const body = new Sprite(loader.get('body.png'));
-const head = new Sprite(loader.get('head.png'));
+const body = new Sprite(this.loader.get('body.png'));
+const head = new Sprite(this.loader.get('head.png'));
 head.setPosition(0, -32);
 
 this.player.addChild(body);

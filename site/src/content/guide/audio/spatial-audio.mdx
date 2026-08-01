@@ -43,7 +43,7 @@ Valid target types are:
 `Sound` itself carries no spatial state — position and distance model live on the `Voice` that `app.audio.play()` returns. Seed the initial position via `PlayOptions`:
 
 ```js
-const pickup = loader.get('audio/pickup.wav');
+const pickup = this.loader.get('audio/pickup.wav');
 const voice = this.app.audio.play(pickup, { position: { x: 320, y: 180 } });
 ```
 
@@ -180,11 +180,11 @@ The same explicit-or-derived rule applies symmetrically to the listener: set `ap
 The most common pattern is to set the listener's target to the camera or player once in `init`, then pass a `position` in `PlayOptions` right before each one-shot play:
 
 ```js
-init(loader) {
-    this.pickupSfx = loader.get('audio/pickup.wav');
+init() {
+    this.pickupSfx = this.loader.get('audio/pickup.wav');
     this.pickupSfx.volume = 0.6;
 
-    app.audio.listener.target = this.player;
+    this.app.audio.listener.target = this.player;
 }
 
 update(delta) {
@@ -203,7 +203,7 @@ A voice played without a `position` plays non-spatially — full volume in both 
 For ambient sounds that should follow the listener's general area but not overlap, set a large `refDistance`:
 
 ```js
-const waterfall = loader.get('audio/waterfall.ogg');
+const waterfall = this.loader.get('audio/waterfall.ogg');
 const voice = this.app.audio.play(waterfall, {
     loop: true,
     position: { x: 600, y: 200 },

@@ -21,8 +21,8 @@ When the player takes damage, flash the sprite red for a fraction of a second an
 ```js
 import { ColorFilter, Signal } from '@codexo/exojs';
 
-init(loader) {
-    this.player = new Sprite(loader.get('image/hero.png'));
+init() {
+    this.player = new Sprite(this.loader.get('image/hero.png'));
     this.flash = new ColorFilter(new Color(255, 255, 255, 1));
     this.player.filters = [this.flash];
 
