@@ -81,7 +81,7 @@ describe('Application.start() with a real FadeSceneTransition (Slice 7 capstone)
     const perfSpy = vi.spyOn(performance, 'now').mockImplementation(() => now);
 
     try {
-      const startPromise = app.start(TitleScene, { transition: new FadeSceneTransition(undefined, { duration: 40 }) });
+      const startPromise = app.start(TitleScene, { transition: new FadeSceneTransition({ duration: 40 }) });
 
       let settled = false;
       void startPromise.then(() => {

@@ -81,11 +81,18 @@ describe('FadeSceneTransition', () => {
 
   test('accepts a custom color and options', () => {
     const customColor = new Color(255, 0, 0, 1);
-    const fade = new FadeSceneTransition(customColor, { duration: 500, easing: Ease.cubicOut });
+    const fade = new FadeSceneTransition({ color: customColor, duration: 500, easing: Ease.cubicOut, placement: 'screen' });
 
     expect(fade.color).toBe(customColor);
     expect(fade.duration).toBe(500);
     expect(fade.easing).toBe(Ease.cubicOut);
+    expect(fade.placement).toBe('screen');
+  });
+
+  test('rejects the removed positional Color form at runtime with a migration message', () => {
+    expect(() => new FadeSceneTransition(Color.red as unknown as ConstructorParameters<typeof FadeSceneTransition>[0])).toThrow(
+      /no longer accepts a positional Color/,
+    );
   });
 
   test('getPhaseRequirements: none/direct for both phases (no texture, no snapshot)', () => {

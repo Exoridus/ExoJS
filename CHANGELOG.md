@@ -148,7 +148,7 @@ data?)` or `app.start('game', data?)`; `app.scene.setScene(instance, opts)`
   resolving via an undocumented `retained → preloaded → active` priority.
 - **BREAKING — the `transition` option no longer accepts a config object.**
   `{ transition: { type: 'fade', duration: 250 } }` →
-  `{ transition: new FadeSceneTransition(undefined, { duration: 250 }) }` — note
+  `{ transition: new FadeSceneTransition({ duration: 250 }) }` — note
   `duration` is now milliseconds, not seconds. `SceneTransition` is a class
   (abstract base + `FadeSceneTransition`/`CrossFadeSceneTransition`/
   `SlideSceneTransition`/`PhasedSceneTransition`), not a union type.

@@ -8,6 +8,12 @@ import {
 import { Matrix } from '#math/Matrix';
 import { QuadGeometry } from '#rendering/geometry/QuadGeometry';
 
+/** Options for {@link FadeSceneTransition}. */
+export interface FadeSceneTransitionOptions extends PhasedSceneTransitionOptions {
+  /** The color faded to. Default {@link Color.black}. */
+  readonly color?: Color;
+}
+
 /** Per-session scratch state for {@link FadeSceneTransition} — never shared with the (immutable, reusable-across-navigations) definition instance. */
 interface FadePhaseState {
   readonly quad: QuadGeometry;
@@ -27,9 +33,13 @@ export class FadeSceneTransition extends PhasedSceneTransition<FadePhaseState> {
   /** The color faded to. Default {@link Color.black}. */
   public readonly color: Color;
 
-  public constructor(color: Color = Color.black, options: PhasedSceneTransitionOptions = {}) {
+  public constructor(options: FadeSceneTransitionOptions = {}) {
+    if (options instanceof Color) {
+      throw new TypeError('FadeSceneTransition no longer accepts a positional Color. Use new FadeSceneTransition({ color, duration, easing }).');
+    }
+
     super(options);
-    this.color = color;
+    this.color = options.color ?? Color.black;
   }
 
   protected override getPhaseRequirements(): SceneTransitionPhaseRequirements {
