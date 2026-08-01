@@ -277,7 +277,7 @@ export class FocusController implements FocusHooks {
   }
 
   private _handleKeyDown(channel: number): void {
-    if (channel === Keyboard.Shift) {
+    if (channel === Keyboard.ShiftLeft || channel === Keyboard.ShiftRight) {
       this._shiftDown = true;
     }
 
@@ -301,7 +301,7 @@ export class FocusController implements FocusHooks {
   }
 
   private _handleKeyUp(channel: number): void {
-    if (channel === Keyboard.Shift) {
+    if (channel === Keyboard.ShiftLeft || channel === Keyboard.ShiftRight) {
       this._shiftDown = false;
     }
 

@@ -338,6 +338,26 @@ describe('InputManager — keyboard', () => {
     im.destroy();
   });
 
+  test('a binding captured on the aggregate modifier channel still suppresses the default for a side-key event', () => {
+    const { im, canvas } = createInputManager();
+
+    canvas.dispatchEvent(new FocusEvent('focus'));
+    const binding = im.onStart(Keyboard.Control, () => {});
+
+    const downEvent = new KeyboardEvent('keydown', { code: 'ControlLeft', cancelable: true });
+
+    window.dispatchEvent(downEvent);
+    expect(downEvent.defaultPrevented).toBe(true);
+
+    const upEvent = new KeyboardEvent('keyup', { code: 'ControlLeft', cancelable: true });
+
+    window.dispatchEvent(upEvent);
+    expect(upEvent.defaultPrevented).toBe(true);
+
+    binding.unbind();
+    im.destroy();
+  });
+
   test('ref-counts captured channels: unbinding one of two bindings on the same channel keeps it captured', () => {
     const { im, canvas } = createInputManager();
 

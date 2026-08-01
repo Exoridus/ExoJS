@@ -1,12 +1,12 @@
 {
   "title": "Keyboard",
-  "description": "Channel indices for keyboard keys, addressed by PHYSICAL key position. Pass any value to the Input constructor to react to that key. A key is identified by the Web platform's layout-independent `KeyboardEvent.code` (see keyboardChannelFromCode), not by the layout-dependent `keyCode`: Keyboard.A is the key at the QWERTY \"A\" position on every layout — the one an AZERTY keyboard prints \"Q\" on — so WASD-style bindings stay in the same place under the player's hand regardless of the player's layout. Every member therefore names a POSITION, described by the glyph a US-QWERTY keyboard prints there, and NOT the character the key actually produces: Keyboard.Z is the key a German QWERTZ keyboard prints \"Y\" on, and Keyboard.Colon the key it prints \"ö\" on. Use DOM text input for anything that needs the typed character, dead keys, or IME composition. The values are opaque channel indices inside the keyboard category — do not assume they equal any `keyCode`. Each modifier is ONE channel covering both physical sides: `ShiftLeft` and `ShiftRight` both drive Keyboard.Shift.",
+  "description": "Channel indices for keyboard keys, addressed by PHYSICAL key position. Pass any value to the Input constructor to react to that key. A key is identified by the Web platform's layout-independent `KeyboardEvent.code` (see keyboardChannelFromCode), not by the layout-dependent `keyCode`: Keyboard.A is the key at the QWERTY \"A\" position on every layout — the one an AZERTY keyboard prints \"Q\" on — so WASD-style bindings stay in the same place under the player's hand regardless of the player's layout. Every member therefore names a POSITION, described by the glyph a US-QWERTY keyboard prints there, and NOT the character the key actually produces: Keyboard.Z is the key a German QWERTZ keyboard prints \"Y\" on, and Keyboard.Colon the key it prints \"ö\" on. Use DOM text input for anything that needs the typed character, dead keys, or IME composition. The values are opaque channel indices inside the keyboard category — do not assume they equal any `keyCode`. Each modifier has both a side-specific channel (`ShiftLeft`, `ShiftRight`, `ControlLeft`, `ControlRight`, `AltLeft`, `AltRight`, `MetaLeft`, `MetaRight`) and an aggregate one (`Shift`, `Control`, `Alt`, `Meta`) that is active whenever either side is held — the aggregate is what a game binding wants (\"was Control held\", regardless of which hand), while the side-specific channels exist for a key-press visualizer or a rebinding UI that needs to tell the two physical keys apart. Releasing one side while the other stays held keeps the aggregate active.",
   "symbol": "Keyboard",
   "kind": "enum",
   "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 105,
+  "memberCount": 113,
   "counts": {
     "constructors": 0,
     "methods": 0,
@@ -23,7 +23,7 @@
         "A key is identified by the Web platform's layout-independent `KeyboardEvent.code` (see keyboardChannelFromCode), not by the layout-dependent `keyCode`: Keyboard.A is the key at the QWERTY \"A\" position on every layout — the one an AZERTY keyboard prints \"Q\" on — so WASD-style bindings stay in the same place under the player's hand regardless of the player's layout.",
         "Every member therefore names a POSITION, described by the glyph a US-QWERTY keyboard prints there, and NOT the character the key actually produces: Keyboard.Z is the key a German QWERTZ keyboard prints \"Y\" on, and Keyboard.Colon the key it prints \"ö\" on. Use DOM text input for anything that needs the typed character, dead keys, or IME composition.",
         "The values are opaque channel indices inside the keyboard category — do not assume they equal any `keyCode`.",
-        "Each modifier is ONE channel covering both physical sides: `ShiftLeft` and `ShiftRight` both drive Keyboard.Shift."
+        "Each modifier has both a side-specific channel (`ShiftLeft`, `ShiftRight`, `ControlLeft`, `ControlRight`, `AltLeft`, `AltRight`, `MetaLeft`, `MetaRight`) and an aggregate one (`Shift`, `Control`, `Alt`, `Meta`) that is active whenever either side is held — the aggregate is what a game binding wants (\"was Control held\", regardless of which hand), while the side-specific channels exist for a key-press visualizer or a rebinding UI that needs to tell the two physical keys apart. Releasing one side while the other stays held keeps the aggregate active."
       ],
       "importLine": "import { Keyboard } from '@codexo/exojs'",
       "sourceLink": null
@@ -51,6 +51,32 @@
           "signatureTokens": [
             {
               "text": "Alt",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "AltLeft",
+          "signature": "AltLeft",
+          "signatureTokens": [
+            {
+              "text": "AltLeft",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "AltRight",
+          "signature": "AltRight",
+          "signatureTokens": [
+            {
+              "text": "AltRight",
               "kind": "name"
             }
           ],
@@ -181,6 +207,32 @@
           "signatureTokens": [
             {
               "text": "Control",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "ControlLeft",
+          "signature": "ControlLeft",
+          "signatureTokens": [
+            {
+              "text": "ControlLeft",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "ControlRight",
+          "signature": "ControlRight",
+          "signatureTokens": [
+            {
+              "text": "ControlRight",
               "kind": "name"
             }
           ],
@@ -709,6 +761,32 @@
           "description": ""
         },
         {
+          "name": "MetaLeft",
+          "signature": "MetaLeft",
+          "signatureTokens": [
+            {
+              "text": "MetaLeft",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "MetaRight",
+          "signature": "MetaRight",
+          "signatureTokens": [
+            {
+              "text": "MetaRight",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
           "name": "N",
           "signature": "N",
           "signatureTokens": [
@@ -1195,6 +1273,32 @@
           "signatureTokens": [
             {
               "text": "Shift",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "ShiftLeft",
+          "signature": "ShiftLeft",
+          "signatureTokens": [
+            {
+              "text": "ShiftLeft",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "ShiftRight",
+          "signature": "ShiftRight",
+          "signatureTokens": [
+            {
+              "text": "ShiftRight",
               "kind": "name"
             }
           ],

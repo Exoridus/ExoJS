@@ -167,6 +167,20 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
   `using` type-checks under `es2022` without consumers bumping `lib`/`target`.
 - **`FadeSceneTransitionOptions`** is exported from the root and
   `core/transitions` barrels (previously unnameable by consumers).
+- **Side-specific keyboard modifier channels.** `Keyboard` gains
+  `ShiftLeft`/`ShiftRight`, `ControlLeft`/`ControlRight`, `AltLeft`/`AltRight`,
+  and `MetaLeft`/`MetaRight`, each occupying a previously-unused channel slot
+  — no existing `Keyboard` member's numeric value changes. `Shift`/`Control`/
+  `Alt`/`Meta` remain as aggregate OR-channels, active whenever either
+  physical side is held; releasing one side while the other stays down keeps
+  the aggregate active instead of clearing it. `keyboardChannelFromCode`
+  now resolves a modifier `code` to its side-specific channel rather than
+  the aggregate. `onKeyDown`/`onKeyUp` keep dispatching exactly once per
+  physical key event, carrying the side-specific channel — the aggregate is
+  buffer state an action reads, not a signal of its own. `ChordAction`/
+  `SequenceAction` string patterns gain shorthand aliases: `Ctrl` for
+  `Control`, `Cmd`/`Command`/`Super` for `Meta`, `Opt` for `Alt`, `Esc` for
+  `Escape`.
 
 ### Changed
 
