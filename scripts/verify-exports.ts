@@ -8,7 +8,7 @@ interface PackageJson {
   browser?: string;
   types?: string;
   exports?: unknown;
-  files?: ReadonlyArray<string>;
+  files?: readonly string[];
 }
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -36,7 +36,7 @@ const collectExportTargets = (value: unknown, targets: Set<string>): void => {
 };
 
 const targets = new Set<string>();
-const entryPointKeys: ReadonlyArray<keyof PackageJson> = ['main', 'module', 'browser', 'types'];
+const entryPointKeys: readonly (keyof PackageJson)[] = ['main', 'module', 'browser', 'types'];
 
 for (const key of entryPointKeys) {
   const value = packageJson[key];
@@ -47,10 +47,10 @@ for (const key of entryPointKeys) {
 
 collectExportTargets(packageJson.exports, targets);
 
-const filesAllowList: ReadonlyArray<string> = Array.isArray(packageJson.files) ? packageJson.files.map(value => normalizePath(String(value))) : [];
+const filesAllowList: readonly string[] = Array.isArray(packageJson.files) ? packageJson.files.map(value => normalizePath(String(value))) : [];
 
-const missingTargets: Array<string> = [];
-const filesCoverageIssues: Array<string> = [];
+const missingTargets: string[] = [];
+const filesCoverageIssues: string[] = [];
 
 for (const target of targets) {
   if (typeof target !== 'string' || !target.startsWith('./')) {

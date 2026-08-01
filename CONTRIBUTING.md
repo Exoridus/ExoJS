@@ -3,6 +3,35 @@
 ExoJS is a TypeScript-first, pnpm-workspace monorepo. Core (`@codexo/exojs`) lives
 at the repository root; official extensions and tooling live under `packages/`.
 
+## One-time clone setup
+
+Run this once per clone:
+
+```sh
+git config pull.ff only
+```
+
+`main` only ever advances through a reviewed PR, so a local commit on `main`
+cannot reach the remote — it just makes the branch diverge from `origin/main`.
+On a diverged branch, Git's default `pull` silently builds a merge commit, and
+that history has to be untangled by hand afterwards. `pull.ff only` turns the
+diverged pull into a loud failure instead.
+
+The other half of that guard — refusing commits on `main` in the first place —
+ships with the repo as `.husky/pre-commit`, so it needs no setup. For a
+deliberate exception such as a release version bump:
+
+```sh
+ALLOW_MAIN_COMMIT=1 git commit ...
+```
+
+Optional, but useful in a repo with many short-lived branches — prune
+remote-tracking refs whose upstream is gone on every fetch:
+
+```sh
+git config fetch.prune true
+```
+
 ## Import policy
 
 Package-internal imports use Node `package.json#imports` subpath imports — never a

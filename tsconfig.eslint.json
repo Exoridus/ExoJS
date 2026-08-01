@@ -3,5 +3,5 @@
   "compilerOptions": {
     "noEmit": true
   },
-  "include": ["src/**/*", "test/**/*", "eslint.config.ts", "jest.config.ts", "rollup.config.ts", "scripts/**/*"]
+  "include": ["src/**/*", "test/**/*", "eslint.config.ts", "rollup.config.ts", "scripts/**/*"]
 }

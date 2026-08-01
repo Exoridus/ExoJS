@@ -307,7 +307,7 @@ const productionOnlyConfigs = buildMode === 'production' ? [iifeMin] : [];
 // EXOJS_FULL_BUNDLE=1. It bundles extension-package source across multiple
 // rootDirs, which is meaningfully more expensive to build (esbuild transpiles
 // the entire dependency graph of core + every extension package) and produces
-// an artifact most consumers don't need (see .size-limit.cjs), so it stays
+// an artifact most consumers don't need (see .size-limit.ts), so it stays
 // out of the default `pnpm build` / release path.
 const fullBundleConfigs = process.env.EXOJS_FULL_BUNDLE === '1' ? (buildMode === 'production' ? [iifeFull, iifeFullMin] : [iifeFull]) : [];
 

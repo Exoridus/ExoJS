@@ -33,7 +33,7 @@ import { LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
-const LOCKSTEP_DIRS: Array<{ name: string; dir: string }> = LOCKSTEP_PACKAGES.map(p => ({ name: p.name, dir: p.dir }));
+const LOCKSTEP_DIRS: { name: string; dir: string }[] = LOCKSTEP_PACKAGES.map(p => ({ name: p.name, dir: p.dir }));
 
 const EXTENSION_NAMES = new Set(LOCKSTEP_PACKAGES.filter(p => p.isExtension).map(p => p.name));
 

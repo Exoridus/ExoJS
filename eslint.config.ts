@@ -1410,6 +1410,16 @@ export default defineConfig([
     },
   },
 
+  // Build/release tooling and root config files. These run under Node, never
+  // ship to consumers, and report progress on stdout by design — `no-console`
+  // is the wrong rule here, not a violation to silence per-line.
+  {
+    files: ['scripts/**/*.ts', '*.config.ts'],
+    rules: {
+      'no-console': 'off',
+    },
+  },
+
   // Prettier compatibility: keep this last
   prettier,
 ]);

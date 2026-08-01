@@ -66,13 +66,9 @@ export const assertLockstepVersion = (packages: OfficialPackage[]): string => {
  * path for each, in publish order. Throws if any pack fails or a tarball is
  * missing — a coordinated release cannot have a hole in the matrix.
  */
-export const packOfficialTarballs = (
-  runner: CommandRunner,
-  packages: OfficialPackage[],
-  stagingDir: string,
-): Array<{ pkg: OfficialPackage; tarball: string }> => {
+export const packOfficialTarballs = (runner: CommandRunner, packages: OfficialPackage[], stagingDir: string): { pkg: OfficialPackage; tarball: string }[] => {
   mkdirSync(stagingDir, { recursive: true });
-  const out: Array<{ pkg: OfficialPackage; tarball: string }> = [];
+  const out: { pkg: OfficialPackage; tarball: string }[] = [];
 
   for (const pkg of packages) {
     const result = runner.run({
@@ -93,7 +89,7 @@ export const packOfficialTarballs = (
 };
 
 /** Builds a release manifest from the packed tarballs (hashing each one). */
-export const buildManifest = (version: string, revision: string, packed: Array<{ pkg: OfficialPackage; tarball: string }>): ReleaseManifest => {
+export const buildManifest = (version: string, revision: string, packed: { pkg: OfficialPackage; tarball: string }[]): ReleaseManifest => {
   const shortRevision = revision.length >= 7 ? revision.slice(0, 7) : revision;
 
   const packages: TarballRecord[] = packed

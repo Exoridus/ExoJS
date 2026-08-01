@@ -1,4 +1,6 @@
-module.exports = [
+import type { SizeLimitConfig } from 'size-limit';
+
+export default [
   {
     path: 'dist/exo.esm.js',
     limit: '700 KB',
@@ -11,4 +13,4 @@ module.exports = [
   },
   // The full bundle (dist/exo.full.iife.min.js) is opt-in (EXOJS_FULL_BUNDLE=1)
   // and not produced by the default build, so it is not size-gated here.
-];
+] satisfies SizeLimitConfig;

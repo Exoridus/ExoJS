@@ -14,7 +14,7 @@ export interface CommandInvocation {
   /** Executable, e.g. `'npm'` or `'git'`. */
   command: string;
   /** Argument vector, e.g. `['publish', 'pkg.tgz', '--dry-run']`. */
-  args: ReadonlyArray<string>;
+  args: readonly string[];
   /** Working directory for the invocation. */
   cwd?: string;
 }
