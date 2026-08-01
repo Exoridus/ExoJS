@@ -1,6 +1,6 @@
 {
   "title": "SequenceBinding",
-  "description": "A binding accepted by SequenceAction: a `'>'`-separated, `'+'`-joined string pattern (`'Down>Down+Right>Right'`), or an InputSequence array of steps directly.",
+  "description": "A binding accepted by SequenceAction: a `'>'`-separated, `'+'`-joined, `'|'`-alternated string pattern (`'Down>Down+Right>Right'`, `'A+B|C>D'`), or an InputSequence array of steps directly.",
   "symbol": "SequenceBinding",
   "kind": "type",
   "subsystem": "input",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A binding accepted by SequenceAction: a `'>'`-separated, `'+'`-joined string pattern (`'Down>Down+Right>Right'`), or an InputSequence array of steps directly."
+        "A binding accepted by SequenceAction: a `'>'`-separated, `'+'`-joined, `'|'`-alternated string pattern (`'Down>Down+Right>Right'`, `'A+B|C>D'`), or an InputSequence array of steps directly."
       ],
       "importLine": "import { SequenceBinding } from '@codexo/exojs'",
       "sourceLink": null

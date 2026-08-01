@@ -1,24 +1,26 @@
 import { ButtonLikeAction } from './ButtonLikeAction';
-import { type InputChord, normalizeSequence } from './pattern';
+import { type InputAlternation, type InputChord, normalizeSequence } from './pattern';
 import type { ActionOptions } from './types';
 
 /**
- * A binding accepted by {@link ChordAction}: a `'+'`-joined string of
- * case-insensitive {@link Keyboard} token names (`'Control+S'`), or an
- * {@link InputChord} array of channels required together directly.
+ * A binding accepted by {@link ChordAction}: a `'+'`/`'|'` string of
+ * case-insensitive {@link Keyboard} token names (`'Control+S'`,
+ * `'Control+S|Meta+S'`), an {@link InputChord} array of channels required
+ * together directly, or an {@link InputAlternation} array of such chords —
+ * any one of which satisfies the binding.
  */
-export type ChordBinding = string | InputChord;
+export type ChordBinding = string | InputChord | InputAlternation;
 
-/** Weakest absolute value across every entry, sign-preserving. */
-function weakestOf(values: Float32Array): number {
-  if (values.length === 0) {
+/** Weakest absolute value among `values` at `indices`, sign-preserving. `0` for an empty group. */
+function weakestAt(values: Float32Array, indices: readonly number[]): number {
+  if (indices.length === 0) {
     return 0;
   }
 
-  let weakest = values[0] ?? 0;
+  let weakest = values[indices[0]!] ?? 0;
 
-  for (let i = 1; i < values.length; i++) {
-    const value = values[i] ?? 0;
+  for (let i = 1; i < indices.length; i++) {
+    const value = values[indices[i]!] ?? 0;
 
     if (Math.abs(value) < Math.abs(weakest)) {
       weakest = value;
@@ -40,7 +42,14 @@ function weakestOf(values: Float32Array): number {
  * reports the trigger's pull limited by whether the button is engaged at all —
  * `0` the instant any member releases, never the button's own binary 0/1.
  *
- * A string binding resolves `+`-joined tokens as case-insensitive
+ * `'|'` alternates between whole chords — `'Control+S|Meta+S'` is active
+ * while EITHER modifier is held alongside `S`. This composes the same
+ * strongest/weakest reduction one level deeper: each alternative reports its
+ * own weakest member as above, and the action reports the strongest of those
+ * alternatives, so an analog alternative's `value` still reflects its own
+ * least-engaged member rather than collapsing to a plain boolean.
+ *
+ * A string binding resolves `+`/`|`-joined tokens as case-insensitive
  * {@link Keyboard} enum names (`'Control+S'`, `'control+s'`). This is a
  * shortcut list syntax for enum lookups, not text or IME input — it never
  * decodes typed characters, dead keys, or composed input, and rejects any
@@ -50,15 +59,19 @@ function weakestOf(values: Float32Array): number {
  *
  * @example
  * ```ts
- * const save = new ChordAction('Control+S');
+ * const save = new ChordAction('Control+S|Meta+S');
  * const swap = new ChordAction([GamepadButton.LeftShoulder, GamepadButton.RightShoulder]);
  * ```
  */
 export class ChordAction extends ButtonLikeAction {
+  /** One entry per alternative; each lists that alternative's channels as indices into {@link ButtonLikeAction._values}. */
+  private readonly _alternativeIndices: ReadonlyArray<readonly number[]>;
+
   /**
    * @throws {Error} If a string binding contains a `>` step separator (use
-   * {@link SequenceAction}), an unknown `Keyboard` token, an empty `+`
-   * segment, or the same channel twice.
+   * {@link SequenceAction}), an unknown `Keyboard` token, an empty `+`/`|`
+   * segment, a mix of a bare channel and a nested alternative within the
+   * same binding, or the same channel twice within one alternative.
    */
   public constructor(binding: ChordBinding, options: ActionOptions = {}) {
     const steps = normalizeSequence(typeof binding === 'string' ? binding : [binding], options.gamepadSlot ?? 0, 'ChordAction');
@@ -70,10 +83,25 @@ export class ChordAction extends ButtonLikeAction {
       );
     }
 
-    super(steps[0]!, options.threshold ?? 0);
+    const alternatives = steps[0]!;
+    const channels = [...new Set(alternatives.flat())];
+
+    super(channels, options.threshold ?? 0);
+
+    this._alternativeIndices = alternatives.map(alternative => alternative.map(channel => channels.indexOf(channel)));
   }
 
   protected override _aggregate(values: Float32Array): number {
-    return weakestOf(values);
+    let strongestAlternative = 0;
+
+    for (const indices of this._alternativeIndices) {
+      const value = weakestAt(values, indices);
+
+      if (Math.abs(value) > Math.abs(strongestAlternative)) {
+        strongestAlternative = value;
+      }
+    }
+
+    return strongestAlternative;
   }
 }

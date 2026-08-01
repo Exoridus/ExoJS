@@ -191,6 +191,101 @@ describe('ChordAction', () => {
   });
 });
 
+describe('ChordAction: `|` alternation', () => {
+  test('activates via either alternative, and releases only once both go inactive', () => {
+    const driver = createSample();
+    const action = new ChordAction('Control+S|Meta+S');
+
+    driver.batch(10, [
+      [Keyboard.Control, 1],
+      [Keyboard.S, 1],
+    ]);
+    action._update(driver.sample);
+    expect(action.active).toBe(true);
+
+    driver.frame();
+    driver.batch(20, [[Keyboard.Control, 0]]);
+    action._update(driver.sample);
+    expect(action.active).toBe(false);
+    expect(action.released).toBe(true);
+
+    // The other alternative satisfies it just as well — Control was never
+    // part of this one, so its earlier release is irrelevant here.
+    driver.frame();
+    driver.batch(30, [[Keyboard.Meta, 1]]);
+    action._update(driver.sample);
+    expect(action.active).toBe(true);
+    expect(action.pressed).toBe(true);
+  });
+
+  test('neither alternative alone activates a `+`-joined one — precedence binds `+` tighter than `|`', () => {
+    // 'A+B|C': (A and B) or C. Holding only A must never activate it — B is
+    // still required for that alternative, and C (the other alternative) was
+    // never touched.
+    const driver = createSample();
+    const action = new ChordAction('A+B|C');
+
+    driver.batch(10, [[Keyboard.A, 1]]);
+    action._update(driver.sample);
+    expect(action.active).toBe(false);
+
+    driver.frame();
+    driver.batch(20, [[Keyboard.B, 1]]);
+    action._update(driver.sample);
+    expect(action.active).toBe(true);
+
+    driver.frame();
+    driver.batch(30, [
+      [Keyboard.A, 0],
+      [Keyboard.B, 0],
+    ]);
+    driver.batch(40, [[Keyboard.C, 1]]);
+    action._update(driver.sample);
+    expect(action.active).toBe(true);
+  });
+
+  test('an alternation of two analog sources reports the strongest, each alternative first reduced to its own weakest member', () => {
+    const driver = createSample();
+    // Array form: [[South, RightTrigger], [LeftTrigger]] is 'South+RightTrigger|LeftTrigger'.
+    const action = new ChordAction([[GamepadButton.South, GamepadButton.RightTrigger], [GamepadButton.LeftTrigger]]);
+
+    // First alternative: South is fully engaged (1) but the trigger only
+    // pulled to 0.4 — the alternative's own value is limited by its weakest
+    // member. The second alternative (LeftTrigger) pulled further (0.7), so
+    // the chord as a whole reports the STRONGER of the two alternatives.
+    driver.batch(10, [
+      [GamepadButton.South, 1],
+      [GamepadButton.RightTrigger, 0.4],
+      [GamepadButton.LeftTrigger, 0.7],
+    ]);
+    action._update(driver.sample);
+    expect(action.value).toBeCloseTo(0.7);
+
+    driver.frame();
+    driver.batch(20, [[GamepadButton.LeftTrigger, 0.2]]);
+    action._update(driver.sample);
+    // The second alternative dropped below the first's weakest member (0.4).
+    expect(action.value).toBeCloseTo(0.4);
+  });
+
+  test('rejects an empty alternative in a string pattern', () => {
+    expect(() => new ChordAction('Control+S|')).toThrow(/ChordAction:.*alternative.*empty/);
+    expect(() => new ChordAction('|Control+S')).toThrow(/ChordAction:.*alternative.*empty/);
+    expect(() => new ChordAction('Control+S||Meta+S')).toThrow(/ChordAction:.*alternative.*empty/);
+  });
+
+  test('rejects a single empty alternative in an array pattern, distinct from an entirely empty chord', () => {
+    // `[[]]` is one alternative (itself empty) — not the same shape as `[]`
+    // (an entirely empty chord, which throws the pre-existing "is empty").
+    expect(() => new ChordAction([[]])).toThrow(/ChordAction:.*alternative 1 of the chord is empty/);
+    expect(() => new ChordAction([])).toThrow(/ChordAction: the chord is empty/);
+  });
+
+  test('rejects a step mixing a bare channel with a nested alternative', () => {
+    expect(() => new ChordAction([Keyboard.A, [Keyboard.B, Keyboard.C]])).toThrow(/ChordAction:.*mixes a bare channel/);
+  });
+});
+
 describe('SequenceAction', () => {
   test('recognizes ordered and mixed chord sequences across same-frame batches', () => {
     const driver = createSample();
@@ -420,6 +515,92 @@ describe('SequenceAction', () => {
     action._update(driver.sample);
     expect(action.triggered).toBe(false);
     expect(action.progress).toBeCloseTo(2 / 3);
+  });
+});
+
+describe('SequenceAction: `|` alternation', () => {
+  test('either alternative advances a step within a multi-step sequence', () => {
+    const viaA = createSample();
+    const first = new SequenceAction('A|B>C');
+
+    viaA.batch(10, [[Keyboard.A, 1]]);
+    first._update(viaA.sample);
+    expect(first.progress).toBeCloseTo(0.5);
+
+    viaA.frame();
+    viaA.batch(20, [[Keyboard.C, 1]]);
+    first._update(viaA.sample);
+    expect(first.triggered).toBe(true);
+
+    const viaB = createSample();
+    const second = new SequenceAction('A|B>C');
+
+    viaB.batch(10, [[Keyboard.B, 1]]);
+    second._update(viaB.sample);
+    expect(second.progress).toBeCloseTo(0.5);
+
+    viaB.frame();
+    viaB.batch(20, [[Keyboard.C, 1]]);
+    second._update(viaB.sample);
+    expect(second.triggered).toBe(true);
+  });
+
+  test('neither alternative alone advances a `+`-joined one — precedence binds `+` tighter than `|`', () => {
+    // 'A+B|C>D': ((A and B) or C), then D.
+    const driver = createSample();
+    const action = new SequenceAction('A+B|C>D');
+
+    driver.batch(10, [[Keyboard.A, 1]]);
+    action._update(driver.sample);
+    expect(action.progress).toBe(0);
+
+    driver.frame();
+    driver.batch(20, [[Keyboard.A, 0]]);
+    driver.batch(30, [[Keyboard.A, 1]]); // fresh press, now paired with B below
+    driver.batch(40, [[Keyboard.B, 1]]);
+    action._update(driver.sample);
+    expect(action.progress).toBeCloseTo(0.5);
+
+    driver.frame();
+    driver.batch(50, [[Keyboard.D, 1]]);
+    action._update(driver.sample);
+    expect(action.triggered).toBe(true);
+  });
+
+  test("completing one alternative's own chord satisfies the step without either alternative interfering with the other", () => {
+    // 'A+B|C+D>E': touching the OTHER alternative's member first must not
+    // reset progress (it still belongs to this step's expected channel set),
+    // and completing the alternative actually being attempted (C+D) must
+    // satisfy the step regardless of A's unrelated, incomplete engagement.
+    const driver = createSample();
+    const action = new SequenceAction('A+B|C+D>E');
+
+    driver.batch(10, [[Keyboard.A, 1]]);
+    action._update(driver.sample);
+    expect(action.progress).toBe(0);
+
+    driver.frame();
+    driver.batch(20, [[Keyboard.C, 1]]);
+    driver.batch(30, [[Keyboard.D, 1]]);
+    action._update(driver.sample);
+    expect(action.progress).toBeCloseTo(0.5);
+
+    driver.frame();
+    driver.batch(40, [[Keyboard.E, 1]]);
+    action._update(driver.sample);
+    expect(action.triggered).toBe(true);
+  });
+
+  test('rejects an empty alternative in a string pattern, naming the correct step', () => {
+    expect(() => new SequenceAction('A>B|')).toThrow(/SequenceAction:.*alternative.*step 2.*empty/);
+  });
+
+  test('rejects a single empty alternative in an array pattern step', () => {
+    expect(() => new SequenceAction([[[]]])).toThrow(/SequenceAction:.*alternative 1 of step 1 is empty/);
+  });
+
+  test('rejects a step mixing a bare channel with a nested alternative', () => {
+    expect(() => new SequenceAction([Keyboard.A, [Keyboard.B, [Keyboard.C, Keyboard.D]]])).toThrow(/SequenceAction:.*step 2.*mixes a bare channel/);
   });
 });
 

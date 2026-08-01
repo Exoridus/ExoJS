@@ -1,6 +1,6 @@
 {
   "title": "ChordBinding",
-  "description": "A binding accepted by ChordAction: a `'+'`-joined string of case-insensitive Keyboard token names (`'Control+S'`), or an InputChord array of channels required together directly.",
+  "description": "A binding accepted by ChordAction: a `'+'`/`'|'` string of case-insensitive Keyboard token names (`'Control+S'`, `'Control+S|Meta+S'`), an InputChord array of channels required together directly, or an InputAlternation array of such chords — any one of which satisfies the binding.",
   "symbol": "ChordBinding",
   "kind": "type",
   "subsystem": "input",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A binding accepted by ChordAction: a `'+'`-joined string of case-insensitive Keyboard token names (`'Control+S'`), or an InputChord array of channels required together directly."
+        "A binding accepted by ChordAction: a `'+'`/`'|'` string of case-insensitive Keyboard token names (`'Control+S'`, `'Control+S|Meta+S'`), an InputChord array of channels required together directly, or an InputAlternation array of such chords — any one of which satisfies the binding."
       ],
       "importLine": "import { ChordBinding } from '@codexo/exojs'",
       "sourceLink": null
@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "ChordBinding",
-          "signature": "string | InputChord",
+          "signature": "string | InputChord | InputAlternation",
           "signatureTokens": [
             {
               "text": "string",
@@ -42,6 +42,14 @@
             },
             {
               "text": "InputChord",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputAlternation",
               "kind": "type"
             }
           ],

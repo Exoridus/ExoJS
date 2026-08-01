@@ -1,10 +1,10 @@
-import { type InputSequence, normalizeSequence } from './pattern';
+import { type InputSequence, type NormalizedStep, normalizeSequence } from './pattern';
 import type { ActionOptions, ActionSample } from './types';
 
 /**
  * A binding accepted by {@link SequenceAction}: a `'>'`-separated,
- * `'+'`-joined string pattern (`'Down>Down+Right>Right'`), or an
- * {@link InputSequence} array of steps directly.
+ * `'+'`-joined, `'|'`-alternated string pattern (`'Down>Down+Right>Right'`,
+ * `'A+B|C>D'`), or an {@link InputSequence} array of steps directly.
  */
 export type SequenceBinding = string | InputSequence;
 
@@ -24,10 +24,17 @@ export interface SequenceActionOptions extends ActionOptions {
 }
 
 /**
- * Ordered input pattern — `+` joins a chord within one step, `>` advances to
- * the next step. `triggered` is `true` for the one frame the final step
- * completes; see {@link progress}'s own doc comment for how far a pattern has
- * advanced.
+ * Ordered input pattern — `+` joins a chord within one step, `|` alternates
+ * between whole alternatives within one step (any ONE of which satisfies
+ * it), `>` advances to the next step. `triggered` is `true` for the one
+ * frame the final step completes; see {@link progress}'s own doc comment for
+ * how far a pattern has advanced.
+ *
+ * Precedence, loosest to tightest: `'>'` separates steps, `'|'` separates
+ * alternatives within one step, `'+'` joins channels required simultaneously
+ * within one alternative — `'A+B|C>D'` is "(A and B) or C, then D". A step
+ * with no `'|'` has exactly one alternative, so this is a strict superset of
+ * the pre-`'|'` grammar: nothing about a plain `'+'`/`'>'` pattern changes.
  *
  * A repeated single-channel step (`'A>A'`) requires a genuine release between
  * the two presses: holding the channel down after the first accepted step
@@ -39,14 +46,17 @@ export interface SequenceActionOptions extends ActionOptions {
  * channels written together by the same real-world event (e.g. `A` and `B`
  * both changing in one batch) can complete a chord STEP together, but can
  * never be read as two sequential steps (`A` then `B`) within that same
- * batch — see `_update`'s implementation comment.
+ * batch — see `_update`'s implementation comment. Switching from one
+ * alternative to another within the same step is never treated as an
+ * unrelated, mismatching entry — only a channel that belongs to NONE of the
+ * step's alternatives is.
  *
  * A string pattern resolves tokens as case-insensitive {@link Keyboard} enum
  * names (`'Down>Down+Right>Right>A'`). This is a shortcut list syntax for enum
  * lookups, not text or IME input — it never decodes typed characters, dead
  * keys, or composed input, and rejects any token that is not a known
- * `Keyboard` member. Use an {@link InputSequence} array of channels/chords
- * directly to include pointer or gamepad channels.
+ * `Keyboard` member. Use an {@link InputSequence} array of channels/chords/
+ * alternations directly to include pointer or gamepad channels.
  *
  * @example
  * ```ts
@@ -54,10 +64,15 @@ export interface SequenceActionOptions extends ActionOptions {
  * // Holding J after the first step does nothing on its own — the second J
  * // requires its own release-then-press, same as the two steps below it.
  * const comboAttack = new SequenceAction([Keyboard.J, Keyboard.J, [Keyboard.Control, Keyboard.K]]);
+ * // Either modifier satisfies the first step: [[Control, K], [Meta, K]] is the array form of 'Control+K|Meta+K'.
+ * const save = new SequenceAction('Control+K|Meta+K>S');
  * ```
  */
 export class SequenceAction {
-  private readonly _steps: ReadonlyArray<readonly number[]>;
+  /** One entry per step; each is one entry per alternative, each the channels that alternative requires together. */
+  private readonly _steps: readonly NormalizedStep[];
+  /** One entry per step — every channel across all of that step's alternatives, flattened and deduplicated, for "does this batch touch this step at all" checks. */
+  private readonly _stepChannels: ReadonlyArray<readonly number[]>;
   private readonly _channels: readonly number[];
   private readonly _threshold: number;
   private readonly _maxGap: number;
@@ -72,12 +87,14 @@ export class SequenceAction {
 
   /**
    * @throws {Error} If the pattern is empty, a string pattern contains an
-   * unknown `Keyboard` token or an empty `+`/`>` segment, or any single step
-   * repeats the same channel twice.
+   * unknown `Keyboard` token or an empty `+`/`>`/`|` segment, a mix of a bare
+   * channel and a nested alternative within the same step, or any single
+   * alternative repeats the same channel twice.
    */
   public constructor(pattern: SequenceBinding, options: SequenceActionOptions = {}) {
     this._steps = normalizeSequence(pattern, options.gamepadSlot ?? 0, 'SequenceAction');
-    this._channels = [...new Set(this._steps.flat())];
+    this._stepChannels = this._steps.map(step => [...new Set(step.flat())]);
+    this._channels = [...new Set(this._stepChannels.flat())];
     this._threshold = options.threshold ?? 0;
     this._maxGap = Math.max(0, options.maxGap ?? 600);
     this._timeout = Math.max(0, options.timeout ?? 3000);
@@ -137,7 +154,7 @@ export class SequenceAction {
 
       if (!touched) continue;
 
-      const expected = this._steps[this._step] ?? [];
+      const expected = this._stepChannels[this._step] ?? [];
       const hasUnexpectedEntry = entered.some(channel => !expected.includes(channel));
       const expectedAfter = this._isStepActive(this._step);
 
@@ -155,7 +172,7 @@ export class SequenceAction {
         // Overlap restart is allowed only when the entire atomic batch belongs
         // to the first step. A simultaneous first-step + unrelated entry is a
         // mismatch, not a synthetic restart.
-        const first = this._steps[0] ?? [];
+        const first = this._stepChannels[0] ?? [];
         const batchBelongsToFirst = entered.every(channel => first.includes(channel));
         const firstAfter = this._isStepActive(0);
         if (batchBelongsToFirst && !firstBefore && firstAfter) this._acceptStep(now);
@@ -193,14 +210,17 @@ export class SequenceAction {
     this._lastStepAt = null;
   }
 
+  /** A step is active if ANY ONE of its alternatives has every one of its own channels active — `'|'`'s OR-of-AND semantics. */
   private _isStepActive(index: number): boolean {
     const step = this._steps[index];
     if (step === undefined) return false;
 
-    return step.every(channel => {
-      const valueIndex = this._channels.indexOf(channel);
-      return valueIndex !== -1 && Math.abs(this._values[valueIndex] ?? 0) > this._threshold;
-    });
+    return step.some(alternative =>
+      alternative.every(channel => {
+        const valueIndex = this._channels.indexOf(channel);
+        return valueIndex !== -1 && Math.abs(this._values[valueIndex] ?? 0) > this._threshold;
+      }),
+    );
   }
 
   private _seed(sample: ActionSample): void {

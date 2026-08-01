@@ -39,7 +39,7 @@ class GameScene extends Scene {
 }
 ```
 
-`+` means simultaneous channels in one step; `>` advances to the next step. A single atomic platform batch never invents ordering: `A` and `B` entering together does not satisfy `A>B` — see below.
+`+` means simultaneous channels in one step; `>` advances to the next step; `|` alternates between whole alternatives within one step — see "Alternation" below. A single atomic platform batch never invents ordering: `A` and `B` entering together does not satisfy `A>B` — see below.
 
 `SequenceAction` also exposes `progress` — `completedSteps / totalSteps`, handy for rendering a partial-combo hint. It never reaches `1`: the same update that completes the final step sets `triggered` and snaps `progress` straight back to `0`, so the real range is `[0, (n-1)/n]` for `n` steps. It resets to `0` on a mismatch, or whenever the map itself is reset (a scene suspend, or losing availability under a `when` policy — see [pause menu](/ExoJS/en/guide/recipes/pause-menu/)). A `maxGap`/`timeout` expiry resets it too, but only once the NEXT relevant input event arrives (see "Tuning restart behavior" below) — a half-completed pattern can hold a stale, non-zero `progress` for an arbitrarily long real gap if nothing else touches a bound channel in the meantime; there is no timer ticking it down on its own.
 
@@ -48,6 +48,16 @@ class GameScene extends Scene {
 String patterns resolve case-insensitive `Keyboard` enum names only (`'Control+S'`, `'control+s'`). They are not a text or IME API: they never decode typed characters, dead keys, or composed input, and reject any token that is not a known `Keyboard` member. Use DOM text input outside the game channel system for localized characters, composition, and editable text.
 
 Array patterns accept keyboard, pointer, gamepad-button, and gamepad-axis channels directly — mix a chord step of several channels as a nested array: `new SequenceAction([Keyboard.J, Keyboard.J, [Keyboard.Control, Keyboard.K]])`. A repeated single-channel step like the two `Keyboard.J` entries above requires a genuine release between them: holding `J` down after the first step is accepted does not also satisfy the second, since a step only advances on a fresh press (an inactive-to-active transition), never merely because a channel already reads as held. `gamepadSlot` remaps gamepad channels exactly as it does for other actions.
+
+## Alternation: `|`
+
+`|` separates alternatives within one step — the step is satisfied if ANY ONE of them is. Precedence, loosest to tightest: `>` separates steps, `|` separates alternatives, `+` joins channels within one alternative — `'Control+S|Meta+S'` is "`Control` and `S`, or `Meta` and `S`", and `'A+B|C>D'` is "(`A` and `B`) or `C`, then `D`".
+
+This composes with the same strongest/weakest reduction `ButtonAction`/`ChordAction` already use for analog sources: an alternation reports the strongest of its alternatives, and each alternative (like any chord) reports the weakest of its own members — so `new ChordAction([GamepadButton.LeftTrigger])` alternating with a `South+RightTrigger` chord still reports each alternative's own least-engaged member, not a collapsed boolean.
+
+In array form, wrap every alternative in its own array, even a single-channel one, so it is never ambiguous with a plain chord: `[[Keyboard.Control, Keyboard.K], [Keyboard.Meta, Keyboard.K]]` is the array form of `'Control+K|Meta+K'`. A step written as `[Keyboard.A, Keyboard.B]` still means "`A` and `B` required together" (a chord), exactly as before — mixing a bare channel and a nested alternative within the same step is rejected.
+
+Switching from one alternative to another within the same `SequenceAction` step is never treated as an unrelated, mismatching entry — only a channel belonging to NONE of the step's alternatives resets progress (see "Tuning restart behavior" below).
 
 ## Same-batch entries never invent an order
 
