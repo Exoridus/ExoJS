@@ -659,6 +659,67 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  test('adopting a BRAND-NEW value ref for a key whose earlier load FAILED retries the key instead of stranding the new ref', async () => {
+    const { fetchMock, succeed } = togglableJsonFetch({ hp: 7 });
+    const loader = createCoreLoader();
+
+    const first = createLeaf('json', 'scene-handoff.json') as AssetRef<unknown>;
+
+    loader._adopt(first, Symbol('scene-a'));
+    await expect(first.loaded).rejects.toThrow();
+    expect(first.loadState).toBe('failed');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // Value twin of the seamless case: a second scene hands over a ref that was
+    // never adopted before — 'idle', never 'failed'. What failed is the KEY, so
+    // the joining ref must drive the retry off its FAILED SIBLING, not off its
+    // own prior state. Nothing else would restart the key: its fetch already
+    // settled into failure, so `_storeResource` never runs for it.
+    succeed();
+
+    const fresh = createLeaf('json', 'scene-handoff.json') as AssetRef<unknown>;
+
+    loader._adopt(fresh, Symbol('scene-b'));
+
+    expect(fresh.loadState).toBe('loading');
+    expect(fetchMock).toHaveBeenCalledTimes(2); // re-armed AND refetched — never 'loading' with nothing in flight
+    expect(loader.inspect().find(r => r.source === 'scene-handoff.json')).toMatchObject({ state: 'loading', inFlight: true });
+
+    // A THIRD brand-new ref joining in the SAME tick must not fetch again: the
+    // adopt above already re-armed every sibling, so none reads 'failed'.
+    const alsoFresh = createLeaf('json', 'scene-handoff.json') as AssetRef<unknown>;
+
+    loader._adopt(alsoFresh, Symbol('scene-c'));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    await expect(fresh.loaded).resolves.toEqual({ hp: 7 });
+    expect(fresh.loadState).toBe('ready');
+    expect(alsoFresh.loadState).toBe('ready');
+    expect(first.loadState).toBe('ready'); // the originally-failed ref heals in place too
+    expect(fetchMock).toHaveBeenCalledTimes(2); // exactly ONE retry fetch served all three
+    expect(loader.inspect().find(r => r.source === 'scene-handoff.json')).toMatchObject({ state: 'ready', inFlight: false });
+  });
+
+  test('a BRAND-NEW value ref adopted onto a still-broken failed key fails honestly again instead of hanging in loading', async () => {
+    const { fetchMock } = togglableJsonFetch({ hp: 0 });
+    const loader = createCoreLoader();
+
+    const first = createLeaf('json', 'still-down.json') as AssetRef<unknown>;
+
+    loader._adopt(first, Symbol('scene-a'));
+    await expect(first.loaded).rejects.toThrow();
+
+    const fresh = createLeaf('json', 'still-down.json') as AssetRef<unknown>;
+
+    loader._adopt(fresh, Symbol('scene-b')); // source is still down
+
+    await expect(fresh.loaded).rejects.toThrow();
+    expect(fresh.loadState).toBe('failed'); // an honest re-failure, not a silent hang
+    expect(first.loadState).toBe('failed');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(loader.inspect().find(r => r.source === 'still-down.json')).toMatchObject({ state: 'failed', inFlight: false });
+  });
+
   test('re-adopting a failed value ref with { background: true } queues the retry instead of fetching immediately', async () => {
     const { fetchMock, succeed } = togglableJsonFetch({ ready: true });
     const loader = createCoreLoader();

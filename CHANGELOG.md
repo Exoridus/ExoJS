@@ -341,7 +341,10 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
   failed handed the loader a brand-new `'idle'` leaf, which joined the failed
   key, flipped to `'loading'`, and hung there because nothing restarted the
   fetch. Whether an adoption is a retry is now decided by the source's own
-  failed handles, not by the state of whichever leaf asked.
+  failed handles, not by the state of whichever leaf asked — and that holds for
+  seamless handles and value refs (`AssetRef`) alike, so a second scene
+  re-claiming a previously-failed JSON/text/binary asset recovers instead of
+  hanging.
 - **`Loader.inspect()` reports `'failed'`, not `'ready'`,** for a value key
   whose fetch succeeded but whose own `parse()` failed: the raw payload is
   stored either way, so a resident payload alone never means "readable".
