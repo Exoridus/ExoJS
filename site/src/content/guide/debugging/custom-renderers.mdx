@@ -30,9 +30,9 @@ class CustomPassScene extends Scene {
     private pipeline!: RenderPipeline;
     private angle = 0;
 
-    override init(loader): void {
-        this.back = new Sprite(loader.get('image/hero.png')).setAnchor(0.5).setPosition(280, 300);
-        this.front = new Sprite(loader.get('image/hero.png')).setAnchor(0.5).setPosition(520, 300);
+    override init(): void {
+        this.back = new Sprite(this.loader.get('image/hero.png')).setAnchor(0.5).setPosition(280, 300);
+        this.front = new Sprite(this.loader.get('image/hero.png')).setAnchor(0.5).setPosition(520, 300);
         this.between = new Graphics();
 
         this.pipeline = new RenderPipeline()

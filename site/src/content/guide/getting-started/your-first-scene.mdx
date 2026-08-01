@@ -40,12 +40,12 @@ There's nothing visible yet because the scene doesn't render anything beyond the
 
 Scenes have four lifecycle hooks. You override the ones you need:
 
-- `async load(loader)` — declare assets upfront. Resolves before `init` runs.
-- `init(loader)` — set up state. Assets are available via `loader.get(...)`.
+- `async load()` — declare assets upfront. Resolves before `init` runs.
+- `init()` — set up state. Assets are available via `this.loader.get(...)`.
 - `update(delta)` — per-frame logic.
 - `draw(context)` — per-frame rendering.
 
-This scene skips `load` entirely. `Texture` is a *seamless* asset type: `loader.get(...)` never throws, even for a path nothing has fetched yet — it hands back a placeholder immediately and heals it in place once the network request resolves. That's enough to build and position a sprite directly in `init`:
+This scene skips `load` entirely. `Texture` is a *seamless* asset type: `this.loader.get(...)` never throws, even for a path nothing has fetched yet — it hands back a placeholder immediately and heals it in place once the network request resolves. That's enough to build and position a sprite directly in `init`:
 
 <SourceSnippet
   source="examples/getting-started/hello-world.ts"
@@ -61,7 +61,7 @@ A few things worth pointing out:
 - The default sprite anchor is `(0, 0)` — the top-left. With `setAnchor(0.5)`, the sprite's center becomes its pivot point, so `setPosition(width / 2, height / 2)` places the sprite at the canvas center rather than offset to one corner.
 
 <Callout type="hint" title="Prefer load() once a scene has more than a placeholder">
-Getting away without `load` works because `Texture` heals in place — fine for a one-sprite demo. Once a scene has several assets, or you don't want a visible pop-in while the texture arrives, declare them upfront with `async load(loader) { await loader.load(...); }` instead — see [Loading and resources](/ExoJS/en/guide/assets/loading-and-resources/).
+Getting away without `load` works because `Texture` heals in place — fine for a one-sprite demo. Once a scene has several assets, or you don't want a visible pop-in while the texture arrives, declare them upfront with `async load() { await this.loader.load(...); }` instead — see [Loading and resources](/ExoJS/en/guide/assets/loading-and-resources/).
 </Callout>
 
 <Callout type="pitfall" title="A sprite that won't center">

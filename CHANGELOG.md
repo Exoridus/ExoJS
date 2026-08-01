@@ -386,6 +386,11 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
   game-starter template, and the `runtime`/`recipes`/`integrations` guides to
   the `change()`/`restore()`/`unload()`/`preload()` navigation API and the
   class-based `SceneTransition`/`PhasedSceneTransition` system.
+- Fixed a batch of guide chapters across `assets`/`audio`/`debugging`/`effects`/
+  `getting-started`/`input`/`recipes`/`rendering`/`runtime` that still taught
+  the removed `load(loader)`/`init(loader)` scene-hook signature; samples now
+  match `load(data)`/`init(data)` and reach the loader through `this.loader`
+  (scene-scoped) or `this.app.loader` (application-lifetime).
 
 ## [0.15.2] - 2026-07-04
 
