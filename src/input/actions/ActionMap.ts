@@ -255,7 +255,7 @@ class ActionMapBase<T extends ActionRecord> {
       // Force every action to re-baseline against the live channel state on
       // its own very next _update call below, rather than trusting whatever
       // frame-to-frame state it carries from a previous, unrelated owner —
-      // see ButtonAction._reset's doc comment.
+      // see ButtonLikeAction._reset's doc comment.
       for (const action of this.actions) {
         action._reset();
       }

@@ -488,7 +488,7 @@ export class InputManager {
    * the correct state. `_update` forwards straight through here: with the
    * map's ownership tracker already reset, it resolves to the SAME baseline
    * path a fresh attach or a genuine handoff would (see
-   * {@link ButtonAction._update}'s doc comment). Re-arms the watermark first
+   * {@link ButtonLikeAction._update}'s doc comment). Re-arms the watermark first
    * (see {@link ActionMapBase._armBaseline}) since this map stays with the
    * SAME owner across the suspend/resume cycle and so never goes through
    * `_attach` again — without this, a resume triggered partway through the
