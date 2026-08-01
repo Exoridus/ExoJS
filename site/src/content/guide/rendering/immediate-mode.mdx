@@ -69,8 +69,8 @@ Build the geometry once in `Scene.init` and keep it — it carries no transform,
 
 `drawGeometry(geometry, transform, options?)` draws the geometry with `transform` as its raw world matrix. The matrix is taken verbatim as `a, b, c, d, tx, ty` — there is no position / rotation / scale / origin composition the way a node would apply. You build the world matrix yourself, which is the point: full control, zero overhead.
 
-```js
-draw(context) {
+```ts
+draw(context: RenderingContext) {
     context.backend.clear();
 
     // A row of the same triangle, each at a different position, rotation,
@@ -94,7 +94,7 @@ The optional third argument carries a `tint` ([`Color`](/ExoJS/en/api/color/)) m
 
 A [`RenderBatch`](/ExoJS/en/api/render-batch/) is one geometry plus one material drawn once with N per-instance `(transform, tint)` pairs — the instanced form of the immediate path. It collapses thousands of like items into a single draw call.
 
-```js
+```ts
 import { Geometry, RenderBatch } from '@codexo/exojs';
 
 // In Scene.init — the geometry must be 'static' (the default); the batch
@@ -111,8 +111,8 @@ const batch = new RenderBatch(sparkGeometry);
 
 Each frame, rebuild the instances and submit the batch. `clear` resets the instance count but **keeps** the pooled per-instance storage, so a steady-state batch allocates nothing across frames. `add` **copies** the transform and tint, so you can reuse one scratch `Matrix` for every instance:
 
-```js
-draw(context) {
+```ts
+draw(context: RenderingContext) {
     context.backend.clear();
 
     this.batch.clear();
@@ -142,7 +142,7 @@ Call `batch.destroy()` in `Scene.unload`/`destroy` to release the pooled storage
 
 The payoff is visible in the per-frame counters. `context.stats.drawCalls` reports the number of GPU draw calls issued this frame. A batched field of 2,400 sparks adds exactly **one** to that count; drawing the same 2,400 sparks with one `drawGeometry` each adds 2,400. Read it at the end of `draw` to surface it in a HUD or the debug overlay:
 
-```js no-check
+```ts no-check
 const drawCalls = context.stats.drawCalls;
 hud.setStatus(`sparks via RenderBatch · drawCalls: ${drawCalls}`);
 ```

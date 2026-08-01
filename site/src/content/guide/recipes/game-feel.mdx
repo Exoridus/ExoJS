@@ -18,9 +18,7 @@ When the player takes damage, flash the sprite red for a fraction of a second an
 `ColorFilter.color` is the filter's live `Color`, not a constructor snapshot. Mutate or tween it in place for a damage flash — set it red, tween back to white — with no filter rebuild.
 </Callout>
 
-```js
-import { ColorFilter, Signal } from '@codexo/exojs';
-
+```ts
 init() {
     this.player = new Sprite(this.loader.get('image/hero.png'));
     this.flash = new ColorFilter(new Color(255, 255, 255, 1));
@@ -44,7 +42,7 @@ The key insight: the `ColorFilter` multiplies the sprite's rendered output by th
 
 `View.shake(intensity, durationMs, { frequency, decay })` is the simplest feedback effect in ExoJS. Fire it on any dramatic event:
 
-```js
+```ts
 this.app.input.onPointerTap.add(pointer => {
     // Position the burst at the click location (relative to system position)
     this.burstPos.set(pointer.x - this.particles.position.x, pointer.y - this.particles.position.y);
@@ -60,7 +58,7 @@ Combine it with a particle burst for a complete explosion feel — particles pro
 
 Tweens are the workhorse of game feel. A few reusable patterns:
 
-```js
+```ts
 // Scale punch — grow on hit, settle back
 this.app.tweens.create(this.sprite.scale)
     .to({ x: 1.4, y: 1.4 }, 0.08)
@@ -90,8 +88,8 @@ Each pattern is fire-and-forget — call `.start()` inside an event handler and 
 
 For held actions — thrust, charging, spinning up — continuous feedback creates presence:
 
-```js
-update(delta) {
+```ts
+update(delta: Time) {
     const thrustMag = Math.hypot(this.thrust.x, this.thrust.y);
 
     if (thrustMag > 0.05) {

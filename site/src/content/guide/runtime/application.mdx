@@ -14,7 +14,7 @@ The [`Application`](/ExoJS/en/api/application/) is the runtime host. One instanc
 
 Every option is optional. If you pass nothing, ExoJS picks reasonable defaults — an 800×600 canvas it created itself, a `cornflowerBlue` clear color, and an auto-selected render backend (WebGPU when available, WebGL2 otherwise).
 
-```js
+```ts
 import { Application } from '@codexo/exojs';
 
 const app = new Application();
@@ -22,7 +22,7 @@ const app = new Application();
 
 When you need to control the configuration, pass a grouped options object:
 
-```js
+```ts
 import { Application, Color } from '@codexo/exojs';
 
 const app = new Application({
@@ -52,19 +52,19 @@ whole life of the application. Assigning a new `Color` copies its channels into 
 (effective from the next frame), which makes it a convenient way to react to game state without
 touching draw code:
 
-```js
+```ts
 import { Application, Color } from '@codexo/exojs';
 
 const app = new Application();
 
-function onLowHealth(isLow) {
+function onLowHealth(isLow: boolean) {
     app.clearColor = isLow ? Color.darkRed : Color.cornflowerBlue;
 }
 ```
 
 You can also mutate the existing instance in place instead of allocating a new `Color` each time:
 
-```js
+```ts
 app.clearColor.set(20, 20, 40, 1); // dusk
 ```
 
@@ -76,7 +76,7 @@ app.clearColor.set(20, 20, 40, 1); // dusk
 
 By default the application creates its own canvas. Read it from `app.canvas` and place it in your page wherever your layout needs it:
 
-```js
+```ts
 const app = new Application({
     canvas: { width: 800, height: 600 },
 });
@@ -85,7 +85,7 @@ document.body.append(app.canvas);
 
 If your page already has a canvas — for example because the layout is owned by a framework that renders the element for you — pass it in via `canvas.element`:
 
-```js
+```ts
 const canvas = document.querySelector('canvas');
 const app = new Application({
     canvas: { element: canvas, width: 800, height: 600 },
@@ -98,7 +98,7 @@ Either way, `app.canvas` is the active `HTMLCanvasElement`. CSS rules, ResizeObs
 
 `canvas.pixelRatio` scales the backing buffer relative to logical CSS pixels. By default it is the host's `window.devicePixelRatio` **clamped to `2`**, so rendering is crisp on Retina/HiDPI screens out of the box. Pass an explicit value to override:
 
-```js
+```ts
 const app = new Application({
     canvas: {
         width: 1280,
@@ -117,7 +117,7 @@ Pass `pixelRatio: 1` to force logical-pixel rendering, or `window.devicePixelRat
 
 For pixel-art games where you want crisp upscaling without browser blurring, combine `pixelRatio` with the `imageRendering` hint:
 
-```js
+```ts
 const app = new Application({
     canvas: {
         width: 320,
@@ -133,11 +133,11 @@ const app = new Application({
 
 The frame loop only runs once you give the application a scene to run:
 
-```js
-import { Application, Scene } from '@codexo/exojs';
+```ts
+import { Application, RenderingContext, Scene } from '@codexo/exojs';
 
 class HelloScene extends Scene {
-    draw(context) {
+    draw(context: RenderingContext) {
         context.backend.clear();
     }
 }
@@ -168,7 +168,7 @@ Most code reaches these through the active scene (`this.app.input`, `this.app.tw
 
 The application emits a small set of signals you can subscribe to without subclassing:
 
-```js
+```ts
 app.onFrame.add(time => {
     console.log(`Frame at ${time.seconds.toFixed(3)}s`);
 });
@@ -184,7 +184,7 @@ For most projects the scene's `update` and `draw` hooks are enough; reach for th
 
 Browsers throttle background tabs to roughly 1 fps. For games this usually shows up as motion artifacts when the user comes back. Toggle `pauseOnHidden` to skip update + render entirely while the tab is hidden:
 
-```js
+```ts
 app.pauseOnHidden = true;
 ```
 

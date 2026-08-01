@@ -14,10 +14,13 @@ A [`Sprite`](/ExoJS/en/api/sprite/) is the primary drawable for textured quads �
 
 A sprite needs a texture. The shortest path from file to visible quad:
 
-```js
+```ts
 import { Scene, Sprite } from '@codexo/exojs';
+import type { RenderingContext } from '@codexo/exojs';
 
 class MyScene extends Scene {
+    private hero!: Sprite;
+
     async load() {
         await this.loader.load('image/hero.png');
     }
@@ -27,7 +30,7 @@ class MyScene extends Scene {
         this.addChild(this.hero);
     }
 
-    draw(context) {
+    draw(context: RenderingContext) {
         context.backend.clear();
         context.render(this.root);
     }
@@ -42,7 +45,7 @@ A sprite's position places its anchor point in the parent's coordinate space. By
 
 `setAnchor(0.5)` centers the anchor at the sprite's middle, making `setPosition(400, 300)` place the sprite's center at `(400, 300)`:
 
-```js
+```ts
 init() {
     const { width, height } = this.app.canvas;
 
@@ -59,7 +62,7 @@ init() {
 
 `sprite.width` and `sprite.height` report the rendered pixel dimensions (texture frame size multiplied by absolute scale). Setting them adjusts the scale to match:
 
-```js
+```ts
 this.hero.width = 64;  // scale.x becomes 64 / textureFrame.width
 this.hero.height = 64; // scale.y becomes 64 / textureFrame.height
 ```
@@ -70,7 +73,7 @@ this.hero.height = 64; // scale.y becomes 64 / textureFrame.height
 
 `sprite.tint` is a `Color` that multiplies the sprite's pixel colors at draw time. White tint (`Color.white`) leaves the texture unchanged. A red tint mutes green and blue channels. Tinting does not allocate or create new textures:
 
-```js
+```ts
 import { Color } from '@codexo/exojs';
 
 this.hero.tint = new Color(255, 128, 128, 1); // reddish tint
@@ -81,7 +84,7 @@ this.hero.tint = new Color(128, 128, 255, 0.8); // blue tint, 80% opacity
 
 A sprite can display a sub-region of its texture through `textureFrame`. This is the mechanism behind spritesheet frame selection:
 
-```js
+```ts
 import { Rectangle } from '@codexo/exojs';
 
 // Show only the top-left 32x32 pixels of a 128x128 texture
@@ -90,7 +93,7 @@ this.sprite.setTextureFrame(new Rectangle(0, 0, 32, 32));
 
 By default `setTextureFrame` resets the sprite's width and height to the frame's dimensions. Pass `false` as the second argument to keep the current display size — useful for animation where frame dimensions vary but the on-screen size should stay constant:
 
-```js
+```ts
 this.sprite.setTextureFrame(new Rectangle(32, 0, 32, 32), false);
 ```
 
@@ -100,7 +103,7 @@ Call `resetTextureFrame()` to restore the full texture.
 
 `sprite.blendMode` controls how the sprite composites with pixels already in the framebuffer. The default is `BlendModes.Normal` (standard alpha blending):
 
-```js
+```ts
 import { BlendModes } from '@codexo/exojs';
 
 this.glow.blendMode = BlendModes.Additive;
@@ -137,7 +140,7 @@ Blend modes are per-sprite. Combined with tinting they cover common glow, shadow
 
 A [`Spritesheet`](/ExoJS/en/api/spritesheet/) slices a single texture atlas into named frames and optional animation sequences. It accepts a JSON descriptor in the Aseprite / TexturePacker format:
 
-```js
+```ts
 import { Spritesheet } from '@codexo/exojs';
 
 const sheet = new Spritesheet(texture, {
@@ -165,7 +168,7 @@ The `animations` map feeds into `AnimatedSprite.fromSpritesheet()`, covered in t
 
 `Sprite` accepts any `Texture` or `RenderTexture`. This means sprites can display video frames, SVG rasterizations, off-screen renders, or `DataTexture` pixel buffers — any source the engine can wrap as a `Texture`:
 
-```js
+```ts
 // Video as a sprite texture
 import { Asset, RenderTexture, Sprite, Video } from '@codexo/exojs';
 

@@ -24,7 +24,7 @@ The scene's `this.inputs` registry creates bindings that are automatically dispo
 
 Each returns an `InputBinding` you can call `.unbind()` on to detach early. The `threshold` option (in ms) overrides the 300 ms default for `onTrigger`:
 
-```js no-check
+```ts no-check
 import { Keyboard, Scene } from '@codexo/exojs';
 
 class GameScene extends Scene {
@@ -42,7 +42,7 @@ class GameScene extends Scene {
 
 For held-key patterns — movement, continuous actions — use `onActive`/`onStop` to track a boolean flag, then consume it in `update`:
 
-```js
+```ts
 init() {
     this.move = { left: 0, right: 0, up: 0, down: 0 };
 
@@ -56,7 +56,7 @@ init() {
     this.inputs.onStop(Keyboard.S,    () => { this.move.down  = 0; });
 }
 
-update(delta) {
+update(delta: Time) {
     const speed = 280 * delta.seconds;
     const dx = (this.move.right - this.move.left) * speed;
     const dy = (this.move.down - this.move.up) * speed;
@@ -68,7 +68,7 @@ update(delta) {
 
 `app.input` exposes two lower-level signals that fire on raw keydown/keyup events, regardless of the current scene:
 
-```js
+```ts
 app.input.onKeyDown.add(channel => {
     console.log('Key pressed:', channel);
 });
@@ -88,7 +88,7 @@ These are raw — no threshold, no auto-disposal. Use them for global shortcuts 
 
 The `onKeyDown` signal accepts a callback that receives the raw channel number. This is the mechanism for letting the player remap controls at runtime:
 
-```js
+```ts
 init() {
     this.jumpChannel = Keyboard.Space;
     this.rebindRequested = false;
@@ -119,7 +119,7 @@ _rebindJump() {
     this.jumpDirty = false;
 }
 
-update(delta) {
+update(delta: Time) {
     this._rebindJump();
     // ... apply jumpVelocity ...
 }
@@ -147,7 +147,7 @@ The full list includes punctuation, brackets, and navigation keys. Punctuation m
 
 Keyboard input is gated on canvas focus. When the user tabs away or clicks outside the canvas, all held keys are released automatically and no further key events fire until focus returns. The `app.input.onCanvasFocusChange` signal notifies you of transitions:
 
-```js
+```ts
 app.input.onCanvasFocusChange.add(focused => {
     if (!focused) this.pause();
 });
@@ -174,7 +174,7 @@ ExoJS does not ship a dedicated action-map abstraction layer. Instead, the exist
 
 Every binding factory — `onTrigger`, `onStart`, `onActive`, `onStop` — accepts an array of channels. The callback fires when any channel in the array activates:
 
-```js
+```ts
 this.inputs.onTrigger([Keyboard.Space, Keyboard.J], () => {
     this.player.jump();
 });
@@ -190,10 +190,15 @@ Per-pad bindings on `Gamepad` (`pad.onTrigger`, `pad.onActive`, etc.) coexist wi
 Scene-scoped bindings from `this.inputs` are cleaned up when the scene unloads, but `pad.onTrigger`/`pad.onActive` bindings live on the long-lived `Gamepad` and are not. Keep their `InputBinding` handles and call `unbind()` in `destroy`, or they stack up across scene changes.
 </Callout>
 
-```js
-import { GamepadAxis, GamepadButton, Keyboard, Scene, Sprite } from '@codexo/exojs';
+```ts
+import { GamepadAxis, GamepadButton, Keyboard, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
 
 class PlayerScene extends Scene {
+    private sprite!: Sprite;
+    private keys!: { left: number; right: number; up: number; down: number };
+    private stick!: { x: number; y: number };
+    private jumpImpulse!: number;
+
     async load() {
         await this.loader.load('image/hero.png');
     }
@@ -248,7 +253,7 @@ class PlayerScene extends Scene {
         });
     }
 
-    update(delta) {
+    update(delta: Time) {
         // Best input wins: prefer the device with the larger magnitude
         const keyX = this.keys.right - this.keys.left;
         const keyY = this.keys.down - this.keys.up;
@@ -263,7 +268,7 @@ class PlayerScene extends Scene {
         this.jumpImpulse = Math.min(0, this.jumpImpulse + 800 * delta.seconds);
     }
 
-    draw(context) {
+    draw(context: RenderingContext) {
         context.backend.clear();
         context.render(this.sprite);
     }
@@ -276,7 +281,7 @@ The "best input wins" logic — `Math.abs(this.stick.x) > Math.abs(keyX)` — pi
 
 A clean pattern for larger projects is to centralise input state in a small plain object and let each device category write into it:
 
-```js
+```ts
 init() {
     // One source of truth for movement intent
     this.move = { x: 0, y: 0 };
@@ -304,7 +309,7 @@ init() {
     // Consume actions once in update, then reset
 }
 
-update(delta) {
+update(delta: Time) {
     if (this.actions.pause) {
         this.togglePause();       // pauses/resumes via app.scenes + shows/hides the pause overlay on scene.ui
         this.actions.pause = 0;
@@ -325,7 +330,7 @@ This keeps input handling in one location, makes it easy to add a third device (
 
 Scene-scoped bindings (`this.inputs.onTrigger(...)`) are automatically disposed when the scene's `destroy` runs. Per-pad bindings (`pad.onTrigger(...)`) are not — they live on the `Gamepad` instance, which outlives any single scene. Store per-pad bindings in an array and unbind them in `destroy`:
 
-```js
+```ts
 init() {
     this._padBindings = [];
     const pad = this.app.input.getGamepad(0);

@@ -24,11 +24,11 @@ A typical ExoJS project starts with two pieces: an [`Application`](/ExoJS/en/api
 
 The application owns the runtime configuration — render backend, canvas size, asset path, frame loop. The scene loads resources, updates state, and draws each frame.
 
-```js
-import { Application, Scene } from '@codexo/exojs';
+```ts
+import { Application, type RenderingContext, Scene } from '@codexo/exojs';
 
 class MyScene extends Scene {
-    draw(context) {
+    draw(context: RenderingContext) {
         context.backend.clear();
     }
 }

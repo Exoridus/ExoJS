@@ -45,7 +45,7 @@ const decor = new RetainedContainer();
 
 Fill it once with static children, add it to your scene, and move only the group:
 
-```js
+```ts
 init() {
     this.decor = new RetainedContainer();
 
@@ -56,7 +56,7 @@ init() {
     }
 }
 
-draw(context) {
+draw(context: RenderingContext) {
     context.backend.clear();
 
     // Panning the camera over the world is ONE group-matrix update — no
@@ -76,7 +76,7 @@ The speed comes from a deliberate trade: descendants of an engaged group resolve
 
 For a true world-space position or orientation of a node inside the group — picking, spatial audio, physics, any math against nodes outside the group — use [`getWorldTransform()`](/ExoJS/en/api/scene-node/), which composes through the group boundary and returns the real world matrix:
 
-```js
+```ts
 update() {
     // getBounds() here is group-local. For a real world position, compose
     // through the boundary:

@@ -34,7 +34,7 @@ All shapes carry a `position` (`Vector`) and expose `collisionType` for dispatch
 
 `shapeA.intersectsWith(shapeB)` returns `true` if the shapes overlap. This is the cheapest query — no penetration depth, no contact normal, just a boolean:
 
-```js
+```ts
 import { Circle, Rectangle } from '@codexo/exojs';
 
 const player = new Circle(400, 300, 20);
@@ -77,7 +77,7 @@ Supported response pairs in the current implementation:
 
 `projectionV` is the minimum-translation vector (MTV): the smallest displacement that separates the two shapes. Move the caller by `projectionV` and the shapes no longer overlap.
 
-```js
+```ts
 // Top-down wall blocking — push the player out of the wall
 const response = player.collidesWith(wall);
 
@@ -90,7 +90,7 @@ if (response) {
 
 For two-way separation (two dynamic objects), split the MTV:
 
-```js
+```ts
 const response = a.collidesWith(b);
 
 if (response) {
@@ -106,7 +106,7 @@ if (response) {
 
 `projectionN` is the unit normal of the contact surface. Use it to classify which side was hit — without it you cannot distinguish "landed on the floor" from "hit a wall":
 
-```js
+```ts
 const response = player.collidesWith(surface);
 
 if (response) {
@@ -133,7 +133,13 @@ The sign convention: `projectionN` points **from shapeB toward shapeA** (away fr
 
 `shape.contains(x, y)` returns `true` if the world-space point is inside the shape. Every shape implements it:
 
-```js
+```ts
+import { Rectangle, Vector } from '@codexo/exojs';
+
+const enemyHitbox: Rectangle = new Rectangle(0, 0, 100, 100);
+const pointer: Vector = new Vector(0, 0);
+function selectEnemy(): void {}
+
 if (enemyHitbox.contains(pointer.x, pointer.y)) {
     selectEnemy();
 }
@@ -145,7 +151,7 @@ A `Sprite`'s `contains()` works on the rotated quad — fast AABB check when rot
 
 Every `SceneNode` (Sprites, Containers, etc.) implements `Collidable` with `CollisionType.SceneNode`. This means you can collision-test drawables directly without wrapping them in shape primitives:
 
-```js
+```ts
 const hero = new Sprite(texture);
 hero.setPosition(400, 300);
 
@@ -168,7 +174,7 @@ if (hero.intersectsWith(box)) {
 
 For scenes with many objects, pair-wise collision checks against every other object are O(n²). A [`Quadtree`](/ExoJS/en/api/quadtree/) reduces the search space:
 
-```js no-check
+```ts no-check
 import { Quadtree } from '@codexo/exojs';
 
 const tree = new Quadtree(new Rectangle(0, 0, 800, 600), 8, 5);
@@ -209,7 +215,7 @@ interface SweptHit {
 
 ### Available sweep functions
 
-```js
+```ts
 import { Sweep } from '@codexo/exojs';
 ```
 
@@ -224,7 +230,7 @@ import { Sweep } from '@codexo/exojs';
 
 ### Tunneling-safe movement
 
-```js
+```ts
 import { Sweep } from '@codexo/exojs';
 
 // In your update loop:
@@ -253,7 +259,7 @@ The batch helpers (`Sweep.rectangleAgainst`, `Sweep.circleAgainst`) include a sw
 
 `Sweep.substep` is a fallback generator for shape pairs that lack a closed-form swept test. It yields evenly-spaced snapshots along the move path so you can run your own `intersectsWith` check at each step:
 
-```js
+```ts
 import { Sweep } from '@codexo/exojs';
 
 for (const snapshot of Sweep.substep(fromX, fromY, dx, dy, maxStepSize)) {

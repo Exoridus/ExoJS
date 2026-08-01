@@ -33,7 +33,7 @@ Like all extensions, the core ships nothing LDtk-specific — an `Application` o
 Pass `ldtkExtension` to `ApplicationOptions.extensions`. This is explicit, tree-shakeable, and
 order-independent — the extension is bound to exactly this `Application`:
 
-```js
+```ts
 import { Application } from '@codexo/exojs';
 import { ldtkExtension } from '@codexo/exojs-ldtk';
 
@@ -50,7 +50,7 @@ For an app that always wants LDtk support, import the `/register` entry once at 
 registers `ldtkExtension` (and its `tilemapExtension` dependency) in the global `ExtensionRegistry`
 and re-exports the same public API:
 
-```js
+```ts
 import '@codexo/exojs-ldtk/register';
 import { Application } from '@codexo/exojs';
 
@@ -65,7 +65,7 @@ from the global registry. The explicit `extensions: [...]` form works regardless
 An `Application` constructed with an explicit empty list takes **no** extensions — not even
 globally registered ones — and will not recognise `.ldtk` files:
 
-```js
+```ts
 import { Application } from '@codexo/exojs';
 
 const app = new Application({ extensions: [] }); // core only; no LdtkMap
@@ -100,7 +100,7 @@ With "Save levels to separate files" enabled, each level lives in a sibling `<id
 
 A loaded `LdtkMap` exposes one runtime `TileMap` per LDtk level, plus the raw parsed document:
 
-```js no-check
+```ts no-check
 world.levels;                      // readonly TileMap[] — one per level, in document order
 world.getLevelByName('Level_0');   // TileMap | undefined — lookup by LDtk identifier
 world.data;                        // the raw parsed LdtkData document
@@ -117,7 +117,7 @@ World-space placement is stored in `TileMap.properties` (`worldX` / `worldY`), a
 level's own "Custom fields" tab — distinct from fields on the entities placed inside it), merged in
 under their own field identifier:
 
-```js no-check
+```ts no-check
 level.properties.worldX;       // number — level's world-space X position in pixels
 level.properties.musicTrack;   // whatever value the level's own custom field carries
 ```
@@ -135,7 +135,7 @@ levels into the same single ordered list, so the rest of this guide's API is unc
 The only difference is that each converted level's `TileMap.properties` additionally carries the
 owning world's id under the reserved `ldtkWorldIid` key:
 
-```js no-check
+```ts no-check
 level.properties.ldtkWorldIid; // string | undefined — set only for multi-world projects
 ```
 
@@ -153,7 +153,7 @@ scene.root.addChild(new TileMapNode(level));
 
 To stream a multi-level world, add a node per level — each level is its own `TileMap`:
 
-```js no-check
+```ts no-check
 for (const level of world.levels) {
     scene.root.addChild(new TileMapNode(level));
 }

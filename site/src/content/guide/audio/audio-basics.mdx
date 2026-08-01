@@ -27,10 +27,15 @@ Use `Sound` when you need many overlapping instances of the same short clip. Use
 
 Both types are loaded through the `Loader`, like textures, then played through `app.audio`:
 
-```js
-import { Asset, AudioStream, Scene } from '@codexo/exojs';
+```ts
+import { Asset, AudioStream, Scene, Sound } from '@codexo/exojs';
+import type { Voice } from '@codexo/exojs';
 
 class AudioScene extends Scene {
+    private laser!: Sound;
+    private theme!: AudioStream;
+    private themeVoice!: Voice;
+
     async load() {
         const [laser, theme] = await Promise.all([
             this.loader.load('audio/laser.ogg'),
@@ -55,7 +60,7 @@ Browsers require a user gesture before Web Audio starts. ExoJS handles this auto
 
 `app.audio.play(asset, ...)` always returns a `Voice` immediately, even while audio is still locked. Stream and sound playback is deferred and starts automatically on that first gesture, so you can call `play()` in `init` and keep the returned voice — there is no separate "start on click" step beyond the gesture the browser already requires. Check `app.audio.locked` to know whether the gesture has happened yet; `app.audio.onUnlock` fires once when it does.
 
-```js
+```ts
 if (this.app.audio.locked) {
     // still waiting for the first user gesture; the queued voice will auto-start
 }
@@ -69,7 +74,7 @@ Browsers won't start audio until the user interacts with the page. Trigger the f
 
 Per-play overrides are passed to `play()`; everything afterwards is controlled on the returned `Voice`:
 
-```js
+```ts
 // Per-play overrides (bus, volume, loop, playbackRate, detune, time, muted)
 const voice = this.app.audio.play(sound, { volume: 0.5, loop: true, playbackRate: 1.2 });
 
@@ -81,7 +86,7 @@ voice.stop(800);        // fade out over 800ms, then stop
 
 Every `Voice` carries `volume` (get/set), `fade(to, ms)`, `stop(fadeMs?)`, an `ended` flag, an `onEnd` signal, the bus it routes through (`voice.bus`), and an `output` node you can tap for analysis. Beyond that base, a voice mixes in only the capabilities its backing node actually supports — narrow with a cast or an `'x' in voice` check:
 
-```js
+```ts
 import { Pausable, Seekable } from '@codexo/exojs';
 
 // A SoundVoice is Seekable + Loopable + RatePitched + Spatializable.
@@ -107,7 +112,7 @@ Voice volume is linear gain in the range `[0, 1]`, where 1 is "as authored". The
 
 `fade(to, ms)` ramps a voice's volume without stopping it; `stop(fadeMs)` ramps to zero and then releases the voice:
 
-```js
+```ts
 // Fade out over 800ms, then stop
 voice.stop(800);
 
@@ -117,7 +122,7 @@ voice.fade(0.7, 500);
 
 The `crossFade` utility fades one playing voice down while fading another up, in parallel:
 
-```js no-check
+```ts no-check
 import { crossFade } from '@codexo/exojs';
 
 const current = this.app.audio.play(this.trackA, { volume: 0.7 });
@@ -139,7 +144,7 @@ Pass `{ toVolume }` to fade the incoming voice to something other than full, and
 
 For rapid-fire SFX (gunshots, footsteps, UI clicks), set `poolSize` higher and use the default FIFO strategy:
 
-```js
+```ts
 const gunshot = this.loader.get('audio/gunshot.ogg');
 gunshot.poolSize = 24;
 
@@ -149,7 +154,7 @@ this.app.audio.play(gunshot); // oldest voice gets evicted when the pool is full
 
 Pitch variation for a richer sound is one line — randomise `playbackRate` per play:
 
-```js
+```ts
 const cents = Math.random() * 300 - 150; // -150 to +150 cents
 this.app.audio.play(sound, { playbackRate: Math.pow(2, cents / 1200) });
 ```
@@ -160,7 +165,7 @@ The audio manager exposes three built-in buses: `app.audio.master`, `app.audio.m
 
 Route a play through a specific bus with the `bus` option, or reassign a live voice's `bus`:
 
-```js
+```ts
 import { AudioBus } from '@codexo/exojs';
 
 const voiceBus = new AudioBus('voice-over', { parent: app.audio.master });
@@ -178,7 +183,7 @@ Buses have independent `volume` (0..2), `muted`, and `pan` controls, plus a filt
 
 A `Sound` can define named sub-regions ("sprites") on the descriptor — useful when you bake several effects into a single file and want to address them by name rather than by offset:
 
-```js
+```ts
 sound.defineSprite('impact', { start: 0.5, end: 0.8 });
 sound.defineSprite('whoosh', { start: 1.2, end: 1.6 });
 ```

@@ -16,7 +16,7 @@ Use `Graphics` when you need shapes that are defined in code rather than loaded 
 
 `Graphics` holds a `fillColor` and a `lineColor`, both `Color` instances. When you call a fill shape method (`drawRectangle`, `drawCircle`, `drawPolygon`, `drawStar`, `drawEllipse`), the shape is filled with the current `fillColor`. When `lineWidth` is greater than zero, the shape is also outlined with the current `lineColor`.
 
-```js
+```ts
 import { Color, Graphics } from '@codexo/exojs';
 
 const g = new Graphics();
@@ -30,7 +30,7 @@ g.drawCircle(200, 40, 40);
 
 Each draw call creates a separate `Mesh`. Changing `fillColor` between calls produces multi-colored output without creating a new `Graphics` instance:
 
-```js
+```ts
 g.fillColor = Color.tomato;
 g.drawCircle(0, 0, 30);
 
@@ -43,37 +43,37 @@ g.drawRectangle(40, -20, 60, 40);
 Seven shape methods cover the common cases. All coordinates are in the `Graphics` object's local space and participate in its transform.
 
 **Rectangles:**
-```js
+```ts
 g.drawRectangle(x, y, width, height);
 ```
 
 **Circles:**
-```js
+```ts
 g.drawCircle(centerX, centerY, radius);
 ```
 
 **Ellipses:**
-```js
+```ts
 g.drawEllipse(centerX, centerY, radiusX, radiusY);
 ```
 
 **Polygons** from a flat `[x0, y0, x1, y1, ...]` array:
-```js
+```ts
 g.drawPolygon([0, -30, 30, 30, -30, 30]); // triangle
 ```
 
 **Stars** with configurable points, inner radius, and rotation in radians (default inner radius is half the outer radius):
-```js
+```ts
 g.drawStar(centerX, centerY, points, radius, innerRadius, rotationRadians);
 ```
 
 **Lines** between two explicit points (does not use or affect the pen position):
-```js
+```ts
 g.drawLine(startX, startY, endX, endY);
 ```
 
 **Paths** from a flat point array, drawn as a stroked polyline:
-```js
+```ts
 g.drawPath([x0, y0, x1, y1, x2, y2, ...]);
 ```
 
@@ -81,7 +81,7 @@ g.drawPath([x0, y0, x1, y1, x2, y2, ...]);
 
 `Graphics` tracks a cursor position. Path commands move the cursor and emit stroked line segments:
 
-```js
+```ts
 g.moveTo(50, 50);
 g.lineTo(150, 100);
 g.lineTo(100, 200);
@@ -106,8 +106,8 @@ Each of these emits a `drawPath` call behind the scenes. The `currentPoint` prop
 
 `clear()` removes all child meshes and resets the pen state (position, colors, line width). The `Graphics` object itself stays alive. This is the right pattern for per-frame redrawing:
 
-```js
-update(delta) {
+```ts
+update(delta: Time) {
     this.g.clear();
 
     this.g.fillColor = Color.tomato;
@@ -124,7 +124,7 @@ For shapes that do not change, create the `Graphics` once in `init` and never ca
 
 Because `Graphics` extends `Container`, it inherits position, rotation, scale, and origin. A single `Graphics` object with several drawn shapes behaves as a group — rotating the `Graphics` rotates all its shape children together:
 
-```js
+```ts
 init() {
     this.group = new Graphics();
     this.group.fillColor = Color.goldenrod;
@@ -136,7 +136,7 @@ init() {
     this.addChild(this.group);
 }
 
-update(delta) {
+update(delta: Time) {
     this.group.rotate(60 * delta.seconds);
 }
 ```

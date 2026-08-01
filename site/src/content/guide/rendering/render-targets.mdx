@@ -15,7 +15,7 @@ This is the foundation of multi-pass rendering in ExoJS: render-to-texture for c
 
 A `RenderTexture` has pixel dimensions and optional sampler parameters:
 
-```js
+```ts
 import { RenderTexture } from '@codexo/exojs';
 
 const rt = new RenderTexture(256, 256);
@@ -23,7 +23,7 @@ const rt = new RenderTexture(256, 256);
 
 The constructor accepts an optional `SamplerOptions` object to control how the texture is sampled when used on a sprite:
 
-```js
+```ts
 import { RenderTexture, ScaleModes, WrapModes } from '@codexo/exojs';
 
 const rt = new RenderTexture(512, 512, {
@@ -38,7 +38,7 @@ Default sampler settings — linear filtering, clamp-to-edge wrapping, premultip
 
 Set the render target on the backend, draw normally, then restore the canvas:
 
-```js
+```ts
 init() {
     const backend = this.app.backend;
 
@@ -62,7 +62,7 @@ Everything between `setRenderTarget(rt)` and `setRenderTarget(null)` draws into 
 
 Once drawn, a `RenderTexture` can be assigned to any `Sprite`:
 
-```js
+```ts
 this.display = new Sprite(this.offscreen);
 this.display.setPosition(400, 300);
 this.display.setAnchor(0.5);
@@ -75,8 +75,8 @@ The sprite displays the off-screen render as its texture. You can position, scal
 
 The render-to-texture step typically happens once during `init` for static content, or inside `draw` for content that changes per frame:
 
-```js
-draw(context) {
+```ts
+draw(context: RenderingContext) {
     // 1. Draw game world into the off-screen target
     context.backend.setRenderTarget(this.offscreen);
     context.backend.clear();
@@ -96,7 +96,7 @@ When a `RenderTexture` is used as the active render target, draw calls write int
 
 `RenderTexture` extends [`RenderTarget`](/ExoJS/en/api/render-target/), which carries a `View` for camera control, size management, and viewport configuration. When drawing into a `RenderTexture`, the render target's view determines the coordinate system. By default it uses a pixel-aligned view matching the texture dimensions:
 
-```js
+```ts
 import { RenderTexture, View } from '@codexo/exojs';
 
 const rt = new RenderTexture(400, 300);
@@ -112,7 +112,7 @@ The `setSize()` method changes the texture dimensions. `powerOfTwo` reports whet
 
 **Cached layers.** Render a complex, static container once into a `RenderTexture`, then display the result as a sprite. Subsequent frames skip the container's render tree entirely — one texture draw instead of N child draws:
 
-```js
+```ts
 init() {
     this.buildComplexScene(); // builds this.staticLayer
 
@@ -131,7 +131,7 @@ init() {
     this.staticLayer.visible = false;
 }
 
-draw(context) {
+draw(context: RenderingContext) {
     context.backend.clear();
     context.render(this.cachedSprite);
     // ... dynamic content on top ...
