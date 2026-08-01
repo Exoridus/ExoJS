@@ -265,6 +265,27 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
   order, instead of synchronously off the raw `pointermove`/timer callback.
   Handlers that relied on running mid-event now run on the next frame
   boundary, in order relative to the pointer phases that produced them.
+- **BREAKING — keyboard channels resolve from the physical key
+  (`KeyboardEvent.code`), fixing bindings on non-US layouts.**
+  `KeyboardEvent.keyCode` reports the layout's own character mapping, so the
+  physical key at the QWERTY "A" position reports the `Q` keyCode on a French
+  AZERTY keyboard and the `Y`/`Z` keys swap on a German QWERTZ one — a WASD
+  binding silently landed on the wrong physical keys for those players. A
+  `Keyboard` member now denotes a physical key POSITION, identical across
+  layouts; the member names and channel values are unchanged (they name the
+  key by its US-QWERTY legend, so `Keyboard.Colon` is the key a QWERTZ
+  keyboard prints "ö" on), and persisted numeric bindings keep working — but
+  the values are opaque slots now, not `keyCode`s. Also: a key ExoJS does not
+  track (media and IME/language keys, and the empty `code` a soft keyboard
+  reports) drives no channel at all instead of writing into whatever slot its
+  `keyCode` happened to fall on; each modifier stays ONE channel covering both
+  physical sides (`ShiftLeft`/`ShiftRight` → `Keyboard.Shift`);
+  `Keyboard.Clear` is removed (it has no `code` — that physical key is
+  `Keyboard.NumPad5`); and `Meta`, `ContextMenu`, `PrintScreen`,
+  `NumPadEqual`, `IntlBackslash`, `IntlRo`, `IntlYen` are added for physical
+  keys that previously had no name. New `keyboardChannelFromCode(code)`
+  resolves a raw DOM `code` to its channel for rebinding UIs that work off DOM
+  events.
 
 ### Removed
 

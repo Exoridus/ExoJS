@@ -17,6 +17,7 @@ export * from './InteractionEvent';
 export * from './InteractionManager';
 export * from './JoyConLeftGamepadMapping';
 export * from './JoyConRightGamepadMapping';
+export { keyboardChannelFromCode } from './keyboardCodes';
 export * from './KeyEvent';
 export * from './PlayStationGamepadMapping';
 export { Pointer, PointerState } from './Pointer';

@@ -17,6 +17,7 @@ import { builtInGamepadDefinitions, resolveGamepadDefinition } from './GamepadDe
 import { type GestureJournalEvent, GestureRecognizer } from './GestureRecognizer';
 import type { InputBindingOptions, InputChannel } from './InputBinding';
 import { InputBinding } from './InputBinding';
+import { keyboardChannelFromCode } from './keyboardCodes';
 import { computeDesignPoint, Pointer, PointerState, PointerStateFlag } from './Pointer';
 import { ChannelOffset, ChannelSize, maxPointers, pointerSlotSize, resolveGamepadSlotChannel } from './types';
 
@@ -758,12 +759,23 @@ export class InputManager {
     pointer.destroy();
   }
 
+  /**
+   * Keys are identified by PHYSICAL position (`KeyboardEvent.code`), never by
+   * the layout-dependent `keyCode` — see {@link keyboardChannelFromCode}. A
+   * key with no channel of its own (media and IME/language keys, and the empty
+   * `code` a soft keyboard reports) is ignored outright rather than writing
+   * into an arbitrary slot.
+   */
   private handleKeyDown(event: KeyboardEvent): void {
     if (!this.canvasFocusedValue) {
       return;
     }
 
-    const channel = ChannelOffset.Keyboard + event.keyCode;
+    const channel = keyboardChannelFromCode(event.code);
+
+    if (channel === undefined) {
+      return;
+    }
 
     this.channels[channel] = 1;
     this._recordChannelChanges(channel, 1);
@@ -775,12 +787,17 @@ export class InputManager {
     }
   }
 
+  /** Physical-key resolution and unmapped-key handling exactly as in {@link handleKeyDown}. */
   private handleKeyUp(event: KeyboardEvent): void {
     if (!this.canvasFocusedValue) {
       return;
     }
 
-    const channel = ChannelOffset.Keyboard + event.keyCode;
+    const channel = keyboardChannelFromCode(event.code);
+
+    if (channel === undefined) {
+      return;
+    }
 
     this.channels[channel] = 0;
     this._recordChannelChanges(channel, 1);

@@ -747,7 +747,7 @@ describe('ActionMap × InputManager lifecycle', () => {
     const imCanvas = (im as unknown as { platform: BrowserPlatform }).platform.surface;
 
     imCanvas.dispatchEvent(new FocusEvent('focus'));
-    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: Keyboard.Space } as KeyboardEventInit));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
     im.update(0 as never);
 
     expect(map.jump.active).toBe(true);
@@ -785,7 +785,7 @@ describe('ActionMap × InputManager lifecycle', () => {
     const canvas = (im as unknown as { platform: BrowserPlatform }).platform.surface;
 
     canvas.dispatchEvent(new FocusEvent('focus'));
-    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: Keyboard.Space } as KeyboardEventInit));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
     im.update(0 as never);
     expect(map.jump.pressed).toBe(true);
 
@@ -813,7 +813,7 @@ describe('ActionMap × InputManager lifecycle', () => {
     const canvas = (im as unknown as { platform: BrowserPlatform }).platform.surface;
 
     canvas.dispatchEvent(new FocusEvent('focus'));
-    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: Keyboard.Space } as KeyboardEventInit));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
 
     im.attach(map);
 
@@ -823,7 +823,7 @@ describe('ActionMap × InputManager lifecycle', () => {
     // without the attach-moment snapshot supplying its true held value, so
     // the release would look like an already-0 channel instead of a real
     // 1 → 0 transition.
-    window.dispatchEvent(new KeyboardEvent('keyup', { keyCode: Keyboard.Space } as KeyboardEventInit));
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space' }));
     im.update(0 as never);
 
     expect(map.jump.active).toBe(false);
@@ -843,7 +843,7 @@ describe('ActionMap × InputManager lifecycle', () => {
     im.update(0 as never);
 
     map.detach();
-    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: Keyboard.Space } as KeyboardEventInit));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
 
     // Reattaching to the SAME owner reuses the SAME long-lived ActionSample
     // object. Without `ActionOwnership.arm` forgetting the previously

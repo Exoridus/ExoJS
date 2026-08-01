@@ -13,7 +13,6 @@ import { SceneState } from '#core/SceneState';
 import { InputManager } from '#input/InputManager';
 import { InteractionManager } from '#input/InteractionManager';
 import type { KeyEvent } from '#input/KeyEvent';
-import { Keyboard } from '#input/types';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
 import { Container } from '#rendering/Container';
 
@@ -77,8 +76,8 @@ const createHarness = (): Harness => {
 };
 
 /** Dispatch a real keydown, then flush it through InputManager into FocusController. */
-const pressKey = (h: Harness, keyCode: number): void => {
-  window.dispatchEvent(new KeyboardEvent('keydown', { keyCode } as KeyboardEventInit));
+const pressKey = (h: Harness, code: string): void => {
+  window.dispatchEvent(new KeyboardEvent('keydown', { code }));
   h.input.update(0 as never);
 };
 
@@ -143,9 +142,9 @@ describe('active scopes as real focus traps', () => {
     h.scene.root.addChild(modal);
 
     h.im.pushScope(modal);
-    pressKey(h, 9); // Tab keyCode
-    pressKey(h, 9);
-    pressKey(h, 9);
+    pressKey(h, 'Tab');
+    pressKey(h, 'Tab');
+    pressKey(h, 'Tab');
 
     expect(h.im.focused).not.toBe(outside);
 
@@ -471,7 +470,7 @@ describe('KeyEvent bubbling', () => {
     grandparent.onKeyDown.add(() => seen.push('grandparent'));
 
     h.im.focus(child);
-    pressKey(h, Keyboard.A);
+    pressKey(h, 'KeyA');
 
     expect(seen).toEqual(['child', 'parent', 'grandparent']);
 
@@ -498,7 +497,7 @@ describe('KeyEvent bubbling', () => {
     });
 
     h.im.focus(child);
-    pressKey(h, Keyboard.A);
+    pressKey(h, 'KeyA');
 
     expect(seenCurrentTargets).toEqual([child, parent]);
     expect(seenTarget).toBe(child);
@@ -520,7 +519,7 @@ describe('KeyEvent bubbling', () => {
     parent.onKeyDown.add(parentHandler);
 
     h.im.focus(child);
-    pressKey(h, Keyboard.A);
+    pressKey(h, 'KeyA');
 
     expect(parentHandler).not.toHaveBeenCalled();
 
@@ -540,8 +539,8 @@ describe('KeyEvent bubbling', () => {
     parent.onKeyUp.add(parentHandler);
     h.im.focus(child);
 
-    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: Keyboard.A } as KeyboardEventInit));
-    window.dispatchEvent(new KeyboardEvent('keyup', { keyCode: Keyboard.A } as KeyboardEventInit));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyA' }));
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyA' }));
     h.input.update(0 as never);
 
     expect(parentHandler).toHaveBeenCalledTimes(1);

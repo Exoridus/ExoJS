@@ -1,12 +1,12 @@
 {
   "title": "Keyboard",
-  "description": "Channel indices for keyboard keys, derived from the legacy `KeyboardEvent.keyCode` map. Pass any value to the Input constructor to react to that key.",
+  "description": "Channel indices for keyboard keys, addressed by PHYSICAL key position. Pass any value to the Input constructor to react to that key. A key is identified by the Web platform's layout-independent `KeyboardEvent.code` (see keyboardChannelFromCode), not by the layout-dependent `keyCode`: Keyboard.A is the key at the QWERTY \"A\" position on every layout — the one an AZERTY keyboard prints \"Q\" on — so WASD-style bindings stay in the same place under the player's hand regardless of the player's layout. Every member therefore names a POSITION, described by the glyph a US-QWERTY keyboard prints there, and NOT the character the key actually produces: Keyboard.Z is the key a German QWERTZ keyboard prints \"Y\" on, and Keyboard.Colon the key it prints \"ö\" on. Use DOM text input for anything that needs the typed character, dead keys, or IME composition. The values are opaque channel indices inside the keyboard category — do not assume they equal any `keyCode`. Each modifier is ONE channel covering both physical sides: `ShiftLeft` and `ShiftRight` both drive Keyboard.Shift.",
   "symbol": "Keyboard",
   "kind": "enum",
   "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 99,
+  "memberCount": 105,
   "counts": {
     "constructors": 0,
     "methods": 0,
@@ -19,7 +19,11 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Channel indices for keyboard keys, derived from the legacy `KeyboardEvent.keyCode` map. Pass any value to the Input constructor to react to that key."
+        "Channel indices for keyboard keys, addressed by PHYSICAL key position. Pass any value to the Input constructor to react to that key.",
+        "A key is identified by the Web platform's layout-independent `KeyboardEvent.code` (see keyboardChannelFromCode), not by the layout-dependent `keyCode`: Keyboard.A is the key at the QWERTY \"A\" position on every layout — the one an AZERTY keyboard prints \"Q\" on — so WASD-style bindings stay in the same place under the player's hand regardless of the player's layout.",
+        "Every member therefore names a POSITION, described by the glyph a US-QWERTY keyboard prints there, and NOT the character the key actually produces: Keyboard.Z is the key a German QWERTZ keyboard prints \"Y\" on, and Keyboard.Colon the key it prints \"ö\" on. Use DOM text input for anything that needs the typed character, dead keys, or IME composition.",
+        "The values are opaque channel indices inside the keyboard category — do not assume they equal any `keyCode`.",
+        "Each modifier is ONE channel covering both physical sides: `ShiftLeft` and `ShiftRight` both drive Keyboard.Shift."
       ],
       "importLine": "import { Keyboard } from '@codexo/exojs'",
       "sourceLink": null
@@ -120,19 +124,6 @@
           "description": ""
         },
         {
-          "name": "Clear",
-          "signature": "Clear",
-          "signatureTokens": [
-            {
-              "text": "Clear",
-              "kind": "name"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
           "name": "ClosedBracket",
           "signature": "ClosedBracket",
           "signatureTokens": [
@@ -164,6 +155,19 @@
           "signatureTokens": [
             {
               "text": "Comma",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "ContextMenu",
+          "signature": "ContextMenu",
+          "signatureTokens": [
+            {
+              "text": "ContextMenu",
               "kind": "name"
             }
           ],
@@ -588,6 +592,45 @@
           "description": ""
         },
         {
+          "name": "IntlBackslash",
+          "signature": "IntlBackslash",
+          "signatureTokens": [
+            {
+              "text": "IntlBackslash",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "IntlRo",
+          "signature": "IntlRo",
+          "signatureTokens": [
+            {
+              "text": "IntlRo",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "IntlYen",
+          "signature": "IntlYen",
+          "signatureTokens": [
+            {
+              "text": "IntlYen",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
           "name": "J",
           "signature": "J",
           "signatureTokens": [
@@ -645,6 +688,19 @@
           "signatureTokens": [
             {
               "text": "M",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Meta",
+          "signature": "Meta",
+          "signatureTokens": [
+            {
+              "text": "Meta",
               "kind": "name"
             }
           ],
@@ -874,6 +930,19 @@
           "description": ""
         },
         {
+          "name": "NumPadEqual",
+          "signature": "NumPadEqual",
+          "signatureTokens": [
+            {
+              "text": "NumPadEqual",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
           "name": "NumPadMultiply",
           "signature": "NumPadMultiply",
           "signatureTokens": [
@@ -996,6 +1065,19 @@
           "signatureTokens": [
             {
               "text": "Period",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "PrintScreen",
+          "signature": "PrintScreen",
+          "signatureTokens": [
+            {
+              "text": "PrintScreen",
               "kind": "name"
             }
           ],

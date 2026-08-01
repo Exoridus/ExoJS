@@ -58,8 +58,27 @@ export enum PointerButton {
 }
 
 /**
- * Channel indices for keyboard keys, derived from the legacy `KeyboardEvent.keyCode`
- * map. Pass any value to the {@link Input} constructor to react to that key.
+ * Channel indices for keyboard keys, addressed by PHYSICAL key position.
+ * Pass any value to the {@link Input} constructor to react to that key.
+ *
+ * A key is identified by the Web platform's layout-independent
+ * `KeyboardEvent.code` (see {@link keyboardChannelFromCode}), not by the
+ * layout-dependent `keyCode`: {@link Keyboard.A} is the key at the QWERTY "A"
+ * position on every layout — the one an AZERTY keyboard prints "Q" on — so
+ * WASD-style bindings stay in the same place under the player's hand
+ * regardless of the player's layout.
+ *
+ * Every member therefore names a POSITION, described by the glyph a US-QWERTY
+ * keyboard prints there, and NOT the character the key actually produces:
+ * {@link Keyboard.Z} is the key a German QWERTZ keyboard prints "Y" on, and
+ * {@link Keyboard.Colon} the key it prints "ö" on. Use DOM text input for
+ * anything that needs the typed character, dead keys, or IME composition.
+ *
+ * The values are opaque channel indices inside the keyboard category — do not
+ * assume they equal any `keyCode`.
+ *
+ * Each modifier is ONE channel covering both physical sides: `ShiftLeft` and
+ * `ShiftRight` both drive {@link Keyboard.Shift}.
  *
  * @example
  * ```ts
@@ -69,7 +88,6 @@ export enum PointerButton {
 export enum Keyboard {
   Backspace = ChannelOffset.Keyboard + 8,
   Tab = ChannelOffset.Keyboard + 9,
-  Clear = ChannelOffset.Keyboard + 12,
   Enter = ChannelOffset.Keyboard + 13,
   Shift = ChannelOffset.Keyboard + 16,
   Control = ChannelOffset.Keyboard + 17,
@@ -86,6 +104,7 @@ export enum Keyboard {
   Up = ChannelOffset.Keyboard + 38,
   Right = ChannelOffset.Keyboard + 39,
   Down = ChannelOffset.Keyboard + 40,
+  PrintScreen = ChannelOffset.Keyboard + 44,
   Insert = ChannelOffset.Keyboard + 45,
   Delete = ChannelOffset.Keyboard + 46,
   Help = ChannelOffset.Keyboard + 47,
@@ -125,6 +144,8 @@ export enum Keyboard {
   X = ChannelOffset.Keyboard + 88,
   Y = ChannelOffset.Keyboard + 89,
   Z = ChannelOffset.Keyboard + 90,
+  Meta = ChannelOffset.Keyboard + 91,
+  ContextMenu = ChannelOffset.Keyboard + 93,
   NumPad0 = ChannelOffset.Keyboard + 96,
   NumPad1 = ChannelOffset.Keyboard + 97,
   NumPad2 = ChannelOffset.Keyboard + 98,
@@ -155,6 +176,13 @@ export enum Keyboard {
   F12 = ChannelOffset.Keyboard + 123,
   NumLock = ChannelOffset.Keyboard + 144,
   ScrollLock = ChannelOffset.Keyboard + 145,
+  NumPadEqual = ChannelOffset.Keyboard + 146,
+  /** The extra key between left `Shift` and `Z` on ISO (non-US) keyboards. */
+  IntlBackslash = ChannelOffset.Keyboard + 147,
+  /** The extra key left of the right `Shift` on Japanese keyboards. */
+  IntlRo = ChannelOffset.Keyboard + 148,
+  /** The extra key right of `Backspace` on Japanese keyboards. */
+  IntlYen = ChannelOffset.Keyboard + 149,
   Colon = ChannelOffset.Keyboard + 186,
   Equals = ChannelOffset.Keyboard + 187,
   Comma = ChannelOffset.Keyboard + 188,

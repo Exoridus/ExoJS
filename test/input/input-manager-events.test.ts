@@ -170,8 +170,8 @@ describe('InputManager — keyboard', () => {
 
     im.onKeyDown.add(onKeyDown);
     im.onKeyUp.add(onKeyUp);
-    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: Keyboard.Space } as KeyboardEventInit));
-    window.dispatchEvent(new KeyboardEvent('keyup', { keyCode: Keyboard.Space } as KeyboardEventInit));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space' }));
     im.update();
 
     expect(ch(im, Keyboard.Space)).toBe(0);
@@ -204,7 +204,7 @@ describe('InputManager — keyboard', () => {
     im.onKeyDown.add(onKeyDown);
     canvas.dispatchEvent(new FocusEvent('focus'));
 
-    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: Keyboard.Space } as KeyboardEventInit));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
 
     expect(ch(im, Keyboard.Space)).toBe(1);
     expect(onKeyDown).not.toHaveBeenCalled(); // not flushed until update()
@@ -224,10 +224,10 @@ describe('InputManager — keyboard', () => {
     im.onKeyUp.add(onKeyUp);
     canvas.dispatchEvent(new FocusEvent('focus'));
 
-    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: Keyboard.A } as KeyboardEventInit));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyA' }));
     im.update();
 
-    window.dispatchEvent(new KeyboardEvent('keyup', { keyCode: Keyboard.A } as KeyboardEventInit));
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyA' }));
     expect(ch(im, Keyboard.A)).toBe(0);
 
     im.update();
@@ -247,8 +247,8 @@ describe('InputManager — keyboard', () => {
     im.onCanvasFocusChange.add(onFocusChange);
     canvas.dispatchEvent(new FocusEvent('focus'));
 
-    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: Keyboard.A } as KeyboardEventInit));
-    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: Keyboard.B } as KeyboardEventInit));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyA' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyB' }));
     im.update();
     onKeyUp.mockClear();
 
@@ -278,7 +278,7 @@ describe('InputManager — keyboard', () => {
     im.onCanvasFocusChange.add(onFocusChange);
     canvas.dispatchEvent(new FocusEvent('focus'));
 
-    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: Keyboard.Space } as KeyboardEventInit));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
     im.update();
 
     window.dispatchEvent(new FocusEvent('blur'));
@@ -310,12 +310,12 @@ describe('InputManager — keyboard', () => {
     canvas.dispatchEvent(new FocusEvent('focus'));
     const binding = im.onStart(Keyboard.Space, () => {});
 
-    const downEvent = new KeyboardEvent('keydown', { keyCode: Keyboard.Space, cancelable: true } as KeyboardEventInit);
+    const downEvent = new KeyboardEvent('keydown', { code: 'Space', cancelable: true });
 
     window.dispatchEvent(downEvent);
     expect(downEvent.defaultPrevented).toBe(true);
 
-    const upEvent = new KeyboardEvent('keyup', { keyCode: Keyboard.Space, cancelable: true } as KeyboardEventInit);
+    const upEvent = new KeyboardEvent('keyup', { code: 'Space', cancelable: true });
 
     window.dispatchEvent(upEvent);
     expect(upEvent.defaultPrevented).toBe(true);
@@ -329,7 +329,7 @@ describe('InputManager — keyboard', () => {
 
     canvas.dispatchEvent(new FocusEvent('focus'));
 
-    const downEvent = new KeyboardEvent('keydown', { keyCode: Keyboard.Enter, cancelable: true } as KeyboardEventInit);
+    const downEvent = new KeyboardEvent('keydown', { code: 'Enter', cancelable: true });
 
     window.dispatchEvent(downEvent);
 
@@ -347,14 +347,14 @@ describe('InputManager — keyboard', () => {
 
     bindingA.unbind();
 
-    const stillCaptured = new KeyboardEvent('keydown', { keyCode: Keyboard.Space, cancelable: true } as KeyboardEventInit);
+    const stillCaptured = new KeyboardEvent('keydown', { code: 'Space', cancelable: true });
 
     window.dispatchEvent(stillCaptured);
     expect(stillCaptured.defaultPrevented).toBe(true);
 
     bindingB.unbind();
 
-    const noLongerCaptured = new KeyboardEvent('keydown', { keyCode: Keyboard.Space, cancelable: true } as KeyboardEventInit);
+    const noLongerCaptured = new KeyboardEvent('keydown', { code: 'Space', cancelable: true });
 
     window.dispatchEvent(noLongerCaptured);
     expect(noLongerCaptured.defaultPrevented).toBe(false);
@@ -373,7 +373,7 @@ describe('InputManager — keyboard', () => {
     // The physical press belongs to an earlier, already-closed frame. Its
     // batch is gone by the time this binding starts observing, while the live
     // channel correctly remains held.
-    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: Keyboard.Space } as KeyboardEventInit));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
     im.update();
 
     const binding = im.onStart(Keyboard.Space, onStart, { threshold: 300 });
@@ -384,7 +384,7 @@ describe('InputManager — keyboard', () => {
     // The first post-construction batch is only the release. createBinding()
     // must have captured the held construction baseline so this is a real
     // stop, while the unknown pre-observation press time cannot become a tap.
-    window.dispatchEvent(new KeyboardEvent('keyup', { keyCode: Keyboard.Space } as KeyboardEventInit));
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space' }));
     im.update();
 
     expect(onStart).toHaveBeenCalledTimes(1);
@@ -817,7 +817,7 @@ describe('InputManager — binding factories', () => {
     im.onTrigger(Keyboard.Space, onTrigger);
 
     canvas.dispatchEvent(new FocusEvent('focus'));
-    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: Keyboard.Space } as KeyboardEventInit));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
 
     im.update();
     expect(onStart).toHaveBeenCalledTimes(1);
@@ -828,7 +828,7 @@ describe('InputManager — binding factories', () => {
     expect(onStart).toHaveBeenCalledTimes(1);
     expect(onActive).toHaveBeenCalledTimes(2);
 
-    window.dispatchEvent(new KeyboardEvent('keyup', { keyCode: Keyboard.Space } as KeyboardEventInit));
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space' }));
     im.update();
 
     expect(onStop).toHaveBeenCalledTimes(1);
@@ -844,7 +844,7 @@ describe('InputManager — binding factories', () => {
     im.onStart([Keyboard.A, Keyboard.B], onStart);
     canvas.dispatchEvent(new FocusEvent('focus'));
 
-    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: Keyboard.B } as KeyboardEventInit));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyB' }));
     im.update();
 
     expect(onStart).toHaveBeenCalledTimes(1);
@@ -883,7 +883,7 @@ describe('InputManager — binding factories', () => {
     canvas.dispatchEvent(new FocusEvent('focus'));
     binding.unbind();
 
-    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: Keyboard.Space } as KeyboardEventInit));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
     im.update();
 
     expect(onActive).not.toHaveBeenCalled();
@@ -919,7 +919,7 @@ describe('InputManager — destroy', () => {
 
     im.destroy();
 
-    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: Keyboard.Space } as KeyboardEventInit));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'mouse', clientX: 1, clientY: 1, isPrimary: true });
     fire(canvas, 'pointerdown', { pointerId: 1, pointerType: 'mouse', clientX: 1, clientY: 1, isPrimary: true });
 
