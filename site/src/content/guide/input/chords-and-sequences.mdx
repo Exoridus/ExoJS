@@ -41,13 +41,13 @@ class GameScene extends Scene {
 
 `+` means simultaneous channels in one step; `>` advances to the next step. A single atomic platform batch never invents ordering: `A` and `B` entering together does not satisfy `A>B` — see below.
 
-`SequenceAction` also exposes `progress` (0..1), how far the pattern has advanced, handy for rendering a partial-combo hint. It resets to `0` on a mismatch, a `maxGap`/`timeout` expiry, or whenever the map itself is reset (a scene suspend, an unavailable `when` policy — see below).
+`SequenceAction` also exposes `progress` — `completedSteps / totalSteps`, handy for rendering a partial-combo hint. It never reaches `1`: the same update that completes the final step sets `triggered` and snaps `progress` straight back to `0`, so the real range is `[0, (n-1)/n]` for `n` steps. It resets to `0` on a mismatch, or whenever the map itself is reset (a scene suspend, or losing availability under a `when` policy — see [pause menu](/ExoJS/en/guide/recipes/pause-menu/)). A `maxGap`/`timeout` expiry resets it too, but only once the NEXT relevant input event arrives (see "Tuning restart behavior" below) — a half-completed pattern can hold a stale, non-zero `progress` for an arbitrarily long real gap if nothing else touches a bound channel in the meantime; there is no timer ticking it down on its own.
 
 ## Not text or IME input
 
 String patterns resolve case-insensitive `Keyboard` enum names only (`'Control+S'`, `'control+s'`). They are not a text or IME API: they never decode typed characters, dead keys, or composed input, and reject any token that is not a known `Keyboard` member. Use DOM text input outside the game channel system for localized characters, composition, and editable text.
 
-Array patterns accept keyboard, pointer, gamepad-button, and gamepad-axis channels directly — mix a chord step of several channels as a nested array: `new SequenceAction([Keyboard.J, Keyboard.J, [Keyboard.Control, Keyboard.K]])`. `gamepadSlot` remaps gamepad channels exactly as it does for other actions.
+Array patterns accept keyboard, pointer, gamepad-button, and gamepad-axis channels directly — mix a chord step of several channels as a nested array: `new SequenceAction([Keyboard.J, Keyboard.J, [Keyboard.Control, Keyboard.K]])`. A repeated single-channel step like the two `Keyboard.J` entries above requires a genuine release between them: holding `J` down after the first step is accepted does not also satisfy the second, since a step only advances on a fresh press (an inactive-to-active transition), never merely because a channel already reads as held. `gamepadSlot` remaps gamepad channels exactly as it does for other actions.
 
 ## Same-batch entries never invent an order
 
@@ -57,4 +57,4 @@ A `ChannelEventBatch` is one atomic platform event — every channel it wrote ar
 
 `maxGap` (default `600`ms) bounds the time between two consecutive accepted steps; `timeout` (default `3000`ms) bounds the whole pattern from its first accepted step to its last. Both are checked against the source events' monotonic timestamps when the next relevant input event arrives — they do not schedule timers and do not wake an otherwise idle frame.
 
-By default (`resetOnMismatch: true`), an unrelated tracked channel entering resets progress to the start; the very same batch can still restart the pattern on its first step if that step's own channels are the only thing it touched.
+By default (`resetOnMismatch: true`), an unrelated tracked channel entering resets progress to the start; the very same batch can still restart the pattern on its first step if that step's own channels are the only thing it touched. Set `resetOnMismatch: false` to ignore an out-of-order channel instead of discarding progress — the pattern simply keeps waiting for its actual next step.

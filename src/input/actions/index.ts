@@ -6,7 +6,7 @@ export { ButtonAction } from './ButtonAction';
 export type { ChordBinding } from './ChordAction';
 export { ChordAction } from './ChordAction';
 export type { InputChord, InputSequence } from './pattern';
-export type { SequenceActionOptions } from './SequenceAction';
+export type { SequenceActionOptions, SequenceBinding } from './SequenceAction';
 export { SequenceAction } from './SequenceAction';
 export type { ActionOptions, AtLeastOne, OneOrMany } from './types';
 export type { VectorBinding, VectorBindingShape } from './VectorAction';

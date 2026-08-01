@@ -16,9 +16,11 @@ export type AtLeastOne<T> = { [K in keyof T]-?: Required<Pick<T, K>> & Partial<O
 /** Options shared by every action. */
 export interface ActionOptions {
   /**
-   * Magnitude an action's value must exceed to count as {@link ButtonAction.active}.
-   * Defaults to `0`. Distinct from a gamepad's device-level deadzone, which is
-   * applied before the value ever reaches the channel buffer.
+   * Magnitude a channel's value must exceed to count as active — see the
+   * concrete action kind's own `active`/`pressed`/`triggered` semantics (for
+   * example {@link ButtonAction.active}). Defaults to `0`. Distinct from a
+   * gamepad's device-level deadzone, which is applied before the value ever
+   * reaches the channel buffer.
    */
   readonly threshold?: number;
   /**

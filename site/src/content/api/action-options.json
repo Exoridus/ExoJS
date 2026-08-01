@@ -100,7 +100,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Magnitude an action's value must exceed to count as ButtonAction.active. Defaults to 0. Distinct from a gamepad's device-level deadzone, which is applied before the value ever reaches the channel buffer."
+          "description": "Magnitude a channel's value must exceed to count as active — see the concrete action kind's own active/pressed/triggered semantics (for example ButtonAction.active). Defaults to 0. Distinct from a gamepad's device-level deadzone, which is applied before the value ever reaches the channel buffer."
         }
       ],
       "paragraphs": [],

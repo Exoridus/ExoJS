@@ -1,7 +1,7 @@
 {
-  "title": "ChordBinding",
-  "description": "A binding accepted by ChordAction: a `'+'`-joined string of case-insensitive Keyboard token names (`'Control+S'`), or an InputChord array of channels required together directly.",
-  "symbol": "ChordBinding",
+  "title": "SequenceBinding",
+  "description": "A binding accepted by SequenceAction: a `'>'`-separated, `'+'`-joined string pattern (`'Down>Down+Right>Right'`), or an InputSequence array of steps directly.",
+  "symbol": "SequenceBinding",
   "kind": "type",
   "subsystem": "input",
   "importPath": "@codexo/exojs",
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A binding accepted by ChordAction: a `'+'`-joined string of case-insensitive Keyboard token names (`'Control+S'`), or an InputChord array of channels required together directly."
+        "A binding accepted by SequenceAction: a `'>'`-separated, `'+'`-joined string pattern (`'Down>Down+Right>Right'`), or an InputSequence array of steps directly."
       ],
-      "importLine": "import { ChordBinding } from '@codexo/exojs'",
+      "importLine": "import { SequenceBinding } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -29,8 +29,8 @@
       "title": "Definition",
       "members": [
         {
-          "name": "ChordBinding",
-          "signature": "string | InputChord",
+          "name": "SequenceBinding",
+          "signature": "string | InputSequence",
           "signatureTokens": [
             {
               "text": "string",
@@ -41,7 +41,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "InputChord",
+              "text": "InputSequence",
               "kind": "type"
             }
           ],
@@ -61,11 +61,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/input/actions/ChordAction.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/ChordAction.ts"
+        "label": "src/input/actions/SequenceAction.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/SequenceAction.ts"
       }
     }
   ],
-  "sourcePath": "src/input/actions/ChordAction.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/ChordAction.ts"
+  "sourcePath": "src/input/actions/SequenceAction.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/SequenceAction.ts"
 }

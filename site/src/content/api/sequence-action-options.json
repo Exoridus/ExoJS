@@ -1,6 +1,6 @@
 {
   "title": "SequenceActionOptions",
-  "description": "",
+  "description": "Options for SequenceAction — the options every action shares, plus pattern timing and restart behavior.",
   "symbol": "SequenceActionOptions",
   "kind": "interface",
   "subsystem": "input",
@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [],
+      "paragraphs": [
+        "Options for SequenceAction — the options every action shares, plus pattern timing and restart behavior."
+      ],
       "importLine": "import { SequenceActionOptions } from '@codexo/exojs'",
       "sourceLink": null
     },
@@ -73,7 +75,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Resolve gamepad channels against this slot (0..3) instead of the primary pad. Non-gamepad channels are unaffected. See ActionOptions.gamepadSlot."
+          "description": "Resolve gamepad channels against this slot (0..3) instead of the primary pad. Non-gamepad channels are unaffected."
         },
         {
           "name": "maxGap",
@@ -98,7 +100,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Maximum source-event gap between completed steps, in milliseconds. Checked against ChannelEventBatch.timestamp when the next relevant event arrives. Default 600."
+          "description": "Maximum source-event gap between completed steps, in milliseconds. Checked against ChannelEventBatch.timestamp when the next relevant event arrives — see SequenceAction.progress's doc comment for what that means for a pattern with no further input. Default 600."
         },
         {
           "name": "resetOnMismatch",
@@ -148,7 +150,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Magnitude a step's channel value must exceed to count as held. Defaults to 0. See ActionOptions.threshold."
+          "description": "Magnitude a channel's value must exceed to count as active — see the concrete action kind's own active/pressed/triggered semantics (for example ButtonAction.active). Defaults to 0. Distinct from a gamepad's device-level deadzone, which is applied before the value ever reaches the channel buffer."
         },
         {
           "name": "timeout",

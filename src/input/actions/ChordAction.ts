@@ -1,9 +1,12 @@
-import type { InputChannel } from '#input/InputBinding';
-
-import { normalizeSequence } from './pattern';
+import { type InputChord, normalizeSequence } from './pattern';
 import type { ActionOptions, ActionSample } from './types';
 
-export type ChordBinding = string | readonly InputChannel[];
+/**
+ * A binding accepted by {@link ChordAction}: a `'+'`-joined string of
+ * case-insensitive {@link Keyboard} token names (`'Control+S'`), or an
+ * {@link InputChord} array of channels required together directly.
+ */
+export type ChordBinding = string | InputChord;
 
 /**
  * Button-like action active while every channel in a chord is held at once —
@@ -41,10 +44,13 @@ export class ChordAction {
    * segment, or the same channel twice.
    */
   public constructor(binding: ChordBinding, options: ActionOptions = {}) {
-    const steps = normalizeSequence(typeof binding === 'string' ? binding : [binding], options.gamepadSlot ?? 0);
+    const steps = normalizeSequence(typeof binding === 'string' ? binding : [binding], options.gamepadSlot ?? 0, 'ChordAction');
 
     if (steps.length !== 1) {
-      throw new Error('ChordAction accepts one simultaneous step. Use SequenceAction for `>` patterns.');
+      const patternText = typeof binding === 'string' ? ` ("${binding}")` : '';
+      throw new Error(
+        `ChordAction: a chord binding${patternText} must resolve to exactly one simultaneous step, not ${steps.length}. Use SequenceAction for '>' patterns.`,
+      );
     }
 
     this._channels = steps[0]!;

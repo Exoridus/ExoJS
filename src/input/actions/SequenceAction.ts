@@ -1,21 +1,20 @@
 import { type InputSequence, normalizeSequence } from './pattern';
-import type { ActionSample } from './types';
+import type { ActionOptions, ActionSample } from './types';
 
-export interface SequenceActionOptions {
-  /**
-   * Magnitude a step's channel value must exceed to count as held. Defaults
-   * to `0`. See {@link ActionOptions.threshold}.
-   */
-  readonly threshold?: number;
-  /**
-   * Resolve gamepad channels against this slot (0..3) instead of the primary
-   * pad. Non-gamepad channels are unaffected. See {@link ActionOptions.gamepadSlot}.
-   */
-  readonly gamepadSlot?: 0 | 1 | 2 | 3;
+/**
+ * A binding accepted by {@link SequenceAction}: a `'>'`-separated,
+ * `'+'`-joined string pattern (`'Down>Down+Right>Right'`), or an
+ * {@link InputSequence} array of steps directly.
+ */
+export type SequenceBinding = string | InputSequence;
+
+/** Options for {@link SequenceAction} — the options every action shares, plus pattern timing and restart behavior. */
+export interface SequenceActionOptions extends ActionOptions {
   /**
    * Maximum source-event gap between completed steps, in milliseconds.
    * Checked against {@link ChannelEventBatch.timestamp} when the next relevant
-   * event arrives. Default `600`.
+   * event arrives — see {@link SequenceAction.progress}'s doc comment for what
+   * that means for a pattern with no further input. Default `600`.
    */
   readonly maxGap?: number;
   /** Maximum source-event duration from first to final step, in milliseconds. Default `3000`. */
@@ -27,8 +26,14 @@ export interface SequenceActionOptions {
 /**
  * Ordered input pattern — `+` joins a chord within one step, `>` advances to
  * the next step. `triggered` is `true` for the one frame the final step
- * completes; `progress` reports how far the pattern has advanced (0..1) so a
- * caller can render a partial-combo hint.
+ * completes; see {@link progress}'s own doc comment for how far a pattern has
+ * advanced.
+ *
+ * A repeated single-channel step (`'A>A'`) requires a genuine release between
+ * the two presses: holding the channel down after the first accepted step
+ * never re-satisfies the second on its own, since a step only advances on a
+ * channel's rising (inactive-to-active) edge, not merely because it reads
+ * active — see `_update`'s implementation.
  *
  * A single atomic {@link ChannelEventBatch} never invents an order: two
  * channels written together by the same real-world event (e.g. `A` and `B`
@@ -46,6 +51,8 @@ export interface SequenceActionOptions {
  * @example
  * ```ts
  * const konami = new SequenceAction('Up>Up>Down>Down>Left>Right>Left>Right>B>A', { maxGap: 800 });
+ * // Holding J after the first step does nothing on its own — the second J
+ * // requires its own release-then-press, same as the two steps below it.
  * const comboAttack = new SequenceAction([Keyboard.J, Keyboard.J, [Keyboard.Control, Keyboard.K]]);
  * ```
  */
@@ -68,8 +75,8 @@ export class SequenceAction {
    * unknown `Keyboard` token or an empty `+`/`>` segment, or any single step
    * repeats the same channel twice.
    */
-  public constructor(pattern: string | InputSequence, options: SequenceActionOptions = {}) {
-    this._steps = normalizeSequence(pattern, options.gamepadSlot ?? 0);
+  public constructor(pattern: SequenceBinding, options: SequenceActionOptions = {}) {
+    this._steps = normalizeSequence(pattern, options.gamepadSlot ?? 0, 'SequenceAction');
     this._channels = [...new Set(this._steps.flat())];
     this._threshold = options.threshold ?? 0;
     this._maxGap = Math.max(0, options.maxGap ?? 600);
@@ -82,6 +89,20 @@ export class SequenceAction {
     return this._triggered;
   }
 
+  /**
+   * How far the pattern has advanced, as `completedSteps / totalSteps` — in
+   * `[0, (n-1)/n]` for `n` steps, and never `1`: the same update that accepts
+   * the final step also sets {@link triggered} and resets `progress` back to
+   * `0`, so a caller polling both together never observes `progress` at its
+   * nominal maximum.
+   *
+   * `maxGap`/`timeout` expiry is evaluated only when the NEXT tracked channel
+   * event arrives (see `_update`'s `_expire` call) — not on a timer, and not
+   * once per idle frame. A half-completed pattern can therefore hold a stale,
+   * non-zero `progress` for an arbitrarily long real-world gap if nothing
+   * else touches a bound channel in the meantime; it only snaps back to `0`
+   * once a relevant event finally arrives and is found to be expired.
+   */
   public get progress(): number {
     return this._step / this._steps.length;
   }

@@ -1,8 +1,24 @@
 import type { InputChannel } from '#input/InputBinding';
 import { Keyboard, resolveGamepadSlotChannel } from '#input/types';
 
+/**
+ * One {@link SequenceAction} step requiring every listed channel
+ * simultaneously — the array-form equivalent of a `'+'`-joined chord token
+ * group, and the whole binding a {@link ChordAction} accepts.
+ */
 export type InputChord = readonly InputChannel[];
+
+/**
+ * An ordered list of {@link SequenceAction} pattern steps. Each entry is
+ * either a single {@link InputChannel} (a one-channel step) or a nested
+ * {@link InputChord} (several channels required together for that one
+ * step) — the array-form equivalent of a `'>'`-separated, `'+'`-joined
+ * string pattern such as `'Down>Down+Right>Right'`.
+ */
 export type InputSequence = ReadonlyArray<InputChannel | InputChord>;
+
+/** Which calling action kind {@link normalizeSequence} is parsing for, purely to word its error messages accurately. */
+type PatternOwner = 'ChordAction' | 'SequenceAction';
 
 const keyboardByName = new Map<string, number>(
   Object.entries(Keyboard)
@@ -10,7 +26,7 @@ const keyboardByName = new Map<string, number>(
     .map(([name, value]) => [name.toLowerCase(), value]),
 );
 
-function resolveToken(token: string): number {
+function resolveToken(token: string, owner: PatternOwner, patternText: string): number {
   const normalized = token
     .trim()
     .replace(/^Keyboard\./i, '')
@@ -18,13 +34,23 @@ function resolveToken(token: string): number {
   const channel = keyboardByName.get(normalized);
 
   if (channel === undefined) {
-    throw new Error(`Input pattern: unknown keyboard token "${token.trim()}". ` + 'Use a Keyboard enum name or pass numeric channels.');
+    throw new Error(`${owner}: unknown keyboard token "${token.trim()}" in pattern "${patternText}". Use a Keyboard enum name or pass numeric channels.`);
   }
 
   return channel;
 }
 
-export function normalizeSequence(input: string | InputSequence, gamepadSlot: 0 | 1 | 2 | 3): ReadonlyArray<readonly number[]> {
+/**
+ * Parse and validate a string or array pattern into raw, gamepad-slot-resolved
+ * channel steps. Shared by {@link ChordAction} (always exactly one resulting
+ * step — enforced by its own constructor after this returns) and
+ * {@link SequenceAction} (one or more). `owner` names the calling action kind
+ * so every thrown message reads naturally for that caller — a `ChordAction`
+ * has no user-facing notion of "step N", only "the chord".
+ */
+export function normalizeSequence(input: string | InputSequence, gamepadSlot: 0 | 1 | 2 | 3, owner: PatternOwner): ReadonlyArray<readonly number[]> {
+  const chord = owner === 'ChordAction';
+
   const steps: ReadonlyArray<InputChannel | InputChord> =
     typeof input === 'string'
       ? input
@@ -34,27 +60,30 @@ export function normalizeSequence(input: string | InputSequence, gamepadSlot: 0 
             const tokens = step.split('+').map(token => token.trim());
 
             if (tokens.some(token => token.length === 0)) {
-              throw new Error(`Input pattern: sequence step ${index + 1} contains an empty chord token.`);
+              const where = chord ? 'the chord' : `step ${index + 1}`;
+              throw new Error(`${owner}: ${where} of pattern "${input}" contains an empty token.`);
             }
 
-            return tokens.map(resolveToken);
+            return tokens.map(token => resolveToken(token, owner, input));
           })
       : input;
 
   if (steps.length === 0) {
-    throw new Error('Input sequence must contain at least one step.');
+    throw new Error(`${owner}: a pattern must contain at least one step.`);
   }
 
   return steps.map((step, index) => {
     const channels: readonly InputChannel[] = Array.isArray(step) ? step : [step as InputChannel];
+    const where = chord ? 'the chord' : `step ${index + 1}`;
+
     if (channels.length === 0) {
-      throw new Error(`Input pattern: sequence step ${index + 1} is empty.`);
+      throw new Error(`${owner}: ${where} is empty.`);
     }
 
     const resolved = channels.map(channel => resolveGamepadSlotChannel(channel, gamepadSlot));
 
     if (new Set(resolved).size !== resolved.length) {
-      throw new Error(`Input pattern: sequence step ${index + 1} contains the same channel more than once.`);
+      throw new Error(`${owner}: ${where} contains the same channel more than once.`);
     }
 
     return resolved;

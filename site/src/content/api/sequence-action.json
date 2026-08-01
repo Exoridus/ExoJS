@@ -1,6 +1,6 @@
 {
   "title": "SequenceAction",
-  "description": "Ordered input pattern — `+` joins a chord within one step, `>` advances to the next step. `triggered` is `true` for the one frame the final step completes; `progress` reports how far the pattern has advanced (0..1) so a caller can render a partial-combo hint. A single atomic ChannelEventBatch never invents an order: two channels written together by the same real-world event (e.g. `A` and `B` both changing in one batch) can complete a chord STEP together, but can never be read as two sequential steps (`A` then `B`) within that same batch — see `_update`'s implementation comment. A string pattern resolves tokens as case-insensitive Keyboard enum names (`'Down>Down+Right>Right>A'`). This is a shortcut list syntax for enum lookups, not text or IME input — it never decodes typed characters, dead keys, or composed input, and rejects any token that is not a known `Keyboard` member. Use an InputSequence array of channels/chords directly to include pointer or gamepad channels.",
+  "description": "Ordered input pattern — `+` joins a chord within one step, `>` advances to the next step. `triggered` is `true` for the one frame the final step completes; see progress's own doc comment for how far a pattern has advanced. A repeated single-channel step (`'A>A'`) requires a genuine release between the two presses: holding the channel down after the first accepted step never re-satisfies the second on its own, since a step only advances on a channel's rising (inactive-to-active) edge, not merely because it reads active — see `_update`'s implementation. A single atomic ChannelEventBatch never invents an order: two channels written together by the same real-world event (e.g. `A` and `B` both changing in one batch) can complete a chord STEP together, but can never be read as two sequential steps (`A` then `B`) within that same batch — see `_update`'s implementation comment. A string pattern resolves tokens as case-insensitive Keyboard enum names (`'Down>Down+Right>Right>A'`). This is a shortcut list syntax for enum lookups, not text or IME input — it never decodes typed characters, dead keys, or composed input, and rejects any token that is not a known `Keyboard` member. Use an InputSequence array of channels/chords directly to include pointer or gamepad channels.",
   "symbol": "SequenceAction",
   "kind": "class",
   "subsystem": "input",
@@ -19,7 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Ordered input pattern — `+` joins a chord within one step, `>` advances to the next step. `triggered` is `true` for the one frame the final step completes; `progress` reports how far the pattern has advanced (0..1) so a caller can render a partial-combo hint.",
+        "Ordered input pattern — `+` joins a chord within one step, `>` advances to the next step. `triggered` is `true` for the one frame the final step completes; see progress's own doc comment for how far a pattern has advanced.",
+        "A repeated single-channel step (`'A>A'`) requires a genuine release between the two presses: holding the channel down after the first accepted step never re-satisfies the second on its own, since a step only advances on a channel's rising (inactive-to-active) edge, not merely because it reads active — see `_update`'s implementation.",
         "A single atomic ChannelEventBatch never invents an order: two channels written together by the same real-world event (e.g. `A` and `B` both changing in one batch) can complete a chord STEP together, but can never be read as two sequential steps (`A` then `B`) within that same batch — see `_update`'s implementation comment.",
         "A string pattern resolves tokens as case-insensitive Keyboard enum names (`'Down>Down+Right>Right>A'`). This is a shortcut list syntax for enum lookups, not text or IME input — it never decodes typed characters, dead keys, or composed input, and rejects any token that is not a known `Keyboard` member. Use an InputSequence array of channels/chords directly to include pointer or gamepad channels."
       ],
@@ -32,7 +33,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(pattern: string | InputSequence, options: SequenceActionOptions): SequenceAction",
+          "signature": "new(pattern: SequenceBinding, options: SequenceActionOptions): SequenceAction",
           "signatureTokens": [
             {
               "text": "new",
@@ -51,15 +52,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "InputSequence",
+              "text": "SequenceBinding",
               "kind": "type"
             },
             {
@@ -94,7 +87,7 @@
           "params": [
             {
               "name": "pattern",
-              "type": "string | InputSequence",
+              "type": "SequenceBinding",
               "optional": false
             },
             {
@@ -219,7 +212,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "How far the pattern has advanced, as completedSteps / totalSteps — in [0, (n-1)/n] for n steps, and never 1: the same update that accepts the final step also sets triggered and resets progress back to 0, so a caller polling both together never observes progress at its nominal maximum. maxGap/timeout expiry is evaluated only when the NEXT tracked channel event arrives (see _update's _expire call) — not on a timer, and not once per idle frame. A half-completed pattern can therefore hold a stale, non-zero progress for an arbitrarily long real-world gap if nothing else touches a bound channel in the meantime; it only snaps back to 0 once a relevant event finally arrives and is found to be expired."
         },
         {
           "name": "triggered",

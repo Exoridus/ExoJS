@@ -113,6 +113,41 @@ describe('ChordAction', () => {
     action._update(driver.sample);
     expect(action.active).toBe(true);
   });
+
+  test('threshold gates an analog channel the same way ButtonAction does', () => {
+    const driver = createSample();
+    const action = new ChordAction([GamepadButton.RightTrigger], { threshold: 0.5 });
+
+    driver.batch(10, [[GamepadButton.RightTrigger, 0.4]]);
+    action._update(driver.sample);
+    expect(action.active).toBe(false);
+
+    driver.frame();
+    driver.batch(20, [[GamepadButton.RightTrigger, 0.6]]);
+    action._update(driver.sample);
+    expect(action.active).toBe(true);
+  });
+
+  test('tolerates whitespace around tokens (Control + Shift + A)', () => {
+    const driver = createSample();
+    const action = new ChordAction('Control + Shift + A');
+
+    driver.batch(10, [
+      [Keyboard.Control, 1],
+      [Keyboard.Shift, 1],
+      [Keyboard.A, 1],
+    ]);
+    action._update(driver.sample);
+    expect(action.active).toBe(true);
+  });
+
+  test('rejects a `>` step separator, naming SequenceAction as the alternative', () => {
+    expect(() => new ChordAction('A>B')).toThrow(/ChordAction.*SequenceAction/);
+  });
+
+  test('rejects an unknown keyboard token with a ChordAction-labeled message', () => {
+    expect(() => new ChordAction('Control+Nope')).toThrow(/ChordAction: unknown keyboard token/);
+  });
 });
 
 describe('SequenceAction', () => {
@@ -256,7 +291,7 @@ describe('SequenceAction', () => {
   });
 
   test.each(['', 'A+', '+A', 'A++B', 'A>', '>A', 'NotAKeyboardKey'])('rejects malformed string pattern %j', pattern => {
-    expect(() => new SequenceAction(pattern)).toThrow(/Input pattern|Input sequence/);
+    expect(() => new SequenceAction(pattern)).toThrow(/SequenceAction/);
   });
 
   test('rejects empty and duplicate array chords', () => {
@@ -271,6 +306,79 @@ describe('SequenceAction', () => {
     // silently accepted as "whatever the user typed".
     expect(() => new SequenceAction('é')).toThrow(/unknown keyboard token/);
     expect(() => new SequenceAction('あ')).toThrow(/unknown keyboard token/);
+  });
+
+  test('tolerates whitespace around every token and separator', () => {
+    const driver = createSample();
+    const action = new SequenceAction(' A > Control + B > C ');
+
+    driver.batch(10, [[Keyboard.A, 1]]);
+    driver.batch(20, [
+      [Keyboard.Control, 1],
+      [Keyboard.B, 1],
+    ]);
+    driver.batch(30, [[Keyboard.C, 1]]);
+    action._update(driver.sample);
+
+    expect(action.triggered).toBe(true);
+  });
+
+  test('threshold gates an analog channel the same way ButtonAction does', () => {
+    const driver = createSample();
+    const action = new SequenceAction([GamepadButton.LeftTrigger, Keyboard.B], { threshold: 0.5 });
+
+    driver.batch(10, [[GamepadButton.LeftTrigger, 0.4]]);
+    action._update(driver.sample);
+    expect(action.progress).toBe(0); // below threshold — not a real press
+
+    driver.frame();
+    driver.batch(20, [[GamepadButton.LeftTrigger, 0.6]]);
+    action._update(driver.sample);
+    expect(action.progress).toBeCloseTo(0.5);
+  });
+
+  test('gamepadSlot remaps every channel in an array-bound sequence to the requested pad slot', () => {
+    const driver = createSample();
+    const action = new SequenceAction([GamepadButton.South, GamepadButton.West], { gamepadSlot: 2 });
+
+    const slot0South = resolveGamepadSlotChannel(GamepadButton.South, 0);
+    const slot2South = resolveGamepadSlotChannel(GamepadButton.South, 2);
+    const slot2West = resolveGamepadSlotChannel(GamepadButton.West, 2);
+
+    // Activity on the default slot (0) must never reach a sequence bound to slot 2.
+    driver.batch(10, [[slot0South, 1]]);
+    action._update(driver.sample);
+    expect(action.progress).toBe(0);
+
+    driver.frame();
+    driver.batch(20, [[slot2South, 1]]);
+    driver.batch(30, [[slot2West, 1]]);
+    action._update(driver.sample);
+    expect(action.triggered).toBe(true);
+  });
+
+  test('resetOnMismatch: false lets an unrelated tracked channel pass through without discarding progress', () => {
+    const driver = createSample();
+    const action = new SequenceAction('A>B>C', { resetOnMismatch: false });
+
+    driver.batch(10, [[Keyboard.A, 1]]);
+    action._update(driver.sample);
+    expect(action.progress).toBeCloseTo(1 / 3);
+
+    // C arrives out of order — with the default (true), this would reset
+    // progress to 0. With resetOnMismatch: false, step 1 (still waiting on
+    // B) is left untouched instead.
+    driver.frame();
+    driver.batch(20, [[Keyboard.C, 1]]);
+    action._update(driver.sample);
+    expect(action.progress).toBeCloseTo(1 / 3);
+    expect(action.triggered).toBe(false);
+
+    driver.frame();
+    driver.batch(30, [[Keyboard.B, 1]]);
+    action._update(driver.sample);
+    expect(action.triggered).toBe(false);
+    expect(action.progress).toBeCloseTo(2 / 3);
   });
 });
 

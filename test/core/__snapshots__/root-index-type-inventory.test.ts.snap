@@ -379,6 +379,7 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "Segment: class",
   "SequenceAction: class",
   "SequenceActionOptions: interface",
+  "SequenceBinding: type alias",
   "SerializationRegistry: class",
   "SerializeContext: interface",
   "SerializedAssetRef: interface",
