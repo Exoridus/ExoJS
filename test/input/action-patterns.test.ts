@@ -128,6 +128,47 @@ describe('ChordAction', () => {
     expect(action.active).toBe(true);
   });
 
+  test('value reports the weakest member for an analog chord, and 0 when any member is released', () => {
+    const driver = createSample();
+    const action = new ChordAction([GamepadButton.South, GamepadButton.RightTrigger]);
+
+    // South is fully engaged (1); the trigger's own pull (0.6) is the
+    // least-engaged member, so it — not South's binary 1 — is what value
+    // reports for the chord as a whole.
+    driver.batch(10, [
+      [GamepadButton.South, 1],
+      [GamepadButton.RightTrigger, 0.6],
+    ]);
+    action._update(driver.sample);
+    expect(action.value).toBeCloseTo(0.6);
+
+    driver.frame();
+    driver.batch(20, [[GamepadButton.RightTrigger, 0]]);
+    action._update(driver.sample);
+    expect(action.value).toBe(0);
+  });
+
+  test('a member crossing threshold twice within one frame still sets pressed and released together', () => {
+    const driver = createSample();
+    const action = new ChordAction([GamepadButton.South, GamepadButton.RightTrigger], { threshold: 0.5 });
+
+    driver.batch(10, [
+      [GamepadButton.South, 1],
+      [GamepadButton.RightTrigger, 0.4],
+    ]);
+    action._update(driver.sample);
+    expect(action.active).toBe(false);
+
+    driver.frame();
+    driver.batch(20, [[GamepadButton.RightTrigger, 0.7]]);
+    driver.batch(30, [[GamepadButton.RightTrigger, 0.4]]);
+    action._update(driver.sample);
+
+    expect(action.pressed).toBe(true);
+    expect(action.released).toBe(true);
+    expect(action.active).toBe(false);
+  });
+
   test('tolerates whitespace around tokens (Control + Shift + A)', () => {
     const driver = createSample();
     const action = new ChordAction('Control + Shift + A');

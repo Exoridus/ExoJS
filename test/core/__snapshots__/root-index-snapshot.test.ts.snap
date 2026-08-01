@@ -36,6 +36,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "BufferUsage",
   "Button",
   "ButtonAction",
+  "ButtonLikeAction",
   "CacheFirstStrategy",
   "CallbackRenderPass",
   "Capabilities",

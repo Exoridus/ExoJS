@@ -3,6 +3,7 @@ export { ActionMap } from './ActionMap';
 export type { AxisBinding, AxisCompositeBinding } from './AxisAction';
 export { AxisAction } from './AxisAction';
 export { ButtonAction } from './ButtonAction';
+export { ButtonLikeAction } from './ButtonLikeAction';
 export type { ChordBinding } from './ChordAction';
 export { ChordAction } from './ChordAction';
 export type { InputChord, InputSequence } from './pattern';

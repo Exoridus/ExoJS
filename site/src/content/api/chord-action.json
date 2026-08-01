@@ -1,16 +1,16 @@
 {
   "title": "ChordAction",
-  "description": "Button-like action active while every channel in a chord is held at once — `Control+S`, a modifier held alongside a gamepad button, and so on. Exposes the same `active`/`pressed`/`released` triad as ButtonAction, but the aggregate is the AND of every bound channel instead of the strongest of a set of alternatives. A string binding resolves `+`-joined tokens as case-insensitive Keyboard enum names (`'Control+S'`, `'control+s'`). This is a shortcut list syntax for enum lookups, not text or IME input — it never decodes typed characters, dead keys, or composed input, and rejects any token that is not a known `Keyboard` member. Use an array of InputChannels directly to include pointer or gamepad channels, or for a sequence with more than one step, use SequenceAction.",
+  "description": "Button-like action active while every channel in a chord is held at once — `Control+S`, a modifier held alongside a gamepad button, and so on. Exposes the same `active`/`pressed`/`released`/`value` quartet as ButtonAction, but the aggregate is the weakest of every bound channel instead of the strongest of a set of alternatives: `min(|v|) > threshold` for every bound channel holds if and only if every one of them individually exceeds threshold, so a chord is only ever as \"on\" as its least-engaged member. For an analog chord (a gamepad trigger held alongside a button, say), value reports the trigger's pull limited by whether the button is engaged at all — `0` the instant any member releases, never the button's own binary 0/1. A string binding resolves `+`-joined tokens as case-insensitive Keyboard enum names (`'Control+S'`, `'control+s'`). This is a shortcut list syntax for enum lookups, not text or IME input — it never decodes typed characters, dead keys, or composed input, and rejects any token that is not a known `Keyboard` member. Use an array of InputChannels directly to include pointer or gamepad channels, or for a sequence with more than one step, use SequenceAction.",
   "symbol": "ChordAction",
   "kind": "class",
   "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 6,
+  "memberCount": 5,
   "counts": {
     "constructors": 1,
-    "methods": 2,
-    "properties": 3,
+    "methods": 0,
+    "properties": 4,
     "events": 0
   },
   "sections": [
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Button-like action active while every channel in a chord is held at once — `Control+S`, a modifier held alongside a gamepad button, and so on. Exposes the same `active`/`pressed`/`released` triad as ButtonAction, but the aggregate is the AND of every bound channel instead of the strongest of a set of alternatives.",
+        "Button-like action active while every channel in a chord is held at once — `Control+S`, a modifier held alongside a gamepad button, and so on. Exposes the same `active`/`pressed`/`released`/`value` quartet as ButtonAction, but the aggregate is the weakest of every bound channel instead of the strongest of a set of alternatives: `min(|v|) > threshold` for every bound channel holds if and only if every one of them individually exceeds threshold, so a chord is only ever as \"on\" as its least-engaged member. For an analog chord (a gamepad trigger held alongside a button, say), value reports the trigger's pull limited by whether the button is engaged at all — `0` the instant any member releases, never the button's own binary 0/1.",
         "A string binding resolves `+`-joined tokens as case-insensitive Keyboard enum names (`'Control+S'`, `'control+s'`). This is a shortcut list syntax for enum lookups, not text or IME input — it never decodes typed characters, dead keys, or composed input, and rejects any token that is not a known `Keyboard` member. Use an array of InputChannels directly to include pointer or gamepad channels, or for a sequence with more than one step, use SequenceAction."
       ],
       "importLine": "import { ChordAction } from '@codexo/exojs'",
@@ -103,91 +103,6 @@
       "sourceLink": null
     },
     {
-      "id": "methods",
-      "title": "Methods",
-      "members": [
-        {
-          "name": "_reset",
-          "signature": "_reset(): void",
-          "signatureTokens": [
-            {
-              "text": "_reset",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "void",
-          "description": ""
-        },
-        {
-          "name": "_update",
-          "signature": "_update(sample: ActionSample): void",
-          "signatureTokens": [
-            {
-              "text": "_update",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "sample",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "ActionSample",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "sample",
-              "type": "ActionSample",
-              "optional": false
-            }
-          ],
-          "returnType": "void",
-          "description": ""
-        }
-      ],
-      "paragraphs": [],
-      "importLine": null,
-      "sourceLink": null
-    },
-    {
       "id": "properties",
       "title": "Properties",
       "members": [
@@ -210,7 +125,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "true while the aggregate value exceeds the action's threshold."
         },
         {
           "name": "pressed",
@@ -231,7 +146,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "true on the frame the AGGREGATE value crossed above the action's own threshold. Bound sources are replayed in the true order their channels changed, batch by whole batch (see ChannelEventBatch's doc comment — every channel a single real-world event wrote together is applied before the aggregate is evaluated even once), so a value that crosses the threshold twice within one frame (0.4 → 0.7 → 0.4 at threshold 0.5) sets both pressed and released on that same frame, while a source that never actually reaches the threshold (0 → 0.1 → 0 at threshold 0.5) sets neither. A second, alternative source tapping while a first stays continuously active never manufactures an edge either, because the aggregate itself never drops below threshold."
         },
         {
           "name": "released",
@@ -252,7 +167,28 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "true on the frame the aggregate value crossed back below the threshold. See pressed."
+        },
+        {
+          "name": "value",
+          "signature": "value: number",
+          "signatureTokens": [
+            {
+              "text": "value",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Aggregate source value this frame, in 0..1. Reads 0 on a frame where the source was pressed and released again between two frame boundaries — check pressed for that case rather than the value."
         }
       ],
       "paragraphs": [],

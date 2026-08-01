@@ -168,8 +168,8 @@ export class ActionOwnership {
    * true attach-moment state BEFORE those filtered batches are replayed on
    * top of it: a watermark alone tells an action which batches to skip, but
    * a channel a skipped batch touches is thereby excluded from that action's
-   * own live-value seed too (see `ButtonAction._seedUntouchedChannels`'s doc
-   * comment), so without this snapshot a channel held before attach and
+   * own live-value seed too (see `ButtonLikeAction._seedUntouchedChannels`'s
+   * doc comment), so without this snapshot a channel held before attach and
    * released by the very next real batch would seed from a synthetic zero
    * instead of its true held value, silently swallowing the release.
    *
