@@ -144,6 +144,20 @@ SequenceAction('Up>Up>Down>Down>Left>Right>Left>Right>B>A', { maxGap: 800 })`),
   between two channels that changed together. New exports: `ChordAction`,
   `SequenceAction`, `ChordBinding`, `SequenceBinding`, `SequenceActionOptions`,
   `InputChord`, `InputSequence`.
+- **`|` alternation in `ChordAction`/`SequenceAction` patterns.** `|` separates
+  alternatives within one step, satisfied if any one of them is — precedence,
+  loosest to tightest, is `>` (steps), `|` (alternatives), `+` (channels
+  within one alternative): `'Control+S|Meta+S'` is `Control`-and-`S` or
+  `Meta`-and-`S`; `'A+B|C>D'` is "(`A` and `B`) or `C`, then `D`". Composes
+  with the existing strongest/weakest analog reduction one level deeper: an
+  alternation reports the strongest of its alternatives, each alternative
+  (like any chord) the weakest of its own members. The array form's new
+  `InputAlternation` type wraps every alternative in its own array, even a
+  single-channel one (`[[A, B], [C]]`), so it is never ambiguous with a plain
+  `InputChord` (`[A, B]`, "`A` and `B` required together"); `InputSequence`
+  accepts it in any step, `ChordAction` at its single step. Mixing a bare
+  channel and a nested alternative within the same step is rejected, as is an
+  empty alternative.
 - **`when` on a scene-owned `ActionMap`** — `scene.inputs.attach(map, { when:
 'active' | 'paused' | 'always' })` (`SceneActionMapOptions`, default
   `'active'`) applies the same availability policy the binding-level `when`

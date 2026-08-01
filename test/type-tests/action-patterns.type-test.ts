@@ -1,7 +1,17 @@
-import { ActionMap, ChordAction, type ChordBinding, type InputSequence, Keyboard, SequenceAction } from '../../src/index';
+import { ActionMap, ChordAction, type ChordBinding, type InputAlternation, type InputSequence, Keyboard, SequenceAction } from '../../src/index';
 
 const chord: ChordBinding = [Keyboard.Control, Keyboard.K];
 const sequence: InputSequence = [Keyboard.A, [Keyboard.B, Keyboard.C]];
+
+// Alternation: [[Control, K], [Meta, K]] is the array form of 'Control+K|Meta+K'.
+const alternation: InputAlternation = [
+  [Keyboard.Control, Keyboard.K],
+  [Keyboard.Meta, Keyboard.K],
+];
+const alternatingChord: ChordBinding = alternation;
+const alternatingSequence: InputSequence = [alternation, Keyboard.Enter];
+void alternatingChord;
+void alternatingSequence;
 
 const actions = new ActionMap({
   shortcut: new ChordAction(chord),
