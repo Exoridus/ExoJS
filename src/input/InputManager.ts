@@ -14,7 +14,7 @@ import type { GamepadAxis } from './GamepadAxis';
 import type { GamepadButton } from './GamepadButton';
 import type { BrowserGamepad, GamepadDefinition } from './GamepadDefinitions';
 import { builtInGamepadDefinitions, resolveGamepadDefinition } from './GamepadDefinitions';
-import { GestureRecognizer } from './GestureRecognizer';
+import { type GestureJournalEvent, GestureRecognizer } from './GestureRecognizer';
 import type { InputBindingOptions, InputChannel } from './InputBinding';
 import { InputBinding } from './InputBinding';
 import { computeDesignPoint, Pointer, PointerState, PointerStateFlag } from './Pointer';
@@ -89,7 +89,7 @@ interface ContextMenuJournalEntry {
  * mirroring {@link InputManager.keyEvents}'s own append/drain/clear
  * lifecycle, just for pointers and context-menu requests together.
  */
-type JournalEntry = PointerJournalEntry | ContextMenuJournalEntry;
+type JournalEntry = PointerJournalEntry | ContextMenuJournalEntry | GestureJournalEvent;
 
 /**
  * Owns the unified input pipeline for an {@link Application}: keyboard
@@ -181,6 +181,7 @@ export class InputManager {
     },
   };
   private readonly wheelOffset = new Vector();
+  private readonly gestureCenter = new Vector();
   private readonly flags = new Flags<InputManagerFlag>();
   /** Keyboard transitions since the last flush, in true chronological order (see updateEvents). */
   private readonly keyEvents: KeyChannelEvent[] = [];
@@ -302,7 +303,7 @@ export class InputManager {
       batches: this.frameBatches,
       frameId: 0,
     };
-    this.gestureRecognizer = new GestureRecognizer(pointerDistanceThreshold, this.onPinch, this.onRotate, this.onLongPress);
+    this.gestureRecognizer = new GestureRecognizer(pointerDistanceThreshold, this.onPinch, this.onRotate, this.onLongPress, event => this.journal.push(event));
 
     const slot0 = new Gamepad(0, this.channels);
     const slot1 = new Gamepad(1, this.channels);
@@ -612,6 +613,7 @@ export class InputManager {
     this.pointerSlots.clear();
     this.freeSlots.length = 0;
     this.wheelOffset.destroy();
+    this.gestureCenter.destroy();
     this.flags.destroy();
 
     this.onPointerEnter.destroy();
@@ -868,8 +870,8 @@ export class InputManager {
 
     pointer.handleMove(event);
     this._recordPointerChanges(pointer);
-    this.gestureRecognizer.onPointerMove(pointer, this.pointerDistanceThreshold);
     this._pushPointerPhase(pointer, PointerStateFlag.Move, pointer.x, pointer.y);
+    this.gestureRecognizer.onPointerMove(pointer, this.pointerDistanceThreshold);
   }
 
   private handlePointerUp(event: PointerEvent): void {
@@ -1256,6 +1258,23 @@ export class InputManager {
         // Fires regardless of `request.pointer` — see this signal's own doc
         // comment for why a missing pointer must not swallow the request.
         this.onContextMenu.dispatch(entry.request);
+        continue;
+      }
+
+      if (entry.kind === 'pinch') {
+        this.gestureCenter.set(entry.x, entry.y);
+        this.onPinch.dispatch(entry.scale, this.gestureCenter);
+        continue;
+      }
+
+      if (entry.kind === 'rotate') {
+        this.gestureCenter.set(entry.x, entry.y);
+        this.onRotate.dispatch(entry.angleDelta, this.gestureCenter);
+        continue;
+      }
+
+      if (entry.kind === 'longpress') {
+        this.onLongPress.dispatch(entry.pointer);
         continue;
       }
 

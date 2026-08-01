@@ -383,4 +383,101 @@ describe('GestureRecognizer — two-touch gestures', () => {
 
     recognizer.destroy();
   });
+
+  test('onPointerUp removes that touch from the active two-touch set so a later move from the remaining touch cannot synthesize a pinch', () => {
+    const { recognizer, onPinch, onRotate } = createHarness();
+    const pinchSpy = vi.fn();
+    const rotateSpy = vi.fn();
+
+    onPinch.add(pinchSpy);
+    onRotate.add(rotateSpy);
+
+    const pA = { id: 1, x: 0, y: 0, type: 'touch' };
+    const pB = { id: 2, x: 10, y: 0, type: 'touch' };
+
+    recognizer.onPointerDown(asPointer(pA));
+    recognizer.onPointerDown(asPointer(pB));
+    recognizer.onPointerMove(asPointer(pB), distanceThreshold); // baseline
+    recognizer.onPointerUp(asPointer(pA));
+
+    // Only pB remains tracked — a lone touch moving must not attempt
+    // two-touch processing (size < 2 now that pA was lifted).
+    pB.x = 40;
+    recognizer.onPointerMove(asPointer(pB), distanceThreshold);
+
+    expect(pinchSpy).not.toHaveBeenCalled();
+    expect(rotateSpy).not.toHaveBeenCalled();
+
+    recognizer.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Rotation delta: shortest signed arc
+// ---------------------------------------------------------------------------
+
+describe('GestureRecognizer — rotation shortest-signed-arc normalization', () => {
+  const toDeg = (radians: number): number => radians * (180 / Math.PI);
+  const toRad = (degrees: number): number => degrees * (Math.PI / 180);
+
+  test('+179° -> -179° reports ≈ +2°, not the naive -358°', () => {
+    const { recognizer, onRotate, onPinch } = createHarness();
+    const rotateSpy = vi.fn();
+    const pinchSpy = vi.fn();
+
+    onRotate.add(rotateSpy);
+    onPinch.add(pinchSpy);
+
+    const radius = 100;
+    const pA = { id: 1, x: 0, y: 0, type: 'touch' };
+    const pB = { id: 2, x: radius * Math.cos(toRad(179)), y: radius * Math.sin(toRad(179)), type: 'touch' };
+
+    recognizer.onPointerDown(asPointer(pA));
+    recognizer.onPointerDown(asPointer(pB));
+    recognizer.onPointerMove(asPointer(pB), distanceThreshold); // baseline: angle=+179°, distance=radius
+
+    // Same distance, angle crosses the +180/-180 seam to -179°.
+    pB.x = radius * Math.cos(toRad(-179));
+    pB.y = radius * Math.sin(toRad(-179));
+    recognizer.onPointerMove(asPointer(pB), distanceThreshold);
+
+    expect(pinchSpy).not.toHaveBeenCalled(); // distance unchanged — isolates the rotation delta
+    expect(rotateSpy).toHaveBeenCalledTimes(1);
+
+    const [angleDelta] = rotateSpy.mock.calls[0] as [number, Vector];
+
+    expect(toDeg(angleDelta)).toBeCloseTo(2, 5);
+
+    recognizer.destroy();
+  });
+
+  test('-179° -> +179° reports ≈ -2°, the mirror-image wrap', () => {
+    const { recognizer, onRotate, onPinch } = createHarness();
+    const rotateSpy = vi.fn();
+    const pinchSpy = vi.fn();
+
+    onRotate.add(rotateSpy);
+    onPinch.add(pinchSpy);
+
+    const radius = 100;
+    const pA = { id: 1, x: 0, y: 0, type: 'touch' };
+    const pB = { id: 2, x: radius * Math.cos(toRad(-179)), y: radius * Math.sin(toRad(-179)), type: 'touch' };
+
+    recognizer.onPointerDown(asPointer(pA));
+    recognizer.onPointerDown(asPointer(pB));
+    recognizer.onPointerMove(asPointer(pB), distanceThreshold); // baseline: angle=-179°, distance=radius
+
+    pB.x = radius * Math.cos(toRad(179));
+    pB.y = radius * Math.sin(toRad(179));
+    recognizer.onPointerMove(asPointer(pB), distanceThreshold);
+
+    expect(pinchSpy).not.toHaveBeenCalled();
+    expect(rotateSpy).toHaveBeenCalledTimes(1);
+
+    const [angleDelta] = rotateSpy.mock.calls[0] as [number, Vector];
+
+    expect(toDeg(angleDelta)).toBeCloseTo(-2, 5);
+
+    recognizer.destroy();
+  });
 });

@@ -6,6 +6,12 @@ import type { Pointer } from './Pointer';
 /** Long-press threshold in milliseconds. */
 const longPressMs = 500;
 
+/** Immutable gesture occurrence queued onto InputManager's frame journal. @internal */
+export type GestureJournalEvent =
+  | { readonly kind: 'pinch'; readonly scale: number; readonly x: number; readonly y: number }
+  | { readonly kind: 'rotate'; readonly angleDelta: number; readonly x: number; readonly y: number }
+  | { readonly kind: 'longpress'; readonly pointer: Pointer };
+
 interface LongPressEntry {
   pointerId: number;
   pointer: Pointer;
@@ -50,6 +56,7 @@ export class GestureRecognizer {
     onPinch: Signal<[scale: number, center: Vector]>,
     onRotate: Signal<[angleDelta: number, center: Vector]>,
     onLongPress: Signal<[pointer: Pointer]>,
+    private readonly _enqueue: ((event: GestureJournalEvent) => void) | null = null,
   ) {
     this.onPinch = onPinch;
     this.onRotate = onRotate;
@@ -65,7 +72,7 @@ export class GestureRecognizer {
     // Start long-press timer for every pointer type.
     const timerId = setTimeout(() => {
       this.longPressEntries.delete(pointer.id);
-      this.onLongPress.dispatch(pointer);
+      this._emit({ kind: 'longpress', pointer });
     }, longPressMs);
 
     this.longPressEntries.set(pointer.id, {
@@ -106,6 +113,11 @@ export class GestureRecognizer {
 
   public onPointerUp(pointer: Pointer): void {
     this._cancelLongPress(pointer.id);
+
+    if (pointer.type === 'touch') {
+      this.touchPointers.delete(pointer.id);
+      this._resetTwoTouchBaseline();
+    }
   }
 
   public onPointerLeave(pointer: Pointer): void {
@@ -170,17 +182,44 @@ export class GestureRecognizer {
 
       // Only fire if there's a meaningful distance change.
       if (Math.abs(scale - 1) > 0.0001) {
-        this.onPinch.dispatch(scale, this.centerVec);
+        this._emit({ kind: 'pinch', scale, x: centerX, y: centerY });
       }
 
-      const angleDelta = currentAngle - this.prevAngle;
+      let angleDelta = currentAngle - this.prevAngle;
+
+      if (angleDelta > Math.PI) {
+        angleDelta -= Math.PI * 2;
+      } else if (angleDelta < -Math.PI) {
+        angleDelta += Math.PI * 2;
+      }
 
       if (Math.abs(angleDelta) > 0.0001) {
-        this.onRotate.dispatch(angleDelta, this.centerVec);
+        this._emit({ kind: 'rotate', angleDelta, x: centerX, y: centerY });
       }
     }
 
     this.prevDistance = currentDistance;
     this.prevAngle = currentAngle;
+  }
+
+  private _emit(event: GestureJournalEvent): void {
+    if (this._enqueue !== null) {
+      this._enqueue(event);
+      return;
+    }
+
+    switch (event.kind) {
+      case 'pinch':
+        this.centerVec.set(event.x, event.y);
+        this.onPinch.dispatch(event.scale, this.centerVec);
+        break;
+      case 'rotate':
+        this.centerVec.set(event.x, event.y);
+        this.onRotate.dispatch(event.angleDelta, this.centerVec);
+        break;
+      case 'longpress':
+        this.onLongPress.dispatch(event.pointer);
+        break;
+    }
   }
 }
