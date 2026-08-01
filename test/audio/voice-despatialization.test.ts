@@ -1,10 +1,10 @@
 /**
- * Regression coverage for real de-spatialization (Task 5, spatial audio
- * hardening): clearing `position`/`follow` once nothing spatial remains must
- * actually tear down the `PannerNode` — disconnect it, restore the direct
- * source-to-output route via each concrete voice's `_routeDirect()`, and
- * unregister the voice from `AudioManager`'s per-frame spatial tick set — not
- * merely stop writing to a panner that is still silently wired into the graph.
+ * Regression coverage for real de-spatialization: clearing `position`/
+ * `follow` once nothing spatial remains must actually tear down the
+ * `PannerNode` — disconnect it, restore the direct source-to-output route via
+ * each concrete voice's `_routeDirect()`, and unregister the voice from
+ * `AudioManager`'s per-frame spatial tick set — not merely stop writing to a
+ * panner that is still silently wired into the graph.
  */
 import { getAudioContext } from '#audio/audio-context';
 import { AudioGenerator } from '#audio/AudioGenerator';

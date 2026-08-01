@@ -100,6 +100,11 @@ export class SmoothedAudioParam {
    * / ramp according to `settings`.
    */
   public write(param: AudioParam, value: number, now: number, settings: SpatialSmoothingSettings): void {
+    // Reject NaN/±Infinity outright — never scheduled on the live AudioParam
+    // (a real browser throws on `setTargetAtTime(NaN, …)`) and never recorded
+    // as `_last`, so an invalid tick can't poison every subsequent write.
+    if (!Number.isFinite(value)) return;
+
     if (this._hasWritten && Math.abs(value - this._last) < POSITION_EPSILON) {
       return;
     }
@@ -178,7 +183,12 @@ export function deriveVelocity(sample: VelocitySample, x: number, y: number, now
     if (now > sample.lastTime) {
       sample.x = 0;
       sample.y = 0;
-      sample.lastPosition = { x, y };
+      // Mutate the existing point in place (never null on this branch —
+      // the null-seed case returns above) instead of allocating a fresh
+      // `{ x, y }` on what is the common per-frame path for every
+      // stationary spatial voice.
+      sample.lastPosition.x = x;
+      sample.lastPosition.y = y;
       sample.lastTime = now;
     }
     return;

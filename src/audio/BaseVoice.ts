@@ -288,13 +288,18 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
   }
 
   public set refDistance(value: number) {
+    // Clamped to strictly positive — refDistance = 0 divides by zero in the
+    // 'exponential' distance model, (d / refDistance) ^ -rolloffFactor. Not
+    // coupled to maxDistance: forcing the two to stay ordered would silently
+    // create a maxDistance === refDistance state, which divides by zero in
+    // the default 'linear' model instead. An out-of-order pair is left to
+    // the caller — no worse than the pre-existing possibility of setting
+    // both to the same value directly.
     const safe = Number.isFinite(value) ? value : this._spatialConfig.refDistance;
     const clamped = Math.max(Number.EPSILON, safe);
     this._spatialConfig.refDistance = clamped;
-    this._spatialConfig.maxDistance = Math.max(this._spatialConfig.maxDistance, clamped);
     if (this._panner !== null) {
       this._panner.refDistance = clamped;
-      this._panner.maxDistance = this._spatialConfig.maxDistance;
     }
   }
 
@@ -303,8 +308,11 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
   }
 
   public set maxDistance(value: number) {
+    // Clamped to strictly positive per the PannerNode spec (a non-positive
+    // maxDistance throws RangeError in a real browser) — independent of
+    // refDistance, see the note on that setter above.
     const safe = Number.isFinite(value) ? value : this._spatialConfig.maxDistance;
-    const clamped = Math.max(this._spatialConfig.refDistance, safe);
+    const clamped = Math.max(Number.EPSILON, safe);
     this._spatialConfig.maxDistance = clamped;
     if (this._panner !== null) {
       this._panner.maxDistance = clamped;
@@ -316,7 +324,8 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
   }
 
   public set rolloffFactor(value: number) {
-    const clamped = Math.max(0, value);
+    const safe = Number.isFinite(value) ? value : this._spatialConfig.rolloffFactor;
+    const clamped = Math.max(0, safe);
     this._spatialConfig.rolloffFactor = clamped;
     if (this._panner !== null) {
       this._panner.rolloffFactor = clamped;
@@ -397,6 +406,11 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
       this._explicitVelocity = false;
       return;
     }
+
+    // Reject a non-finite component outright (no partial write) — an
+    // explicit NaN/±Infinity velocity would otherwise feed straight into the
+    // Doppler ratio calculation. Keep whatever velocity was in effect before.
+    if (!Number.isFinite(value.x) || !Number.isFinite(value.y)) return;
 
     if (this._velocity === null) {
       this._velocity = new Vector(value.x, value.y);
@@ -516,9 +530,14 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
   }
 
   private _setDopplerRatio(ratio: number): void {
-    if (ratio === 1 && !this._dopplerActive) return;
-    this._dopplerActive = ratio !== 1;
-    this._applyDopplerRate(ratio);
+    // A single backstop against every possible NaN source feeding the ratio
+    // calculation (explicit or derived velocity, a NaN/zero `speedOfSound` on
+    // the shared settings object, ...) — falls back to the neutral ratio
+    // rather than ever writing a non-finite value to a live AudioParam.
+    const safeRatio = Number.isFinite(ratio) ? ratio : 1;
+    if (safeRatio === 1 && !this._dopplerActive) return;
+    this._dopplerActive = safeRatio !== 1;
+    this._applyDopplerRate(safeRatio);
   }
 
   /**

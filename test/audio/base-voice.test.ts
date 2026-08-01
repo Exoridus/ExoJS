@@ -400,8 +400,9 @@ describe('BaseVoice — _tickSpatial()', () => {
 
     voice.position = { x: 1, y: 2 }; // creates the panner, registers as spatial
     // Clears position with no follow target active — this actually tears down
-    // and disconnects the panner (real de-spatialization); see voice-spatial.test.ts
-    // for dedicated coverage of that reconnection behavior.
+    // and disconnects the panner (real de-spatialization); see
+    // voice-despatialization.test.ts for dedicated coverage of that
+    // reconnection behavior.
     voice.position = null;
 
     const panner = pannerSpy.panners[0];
