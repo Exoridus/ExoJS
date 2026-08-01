@@ -70,8 +70,6 @@ The raw FFT returns N bins linearly spaced from 0 Hz to the Nyquist frequency (h
 The mel and log methods accept an optional `bands` parameter (default 32) and frequency range (`fMin`/`fMax`, default 20 Hz to 20 kHz, clamped to Nyquist). The filterbanks are built once per `(bands, fMin, fMax, fftSize)` combination and cached on the analyser instance — subsequent calls at the same parameters are just a weighted sum.
 
 ```ts
-import { Time } from '@codexo/exojs';
-
 update(delta: Time) {
     const mel32 = this.analyser.getSpectrumMel(null, { bands: 32 });
     // mel32[0] is the lowest mel band, mel32[31] is the highest
@@ -117,9 +115,7 @@ For continuous animation — something that smoothly decays between beats rather
 These are all pure derivations from the detector's internal state — they do not allocate, do not fire events, and are safe to call every frame:
 
 ```ts
-import { Color } from '@codexo/exojs';
-
-update(delta) {
+update(delta: Time) {
     const beat = this.detector.pulse;
     const downbeat = this.detector.barPulse;
 
@@ -160,8 +156,6 @@ A scrolling spectrogram rewrites just one column per frame. `commitRect(x, y, wi
 A simple scrolling spectrogram:
 
 ```ts
-import { DataTexture, Sprite } from '@codexo/exojs';
-
 init() {
     this.analyser = new AudioAnalyser({ fftSize: 512 });
     this.analyser.source = this.app.audio.music;
@@ -179,7 +173,7 @@ init() {
     this.col = 0;
 }
 
-update(delta) {
+update(delta: Time) {
     const bands = this.analyser.getSpectrumMel(null, { bands: 64 });
     const buf = this.specTex.buffer;
 

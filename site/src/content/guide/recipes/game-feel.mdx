@@ -19,8 +19,6 @@ When the player takes damage, flash the sprite red for a fraction of a second an
 </Callout>
 
 ```ts
-import { ColorFilter, Signal } from '@codexo/exojs';
-
 init() {
     this.player = new Sprite(this.loader.get('image/hero.png'));
     this.flash = new ColorFilter(new Color(255, 255, 255, 1));

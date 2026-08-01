@@ -107,8 +107,6 @@ Each of these emits a `drawPath` call behind the scenes. The `currentPoint` prop
 `clear()` removes all child meshes and resets the pen state (position, colors, line width). The `Graphics` object itself stays alive. This is the right pattern for per-frame redrawing:
 
 ```ts
-import { Time } from '@codexo/exojs';
-
 update(delta: Time) {
     this.g.clear();
 

@@ -76,8 +76,6 @@ The sprite displays the off-screen render as its texture. You can position, scal
 The render-to-texture step typically happens once during `init` for static content, or inside `draw` for content that changes per frame:
 
 ```ts
-import type { RenderingContext } from '@codexo/exojs';
-
 draw(context: RenderingContext) {
     // 1. Draw game world into the off-screen target
     context.backend.setRenderTarget(this.offscreen);

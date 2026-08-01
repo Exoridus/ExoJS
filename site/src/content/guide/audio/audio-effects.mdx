@@ -57,8 +57,6 @@ app.audio.master.addEffect(compressor);
 All properties are live get/set. The `compressor.reduction` getter returns the current gain reduction in dB (always ≤ 0) — useful for live level metering:
 
 ```ts
-import { Time } from '@codexo/exojs';
-
 update(delta: Time) {
     const gr = this.compressor.reduction;
     this.meterBar.height = Math.abs(gr) * 10; // scale to pixels
