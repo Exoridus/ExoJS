@@ -303,7 +303,7 @@ export class InputManager {
       batches: this.frameBatches,
       frameId: 0,
     };
-    this.gestureRecognizer = new GestureRecognizer(pointerDistanceThreshold, this.onPinch, this.onRotate, this.onLongPress, event => this.journal.push(event));
+    this.gestureRecognizer = new GestureRecognizer(pointerDistanceThreshold, event => this.journal.push(event));
 
     const slot0 = new Gamepad(0, this.channels);
     const slot1 = new Gamepad(1, this.channels);

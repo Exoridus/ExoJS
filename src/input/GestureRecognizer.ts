@@ -1,6 +1,3 @@
-import type { Signal } from '#core/Signal';
-import { Vector } from '#math/Vector';
-
 import type { Pointer } from './Pointer';
 
 /** Long-press threshold in milliseconds. */
@@ -23,21 +20,20 @@ interface LongPressEntry {
 /**
  * Internal multi-touch gesture recognizer used by {@link InputManager}.
  * Tracks active touch pointers, derives pinch/rotate deltas from the two
- * primary touches, and fires long-press signals when a single pointer is
- * held still for {@link longPressMs} (500 ms). Long-press cancels if the
+ * primary touches, and reports a long-press occurrence when a single pointer
+ * is held still for {@link longPressMs} (500 ms). Long-press cancels if the
  * pointer moves beyond `distanceThreshold` pixels from the down position.
  *
- * The associated Signals (`onPinch`, `onRotate`, `onLongPress`) are owned
- * by {@link InputManager} and re-exposed there as part of the public API;
- * the recognizer just dispatches into them.
+ * Every occurrence (pinch, rotate, long-press) is handed to the `_enqueue`
+ * callback supplied at construction rather than dispatched here — that
+ * callback pushes it onto {@link InputManager}'s own frame journal, which
+ * owns the actual `onPinch`/`onRotate`/`onLongPress` Signals and dispatches
+ * them from there, in true chronological order relative to the pointer
+ * phases that produced them. This class holds no Signal of its own.
  *
  * @internal
  */
 export class GestureRecognizer {
-  public readonly onPinch: Signal<[scale: number, center: Vector]>;
-  public readonly onRotate: Signal<[angleDelta: number, center: Vector]>;
-  public readonly onLongPress: Signal<[pointer: Pointer]>;
-
   // Active touch pointers (only touch type; index in order of arrival).
   private readonly touchPointers = new Map<number, Pointer>();
 
@@ -48,20 +44,10 @@ export class GestureRecognizer {
   private prevDistance = -1;
   private prevAngle = 0;
 
-  // Reusable Vector for center dispatches (avoids heap churn).
-  private readonly centerVec = new Vector();
-
   public constructor(
     _distanceThreshold: number,
-    onPinch: Signal<[scale: number, center: Vector]>,
-    onRotate: Signal<[angleDelta: number, center: Vector]>,
-    onLongPress: Signal<[pointer: Pointer]>,
-    private readonly _enqueue: ((event: GestureJournalEvent) => void) | null = null,
-  ) {
-    this.onPinch = onPinch;
-    this.onRotate = onRotate;
-    this.onLongPress = onLongPress;
-  }
+    private readonly _enqueue: (event: GestureJournalEvent) => void,
+  ) {}
 
   public onPointerDown(pointer: Pointer): void {
     if (pointer.type === 'touch') {
@@ -72,7 +58,7 @@ export class GestureRecognizer {
     // Start long-press timer for every pointer type.
     const timerId = setTimeout(() => {
       this.longPressEntries.delete(pointer.id);
-      this._emit({ kind: 'longpress', pointer });
+      this._enqueue({ kind: 'longpress', pointer });
     }, longPressMs);
 
     this.longPressEntries.set(pointer.id, {
@@ -145,7 +131,6 @@ export class GestureRecognizer {
 
     this.longPressEntries.clear();
     this.touchPointers.clear();
-    this.centerVec.destroy();
   }
 
   private _cancelLongPress(pointerId: number): void {
@@ -175,14 +160,12 @@ export class GestureRecognizer {
     const centerX = (pA.x + pB.x) / 2;
     const centerY = (pA.y + pB.y) / 2;
 
-    this.centerVec.set(centerX, centerY);
-
     if (this.prevDistance > 0) {
       const scale = currentDistance / this.prevDistance;
 
       // Only fire if there's a meaningful distance change.
       if (Math.abs(scale - 1) > 0.0001) {
-        this._emit({ kind: 'pinch', scale, x: centerX, y: centerY });
+        this._enqueue({ kind: 'pinch', scale, x: centerX, y: centerY });
       }
 
       let angleDelta = currentAngle - this.prevAngle;
@@ -194,32 +177,11 @@ export class GestureRecognizer {
       }
 
       if (Math.abs(angleDelta) > 0.0001) {
-        this._emit({ kind: 'rotate', angleDelta, x: centerX, y: centerY });
+        this._enqueue({ kind: 'rotate', angleDelta, x: centerX, y: centerY });
       }
     }
 
     this.prevDistance = currentDistance;
     this.prevAngle = currentAngle;
-  }
-
-  private _emit(event: GestureJournalEvent): void {
-    if (this._enqueue !== null) {
-      this._enqueue(event);
-      return;
-    }
-
-    switch (event.kind) {
-      case 'pinch':
-        this.centerVec.set(event.x, event.y);
-        this.onPinch.dispatch(event.scale, this.centerVec);
-        break;
-      case 'rotate':
-        this.centerVec.set(event.x, event.y);
-        this.onRotate.dispatch(event.angleDelta, this.centerVec);
-        break;
-      case 'longpress':
-        this.onLongPress.dispatch(event.pointer);
-        break;
-    }
   }
 }
