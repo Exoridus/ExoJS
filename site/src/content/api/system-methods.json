@@ -1,6 +1,6 @@
 {
   "title": "SystemMethods",
-  "description": "The three scheduler phases a System may participate in, one per dispatch stage of the Application frame loop: fixed-timestep simulation, variable-rate update, and rendering.",
+  "description": "The three scheduler phases a System may participate in, one per dispatch stage of the Application frame loop: fixed-timestep simulation, variable-rate update, and rendering. Every phase must be synchronous. The registry dispatches them on the frame path and never awaits a result, so an `async` phase is a compile error (see Synchronous) and, for callers the type system cannot reach, a thrown error in every build. Asynchronous work belongs in the owning scene's Scene.load.",
   "symbol": "SystemMethods",
   "kind": "interface",
   "subsystem": "core",
@@ -19,7 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "The three scheduler phases a System may participate in, one per dispatch stage of the Application frame loop: fixed-timestep simulation, variable-rate update, and rendering."
+        "The three scheduler phases a System may participate in, one per dispatch stage of the Application frame loop: fixed-timestep simulation, variable-rate update, and rendering.",
+        "Every phase must be synchronous. The registry dispatches them on the frame path and never awaits a result, so an `async` phase is a compile error (see Synchronous) and, for callers the type system cannot reach, a thrown error in every build. Asynchronous work belongs in the owning scene's Scene.load."
       ],
       "importLine": "import { SystemMethods } from '@codexo/exojs'",
       "sourceLink": null
@@ -30,7 +31,7 @@
       "members": [
         {
           "name": "draw",
-          "signature": "draw?(context: RenderingContext): void",
+          "signature": "draw?(context: RenderingContext): Synchronous",
           "signatureTokens": [
             {
               "text": "draw",
@@ -65,8 +66,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "void",
-              "kind": "keyword"
+              "text": "Synchronous",
+              "kind": "type"
             }
           ],
           "params": [
@@ -76,12 +77,12 @@
               "optional": false
             }
           ],
-          "returnType": "void",
+          "returnType": "Synchronous",
           "description": "Render into context. Called once per frame, after SystemMethods.update."
         },
         {
           "name": "fixedUpdate",
-          "signature": "fixedUpdate?(step: Time): void",
+          "signature": "fixedUpdate?(step: Time): Synchronous",
           "signatureTokens": [
             {
               "text": "fixedUpdate",
@@ -116,8 +117,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "void",
-              "kind": "keyword"
+              "text": "Synchronous",
+              "kind": "type"
             }
           ],
           "params": [
@@ -127,12 +128,12 @@
               "optional": false
             }
           ],
-          "returnType": "void",
+          "returnType": "Synchronous",
           "description": "Advance by one fixed-timestep step (Application.fixedTimeStep). Called zero or more times per frame, before SystemMethods.update."
         },
         {
           "name": "update",
-          "signature": "update?(delta: Time): void",
+          "signature": "update?(delta: Time): Synchronous",
           "signatureTokens": [
             {
               "text": "update",
@@ -167,8 +168,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "void",
-              "kind": "keyword"
+              "text": "Synchronous",
+              "kind": "type"
             }
           ],
           "params": [
@@ -178,7 +179,7 @@
               "optional": false
             }
           ],
-          "returnType": "void",
+          "returnType": "Synchronous",
           "description": "Advance by the variable frame delta. Called once per frame, after fixed steps."
         }
       ],

@@ -37,7 +37,7 @@ class TileChunksAndBandsScene extends Scene {
     private moveY = 0;
     private hud!: ReturnType<typeof mountControls>;
 
-    override async init(): Promise<void> {
+    override async load(): Promise<void> {
         // ── Tileset + two layers, built entirely in code ──────────────────
         // Await the atlas load: TileSet needs a TextureRegion with real
         // dimensions, so a not-yet-hydrated `loader.get()` handle is not enough.

@@ -1,20 +1,26 @@
 import type { RenderingContext } from '#rendering/RenderingContext';
 
 import type { Time } from './Time';
-import type { Destroyable } from './types';
+import type { Destroyable, Synchronous } from './types';
 
 /**
  * The three scheduler phases a {@link System} may participate in, one per
  * dispatch stage of the {@link Application} frame loop: fixed-timestep
  * simulation, variable-rate update, and rendering.
+ *
+ * Every phase must be synchronous. The registry dispatches them on the frame
+ * path and never awaits a result, so an `async` phase is a compile error (see
+ * {@link Synchronous}) and, for callers the type system cannot reach, a thrown
+ * error in every build. Asynchronous work belongs in the owning scene's
+ * {@link Scene.load}.
  */
 export interface SystemMethods {
   /** Advance by one fixed-timestep `step` ({@link Application.fixedTimeStep}). Called zero or more times per frame, before {@link SystemMethods.update}. */
-  fixedUpdate?(step: Time): void;
+  fixedUpdate?(step: Time): Synchronous;
   /** Advance by the variable frame `delta`. Called once per frame, after fixed steps. */
-  update?(delta: Time): void;
+  update?(delta: Time): Synchronous;
   /** Render into `context`. Called once per frame, after {@link SystemMethods.update}. */
-  draw?(context: RenderingContext): void;
+  draw?(context: RenderingContext): Synchronous;
 }
 
 /**

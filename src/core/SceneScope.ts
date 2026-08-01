@@ -10,6 +10,7 @@ import { SceneInteraction } from './scene/SceneInteraction';
 import { SceneLoader } from './scene/SceneLoader';
 import { SceneTweens } from './scene/SceneTweens';
 import { canDestroy, canRestore, canSuspend, SceneState } from './SceneState';
+import { hookOwnerName, requireSynchronousHook } from './syncHooks';
 import { SystemRegistry } from './SystemRegistry';
 import type { Time } from './Time';
 
@@ -23,7 +24,8 @@ const updateMeasure = 'exojs:scene-update';
 const drawStartMark = 'exojs:scene-draw:start';
 const drawMeasure = 'exojs:scene-draw';
 
-const isThenable = (value: unknown): boolean => value instanceof Promise;
+const frameHookRemedy =
+  'The frame path never awaits a hook result, so an async override loses its timing and swallows its errors. Move the asynchronous work into load(), which the engine awaits once per activation.';
 
 /**
  * Internal owner of one {@link Scene} activation: constructs and attaches the
@@ -88,29 +90,20 @@ export class SceneScope<Data = unknown> {
    * application-wide effect yet (definition §4.1/§4.2). The caller commits
    * the switch and calls {@link SceneScope.activate} once the previous scene
    * has been disposed. Throws the original `load()`/`init()` error, or a
-   * dev-only lifecycle error when `init()` returns a thenable (it must be
-   * synchronous).
+   * lifecycle error when `init()` returns a thenable — in every build, not
+   * only in development (it must be synchronous).
    */
   public async prepare(data: Data): Promise<void> {
     await this.scene.load(data);
 
-    // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression -- init() is declared void; capturing the raw return is exactly how a broken async override is detected below.
     const result = this.scene.init(data) as unknown;
 
-    if (isThenable(result)) {
-      // Detach any rejection from the abandoned thenable — an async init()
-      // is a dev-mode activation error below, so the original async result
-      // is intentionally discarded and must never surface as an unhandled
-      // rejection on top of that error.
-      (result as Promise<unknown>).catch(() => {
-        /* discarded: see the thenable-detection error thrown below */
-      });
-
-      if (__DEV__) {
-        throw new Error(
-          'Scene.init() must be synchronous, but it returned a thenable (e.g. an async function). init() runs only after load() has completed — move asynchronous setup into load() instead.',
-        );
-      }
+    if (result !== undefined) {
+      requireSynchronousHook(
+        result,
+        `${hookOwnerName(this.scene, 'Scene')}.init()`,
+        'init() runs only after load() has completed — move the asynchronous setup into load() instead.',
+      );
     }
 
     const previous = this._state;
@@ -275,8 +268,8 @@ export class SceneScope<Data = unknown> {
   /**
    * Forward one fixed step to the scene and its systems, gated to `Active`
    * and unpaused (§3 state table — `fixedUpdate` never runs while paused,
-   * unlike {@link SceneScope.draw}). Warns (dev-only) if `Scene.fixedUpdate`
-   * returns a thenable — the hook must be synchronous.
+   * unlike {@link SceneScope.draw}). Throws in every build if
+   * `Scene.fixedUpdate` returns a thenable — the hook must be synchronous.
    */
   public fixedUpdate(step: Time): void {
     if (this._state !== SceneState.Active || this._paused) {
@@ -284,19 +277,10 @@ export class SceneScope<Data = unknown> {
     }
 
     if (__DEV__) Perf.mark(fixedUpdateStartMark);
-    // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
-    const result = this.scene.fixedUpdate(step);
+    const result = this.scene.fixedUpdate(step) as unknown;
     if (__DEV__) Perf.measure(fixedUpdateMeasure, fixedUpdateStartMark);
 
-    if (__DEV__ && isThenable(result)) {
-      logger.warn(
-        'Scene.fixedUpdate() returned a Promise. fixedUpdate() must be synchronous — async logic here breaks frame timing and silently drops errors. Move async work into load() or init() instead.',
-        {
-          source: 'SceneScope',
-          once: 'scene-scope:async-fixed-update',
-        },
-      );
-    }
+    if (result !== undefined) this._requireSynchronousFrameHook(result, 'fixedUpdate');
 
     this.systems._fixedUpdate(step);
 
@@ -308,7 +292,7 @@ export class SceneScope<Data = unknown> {
 
   /**
    * Forward one frame's update to the scene and its systems, gated to
-   * `Active` and unpaused. Warns (dev-only) if `Scene.update` returns a
+   * `Active` and unpaused. Throws in every build if `Scene.update` returns a
    * thenable — the hook must be synchronous.
    */
   public update(delta: Time): void {
@@ -317,19 +301,10 @@ export class SceneScope<Data = unknown> {
     }
 
     if (__DEV__) Perf.mark(updateStartMark);
-    // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
-    const result = this.scene.update(delta);
+    const result = this.scene.update(delta) as unknown;
     if (__DEV__) Perf.measure(updateMeasure, updateStartMark);
 
-    if (__DEV__ && isThenable(result)) {
-      logger.warn(
-        'Scene.update() returned a Promise. update() must be synchronous — async logic here breaks frame timing and silently drops errors. Move async work into load() or init() instead.',
-        {
-          source: 'SceneScope',
-          once: 'scene-scope:async-update',
-        },
-      );
-    }
+    if (result !== undefined) this._requireSynchronousFrameHook(result, 'update');
 
     this.systems._update(delta);
 
@@ -342,8 +317,8 @@ export class SceneScope<Data = unknown> {
   /**
    * Forward one frame's draw to the scene, its systems, then the UI layer —
    * gated to `Active` regardless of `paused` (a paused scene keeps rendering
-   * while simulation is frozen). Warns (dev-only) if `Scene.draw` returns a
-   * thenable — the hook must be synchronous.
+   * while simulation is frozen). Throws in every build if `Scene.draw`
+   * returns a thenable — the hook must be synchronous.
    */
   public draw(context: RenderingContext): void {
     if (this._state !== SceneState.Active) {
@@ -351,16 +326,10 @@ export class SceneScope<Data = unknown> {
     }
 
     if (__DEV__) Perf.mark(drawStartMark);
-    // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
-    const result = this.scene.draw(context);
+    const result = this.scene.draw(context) as unknown;
     if (__DEV__) Perf.measure(drawMeasure, drawStartMark);
 
-    if (__DEV__ && isThenable(result)) {
-      logger.warn('Scene.draw() returned a Promise. draw() must be synchronous — an async draw() produces incomplete frames and silently drops errors.', {
-        source: 'SceneScope',
-        once: 'scene-scope:async-draw',
-      });
-    }
+    if (result !== undefined) this._requireSynchronousFrameHook(result, 'draw');
 
     this.systems._draw(context);
     this.scene._peekUI()?._render(context);
@@ -495,6 +464,16 @@ export class SceneScope<Data = unknown> {
     }
 
     this._app.interaction.detachRoot(this.scene.root);
+  }
+
+  /**
+   * Cold half of the frame-hook synchrony contract. The dispatchers keep the
+   * hot path to a single `result !== undefined` comparison and only call this
+   * once a hook has actually returned something, so building the message here
+   * costs nothing per frame.
+   */
+  private _requireSynchronousFrameHook(result: unknown, hook: string): void {
+    requireSynchronousHook(result, `${hookOwnerName(this.scene, 'Scene')}.${hook}()`, frameHookRemedy);
   }
 
   private _guard(errors: unknown[], fn: () => void): void {

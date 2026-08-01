@@ -18,6 +18,10 @@
     "test/type-tests/loader-catalog-input.type-test.ts",
     "test/type-tests/loader-catalog-leaf.type-test.ts",
     "test/type-tests/assets-strict-false.type-test.ts",
+    // The synchronous-hook prohibition leans on a union with `void`, whose
+    // assignability differs under `strictNullChecks: false` — it has to hold
+    // for a non-strict consumer too, not just the strict lane.
+    "test/type-tests/synchronous-hooks.type-test.ts",
     "src/typings.d.ts"
   ]
 }

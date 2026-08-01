@@ -184,7 +184,7 @@ class AssetBrowserScene extends Scene {
     loadedCats  = new Set<string>();
     loadingCats = new Set<string>();
 
-    override async init(): Promise<void> {
+    override async load(): Promise<void> {
         const app = this.app;
         if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.assetLoader = this.loader;

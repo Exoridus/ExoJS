@@ -31,7 +31,7 @@ class LdtkWorldImportScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
     private showIntGrid = true;
 
-    override async init(): Promise<void> {
+    override async load(): Promise<void> {
         // The .ldtk source must be an absolute URL: @codexo/exojs-ldtk resolves
         // tileset relPaths with `new URL(relPath, source)`, which throws for a
         // relative `source` (unlike the Tiled adapter's relative-base-aware

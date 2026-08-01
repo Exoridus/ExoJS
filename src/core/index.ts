@@ -95,6 +95,7 @@ export type {
   Mutable,
   PlaybackOptions,
   StreamingLoadEvent,
+  Synchronous,
   TextureSource,
   TimeInterval,
   TypedArray,
