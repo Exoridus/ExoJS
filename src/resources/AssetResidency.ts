@@ -1,3 +1,4 @@
+import type { LoadStateValue } from '#core/LoadState';
 import { logger } from '#core/logging';
 import type { Signal } from '#core/Signal';
 
@@ -22,6 +23,52 @@ export interface AssetResidencySignals {
   readonly onProgress: Signal<[loaded: number, total: number]>;
   readonly onLoaded: Signal<[type: AssetConstructor, alias: string, resource: unknown]>;
   readonly onError: Signal<[type: AssetConstructor, alias: string, error: Error]>;
+}
+
+/**
+ * One row of {@link Loader.inspect}'s diagnostic snapshot: everything a
+ * developer needs to reason about a single claimed `(type, source)` key
+ * without reaching into `Loader`'s private residency bookkeeping — its
+ * lifecycle state, how many independent claim scopes hold it, and whether its
+ * fetch is queued, in flight, or settled. Every row is plain, frozen data:
+ * numbers, strings, booleans, and the asset's constructor token — never a
+ * `Set`, a claim symbol, or a live handle/ref object, so nothing returned here
+ * can be used to mutate residency state.
+ */
+export interface AssetInspection {
+  /** The normalized `(type, source)` residency key this row describes — the same key `Loader`'s internal claim/dedup maps use. */
+  readonly key: string;
+  /** The asset type constructor this key was claimed under. */
+  readonly type: AssetConstructor;
+  /** The literal source/path this key was claimed under (an alias, not necessarily a URL). */
+  readonly source: string;
+  /**
+   * Where this key currently sits in the load lifecycle: `'idle'` (claimed
+   * but its fetch has not started), `'queued'` (parked in the low-priority
+   * background lane), `'loading'` (fetch in flight), `'ready'` (payload
+   * resident and readable), or `'failed'` (the last fetch attempt errored).
+   * A row reports exactly one of these five, chosen by priority: a settled
+   * `'ready'` or `'failed'` outcome always wins over `'queued'`/`'loading'`,
+   * so a row can never claim to be both settled and still pending.
+   */
+  readonly state: 'idle' | 'queued' | 'loading' | 'ready' | 'failed';
+  /**
+   * The number of distinct claim scopes currently holding this key — the same
+   * refcount `Loader.release()` decrements and that reaches zero to evict.
+   * This is a scope count, not a count of consumer handles/refs or `get()`
+   * calls: several handles sharing one scope, or several `get()` calls for
+   * the same source, still report `1` here.
+   */
+  readonly claims: number;
+  /** `true` while a fetch for this key is actively in flight (network request or handler load). */
+  readonly inFlight: boolean;
+  /**
+   * `true` only while this key is genuinely parked in the low-priority
+   * background queue — always in lockstep with `state === 'queued'`, and
+   * never `true` on a row whose `state` has already settled to `'ready'` or
+   * `'failed'`.
+   */
+  readonly background: boolean;
 }
 
 /**
@@ -83,6 +130,84 @@ export class AssetResidency {
     this._decoder = decoder;
     this._signals = signals;
     this._concurrency = concurrency;
+  }
+
+  /** Read-only, detached snapshot for diagnostics and support bundles. @internal */
+  public _inspect(): readonly AssetInspection[] {
+    const backgroundKeys = new Set(this._backgroundQueue.map(entry => this._typeRegistry._key(entry.type, entry.alias)));
+    const rows: AssetInspection[] = [];
+
+    for (const [key, claim] of this._claims) {
+      const stored = this._resources.get(claim.type)?.has(claim.source) ?? false;
+      const identityKey = this._aliasKeyToIdentityKey.get(key);
+      const inFlight = this._inFlight.has(key) || (identityKey !== undefined && this._inFlightByIdentity.has(identityKey));
+      // Raw queue membership only — a settled row must never report `background: true`
+      // (see below), so this is an INPUT to `state`, not the field's own value.
+      const queuedInBackground = backgroundKeys.has(key);
+      const handleState = this._inspectHandleState(key, claim.type);
+      const state = this._inspectState({ stored, handleState, queuedInBackground, inFlight });
+
+      rows.push(
+        Object.freeze({
+          key,
+          type: claim.type,
+          source: claim.source,
+          state,
+          claims: claim.scopes.size,
+          inFlight,
+          // Derived from `state`, not from raw queue membership: a producer that
+          // stores a payload without draining the background queue first (e.g. a
+          // container injecting the same (type, source) directly) must never
+          // leave a settled row also reporting `background: true`.
+          background: state === 'queued',
+        }),
+      );
+    }
+
+    rows.sort((left, right) => left.key.localeCompare(right.key));
+    return Object.freeze(rows);
+  }
+
+  /** The load-lifecycle state of whatever handle/ref is registered for `key`, or `undefined` if none is. Backs {@link _inspect}. */
+  private _inspectHandleState(key: string, type: AssetConstructor): LoadStateValue | undefined {
+    const ref: AssetRef<unknown> | undefined = this._refs.get(key)?.refs.values().next().value;
+
+    if (ref !== undefined) {
+      return ref.state;
+    }
+
+    const deferred = this._deferred.get(key)?.handles.first();
+    const adapter = this._typeRegistry.getSeamlessAdapter(type);
+
+    return deferred !== undefined && adapter !== undefined ? adapter.stateOf(deferred) : undefined;
+  }
+
+  /**
+   * Resolve one {@link AssetInspection} row's `state`, by priority: a settled
+   * `stored`/`'ready'` payload or a `'failed'` handle always wins over
+   * `'queued'`/`'loading'`, so a row can never claim to be both settled and
+   * still pending. Backs {@link _inspect}.
+   */
+  private _inspectState(input: { stored: boolean; handleState: LoadStateValue | undefined; queuedInBackground: boolean; inFlight: boolean }): AssetInspection['state'] {
+    const { stored, handleState, queuedInBackground, inFlight } = input;
+
+    if (stored) {
+      return 'ready';
+    }
+
+    if (handleState === 'failed') {
+      return 'failed';
+    }
+
+    if (queuedInBackground) {
+      return 'queued';
+    }
+
+    if (inFlight || handleState === 'loading') {
+      return 'loading';
+    }
+
+    return handleState === 'ready' ? 'ready' : 'idle';
   }
 
   // -----------------------------------------------------------------------
