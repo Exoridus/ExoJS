@@ -656,6 +656,116 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
     expect(b.loadState).toBe('ready');
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
+
+  test('re-adopting an already-ready ref is untouched — retryingFailedLeaf must not misfire on a settled success (value/ref)', async () => {
+    const { fetchMock, succeed } = togglableJsonFetch({ hp: 2 });
+    const loader = createCoreLoader();
+    const leaf = createLeaf('json', 'ready.json') as AssetRef<unknown>;
+    const claimer = Symbol('claimer');
+
+    succeed(); // this ref's fetch succeeds on the very first attempt
+
+    loader._adopt(leaf, claimer);
+    await expect(leaf.loaded).resolves.toEqual({ hp: 2 });
+    expect(leaf.loadState).toBe('ready');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    loader._adopt(leaf, claimer); // re-adopt the SAME already-ready ref
+
+    expect(leaf.loadState).toBe('ready'); // untouched — never re-armed
+    expect(leaf.value).toEqual({ hp: 2 }); // value still intact, not cleared
+    expect(fetchMock).toHaveBeenCalledTimes(1); // no duplicate fetch
+  });
+
+  test('retrying a failed ref under a NEW claimer adds that claim without disturbing the original scope (value/ref)', async () => {
+    const { succeed } = togglableJsonFetch({ hp: 3 });
+    const loader = createCoreLoader();
+    const leaf = createLeaf('json', 'owned.json') as AssetRef<unknown>;
+    const original = Symbol('original');
+    const retryClaimer = Symbol('retry');
+
+    loader._adopt(leaf, original);
+    await expect(leaf.loaded).rejects.toThrow();
+
+    const key = loader['_typeRegistry']['_key'](Json, 'owned.json');
+    const claims = (): Set<symbol> | undefined => loader['_residency']['_claims'].get(key)?.scopes;
+
+    expect(claims()?.has(original)).toBe(true);
+
+    succeed();
+    loader._adopt(leaf, retryClaimer); // a DIFFERENT scope retries the SAME failed ref
+
+    expect(claims()?.has(original)).toBe(true); // original claim preserved
+    expect(claims()?.has(retryClaimer)).toBe(true); // new claim added, not swapped in
+
+    await expect(leaf.loaded).resolves.toEqual({ hp: 3 });
+
+    // Releasing only the retry scope must NOT evict — the original scope still holds it.
+    loader._release(key, retryClaimer);
+    expect(leaf.loadState).toBe('ready');
+    expect(loader['_residency']['_claims'].has(key)).toBe(true);
+
+    // Releasing the last remaining scope evicts.
+    loader._release(key, original);
+    expect(loader['_residency']['_claims'].has(key)).toBe(false);
+  });
+
+  // Minor #2 (review follow-up): the generic re-arm at the top of `_adopt` only
+  // re-enters 'loading' on the shared `_loadState` — it does not clear a value
+  // ref's OWN `_value`/`_hasValue` (only `AssetRef._begin()` does). `_fail()`
+  // never clears them either, so a ref that was 'ready' before a LATER failure
+  // (`_onTrackedFailure` fails every ref of a key regardless of its prior state)
+  // must have its stale internal value actually cleared on retry — not merely
+  // hidden behind the `state !== 'ready'` guard on `.value`.
+  test('a ref that was ready, then failed, has its stale value actually cleared on retry (not just gated by state)', async () => {
+    const { fetchMock, succeed } = togglableJsonFetch({ hp: 42 });
+    const loader = createCoreLoader();
+    const leaf = createLeaf('json', 'stale.json') as AssetRef<unknown>;
+    const claimer = Symbol('claimer');
+
+    succeed();
+    loader._adopt(leaf, claimer);
+    await expect(leaf.loaded).resolves.toEqual({ hp: 42 });
+    expect(leaf.value).toEqual({ hp: 42 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // A LATER failure on this already-'ready' ref (mirrors `_onTrackedFailure`,
+    // which fails every ref of a key regardless of its current state), paired
+    // with invalidating the stored value directly — value-ref eviction has no
+    // public path yet ("an accepted gap", per AssetResidency._evictKey's own
+    // comment), so this reaches into internals to set up the precondition
+    // rather than exercising a real eviction API that does not exist.
+    leaf._fail(new Error('later failure'));
+    (loader as unknown as { _residency: { _resources: Map<unknown, Map<string, unknown>> } })._residency._resources.get(Json)?.delete('stale.json');
+
+    expect(leaf.loadState).toBe('failed');
+    expect(() => leaf.value).toThrow("'failed'"); // gated by state, as expected
+
+    // `_fail()` alone does NOT clear the stale value — confirms the precondition
+    // this test is guarding against actually holds before the retry runs.
+    const internalsBeforeRetry = leaf as unknown as { _value: unknown; _hasValue: boolean };
+
+    expect(internalsBeforeRetry._hasValue).toBe(true);
+    expect(internalsBeforeRetry._value).toEqual({ hp: 42 });
+
+    loader._adopt(leaf, claimer); // retry
+
+    expect(leaf.loadState).toBe('loading');
+    expect(() => leaf.value).toThrow("'loading'"); // still gated by state either way…
+
+    // …but the INTERNAL value must actually be cleared too, not merely hidden
+    // behind the state guard: re-arming through the generic `LoadState.begin()`
+    // alone (bypassing `AssetRef._begin()`) would leave the stale `{hp:42}`
+    // sitting in `_value`/`_hasValue` behind that gate.
+    const internals = leaf as unknown as { _value: unknown; _hasValue: boolean };
+
+    expect(internals._hasValue).toBe(false);
+    expect(internals._value).toBeUndefined();
+
+    await expect(leaf.loaded).resolves.toEqual({ hp: 42 });
+    expect(leaf.value).toEqual({ hp: 42 });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe('Loader.get / load — Assets catalog adoption (end-to-end)', () => {

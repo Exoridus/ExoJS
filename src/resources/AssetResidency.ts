@@ -258,6 +258,14 @@ export class AssetResidency {
     const key = this._typeRegistry._key(ctor, meta.src);
 
     if (handle instanceof AssetRef) {
+      // The generic re-arm above only re-enters 'loading' on the shared
+      // `_loadState` — it does not clear a value ref's OWN `_value`/`_hasValue`
+      // (only `AssetRef._begin()` does). `_fail()` never clears them either, so a
+      // ref that was 'ready' before a LATER failure (`_onTrackedFailure` fails
+      // every ref of a key regardless of its prior state) carries a stale value
+      // behind the `'loading'` gate until this fuller reset runs.
+      if (retryingFailedLeaf) handle._begin();
+
       const existingRef = this._refs.get(key);
       const stored = this._resources.get(ctor)?.get(meta.src);
 
