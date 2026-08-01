@@ -44,7 +44,7 @@ class TiledMapImportScene extends Scene {
     private filterIndex = 0;
     private hud!: ReturnType<typeof mountControls>;
 
-    override async init(): Promise<void> {
+    override async load(): Promise<void> {
         // Advanced path: parsed TiledMap -> map property lookup -> manual
         // toTileMap() conversion (the common-case Asset.type('tileMap', ...)
         // binding does the same conversion internally).

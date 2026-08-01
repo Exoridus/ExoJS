@@ -18,7 +18,7 @@ import { SERIALIZATION_VERSION, type SerializedScene } from './serialization/typ
 import { Signal } from './Signal';
 import type { SystemRegistry } from './SystemRegistry';
 import type { Time } from './Time';
-import type { Destroyable } from './types';
+import type { Destroyable, Synchronous } from './types';
 
 /**
  * A scene's lifecycle host. Subclass to define scene behavior:
@@ -346,10 +346,15 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * Promise returned by {@link Scene.load} has fulfilled and before the
    * scene becomes active: register scene systems, connect stable scene
    * objects, bind input, register interaction roots, start scene audio.
-   * Must remain synchronous — development builds detect a returned thenable
-   * and fail activation with a lifecycle error. Override in subclass.
+   * Override in subclass.
+   *
+   * Must be synchronous: `async init()` is a compile error (see
+   * {@link Synchronous}) and, for callers the type system cannot reach, a
+   * thrown lifecycle error that fails activation in **every** build. Put
+   * asynchronous setup in {@link Scene.load}, which the engine awaits before
+   * `init()` runs.
    */
-  public init(_data: Readonly<Data>): void {
+  public init(_data: Readonly<Data>): Synchronous {
     // override in subclass
   }
 
@@ -357,8 +362,12 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * Per-frame logic hook. Receives the time elapsed since the previous
    * frame. The scene-graph transforms are still authoritative — mutate
    * positions, advance timers, drive AI here. Override in subclass.
+   *
+   * Must be synchronous — see {@link Scene.init} for the contract and
+   * {@link Synchronous} for why. The frame path never awaits a hook result,
+   * so an `async` override would drop its timing and swallow its errors.
    */
-  public update(_delta: Time): void {
+  public update(_delta: Time): Synchronous {
     // override in subclass
   }
 
@@ -369,8 +378,10 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * rate. Put `physicsWorld.step(delta)` and movement here; leave camera, UI and
    * purely visual work in {@link Scene.update}. Default is a no-op. Override in
    * subclass.
+   *
+   * Must be synchronous — see {@link Scene.update}.
    */
-  public fixedUpdate(_step: Time): void {
+  public fixedUpdate(_step: Time): Synchronous {
     // override in subclass
   }
 
@@ -387,9 +398,12 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * skipping `ui` for a given frame) is equally valid and intentionally
    * supported.
    *
+   * Must be synchronous — see {@link Scene.update}. An `async` draw() would
+   * present incomplete frames.
+   *
    * @see Scene.root for why root is structural, not render-authoritative.
    */
-  public draw(_context: RenderingContext): void {
+  public draw(_context: RenderingContext): Synchronous {
     // override in subclass
   }
 

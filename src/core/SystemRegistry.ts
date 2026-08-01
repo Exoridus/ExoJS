@@ -1,6 +1,7 @@
 import type { RenderingContext } from '#rendering/RenderingContext';
 
 import { Signal } from './Signal';
+import { hookOwnerName, requireSynchronousHook } from './syncHooks';
 import type { System } from './System';
 import type { Time } from './Time';
 import type { Destroyable } from './types';
@@ -49,6 +50,20 @@ type PendingMutation = PendingAdd | PendingRemove;
 const isPendingAdd = (mutation: PendingMutation): mutation is PendingAdd => mutation.add;
 
 const tieBreak = (a: SystemRegistration, b: SystemRegistration): number => a.order - b.order || a.sequence - b.sequence;
+
+/**
+ * Cold half of the system-phase synchrony contract. The phase loops keep the
+ * hot path to a single `result !== undefined` comparison and only call this
+ * once a phase has actually returned something, so building the message here
+ * costs nothing per frame.
+ */
+const requireSynchronousPhase = (result: unknown, system: System, phase: string): void => {
+  requireSynchronousHook(
+    result,
+    `${hookOwnerName(system, 'System')}.${phase}()`,
+    'The frame path never awaits a phase result, so an async phase loses its timing and swallows its errors. Move the asynchronous work into the owning scene’s load(), which the engine awaits once per activation.',
+  );
+};
 
 /**
  * Sorts `list` in place. Pure `order`/`sequence` comparison when no
@@ -291,7 +306,9 @@ export class SystemRegistry implements Destroyable {
 
     for (const registration of this._fixedList) {
       if (registration.active) {
-        registration.system.fixedUpdate!(step);
+        const result = registration.system.fixedUpdate!(step) as unknown;
+
+        if (result !== undefined) requireSynchronousPhase(result, registration.system, 'fixedUpdate');
       }
     }
   }
@@ -309,7 +326,9 @@ export class SystemRegistry implements Destroyable {
 
     for (const registration of this._updateList) {
       if (registration.active) {
-        registration.system.update!(delta);
+        const result = registration.system.update!(delta) as unknown;
+
+        if (result !== undefined) requireSynchronousPhase(result, registration.system, 'update');
       }
     }
   }
@@ -327,7 +346,9 @@ export class SystemRegistry implements Destroyable {
 
     for (const registration of this._drawList) {
       if (registration.active) {
-        registration.system.draw!(context);
+        const result = registration.system.draw!(context) as unknown;
+
+        if (result !== undefined) requireSynchronousPhase(result, registration.system, 'draw');
       }
     }
   }

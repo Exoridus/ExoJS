@@ -85,7 +85,7 @@ class InfiniteTerrainScene extends Scene {
     private hudTimer = 0;
     private hud!: ReturnType<typeof mountControls>;
 
-    override async init(): Promise<void> {
+    override async load(): Promise<void> {
         const tilesTexture = await this.loader.load(Asset.type('texture', assets.demo.tilesets.map.image));
         this.tileset = new TileSet({
             name: 'biomes',

@@ -20,6 +20,34 @@ export type TypedEnum<Enum, Type> = { [Key in keyof Enum]: Type };
 /** Type-level extractor of an object's value type, equivalent to `T[keyof T]`. */
 export type ValueOf<T> = T[keyof T];
 
+/**
+ * Return type of the engine hooks that must not be asynchronous:
+ * {@link Scene.init}, the frame hooks {@link Scene.fixedUpdate} /
+ * {@link Scene.update} / {@link Scene.draw}, and the {@link SystemMethods}
+ * phases. Write these overrides exactly as before — a body that returns
+ * nothing satisfies `Synchronous`, `override update(delta: Time): void`
+ * remains the idiomatic annotation, and the engine's fluent
+ * `update(delta): this` convention still fits.
+ *
+ * It is deliberately *not* a bare `void`. TypeScript makes a `void`-returning
+ * signature assignable from a signature returning **anything at all**, so
+ * `override async update()` compiles clean against a `void` base — the exact
+ * mistake this contract exists to prevent. The union above keeps `void`,
+ * keeps every ordinary object return, and rejects only thenables: `then` is
+ * pinned to `never`, so any type carrying a callable `then` (a `Promise`, or
+ * a hand-rolled thenable) fails to match. `object &` is what makes the
+ * remaining constituent non-weak, so a return type with no `then` property at
+ * all is still accepted rather than tripping TypeScript's weak-type check.
+ *
+ * Nothing here exists at runtime; no engine code reads `then` off a hook
+ * result to decide anything (the always-on runtime guard does its own check).
+ *
+ * Hooks the engine genuinely awaits — {@link Scene.load} and
+ * {@link Scene.unload} — are typed `Promise<void> | void` instead and stay
+ * asynchronous.
+ */
+export type Synchronous = void | (object & { then?: never });
+
 /** Strips `readonly` modifiers from every property of `T`. */
 export type Mutable<T> = {
   -readonly [P in keyof T]: T[P];

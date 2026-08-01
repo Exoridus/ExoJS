@@ -13,7 +13,7 @@ class GamepadScene extends Scene {
     private status!: Sprite;
     private container!: Container;
 
-    override async init(): Promise<void> {
+    override async load(): Promise<void> {
         const app = this.app;
         if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const buttonsData = (await this.loader.load(Asset.type('json', 'json/buttons.json'))) as SpritesheetData;

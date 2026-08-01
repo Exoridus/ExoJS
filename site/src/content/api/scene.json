@@ -220,7 +220,7 @@
         },
         {
           "name": "draw",
-          "signature": "draw(_context: RenderingContext): void",
+          "signature": "draw(_context: RenderingContext): Synchronous",
           "signatureTokens": [
             {
               "text": "draw",
@@ -251,8 +251,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "void",
-              "kind": "keyword"
+              "text": "Synchronous",
+              "kind": "type"
             }
           ],
           "params": [
@@ -262,12 +262,12 @@
               "optional": false
             }
           ],
-          "returnType": "void",
-          "description": "Explicit per-frame rendering entry point. Override to choose what gets rendered. The default body is intentionally empty: Scene does not automatically traverse Scene.root. Auto-rendering the full hierarchy would conflict with ExoJS's \"explicit instead of implicit\" identity. Users decide which subtree(s) render each frame — context.render(this.root) is the recommended high-level path, but selective rendering (e.g. context.render(world) while skipping ui for a given frame) is equally valid and intentionally supported."
+          "returnType": "Synchronous",
+          "description": "Explicit per-frame rendering entry point. Override to choose what gets rendered. The default body is intentionally empty: Scene does not automatically traverse Scene.root. Auto-rendering the full hierarchy would conflict with ExoJS's \"explicit instead of implicit\" identity. Users decide which subtree(s) render each frame — context.render(this.root) is the recommended high-level path, but selective rendering (e.g. context.render(world) while skipping ui for a given frame) is equally valid and intentionally supported. Must be synchronous — see Scene.update. An async draw() would present incomplete frames."
         },
         {
           "name": "fixedUpdate",
-          "signature": "fixedUpdate(_step: Time): void",
+          "signature": "fixedUpdate(_step: Time): Synchronous",
           "signatureTokens": [
             {
               "text": "fixedUpdate",
@@ -298,8 +298,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "void",
-              "kind": "keyword"
+              "text": "Synchronous",
+              "kind": "type"
             }
           ],
           "params": [
@@ -309,12 +309,12 @@
               "optional": false
             }
           ],
-          "returnType": "void",
-          "description": "Fixed-timestep logic hook. Called zero or more times per frame with a constant delta (Application.fixedTimeStep) before Scene.update, so physics and deterministic gameplay advance at a frame-rate-independent rate. Put physicsWorld.step(delta) and movement here; leave camera, UI and purely visual work in Scene.update. Default is a no-op. Override in subclass."
+          "returnType": "Synchronous",
+          "description": "Fixed-timestep logic hook. Called zero or more times per frame with a constant delta (Application.fixedTimeStep) before Scene.update, so physics and deterministic gameplay advance at a frame-rate-independent rate. Put physicsWorld.step(delta) and movement here; leave camera, UI and purely visual work in Scene.update. Default is a no-op. Override in subclass. Must be synchronous — see Scene.update."
         },
         {
           "name": "init",
-          "signature": "init(_data: Readonly<Data>): void",
+          "signature": "init(_data: Readonly<Data>): Synchronous",
           "signatureTokens": [
             {
               "text": "init",
@@ -357,8 +357,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "void",
-              "kind": "keyword"
+              "text": "Synchronous",
+              "kind": "type"
             }
           ],
           "params": [
@@ -368,8 +368,8 @@
               "optional": false
             }
           ],
-          "returnType": "void",
-          "description": "Optional synchronous setup hook. Runs once per activation, after the Promise returned by Scene.load has fulfilled and before the scene becomes active: register scene systems, connect stable scene objects, bind input, register interaction roots, start scene audio. Must remain synchronous — development builds detect a returned thenable and fail activation with a lifecycle error. Override in subclass."
+          "returnType": "Synchronous",
+          "description": "Optional synchronous setup hook. Runs once per activation, after the Promise returned by Scene.load has fulfilled and before the scene becomes active: register scene systems, connect stable scene objects, bind input, register interaction roots, start scene audio. Override in subclass. Must be synchronous: async init() is a compile error (see Synchronous) and, for callers the type system cannot reach, a thrown lifecycle error that fails activation in **every** build. Put asynchronous setup in Scene.load, which the engine awaits before init() runs."
         },
         {
           "name": "load",
@@ -624,7 +624,7 @@
         },
         {
           "name": "update",
-          "signature": "update(_delta: Time): void",
+          "signature": "update(_delta: Time): Synchronous",
           "signatureTokens": [
             {
               "text": "update",
@@ -655,8 +655,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "void",
-              "kind": "keyword"
+              "text": "Synchronous",
+              "kind": "type"
             }
           ],
           "params": [
@@ -666,8 +666,8 @@
               "optional": false
             }
           ],
-          "returnType": "void",
-          "description": "Per-frame logic hook. Receives the time elapsed since the previous frame. The scene-graph transforms are still authoritative — mutate positions, advance timers, drive AI here. Override in subclass."
+          "returnType": "Synchronous",
+          "description": "Per-frame logic hook. Receives the time elapsed since the previous frame. The scene-graph transforms are still authoritative — mutate positions, advance timers, drive AI here. Override in subclass. Must be synchronous — see Scene.init for the contract and Synchronous for why. The frame path never awaits a hook result, so an async override would drop its timing and swallow its errors."
         }
       ],
       "paragraphs": [],

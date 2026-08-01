@@ -265,6 +265,22 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
   order, instead of synchronously off the raw `pointermove`/timer callback.
   Handlers that relied on running mid-event now run on the next frame
   boundary, in order relative to the pointer phases that produced them.
+- **BREAKING — `Scene.init`, the frame hooks and the `System` phases must be
+  synchronous, enforced by the type system and by a hard failure in every
+  build.** `Scene.init`/`fixedUpdate`/`update`/`draw` and
+  `SystemMethods.fixedUpdate`/`update`/`draw` now return `Synchronous`
+  instead of `void`, so `override async update()` is a compile error — a bare
+  `void` return type could never reject it, because TypeScript accepts any
+  return type against a `void`-returning signature. Only thenables are
+  rejected; `void` and the engine's fluent `update(delta): this` convention
+  still compile unchanged. At runtime a hook that returns a thenable now
+  throws a lifecycle error naming the owner, the hook and the remedy, in
+  **production as well as development** — previously an async `init()` was a
+  dev-only activation failure and an async frame hook a dev-only warning, so
+  the same broken override silently dropped its timing and swallowed its
+  errors in a production build. Move asynchronous work into `Scene.load()`,
+  which the engine awaits once per activation. `Scene.load()`/`Scene.unload()`
+  are unchanged and stay asynchronous.
 
 ### Removed
 

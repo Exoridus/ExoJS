@@ -49,7 +49,7 @@ class FalloffCurvesScene extends Scene {
     private plot = { x: 0, y: 0, w: 0, h: 0 };
     private hud!: ReturnType<typeof mountControls>;
 
-    override async init(): Promise<void> {
+    override async load(): Promise<void> {
         const app = this.app;
         if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const { width, height } = app.canvas;
