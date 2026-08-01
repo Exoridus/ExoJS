@@ -41,7 +41,7 @@ export interface ReleaseManifest {
   shortRevision: string;
   tag: string;
   generatedAt: string;
-  publishOrder: ReadonlyArray<OfficialPackageName>;
+  publishOrder: readonly OfficialPackageName[];
   packages: TarballRecord[];
   fullZip?: FullZipRecord;
 }

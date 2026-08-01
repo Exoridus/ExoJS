@@ -39,7 +39,7 @@ const VENDOR_PACKAGES = [
   { name: 'exojs-audio-fx', vendorDir: 'exojs-audio-fx' },
 ] as const;
 
-const FORBIDDEN_PATTERNS: Array<{ label: string; test: (text: string) => boolean }> = [
+const FORBIDDEN_PATTERNS: { label: string; test: (text: string) => boolean }[] = [
   { label: 'workspace: specifier', test: t => t.includes('workspace:') },
   { label: '@assets alias', test: t => /['"`]@assets['"`/]/.test(t) },
   { label: '@/ alias import', test: t => /(from|import)\s*\(?\s*['"`]@\//.test(t) },

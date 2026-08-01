@@ -372,8 +372,8 @@ function computeCoreExportNames(): Set<string> {
 // ---------------------------------------------------------------------------
 const SOURCE_SNIPPET_TAG_RE = /<SourceSnippet\s+([^>]*?)\/>/gs;
 
-function parseSourceSnippetRefs(mdxContent: string): Array<{ source: string; region: string }> {
-  const refs: Array<{ source: string; region: string }> = [];
+function parseSourceSnippetRefs(mdxContent: string): { source: string; region: string }[] {
+  const refs: { source: string; region: string }[] = [];
   for (const m of mdxContent.matchAll(SOURCE_SNIPPET_TAG_RE)) {
     const attrs = m[1];
     const source = attrs.match(/source="([^"]+)"/)?.[1];
