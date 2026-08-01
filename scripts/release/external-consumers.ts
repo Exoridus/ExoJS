@@ -49,7 +49,7 @@ const run = (command: string, args: string[], cwd: string): { code: number; outp
   }
 };
 
-const CONSUMER_TS = `import { Application, Scene } from '@codexo/exojs';
+const CONSUMER_TS = `import { ActionMap, Application, ButtonAction, Container, Keyboard, Scene, type InputBinding } from '@codexo/exojs';
 import { ParticleSystem, particlesExtension } from '@codexo/exojs-particles';
 import { TileMap, tilemapExtension } from '@codexo/exojs-tilemap';
 import { TiledMap, tiledExtension } from '@codexo/exojs-tiled';
@@ -60,6 +60,15 @@ import { AsepriteSheet, asepriteExtension } from '@codexo/exojs-aseprite';
 import { LdtkMap, ldtkExtension } from '@codexo/exojs-ldtk';
 
 export class DemoScene extends Scene {}
+
+export function verifyCoreProtocols(binding: InputBinding, container: Container): void {
+    const actions = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+    for (const action of actions) void action;
+    for (const child of container) void child;
+
+    using ownedBinding = binding;
+    void ownedBinding.active;
+}
 
 export function bootstrap(): { app: Application; system: typeof ParticleSystem; tiles: typeof TileMap; map: typeof TiledMap } {
     const app = new Application();

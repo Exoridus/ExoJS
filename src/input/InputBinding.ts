@@ -7,6 +7,18 @@ import type { GamepadButtonChannel } from './GamepadButton';
 import type { PointerChannel } from './Pointer';
 import type { Keyboard, PointerButton } from './types';
 
+// Cast required: under a tsconfig without `@types/node` in scope (this
+// package's own `examples`/`type-tests` lanes, and many browser-only
+// consumers), nothing pulls in TypeScript's real `esnext.disposable` lib, so
+// `Symbol.dispose` is typed purely from this package's own ambient
+// declaration (see `src/index.ts`) and `Symbol.for(...)`'s plain `symbol`
+// return widens the union — the assertion re-narrows it back down. Under a
+// project that DOES have `@types/node` (this repo's own root tsconfig), the
+// real lib already narrows the union on its own, which is why this looks
+// "unnecessary" to a linter resolving against that project specifically.
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- necessary under any tsconfig without `@types/node`'s `esnext.disposable` lib reference; see comment above.
+const disposeSymbol: typeof Symbol.dispose = (Symbol.dispose ?? Symbol.for('Symbol.dispose')) as typeof Symbol.dispose;
+
 /** Channel a single {@link InputBinding} can subscribe to. */
 export type InputChannel = GamepadButtonChannel | GamepadAxisChannel | PointerChannel | Keyboard | PointerButton;
 
@@ -361,6 +373,15 @@ export class InputBinding {
 
       this._activationTimestamp = null;
     }
+  }
+
+  /**
+   * Explicit Resource Management alias for {@link unbind}. Only caller-owned
+   * binding handles expose this protocol; engine-owned managers and nodes do
+   * not become caller-disposable.
+   */
+  public [disposeSymbol](): void {
+    this.unbind();
   }
 
   /**

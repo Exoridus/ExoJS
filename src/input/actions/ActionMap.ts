@@ -144,6 +144,11 @@ class ActionMapBase<T extends ActionRecord> {
     Object.assign(this, Object.fromEntries(entries));
   }
 
+  /** Iterate actions in declaration order. */
+  public [Symbol.iterator](): IterableIterator<Action> {
+    return this.actions[Symbol.iterator]();
+  }
+
   /** `true` while this map is attached to an input owner and being updated. */
   public get attached(): boolean {
     return this._owner !== null;

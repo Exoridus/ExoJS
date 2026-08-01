@@ -72,6 +72,11 @@ export class Container extends RenderNode {
     this._childIndexView = null;
   }
 
+  /** Iterate a stable document-order snapshot. */
+  public [Symbol.iterator](): IterableIterator<RenderNode> {
+    return this.children[Symbol.iterator]();
+  }
+
   public get width(): number {
     return Math.abs(this.scale.x) * this.getBounds().width;
   }
