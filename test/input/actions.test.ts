@@ -475,6 +475,8 @@ describe('ActionMap', () => {
     'detach',
     '_owner',
     '_ownership',
+    '_availability',
+    '_wasAvailable',
     '_attach',
     '_armBaseline',
     '_update',

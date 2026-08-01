@@ -13,6 +13,12 @@ export interface SceneInputBindingOptions extends InputBindingOptions {
   readonly when?: SceneInputAvailability;
 }
 
+/** Availability policy for a scene-owned ActionMap. */
+export interface SceneActionMapOptions {
+  /** Visible scene states in which this map may sample. Default: `'active'`. */
+  readonly when?: SceneInputAvailability;
+}
+
 const gatedStates = new Set<SceneState>([SceneState.Preparing, SceneState.Ready, SceneState.Suspended, SceneState.Destroying, SceneState.Destroyed]);
 
 function whenPolicyAllows(when: SceneInputAvailability, state: SceneState, paused: boolean): boolean {
@@ -71,8 +77,9 @@ export class SceneInputs implements Destroyable {
    * scene stops feeding its maps and resets every action, so a key held across
    * the suspend does not surface as a fresh press on resume.
    */
-  public attach<T extends ActionRecord>(map: ActionMap<T>): ActionMap<T> {
-    map._attach(this);
+  public attach<T extends ActionRecord>(map: ActionMap<T>, options: SceneActionMapOptions = {}): ActionMap<T> {
+    const when = options.when ?? 'active';
+    map._attach(this, () => !this._suspended && !this._app.scenes._transitionGateOpen && whenPolicyAllows(when, this._getState(), this._getPaused()));
     this._actionMaps.add(map);
 
     if (!this._suspended) {

@@ -29,6 +29,12 @@ const setChannel = (sample: ActionSample, channel: number, value: number): void 
   (sample.batches as ChannelEventBatch[]).push({ channels: [{ channel, value }], sequence, timestamp: sequence });
 };
 
+/** Close the frame on `sample` — clears its batch log and bumps `frameId`, mirroring `InputManager.update()`. */
+const advanceFrame = (sample: ActionSample): void => {
+  (sample.batches as ChannelEventBatch[]).length = 0;
+  sample.frameId++;
+};
+
 interface StubBinding {
   onStart: Signal<[number]>;
   onActive: Signal<[number]>;
@@ -519,5 +525,325 @@ describe('SceneInputs action maps', () => {
     // A later suspend must not resurrect the detached map.
     inputs.resume();
     expect(tracked.has(map)).toBe(false);
+  });
+});
+
+describe('SceneInputs action maps — availability policy (when)', () => {
+  type Mode = 'active' | 'paused' | 'always';
+
+  const modes: readonly Mode[] = ['active', 'paused', 'always'];
+
+  interface AvailabilityStub {
+    inputs: SceneInputs;
+    state: { value: SceneState };
+    paused: { value: boolean };
+    transitionGateOpen: { value: boolean };
+    /** Truth the next resync/attach-time snapshot should report as "currently held". */
+    snapshot: Float32Array;
+  }
+
+  /**
+   * Same shape as `createMapStub()` above, plus mutable `state`/`paused`/
+   * `transitionGateOpen` controls and a `snapshot` a test can preload before
+   * a resync/re-attach — the real-world "channel is still physically held"
+   * truth `_snapshotActionChannels`/`_resyncActionMap` would report.
+   */
+  const createAvailabilityStub = (): AvailabilityStub => {
+    const state = { value: SceneState.Active };
+    const paused = { value: false };
+    const transitionGateOpen = { value: false };
+    const snapshot = new Float32Array(ChannelSize.Container);
+    const resyncSample = createEmptySample();
+
+    const app = {
+      input: {
+        _trackActionMap: vi.fn(),
+        _detachActionMap: vi.fn(),
+        _resyncActionMap: vi.fn((map: ActionMap) => {
+          resyncSample.values.set(snapshot);
+          map._update(resyncSample);
+        }),
+        // Mirrors the real InputManager's live monotonic counter: "now", not a
+        // constant — a re-arm on regaining availability must exclude batches
+        // already sitting in the log from before this exact moment (e.g. a
+        // press/release that happened while disallowed), never replay them.
+        _currentBatchSequence: vi.fn((): number => nextSequence - 1),
+        _snapshotActionChannels: vi.fn((): Float32Array => snapshot.slice()),
+      },
+      scenes: {
+        get _transitionGateOpen(): boolean {
+          return transitionGateOpen.value;
+        },
+      },
+    } as unknown as Application;
+
+    const inputs = new SceneInputs(
+      app,
+      () => state.value,
+      () => paused.value,
+    );
+
+    return { inputs, state, paused, transitionGateOpen, snapshot };
+  };
+
+  /**
+   * Put `stub` into the allowed/disallowed condition for `mode` via the
+   * `SceneState`/`paused` axes alone — independent of `suspend()` and the
+   * transition gate, which have their own dedicated situations below.
+   * `'always'` never reacts to `paused`, so its only lever is a gated state.
+   */
+  const setAllowed = (stub: AvailabilityStub, mode: Mode, allowed: boolean): void => {
+    if (mode === 'always') {
+      stub.state.value = allowed ? SceneState.Active : SceneState.Preparing;
+      stub.paused.value = false;
+
+      return;
+    }
+
+    stub.state.value = SceneState.Active;
+    stub.paused.value = mode === 'active' ? !allowed : allowed;
+  };
+
+  describe.each(modes)('when: "%s"', mode => {
+    test('initial state: samples immediately when attached already-allowed', () => {
+      const stub = createAvailabilityStub();
+      setAllowed(stub, mode, true);
+
+      const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+      stub.inputs.attach(map, { when: mode });
+
+      const sample = createEmptySample();
+      setChannel(sample, Keyboard.Space, 1);
+      map._update(sample);
+
+      expect(map.jump.active).toBe(true);
+      expect(map.jump.pressed).toBe(true);
+    });
+
+    test('initial state: stays inert when attached already-disallowed', () => {
+      const stub = createAvailabilityStub();
+      setAllowed(stub, mode, false);
+
+      const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+      stub.inputs.attach(map, { when: mode });
+
+      const sample = createEmptySample();
+      setChannel(sample, Keyboard.Space, 1);
+      map._update(sample);
+
+      expect(map.jump.active).toBe(false);
+      expect(map.jump.pressed).toBe(false);
+    });
+
+    test('pause and resume toggle availability per the when policy, with no synthetic press on either transition', () => {
+      const stub = createAvailabilityStub();
+      stub.state.value = SceneState.Active;
+      stub.paused.value = false;
+
+      const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+      stub.inputs.attach(map, { when: mode });
+
+      const sample = createEmptySample();
+      setChannel(sample, Keyboard.Space, 1);
+      map._update(sample);
+
+      const activeWhileUnpaused = mode !== 'paused';
+
+      expect(map.jump.active).toBe(activeWhileUnpaused);
+
+      advanceFrame(sample); // pause happens on a later real frame, not mid-batch
+      stub.paused.value = true;
+      stub.snapshot[Keyboard.Space] = 1; // still physically held across the transition
+      map._update(sample);
+
+      const activeWhilePaused = mode !== 'active';
+
+      expect(map.jump.active).toBe(activeWhilePaused);
+      expect(map.jump.pressed).toBe(false); // never a synthetic press from the toggle alone
+
+      advanceFrame(sample); // resume happens on a later real frame too
+      stub.paused.value = false;
+      map._update(sample);
+
+      expect(map.jump.active).toBe(activeWhileUnpaused);
+      expect(map.jump.pressed).toBe(false);
+    });
+
+    test('the transition gate suppresses sampling regardless of when, and resyncs once closed', () => {
+      const stub = createAvailabilityStub();
+      setAllowed(stub, mode, true);
+
+      const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+      stub.inputs.attach(map, { when: mode });
+
+      const sample = createEmptySample();
+      setChannel(sample, Keyboard.Space, 1);
+      map._update(sample);
+      expect(map.jump.active).toBe(true);
+
+      stub.transitionGateOpen.value = true;
+      map._update(sample);
+      expect(map.jump.active).toBe(false); // suppressed even for 'always'
+
+      stub.transitionGateOpen.value = false;
+      stub.snapshot[Keyboard.Space] = 1; // still physically held while the gate was open
+      map._update(sample);
+
+      expect(map.jump.active).toBe(true);
+      expect(map.jump.pressed).toBe(false); // resync, not a synthetic press
+    });
+
+    test('a suspended scene stays inert regardless of when, and resume() resyncs a still-held key without a synthetic press', () => {
+      const stub = createAvailabilityStub();
+      setAllowed(stub, mode, true);
+
+      const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+      stub.inputs.attach(map, { when: mode });
+
+      const sample = createEmptySample();
+      setChannel(sample, Keyboard.Space, 1);
+      map._update(sample);
+      expect(map.jump.active).toBe(true);
+
+      stub.inputs.suspend();
+
+      // Defense in depth: even a direct _update call while the facade
+      // considers itself suspended must stay inert, independent of `when`
+      // (suspend() itself already stops tracking and resets the map, but the
+      // availability predicate itself also gates on `_suspended`).
+      map._update(sample);
+      expect(map.jump.active).toBe(false);
+
+      stub.snapshot[Keyboard.Space] = 1; // still physically held across the suspend
+      stub.inputs.resume();
+
+      expect(map.jump.active).toBe(true);
+      expect(map.jump.pressed).toBe(false); // resync, not a synthetic press
+    });
+
+    test('held before enable: becoming allowed reports the key as already active, never a synthetic press', () => {
+      const stub = createAvailabilityStub();
+      setAllowed(stub, mode, false);
+      stub.snapshot[Keyboard.Space] = 1; // physically held from before the map ever attached
+
+      const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+      stub.inputs.attach(map, { when: mode });
+
+      const sample = createEmptySample();
+      setChannel(sample, Keyboard.Space, 1); // mirrors the same physical hold in the sample buffer
+
+      map._update(sample); // still disallowed -> stays inert
+      expect(map.jump.active).toBe(false);
+      expect(map.jump.pressed).toBe(false);
+
+      setAllowed(stub, mode, true);
+      map._update(sample);
+
+      expect(map.jump.active).toBe(true);
+      expect(map.jump.pressed).toBe(false); // baseline from the snapshot, not a synthetic edge
+    });
+
+    test('pressed while disabled: enabling later does not surface a delayed press', () => {
+      const stub = createAvailabilityStub();
+      setAllowed(stub, mode, false);
+
+      const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+      stub.inputs.attach(map, { when: mode });
+
+      const sample = createEmptySample();
+      map._update(sample); // establishes the inert baseline while disallowed
+
+      setChannel(sample, Keyboard.Space, 1); // pressed while still disallowed
+      map._update(sample);
+      expect(map.jump.active).toBe(false); // never sampled
+
+      stub.snapshot[Keyboard.Space] = 1; // true state at the moment it becomes allowed: held
+      setAllowed(stub, mode, true);
+      map._update(sample);
+
+      expect(map.jump.active).toBe(true);
+      expect(map.jump.pressed).toBe(false); // no delayed press — a resync, not an edge
+    });
+
+    test('released while disabled: enabling later does not surface a delayed release', () => {
+      const stub = createAvailabilityStub();
+      setAllowed(stub, mode, true);
+
+      const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+      stub.inputs.attach(map, { when: mode });
+
+      const sample = createEmptySample();
+      setChannel(sample, Keyboard.Space, 1);
+      map._update(sample);
+      expect(map.jump.active).toBe(true); // active while allowed
+
+      setAllowed(stub, mode, false);
+      map._update(sample); // disabled -> forced reset now, regardless of the real channel state
+      expect(map.jump.active).toBe(false);
+
+      setChannel(sample, Keyboard.Space, 0); // released while still disabled
+      map._update(sample);
+      expect(map.jump.active).toBe(false); // no change, still not sampled
+
+      stub.snapshot[Keyboard.Space] = 0; // true state at the moment it becomes allowed: released
+      setAllowed(stub, mode, true);
+      map._update(sample);
+
+      expect(map.jump.active).toBe(false);
+      expect(map.jump.pressed).toBe(false);
+      expect(map.jump.released).toBe(false); // no delayed release — already inert since the disable
+    });
+
+    test('a permission change mid real-frame takes effect on the very next _update call, with no one-frame lag', () => {
+      const stub = createAvailabilityStub();
+      setAllowed(stub, mode, true);
+
+      const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+      stub.inputs.attach(map, { when: mode });
+
+      const sample = createEmptySample(); // frameId never advances — one real frame throughout
+      setChannel(sample, Keyboard.Space, 1);
+      map._update(sample);
+      expect(map.jump.active).toBe(true);
+
+      setAllowed(stub, mode, false); // permission flips within the same frameId
+      map._update(sample); // same sample object, same frameId
+      expect(map.jump.active).toBe(false); // reacted immediately, not delayed to the next frame
+
+      setAllowed(stub, mode, true);
+      stub.snapshot[Keyboard.Space] = 1;
+      map._update(sample); // still the same frameId
+
+      expect(map.jump.active).toBe(true);
+      expect(map.jump.pressed).toBe(false);
+    });
+
+    test('detach then reattach under the same when option re-baselines a still-held key with no synthetic press', () => {
+      const stub = createAvailabilityStub();
+      setAllowed(stub, mode, true);
+
+      const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+      stub.inputs.attach(map, { when: mode });
+
+      const sample = createEmptySample();
+      setChannel(sample, Keyboard.Space, 1);
+      map._update(sample);
+      expect(map.jump.active).toBe(true);
+
+      map.detach();
+      expect(map.attached).toBe(false);
+
+      // Still physically held across the detach/reattach gap.
+      stub.snapshot[Keyboard.Space] = 1;
+      stub.inputs.attach(map, { when: mode });
+
+      const sample2 = createEmptySample();
+      sample2.values[Keyboard.Space] = 1; // held, no fresh batch this time
+
+      map._update(sample2);
+
+      expect(map.jump.active).toBe(true);
+      expect(map.jump.pressed).toBe(false); // reattach baselines, doesn't replay a synthetic press
+    });
   });
 });
