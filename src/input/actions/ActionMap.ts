@@ -229,8 +229,7 @@ class ActionMapBase<T extends ActionRecord> {
 
     if (!available) {
       if (this._wasAvailable) {
-        for (const action of this.actions) action._reset();
-        this._ownership.reset();
+        this._reset();
       }
       this._wasAvailable = false;
       return;

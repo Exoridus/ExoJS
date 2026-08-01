@@ -27,7 +27,7 @@ export { Perf } from './Perf';
 export type { PhasedSceneTransitionOptions, SceneTransitionPhaseContext, SceneTransitionPhaseRequirements } from './PhasedSceneTransition';
 export { PhasedSceneTransition } from './PhasedSceneTransition';
 export { Scene } from './Scene';
-export type { SceneInputAvailability, SceneInputBindingOptions } from './scene/SceneInputs';
+export type { SceneActionMapOptions, SceneInputAvailability, SceneInputBindingOptions } from './scene/SceneInputs';
 export type { InteractionObservation, InteractionScope } from './scene/SceneInteraction';
 export { SceneDirector } from './SceneDirector';
 export { SceneNode } from './SceneNode';

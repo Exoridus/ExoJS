@@ -341,6 +341,7 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "SamplerOptions: interface",
   "ScaleModes: enum",
   "Scene: class",
+  "SceneActionMapOptions: interface",
   "SceneConstructor: type alias",
   "SceneDirector: class",
   "SceneInputAvailability: type alias",
