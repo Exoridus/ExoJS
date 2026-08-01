@@ -257,7 +257,7 @@ describe('Voice — spatial (PannerNode)', () => {
     sound.destroy();
   });
 
-  test('voice.distanceModel/refDistance/maxDistance/rolloffFactor round-trip and clamp to >= 0', () => {
+  test('voice.distanceModel/refDistance/maxDistance/rolloffFactor round-trip and clamp per the PannerNode spec', () => {
     const manager = new AudioManager();
     const sound = new Sound(createAudioBufferStub());
     const voice = manager.play(sound);
@@ -269,14 +269,19 @@ describe('Voice — spatial (PannerNode)', () => {
     expect(voice.refDistance).toBe(50);
     voice.refDistance = 20;
     expect(voice.refDistance).toBe(20);
+    // refDistance must stay strictly positive (PannerNode spec) — a negative
+    // assignment clamps up to a tiny positive floor, never down to 0.
     voice.refDistance = -5;
-    expect(voice.refDistance).toBe(0);
+    expect(voice.refDistance).toBeGreaterThan(0);
+    expect(voice.refDistance).toBeLessThan(1e-10);
 
     expect(voice.maxDistance).toBe(1000);
     voice.maxDistance = 500;
     expect(voice.maxDistance).toBe(500);
+    // maxDistance must never fall below refDistance (PannerNode spec) — a
+    // value below it clamps back up to the current refDistance, not to 0.
     voice.maxDistance = -1;
-    expect(voice.maxDistance).toBe(0);
+    expect(voice.maxDistance).toBe(voice.refDistance);
 
     expect(voice.rolloffFactor).toBe(1);
     voice.rolloffFactor = 2.5;
@@ -471,6 +476,52 @@ describe('Voice — spatial (PannerNode)', () => {
     sound.destroy();
   });
 
+  test('dopplerFactor dropping to 0 actively restores the base playbackRate (no stale ratio)', () => {
+    const spy = setupPannerSpy();
+    const manager = new AudioManager();
+    manager.spatial.dopplerFactor = 1;
+    manager.spatial.speedOfSound = 100;
+    manager.listener.position.set(0, 0);
+    const sound = new Sound(createAudioBufferStub());
+    const voice = manager.play(sound, { position: { x: 100, y: 0 }, velocity: { x: -50, y: 0 } }) as SoundVoice;
+    manager.update();
+
+    const source = (voice as unknown as { _source: { playbackRate: { setTargetAtTime: MockInstance } } })._source;
+    // Sanity: a real Doppler shift is in effect before we disable it.
+    expect(source.playbackRate.setTargetAtTime.mock.calls.at(-1)?.[0]).not.toBe(voice.playbackRate);
+
+    source.playbackRate.setTargetAtTime.mockClear();
+    manager.spatial.dopplerFactor = 0;
+    manager.update();
+
+    expect(source.playbackRate.setTargetAtTime).toHaveBeenCalledWith(voice.playbackRate, expect.any(Number), expect.any(Number));
+
+    spy.restore();
+    sound.destroy();
+  });
+
+  test('the source becoming coincident with the listener actively restores the base playbackRate (no stale ratio)', () => {
+    const spy = setupPannerSpy();
+    const manager = new AudioManager();
+    manager.spatial.dopplerFactor = 1;
+    manager.spatial.speedOfSound = 100;
+    manager.listener.position.set(0, 0);
+    const sound = new Sound(createAudioBufferStub());
+    const voice = manager.play(sound, { position: { x: 100, y: 0 }, velocity: { x: -50, y: 0 } }) as SoundVoice;
+    manager.update();
+
+    const source = (voice as unknown as { _source: { playbackRate: { setTargetAtTime: MockInstance } } })._source;
+    expect(source.playbackRate.setTargetAtTime.mock.calls.at(-1)?.[0]).not.toBe(voice.playbackRate);
+
+    source.playbackRate.setTargetAtTime.mockClear();
+    voice.position = { x: 0, y: 0 }; // now exactly coincident with the listener
+
+    expect(source.playbackRate.setTargetAtTime).toHaveBeenCalledWith(voice.playbackRate, expect.any(Number), expect.any(Number));
+
+    spy.restore();
+    sound.destroy();
+  });
+
   test('velocity round-trips and can be cleared back to auto-derivation', () => {
     const manager = new AudioManager();
     const sound = new Sound(createAudioBufferStub());
@@ -480,6 +531,75 @@ describe('Voice — spatial (PannerNode)', () => {
     expect(voice.velocity!.x).toBe(10);
     voice.velocity = null;
     expect(voice.velocity).toBeNull();
+    sound.destroy();
+  });
+});
+
+describe('Voice — spatial parameter sanitization (NaN/±Infinity rejection)', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  test('refDistance/maxDistance/cone setters reject NaN and ±Infinity, keeping the last valid value', () => {
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+    const voice = manager.play(sound);
+
+    voice.refDistance = 30;
+    voice.refDistance = NaN;
+    expect(voice.refDistance).toBe(30);
+    voice.refDistance = Infinity;
+    expect(voice.refDistance).toBe(30);
+    voice.refDistance = -Infinity;
+    expect(voice.refDistance).toBe(30);
+
+    voice.maxDistance = 400;
+    voice.maxDistance = NaN;
+    expect(voice.maxDistance).toBe(400);
+    voice.maxDistance = Infinity;
+    expect(voice.maxDistance).toBe(400);
+    voice.maxDistance = -Infinity;
+    expect(voice.maxDistance).toBe(400);
+
+    voice.coneInnerAngle = 45;
+    voice.coneInnerAngle = NaN;
+    expect(voice.coneInnerAngle).toBe(45);
+    voice.coneInnerAngle = Infinity;
+    expect(voice.coneInnerAngle).toBe(45);
+
+    voice.coneOuterAngle = 90;
+    voice.coneOuterAngle = NaN;
+    expect(voice.coneOuterAngle).toBe(90);
+    voice.coneOuterAngle = -Infinity;
+    expect(voice.coneOuterAngle).toBe(90);
+
+    voice.coneOuterGain = 0.3;
+    voice.coneOuterGain = NaN;
+    expect(voice.coneOuterGain).toBe(0.3);
+    voice.coneOuterGain = Infinity;
+    expect(voice.coneOuterGain).toBe(0.3);
+
+    sound.destroy();
+  });
+
+  test('a NaN/Infinity spatial setter never reaches the live PannerNode', () => {
+    const spy = setupPannerSpy();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+    const voice = manager.play(sound, { position: { x: 0, y: 0 } });
+    const panner = spy.panners[0];
+
+    voice.refDistance = NaN;
+    voice.maxDistance = Infinity;
+    voice.coneInnerAngle = NaN;
+    voice.coneOuterAngle = -Infinity;
+    voice.coneOuterGain = Infinity;
+
+    expect(Number.isFinite(panner.refDistance)).toBe(true);
+    expect(Number.isFinite(panner.maxDistance)).toBe(true);
+    expect(Number.isFinite(panner.coneInnerAngle)).toBe(true);
+    expect(Number.isFinite(panner.coneOuterAngle)).toBe(true);
+    expect(Number.isFinite(panner.coneOuterGain)).toBe(true);
+
+    spy.restore();
     sound.destroy();
   });
 });

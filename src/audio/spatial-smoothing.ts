@@ -175,6 +175,12 @@ export function deriveVelocity(sample: VelocitySample, x: number, y: number, now
   const dx = x - sample.lastPosition.x;
   const dy = y - sample.lastPosition.y;
   if (Math.hypot(dx, dy) < POSITION_EPSILON) {
+    if (now > sample.lastTime) {
+      sample.x = 0;
+      sample.y = 0;
+      sample.lastPosition = { x, y };
+      sample.lastTime = now;
+    }
     return;
   }
 

@@ -176,6 +176,11 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
     panner.connect(this._output);
   }
 
+  protected override _routeDirect(): void {
+    this._source.disconnect();
+    this._source.connect(this._output);
+  }
+
   protected override _teardownSource(): void {
     this._source.onended = null;
     try {
