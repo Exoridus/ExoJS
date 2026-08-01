@@ -73,7 +73,7 @@
             }
           ],
           "returnType": "FadeSceneTransition",
-          "description": ""
+          "description": "Create a FadeSceneTransition."
         }
       ],
       "paragraphs": [],

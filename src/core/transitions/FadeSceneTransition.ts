@@ -33,11 +33,11 @@ export class FadeSceneTransition extends PhasedSceneTransition<FadePhaseState> {
   /** The color faded to. Default {@link Color.black}. */
   public readonly color: Color;
 
+  /**
+   * Create a {@link FadeSceneTransition}.
+   * @param options - See {@link FadeSceneTransitionOptions}.
+   */
   public constructor(options: FadeSceneTransitionOptions = {}) {
-    if (options instanceof Color) {
-      throw new TypeError('FadeSceneTransition no longer accepts a positional Color. Use new FadeSceneTransition({ color, duration, easing }).');
-    }
-
     super(options);
     this.color = options.color ?? Color.black;
   }

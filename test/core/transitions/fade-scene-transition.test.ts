@@ -89,10 +89,15 @@ describe('FadeSceneTransition', () => {
     expect(fade.placement).toBe('screen');
   });
 
-  test('rejects the removed positional Color form at runtime with a migration message', () => {
-    expect(() => new FadeSceneTransition(Color.red as unknown as ConstructorParameters<typeof FadeSceneTransition>[0])).toThrow(
-      /no longer accepts a positional Color/,
-    );
+  // The regression this whole options-only break was for: under the old
+  // (color, options) positional signature, this call silently misassigned
+  // the options object to `color` instead of defaulting it — leaving both
+  // assertions below false.
+  test('options-only call with color omitted keeps the color default alongside the supplied option', () => {
+    const fade = new FadeSceneTransition({ duration: 300 });
+
+    expect(fade.color.equals(Color.black)).toBe(true);
+    expect(fade.duration).toBe(300);
   });
 
   test('getPhaseRequirements: none/direct for both phases (no texture, no snapshot)', () => {
