@@ -95,7 +95,7 @@ const app = new Application({
         mount: document.body,
         sizingMode: 'fit',
     },
-    clearColor: new Color(0.018, 0.02, 0.04, 1),
+    clearColor: new Color(5, 5, 10, 1),
     backend: { type: 'webgpu' },
 });
 

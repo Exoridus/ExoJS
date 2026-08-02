@@ -223,6 +223,7 @@ export class Text extends AbstractText {
       // extent, and any instruction-set cache of the prior geometry stays live.
       this.getLocalBounds().set(0, 0, 0, 0);
       this._invalidateBoundsCascade();
+      this._updateOrigin();
       this._style.consumeDirty();
       return;
     }
@@ -238,6 +239,7 @@ export class Text extends AbstractText {
       // extent and content-dirty rather than leaving a stale non-empty bounds.
       this.getLocalBounds().set(0, 0, 0, 0);
       this._invalidateBoundsCascade();
+      this._updateOrigin();
       this._style.consumeDirty();
       return;
     }
@@ -253,6 +255,11 @@ export class Text extends AbstractText {
     this._textBounds = { width: maxX, height: maxY };
     this.getLocalBounds().set(0, 0, maxX, maxY);
     this._invalidateBoundsCascade();
+
+    // An anchor is a fraction of the bounds, so a node whose text just changed
+    // width has to re-derive its origin — otherwise a centred label drifts left
+    // as it grows. Mirrors what Sprite does when it switches sub-frame.
+    this._updateOrigin();
 
     this._pageQuads = buildTextPageQuads(placements);
     this._style.consumeDirty();
