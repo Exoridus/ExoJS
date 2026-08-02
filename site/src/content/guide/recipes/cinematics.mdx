@@ -17,8 +17,25 @@ A cinematic is a scene. It owns the sequence. Tweens drive every timed element �
 The key technique: **tween chains and delays**. Each tween starts at a specific time offset. Together they form a timeline:
 
 ```ts
+import {
+    Asset, AudioStream, Color, Graphics, type RenderingContext,
+    Scene, Sprite, Text, Texture, type Voice, View,
+} from '@codexo/exojs';
+
+const TITLE = 'VOID EMPEROR';
+
 class CinematicScene extends Scene {
-    async load() {
+    private bossTexture!: Texture;
+    private trackStream!: AudioStream;
+    private view!: View;
+    private boss!: Sprite;
+    private musicVoice!: Voice;
+    private barSize!: { v: number };
+    private bars!: Graphics;
+    private titleState!: { count: number };
+    private titleText!: Text;
+
+    override async load(): Promise<void> {
         // AudioStream has no bare-path form, so use `Asset.type(...)` — and since
         // `get(Asset.type('music', ...))` isn't supported, keep the loaded
         // instances as direct references instead of looking them up later.
@@ -28,7 +45,7 @@ class CinematicScene extends Scene {
         ]);
     }
 
-    init() {
+    override init(): void {
         // Camera — pans from title position to boss reveal
         this.view = new View(220, 300, 800, 600);
 
@@ -77,7 +94,7 @@ class CinematicScene extends Scene {
             .start();
     }
 
-    draw(context) {
+    override draw(context: RenderingContext): void {
         context.backend.clear(new Color(16, 16, 24));
 
         context.render(this.boss, { view: this.view });

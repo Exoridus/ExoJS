@@ -91,15 +91,21 @@ update(delta: Time) {
 The event signals — `onBeat`, `onDownbeat`, `onBarStart`, `onTempoChange` — fire when the worklet processor detects a beat and dispatches a message to the main thread. Use them for one-shot side effects: spawning a particle burst, triggering a screen flash, advancing a sequencer:
 
 ```ts
+import { Scene } from '@codexo/exojs';
 import { BeatDetector } from '@codexo/exojs-audio-fx';
 
-this.detector = new BeatDetector();
-this.detector.source = this.app.audio.music;
+class BeatReactiveScene extends Scene {
+    private detector!: BeatDetector;
+    private flash = 0;
 
-this.detector.onBeat.add(() => {
-    this.particleBurst.reset();
-    this.flash = 0.3;
-});
+    init() {
+        this.detector = new BeatDetector({ source: this.app.audio.music });
+        this.detector.onBeat.add(() => {
+            // Spawn particles or trigger another one-shot effect here.
+            this.flash = 0.3;
+        });
+    }
+}
 ```
 
 For continuous animation — something that smoothly decays between beats rather than snapping — use the polling getters inside `update`:

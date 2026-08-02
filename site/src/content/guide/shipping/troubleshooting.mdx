@@ -182,8 +182,10 @@ Using an old property name silently produces no error but the style is ignored. 
 If your scene runs slowly, measure first before guessing. The [`DebugOverlay`](/ExoJS/en/api/debug-overlay/) from `@codexo/exojs/debug` shows FPS, frame time, and draw-call count in real time:
 
 ```ts
+import { Application } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
 
+const app = new Application();
 const debug = new DebugOverlay(app);
 debug.layers.performance.visible = true;
 ```
