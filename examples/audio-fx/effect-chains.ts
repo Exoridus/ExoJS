@@ -20,17 +20,6 @@ import {
 } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
-/**
- * Centre a label on a point. An anchor is turned into an origin from the
- * bounds as they are at that moment, so a label whose text changes later has
- * to re-derive it: set the text first, then the origin follows the new width.
- */
-function centre(label: Text, x: number, y: number): void {
-    const bounds = label.getLocalBounds();
-
-    label.setOrigin(bounds.width / 2, bounds.height / 2).setPosition(x, y);
-}
-
 /** Everything a stage needs from the scene to build its effect. */
 interface ChainContext {
     impulse: Sound;
@@ -204,18 +193,16 @@ class EffectChainsScene extends Scene {
         this.analyser = new AudioAnalyser({ source: app.audio.master, fftSize: 2048, smoothingTimeConstant: 0.75 });
 
         this.gfx = new Graphics();
-        this.title = new Text('', { fillColor: Color.white, fontSize: 38 });
-        this.subtitle = new Text('', { fillColor: new Color(150, 162, 186), fontSize: 19 });
-
-        // Static labels never change width, so anchoring them once is enough.
+        this.title = new Text('', { fillColor: Color.white, fontSize: 38 }).setAnchor(0.5, 0.5).setPosition(width / 2, 72);
+        this.subtitle = new Text('', { fillColor: new Color(150, 162, 186), fontSize: 19 }).setAnchor(0.5, 0.5).setPosition(width / 2, 120);
         this.tapPrompt = new Text('Click or press any key to start audio', { fillColor: Color.white, fontSize: 24 })
             .setAnchor(0.5, 0.5)
             .setPosition(width / 2, height - 44);
 
         // Three slots is the longest chain; shorter ones hide the extra nodes.
         for (let i = 0; i < 3; i++) {
-            this.slotNames.push(new Text('', { fillColor: Color.white, fontSize: 26 }));
-            this.slotDetails.push(new Text('', { fillColor: DETAIL_COLOR, fontSize: 18 }));
+            this.slotNames.push(new Text('', { fillColor: Color.white, fontSize: 26 }).setAnchor(0.5, 0.5));
+            this.slotDetails.push(new Text('', { fillColor: DETAIL_COLOR, fontSize: 18 }).setAnchor(0.5, 0.5));
         }
         for (let i = 0; i < 2; i++) {
             this.arrows.push(new Text('>', { fillColor: new Color(90, 100, 120), fontSize: 26 }).setAnchor(0.5, 0.5));
@@ -293,8 +280,6 @@ class EffectChainsScene extends Scene {
 
         this.title.text = chain.name;
         this.subtitle.text = `chain ${this.index + 1} of ${CHAINS.length}`;
-        centre(this.title, width / 2, 72);
-        centre(this.subtitle, width / 2, 120);
 
         // The per-chain note goes in the overlay: on the canvas it would run
         // under the controls panel.
@@ -313,9 +298,9 @@ class EffectChainsScene extends Scene {
 
             if (stage) {
                 this.slotNames[i]!.text = stage.name;
+                this.slotNames[i]!.setPosition(slotCentre, SLOT_TOP + SLOT_HEIGHT / 2 - 16);
                 this.slotDetails[i]!.text = stage.detail;
-                centre(this.slotNames[i]!, slotCentre, SLOT_TOP + SLOT_HEIGHT / 2 - 16);
-                centre(this.slotDetails[i]!, slotCentre, SLOT_TOP + SLOT_HEIGHT / 2 + 22);
+                this.slotDetails[i]!.setPosition(slotCentre, SLOT_TOP + SLOT_HEIGHT / 2 + 22);
             }
         }
 

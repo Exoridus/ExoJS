@@ -1,4 +1,4 @@
-import { Application, Asset, Color, Graphics, Keyboard, type RenderingContext, Scene, type Sound, Text, type Time } from '@codexo/exojs';
+import { Application, Color, Graphics, Keyboard, type RenderingContext, Scene, type Sound, Text, type Time } from '@codexo/exojs';
 import { ConvolutionEffect } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
@@ -39,17 +39,6 @@ const ROOMS = [
     { file: 'AK-SROOMS_016', ms: 593 },
 ] as const;
 
-/**
- * Centre a label on a point. An anchor is turned into an origin from the
- * bounds as they are at that moment, so a label whose text changes later has
- * to re-derive it: set the text first, then the origin follows the new width.
- */
-function centre(label: Text, x: number, y: number): void {
-    const bounds = label.getLocalBounds();
-
-    label.setOrigin(bounds.width / 2, bounds.height / 2).setPosition(x, y);
-}
-
 /** Rough label for a tail length — the same intuition a level designer works with. */
 function character(ms: number): string {
     if (ms < 10) return 'colouration only';
@@ -84,11 +73,12 @@ class ConvolutionRoomsScene extends Scene {
         this.app.audio.sound.addEffect(this.convolution);
 
         this.gfx = new Graphics();
-
-        // Both labels change with the selected room, so they are re-centred in
-        // `select()` once the new text has decided their width.
-        this.label = new Text('', { fillColor: Color.white, fontSize: 26 });
-        this.detail = new Text('', { fillColor: new Color(178, 191, 217), fontSize: 18 });
+        this.label = new Text('', { fillColor: Color.white, fontSize: 26 })
+            .setAnchor(0.5, 0.5)
+            .setPosition(width / 2, this.pad.y + this.pad.h / 2 - 14);
+        this.detail = new Text('', { fillColor: new Color(178, 191, 217), fontSize: 18 })
+            .setAnchor(0.5, 0.5)
+            .setPosition(width / 2, this.pad.y + this.pad.h / 2 + 22);
         this.tapPrompt = new Text('Click or press any key to start audio', { fillColor: Color.white, fontSize: 22 })
             .setAnchor(0.5, 0.5)
             .setPosition(width / 2, height - 48);
@@ -111,25 +101,19 @@ class ConvolutionRoomsScene extends Scene {
         this.select(0);
     }
 
-    /** Swap the impulse response. The effect keeps the previous one until the new one has decoded. */
+    /** Swap the impulse response. The handle heals in place, so the effect picks it up once decoded. */
     private select(next: number): void {
         this.index = (next + ROOMS.length) % ROOMS.length;
 
         const room = ROOMS[this.index]!;
+        const ir = this.loader.get(`audio/ir/${room.file}.wav`);
 
         this.label.text = `${this.index + 1} / ${ROOMS.length} — ${character(room.ms)}`;
         this.detail.text = `${room.file} · ${room.ms} ms tail`;
 
-        const centreX = this.app.width / 2;
-        const centreY = this.pad.y + this.pad.h / 2;
-
-        centre(this.label, centreX, centreY - 14);
-        centre(this.detail, centreX, centreY + 22);
-
-        // `load()` claims the asset for this scene, which keeps the decoded
-        // buffer resident. A bare `get()` handle carries no claim, so its
-        // buffer can be evicted again before the convolver ever reads it.
-        void this.loader.load(Asset.type('sound', `audio/ir/${room.file}.wav`)).then(ir => {
+        // `.loaded` resolves immediately for an already-decoded handle; the
+        // effect stays on the previous IR until the new one is ready.
+        void ir.loaded.then(() => {
             if (ROOMS[this.index]?.file === room.file) {
                 this.convolution.setImpulse(ir);
             }

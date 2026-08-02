@@ -163,6 +163,34 @@ describe('Text', () => {
     expect(text.getLocalBounds().height).toBe(0);
   });
 
+  // An anchor is a fraction of the bounds. A label that keeps its anchor but
+  // changes width has to re-derive its origin, or a centred caption drifts off
+  // centre as soon as its text changes.
+  test('changing the text re-derives the origin from the anchor', () => {
+    const text = new Text('Hi');
+    text.setAnchor(0.5, 0.5);
+
+    const shortWidth = text.getLocalBounds().width;
+
+    expect(text.origin.x).toBeCloseTo(shortWidth / 2);
+
+    text.text = 'Much longer caption';
+
+    const longWidth = text.getLocalBounds().width;
+
+    expect(longWidth).toBeGreaterThan(shortWidth);
+    expect(text.origin.x).toBeCloseTo(longWidth / 2);
+  });
+
+  test('an unanchored text keeps its origin at zero when the text changes', () => {
+    const text = new Text('Hi');
+
+    text.text = 'Much longer caption';
+
+    expect(text.origin.x).toBe(0);
+    expect(text.origin.y).toBe(0);
+  });
+
   test('style getter returns the current TextStyle', () => {
     const style = new TextStyle({ fontSize: 20 });
     const text = new Text('Hi');

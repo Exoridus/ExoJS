@@ -270,6 +270,7 @@ export class BitmapText extends AbstractText {
       // culling, hit-testing, or an instruction-set cache of prior geometry.
       this.getLocalBounds().set(0, 0, 0, 0);
       this._invalidateBoundsCascade();
+      this._updateOrigin();
       return;
     }
 
@@ -296,6 +297,11 @@ export class BitmapText extends AbstractText {
     this._textBounds = { width: maxX, height: maxY };
     this.getLocalBounds().set(0, 0, maxX, maxY);
     this._invalidateBoundsCascade();
+
+    // An anchor is a fraction of the bounds, so a node whose text just changed
+    // width has to re-derive its origin — otherwise a centred label drifts left
+    // as it grows. Mirrors what Sprite does when it switches sub-frame.
+    this._updateOrigin();
 
     this._pageQuads = buildTextPageQuads(placements);
   }
