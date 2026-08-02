@@ -1,6 +1,6 @@
 {
   "title": "LoadOptions",
-  "description": "Options for the catalog/asset/leaf Loader.load forms. With `background: true` every adopted leaf is still claimed and registered (so it heals in place and a later Loader.get returns the same instance), but its fetch is routed through the low-priority background queue instead of started immediately: it streams concurrency-capped, drops from the queue if released at refcount 0, and is boosted to fetch now on a direct `get()`. Foreground loading (no options) is unaffected.",
+  "description": "Options for the catalog/asset/leaf Loader.load forms.",
   "symbol": "LoadOptions",
   "kind": "interface",
   "subsystem": "resources",
@@ -19,8 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Options for the catalog/asset/leaf Loader.load forms.",
-        "With `background: true` every adopted leaf is still claimed and registered (so it heals in place and a later Loader.get returns the same instance), but its fetch is routed through the low-priority background queue instead of started immediately: it streams concurrency-capped, drops from the queue if released at refcount 0, and is boosted to fetch now on a direct `get()`. Foreground loading (no options) is unaffected."
+        "Options for the catalog/asset/leaf Loader.load forms."
       ],
       "importLine": "import { LoadOptions } from '@codexo/exojs'",
       "sourceLink": null
@@ -30,11 +29,11 @@
       "title": "Properties",
       "members": [
         {
-          "name": "background",
-          "signature": "background?: boolean",
+          "name": "priority",
+          "signature": "priority?: LoadPriority",
           "signatureTokens": [
             {
-              "text": "background",
+              "text": "priority",
               "kind": "name"
             },
             {
@@ -46,13 +45,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "boolean",
-              "kind": "keyword"
+              "text": "LoadPriority",
+              "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Defaults to LoadPriority.Immediate."
         }
       ],
       "paragraphs": [],

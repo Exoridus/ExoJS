@@ -859,11 +859,11 @@
           "description": "Register a callback fired when the input is released within InputBindingOptions.threshold ms of activation (a \"tap\")."
         },
         {
-          "name": "update",
-          "signature": "update(_delta: Time): void",
+          "name": "preUpdate",
+          "signature": "preUpdate(_delta: Time): void",
           "signatureTokens": [
             {
-              "text": "update",
+              "text": "preUpdate",
               "kind": "name"
             },
             {
@@ -903,7 +903,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Per-frame entry point invoked by Application.update. Polls the gamepad API, drains queued keyboard/pointer/wheel deltas into the channel buffer, fires the corresponding Signals, then evaluates each registered binding."
+          "description": "SystemMethods.preUpdate phase, registered on app.systems by the Application at SystemOrder.CoreInput — ahead of every other core system, so this frame's snapshot is current before anything simulates. Polls the gamepad API, drains queued keyboard/pointer/wheel deltas into the channel buffer, fires the corresponding Signals, then evaluates each registered binding."
         }
       ],
       "paragraphs": [],

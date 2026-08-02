@@ -451,6 +451,53 @@
           "description": "Play a Playable asset and return a Voice handle. Each call creates an independent playback instance. Call play() again to start another concurrent voice. The returned Voice lets you control this specific instance (stop(), volume, fade(), capabilities)."
         },
         {
+          "name": "preUpdate",
+          "signature": "preUpdate(_delta: Time): void",
+          "signatureTokens": [
+            {
+              "text": "preUpdate",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "_delta",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Time",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "_delta",
+              "type": "Time",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "SystemMethods.preUpdate phase, at SystemOrder.CoreAudio. The frame delta is unused here (hence _delta)."
+        },
+        {
           "name": "registerBus",
           "signature": "registerBus(bus: AudioBus): this",
           "signatureTokens": [
@@ -543,53 +590,6 @@
           ],
           "returnType": "this",
           "description": "Unregister and AudioBus.destroy a previously registered bus. Throws if you attempt to unregister one of the three built-ins (master, music, sound). No-op if the bus is unknown."
-        },
-        {
-          "name": "update",
-          "signature": "update(_delta: Time): void",
-          "signatureTokens": [
-            {
-              "text": "update",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "_delta",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Time",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "_delta",
-              "type": "Time",
-              "optional": false
-            }
-          ],
-          "returnType": "void",
-          "description": "Called once per frame from Application.update(). The frame delta is unused here (hence _delta)."
         }
       ],
       "paragraphs": [],

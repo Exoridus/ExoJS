@@ -1,7 +1,7 @@
 {
-  "title": "SceneInputAvailability",
-  "description": "Visible-scene states in which a SceneInputs binding may dispatch. Default: `'active'`.",
-  "symbol": "SceneInputAvailability",
+  "title": "SystemPhase",
+  "description": "The scheduler phases a System can be registered for, in dispatch order.",
+  "symbol": "SystemPhase",
   "kind": "type",
   "subsystem": "core",
   "importPath": "@codexo/exojs",
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Visible-scene states in which a SceneInputs binding may dispatch. Default: `'active'`."
+        "The scheduler phases a System can be registered for, in dispatch order."
       ],
-      "importLine": "import { SceneInputAvailability } from '@codexo/exojs'",
+      "importLine": "import { SystemPhase } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -29,11 +29,11 @@
       "title": "Definition",
       "members": [
         {
-          "name": "SceneInputAvailability",
-          "signature": "\"active\" | \"paused\" | \"always\"",
+          "name": "SystemPhase",
+          "signature": "\"preUpdate\" | \"fixedUpdate\" | \"update\" | \"draw\"",
           "signatureTokens": [
             {
-              "text": "\"active\"",
+              "text": "\"preUpdate\"",
               "kind": "keyword"
             },
             {
@@ -41,7 +41,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"paused\"",
+              "text": "\"fixedUpdate\"",
               "kind": "keyword"
             },
             {
@@ -49,7 +49,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"always\"",
+              "text": "\"update\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"draw\"",
               "kind": "keyword"
             }
           ],
@@ -69,11 +77,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/core/scene/SceneInputs.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/scene/SceneInputs.ts"
+        "label": "src/core/SystemRegistry.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SystemRegistry.ts"
       }
     }
   ],
-  "sourcePath": "src/core/scene/SceneInputs.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/scene/SceneInputs.ts"
+  "sourcePath": "src/core/SystemRegistry.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SystemRegistry.ts"
 }

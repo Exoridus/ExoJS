@@ -7,7 +7,7 @@ import { ScaleModes } from '#rendering/types';
 import { Asset } from '#resources/Asset';
 import { Assets } from '#resources/Assets';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
-import { Loader } from '#resources/Loader';
+import { Loader, LoadPriority } from '#resources/Loader';
 import { textureSeamlessAdapter } from '#resources/seamless';
 
 /** Loader with all core asset bindings (mirrors createCoreLoader in loader.test.ts). */
@@ -231,7 +231,7 @@ describe('Loader seamless get (Texture)', () => {
     const loader = createCoreLoader();
 
     const catalog = new Assets({ ship: { type: 'texture', source: 'ship.png', samplerOptions: { scaleMode: ScaleModes.Nearest } } });
-    loader.load(catalog, { background: true });
+    loader.load(catalog, { priority: LoadPriority.Background });
 
     // A bare get() for the same source returns the adopted leaf, whose sampler
     // options were baked at createPlaceholder — not just applied at fetch time.
@@ -391,7 +391,7 @@ describe('Loader seamless get (Texture)', () => {
     loader.onError.add((_type, alias) => errors.push(alias));
     // The background catalog queue rejects when its leaf 404s; the failure is
     // asserted below via `handle.loaded`, so swallow the queue's own rejection.
-    loader.load(Assets.from({ gone: 'gone.png' }), { background: true }).catch(() => {});
+    loader.load(Assets.from({ gone: 'gone.png' }), { priority: LoadPriority.Background }).catch(() => {});
 
     const handle = loader.get('gone.png');
 

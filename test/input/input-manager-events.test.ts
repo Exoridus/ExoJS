@@ -172,7 +172,7 @@ describe('InputManager — keyboard', () => {
     im.onKeyUp.add(onKeyUp);
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
     window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space' }));
-    im.update();
+    im.preUpdate();
 
     expect(ch(im, Keyboard.Space)).toBe(0);
     expect(onKeyDown).not.toHaveBeenCalled();
@@ -209,7 +209,7 @@ describe('InputManager — keyboard', () => {
     expect(ch(im, Keyboard.Space)).toBe(1);
     expect(onKeyDown).not.toHaveBeenCalled(); // not flushed until update()
 
-    im.update();
+    im.preUpdate();
 
     expect(onKeyDown).toHaveBeenCalledTimes(1);
     expect(onKeyDown).toHaveBeenCalledWith(Keyboard.Space);
@@ -225,12 +225,12 @@ describe('InputManager — keyboard', () => {
     canvas.dispatchEvent(new FocusEvent('focus'));
 
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyA' }));
-    im.update();
+    im.preUpdate();
 
     window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyA' }));
     expect(ch(im, Keyboard.A)).toBe(0);
 
-    im.update();
+    im.preUpdate();
 
     expect(onKeyUp).toHaveBeenCalledTimes(1);
     expect(onKeyUp).toHaveBeenCalledWith(Keyboard.A);
@@ -249,7 +249,7 @@ describe('InputManager — keyboard', () => {
 
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyA' }));
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyB' }));
-    im.update();
+    im.preUpdate();
     onKeyUp.mockClear();
 
     canvas.dispatchEvent(new FocusEvent('blur'));
@@ -258,7 +258,7 @@ describe('InputManager — keyboard', () => {
     expect(ch(im, Keyboard.A)).toBe(0);
     expect(ch(im, Keyboard.B)).toBe(0);
 
-    im.update();
+    im.preUpdate();
 
     expect(onKeyUp).toHaveBeenCalledTimes(2);
     expect(onFocusChange).toHaveBeenCalledWith(false);
@@ -279,7 +279,7 @@ describe('InputManager — keyboard', () => {
     canvas.dispatchEvent(new FocusEvent('focus'));
 
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
-    im.update();
+    im.preUpdate();
 
     window.dispatchEvent(new FocusEvent('blur'));
 
@@ -394,7 +394,7 @@ describe('InputManager — keyboard', () => {
     // batch is gone by the time this binding starts observing, while the live
     // channel correctly remains held.
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
-    im.update();
+    im.preUpdate();
 
     const binding = im.onStart(Keyboard.Space, onStart, { threshold: 300 });
 
@@ -405,7 +405,7 @@ describe('InputManager — keyboard', () => {
     // must have captured the held construction baseline so this is a real
     // stop, while the unknown pre-observation press time cannot become a tap.
     window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space' }));
-    im.update();
+    im.preUpdate();
 
     expect(onStart).toHaveBeenCalledTimes(1);
     expect(onStop).toHaveBeenCalledTimes(1);
@@ -428,7 +428,7 @@ describe('InputManager — mouse wheel', () => {
 
     im.onMouseWheel.add(onWheel);
     canvas.dispatchEvent(new WheelEvent('wheel', { deltaX: 5, deltaY: 10 }));
-    im.update();
+    im.preUpdate();
 
     expect(onWheel).not.toHaveBeenCalled();
 
@@ -453,7 +453,7 @@ describe('InputManager — mouse wheel', () => {
     canvas.dispatchEvent(wheelEvent);
     expect(wheelEvent.defaultPrevented).toBe(true);
 
-    im.update();
+    im.preUpdate();
 
     expect(onWheel).toHaveBeenCalledTimes(1);
     expect(seen).toEqual([{ x: 4, y: -8 }]);
@@ -475,7 +475,7 @@ describe('InputManager — pointer signal lifecycle', () => {
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'mouse', clientX: 10, clientY: 10, isPrimary: true });
 
     expect(onEnter).not.toHaveBeenCalled();
-    im.update();
+    im.preUpdate();
     expect(onEnter).toHaveBeenCalledTimes(1);
 
     im.destroy();
@@ -492,13 +492,13 @@ describe('InputManager — pointer signal lifecycle', () => {
     // Both pointers arrive and get their Over flag flushed together.
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'mouse', clientX: 10, clientY: 10, isPrimary: true });
     fire(canvas, 'pointerover', { pointerId: 2, pointerType: 'mouse', clientX: 20, clientY: 20, isPrimary: false });
-    im.update();
+    im.preUpdate();
     expect(onEnter).toHaveBeenCalledTimes(2);
 
     // Only pointer 1 moves this frame; pointer 2 has no pending flags and
     // must be skipped without throwing or firing anything for it.
     fire(canvas, 'pointermove', { pointerId: 1, pointerType: 'mouse', clientX: 15, clientY: 15, isPrimary: true });
-    im.update();
+    im.preUpdate();
 
     expect(onMove).toHaveBeenCalledTimes(1);
 
@@ -512,7 +512,7 @@ describe('InputManager — pointer signal lifecycle', () => {
     im.onPointerDown.add(onDown);
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'mouse', clientX: 10, clientY: 10, isPrimary: true });
     fire(canvas, 'pointerdown', { pointerId: 1, pointerType: 'mouse', clientX: 10, clientY: 10, isPrimary: true });
-    im.update();
+    im.preUpdate();
 
     expect(onDown).toHaveBeenCalledTimes(1);
 
@@ -526,7 +526,7 @@ describe('InputManager — pointer signal lifecycle', () => {
     im.onPointerMove.add(onMove);
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'mouse', clientX: 10, clientY: 10, isPrimary: true });
     fire(canvas, 'pointermove', { pointerId: 1, pointerType: 'mouse', clientX: 20, clientY: 20, isPrimary: true });
-    im.update();
+    im.preUpdate();
 
     expect(onMove).toHaveBeenCalledTimes(1);
 
@@ -546,7 +546,7 @@ describe('InputManager — pointer signal lifecycle', () => {
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'mouse', clientX: 100, clientY: 100, isPrimary: true });
     fire(canvas, 'pointerdown', { pointerId: 1, pointerType: 'mouse', clientX: 100, clientY: 100, isPrimary: true });
     fire(canvas, 'pointerup', { pointerId: 1, pointerType: 'mouse', clientX: 101, clientY: 100, isPrimary: true });
-    im.update();
+    im.preUpdate();
 
     expect(onUp).toHaveBeenCalledTimes(1);
     expect(onTap).toHaveBeenCalledTimes(1);
@@ -568,7 +568,7 @@ describe('InputManager — pointer signal lifecycle', () => {
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'mouse', clientX: 100, clientY: 100, isPrimary: true });
     fire(canvas, 'pointerdown', { pointerId: 1, pointerType: 'mouse', clientX: 100, clientY: 100, isPrimary: true });
     fire(canvas, 'pointerup', { pointerId: 1, pointerType: 'mouse', clientX: 300, clientY: 100, isPrimary: true });
-    im.update();
+    im.preUpdate();
 
     expect(onUp).toHaveBeenCalledTimes(1);
     expect(onSwipe).toHaveBeenCalledTimes(1);
@@ -585,7 +585,7 @@ describe('InputManager — pointer signal lifecycle', () => {
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
     fire(canvas, 'pointerdown', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
     fire(canvas, 'pointercancel', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
-    im.update();
+    im.preUpdate();
 
     expect(onCancel).toHaveBeenCalledTimes(1);
 
@@ -599,7 +599,7 @@ describe('InputManager — pointer signal lifecycle', () => {
     im.onPointerLeave.add(onLeave);
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'mouse', clientX: 10, clientY: 10, isPrimary: true });
     fire(canvas, 'pointerleave', { pointerId: 1, pointerType: 'mouse', clientX: 10, clientY: 10, isPrimary: true });
-    im.update();
+    im.preUpdate();
     im._finishInteractionFrame();
 
     expect(onLeave).toHaveBeenCalledTimes(1);
@@ -614,7 +614,7 @@ describe('InputManager — pointer signal lifecycle', () => {
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
     fire(canvas, 'pointerdown', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
     fire(canvas, 'pointercancel', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
-    im.update();
+    im.preUpdate();
     im._finishInteractionFrame();
 
     expect(im.getPrimaryPointerPosition()).toBeNull();
@@ -634,7 +634,7 @@ describe('InputManager — pointer signal lifecycle', () => {
     const pointers = (im as unknown as { pointers: Map<number, Pointer> }).pointers;
 
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'mouse', clientX: 10, clientY: 10, isPrimary: true });
-    im.update(); // settle the initial enter before the leave/re-enter batch below
+    im.preUpdate(); // settle the initial enter before the leave/re-enter batch below
 
     const beforeReentry = pointers.get(1);
 
@@ -648,7 +648,7 @@ describe('InputManager — pointer signal lifecycle', () => {
     // would never dispatch, and the discarded object would leak.
     fire(canvas, 'pointerleave', { pointerId: 1, pointerType: 'mouse', clientX: 10, clientY: 10, isPrimary: true });
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'mouse', clientX: 15, clientY: 15, isPrimary: true });
-    im.update();
+    im.preUpdate();
 
     expect(onLeave).toHaveBeenCalledTimes(1);
     expect(onEnter).toHaveBeenCalledTimes(1);
@@ -682,7 +682,7 @@ describe('InputManager — pointer signal lifecycle', () => {
       fire(canvas, 'pointerup', { pointerId: 99, pointerType: 'mouse', clientX: 3, clientY: 3 });
       fire(canvas, 'pointerleave', { pointerId: 99, pointerType: 'mouse', clientX: 4, clientY: 4 });
       fire(canvas, 'pointercancel', { pointerId: 99, pointerType: 'mouse', clientX: 5, clientY: 5 });
-      im.update();
+      im.preUpdate();
     }).not.toThrow();
 
     expect(onMove).not.toHaveBeenCalled();
@@ -709,7 +709,7 @@ describe('InputManager — pointer signal lifecycle', () => {
     expect(() => {
       fire(canvas, 'pointerleave', { pointerId: 1, pointerType: 'touch', clientX: 1, clientY: 1, isPrimary: true });
       fire(canvas, 'pointerleave', { pointerId: 1, pointerType: 'touch', clientX: 1, clientY: 1, isPrimary: true });
-      im.update();
+      im.preUpdate();
       im._finishInteractionFrame();
     }).not.toThrow();
 
@@ -734,7 +734,7 @@ describe('InputManager — pointer signal lifecycle', () => {
 
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'mouse', clientX: 10, clientY: 10, isPrimary: true });
     fire(canvas, 'pointerup', { pointerId: 1, pointerType: 'mouse', clientX: 10, clientY: 10, isPrimary: true });
-    im.update();
+    im.preUpdate();
 
     expect(onUp).toHaveBeenCalledTimes(1);
     expect(onTap).not.toHaveBeenCalled();
@@ -839,17 +839,17 @@ describe('InputManager — binding factories', () => {
     canvas.dispatchEvent(new FocusEvent('focus'));
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
 
-    im.update();
+    im.preUpdate();
     expect(onStart).toHaveBeenCalledTimes(1);
     expect(onActive).toHaveBeenCalledTimes(1);
 
     // Held across a second frame: onActive fires again, onStart does not.
-    im.update();
+    im.preUpdate();
     expect(onStart).toHaveBeenCalledTimes(1);
     expect(onActive).toHaveBeenCalledTimes(2);
 
     window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space' }));
-    im.update();
+    im.preUpdate();
 
     expect(onStop).toHaveBeenCalledTimes(1);
     expect(onTrigger).toHaveBeenCalledTimes(1); // released promptly, within the default tap threshold
@@ -865,7 +865,7 @@ describe('InputManager — binding factories', () => {
     canvas.dispatchEvent(new FocusEvent('focus'));
 
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyB' }));
-    im.update();
+    im.preUpdate();
 
     expect(onStart).toHaveBeenCalledTimes(1);
 
@@ -882,7 +882,7 @@ describe('InputManager — binding factories', () => {
     const slot2SouthChannel = Gamepad.resolveChannelOffset(2, GamepadButton.South);
 
     channels[slot2SouthChannel] = 1;
-    im.update();
+    im.preUpdate();
 
     expect(onActive).toHaveBeenCalledTimes(1);
     expect(onActive).toHaveBeenCalledWith(1);
@@ -904,7 +904,7 @@ describe('InputManager — binding factories', () => {
     binding.unbind();
 
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
-    im.update();
+    im.preUpdate();
 
     expect(onActive).not.toHaveBeenCalled();
 
@@ -980,7 +980,7 @@ describe('InputManager — gamepad edge cases', () => {
 
     withMockedGetGamepads(setSnapshot => {
       setSnapshot([createNativeGamepad('bogus', -1)]);
-      im.update();
+      im.preUpdate();
 
       expect(onConnected).not.toHaveBeenCalled();
       expect(im.hasGamepad).toBe(false);
@@ -1002,7 +1002,7 @@ describe('InputManager — gamepad edge cases', () => {
         createNativeGamepad('Vendor: 057e Product: 2009', 2),
         createNativeGamepad('Vendor: 045e Product: 0b13', 3),
       ]);
-      im.update();
+      im.preUpdate();
       expect(onConnected).toHaveBeenCalledTimes(4);
 
       // A 5th physical pad connects (browser index 4) — no free slot remains.
@@ -1013,7 +1013,7 @@ describe('InputManager — gamepad edge cases', () => {
         createNativeGamepad('Vendor: 045e Product: 0b13', 3),
         createNativeGamepad('Vendor: 054c Product: 0ce6', 4),
       ]);
-      im.update();
+      im.preUpdate();
 
       expect(onConnected).toHaveBeenCalledTimes(4);
       expect(im.connectedGamepadCount).toBe(4);
@@ -1030,10 +1030,10 @@ describe('InputManager — gamepad edge cases', () => {
 
     withMockedGetGamepads(setSnapshot => {
       setSnapshot([createNativeGamepad('Vendor: 045e Product: 0b13', 0, [], [0])]);
-      im.update();
+      im.preUpdate();
 
       setSnapshot([createNativeGamepad('Vendor: 045e Product: 0b13', 0, [], [0.75])]);
-      im.update();
+      im.preUpdate();
 
       expect(onAxisChange).toHaveBeenCalled();
       const [pad, , value] = onAxisChange.mock.calls[onAxisChange.mock.calls.length - 1] as [Gamepad, unknown, number];
@@ -1055,16 +1055,16 @@ describe('InputManager — gamepad edge cases', () => {
 
     withMockedGetGamepads(setSnapshot => {
       setSnapshot([createNativeGamepad('Vendor: 045e Product: 0b13', 0, [0])]);
-      im.update();
+      im.preUpdate();
 
       setSnapshot([createNativeGamepad('Vendor: 045e Product: 0b13', 0, [1])]);
-      im.update();
+      im.preUpdate();
 
       expect(onButtonDown).toHaveBeenCalledTimes(1);
       expect(onButtonDown.mock.calls[0][0]).toBe(im.gamepads[0]);
 
       setSnapshot([createNativeGamepad('Vendor: 045e Product: 0b13', 0, [0])]);
-      im.update();
+      im.preUpdate();
 
       expect(onButtonUp).toHaveBeenCalledTimes(1);
     });

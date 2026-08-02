@@ -7,6 +7,9 @@ import type { CacheStrategy } from './CacheStrategy';
 import type { AssetConstructor } from './FactoryRegistry';
 import type { AssetLoaderContext, Loader } from './Loader';
 
+/** Sink a decoded resource is handed to, returning the value callers should see for it. */
+export type ResourceStore = (type: AssetConstructor, alias: string, resource: unknown) => unknown;
+
 /** Construction options for {@link AssetDecoder}. Values are already resolved by `Loader` — see `Loader`'s constructor. */
 export interface AssetDecoderOptions {
   basePath: string;
@@ -31,25 +34,44 @@ export interface AssetDecoderOptions {
 export class AssetDecoder {
   private readonly _loader: Loader;
   private readonly _typeRegistry: AssetTypeRegistry;
-  private readonly _storeResource: (type: AssetConstructor, alias: string, resource: unknown) => unknown;
   private readonly _stores: readonly CacheStore[];
   private readonly _cacheStrategy: CacheStrategy;
   private _basePath: string;
   private _fetchOptions: RequestInit;
 
-  public constructor(
-    loader: Loader,
-    typeRegistry: AssetTypeRegistry,
-    storeResource: (type: AssetConstructor, alias: string, resource: unknown) => unknown,
-    options: AssetDecoderOptions,
-  ) {
+  /**
+   * Where decoded resources go. Bound by {@link _bindResourceStore} after the
+   * owner has built the residency this forwards to, so it is deliberately not
+   * a constructor parameter — see that method for why.
+   */
+  private _storeResource: ResourceStore = () => {
+    throw new Error('AssetDecoder decoded a resource before its owner bound a resource store. Call _bindResourceStore() first.');
+  };
+
+  public constructor(loader: Loader, typeRegistry: AssetTypeRegistry, options: AssetDecoderOptions) {
     this._loader = loader;
     this._typeRegistry = typeRegistry;
-    this._storeResource = storeResource;
     this._stores = options.stores;
     this._cacheStrategy = options.cacheStrategy;
     this._basePath = options.basePath;
     this._fetchOptions = options.fetchOptions;
+  }
+
+  /**
+   * Bind the sink decoded resources are handed to.
+   *
+   * Separate from construction because the two collaborators are mutually
+   * dependent: the residency needs a decoder to dispatch fetches, and the
+   * decoder needs the residency to store what it decodes. Passing the sink as a
+   * constructor argument forced it to close over a field that was still
+   * unassigned, which held only because nothing invoked it synchronously — a
+   * guarantee no type could express and only a comment recorded. Binding it
+   * afterwards makes the order structural, and the throwing default above turns
+   * any future too-early call into an immediate, named failure.
+   * @internal
+   */
+  public _bindResourceStore(storeResource: ResourceStore): void {
+    this._storeResource = storeResource;
   }
 
   /** Base path prepended to relative asset URLs at fetch time. @see Loader.basePath for the full contract. */

@@ -10,6 +10,7 @@ import type { Collider } from '../Collider';
 import { Manifold } from '../collision/Manifold';
 import { collide } from '../collision/narrowphase';
 import type { PhysicsWorld } from '../PhysicsWorld';
+import type { BodyType } from '../types';
 
 /** Toggles for the physics debug overlay. */
 export interface PhysicsDebugDrawOptions {
@@ -290,7 +291,7 @@ export class PhysicsDebugDraw extends DebugLayer {
   }
 }
 
-const colorForType = (type: 'dynamic' | 'static' | 'kinematic'): Color => {
+const colorForType = (type: BodyType): Color => {
   if (type === 'static') {
     return colorStatic;
   }

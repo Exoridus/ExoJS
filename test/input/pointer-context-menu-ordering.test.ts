@@ -150,10 +150,10 @@ const destroyHarness = (h: Harness): void => {
  * (even if a node handler throws).
  */
 const tick = (h: Harness): void => {
-  h.input.update();
+  h.input.preUpdate();
 
   try {
-    h.interaction.update();
+    h.interaction.preUpdate();
   } finally {
     h.input._finishInteractionFrame();
   }
@@ -189,7 +189,7 @@ describe('InputManager — cross-pointer chronological order (Bug A)', () => {
 
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'mouse', clientX: 10, clientY: 10, isPrimary: true });
     fire(canvas, 'pointerover', { pointerId: 2, pointerType: 'mouse', clientX: 20, clientY: 20, isPrimary: false });
-    input.update();
+    input.preUpdate();
     calls.length = 0;
 
     // True arrival order: P1 presses, THEN P2 presses, THEN P1 releases —
@@ -197,7 +197,7 @@ describe('InputManager — cross-pointer chronological order (Bug A)', () => {
     fire(canvas, 'pointerdown', { pointerId: 1, pointerType: 'mouse', clientX: 10, clientY: 10, isPrimary: true });
     fire(canvas, 'pointerdown', { pointerId: 2, pointerType: 'mouse', clientX: 20, clientY: 20, isPrimary: false });
     fire(canvas, 'pointerup', { pointerId: 1, pointerType: 'mouse', clientX: 10, clientY: 10, isPrimary: true });
-    input.update();
+    input.preUpdate();
 
     // The old per-pointer-grouped dispatch would have produced
     // ['down:1', 'up:1', 'down:2'] — this pinpoints the exact defect.
@@ -213,11 +213,11 @@ describe('InputManager — cross-pointer chronological order (Bug A)', () => {
     input.onPointerMove.add((_pointer, x, y) => calls.push({ x, y }));
 
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'mouse', clientX: 10, clientY: 10, isPrimary: true });
-    input.update();
+    input.preUpdate();
 
     fire(canvas, 'pointermove', { pointerId: 1, pointerType: 'mouse', clientX: 11, clientY: 10, isPrimary: true });
     fire(canvas, 'pointermove', { pointerId: 1, pointerType: 'mouse', clientX: 12, clientY: 10, isPrimary: true });
-    input.update();
+    input.preUpdate();
 
     expect(calls).toEqual([{ x: 12, y: 10 }]);
 
@@ -232,12 +232,12 @@ describe('InputManager — cross-pointer chronological order (Bug A)', () => {
 
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'mouse', clientX: 10, clientY: 10, isPrimary: true });
     fire(canvas, 'pointerover', { pointerId: 2, pointerType: 'mouse', clientX: 20, clientY: 20, isPrimary: false });
-    input.update();
+    input.preUpdate();
 
     fire(canvas, 'pointermove', { pointerId: 1, pointerType: 'mouse', clientX: 11, clientY: 10, isPrimary: true });
     fire(canvas, 'pointermove', { pointerId: 2, pointerType: 'mouse', clientX: 21, clientY: 20, isPrimary: false });
     fire(canvas, 'pointermove', { pointerId: 1, pointerType: 'mouse', clientX: 12, clientY: 10, isPrimary: true });
-    input.update();
+    input.preUpdate();
 
     // A naive "coalesce by pointer id regardless of position" implementation
     // would collapse this to two dispatches (one per id); the SAME-position
@@ -264,7 +264,7 @@ describe('InputManager — context-menu ordering and queuing (Bug B)', () => {
     input.onContextMenu.add(request => calls.push(`menu:${request.x},${request.y}`));
 
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'mouse', clientX: 10, clientY: 10, isPrimary: true });
-    input.update();
+    input.preUpdate();
 
     // move -> menu -> move -> menu, interleaved: the second move is NOT
     // adjacent to the first in the global order (a menu entry sits between
@@ -273,7 +273,7 @@ describe('InputManager — context-menu ordering and queuing (Bug B)', () => {
     fireContextMenu(canvas, 50, 50);
     fire(canvas, 'pointermove', { pointerId: 1, pointerType: 'mouse', clientX: 12, clientY: 10, isPrimary: true });
     fireContextMenu(canvas, 60, 60);
-    input.update();
+    input.preUpdate();
 
     expect(calls).toEqual(['move:1', 'menu:50,50', 'move:1', 'menu:60,60']);
 
@@ -288,7 +288,7 @@ describe('InputManager — context-menu ordering and queuing (Bug B)', () => {
 
     fireContextMenu(canvas, 10, 10);
     fireContextMenu(canvas, 20, 20);
-    input.update();
+    input.preUpdate();
 
     // The old single-slot design would only ever see the SECOND request —
     // the first is silently lost with no signal ever firing for it.
@@ -310,7 +310,7 @@ describe('InputManager — context-menu ordering and queuing (Bug B)', () => {
     fireContextMenu(canvas, 5, 5);
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'mouse', clientX: 10, clientY: 10, isPrimary: true });
     fire(canvas, 'pointerdown', { pointerId: 1, pointerType: 'mouse', clientX: 10, clientY: 10, isPrimary: true });
-    input.update();
+    input.preUpdate();
 
     expect(calls).toEqual(['menu:null', 'down:1']);
 
@@ -322,7 +322,7 @@ describe('InputManager — context-menu ordering and queuing (Bug B)', () => {
     const pointers = (input as unknown as { pointers: Map<number, Pointer> }).pointers;
 
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'mouse', clientX: 10, clientY: 10, isPrimary: true });
-    input.update();
+    input.preUpdate();
 
     const pointer = pointers.get(1)!;
     const destroySpy = vi.spyOn(pointer, 'destroy');
@@ -338,7 +338,7 @@ describe('InputManager — context-menu ordering and queuing (Bug B)', () => {
     // AFTER it in the same flush — the ordering under test.
     fire(canvas, 'pointerleave', { pointerId: 1, pointerType: 'mouse', clientX: 10, clientY: 10, isPrimary: true });
     fireContextMenu(canvas, 12, 12);
-    input.update();
+    input.preUpdate();
 
     expect(receivedPointer).toBe(pointer);
     expect(wasAlreadyDestroyedWhenMenuFired).toBe(false);
@@ -346,7 +346,7 @@ describe('InputManager — context-menu ordering and queuing (Bug B)', () => {
     // retirement now — InteractionManager still owns queued node-level
     // events (e.g. app-level onContextMenu subscribers aside, a real node's
     // onContextMenu handler) that reference this same Pointer, and those only
-    // dispatch in ITS pass, which runs strictly after this input.update().
+    // dispatch in ITS pass, which runs strictly after this input.preUpdate().
     expect(destroySpy).not.toHaveBeenCalled();
     expect(pointers.has(1)).toBe(true);
 
@@ -458,9 +458,9 @@ describe('InteractionManager — cross-pointer order preserved end-to-end (Bug C
     fire(canvas, 'pointerleave', { pointerId: 1, pointerType: 'mouse', clientX: 25, clientY: 25, isPrimary: true });
     fireContextMenu(canvas, 25, 25);
 
-    input.update();
+    input.preUpdate();
     try {
-      interaction.update();
+      interaction.preUpdate();
     } catch {
       // Expected: this focused harness lets the node handler's throw
       // propagate; Application.ts's real `try/finally` is what this test's
@@ -536,8 +536,8 @@ describe('InteractionManager — cross-pointer order preserved end-to-end (Bug C
     fire(canvas, 'pointerdown', { pointerId: 1, pointerType: 'mouse', clientX: 25, clientY: 25, isPrimary: true });
     fire(canvas, 'pointermove', { pointerId: 1, pointerType: 'mouse', clientX: 60, clientY: 25, isPrimary: true });
 
-    input.update();
-    expect(() => interaction.update()).toThrow('expected handler failure');
+    input.preUpdate();
+    expect(() => interaction.preUpdate()).toThrow('expected handler failure');
     input._finishInteractionFrame();
 
     expect(interaction.getCapturedNodes()).toEqual([]);

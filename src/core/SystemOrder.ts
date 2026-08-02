@@ -6,6 +6,22 @@
  * these are just common reference points.
  */
 export enum SystemOrder {
+  /**
+   * Input snapshot for this frame. First of the engine's own
+   * {@link SystemMethods.preUpdate} systems, which occupy the negative range
+   * so that an application system added without an `order` runs after all of
+   * them. To sit between two of them, prefer `before`/`after` against the
+   * manager instance (`before: [app.rendering]`) over picking a number.
+   */
+  CoreInput = -500,
+  /** Node-level pointer dispatch plus terminal-pointer retirement, directly after {@link SystemOrder.CoreInput}. */
+  CoreInteraction = -400,
+  /** Voice and bus bookkeeping. */
+  CoreAudio = -300,
+  /** Tween and sequencer advance. */
+  CoreTweens = -200,
+  /** Renderer per-frame state reset and view update. Last of the engine's own pre-update systems. */
+  CoreRendering = -100,
   /** The implicit order of a system that does not specify one. */
   Default = 0,
   /** Conventional slot for physics/simulation systems, after ordinary gameplay systems. */

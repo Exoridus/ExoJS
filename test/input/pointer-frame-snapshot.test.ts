@@ -82,7 +82,7 @@ const getPointer = (): Pointer => {
 describe('multiple phases within one frame', () => {
   it('reports pressed, moved and released together for a down-move-up sequence', () => {
     fire(canvas, 'pointerover', { clientX: 10, clientY: 10 });
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     fire(canvas, 'pointerdown', { clientX: 10, clientY: 10, buttons: 1 });
     fire(canvas, 'pointermove', { clientX: 14, clientY: 10, buttons: 1 });
@@ -90,7 +90,7 @@ describe('multiple phases within one frame', () => {
 
     const pointer = getPointer();
 
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     expect(pointer.pressed).toBe(true);
     expect(pointer.moved).toBe(true);
@@ -100,7 +100,7 @@ describe('multiple phases within one frame', () => {
 
   it('hands each phase the coordinates that phase happened at', () => {
     fire(canvas, 'pointerover', { clientX: 10, clientY: 10 });
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     const seen: Record<string, [number, number]> = {};
 
@@ -111,7 +111,7 @@ describe('multiple phases within one frame', () => {
     fire(canvas, 'pointerdown', { clientX: 10, clientY: 20, buttons: 1 });
     fire(canvas, 'pointermove', { clientX: 50, clientY: 60, buttons: 1 });
     fire(canvas, 'pointerup', { clientX: 90, clientY: 100, buttons: 0 });
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     expect(seen.down).toEqual([10, 20]);
     expect(seen.move).toEqual([50, 60]);
@@ -120,7 +120,7 @@ describe('multiple phases within one frame', () => {
 
   it('collapses several moves onto the last of them', () => {
     fire(canvas, 'pointerover', { clientX: 10, clientY: 10 });
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     const seen: Array<[number, number]> = [];
 
@@ -129,14 +129,14 @@ describe('multiple phases within one frame', () => {
     fire(canvas, 'pointermove', { clientX: 20, clientY: 20 });
     fire(canvas, 'pointermove', { clientX: 30, clientY: 30 });
     fire(canvas, 'pointermove', { clientX: 40, clientY: 40 });
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     expect(seen).toEqual([[40, 40]]);
   });
 
   it('dispatches a cancel at the position it was cancelled at', () => {
     fire(canvas, 'pointerover', { clientX: 10, clientY: 10 });
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     const seen: Array<[number, number]> = [];
 
@@ -144,21 +144,21 @@ describe('multiple phases within one frame', () => {
 
     fire(canvas, 'pointerdown', { clientX: 10, clientY: 10, buttons: 1 });
     fire(canvas, 'pointercancel', { clientX: 70, clientY: 80, buttons: 0 });
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     expect(seen).toEqual([[70, 80]]);
   });
 
   it('restores the latest position once the phase dispatch is over', () => {
     fire(canvas, 'pointerover', { clientX: 10, clientY: 10 });
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     fire(canvas, 'pointerdown', { clientX: 10, clientY: 20, buttons: 1 });
     fire(canvas, 'pointermove', { clientX: 90, clientY: 100, buttons: 1 });
 
     const pointer = getPointer();
 
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     expect(pointer.x).toBe(90);
     expect(pointer.y).toBe(100);
@@ -170,10 +170,10 @@ describe('multiple phases within one frame', () => {
 
     const pointer = getPointer();
 
-    im.update(0 as never);
+    im.preUpdate(0 as never);
     expect(pointer.pressed).toBe(true);
 
-    im.update(0 as never);
+    im.preUpdate(0 as never);
     expect(pointer.pressed).toBe(false);
     expect(pointer.down).toBe(true);
   });
@@ -182,7 +182,7 @@ describe('multiple phases within one frame', () => {
 describe('press excursion tracking', () => {
   it('accumulates the maximum distance rather than the release distance', () => {
     fire(canvas, 'pointerover', { clientX: 0, clientY: 0 });
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     fire(canvas, 'pointerdown', { clientX: 0, clientY: 0, buttons: 1 });
     fire(canvas, 'pointermove', { clientX: 100, clientY: 0, buttons: 1 });
@@ -195,7 +195,7 @@ describe('press excursion tracking', () => {
 
   it('classifies an out-and-back press as a swipe, not a tap', () => {
     fire(canvas, 'pointerover', { clientX: 0, clientY: 0 });
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     const taps = vi.fn();
     const swipes = vi.fn();
@@ -207,7 +207,7 @@ describe('press excursion tracking', () => {
     fire(canvas, 'pointermove', { clientX: 100, clientY: 0, buttons: 1 });
     fire(canvas, 'pointermove', { clientX: 2, clientY: 0, buttons: 1 });
     fire(canvas, 'pointerup', { clientX: 2, clientY: 0, buttons: 0 });
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     expect(swipes).toHaveBeenCalledTimes(1);
     expect(taps).not.toHaveBeenCalled();
@@ -215,7 +215,7 @@ describe('press excursion tracking', () => {
 
   it('still taps when the pointer never left the threshold', () => {
     fire(canvas, 'pointerover', { clientX: 0, clientY: 0 });
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     const taps = vi.fn();
 
@@ -224,14 +224,14 @@ describe('press excursion tracking', () => {
     fire(canvas, 'pointerdown', { clientX: 0, clientY: 0, buttons: 1 });
     fire(canvas, 'pointermove', { clientX: 3, clientY: 0, buttons: 1 });
     fire(canvas, 'pointerup', { clientX: 3, clientY: 0, buttons: 0 });
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     expect(taps).toHaveBeenCalledTimes(1);
   });
 
   it('emits neither tap nor swipe for a release that closed no press', () => {
     fire(canvas, 'pointerover', { clientX: 0, clientY: 0 });
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     const taps = vi.fn();
     const swipes = vi.fn();
@@ -240,7 +240,7 @@ describe('press excursion tracking', () => {
     im.onPointerSwipe.add(swipes);
 
     fire(canvas, 'pointerup', { clientX: 0, clientY: 0, buttons: 0 });
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     expect(taps).not.toHaveBeenCalled();
     expect(swipes).not.toHaveBeenCalled();
@@ -248,14 +248,14 @@ describe('press excursion tracking', () => {
 
   it('keeps the press position readable after release', () => {
     fire(canvas, 'pointerover', { clientX: 0, clientY: 0 });
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     fire(canvas, 'pointerdown', { clientX: 30, clientY: 40, buttons: 1 });
     fire(canvas, 'pointerup', { clientX: 31, clientY: 41, buttons: 0 });
 
     const pointer = getPointer();
 
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     expect([pointer.pressPosition.x, pointer.pressPosition.y]).toEqual([30, 40]);
     expect([pointer.releasePosition.x, pointer.releasePosition.y]).toEqual([31, 41]);
@@ -265,13 +265,13 @@ describe('press excursion tracking', () => {
 describe('per-frame delta', () => {
   it('spans the previous frame boundary, collapsing several moves into one', () => {
     fire(canvas, 'pointerover', { clientX: 100, clientY: 100 });
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     const pointer = getPointer();
 
     fire(canvas, 'pointermove', { clientX: 120, clientY: 100 });
     fire(canvas, 'pointermove', { clientX: 140, clientY: 110 });
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     expect(pointer.delta.x).toBeCloseTo(40);
     expect(pointer.delta.y).toBeCloseTo(10);
@@ -281,12 +281,12 @@ describe('per-frame delta', () => {
 
   it('keeps previousPosition spanning delta together with position', () => {
     fire(canvas, 'pointerover', { clientX: 100, clientY: 100 });
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     const pointer = getPointer();
 
     fire(canvas, 'pointermove', { clientX: 140, clientY: 110 });
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     expect(pointer.position.x - pointer.previousPosition.x).toBeCloseTo(pointer.delta.x);
     expect(pointer.position.y - pointer.previousPosition.y).toBeCloseTo(pointer.delta.y);
@@ -294,13 +294,13 @@ describe('per-frame delta', () => {
 
   it('is zero on a frame without movement', () => {
     fire(canvas, 'pointerover', { clientX: 100, clientY: 100 });
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     const pointer = getPointer();
 
     fire(canvas, 'pointermove', { clientX: 120, clientY: 100 });
-    im.update(0 as never);
-    im.update(0 as never);
+    im.preUpdate(0 as never);
+    im.preUpdate(0 as never);
 
     expect([pointer.delta.x, pointer.delta.y]).toEqual([0, 0]);
   });
@@ -337,7 +337,7 @@ describe('ordered channel event log', () => {
 
   it('records a release then a fresh press in that true order', () => {
     focusAndPress('Space');
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space' }));
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
@@ -354,15 +354,15 @@ describe('ordered channel event log', () => {
 
   it('clears the log once the frame closes', () => {
     focusAndPress('Space');
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     expect(forSpace(im)).toEqual([]);
   });
 
   it('does not log a repeat write of the same value', () => {
     focusAndPress('Space');
-    im.update(0 as never);
-    im.update(0 as never); // still held, no new platform event
+    im.preUpdate(0 as never);
+    im.preUpdate(0 as never); // still held, no new platform event
 
     expect(forSpace(im)).toEqual([]);
   });
@@ -372,7 +372,7 @@ describe('keyboard dispatch order', () => {
   it('dispatches a Shift-up followed by a Tab-down in that true order, not grouped by type', () => {
     canvas.dispatchEvent(new FocusEvent('focus'));
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'ShiftLeft' })); // Shift down
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     const seen: Array<{ channel: number; pressed: boolean }> = [];
 
@@ -385,7 +385,7 @@ describe('keyboard dispatch order', () => {
     // as held.
     window.dispatchEvent(new KeyboardEvent('keyup', { code: 'ShiftLeft' }));
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab' })); // Tab down
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     expect(seen).toEqual([
       { channel: Keyboard.ShiftLeft, pressed: false },
@@ -398,7 +398,7 @@ describe('pointer dispatch order', () => {
   it('dispatches an Up followed by a Down in that true order, not reordered to Down-then-Up', () => {
     fire(canvas, 'pointerover', { clientX: 10, clientY: 10 });
     fire(canvas, 'pointerdown', { clientX: 10, clientY: 10, buttons: 1 });
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     const seen: string[] = [];
 
@@ -410,7 +410,7 @@ describe('pointer dispatch order', () => {
     // backwards.
     fire(canvas, 'pointerup', { clientX: 10, clientY: 10, buttons: 0 });
     fire(canvas, 'pointerdown', { clientX: 10, clientY: 10, buttons: 1 });
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     expect(seen).toEqual(['up', 'down']);
   });
@@ -418,24 +418,24 @@ describe('pointer dispatch order', () => {
   it('carries a fresh press as a live candidate into the next frame after an up-then-down collapse', () => {
     fire(canvas, 'pointerover', { clientX: 10, clientY: 10 });
     fire(canvas, 'pointerdown', { clientX: 10, clientY: 10, buttons: 1 });
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     fire(canvas, 'pointerup', { clientX: 10, clientY: 10, buttons: 0 });
     fire(canvas, 'pointerdown', { clientX: 10, clientY: 10, buttons: 1 });
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     const pointer = getPointer();
 
     expect(pointer.down).toBe(true);
 
-    im.update(0 as never); // next frame: no new platform events
+    im.preUpdate(0 as never); // next frame: no new platform events
 
     expect(pointer.down).toBe(true);
   });
 
   it('dispatches two discrete presses within one frame as two separate onPointerDown calls', () => {
     fire(canvas, 'pointerover', { clientX: 10, clientY: 10 });
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     const downHandler = vi.fn();
 
@@ -444,7 +444,7 @@ describe('pointer dispatch order', () => {
     fire(canvas, 'pointerdown', { clientX: 10, clientY: 10, buttons: 1 });
     fire(canvas, 'pointerup', { clientX: 10, clientY: 10, buttons: 0 });
     fire(canvas, 'pointerdown', { clientX: 20, clientY: 20, buttons: 1 });
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     expect(downHandler).toHaveBeenCalledTimes(2);
   });
@@ -492,10 +492,10 @@ describe('context menu policy', () => {
 
     manager.onContextMenu.add(seen);
     c.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerId: 1, isPrimary: true, clientX: 10, clientY: 10 }));
-    manager.update(0 as never);
+    manager.preUpdate(0 as never);
 
     c.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 40, clientY: 50 }));
-    manager.update(0 as never);
+    manager.preUpdate(0 as never);
 
     expect(seen).toHaveBeenCalledTimes(1);
     expect(seen.mock.calls[0]![0].x).toBe(40);
@@ -509,11 +509,11 @@ describe('context menu policy', () => {
 
     manager.onContextMenu.add(request => void seen.push([request.x, request.y]));
     c.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerId: 1, isPrimary: true, clientX: 10, clientY: 10 }));
-    manager.update(0 as never);
+    manager.preUpdate(0 as never);
 
     c.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 200, clientY: 150 }));
     c.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 1, isPrimary: true, clientX: 400, clientY: 400 }));
-    manager.update(0 as never);
+    manager.preUpdate(0 as never);
 
     expect(seen).toEqual([[200, 150]]);
     manager.destroy();
@@ -529,7 +529,7 @@ describe('context menu policy', () => {
     // event — no prior pointerover/pointerdown means no pointer was ever
     // tracked, but the request itself must still carry real coordinates.
     c.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 40, clientY: 50 }));
-    manager.update(0 as never);
+    manager.preUpdate(0 as never);
 
     expect(seen).toHaveBeenCalledTimes(1);
     expect(seen.mock.calls[0]![0]).toEqual({ x: 40, y: 50, pointer: null });
@@ -542,11 +542,11 @@ describe('context menu policy', () => {
 
     manager.onContextMenu.add(seen);
     c.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerId: 1, isPrimary: true, clientX: 10, clientY: 10 }));
-    manager.update(0 as never);
+    manager.preUpdate(0 as never);
 
     c.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
-    manager.update(0 as never);
-    manager.update(0 as never);
+    manager.preUpdate(0 as never);
+    manager.preUpdate(0 as never);
 
     expect(seen).toHaveBeenCalledTimes(1);
     manager.destroy();

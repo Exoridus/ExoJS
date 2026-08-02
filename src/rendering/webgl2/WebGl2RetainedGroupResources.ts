@@ -4,7 +4,7 @@ import { DataTexture } from '#rendering/texture/DataTexture';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import { TRANSFORM_FLOATS_PER_ROW, TRANSFORM_TINT_BYTES_PER_ROW } from '#rendering/TransformBuffer';
-import { type BlendModes, BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
+import { type BlendModes, BufferTypes, BufferUsage, RenderingPrimitives, TextureFormat } from '#rendering/types';
 
 import { WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
@@ -176,11 +176,11 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
   private _transformRowCapacity = 0;
   private _transformRowCount = 0;
   private _transformRowBase = 0;
-  private _transformTexture: DataTexture<'rgba32f'> | null = null;
+  private _transformTexture: DataTexture<TextureFormat.Rgba32F> | null = null;
   // Parallel tint rows (see TransformBuffer's class doc): same row capacity/
   // count/base as the transform store, grown and stored together.
   private _tintBytes: Uint8Array | null = null;
-  private _tintTexture: DataTexture<'rgba8'> | null = null;
+  private _tintTexture: DataTexture<TextureFormat.Rgba8> | null = null;
 
   // Device-side resources, created lazily at the first capture finalize.
   private _gl: WebGL2RenderingContext | null = null;
@@ -220,12 +220,12 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
   }
 
   /** Group-owned transform store (`null` until the first capture stored rows). */
-  public get transformTexture(): DataTexture<'rgba32f'> | null {
+  public get transformTexture(): DataTexture<TextureFormat.Rgba32F> | null {
     return this._transformTexture;
   }
 
   /** Group-owned tint store (`null` until the first capture stored rows). */
-  public get tintTexture(): DataTexture<'rgba8'> | null {
+  public get tintTexture(): DataTexture<TextureFormat.Rgba8> | null {
     return this._tintTexture;
   }
 
@@ -296,14 +296,14 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
       this._transformTexture = new DataTexture({
         width: 2,
         height: next,
-        format: 'rgba32f',
+        format: TextureFormat.Rgba32F,
         data: this._transformFloats,
       });
       this._tintBytes = new Uint8Array(next * tintBytesPerRow);
       this._tintTexture = new DataTexture({
         width: 1,
         height: next,
-        format: 'rgba8',
+        format: TextureFormat.Rgba8,
         data: this._tintBytes,
       });
       this._transformRowCapacity = next;

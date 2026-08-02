@@ -1,6 +1,7 @@
 import { Signal } from '#core/Signal';
 import { DataTexture } from '#rendering/texture/DataTexture';
 import { Texture } from '#rendering/texture/Texture';
+import { TextureFormat } from '#rendering/types';
 
 import { GlyphSdf } from './GlyphSdf';
 import type { GlyphInfo, GlyphKey, GlyphProvider } from './types';
@@ -106,7 +107,7 @@ export class AtlasPage {
 
   // SDF mode
   private readonly _sdfBuffer: Uint8Array | null = null;
-  private readonly _sdfTexture: DataTexture<'r8'> | null = null;
+  private readonly _sdfTexture: DataTexture<TextureFormat.R8> | null = null;
 
   // Canvas mode
   private readonly _ctx: Ctx2D | null = null;
@@ -122,7 +123,7 @@ export class AtlasPage {
 
     if (mode === 'sdf') {
       this._sdfBuffer = new Uint8Array(width * height);
-      this._sdfTexture = new DataTexture({ width, height, format: 'r8', data: this._sdfBuffer });
+      this._sdfTexture = new DataTexture({ width, height, format: TextureFormat.R8, data: this._sdfBuffer });
       this._sdfTexture.setSize(width, height);
       this.texture = this._sdfTexture;
     } else {

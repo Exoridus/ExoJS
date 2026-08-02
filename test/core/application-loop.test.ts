@@ -129,8 +129,8 @@ describe('Application.update() — loop timing', () => {
 
     // Stub out input/interaction so jsdom's missing gamepad API doesn't error.
     // These tests exercise loop timing logic, not the input subsystem.
-    vi.spyOn(app.input, 'update').mockReturnValue(app.input);
-    vi.spyOn(app.interaction, 'update').mockImplementation(() => undefined);
+    vi.spyOn(app.input, 'preUpdate').mockReturnValue(app.input);
+    vi.spyOn(app.interaction, 'preUpdate').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
@@ -212,7 +212,7 @@ describe('Application.update() — loop timing', () => {
       (app as unknown as Record<string, unknown>)['_documentVisible'] = true;
 
       // On the visible frame, capture what delta tweens receive
-      const tweensUpdateSpy = vi.spyOn(app.tweens, 'update');
+      const tweensUpdateSpy = vi.spyOn(app.tweens, 'preUpdate');
 
       // Control the clock to return a small post-resume delta
       mockFrameElapsed(app, 16);
@@ -233,7 +233,7 @@ describe('Application.update() — loop timing', () => {
     test('a very large raw delta is clamped before tweens.update receives it', () => {
       mockFrameElapsed(app, 30_000); // 30 seconds — simulates device sleep
 
-      const tweensUpdateSpy = vi.spyOn(app.tweens, 'update');
+      const tweensUpdateSpy = vi.spyOn(app.tweens, 'preUpdate');
 
       app.update();
 
@@ -260,7 +260,7 @@ describe('Application.update() — loop timing', () => {
     test('a normal frame delta (16ms) passes through unchanged', () => {
       mockFrameElapsed(app, 16);
 
-      const tweensUpdateSpy = vi.spyOn(app.tweens, 'update');
+      const tweensUpdateSpy = vi.spyOn(app.tweens, 'preUpdate');
 
       app.update();
 
@@ -273,7 +273,7 @@ describe('Application.update() — loop timing', () => {
     test('a delta exactly at the cap boundary (100ms) passes through unchanged', () => {
       mockFrameElapsed(app, 100);
 
-      const tweensUpdateSpy = vi.spyOn(app.tweens, 'update');
+      const tweensUpdateSpy = vi.spyOn(app.tweens, 'preUpdate');
 
       app.update();
 
@@ -285,7 +285,7 @@ describe('Application.update() — loop timing', () => {
     test('a delta one millisecond above the cap is clamped to exactly the cap', () => {
       mockFrameElapsed(app, 101);
 
-      const tweensUpdateSpy = vi.spyOn(app.tweens, 'update');
+      const tweensUpdateSpy = vi.spyOn(app.tweens, 'preUpdate');
 
       app.update();
 
@@ -306,7 +306,7 @@ describe('Application.update() — loop timing', () => {
     test('rawFrameDeltaMs equals the unclamped value even when clamped', () => {
       mockFrameElapsed(app, 200);
 
-      const tweensUpdateSpy = vi.spyOn(app.tweens, 'update');
+      const tweensUpdateSpy = vi.spyOn(app.tweens, 'preUpdate');
 
       app.update();
 

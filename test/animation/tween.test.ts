@@ -294,7 +294,7 @@ describe('Tween', () => {
       tween.stop();
       // After stop, updating manager should not move sprite.
       const xAtStop = sprite.x;
-      manager.update(sec(1.0));
+      manager.preUpdate(sec(1.0));
       expect(sprite.x).toBe(xAtStop);
     });
   });
@@ -452,14 +452,14 @@ describe('Tween', () => {
       const target = makeSprite();
       const tween = manager.create(target).to({ x: 100 }, 1.0).start();
 
-      manager.update(sec(1.0)); // complete — tween removed from manager
+      manager.preUpdate(sec(1.0)); // complete — tween removed from manager
       expect(tween.state).toBe(TweenState.Complete);
 
       const secondComplete = vi.fn();
       tween.onComplete(secondComplete).start();
       expect(tween.state).toBe(TweenState.Active);
 
-      manager.update(sec(1.0)); // manager must drive it — second completion fires
+      manager.preUpdate(sec(1.0)); // manager must drive it — second completion fires
       expect(secondComplete).toHaveBeenCalledTimes(1);
       expect(tween.state).toBe(TweenState.Complete);
     });
@@ -469,7 +469,7 @@ describe('Tween', () => {
       const target = makeSprite();
       const tween = manager.create(target).to({ x: 100 }, 1.0).start();
 
-      manager.update(sec(0.3));
+      manager.preUpdate(sec(0.3));
       tween.stop();
       expect(tween.state).toBe(TweenState.Stopped);
 
@@ -477,7 +477,7 @@ describe('Tween', () => {
       tween.onComplete(onComplete).start();
       expect(tween.state).toBe(TweenState.Active);
 
-      manager.update(sec(1.0)); // manager drives the restarted tween
+      manager.preUpdate(sec(1.0)); // manager drives the restarted tween
       expect(onComplete).toHaveBeenCalledTimes(1);
       expect(tween.state).toBe(TweenState.Complete);
     });
@@ -490,7 +490,7 @@ describe('Tween', () => {
       const tween = manager.create(target).to({ x: 100 }, 1.0).start();
 
       tween.start(); // re-call while active — resets elapsed, no double-registration
-      manager.update(sec(0.5));
+      manager.preUpdate(sec(0.5));
       expect(target.x).toBeCloseTo(50, 5); // exactly one advancement
     });
 
@@ -520,7 +520,7 @@ describe('Tween', () => {
       forward.start();
 
       // 50 × 0.1s = 5 seconds; enough for ≥2 complete cycles of each tween
-      for (let i = 0; i < 50; i++) manager.update(sec(0.1));
+      for (let i = 0; i < 50; i++) manager.preUpdate(sec(0.1));
 
       expect(forwardCompleteCount).toBeGreaterThanOrEqual(2);
       expect(backwardCompleteCount).toBeGreaterThanOrEqual(2);

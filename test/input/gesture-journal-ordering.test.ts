@@ -82,7 +82,7 @@ const settleTwoTouchBaseline = (im: InputManager, canvas: HTMLCanvasElement, bx:
   fire(canvas, 'pointerover', { pointerId: 2, pointerType: 'touch', clientX: bx, clientY: by, isPrimary: false });
   fire(canvas, 'pointerdown', { pointerId: 2, pointerType: 'touch', clientX: bx, clientY: by, isPrimary: false });
   fire(canvas, 'pointermove', { pointerId: 2, pointerType: 'touch', clientX: bx, clientY: by, isPrimary: false });
-  im.update();
+  im.preUpdate();
 };
 
 beforeEach(() => {
@@ -111,7 +111,7 @@ describe('InputManager — gesture journal ordering', () => {
     // Spread the touches apart — distance changes (angle does not), so only
     // onPinch fires alongside the move, all within this one frame.
     fire(canvas, 'pointermove', { pointerId: 2, pointerType: 'touch', clientX: 40, clientY: 0, isPrimary: false });
-    im.update();
+    im.preUpdate();
 
     expect(calls).toEqual(['move', 'pinch']);
 
@@ -130,7 +130,7 @@ describe('InputManager — gesture journal ordering', () => {
 
     // Rotate the pair around the midpoint — distance unchanged, angle changes.
     fire(canvas, 'pointermove', { pointerId: 2, pointerType: 'touch', clientX: 0, clientY: 40, isPrimary: false });
-    im.update();
+    im.preUpdate();
 
     expect(calls).toEqual(['move', 'rotate']);
 
@@ -158,7 +158,7 @@ describe('InputManager — long-press queuing', () => {
     // dispatched the signal yet.
     expect(spy).not.toHaveBeenCalled();
 
-    im.update();
+    im.preUpdate();
 
     expect(spy).toHaveBeenCalledTimes(1);
 
@@ -174,10 +174,10 @@ describe('InputManager — long-press queuing', () => {
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
     fire(canvas, 'pointerdown', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
     fire(canvas, 'pointerup', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
-    im.update();
+    im.preUpdate();
 
     vi.advanceTimersByTime(600);
-    im.update();
+    im.preUpdate();
 
     expect(spy).not.toHaveBeenCalled();
 
@@ -193,10 +193,10 @@ describe('InputManager — long-press queuing', () => {
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
     fire(canvas, 'pointerdown', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
     fire(canvas, 'pointercancel', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
-    im.update();
+    im.preUpdate();
 
     vi.advanceTimersByTime(600);
-    im.update();
+    im.preUpdate();
 
     expect(spy).not.toHaveBeenCalled();
 
@@ -212,11 +212,11 @@ describe('InputManager — long-press queuing', () => {
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
     fire(canvas, 'pointerdown', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
     fire(canvas, 'pointerleave', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
-    im.update();
+    im.preUpdate();
     im._finishInteractionFrame();
 
     vi.advanceTimersByTime(600);
-    im.update();
+    im.preUpdate();
 
     expect(spy).not.toHaveBeenCalled();
 
@@ -282,7 +282,7 @@ describe('InputManager — gesture center coordinates across multiple queued ges
     // center (20,0) then center (50,0).
     fire(canvas, 'pointermove', { pointerId: 2, pointerType: 'touch', clientX: 40, clientY: 0, isPrimary: false }); // distance=40, center=(20,0)
     fire(canvas, 'pointermove', { pointerId: 2, pointerType: 'touch', clientX: 100, clientY: 0, isPrimary: false }); // distance=100, center=(50,0)
-    im.update();
+    im.preUpdate();
 
     expect(seenCenters).toEqual([
       { x: 20, y: 0 },

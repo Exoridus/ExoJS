@@ -7,6 +7,8 @@
 
 import { Asset, Json, Loader, type Texture, type ValueAsset } from '@codexo/exojs';
 
+import { LoadPriority } from '#resources/Loader';
+
 // Compile-time exact-type assertion, independent of vitest/expectTypeOf so a bare
 // `tsc --noEmit` validates it (mirrors assets-strict-false.type-test.ts).
 type Equal<A, B> = (<G>() => G extends A ? 1 : 2) extends <G>() => G extends B ? 1 : 2 ? true : false;
@@ -47,10 +49,10 @@ Asset.type('texture', 'p.png', { delimiter: ',' });
 const loader = new Loader();
 
 // @ts-expect-error — per-asset options belong on Asset.type(), not load(path, options).
-loader.load('l.json', { background: true });
+loader.load('l.json', { priority: LoadPriority.Background });
 
 // @ts-expect-error — descriptor options belong inside Asset.type(), not a second load() argument.
-loader.load(levelDesc, { background: true });
+loader.load(levelDesc, { priority: LoadPriority.Background });
 
 // @ts-expect-error — descriptor options belong inside Asset.type(), not a second get() argument.
 loader.get(levelDesc, { delimiter: ',' });

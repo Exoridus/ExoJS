@@ -95,6 +95,7 @@ const createApp = (): {
     // InteractionManager owns the focus controller, which listens for keys.
     onKeyDown: new Signal<[number]>(),
     onKeyUp: new Signal<[number]>(),
+    _finishInteractionFrame: (): void => undefined,
   };
 
   const canvas = document.createElement('canvas');
@@ -131,7 +132,7 @@ const createApp = (): {
 };
 
 const flushInteractions = (im: InteractionManager): void => {
-  im.update();
+  im.preUpdate();
 };
 
 // ---------------------------------------------------------------------------
@@ -524,7 +525,7 @@ describe('InteractionManager — spatial index: addChild registers subtree', () 
     expect(im._getDebugQuadtree()).not.toBeNull();
 
     // Both children should be discoverable via hit test.
-    im.update(); // flush stale entries
+    im.preUpdate(); // flush stale entries
 
     im.destroy();
     container.destroy();

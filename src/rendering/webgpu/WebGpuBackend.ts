@@ -33,7 +33,7 @@ import { DataTexture, type DataTextureFormat } from '#rendering/texture/DataText
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import type { BlendModes, ColorTextureFormat } from '#rendering/types';
-import { ScaleModes, WrapModes } from '#rendering/types';
+import { ScaleModes, TextureFormat, WrapModes } from '#rendering/types';
 import type { View } from '#rendering/View';
 
 import { WebGpuBackdropBlendCompositor } from './WebGpuBackdropBlendCompositor';
@@ -2211,7 +2211,7 @@ export class WebGpuBackend implements RenderBackend {
     // that need linear filtering on floats can opt into the
     // 'float32-filterable' device feature and pass linear via samplerOptions
     // (not yet exposed).
-    const isFloatData = texture instanceof DataTexture && (texture.format === 'r32f' || texture.format === 'rgba32f');
+    const isFloatData = texture instanceof DataTexture && (texture.format === TextureFormat.R32F || texture.format === TextureFormat.Rgba32F);
     const filter: GPUFilterMode = isFloatData ? 'nearest' : this._getFilterMode(texture.scaleMode);
 
     return this.device.createSampler({
@@ -2447,24 +2447,24 @@ interface WebGpuDataTextureFormatInfo {
 /** Map a {@link RenderTexture} color format to its WebGPU render-target format. */
 function webgpuColorTextureFormat(format: ColorTextureFormat): GPUTextureFormat {
   switch (format) {
-    case 'rgba8':
+    case TextureFormat.Rgba8:
       return 'rgba8unorm';
-    case 'rgba16f':
+    case TextureFormat.Rgba16F:
       return 'rgba16float';
-    case 'rgba32f':
+    case TextureFormat.Rgba32F:
       return 'rgba32float';
   }
 }
 
 function webgpuDataTextureFormat(format: DataTextureFormat): WebGpuDataTextureFormatInfo {
   switch (format) {
-    case 'r8':
+    case TextureFormat.R8:
       return { gpuFormat: 'r8unorm', bytesPerPixel: 1, channels: 1 };
-    case 'r32f':
+    case TextureFormat.R32F:
       return { gpuFormat: 'r32float', bytesPerPixel: 4, channels: 1 };
-    case 'rgba8':
+    case TextureFormat.Rgba8:
       return { gpuFormat: 'rgba8unorm', bytesPerPixel: 4, channels: 4 };
-    case 'rgba32f':
+    case TextureFormat.Rgba32F:
       return { gpuFormat: 'rgba32float', bytesPerPixel: 16, channels: 4 };
   }
 }

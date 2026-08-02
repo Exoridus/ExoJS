@@ -33,6 +33,8 @@ import {
   type Video,
 } from '@codexo/exojs';
 
+import { LoadPriority } from '#resources/Loader';
+
 import type { CatalogResourceLeaf, CatalogValueLeaf } from './helpers/catalog-leaf';
 
 type Equal<A, B> = (<G>() => G extends A ? 1 : 2) extends <G>() => G extends B ? 1 : 2 ? true : false;
@@ -98,7 +100,7 @@ export async function leafLoads(): Promise<void> {
   expectType<Equal<typeof textureQueue, LoadingQueue<Texture>>>();
   expectType<Equal<Awaited<typeof textureQueue>, Texture>>();
 
-  const soundQueue = loader.load(bag.jump, { background: true });
+  const soundQueue = loader.load(bag.jump, { priority: LoadPriority.Background });
   expectType<Equal<Awaited<typeof soundQueue>, Sound>>();
 
   // A value leaf resolves to its DECODED payload, not to the ref.
@@ -109,7 +111,7 @@ export async function leafLoads(): Promise<void> {
   const atlasQueue = loader.load(bag.atlas);
   expectType<Equal<Awaited<typeof atlasQueue>, SpriteAtlas>>();
 
-  const metricsQueue = loader.load(bag.metrics, { background: true });
+  const metricsQueue = loader.load(bag.metrics, { priority: LoadPriority.Background });
   expectType<Equal<Awaited<typeof metricsQueue>, AtlasMetrics>>();
 
   // `get(leaf)` adopts and returns THE SAME leaf — brand included, because the
@@ -185,7 +187,7 @@ export async function sceneLeaves(): Promise<void> {
   const sceneTexture = await scene.loader.load(bag.player);
   expectType<Equal<typeof sceneTexture, Texture>>();
 
-  const sceneValue = await scene.loader.load(bag.config, { background: true });
+  const sceneValue = await scene.loader.load(bag.config, { priority: LoadPriority.Background });
   expectType<Equal<typeof sceneValue, unknown>>();
 
   const sceneAtlas = await scene.loader.load(bag.atlas);

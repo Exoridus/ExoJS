@@ -28,7 +28,7 @@
       "members": [
         {
           "name": "format",
-          "signature": "format?: \"rgba8\" | \"rgba32f\"",
+          "signature": "format?: Rgba8 | Rgba32F",
           "signatureTokens": [
             {
               "text": "format",
@@ -43,16 +43,16 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"rgba8\"",
-              "kind": "keyword"
+              "text": "Rgba8",
+              "kind": "type"
             },
             {
               "text": " | ",
               "kind": "punctuation"
             },
             {
-              "text": "\"rgba32f\"",
-              "kind": "keyword"
+              "text": "Rgba32F",
+              "kind": "type"
             }
           ],
           "params": [],

@@ -30,6 +30,7 @@ export type { IndexedDbStoreOptions } from './IndexedDbStore';
 export { IndexedDbStore } from './IndexedDbStore';
 export type { KeyValueStore } from './KeyValueStore';
 export type { AssetLoaderContext, InferLoadedMap, Loadable, LoaderOptions, LoadOptions } from './Loader';
+export { LoadPriority } from './Loader';
 export { Loader } from './Loader';
 export type { LoadingProgress } from './LoadingQueue';
 export { LoadingQueue } from './LoadingQueue';

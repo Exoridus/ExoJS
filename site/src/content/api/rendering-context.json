@@ -358,6 +358,53 @@
           "description": "Immediately draw a single Geometry with transform as its world matrix — no retained RenderNode required. Useful for procedural or data-driven shapes that would be wasteful to wrap in a node. The draw is submitted through the mesh renderer and flushed at once, so it lands in call order relative to the surrounding render calls: a drawGeometry issued after a layer's render draws on top of it. All output is presented at the frame-end backend flush, as usual. transform is taken as the raw world matrix (a, b, c, d, tx, ty), bypassing the position / rotation / scale / origin composition a node would apply — build it with Matrix directly. The geometry must use the triangle-list topology and the standard mesh attribute layout (position, optional texcoord and color); custom per-vertex attributes are dropped. This is the single-draw convenience of the immediate API: each call is its own flush and draw call, and the geometry is repacked every call, so it is best for a handful of draws. An instanced batch path for drawing many like items as one upload + one draw follows in a later release."
         },
         {
+          "name": "preUpdate",
+          "signature": "preUpdate(delta: Time): void",
+          "signatureTokens": [
+            {
+              "text": "preUpdate",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "delta",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Time",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "delta",
+              "type": "Time",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Advance follow, shake, and bounds-constraint animations on the active view, every view rendered last frame (automatic), and any trackView-ed view. The SystemMethods.preUpdate phase, at SystemOrder.CoreRendering — last of the engine's core systems."
+        },
+        {
           "name": "render",
           "signature": "render(node: RenderNode, options: RenderOptions): void",
           "signatureTokens": [
@@ -701,53 +748,6 @@
           ],
           "returnType": "void",
           "description": "Stop advancing a previously trackView-ed view. No-op if absent."
-        },
-        {
-          "name": "update",
-          "signature": "update(delta: Time): void",
-          "signatureTokens": [
-            {
-              "text": "update",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "delta",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Time",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "delta",
-              "type": "Time",
-              "optional": false
-            }
-          ],
-          "returnType": "void",
-          "description": "Advance follow, shake, and bounds-constraint animations on the active view, every view rendered last frame (automatic), and any trackView-ed view. Ticked once per frame via Application.update's internal prepare stage."
         }
       ],
       "paragraphs": [],

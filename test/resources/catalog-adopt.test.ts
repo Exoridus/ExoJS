@@ -492,7 +492,7 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
     expect(loader.inspect().find(r => r.source === 'still-down.png')).toMatchObject({ state: 'failed', inFlight: false });
   });
 
-  test('re-adopting a failed seamless leaf with { background: true } queues the retry instead of fetching immediately', async () => {
+  test('re-adopting a failed seamless leaf with { priority: LoadPriority.Background } queues the retry instead of fetching immediately', async () => {
     const { fetchMock, succeed } = togglableImageFetch();
     const loader = createCoreLoader();
     const leaf = createLeaf('texture', 'flaky-bg.png') as Texture;
@@ -720,7 +720,7 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
     expect(loader.inspect().find(r => r.source === 'still-down.json')).toMatchObject({ state: 'failed', inFlight: false });
   });
 
-  test('re-adopting a failed value ref with { background: true } queues the retry instead of fetching immediately', async () => {
+  test('re-adopting a failed value ref with { priority: LoadPriority.Background } queues the retry instead of fetching immediately', async () => {
     const { fetchMock, succeed } = togglableJsonFetch({ ready: true });
     const loader = createCoreLoader();
     const leaf = createLeaf('json', 'flaky-bg.json') as AssetRef<unknown>;

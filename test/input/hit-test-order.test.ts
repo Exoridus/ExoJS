@@ -63,6 +63,7 @@ const createApp = (): { app: Application; scene: Scene; signals: { onPointerDown
     onContextMenu: new Signal<[ContextMenuRequest]>(),
     onKeyDown: new Signal<[number]>(),
     onKeyUp: new Signal<[number]>(),
+    _finishInteractionFrame: (): void => undefined,
   };
   const canvas = document.createElement('canvas');
   const scene = new Scene();
@@ -96,7 +97,7 @@ const pick = (im: InteractionManager, signals: { onPointerDown: Signal<[Pointer]
 
   // getHoveredNode reflects the resolved hit, which the queue flush computes.
   signals.onPointerDown.dispatch(makePointer(x, y));
-  im.update();
+  im.preUpdate();
   probe();
   void scene;
 

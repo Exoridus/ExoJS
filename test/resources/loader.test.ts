@@ -9,7 +9,7 @@ import { Assets } from '#resources/Assets';
 import type { CacheStore } from '#resources/CacheStore';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
 import { defineAsset } from '#resources/defineAsset';
-import { Loader } from '#resources/Loader';
+import { Loader, LoadPriority } from '#resources/Loader';
 import { FontAsset, TextAsset } from '#resources/tokens';
 
 /** Create a Loader with all core asset bindings pre-installed. */
@@ -1052,7 +1052,7 @@ describe('setConcurrency()', () => {
     expect(loader.setConcurrency(1)).toBe(loader);
 
     // Three background-adopted sources, but concurrency 1 → only one fetch starts.
-    loader.load(Assets.from({ a: 'a.png', b: 'b.png', c: 'c.png' }), { background: true });
+    loader.load(Assets.from({ a: 'a.png', b: 'b.png', c: 'c.png' }), { priority: LoadPriority.Background });
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
@@ -1785,8 +1785,8 @@ describe('bare-path descriptor normalization', () => {
 
     const legacyLoad = loader.load as unknown as (path: string, options: object) => unknown;
 
-    expect(() => legacyLoad.call(loader, 'notes.txt', { background: true })).toThrow(/load\(path, options\) is not supported/);
-    expect(() => legacyLoad.call(loader, 'notes.txt', { background: true })).toThrow(/Asset\.type\(type, path, options\)/);
+    expect(() => legacyLoad.call(loader, 'notes.txt', { priority: LoadPriority.Background })).toThrow(/load\(path, options\) is not supported/);
+    expect(() => legacyLoad.call(loader, 'notes.txt', { priority: LoadPriority.Background })).toThrow(/Asset\.type\(type, path, options\)/);
   });
 
   test('rejects second-argument options for Asset.type() descriptors instead of silently dropping them', () => {
@@ -1795,7 +1795,9 @@ describe('bare-path descriptor normalization', () => {
     const descriptorLoad = loader.load as unknown as (asset: typeof descriptor, options: object) => unknown;
     const descriptorGet = loader.get as unknown as (asset: typeof descriptor, options: object) => unknown;
 
-    expect(() => descriptorLoad.call(loader, descriptor, { background: true })).toThrow(/load\(Asset\.type\(\.\.\.\), options\) is not supported/);
+    expect(() => descriptorLoad.call(loader, descriptor, { priority: LoadPriority.Background })).toThrow(
+      /load\(Asset\.type\(\.\.\.\), options\) is not supported/,
+    );
     expect(() => descriptorGet.call(loader, descriptor, { delimiter: ',' })).toThrow(/get\(Asset\.type\(\.\.\.\), options\) is not supported/);
   });
 });

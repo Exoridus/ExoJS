@@ -8,7 +8,7 @@ import type { Gradient } from '#rendering/gradient/Gradient';
 import { Mesh } from '#rendering/mesh/Mesh';
 import type { RenderNode } from '#rendering/RenderNode';
 import type { DataTexture } from '#rendering/texture/DataTexture';
-import { ScaleModes } from '#rendering/types';
+import { ScaleModes, type TextureFormat } from '#rendering/types';
 
 /**
  * Edge length of the square gradient texture rasterized for gradient paints.
@@ -54,8 +54,8 @@ export class Graphics extends Container {
   private readonly _lineColor: Color = new Color();
   private _fillStyle: Color | Gradient = this._fillColor;
   private _strokeStyle: Color | Gradient = this._lineColor;
-  private _fillStyleTexture: DataTexture<'rgba8'> | null = null;
-  private _strokeStyleTexture: DataTexture<'rgba8'> | null = null;
+  private _fillStyleTexture: DataTexture<TextureFormat.Rgba8> | null = null;
+  private _strokeStyleTexture: DataTexture<TextureFormat.Rgba8> | null = null;
   private readonly _ownedTextures = new Set<DataTexture>();
   private _currentPoint: Vector = new Vector(0, 0);
 
@@ -501,7 +501,7 @@ export class Graphics extends Container {
    * gradient texture samples across the filled/stroked geometry. The default
    * white tint and vertex color leave the sampled gradient color unmodulated.
    */
-  private _createGradientMesh(data: MeshGeometryData, texture: DataTexture<'rgba8'>): Mesh {
+  private _createGradientMesh(data: MeshGeometryData, texture: DataTexture<TextureFormat.Rgba8>): Mesh {
     return new Mesh({
       vertices: data.vertices,
       indices: data.indices,
@@ -510,7 +510,7 @@ export class Graphics extends Container {
     });
   }
 
-  private _rasterizeGradient(gradient: Gradient): DataTexture<'rgba8'> {
+  private _rasterizeGradient(gradient: Gradient): DataTexture<TextureFormat.Rgba8> {
     const texture = gradient.toTexture(gradientTextureSize, gradientTextureSize, {
       samplerOptions: { scaleMode: ScaleModes.Linear },
     });

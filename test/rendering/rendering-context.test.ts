@@ -362,12 +362,12 @@ describe('RenderingContext', () => {
 
     pip.follow({ x: 40, y: 0 }, { lerp: 1 });
     context.trackView(pip);
-    context.update(tick);
+    context.preUpdate(tick);
     expect(pip.center.x).toBe(40); // tracked → followed to its target
 
     context.untrackView(pip);
     pip.follow({ x: 80, y: 0 }, { lerp: 1 });
-    context.update(tick);
+    context.preUpdate(tick);
     expect(pip.center.x).toBe(40); // untracked → no longer advanced
 
     pip.destroy();
@@ -383,12 +383,12 @@ describe('RenderingContext', () => {
 
     pip.follow({ x: 40, y: 0 }, { lerp: 1 });
     context.render(node, { view: pip }); // render-usage registers pip for the next update
-    context.update(tick); // advances views rendered since the last update → pip follows
+    context.preUpdate(tick); // advances views rendered since the last update → pip follows
     expect(pip.center.x).toBe(40);
 
     // Stop rendering pip: it is no longer auto-advanced.
     pip.follow({ x: 80, y: 0 }, { lerp: 1 });
-    context.update(tick);
+    context.preUpdate(tick);
     expect(pip.center.x).toBe(40);
 
     pip.destroy();

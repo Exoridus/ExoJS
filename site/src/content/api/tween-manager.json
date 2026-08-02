@@ -309,6 +309,53 @@
           "description": "Tear down the manager. Clears tweens and tickers and makes subsequent updates no-ops."
         },
         {
+          "name": "preUpdate",
+          "signature": "preUpdate(delta: Time): void",
+          "signatureTokens": [
+            {
+              "text": "preUpdate",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "delta",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Time",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "delta",
+              "type": "Time",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Advance all active tweens by the frame delta (read as seconds), then advance all registered tickers. The SystemMethods.preUpdate phase, at SystemOrder.CoreTweens. Uses snapshots so callbacks that add or remove tweens/tickers do not corrupt mid-iteration."
+        },
+        {
           "name": "remove",
           "signature": "remove(tween: Tween): this",
           "signatureTokens": [
@@ -472,53 +519,6 @@
           ],
           "returnType": "Tween",
           "description": "Chain tweens in sequence: each tween starts automatically when the previous one completes. Returns the first tween; call .start() on it to kick off the whole sequence. All tweens are registered with this manager (idempotent — already-added tweens are not double-added)."
-        },
-        {
-          "name": "update",
-          "signature": "update(delta: Time): void",
-          "signatureTokens": [
-            {
-              "text": "update",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "delta",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Time",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "delta",
-              "type": "Time",
-              "optional": false
-            }
-          ],
-          "returnType": "void",
-          "description": "Advance all active tweens by the frame delta (read as seconds), then advance all registered tickers. Ticked once per frame via Application.systems. Uses snapshots so callbacks that add or remove tweens/tickers do not corrupt mid-iteration."
         }
       ],
       "paragraphs": [],

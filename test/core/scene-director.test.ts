@@ -6,6 +6,7 @@ import { Color } from '#core/Color';
 import { logger } from '#core/logging';
 import { PhasedSceneTransition } from '#core/PhasedSceneTransition';
 import { Scene } from '#core/Scene';
+import { SceneAvailability } from '#core/SceneAvailability';
 import { SceneDirector } from '#core/SceneDirector';
 import { SceneScope } from '#core/SceneScope';
 import { SceneState } from '#core/SceneState';
@@ -126,6 +127,7 @@ const createApplicationStub = (): ApplicationStub => {
 const tick = (manager: SceneDirector, app: ReturnType<typeof createApplicationStub>, milliseconds = 16): void => {
   const time = new Time(milliseconds);
 
+  manager.preUpdate(time);
   manager.update(time);
   manager._updateTransition(time);
   manager.draw(app.rendering);
@@ -701,7 +703,7 @@ describe('SceneDirector — retention', () => {
     let tween!: Tween;
     const FirstScene = makeSceneClass({
       init() {
-        tween = this.tweens.create({}, { when: 'active' }).to({}, 1).start();
+        tween = this.tweens.create({}, { when: SceneAvailability.Active }).to({}, 1).start();
       },
     });
     const SecondScene = makeSceneClass();

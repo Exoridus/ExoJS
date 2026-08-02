@@ -211,6 +211,7 @@ describe('Application', () => {
     const systems = {
       _beginFrame: vi.fn(),
       _endFrame: vi.fn(),
+      _preUpdate: vi.fn(),
       _fixedUpdate: vi.fn(),
       _update: systemsUpdate,
       _draw: vi.fn(),
@@ -218,6 +219,7 @@ describe('Application', () => {
     const sceneDirector = {
       _beginFrame: vi.fn(),
       _endFrame: vi.fn(),
+      preUpdate: vi.fn(),
       fixedUpdate: vi.fn(),
       update: vi.fn(),
       draw: vi.fn(),

@@ -387,6 +387,23 @@ type AssetsFacade = AssetsConstructorFn & {
    * widens to `string`, `KindByPath<string>` collapses to `never`, and every
    * leaf degrades to `unknown` (surfacing as `{}`) — see the strict:false type
    * test `test/type-tests/assets-strict-false.type-test.ts`.
+   *
+   * @remarks Catalogs are values, not identities. Two calls with an identical
+   * definition produce two distinct catalogs with two distinct sets of leaves:
+   *
+   * ```ts
+   * Assets.from({ hero: 'hero.png' }) === Assets.from({ hero: 'hero.png' }); // false
+   * ```
+   *
+   * The *payload* is still shared — the loader keys on type and source, so
+   * `hero.png` is fetched once and both catalogs resolve to the same resource.
+   * What is not shared is the claim bookkeeping: releasing one catalog does not
+   * release the other's claim. Build a catalog once and pass it around when
+   * that matters, rather than rebuilding an equal one at each call site.
+   *
+   * The same holds for {@link AssetsFacade.one} — a per-chunk descriptor built
+   * in a streaming loop is a fresh object each time, which is fine for the
+   * fetch (dedup still applies) but means it cannot be used as a lookup key.
    */
   from<const M extends Record<string, CatalogEntry>>(definition: M): Assets<M>;
 
@@ -401,7 +418,7 @@ type AssetsFacade = AssetsConstructorFn & {
    * @example
    * ```ts
    * const chunk = Assets.one({ type: 'json', source: `chunks/${cx}_${cy}.json` });
-   * loader.load(chunk, { background: true });
+   * loader.load(chunk, { priority: LoadPriority.Background });
    * await chunk.loaded;
    * ```
    */

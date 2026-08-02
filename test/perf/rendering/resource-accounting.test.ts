@@ -19,6 +19,7 @@
 // ---------------------------------------------------------------------------
 import { Sprite } from '#rendering/sprite/Sprite';
 import { DataTexture } from '#rendering/texture/DataTexture';
+import { TextureFormat } from '#rendering/types';
 
 import { buildSpriteScene, makeTexture } from './fixtures';
 import { createWebGl2Harness, measureFrame, measureSteadyFrame, type WebGl2Harness } from './harness';
@@ -76,11 +77,11 @@ describe('GPU resource accounting (RenderStats)', () => {
 
         // Warm with a tiny placeholder texture so the renderer buffers + the
         // shared transform texture are already allocated and out of the delta.
-        const baselineTex = new DataTexture({ width: 8, height: 8, format: 'rgba8' });
+        const baselineTex = new DataTexture({ width: 8, height: 8, format: TextureFormat.Rgba8 });
         const baseline = warmAndReadVram(harness, baselineTex);
 
         const textureCount = 4;
-        const textures = Array.from({ length: textureCount }, () => new DataTexture({ width: size, height: size, format: 'rgba8' }));
+        const textures = Array.from({ length: textureCount }, () => new DataTexture({ width: size, height: size, format: TextureFormat.Rgba8 }));
 
         measureSteadyFrame(harness, buildSpriteScene({ count: textureCount, textures, assign: 'distinct' }).root);
 
@@ -105,10 +106,10 @@ describe('GPU resource accounting (RenderStats)', () => {
 
         // Warm with the eventual texture's slot already holding a small texture,
         // then swap in the full-size one and measure the resize delta exactly.
-        const baselineTex = new DataTexture({ width: 8, height: 8, format: 'rgba8' });
+        const baselineTex = new DataTexture({ width: 8, height: 8, format: TextureFormat.Rgba8 });
         const baseline = warmAndReadVram(harness, baselineTex);
 
-        const texture = new DataTexture({ width: size, height: size, format: 'rgba8' });
+        const texture = new DataTexture({ width: size, height: size, format: TextureFormat.Rgba8 });
 
         measureSteadyFrame(harness, buildSpriteScene({ count: 1, textures: [texture] }).root);
 
@@ -128,8 +129,8 @@ describe('GPU resource accounting (RenderStats)', () => {
 
       try {
         const size = 256;
-        const keep = new DataTexture({ width: size, height: size, format: 'rgba8' });
-        const drop = new DataTexture({ width: size, height: size, format: 'rgba8' });
+        const keep = new DataTexture({ width: size, height: size, format: TextureFormat.Rgba8 });
+        const drop = new DataTexture({ width: size, height: size, format: TextureFormat.Rgba8 });
 
         measureSteadyFrame(harness, buildSpriteScene({ count: 2, textures: [keep, drop], assign: 'distinct' }).root);
 
@@ -150,11 +151,11 @@ describe('GPU resource accounting (RenderStats)', () => {
       const large = createWebGl2Harness();
 
       try {
-        const baseS = warmAndReadVram(small, new DataTexture({ width: 8, height: 8, format: 'rgba8' }));
-        const baseL = warmAndReadVram(large, new DataTexture({ width: 8, height: 8, format: 'rgba8' }));
+        const baseS = warmAndReadVram(small, new DataTexture({ width: 8, height: 8, format: TextureFormat.Rgba8 }));
+        const baseL = warmAndReadVram(large, new DataTexture({ width: 8, height: 8, format: TextureFormat.Rgba8 }));
 
-        const deltaSmall = warmAndReadVram(small, new DataTexture({ width: 64, height: 64, format: 'rgba8' })) - baseS;
-        const deltaLarge = warmAndReadVram(large, new DataTexture({ width: 128, height: 128, format: 'rgba8' })) - baseL;
+        const deltaSmall = warmAndReadVram(small, new DataTexture({ width: 64, height: 64, format: TextureFormat.Rgba8 })) - baseS;
+        const deltaLarge = warmAndReadVram(large, new DataTexture({ width: 128, height: 128, format: TextureFormat.Rgba8 })) - baseL;
 
         // 128² is 4× the pixels of 64²; the content deltas reflect that exactly.
         expect(deltaLarge - deltaSmall).toBe(rgba8Bytes(128) - rgba8Bytes(64));
@@ -171,11 +172,11 @@ describe('GPU resource accounting (RenderStats)', () => {
       try {
         const size = 64;
 
-        const base8 = warmAndReadVram(harness8, new DataTexture({ width: 8, height: 8, format: 'rgba8' }));
-        const base32 = warmAndReadVram(harness32, new DataTexture({ width: 8, height: 8, format: 'rgba8' }));
+        const base8 = warmAndReadVram(harness8, new DataTexture({ width: 8, height: 8, format: TextureFormat.Rgba8 }));
+        const base32 = warmAndReadVram(harness32, new DataTexture({ width: 8, height: 8, format: TextureFormat.Rgba8 }));
 
-        const delta8 = warmAndReadVram(harness8, new DataTexture({ width: size, height: size, format: 'rgba8' })) - base8;
-        const delta32 = warmAndReadVram(harness32, new DataTexture({ width: size, height: size, format: 'rgba32f' })) - base32;
+        const delta8 = warmAndReadVram(harness8, new DataTexture({ width: size, height: size, format: TextureFormat.Rgba8 })) - base8;
+        const delta32 = warmAndReadVram(harness32, new DataTexture({ width: size, height: size, format: TextureFormat.Rgba32F })) - base32;
 
         // Same dimensions; the content delta is (16 − 4) bytes/px × size².
         expect(delta32 - delta8).toBe(size * size * (16 - 4));
@@ -192,11 +193,11 @@ describe('GPU resource accounting (RenderStats)', () => {
       const b = createWebGl2Harness();
 
       try {
-        const baseA = warmAndReadVram(a, new DataTexture({ width: 8, height: 8, format: 'rgba8' }));
-        const baseB = warmAndReadVram(b, new DataTexture({ width: 8, height: 8, format: 'rgba8' }));
+        const baseA = warmAndReadVram(a, new DataTexture({ width: 8, height: 8, format: TextureFormat.Rgba8 }));
+        const baseB = warmAndReadVram(b, new DataTexture({ width: 8, height: 8, format: TextureFormat.Rgba8 }));
 
-        const deltaA = warmAndReadVram(a, new DataTexture({ width: 64, height: 64, format: 'rgba8' })) - baseA;
-        const deltaB = warmAndReadVram(b, new DataTexture({ width: 256, height: 256, format: 'rgba8' })) - baseB;
+        const deltaA = warmAndReadVram(a, new DataTexture({ width: 64, height: 64, format: TextureFormat.Rgba8 })) - baseA;
+        const deltaB = warmAndReadVram(b, new DataTexture({ width: 256, height: 256, format: TextureFormat.Rgba8 })) - baseB;
 
         // Each backend booked only its own texture; the deltas differ by the
         // exact content-size difference and do not bleed across instances.
@@ -214,7 +215,7 @@ describe('GPU resource accounting (RenderStats)', () => {
 
       try {
         const size = 128;
-        const texture = new DataTexture({ width: size, height: size, format: 'rgba8' });
+        const texture = new DataTexture({ width: size, height: size, format: TextureFormat.Rgba8 });
 
         measureFrame(harness, buildSpriteScene({ count: 1, textures: [texture] }).root);
 
@@ -231,7 +232,7 @@ describe('GPU resource accounting (RenderStats)', () => {
 
       try {
         const size = 128;
-        const texture = new DataTexture({ width: size, height: size, format: 'rgba8' });
+        const texture = new DataTexture({ width: size, height: size, format: TextureFormat.Rgba8 });
         const { root } = buildSpriteScene({ count: 1, textures: [texture] });
 
         // Warm: content + transform uploaded; transforms unchanged thereafter.
@@ -251,8 +252,8 @@ describe('GPU resource accounting (RenderStats)', () => {
 
       try {
         const size = 64;
-        const a = new DataTexture({ width: size, height: size, format: 'rgba8' });
-        const b = new DataTexture({ width: size, height: size, format: 'rgba8' });
+        const a = new DataTexture({ width: size, height: size, format: TextureFormat.Rgba8 });
+        const b = new DataTexture({ width: size, height: size, format: TextureFormat.Rgba8 });
 
         // Warm steady with texture `a` only — transforms quiescent.
         const sceneA = buildSpriteScene({ count: 1, textures: [a] });
@@ -282,7 +283,7 @@ describe('GPU resource accounting (RenderStats)', () => {
       const harness = createWebGl2Harness();
 
       try {
-        const texture = new DataTexture({ width: 64, height: 64, format: 'rgba8' });
+        const texture = new DataTexture({ width: 64, height: 64, format: TextureFormat.Rgba8 });
         const { root } = buildSpriteScene({ count: 1, textures: [texture] });
 
         measureFrame(harness, root);
@@ -345,7 +346,7 @@ describe('GPU resource accounting (RenderStats)', () => {
       const harness = createWebGl2Harness();
 
       try {
-        const texture = new DataTexture({ width: 64, height: 64, format: 'rgba8' });
+        const texture = new DataTexture({ width: 64, height: 64, format: TextureFormat.Rgba8 });
         const { root } = buildSpriteScene({ count: 1, textures: [texture] });
 
         measureSteadyFrame(harness, root);
@@ -373,9 +374,9 @@ describe('GPU resource accounting (RenderStats)', () => {
 
       try {
         const size = 64;
-        const baseline = warmAndReadVram(harness, new DataTexture({ width: 8, height: 8, format: 'rgba8' }));
+        const baseline = warmAndReadVram(harness, new DataTexture({ width: 8, height: 8, format: TextureFormat.Rgba8 }));
 
-        const texture = new DataTexture({ width: size, height: size, format: 'rgba8' });
+        const texture = new DataTexture({ width: size, height: size, format: TextureFormat.Rgba8 });
         const sprite = new Sprite(texture);
 
         sprite.setPosition(10, 10);

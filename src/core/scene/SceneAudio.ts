@@ -3,14 +3,12 @@ import type { AudioBus } from '#audio/AudioBus';
 import type { AudioEffect } from '#audio/AudioEffect';
 import type { Pausable, Playable, PlayOptions, Voice } from '#audio/Playable';
 import type { Application } from '#core/Application';
+import { SceneAvailability } from '#core/SceneAvailability';
 import { SceneState } from '#core/SceneState';
 import { Signal } from '#core/Signal';
 import type { Destroyable } from '#core/types';
 
 const isPausable = (voice: Voice): voice is Voice & Pausable => 'pause' in voice && 'resume' in voice;
-
-/** Availability of a tracked voice relative to the owning scene's pause state. Default `'always'`. */
-export type SceneAudioAvailability = 'active' | 'paused' | 'always';
 
 /** Options accepted by {@link SceneAudio.play}, extending the base {@link PlayOptions}. */
 export interface SceneAudioPlayOptions extends PlayOptions {
@@ -25,13 +23,13 @@ export interface SceneAudioPlayOptions extends PlayOptions {
    * creation time — a voice started while the scene is already paused plays
    * immediately and is only corrected at the next pause/resume cycle.
    */
-  when?: SceneAudioAvailability;
+  when?: SceneAvailability;
 }
 
 /** Options accepted by {@link SceneAudio.add}. */
 export interface SceneAudioTrackOptions {
   /** See {@link SceneAudioPlayOptions.when}. */
-  when?: SceneAudioAvailability;
+  when?: SceneAvailability;
 }
 
 /**
@@ -56,7 +54,7 @@ class PendingVoice implements Voice {
   private readonly _dummyOutput: AudioNode;
   public readonly onEnd = new Signal();
   /** The `when` policy this voice was created with — carried across to the real `Voice` at flush. */
-  public readonly when: SceneAudioAvailability;
+  public readonly when: SceneAvailability;
 
   public constructor(
     private readonly _createReal: () => Voice,
@@ -64,7 +62,7 @@ class PendingVoice implements Voice {
   ) {
     this._volume = options.volume ?? 1;
     this._bus = options.bus;
-    this.when = options.when ?? 'always';
+    this.when = options.when ?? SceneAvailability.Always;
     this._dummyOutput = getAudioContext().createGain();
   }
 
@@ -193,7 +191,7 @@ class PendingVoice implements Voice {
  * activates (definition §7.8) — see {@link PendingVoice}.
  */
 export class SceneAudio implements Destroyable {
-  private readonly _tracked = new Map<Voice, SceneAudioAvailability>();
+  private readonly _tracked = new Map<Voice, SceneAvailability>();
   private readonly _pending = new Set<PendingVoice>();
   private _suspended: Set<Voice & Pausable> | null = null;
   private _frozenByPause: Set<Voice & Pausable> | null = null;
@@ -261,7 +259,7 @@ export class SceneAudio implements Destroyable {
 
   /** Track an already-created {@link Voice} (e.g. from `app.audio.play(...)`) for scene-lifetime cleanup. Returns it unchanged. */
   public add(voice: Voice, options?: SceneAudioTrackOptions): Voice {
-    this._tracked.set(voice, options?.when ?? 'always');
+    this._tracked.set(voice, options?.when ?? SceneAvailability.Always);
 
     return voice;
   }
@@ -341,10 +339,10 @@ export class SceneAudio implements Destroyable {
         continue;
       }
 
-      if (when === 'active' && !voice.paused) {
+      if (when === SceneAvailability.Active && !voice.paused) {
         voice.pause();
         frozen.add(voice);
-      } else if (when === 'paused' && voice.paused) {
+      } else if (when === SceneAvailability.Paused && voice.paused) {
         voice.resume();
         thawed.add(voice);
       }

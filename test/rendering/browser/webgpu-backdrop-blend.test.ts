@@ -33,7 +33,7 @@ import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Mesh } from '#rendering/mesh/Mesh';
 import { DataTexture } from '#rendering/texture/DataTexture';
-import { BlendModes, ScaleModes } from '#rendering/types';
+import { BlendModes, ScaleModes, TextureFormat } from '#rendering/types';
 import { WebGpuBackdropBlendCompositor } from '#rendering/webgpu/WebGpuBackdropBlendCompositor';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
@@ -48,7 +48,7 @@ const solidDataTexture = (r: number, g: number, b: number): DataTexture =>
   new DataTexture({
     width: 1,
     height: 1,
-    format: 'rgba8',
+    format: TextureFormat.Rgba8,
     data: new Uint8Array([r, g, b, 255]),
     samplerOptions: { scaleMode: ScaleModes.Nearest },
   });
@@ -180,7 +180,7 @@ describe('WebGPU backdrop-aware blend (Darken spike)', () => {
     const source = new DataTexture({
       width: 2,
       height: 1,
-      format: 'rgba8',
+      format: TextureFormat.Rgba8,
       data: new Uint8Array([255, 0, 0, 255, 0, 0, 0, 0]),
       samplerOptions: { scaleMode: ScaleModes.Nearest },
     });
@@ -217,7 +217,7 @@ describe('WebGPU backdrop-aware blend (Darken spike)', () => {
     const backdrop = new DataTexture({
       width: 1,
       height: 2,
-      format: 'rgba8',
+      format: TextureFormat.Rgba8,
       data: new Uint8Array([200, 40, 40, 255, 40, 40, 200, 255]),
       samplerOptions: { scaleMode: ScaleModes.Nearest },
     });
@@ -227,7 +227,7 @@ describe('WebGPU backdrop-aware blend (Darken spike)', () => {
     const white = new DataTexture({
       width: 1,
       height: 1,
-      format: 'rgba8',
+      format: TextureFormat.Rgba8,
       data: new Uint8Array([255, 255, 255, 255]),
       samplerOptions: { scaleMode: ScaleModes.Nearest },
     });

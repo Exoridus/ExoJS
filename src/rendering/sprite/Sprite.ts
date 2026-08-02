@@ -1,4 +1,4 @@
-import { logger } from '#core/logging';
+import { invariant } from '#core/dev';
 import { Interval } from '#math/Interval';
 import { Rectangle } from '#math/Rectangle';
 import { Vector } from '#math/Vector';
@@ -210,14 +210,14 @@ export class Sprite extends Drawable {
    * Call {@link updateTexture} explicitly when you mutate the source.
    */
   public setTexture(texture: Texture | RenderTexture | null): this {
-    // Binding a destroyed texture is otherwise silent (it samples freed
-    // GPU state or renders nothing). Warn once in dev at the assignment site.
-    if (__DEV__ && texture !== null && 'destroyed' in texture && texture.destroyed) {
-      logger.warn(
-        'Sprite.setTexture(): the texture has already been destroy()ed — a destroyed texture samples freed state or renders nothing. Assign a live texture instead.',
-        { source: 'Sprite', once: 'sprite:set-destroyed-texture' },
-      );
-    }
+    // A destroyed texture samples freed GPU state or renders nothing, and the
+    // sprite would keep it. That is a caller bug rather than a runtime
+    // condition, so it fails unconditionally — a dev-only warning would let
+    // production take the texture anyway and fail silently there.
+    invariant(
+      texture === null || !('destroyed' in texture) || !texture.destroyed,
+      'Sprite.setTexture(): the texture has already been destroy()ed — a destroyed texture samples freed state or renders nothing. Assign a live texture instead.',
+    );
 
     if (this._texture !== texture) {
       this._texture = texture;

@@ -912,7 +912,34 @@ export class AssetResidency {
 
     const path = explicitPath ?? alias;
 
-    return this._trackInFlight(type, alias, this._decoder._dispatchFetch(type, alias, path, options));
+    return this._dispatchTracked(type, alias, path, options);
+  }
+
+  /**
+   * Dispatch a fetch and place it under in-flight tracking.
+   *
+   * `_dispatchFetch` can fail *synchronously* — it copies the caller's fetch
+   * options into the handler config, so an option object with a throwing getter
+   * fails before any promise exists. Every real 404 or decode error fails
+   * asynchronously instead, which is why this path stayed unnoticed.
+   *
+   * Turning that throw into a rejection keeps every failure on the single path
+   * {@link _onTrackedFailure} observes. Letting it escape strands deferred
+   * handles and value refs in `'loading'` with no later `get()` able to heal
+   * them, and from the background queue it is worse still: the throw escapes
+   * before the caller attaches its `.finally()`, so the concurrency slot is
+   * never released and the queue wedges.
+   */
+  private _dispatchTracked(type: AssetConstructor, alias: string, path: string, options: unknown): Promise<unknown> {
+    let fetch: Promise<unknown>;
+
+    try {
+      fetch = this._decoder._dispatchFetch(type, alias, path, options);
+    } catch (error: unknown) {
+      fetch = Promise.reject(this._normalizeError(error));
+    }
+
+    return this._trackInFlight(type, alias, fetch);
   }
 
   /**
@@ -1281,7 +1308,7 @@ export class AssetResidency {
   private _startBackgroundEntry(entry: QueueEntry): void {
     this._backgroundActive++;
 
-    this._trackInFlight(entry.type, entry.alias, this._decoder._dispatchFetch(entry.type, entry.alias, entry.path, entry.options))
+    this._dispatchTracked(entry.type, entry.alias, entry.path, entry.options)
       .catch(() => {
         /* Failure handled centrally in _onTrackedFailure. */
       })

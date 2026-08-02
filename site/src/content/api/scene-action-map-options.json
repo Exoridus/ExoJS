@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "when",
-          "signature": "when?: SceneInputAvailability",
+          "signature": "when?: SceneAvailability",
           "signatureTokens": [
             {
               "text": "when",
@@ -45,7 +45,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "SceneInputAvailability",
+              "text": "SceneAvailability",
               "kind": "type"
             }
           ],

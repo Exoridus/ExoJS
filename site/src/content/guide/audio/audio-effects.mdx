@@ -276,7 +276,9 @@ application.audio.master.addEffect(limiter);
 
 ### ConvolutionEffect
 
-Convolves the signal with a real impulse response instead of `ReverbEffect`'s procedurally generated one — useful for captured spaces, cabinet/speaker simulation, or telephone-style filtering. Pass a decoded `AudioBuffer` or a loaded `Sound`; call `setImpulse()` to swap the IR later:
+Convolves the signal with a real impulse response instead of `ReverbEffect`'s procedurally generated one — useful for captured spaces, cabinet/speaker simulation, or telephone-style filtering. Pass a decoded `AudioBuffer` or a loaded `Sound`; call `setImpulse()` to swap the IR later.
+
+An impulse response is just an audio file, so it loads like any other sound — there is no separate asset type for it. Load it with `Asset.type('sound', 'ir/concert-hall.wav')` (or as a catalog leaf) and hand the result straight to the effect:
 
 ```ts
 import { type Application, Sound } from '@codexo/exojs';
@@ -288,6 +290,10 @@ declare const hall: Sound;
 const convReverb = new ConvolutionEffect({ impulse: hall, wet: 0.6 });
 application.audio.master.addEffect(convReverb);
 ```
+
+<Callout type="hint" title="Keep impulse responses short">
+Convolution cost scales with IR length. A two-second hall is already expensive on a busy bus; trim captures to the tail you actually need, and prefer one shared `ConvolutionEffect` on a bus over per-voice instances.
+</Callout>
 
 ## Worklet-based effects
 

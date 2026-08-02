@@ -143,11 +143,18 @@ describe('Application app-system extension bindings (Slice F)', () => {
     expect(order).toEqual(['user', 'extension']);
   });
 
-  test('a renderer-only extension is unaffected — app.systems stays empty', () => {
+  test('a renderer-only extension adds no system of its own', () => {
     const ext: Extension = { id: 'renderer-only', renderers: [] };
+    const baseline = new Application({ backend: { type: 'webgl2' } });
+    const coreSystemCount = baseline.systems.size;
+
+    baseline.destroy();
+
     const app = new Application({ backend: { type: 'webgl2' }, extensions: [ext] });
 
-    expect(app.systems.size).toBe(0);
+    // The engine's own core managers are always registered; the extension
+    // contributes nothing on top of them.
+    expect(app.systems.size).toBe(coreSystemCount);
     app.destroy();
   });
 });

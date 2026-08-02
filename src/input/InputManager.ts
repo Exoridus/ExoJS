@@ -537,12 +537,14 @@ export class InputManager {
   }
 
   /**
-   * Per-frame entry point invoked by {@link Application.update}. Polls
-   * the gamepad API, drains queued keyboard/pointer/wheel deltas into
-   * the channel buffer, fires the corresponding Signals, then evaluates
-   * each registered binding.
+   * {@link SystemMethods.preUpdate} phase, registered on `app.systems` by the
+   * {@link Application} at {@link SystemOrder.CoreInput} — ahead of every other
+   * core system, so this frame's snapshot is current before anything
+   * simulates. Polls the gamepad API, drains queued keyboard/pointer/wheel
+   * deltas into the channel buffer, fires the corresponding Signals, then
+   * evaluates each registered binding.
    */
-  public update(_delta: Time): void {
+  public preUpdate(_delta: Time): void {
     for (const pointer of this.pointers.values()) {
       pointer._beginFrame();
     }
@@ -570,15 +572,6 @@ export class InputManager {
     // where it is read — every action within the frame must see the same
     // sequence, and the next frame starts from an empty log.
     this.frameBatches.length = 0;
-  }
-
-  /**
-   * @internal Invoked once per frame by {@link Application.update}'s
-   * internal prepare stage, ahead of fixed steps — not a public
-   * {@link System} phase. Thin wrapper over {@link InputManager.update}.
-   */
-  public _prepareFrame(delta: Time): void {
-    this.update(delta);
   }
 
   public destroy(): void {

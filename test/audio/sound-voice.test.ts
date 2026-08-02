@@ -402,7 +402,7 @@ describe('SoundVoice — capabilities', () => {
 
     expect(pannerSpy.panners.length).toBe(1);
 
-    manager.update();
+    manager.preUpdate();
 
     expect(node.getWorldTransform).toHaveBeenCalled();
     expect(pannerSpy.panners[0].positionX.setValueAtTime).toHaveBeenCalledWith(10, expect.any(Number));

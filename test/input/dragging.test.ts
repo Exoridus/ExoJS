@@ -72,6 +72,7 @@ const createApp = (dragThreshold?: number): { app: Application; scene: Scene; si
     onContextMenu: new Signal<[ContextMenuRequest]>(),
     onKeyDown: new Signal<[number]>(),
     onKeyUp: new Signal<[number]>(),
+    _finishInteractionFrame: (): void => undefined,
   };
   const canvas = document.createElement('canvas');
 
@@ -124,7 +125,7 @@ describe('drag threshold', () => {
     sprite.onDragStart.add(started);
 
     dispatchPointer(signals.onPointerDown, 50, 50);
-    im.update();
+    im.preUpdate();
 
     expect(started).not.toHaveBeenCalled();
     expect(im.getCapturedNodes()).toEqual([]);
@@ -143,10 +144,10 @@ describe('drag threshold', () => {
     sprite.onDrag.add(dragged);
 
     dispatchPointer(signals.onPointerDown, 50, 50);
-    im.update();
+    im.preUpdate();
 
     dispatchPointer(signals.onPointerMove, 54, 52, 5);
-    im.update();
+    im.preUpdate();
 
     expect(started).not.toHaveBeenCalled();
     expect(dragged).not.toHaveBeenCalled();
@@ -164,10 +165,10 @@ describe('drag threshold', () => {
     sprite.onDragStart.add(started);
 
     dispatchPointer(signals.onPointerDown, 50, 50);
-    im.update();
+    im.preUpdate();
 
     dispatchPointer(signals.onPointerMove, 70, 50, 20);
-    im.update();
+    im.preUpdate();
 
     expect(started).toHaveBeenCalledTimes(1);
     expect(im.getCapturedNodes()).toEqual([sprite]);
@@ -184,11 +185,11 @@ describe('drag threshold', () => {
     sprite.onDragStart.add(started);
 
     dispatchPointer(signals.onPointerDown, 50, 50);
-    im.update();
+    im.preUpdate();
     dispatchPointer(signals.onPointerMove, 70, 50, 20);
-    im.update();
+    im.preUpdate();
     dispatchPointer(signals.onPointerMove, 90, 50, 40);
-    im.update();
+    im.preUpdate();
 
     expect(started).toHaveBeenCalledTimes(1);
 
@@ -204,14 +205,14 @@ describe('drag threshold', () => {
     sprite.onDragStart.add(started);
 
     dispatchPointer(signals.onPointerDown, 50, 50);
-    im.update();
+    im.preUpdate();
 
     dispatchPointer(signals.onPointerMove, 70, 50, 20);
-    im.update();
+    im.preUpdate();
     expect(started).not.toHaveBeenCalled();
 
     dispatchPointer(signals.onPointerMove, 90, 50, 40);
-    im.update();
+    im.preUpdate();
     expect(started).toHaveBeenCalledTimes(1);
 
     im.destroy();
@@ -228,10 +229,10 @@ describe('tap after drag', () => {
     sprite.onPointerTap.add(tapped);
 
     dispatchPointer(signals.onPointerDown, 50, 50);
-    im.update();
+    im.preUpdate();
     dispatchPointer(signals.onPointerUp, 52, 50, 2);
     dispatchPointer(signals.onPointerTap, 52, 50, 2);
-    im.update();
+    im.preUpdate();
 
     expect(tapped).toHaveBeenCalledTimes(1);
 
@@ -249,13 +250,13 @@ describe('tap after drag', () => {
     sprite.onDragEnd.add(ended);
 
     dispatchPointer(signals.onPointerDown, 50, 50);
-    im.update();
+    im.preUpdate();
     dispatchPointer(signals.onPointerMove, 90, 50, 40);
-    im.update();
+    im.preUpdate();
 
     dispatchPointer(signals.onPointerUp, 90, 50, 40);
     dispatchPointer(signals.onPointerTap, 90, 50, 40);
-    im.update();
+    im.preUpdate();
 
     expect(ended).toHaveBeenCalledTimes(1);
     expect(tapped).not.toHaveBeenCalled();
@@ -277,10 +278,10 @@ describe('parent-local positioning', () => {
 
     // Grab at world (50, 50) — parent-local (-50, 10), so the offset is (50, -10).
     dispatchPointer(signals.onPointerDown, 50, 50);
-    im.update();
+    im.preUpdate();
 
     dispatchPointer(signals.onPointerMove, 150, 90, 108);
-    im.update();
+    im.preUpdate();
 
     // World (150, 90) is parent-local (50, 50); plus the grab offset → (100, 40).
     expect(sprite.position.x).toBeCloseTo(100);
@@ -300,11 +301,11 @@ describe('parent-local positioning', () => {
     parent.getWorldTransform();
 
     dispatchPointer(signals.onPointerDown, 0, 0);
-    im.update();
+    im.preUpdate();
 
     // 40 world pixels are 20 parent-local pixels under a 2× parent.
     dispatchPointer(signals.onPointerMove, 40, 40, 56);
-    im.update();
+    im.preUpdate();
 
     expect(sprite.position.x).toBeCloseTo(20);
     expect(sprite.position.y).toBeCloseTo(20);
@@ -326,11 +327,11 @@ describe('reentrancy: node removed/destroyed inside its own handler', () => {
     sprite.onPointerDown.add(() => sprite.destroy());
 
     dispatchPointer(signals.onPointerDown, 50, 50);
-    im.update();
+    im.preUpdate();
 
     expect(() => {
       dispatchPointer(signals.onPointerMove, 90, 50, 40);
-      im.update();
+      im.preUpdate();
     }).not.toThrow();
 
     expect(started).not.toHaveBeenCalled();
@@ -349,10 +350,10 @@ describe('reentrancy: node removed/destroyed inside its own handler', () => {
     sprite.onPointerDown.add(() => scene.removeChild(sprite));
 
     dispatchPointer(signals.onPointerDown, 50, 50);
-    im.update();
+    im.preUpdate();
 
     dispatchPointer(signals.onPointerMove, 90, 50, 40);
-    im.update();
+    im.preUpdate();
 
     expect(started).not.toHaveBeenCalled();
     expect(im.getCapturedNodes()).toEqual([]);
@@ -370,13 +371,13 @@ describe('reentrancy: node removed/destroyed inside its own handler', () => {
     sprite.onDrag.add(dragged);
 
     dispatchPointer(signals.onPointerDown, 50, 50);
-    im.update();
+    im.preUpdate();
 
     // This move promotes the candidate, fires dragstart (which destroys the
     // node), and must not then reposition it or fire `drag`.
     expect(() => {
       dispatchPointer(signals.onPointerMove, 90, 50, 40);
-      im.update();
+      im.preUpdate();
     }).not.toThrow();
 
     expect(dragged).not.toHaveBeenCalled();
@@ -385,7 +386,7 @@ describe('reentrancy: node removed/destroyed inside its own handler', () => {
     // A further move must not resurrect stale state or throw either.
     expect(() => {
       dispatchPointer(signals.onPointerMove, 120, 50, 40);
-      im.update();
+      im.preUpdate();
     }).not.toThrow();
 
     im.destroy();
@@ -403,12 +404,12 @@ describe('reentrancy: node removed/destroyed inside its own handler', () => {
     });
 
     dispatchPointer(signals.onPointerDown, 50, 50);
-    im.update();
+    im.preUpdate();
 
     // Promotes, fires dragstart, then the first `drag` tick — which destroys
     // the node from inside its own handler.
     dispatchPointer(signals.onPointerMove, 90, 50, 40);
-    im.update();
+    im.preUpdate();
 
     expect(dragged).toHaveBeenCalledTimes(1);
     expect(im.getCapturedNodes()).toEqual([]);
@@ -416,7 +417,7 @@ describe('reentrancy: node removed/destroyed inside its own handler', () => {
     // A further move must find no captured node left to move or tick again.
     expect(() => {
       dispatchPointer(signals.onPointerMove, 120, 50, 40);
-      im.update();
+      im.preUpdate();
     }).not.toThrow();
 
     expect(dragged).toHaveBeenCalledTimes(1);
@@ -434,13 +435,13 @@ describe('reentrancy: node removed/destroyed inside its own handler', () => {
     sprite.onPointerUp.add(() => sprite.destroy());
 
     dispatchPointer(signals.onPointerDown, 50, 50);
-    im.update();
+    im.preUpdate();
     dispatchPointer(signals.onPointerMove, 90, 50, 40);
-    im.update();
+    im.preUpdate();
 
     expect(() => {
       dispatchPointer(signals.onPointerUp, 90, 50, 40);
-      im.update();
+      im.preUpdate();
     }).not.toThrow();
 
     // The node was already gone by the time dragend would have fired.
@@ -463,9 +464,9 @@ describe('reentrancy: node removed/destroyed inside its own handler', () => {
     sprite.onDragEnd.add(() => other.destroy());
 
     dispatchPointer(signals.onPointerDown, 50, 50);
-    im.update();
+    im.preUpdate();
     dispatchPointer(signals.onPointerMove, 90, 50, 40);
-    im.update();
+    im.preUpdate();
 
     // Release ends the drag (firing dragend, which destroys `other`), then a
     // tap-shaped release/tap pair over `other` shares the SAME flush.
@@ -473,7 +474,7 @@ describe('reentrancy: node removed/destroyed inside its own handler', () => {
       dispatchPointer(signals.onPointerUp, 90, 50, 40);
       dispatchPointer(signals.onPointerDown, 250, 50);
       dispatchPointer(signals.onPointerTap, 250, 50);
-      im.update();
+      im.preUpdate();
     }).not.toThrow();
 
     expect(otherTap).not.toHaveBeenCalled();

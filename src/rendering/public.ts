@@ -32,7 +32,18 @@ export type { RenderStats } from './RenderStats';
 export { createRenderStats, resetRenderStats } from './RenderStats';
 export { RenderTarget } from './RenderTarget';
 export { RetainedContainer } from './RetainedContainer';
-export { BlendModes, BufferTypes, BufferUsage, isAdvancedBlendMode, RenderingPrimitives, ScaleModes, ShaderPrimitives, WrapModes } from './types';
+export type { ColorTextureFormat } from './types';
+export {
+  BlendModes,
+  BufferTypes,
+  BufferUsage,
+  isAdvancedBlendMode,
+  RenderingPrimitives,
+  ScaleModes,
+  ShaderPrimitives,
+  TextureFormat,
+  WrapModes,
+} from './types';
 export type { ViewFollowOptions, ViewFollowTarget, ViewOptions, ViewShakeOptions } from './View';
 export { View, ViewFlags } from './View';
 export type { BlurFilterOptions } from '#rendering/filters/BlurFilter';

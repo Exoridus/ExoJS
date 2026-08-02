@@ -42,15 +42,15 @@ describe('AudioManager.update()', () => {
     vi.restoreAllMocks();
   });
 
-  // 1. mixer.update() ticks listener
+  // 1. mixer.preUpdate() ticks listener
   test('update() calls listener._tick()', () => {
     const mixer = new AudioManager();
     const tickSpy = vi.spyOn(mixer.listener, '_tick');
-    mixer.update();
+    mixer.preUpdate();
     expect(tickSpy).toHaveBeenCalledTimes(1);
   });
 
-  // 2. mixer.update() ticks all registered spatial voices
+  // 2. mixer.preUpdate() ticks all registered spatial voices
   test('update() calls _tickSpatial() on all registered spatial voices', () => {
     const pannerSpy = setupPannerSpy();
     const mixer = new AudioManager();
@@ -63,7 +63,7 @@ describe('AudioManager.update()', () => {
     const tick1 = vi.spyOn(voice1, '_tickSpatial');
     const tick2 = vi.spyOn(voice2, '_tickSpatial');
 
-    mixer.update();
+    mixer.preUpdate();
 
     expect(tick1).toHaveBeenCalledTimes(1);
     expect(tick2).toHaveBeenCalledTimes(1);
@@ -80,19 +80,16 @@ describe('AudioManager.update()', () => {
     // sound.position remains null — not spatial
     const voice = mixer.play(sound) as SoundVoice;
     const tickSpy = vi.spyOn(voice, '_tickSpatial');
-    mixer.update();
+    mixer.preUpdate();
     expect(tickSpy).not.toHaveBeenCalled();
     sound.destroy();
   });
 
-  // 4. Application.update() drives the internal prepare stage — input,
-  // interaction, then input._finishInteractionFrame() (deferred pointer
-  // retirement, run once interaction dispatch has finished with them),
-  // audio, tweens, rendering, in that fixed relative order — ahead of fixed
-  // steps. The core managers are no longer app systems (they no longer
-  // occupy `app.systems`), so this stubs each manager's `_prepareFrame`
-  // directly rather than going through the registry.
-  test('Application.update() drives the internal prepare stage in the historical core-manager order', async () => {
+  // 4. The engine's own core managers run as `preUpdate` systems, ahead of the
+  // fixed steps, in a fixed relative order pinned by their `SystemOrder.Core*`
+  // values: input, interaction (which retires the pointers input flagged
+  // terminal, in its own `finally`), audio, tweens, rendering.
+  test('Application.update() runs the core managers in order at the head of preUpdate', async () => {
     vi.resetModules();
 
     const callOrder: string[] = [];
@@ -107,11 +104,12 @@ describe('AudioManager.update()', () => {
 
     const { Application, ApplicationStatus } = await import('#core/Application');
     const { SystemRegistry } = await import('#core/SystemRegistry');
+    const { SystemOrder } = await import('#core/SystemOrder');
 
     const app = Object.create(Application.prototype) as import('#core/Application').Application;
     const rawApp = app as unknown as Record<string, unknown>;
 
-    const prepareStub = (name: string): { _prepareFrame: () => void } => ({ _prepareFrame: () => callOrder.push(name) });
+    const preUpdateStub = (name: string): { preUpdate: () => void } => ({ preUpdate: () => callOrder.push(name) });
 
     rawApp['_status'] = ApplicationStatus.Running;
     rawApp['_frameLoopActive'] = true;
@@ -121,6 +119,7 @@ describe('AudioManager.update()', () => {
     rawApp['scenes'] = {
       _beginFrame: vi.fn(),
       _endFrame: vi.fn(),
+      preUpdate: vi.fn(),
       fixedUpdate: vi.fn(),
       update: vi.fn(),
       draw: vi.fn(),
@@ -128,11 +127,27 @@ describe('AudioManager.update()', () => {
       _transitionPlacement: vi.fn(() => null),
       _renderTransition: vi.fn(),
     };
-    rawApp['input'] = { ...prepareStub('input'), _finishInteractionFrame: () => callOrder.push('finishInteraction') };
-    rawApp['interaction'] = prepareStub('interaction');
-    rawApp['_audio'] = prepareStub('audio');
-    rawApp['tweens'] = prepareStub('tweens');
-    rawApp['_rendering'] = prepareStub('rendering');
+    rawApp['input'] = { ...preUpdateStub('input'), _finishInteractionFrame: () => callOrder.push('finishInteraction') };
+    rawApp['interaction'] = {
+      preUpdate: (): void => {
+        callOrder.push('interaction');
+        (rawApp['input'] as { _finishInteractionFrame: () => void })._finishInteractionFrame();
+      },
+    };
+    rawApp['_audio'] = preUpdateStub('audio');
+    rawApp['tweens'] = preUpdateStub('tweens');
+    rawApp['_rendering'] = preUpdateStub('rendering');
+
+    // The constructor is bypassed here, so register the stubs the same way it
+    // would — same order values, same phase restriction.
+    const registry = rawApp['systems'] as InstanceType<typeof SystemRegistry>;
+    const preUpdateOnly = ['preUpdate'] as const;
+
+    registry.add(rawApp['input'] as never, { order: SystemOrder.CoreInput, phases: preUpdateOnly });
+    registry.add(rawApp['interaction'] as never, { order: SystemOrder.CoreInteraction, phases: preUpdateOnly });
+    registry.add(rawApp['_audio'] as never, { order: SystemOrder.CoreAudio, phases: preUpdateOnly });
+    registry.add(rawApp['tweens'] as never, { order: SystemOrder.CoreTweens, phases: preUpdateOnly });
+    registry.add(rawApp['_rendering'] as never, { order: SystemOrder.CoreRendering, phases: preUpdateOnly });
     rawApp['_backend'] = {
       flush: vi.fn(),
       resetStats: vi.fn().mockReturnThis(),
@@ -164,7 +179,7 @@ describe('AudioManager.update()', () => {
     const voice = mixer.play(sound, { position: { x: 0, y: 0 } });
     voice.stop(); // mark ended
 
-    expect(() => mixer.update()).not.toThrow();
+    expect(() => mixer.preUpdate()).not.toThrow();
     pannerSpy.restore();
     sound.destroy();
   });

@@ -1,4 +1,3 @@
-import { logger } from '#core/logging';
 import { Rectangle } from '#math/Rectangle';
 import { Vector } from '#math/Vector';
 import { Sprite } from '#rendering/sprite/Sprite';
@@ -120,35 +119,38 @@ describe('Sprite', () => {
     });
   });
 
-  // Binding a destroyed texture is otherwise silent — warn once (dev) at
-  // the assignment site. Asserted via a sink (honours the logger's `once` dedup).
+  // Assigning a destroyed texture samples freed GPU state or renders nothing.
+  // It is a caller bug, not a runtime condition, so it fails in every build
+  // rather than warning in dev and taking the texture anyway.
   describe('destroyed-texture guard', () => {
     const destroyedTexture = (): Texture => ({ width: 16, height: 16, flipY: false, destroyed: true, updateSource: () => undefined }) as unknown as Texture;
 
-    let entries: string[];
-    let removeSink: () => void;
-
-    beforeEach(() => {
-      logger._resetOnce();
-      entries = [];
-      removeSink = logger.addSink(e => entries.push(e.message));
+    test('throws when a destroyed texture is assigned', () => {
+      expect(() => new Sprite(null).setTexture(destroyedTexture())).toThrow(/destroy\(\)ed/);
     });
 
-    afterEach(() => removeSink());
+    test('throws for the texture setter too', () => {
+      const sprite = new Sprite(null);
 
-    const destroyedCount = (): number => entries.filter(m => m.includes('destroyed')).length;
-
-    test('warns once when a destroyed texture is assigned', () => {
-      new Sprite(null).setTexture(destroyedTexture());
-      new Sprite(null).setTexture(destroyedTexture());
-
-      expect(destroyedCount()).toBe(1); // once, despite two destroyed assignments
+      expect(() => {
+        sprite.texture = destroyedTexture();
+      }).toThrow(/destroy\(\)ed/);
     });
 
-    test('does not warn for a live texture', () => {
-      new Sprite(makeTexture(16, 16));
+    test('throws when a destroyed texture is passed to the constructor', () => {
+      expect(() => new Sprite(destroyedTexture())).toThrow(/destroy\(\)ed/);
+    });
 
-      expect(destroyedCount()).toBe(0);
+    test('leaves the previous texture in place when the assignment is rejected', () => {
+      const live = makeTexture(16, 16);
+      const sprite = new Sprite(live);
+
+      expect(() => sprite.setTexture(destroyedTexture())).toThrow();
+      expect(sprite.texture).toBe(live);
+    });
+
+    test('accepts a live texture', () => {
+      expect(() => new Sprite(makeTexture(16, 16))).not.toThrow();
     });
   });
 

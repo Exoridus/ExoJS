@@ -421,6 +421,53 @@
           "description": "Release the scope token identifies — a targeted removal wherever it sits in the stack, never a rebuild of the entries above or below it (see pushScope). Idempotent: releasing an already-released or unknown token is a no-op, so a caller never needs to track whether it already let go of a scope."
         },
         {
+          "name": "preUpdate",
+          "signature": "preUpdate(_delta: Time): void",
+          "signatureTokens": [
+            {
+              "text": "preUpdate",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "_delta",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Time",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "_delta",
+              "type": "Time",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "SystemMethods.preUpdate phase: dispatch this frame's node-level pointer events, then retire the pointers InputManager flagged terminal. Registered on app.systems by the Application at SystemOrder.CoreInteraction, directly after InputManager. The retirement runs in a finally because node-level dispatch above may still reference pointers flagged terminal this flush; only once it has drained is destroying them safe — and it must still happen if a node handler threw. Keeping both halves inside this one phase is what lets the pair be a single system: order alone could not express \"B runs after A even when A throws\"."
+        },
+        {
           "name": "pushScope",
           "signature": "pushScope(root: RenderNode): object",
           "signatureTokens": [
@@ -466,53 +513,6 @@
           ],
           "returnType": "object",
           "description": "Confine interaction to root's subtree until it is released via popScope with the returned token. Pointer events outside the subtree hit nothing, Tab traversal stays inside it, and — since the scope is a real focus trap — so does every programmatic InteractionManager.focus call; a modal dialog (optionally with a full-screen backdrop to swallow clicks) shields everything beneath it. Scopes stack — the most recently pushed one wins — and nest freely with scopes pushed at any other level (app-wide or scene-scoped alike). A scope is not what makes a node interactive; node.interactive = true alone does that. Nor is it the browser pointer-capture taken during a drag, which is a private implementation detail. Prefer scene.interaction.scope() when the scope should end with its scene."
-        },
-        {
-          "name": "update",
-          "signature": "update(_delta: Time): void",
-          "signatureTokens": [
-            {
-              "text": "update",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "_delta",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Time",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "_delta",
-              "type": "Time",
-              "optional": false
-            }
-          ],
-          "returnType": "void",
-          "description": "Process all pending pointer events accumulated since the last frame. Must be called once per frame from Application.update, after input.update() has run (so signals are already dispatched and queued here) and before game-state updates so that user listeners on onPointerDown etc. fire before per-frame logic mutates state. The dirty flag ensures this is a no-op on frames with no pointer activity; every signal handler that enqueues an event sets _dirty = true, and update() clears it at the top before draining the queue. Gated by the active scope's SceneState (only Active dispatches — pause does not gate interaction; Preparing/Suspended/Destroying/ Destroyed/no-scene do not dispatch) and by the director's transition gate (definition §13.6) — gated frames discard the pending queue rather than deferring it, so a pointer-down queued before a transition never replays once it clears."
         }
       ],
       "paragraphs": [],

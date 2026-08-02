@@ -47,7 +47,7 @@ function createFakeSeamlessAdapter(): SeamlessAdapter<unknown> & { states: WeakM
 function createResidency(overrides: { cacheStrategy?: CacheStrategy; concurrency?: number } = {}) {
   const typeRegistry = new AssetTypeRegistry();
   const strategy = overrides.cacheStrategy ?? createFakeStrategy();
-  const decoder = new AssetDecoder(fakeLoader, typeRegistry, (type, alias, resource) => residency._storeResource(type, alias, resource), {
+  const decoder = new AssetDecoder(fakeLoader, typeRegistry, {
     basePath: '',
     fetchOptions: {},
     stores: [],
@@ -63,6 +63,8 @@ function createResidency(overrides: { cacheStrategy?: CacheStrategy; concurrency
     { onProgress, onLoaded, onError } as unknown as AssetResidencySignals,
     overrides.concurrency ?? 6,
   );
+
+  decoder._bindResourceStore((type, alias, resource) => residency._storeResource(type, alias, resource));
 
   return { residency, typeRegistry, decoder, strategy, onProgress, onLoaded, onError };
 }

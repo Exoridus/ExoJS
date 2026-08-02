@@ -1,5 +1,6 @@
 import type { RenderingContext } from '#rendering/RenderingContext';
 
+import { logger } from './logging';
 import { Signal } from './Signal';
 import { hookOwnerName, requireSynchronousHook } from './syncHooks';
 import type { System } from './System';
@@ -18,7 +19,21 @@ export interface SystemRegistrationOptions {
   readonly before?: readonly System[];
   /** Systems this one must run after. See {@link SystemRegistrationOptions.before}. */
   readonly after?: readonly System[];
+  /**
+   * Restrict this registration to the named phases. By default a system takes
+   * part in every phase whose method it defines, which is what almost every
+   * system wants.
+   *
+   * Pass this when an object happens to carry a method whose name matches a
+   * phase without meaning to be that phase — a controller with its own
+   * `update()` that should only draw, say. Naming a phase the system does not
+   * implement is ignored.
+   */
+  readonly phases?: readonly SystemPhase[];
 }
+
+/** The scheduler phases a {@link System} can be registered for, in dispatch order. */
+export type SystemPhase = 'preUpdate' | 'fixedUpdate' | 'update' | 'draw';
 
 interface SystemRegistration {
   readonly system: System;
@@ -160,7 +175,7 @@ const removeRegistration = (list: SystemRegistration[], registration: SystemRegi
  * Phase-dispatching registry of {@link System}s, shared by `Scene` (as
  * `scene.systems`) and `Application` (as `app.systems`). Each system
  * participates only in the scheduler phases it implements
- * (`fixedUpdate`/`update`/`draw`); within a phase, systems run in ascending
+ * (`preUpdate`/`fixedUpdate`/`update`/`draw`); within a phase, systems run in ascending
  * `order` (ties keep registration order) and are destroyed in reverse
  * registration order when the registry is destroyed.
  *
@@ -185,6 +200,10 @@ const removeRegistration = (list: SystemRegistration[], registration: SystemRegi
  */
 export class SystemRegistry implements Destroyable {
   private readonly _registrations = new Map<System, SystemRegistration>();
+  /** Systems the owning Application registered as its own; removing one stops part of the engine. */
+  private readonly _coreSystems = new Set<System>();
+
+  private readonly _preUpdateList: SystemRegistration[] = [];
   private readonly _fixedList: SystemRegistration[] = [];
   private readonly _updateList: SystemRegistration[] = [];
   private readonly _drawList: SystemRegistration[] = [];
@@ -193,6 +212,7 @@ export class SystemRegistry implements Destroyable {
   private _sequence = 0;
   private _activeCount = 0;
   private _frameActive = false;
+  private _preUpdateDirty = false;
   private _fixedDirty = false;
   private _updateDirty = false;
   private _drawDirty = false;
@@ -228,6 +248,13 @@ export class SystemRegistry implements Destroyable {
    * structural cleanup and {@link SystemRegistry.onRemove}.
    */
   public remove(system: System): boolean {
+    if (__DEV__ && this._coreSystems.has(system)) {
+      logger.warn(
+        "SystemRegistry.remove(): removing one of the engine's own core systems stops that part of the engine for good — input, interaction, audio, tweens or rendering will no longer run. This is allowed on purpose, but it is almost never what you want; to reorder around one, use `before`/`after` against it instead.",
+        { source: 'SystemRegistry', once: 'systems:remove-core' },
+      );
+    }
+
     if (this._pendingAdds.has(system)) {
       this._pendingAdds.delete(system);
 
@@ -293,7 +320,47 @@ export class SystemRegistry implements Destroyable {
     this._pending.length = 0;
   }
 
-  /** @internal Dispatched once per fixed-timestep step, ahead of {@link SystemRegistry._update}. */
+  /**
+   * Register a system the owning {@link Application} owns. Identical to
+   * {@link SystemRegistry.add} apart from marking it, so that removing it later
+   * warns in development and so that the owner can take it back out at teardown
+   * without tripping that warning.
+   * @internal
+   */
+  public _addCoreSystem<T extends System>(system: T, options?: SystemRegistrationOptions): T {
+    this._coreSystems.add(system);
+
+    return this.add(system, options);
+  }
+
+  /** @internal Counterpart to {@link _addCoreSystem}: unregister without the development warning. */
+  public _removeCoreSystem(system: System): boolean {
+    this._coreSystems.delete(system);
+
+    return this.remove(system);
+  }
+
+  /** @internal Dispatched once per frame, ahead of every fixed step. */
+  public _preUpdate(delta: Time): void {
+    if (this._preUpdateList.length === 0) {
+      return;
+    }
+
+    if (this._preUpdateDirty) {
+      sortRegistrations(this._preUpdateList, this._registrations);
+      this._preUpdateDirty = false;
+    }
+
+    for (const registration of this._preUpdateList) {
+      if (registration.active) {
+        const result = registration.system.preUpdate!(delta) as unknown;
+
+        if (result !== undefined) requireSynchronousPhase(result, registration.system, 'preUpdate');
+      }
+    }
+  }
+
+  /** @internal Dispatched once per fixed-timestep step, after {@link SystemRegistry._preUpdate} and ahead of {@link SystemRegistry._update}. */
   public _fixedUpdate(step: Time): void {
     if (this._fixedList.length === 0) {
       return;
@@ -367,6 +434,7 @@ export class SystemRegistry implements Destroyable {
     }
 
     this._registrations.clear();
+    this._preUpdateList.length = 0;
     this._fixedList.length = 0;
     this._updateList.length = 0;
     this._drawList.length = 0;
@@ -390,17 +458,24 @@ export class SystemRegistry implements Destroyable {
     this._registrations.set(system, registration);
     this._activeCount++;
 
-    if (system.fixedUpdate !== undefined) {
+    const wants = (phase: SystemPhase): boolean => options?.phases === undefined || options.phases.includes(phase);
+
+    if (system.preUpdate !== undefined && wants('preUpdate')) {
+      this._preUpdateList.push(registration);
+      this._preUpdateDirty = true;
+    }
+
+    if (system.fixedUpdate !== undefined && wants('fixedUpdate')) {
       this._fixedList.push(registration);
       this._fixedDirty = true;
     }
 
-    if (system.update !== undefined) {
+    if (system.update !== undefined && wants('update')) {
       this._updateList.push(registration);
       this._updateDirty = true;
     }
 
-    if (system.draw !== undefined) {
+    if (system.draw !== undefined && wants('draw')) {
       this._drawList.push(registration);
       this._drawDirty = true;
     }
@@ -410,6 +485,7 @@ export class SystemRegistry implements Destroyable {
 
   private _finalizeRemoval(registration: SystemRegistration): void {
     this._registrations.delete(registration.system);
+    removeRegistration(this._preUpdateList, registration);
     removeRegistration(this._fixedList, registration);
     removeRegistration(this._updateList, registration);
     removeRegistration(this._drawList, registration);

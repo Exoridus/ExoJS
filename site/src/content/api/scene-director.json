@@ -6,10 +6,10 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 23,
+  "memberCount": 24,
   "counts": {
     "constructors": 1,
-    "methods": 12,
+    "methods": 13,
     "properties": 3,
     "events": 7
   },
@@ -625,6 +625,53 @@
           "description": "Transparently pre-warm a fresh instance of target into SceneState.Ready — fully prepared (load() + init() complete), but never activated. A later SceneDirector.change call for the same constructor with Object.is()-matching data consumes it automatically, skipping load()/ init() entirely. Not exclusive of an active or retained instance of the same constructor — preloading \"the next GameScene\" while a different GameScene instance is currently playing, or already retained, is fully supported. A racing second preload() call for the same constructor shares this same in-flight preparation when its data matches (Object.is()); a call with different data discards the stale entry (once its own preparation settles) and starts a fresh one with the new data — the newest call's data always wins, never silently ignored. Rejects with UnregisteredSceneError (dev builds) when target is not present in ApplicationOptions.scenes."
         },
         {
+          "name": "preUpdate",
+          "signature": "preUpdate(delta: Time): this",
+          "signatureTokens": [
+            {
+              "text": "preUpdate",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "delta",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Time",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "delta",
+              "type": "Time",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Per-frame logic entry point called by Application.update, after this frame's fixed steps: for the active scene, gated by its SceneScope state, runs update() then its systems' update phase. Dispatches SceneDirector.onUpdateScene whenever a scene is active, regardless of state. Drawing is a separate call — see SceneDirector.draw."
+        },
+        {
           "name": "restore",
           "signature": "restore(target: K, options?: RestoreSceneOptions): Promise<SceneDirector<Registry>>",
           "signatureTokens": [
@@ -970,7 +1017,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Per-frame logic entry point called by Application.update, after this frame's fixed steps: for the active scene, gated by its SceneScope state, runs update() then its systems' update phase. Dispatches SceneDirector.onUpdateScene whenever a scene is active, regardless of state. Drawing is a separate call — see SceneDirector.draw."
+          "description": ""
         }
       ],
       "paragraphs": [],
