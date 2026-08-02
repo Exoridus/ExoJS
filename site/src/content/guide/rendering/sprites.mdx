@@ -74,10 +74,12 @@ this.hero.height = 64; // scale.y becomes 64 / textureFrame.height
 `sprite.tint` is a `Color` that multiplies the sprite's pixel colors at draw time. White tint (`Color.white`) leaves the texture unchanged. A red tint mutes green and blue channels. Tinting does not allocate or create new textures:
 
 ```ts
-import { Color } from '@codexo/exojs';
+import { Color, Sprite } from '@codexo/exojs';
 
-this.hero.tint = new Color(255, 128, 128, 1); // reddish tint
-this.hero.tint = new Color(128, 128, 255, 0.8); // blue tint, 80% opacity
+declare const hero: Sprite;
+
+hero.tint = new Color(255, 128, 128, 1); // reddish tint
+hero.tint = new Color(128, 128, 255, 0.8); // blue tint, 80% opacity
 ```
 
 ## Texture frames
@@ -85,16 +87,22 @@ this.hero.tint = new Color(128, 128, 255, 0.8); // blue tint, 80% opacity
 A sprite can display a sub-region of its texture through `textureFrame`. This is the mechanism behind spritesheet frame selection:
 
 ```ts
-import { Rectangle } from '@codexo/exojs';
+import { Rectangle, Sprite } from '@codexo/exojs';
+
+declare const sprite: Sprite;
 
 // Show only the top-left 32x32 pixels of a 128x128 texture
-this.sprite.setTextureFrame(new Rectangle(0, 0, 32, 32));
+sprite.setTextureFrame(new Rectangle(0, 0, 32, 32));
 ```
 
 By default `setTextureFrame` resets the sprite's width and height to the frame's dimensions. Pass `false` as the second argument to keep the current display size — useful for animation where frame dimensions vary but the on-screen size should stay constant:
 
 ```ts
-this.sprite.setTextureFrame(new Rectangle(32, 0, 32, 32), false);
+import { Rectangle, Sprite } from '@codexo/exojs';
+
+declare const sprite: Sprite;
+
+sprite.setTextureFrame(new Rectangle(32, 0, 32, 32), false);
 ```
 
 Call `resetTextureFrame()` to restore the full texture.
@@ -104,9 +112,11 @@ Call `resetTextureFrame()` to restore the full texture.
 `sprite.blendMode` controls how the sprite composites with pixels already in the framebuffer. The default is `BlendModes.Normal` (standard alpha blending):
 
 ```ts
-import { BlendModes } from '@codexo/exojs';
+import { BlendModes, Sprite } from '@codexo/exojs';
 
-this.glow.blendMode = BlendModes.Additive;
+declare const glow: Sprite;
+
+glow.blendMode = BlendModes.Additive;
 ```
 
 Blend modes are per-sprite. Combined with tinting they cover common glow, shadow, and knock-out compositing without needing custom shaders.
@@ -141,9 +151,12 @@ Blend modes are per-sprite. Combined with tinting they cover common glow, shadow
 A [`Spritesheet`](/ExoJS/en/api/spritesheet/) slices a single texture atlas into named frames and optional animation sequences. It accepts a JSON descriptor in the Aseprite / TexturePacker format:
 
 ```ts
-import { Spritesheet } from '@codexo/exojs';
+import { Container, Spritesheet, Texture } from '@codexo/exojs';
 
-const sheet = new Spritesheet(texture, {
+declare const atlasTexture: Texture;
+declare const sceneRoot: Container;
+
+const sheet = new Spritesheet(atlasTexture, {
     frames: {
         'walk_01': { frame: { x: 0, y: 0, w: 32, h: 32 } },
         'walk_02': { frame: { x: 32, y: 0, w: 32, h: 32 } },
@@ -156,7 +169,7 @@ const sheet = new Spritesheet(texture, {
 
 // Pre-built Sprite for a single frame
 const sprite = sheet.sprites.get('walk_01');
-this.addChild(sprite);
+if (sprite) sceneRoot.addChild(sprite);
 
 // Rectangle for a single frame (useful for textureFrame)
 const frame = sheet.frames.get('walk_01');
@@ -170,10 +183,11 @@ The `animations` map feeds into `AnimatedSprite.fromSpritesheet()`, covered in t
 
 ```ts
 // Video as a sprite texture
-import { Asset, RenderTexture, Sprite, Video } from '@codexo/exojs';
+import { RenderTexture, Sprite, Video } from '@codexo/exojs';
 
-const video = await this.loader.load(Asset.type('video', 'intro.mp4'));
-const sprite = new Sprite(video.texture);
+declare const video: Video;
+const { texture: videoTexture } = video;
+const sprite = new Sprite(videoTexture);
 
 // A RenderTexture (offscreen render) as a sprite texture
 const rt = new RenderTexture(256, 256);

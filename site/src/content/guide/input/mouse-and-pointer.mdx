@@ -8,7 +8,7 @@ import Callout from '../../../components/Callout.astro';
 
 # Mouse and pointer
 
-ExoJS unifies mouse, touch, and pen input under a single pointer system built on the browser's Pointer Events API. Every pointer is represented by a [`Pointer`](/ExoJS/en/api/pointer/) instance with a canvas-pixel position, button state, pressure, tilt, and a slot index. The [`InputManager`](/ExoJS/en/api/input-manager/) tracks up to 16 simultaneous pointers — enough for ten-finger multitouch, plus a mouse, plus a pen — with no additional configuration.
+ExoJS unifies mouse, touch, and pen input under a single pointer system built on the browser's Pointer Events API. Every pointer is represented by a [`Pointer`](/ExoJS/en/api/pointer/) instance with a canvas-local design-space position, button state, pressure, tilt, and a slot index. The [`InputManager`](/ExoJS/en/api/input-manager/) tracks up to 16 simultaneous pointers — enough for ten-finger multitouch, plus a mouse, plus a pen — with no additional configuration.
 
 ## Pointer signals
 
@@ -28,16 +28,22 @@ The application's input manager emits these pointer signals:
 Each signal's callback receives the `Pointer` instance:
 
 ```ts
-app.input.onPointerMove.add(pointer => {
-    this.crosshair.position.set(pointer.x, pointer.y);
+import { type Application, Sprite } from '@codexo/exojs';
+
+declare const application: Application;
+declare const crosshair: Sprite;
+declare function placeBuilding(x: number, y: number): void;
+
+application.input.onPointerMove.add(pointer => {
+    crosshair.position.set(pointer.x, pointer.y);
 });
 
-app.input.onPointerTap.add(pointer => {
-    this.placeBuilding(pointer.x, pointer.y);
+application.input.onPointerTap.add(pointer => {
+    placeBuilding(pointer.x, pointer.y);
 });
 ```
 
-The pointer's `position` is in canvas-local pixel space — `(0, 0)` is the top-left of the canvas, regardless of CSS size or page scroll.
+The pointer's `position` is in canvas-local design space — `(0, 0)` is the top-left of the canvas, regardless of CSS size, device pixel ratio, or page scroll.
 
 <Callout type="pitfall" title="Pointer coordinates are design space, not world space">
 `pointer.x`/`pointer.y` are design-space pixels — the same coordinates whether or not the camera has panned or zoomed. Before hit-testing against world objects, run them through the active view's `screenToWorld`; using the raw values places or selects things in the wrong spot the moment the camera moves.
@@ -63,12 +69,18 @@ The signal-style API (`app.input.onPointerMove`) is typically more ergonomic for
 Each pointer gets a slot index (0–15). Per-slot channel constants let you track individual fingers for multi-touch:
 
 ```ts
-import { Pointer } from '@codexo/exojs';
+import { Pointer, Scene } from '@codexo/exojs';
 
-// Slot 1 (second finger)
-this.inputs.onActive(Pointer.Slot1X, value => {
-    this.touchX = value * this.app.width;
-});
+class TouchScene extends Scene {
+    private touchX = 0;
+
+    override init(): void {
+        // Slot 1 (second finger)
+        this.inputs.onActive(Pointer.Slot1X, value => {
+            this.touchX = value * this.app.width;
+        });
+    }
+}
 ```
 
 For most multi-touch use cases, tracking pointer instances by ID via the signal API is simpler:
@@ -102,19 +114,26 @@ init() {
 The input manager includes built-in gesture recognizers for common multi-touch patterns:
 
 ```ts
-app.input.onPinch.add((scale, center) => {
+import { type Application, Container } from '@codexo/exojs';
+
+declare const application: Application;
+declare const camera: { zoom: number };
+declare const map: Container;
+declare function showContextMenu(x: number, y: number): void;
+
+application.input.onPinch.add(scale => {
     // scale > 1 = spreading fingers, scale < 1 = pinching
-    this.camera.zoom *= scale;
+    camera.zoom *= scale;
 });
 
-app.input.onRotate.add((angleDelta, center) => {
+application.input.onRotate.add(angleDelta => {
     // angleDelta in radians — positive = clockwise rotation
-    this.map.rotate(angleDelta);
+    map.rotate(angleDelta);
 });
 
-app.input.onLongPress.add(pointer => {
+application.input.onLongPress.add(pointer => {
     // pointer held without significant movement for >= 500 ms
-    this.showContextMenu(pointer.x, pointer.y);
+    showContextMenu(pointer.x, pointer.y);
 });
 ```
 
@@ -125,7 +144,12 @@ These are high-level events built on top of the raw pointer signals. They track 
 Pointer positions are in **design space** (`0..app.width` × `0..app.height`), independent of device pixel ratio or how the canvas is displayed. To map them into scene world coordinates — for placing objects, selecting units, or aiming — pass them through the active view's `screenToWorld`, which undoes the camera's pan / zoom / rotation:
 
 ```ts
-const world = this._view.screenToWorld(pointer.x, pointer.y);
+import { Pointer, View } from '@codexo/exojs';
+
+declare const pointer: Pointer;
+declare const view: View;
+
+const world = view.screenToWorld(pointer.x, pointer.y);
 // world.x, world.y are now in scene world space
 ```
 
@@ -155,6 +179,10 @@ Setting `interactive = true` makes the sprite participate in hit testing. Settin
 The `Pointer` instance passed to every signal callback carries the properties you typically need:
 
 ```ts
+import { Pointer } from '@codexo/exojs';
+
+declare const pointer: Pointer;
+
 pointer.x, pointer.y   // design-space pixel position (0..app.width, 0..app.height)
 pointer.position       // Vector with current x and y
 pointer.buttons        // bitmask: 1=left, 2=right, 4=middle

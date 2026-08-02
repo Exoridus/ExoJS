@@ -5,12 +5,9 @@
     "audio/audio-effects.mdx": 16,
     "audio/beat-detection.mdx": 9,
     "audio/spatial-audio.mdx": 12,
-    "input/gamepad.mdx": 5,
-    "input/mouse-and-pointer.mdx": 5,
     "recipes/gameplay-collision.mdx": 8,
     "rendering/animation.mdx": 9,
     "rendering/graphics.mdx": 9,
-    "rendering/sprites.mdx": 5,
     "runtime/application.mdx": 8,
     "shipping/v0-8-x-to-v0-9-0.mdx": 5
   }

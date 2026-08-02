@@ -14,8 +14,12 @@ ExoJS manages gamepads through four stable slot mailboxes. Each slot is a [`Game
 ## The four-slot model
 
 ```ts
-const pad0 = app.input.gamepads[0];  // always exists, may be disconnected
-const pad1 = app.input.getGamepad(1); // same thing, reads more clearly
+import type { Application } from '@codexo/exojs';
+
+declare const application: Application;
+
+const pad0 = application.input.gamepads[0];  // always exists, may be disconnected
+const pad1 = application.input.getGamepad(1); // same thing, reads more clearly
 
 if (pad0.connected) {
     console.log(pad0.info.name); // e.g. "Xbox Wireless Controller"
@@ -25,10 +29,14 @@ if (pad0.connected) {
 The `gamepads` array is always length 4. Check `pad.connected` before reading pad state. Convenience accessors on the input manager:
 
 ```ts
-app.input.hasGamepad               // true when at least one pad is connected
-app.input.connectedGamepadCount    // how many slots are occupied
-app.input.firstConnectedGamepad    // first in slot order, or null
-app.input.connectedGamepads        // subset of gamepads[] that are connected
+import type { Application } from '@codexo/exojs';
+
+declare const application: Application;
+
+application.input.hasGamepad               // true when at least one pad is connected
+application.input.connectedGamepadCount    // how many slots are occupied
+application.input.firstConnectedGamepad    // first in slot order, or null
+application.input.connectedGamepads        // subset of gamepads[] that are connected
 ```
 
 <Callout type="warning" title="A gamepad is invisible until its first button press">
@@ -40,6 +48,11 @@ On most browsers a connected controller isn't reported until the user presses a 
 Subscribe to lifecycle signals at either level:
 
 ```ts
+import type { Application } from '@codexo/exojs';
+
+declare const application: Application;
+const pad0 = application.input.getGamepad(0);
+
 // Per-slot — fires only for that specific slot
 pad0.onConnect.add(() => {
     console.log('Controller connected to slot 0');
@@ -49,10 +62,10 @@ pad0.onDisconnect.add(() => {
 });
 
 // Global — fires for any slot
-app.input.onGamepadConnected.add(pad => {
+application.input.onGamepadConnected.add(pad => {
     console.log(`Controller connected to slot ${pad.slot}`);
 });
-app.input.onGamepadDisconnected.add(pad => {
+application.input.onGamepadDisconnected.add(pad => {
     console.log(`Slot ${pad.slot} disconnected`);
 });
 ```
@@ -73,20 +86,25 @@ When a compact shift occurs, `pad.onPadReassigned` fires on the receiving slot w
 The [`GamepadButton`](/ExoJS/en/api/gamepad-button/) namespace provides 24 named button channels. Buttons use cross-platform semantic names rather than per-console labels:
 
 ```ts
-import { GamepadButton } from '@codexo/exojs';
+import { Gamepad, GamepadButton } from '@codexo/exojs';
 
-const pad = app.input.getGamepad(0);
+declare const pad: Gamepad;
+declare const player: {
+    jump(): void;
+    attack(value: number): void;
+    stopAttack(): void;
+};
 
 // --- Binding-style listeners (attach to a specific pad) ---
 pad.onTrigger(GamepadButton.South, () => {
-    this.player.jump();  // A on Xbox, ✕ on PlayStation, B on Switch
+    player.jump();  // A on Xbox, ✕ on PlayStation, B on Switch
 });
 
 pad.onActive(GamepadButton.West, value => {
-    this.player.attack(value);  // X on Xbox, □ on PlayStation, Y on Switch
+    player.attack(value);  // X on Xbox, □ on PlayStation, Y on Switch
 });
 pad.onStop(GamepadButton.West, () => {
-    this.player.stopAttack();
+    player.stopAttack();
 });
 
 // --- Signal-style listeners (per-button transition events) ---
@@ -141,17 +159,22 @@ GamepadAxis.RightStickX     GamepadAxis.RightStickY
 A single signed value per axis — negative is left/up, positive is right/down. The callback receives the full -1..1 range, making a single line of code drive 2D movement:
 
 ```ts
+import { Gamepad, GamepadAxis } from '@codexo/exojs';
+
+declare const pad: Gamepad;
+const move = { x: 0, y: 0 };
+
 pad.onActive(GamepadAxis.LeftStickX, value => {
-    this.move.x = value;  // -1..1, already deadzoned
+    move.x = value;  // -1..1, already deadzoned
 });
 pad.onStop(GamepadAxis.LeftStickX, () => {
-    this.move.x = 0;
+    move.x = 0;
 });
 pad.onActive(GamepadAxis.LeftStickY, value => {
-    this.move.y = value;
+    move.y = value;
 });
 pad.onStop(GamepadAxis.LeftStickY, () => {
-    this.move.y = 0;
+    move.y = 0;
 });
 ```
 
