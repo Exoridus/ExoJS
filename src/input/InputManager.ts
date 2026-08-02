@@ -573,11 +573,12 @@ export class InputManager {
   }
 
   /**
-   * @internal Invoked once per frame by {@link Application.update}'s
-   * internal prepare stage, ahead of fixed steps — not a public
-   * {@link System} phase. Thin wrapper over {@link InputManager.update}.
+   * {@link SystemMethods.preUpdate} phase: build this frame's input snapshot
+   * before any simulation runs. Registered on `app.systems` by the
+   * {@link Application} at {@link SystemOrder.CoreInput}, ahead of every other
+   * core system.
    */
-  public _prepareFrame(delta: Time): void {
+  public preUpdate(delta: Time): void {
     this.update(delta);
   }
 

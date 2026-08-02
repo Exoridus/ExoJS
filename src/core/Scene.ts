@@ -372,6 +372,23 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
   }
 
   /**
+   * Pre-simulation hook, called once per frame before this frame's fixed
+   * steps — and therefore before {@link Scene.fixedUpdate} and
+   * {@link Scene.update}. Runs after the engine's own core systems, so this
+   * frame's input snapshot is already current here.
+   *
+   * Use it for state the simulation must see this frame rather than next:
+   * feeding networked or replayed input, resolving intents before physics
+   * consumes them. Ordinary gameplay belongs in {@link Scene.update}, which
+   * runs after the simulation. Default is a no-op. Override in subclass.
+   *
+   * Must be synchronous — see {@link Scene.update}.
+   */
+  public preUpdate(_delta: Time): Synchronous {
+    // override in subclass
+  }
+
+  /**
    * Fixed-timestep logic hook. Called zero or more times per frame with a
    * constant `delta` ({@link Application.fixedTimeStep}) before {@link Scene.update},
    * so physics and deterministic gameplay advance at a frame-rate-independent

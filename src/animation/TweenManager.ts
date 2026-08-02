@@ -171,7 +171,7 @@ export class TweenManager {
    * internal prepare stage, after audio and ahead of fixed steps — not a
    * public {@link System} phase. Thin wrapper over {@link TweenManager.update}.
    */
-  public _prepareFrame(delta: Time): void {
+  public preUpdate(delta: Time): void {
     this.update(delta);
   }
 

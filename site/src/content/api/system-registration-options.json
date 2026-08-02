@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 3,
+  "memberCount": 4,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 3,
+    "properties": 4,
     "events": 0
   },
   "sections": [
@@ -126,6 +126,43 @@
           "params": [],
           "returnType": null,
           "description": "Overrides System.order for this registration only."
+        },
+        {
+          "name": "phases",
+          "signature": "phases?: readonly SystemPhase[]",
+          "signatureTokens": [
+            {
+              "text": "phases",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SystemPhase",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Restrict this registration to the named phases. By default a system takes part in every phase whose method it defines, which is what almost every system wants. Pass this when an object happens to carry a method that shares a phase name without meaning to be that phase — the engine's own core managers expose a public update() for driving them manually, but participate only in preUpdate. Naming a phase the system does not implement is ignored."
         }
       ],
       "paragraphs": [],

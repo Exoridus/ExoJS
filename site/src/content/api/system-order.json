@@ -6,7 +6,7 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 4,
+  "memberCount": 9,
   "counts": {
     "constructors": 0,
     "methods": 0,
@@ -28,6 +28,71 @@
       "id": "members",
       "title": "Members",
       "members": [
+        {
+          "name": "CoreAudio",
+          "signature": "CoreAudio",
+          "signatureTokens": [
+            {
+              "text": "CoreAudio",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "CoreInput",
+          "signature": "CoreInput",
+          "signatureTokens": [
+            {
+              "text": "CoreInput",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "CoreInteraction",
+          "signature": "CoreInteraction",
+          "signatureTokens": [
+            {
+              "text": "CoreInteraction",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "CoreRendering",
+          "signature": "CoreRendering",
+          "signatureTokens": [
+            {
+              "text": "CoreRendering",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "CoreTweens",
+          "signature": "CoreTweens",
+          "signatureTokens": [
+            {
+              "text": "CoreTweens",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
         {
           "name": "Debug",
           "signature": "Debug",

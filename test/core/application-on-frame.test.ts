@@ -153,6 +153,7 @@ describe('Application.onFrame', () => {
     const sceneDirector = {
       _beginFrame: vi.fn(),
       _endFrame: vi.fn(),
+      preUpdate: vi.fn(),
       fixedUpdate: vi.fn(),
       update: vi.fn(() => {
         callOrder.push('sceneDirector.update');
@@ -185,7 +186,7 @@ describe('Application.onFrame', () => {
     rawApp['_frameLoopActive'] = true;
     rawApp['pauseOnHidden'] = false;
     rawApp['_documentVisible'] = true;
-    rawApp['systems'] = { _beginFrame: vi.fn(), _endFrame: vi.fn(), _fixedUpdate: vi.fn(), _update: vi.fn(), _draw: vi.fn() };
+    rawApp['systems'] = { _beginFrame: vi.fn(), _endFrame: vi.fn(), _preUpdate: vi.fn(), _fixedUpdate: vi.fn(), _update: vi.fn(), _draw: vi.fn() };
     rawApp['scenes'] = sceneDirector;
     rawApp['input'] = { _prepareFrame: vi.fn(), _finishInteractionFrame: vi.fn() };
     rawApp['interaction'] = { _prepareFrame: vi.fn() };

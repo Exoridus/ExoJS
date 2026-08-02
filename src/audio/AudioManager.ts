@@ -167,7 +167,7 @@ export class AudioManager {
    * not a public {@link System} phase. Thin wrapper over
    * {@link AudioManager.update}.
    */
-  public _prepareFrame(delta: Time): void {
+  public preUpdate(delta: Time): void {
     this.update(delta);
   }
 

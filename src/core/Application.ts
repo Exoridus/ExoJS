@@ -45,7 +45,8 @@ import {
 } from './SceneTypes';
 import { defaultSerializationRegistry, SerializationRegistry } from './serialization/SerializationRegistry';
 import { Signal } from './Signal';
-import { SystemRegistry } from './SystemRegistry';
+import { SystemOrder } from './SystemOrder';
+import { type SystemPhase, SystemRegistry } from './SystemRegistry';
 import { Time } from './Time';
 import { canvasSourceToDataUrl } from './utils';
 
@@ -545,6 +546,21 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this._audio._applyVisibility(visible);
     });
 
+    // The engine's own per-frame work, registered as ordinary systems in the
+    // `preUpdate` phase rather than as a separate hard-coded stage. They occupy
+    // the negative `order` range, so an application system added without an
+    // `order` runs after all of them — and `before`/`after` can name them.
+    // `phases` is explicit here: each manager also exposes a public `update()`
+    // for driving it manually, which the registry would otherwise read as an
+    // update-phase system and tick a second time per frame.
+    const preUpdateOnly: readonly SystemPhase[] = ['preUpdate'];
+
+    this.systems.add(this.input, { order: SystemOrder.CoreInput, phases: preUpdateOnly });
+    this.systems.add(this.interaction, { order: SystemOrder.CoreInteraction, phases: preUpdateOnly });
+    this.systems.add(this._audio, { order: SystemOrder.CoreAudio, phases: preUpdateOnly });
+    this.systems.add(this.tweens, { order: SystemOrder.CoreTweens, phases: preUpdateOnly });
+    this.systems.add(this._rendering, { order: SystemOrder.CoreRendering, phases: preUpdateOnly });
+
     // Every core manager exists by this point, so app-system bindings can capture references to them.
     materializeApplicationSystems(this, this._snapshot.systems);
   }
@@ -876,8 +892,13 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    *
    * Each normal frame runs, in order:
    *
-   * 1. **Internal prepare stage** (not a public phase) — input, interaction,
-   *    audio, tweens, then rendering normalize their per-frame state.
+   * 1. **Pre-update** — `app.systems` pre-update phase, then the scene's
+   *    `preUpdate()` hook and its own systems' pre-update phase. The engine's
+   *    input, interaction, audio, tween and rendering managers are ordinary
+   *    systems in this phase, pinned to the head of it by their
+   *    {@link SystemOrder} `Core*` values, so this frame's input snapshot is
+   *    current before anything simulates. An application system registered
+   *    without an explicit `order` runs after all of them.
    * 2. **Fixed steps** (zero or more) — `app.systems` fixed-update phase,
    *    `scenes.fixedUpdate()` + the scene's systems fixed-update phase,
    *    {@link Application.onFixedFrame}.
@@ -925,22 +946,11 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         this.backend.resetStats();
         this.backend.stats.rawFrameDeltaMs = rawDeltaMs;
 
-        // Internal frame setup — not a public System phase. Same relative
-        // order the core managers ticked in as (former) app systems.
-        this.input._prepareFrame(frameDelta);
-
-        try {
-          this.interaction._prepareFrame(frameDelta);
-        } finally {
-          // Node-level dispatch above may still reference pointers InputManager
-          // flagged terminal this flush; only now is it safe to destroy them —
-          // and retirement must still run if a node handler just threw.
-          this.input._finishInteractionFrame();
-        }
-
-        this._audio._prepareFrame(frameDelta);
-        this.tweens._prepareFrame(frameDelta);
-        this._rendering._prepareFrame(frameDelta);
+        // Bring per-frame state in sync before anything simulates: the engine's
+        // own input, interaction, audio, tween and rendering systems sit at the
+        // head of this phase (negative `order`), application systems follow.
+        this.systems._preUpdate(frameDelta);
+        this.scenes.preUpdate(frameDelta);
 
         // Fixed-timestep steps (0..N) for deterministic logic/physics, after input
         // so they see this frame's input and before the variable update/draw.
@@ -1352,10 +1362,19 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     }
 
     this.loader.destroy();
+
+    // The core managers run as systems but belong to the application, not to
+    // the registry — which destroys whatever is still registered when it goes
+    // down. Unregister them first so they are torn down exactly once, here, in
+    // reverse registration order.
+    this.systems.remove(this._rendering);
+    this.systems.remove(this.tweens);
+    this.systems.remove(this._audio);
+    this.systems.remove(this.interaction);
+    this.systems.remove(this.input);
+
     this.systems.destroy();
-    // Core managers are driven directly (not via `systems`, see the internal
-    // prepare stage in `update()`), so they are torn down explicitly here, in
-    // the same reverse order they used to run in as app systems.
+
     this._rendering.destroy();
     this.tweens.destroy();
     this._audio.destroy();

@@ -181,7 +181,7 @@ export class RenderingContext implements DrawContext {
    * steps — not a public {@link System} phase. Thin wrapper over
    * {@link RenderingContext.update}.
    */
-  public _prepareFrame(delta: Time): void {
+  public preUpdate(delta: Time): void {
     this.update(delta);
   }
 

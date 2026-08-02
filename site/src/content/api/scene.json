@@ -6,10 +6,10 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 29,
+  "memberCount": 30,
   "counts": {
     "constructors": 1,
-    "methods": 12,
+    "methods": 13,
     "properties": 12,
     "events": 4
   },
@@ -449,6 +449,53 @@
           ],
           "returnType": "void | Promise<void>",
           "description": "Optional asynchronous loading hook. Runs once per activation, before Scene.init: initial asset loading, activation-data-dependent asset selection, remote/storage reads, or any other work that must complete before synchronous setup. Reach the loader via this.loader (scene lifetime) or this.app.loader (app lifetime). Override in subclass."
+        },
+        {
+          "name": "preUpdate",
+          "signature": "preUpdate(_delta: Time): Synchronous",
+          "signatureTokens": [
+            {
+              "text": "preUpdate",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "_delta",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Time",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Synchronous",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "_delta",
+              "type": "Time",
+              "optional": false
+            }
+          ],
+          "returnType": "Synchronous",
+          "description": "Pre-simulation hook, called once per frame before this frame's fixed steps — and therefore before Scene.fixedUpdate and Scene.update. Runs after the engine's own core systems, so this frame's input snapshot is already current here. Use it for state the simulation must see this frame rather than next: feeding networked or replayed input, resolving intents before physics consumes them. Ordinary gameplay belongs in Scene.update, which runs after the simulation. Default is a no-op. Override in subclass. Must be synchronous — see Scene.update."
         },
         {
           "name": "removeChild",

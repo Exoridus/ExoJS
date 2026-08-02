@@ -870,6 +870,12 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * active, regardless of state. Drawing is a separate call — see
    * {@link SceneDirector.draw}.
    */
+  public preUpdate(delta: Time): this {
+    this._activeScope?.preUpdate(delta);
+
+    return this;
+  }
+
   public update(delta: Time): this {
     const scope = this._activeScope;
 

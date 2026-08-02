@@ -6,10 +6,10 @@
   "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 12,
+  "memberCount": 13,
   "counts": {
     "constructors": 1,
-    "methods": 10,
+    "methods": 11,
     "properties": 1,
     "events": 0
   },
@@ -419,6 +419,53 @@
           ],
           "returnType": "void",
           "description": "Release the scope token identifies — a targeted removal wherever it sits in the stack, never a rebuild of the entries above or below it (see pushScope). Idempotent: releasing an already-released or unknown token is a no-op, so a caller never needs to track whether it already let go of a scope."
+        },
+        {
+          "name": "preUpdate",
+          "signature": "preUpdate(delta: Time): void",
+          "signatureTokens": [
+            {
+              "text": "preUpdate",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "delta",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Time",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "delta",
+              "type": "Time",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "SystemMethods.preUpdate phase: dispatch this frame's node-level pointer events, then retire the pointers InputManager flagged terminal. Registered on app.systems by the Application at SystemOrder.CoreInteraction, directly after InputManager. The retirement runs in a finally because node-level dispatch above may still reference pointers flagged terminal this flush; only once it has drained is destroying them safe — and it must still happen if a node handler threw. Keeping both halves inside this one phase is what lets the pair be a single system: order alone could not express \"B runs after A even when A throws\"."
         },
         {
           "name": "pushScope",

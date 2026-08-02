@@ -4,9 +4,9 @@ import type { Time } from './Time';
 import type { Destroyable, Synchronous } from './types';
 
 /**
- * The three scheduler phases a {@link System} may participate in, one per
- * dispatch stage of the {@link Application} frame loop: fixed-timestep
- * simulation, variable-rate update, and rendering.
+ * The four scheduler phases a {@link System} may participate in, one per
+ * dispatch stage of the {@link Application} frame loop: pre-simulation sync,
+ * fixed-timestep simulation, variable-rate update, and rendering.
  *
  * Every phase must be synchronous. The registry dispatches them on the frame
  * path and never awaits a result, so an `async` phase is a compile error (see
@@ -15,7 +15,19 @@ import type { Destroyable, Synchronous } from './types';
  * {@link Scene.load}.
  */
 export interface SystemMethods {
-  /** Advance by one fixed-timestep `step` ({@link Application.fixedTimeStep}). Called zero or more times per frame, before {@link SystemMethods.update}. */
+  /**
+   * Advance by the variable frame `delta`, *before* this frame's fixed steps.
+   * Called once per frame, ahead of every other phase.
+   *
+   * This is where per-frame state has to be brought in sync with the incoming
+   * frame so the simulation sees it: the engine's own input, interaction,
+   * audio, tween and rendering systems all run here. Anything that must be
+   * current *before* physics runs belongs in this phase — a system reading
+   * input in {@link SystemMethods.update} would see the previous frame's
+   * snapshot, because `update` runs after the fixed steps.
+   */
+  preUpdate?(delta: Time): Synchronous;
+  /** Advance by one fixed-timestep `step` ({@link Application.fixedTimeStep}). Called zero or more times per frame, after {@link SystemMethods.preUpdate} and before {@link SystemMethods.update}. */
   fixedUpdate?(step: Time): Synchronous;
   /** Advance by the variable frame `delta`. Called once per frame, after fixed steps. */
   update?(delta: Time): Synchronous;

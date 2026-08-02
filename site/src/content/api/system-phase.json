@@ -1,0 +1,87 @@
+{
+  "title": "SystemPhase",
+  "description": "The scheduler phases a System can be registered for, in dispatch order.",
+  "symbol": "SystemPhase",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The scheduler phases a System can be registered for, in dispatch order."
+      ],
+      "importLine": "import { SystemPhase } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "SystemPhase",
+          "signature": "\"preUpdate\" | \"fixedUpdate\" | \"update\" | \"draw\"",
+          "signatureTokens": [
+            {
+              "text": "\"preUpdate\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"fixedUpdate\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"update\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"draw\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/SystemRegistry.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SystemRegistry.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/SystemRegistry.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SystemRegistry.ts"
+}

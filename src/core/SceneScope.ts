@@ -271,6 +271,18 @@ export class SceneScope<Data = unknown> {
    * unlike {@link SceneScope.draw}). Throws in every build if
    * `Scene.fixedUpdate` returns a thenable — the hook must be synchronous.
    */
+  public preUpdate(delta: Time): void {
+    if (this._state !== SceneState.Active || this._paused) {
+      return;
+    }
+
+    const preResult = this.scene.preUpdate(delta) as unknown;
+
+    if (preResult !== undefined) this._requireSynchronousFrameHook(preResult, 'preUpdate');
+
+    this.systems._preUpdate(delta);
+  }
+
   public fixedUpdate(step: Time): void {
     if (this._state !== SceneState.Active || this._paused) {
       return;

@@ -507,13 +507,24 @@ export class InteractionManager implements InteractionHooks {
   }
 
   /**
-   * @internal Invoked once per frame by {@link Application.update}'s
-   * internal prepare stage, after input and ahead of fixed steps — not a
-   * public {@link System} phase. Thin wrapper over
-   * {@link InteractionManager.update}.
+   * {@link SystemMethods.preUpdate} phase: dispatch this frame's node-level
+   * pointer events, then retire the pointers {@link InputManager} flagged
+   * terminal. Registered on `app.systems` by the {@link Application} at
+   * {@link SystemOrder.CoreInteraction}, directly after {@link InputManager}.
+   *
+   * The retirement runs in a `finally` because node-level dispatch above may
+   * still reference pointers flagged terminal this flush; only once it has
+   * drained is destroying them safe — and it must still happen if a node
+   * handler threw. Keeping both halves inside this one phase is what lets the
+   * pair be a single system: `order` alone could not express "B runs after A
+   * even when A throws".
    */
-  public _prepareFrame(delta: Time): void {
-    this.update(delta);
+  public preUpdate(delta: Time): void {
+    try {
+      this.update(delta);
+    } finally {
+      this._app.input._finishInteractionFrame();
+    }
   }
 
   /**
