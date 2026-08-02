@@ -375,6 +375,33 @@ describe('ConvolutionEffect', () => {
       convolverSpy.mockRestore();
     });
 
+    // A ConvolverNode only accepts a buffer already at its context's rate.
+    // Assets decoded before a live context exists land at the default rate, so
+    // the effect has to convert them instead of throwing.
+    it('setImpulse resamples an impulse response recorded at another rate', async () => {
+      const ctx = getAudioContext();
+      const { convolver, gainSpy, convolverSpy } = wireConvolver(ctx);
+      convolver.context = { sampleRate: 48000 } as BaseAudioContext;
+
+      const ab = ctx.createBuffer(1, 44100, 44100);
+      const effect = new ConvolutionEffect();
+
+      effect.setImpulse(ab);
+
+      // Conversion is asynchronous: the previous IR stays in place until it lands.
+      expect(convolver.buffer).not.toBe(ab);
+
+      await vi.waitFor(() => {
+        expect(convolver.buffer).not.toBeNull();
+      });
+
+      expect(convolver.buffer?.sampleRate).toBe(48000);
+
+      effect.destroy();
+      gainSpy.mockRestore();
+      convolverSpy.mockRestore();
+    });
+
     it('setImpulse resolves a Sound to its audioBuffer', () => {
       const ctx = getAudioContext();
       const { convolver, gainSpy, convolverSpy } = wireConvolver(ctx);

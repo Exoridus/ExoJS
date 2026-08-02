@@ -31,6 +31,22 @@ export interface ConvolutionEffectOptions {
   gain?: number;
 }
 
+/**
+ * Render `buffer` at `sampleRate`. Used for impulse responses, which a
+ * `ConvolverNode` only accepts at its own context's rate.
+ */
+const resampleBuffer = async (buffer: AudioBuffer, sampleRate: number): Promise<AudioBuffer> => {
+  const frames = Math.max(1, Math.ceil((buffer.length / buffer.sampleRate) * sampleRate));
+  const offline = new OfflineAudioContext(buffer.numberOfChannels, frames, sampleRate);
+  const source = offline.createBufferSource();
+
+  source.buffer = buffer;
+  source.connect(offline.destination);
+  source.start();
+
+  return offline.startRendering();
+};
+
 interface ConvolutionEffectSetup {
   readonly inputGain: GainNode;
   readonly outputGain: GainNode;
@@ -73,6 +89,9 @@ export class ConvolutionEffect extends AudioEffect {
   private _normalize: boolean;
   private _gain: number;
   private _pendingImpulse: AudioBuffer | Sound | null;
+
+  /** Bumped per impulse request so a slow resample cannot overwrite a newer IR. */
+  private _impulseGeneration = 0;
   private readonly _onAudioContextReady = (ctx: AudioContext): void => {
     onAudioContextReady.remove(this._onAudioContextReady);
     this._setupNodes(ctx);
@@ -179,15 +198,44 @@ export class ConvolutionEffect extends AudioEffect {
    * `buffer` is assigned, as required by the spec for the value to take effect.
    */
   public setImpulse(ir: AudioBuffer | Sound | null): void {
-    const resolved = this._resolveBuffer(ir);
-    if (this._setup) {
-      const { convolver } = this._setup;
-      convolver.normalize = this._normalize;
-      convolver.buffer = resolved;
-    } else {
+    const generation = ++this._impulseGeneration;
+
+    if (!this._setup) {
       // Store for application in _setupNodes once the context is ready.
       this._pendingImpulse = ir;
+      return;
     }
+
+    const resolved = this._resolveBuffer(ir);
+    const rate = this._setup.convolver.context.sampleRate;
+
+    if (resolved === null || resolved.sampleRate === rate) {
+      this._applyImpulse(resolved);
+      return;
+    }
+
+    // A `ConvolverNode` rejects any buffer that is not already at the
+    // context's sample rate — unlike an `AudioBufferSourceNode`, which
+    // resamples as it plays. Assets decoded before a live context exists land
+    // at the default rate, so an IR routinely needs a conversion pass first.
+    // The wet path keeps the previous IR until the new one is converted.
+    void resampleBuffer(resolved, rate).then(converted => {
+      // A newer impulse may have been requested while this one converted.
+      if (this._impulseGeneration === generation && this._setup) {
+        this._applyImpulse(converted);
+      }
+    });
+  }
+
+  /** Assign an IR that is known to match the context rate. */
+  private _applyImpulse(buffer: AudioBuffer | null): void {
+    if (!this._setup) return;
+
+    const { convolver } = this._setup;
+
+    // Web Audio requirement: set normalize BEFORE assigning buffer.
+    convolver.normalize = this._normalize;
+    convolver.buffer = buffer;
   }
 
   public override destroy(): void {
@@ -222,10 +270,6 @@ export class ConvolutionEffect extends AudioEffect {
 
     // Web Audio requirement: set normalize BEFORE assigning buffer.
     convolver.normalize = this._normalize;
-    if (this._pendingImpulse !== null) {
-      convolver.buffer = this._resolveBuffer(this._pendingImpulse);
-      this._pendingImpulse = null;
-    }
 
     // Dry path: input → dryGain → output
     inputGain.connect(dryGain);
@@ -237,5 +281,13 @@ export class ConvolutionEffect extends AudioEffect {
     wetGain.connect(outputGain);
 
     this._setup = { inputGain, outputGain, convolver, dryGain, wetGain };
+
+    // Now that a context exists, route any IR supplied earlier through the
+    // same path as a runtime change — including the resample it may need.
+    if (this._pendingImpulse !== null) {
+      const pending = this._pendingImpulse;
+      this._pendingImpulse = null;
+      this.setImpulse(pending);
+    }
   }
 }

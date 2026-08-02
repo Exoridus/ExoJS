@@ -370,13 +370,37 @@ class MockAudioContext {
 
 class MockOfflineAudioContext {
   public sampleRate: number;
+  public destination = {} as AudioDestinationNode;
+  private readonly _channels: number;
+  private readonly _length: number;
 
-  public constructor(_channels: number, _length: number, sampleRate: number) {
+  public constructor(channels: number, length: number, sampleRate: number) {
     this.sampleRate = sampleRate;
+    this._channels = channels;
+    this._length = length;
   }
 
   public decodeAudioData(): Promise<AudioBuffer> {
     return Promise.resolve({} as AudioBuffer);
+  }
+
+  public createBufferSource(): AudioBufferSourceNode {
+    return {
+      buffer: null,
+      connect: (): void => undefined,
+      start: (): void => undefined,
+    } as unknown as AudioBufferSourceNode;
+  }
+
+  /** Renders silence at the requested rate — enough to exercise resampling paths. */
+  public startRendering(): Promise<AudioBuffer> {
+    return Promise.resolve({
+      sampleRate: this.sampleRate,
+      length: this._length,
+      numberOfChannels: this._channels,
+      duration: this._length / this.sampleRate,
+      getChannelData: (): Float32Array => new Float32Array(this._length),
+    } as unknown as AudioBuffer);
   }
 }
 
