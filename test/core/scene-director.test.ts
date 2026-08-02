@@ -127,6 +127,7 @@ const createApplicationStub = (): ApplicationStub => {
 const tick = (manager: SceneDirector, app: ReturnType<typeof createApplicationStub>, milliseconds = 16): void => {
   const time = new Time(milliseconds);
 
+  manager.preUpdate(time);
   manager.update(time);
   manager._updateTransition(time);
   manager.draw(app.rendering);

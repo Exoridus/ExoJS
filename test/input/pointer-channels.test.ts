@@ -202,7 +202,7 @@ describe('Pointer channel buffer — slot reuse', () => {
     // undispatched.
     pointerLeave(canvas, { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
     expect(ch(im, Pointer.Slot0Active)).toBe(0);
-    im.update(0 as never);
+    im.preUpdate(0 as never);
     im._finishInteractionFrame();
 
     // Pointer 2 should land in slot 0 again (front of free-list), now that
@@ -341,7 +341,7 @@ describe('Gesture — pinch', () => {
 
     expect(pinchSpy).not.toHaveBeenCalled();
 
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     expect(pinchSpy).toHaveBeenCalledTimes(1);
     const [scale] = pinchSpy.mock.calls[0] as [number, unknown];
@@ -406,7 +406,7 @@ describe('Gesture — long press', () => {
     // next update() (the next frame boundary), not the instant the timer elapses.
     expect(longPressSpy).not.toHaveBeenCalled();
 
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     expect(longPressSpy).toHaveBeenCalledTimes(1);
 

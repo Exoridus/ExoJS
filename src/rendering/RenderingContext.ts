@@ -149,10 +149,10 @@ export class RenderingContext implements DrawContext {
   /**
    * Advance follow, shake, and bounds-constraint animations on the active
    * {@link view}, every view rendered last frame (automatic), and any
-   * {@link trackView}-ed view. Ticked once per frame via
-   * {@link Application.update}'s internal prepare stage.
+   * {@link trackView}-ed view. The {@link SystemMethods.preUpdate} phase, at
+   * {@link SystemOrder.CoreRendering} — last of the engine's core systems.
    */
-  public update(delta: Time): void {
+  public preUpdate(delta: Time): void {
     const ms = delta.milliseconds;
 
     this._view.update(ms);
@@ -173,16 +173,6 @@ export class RenderingContext implements DrawContext {
 
     // Render-usage is per-frame: clear so a view that stops being rendered stops ticking.
     this._renderedViews.clear();
-  }
-
-  /**
-   * @internal Invoked once per frame by {@link Application.update}'s
-   * internal prepare stage, last — after audio and tweens, ahead of fixed
-   * steps — not a public {@link System} phase. Thin wrapper over
-   * {@link RenderingContext.update}.
-   */
-  public preUpdate(delta: Time): void {
-    this.update(delta);
   }
 
   /**

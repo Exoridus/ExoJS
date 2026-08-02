@@ -45,8 +45,9 @@ import {
 } from './SceneTypes';
 import { defaultSerializationRegistry, SerializationRegistry } from './serialization/SerializationRegistry';
 import { Signal } from './Signal';
+import type { System } from './System';
 import { SystemOrder } from './SystemOrder';
-import { type SystemPhase, SystemRegistry } from './SystemRegistry';
+import { SystemRegistry } from './SystemRegistry';
 import { Time } from './Time';
 import { canvasSourceToDataUrl } from './utils';
 
@@ -385,6 +386,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   public readonly onError = new Signal<[error: Error]>();
   public pauseOnHidden = false;
 
+  /** The engine's own `preUpdate` systems, owned here rather than by the registry. */
+  private readonly _coreSystems: readonly System[];
+
   private readonly _updateHandler: () => void;
   private readonly _startupClock: Clock = new Clock();
   private readonly _activeClock: Clock = new Clock();
@@ -550,16 +554,13 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     // `preUpdate` phase rather than as a separate hard-coded stage. They occupy
     // the negative `order` range, so an application system added without an
     // `order` runs after all of them — and `before`/`after` can name them.
-    // `phases` is explicit here: each manager also exposes a public `update()`
-    // for driving it manually, which the registry would otherwise read as an
-    // update-phase system and tick a second time per frame.
-    const preUpdateOnly: readonly SystemPhase[] = ['preUpdate'];
+    this.systems._addCoreSystem(this.input, { order: SystemOrder.CoreInput });
+    this.systems._addCoreSystem(this.interaction, { order: SystemOrder.CoreInteraction });
+    this.systems._addCoreSystem(this._audio, { order: SystemOrder.CoreAudio });
+    this.systems._addCoreSystem(this.tweens, { order: SystemOrder.CoreTweens });
+    this.systems._addCoreSystem(this._rendering, { order: SystemOrder.CoreRendering });
 
-    this.systems.add(this.input, { order: SystemOrder.CoreInput, phases: preUpdateOnly });
-    this.systems.add(this.interaction, { order: SystemOrder.CoreInteraction, phases: preUpdateOnly });
-    this.systems.add(this._audio, { order: SystemOrder.CoreAudio, phases: preUpdateOnly });
-    this.systems.add(this.tweens, { order: SystemOrder.CoreTweens, phases: preUpdateOnly });
-    this.systems.add(this._rendering, { order: SystemOrder.CoreRendering, phases: preUpdateOnly });
+    this._coreSystems = [this.input, this.interaction, this._audio, this.tweens, this._rendering];
 
     // Every core manager exists by this point, so app-system bindings can capture references to them.
     materializeApplicationSystems(this, this._snapshot.systems);
@@ -1367,11 +1368,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     // the registry — which destroys whatever is still registered when it goes
     // down. Unregister them first so they are torn down exactly once, here, in
     // reverse registration order.
-    this.systems.remove(this._rendering);
-    this.systems.remove(this.tweens);
-    this.systems.remove(this._audio);
-    this.systems.remove(this.interaction);
-    this.systems.remove(this.input);
+    for (const system of [...this._coreSystems].reverse()) {
+      this.systems._removeCoreSystem(system);
+    }
 
     this.systems.destroy();
 

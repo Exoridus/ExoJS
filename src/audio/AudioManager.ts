@@ -148,8 +148,8 @@ export class AudioManager {
     });
   }
 
-  /** Called once per frame from Application.update(). The frame delta is unused here (hence `_delta`). */
-  public update(_delta: Time): void {
+  /** {@link SystemMethods.preUpdate} phase, at {@link SystemOrder.CoreAudio}. The frame delta is unused here (hence `_delta`). */
+  public preUpdate(_delta: Time): void {
     this.listener._tick();
     // Tick spatial voices and prune ended ones.
     for (const voice of this._spatial) {
@@ -159,16 +159,6 @@ export class AudioManager {
       }
       voice._tickSpatial();
     }
-  }
-
-  /**
-   * @internal Invoked once per frame by {@link Application.update}'s
-   * internal prepare stage, after interaction and ahead of fixed steps —
-   * not a public {@link System} phase. Thin wrapper over
-   * {@link AudioManager.update}.
-   */
-  public preUpdate(delta: Time): void {
-    this.update(delta);
   }
 
   /**

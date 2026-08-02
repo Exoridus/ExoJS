@@ -42,15 +42,15 @@ describe('AudioManager.update()', () => {
     vi.restoreAllMocks();
   });
 
-  // 1. mixer.update() ticks listener
+  // 1. mixer.preUpdate() ticks listener
   test('update() calls listener._tick()', () => {
     const mixer = new AudioManager();
     const tickSpy = vi.spyOn(mixer.listener, '_tick');
-    mixer.update();
+    mixer.preUpdate();
     expect(tickSpy).toHaveBeenCalledTimes(1);
   });
 
-  // 2. mixer.update() ticks all registered spatial voices
+  // 2. mixer.preUpdate() ticks all registered spatial voices
   test('update() calls _tickSpatial() on all registered spatial voices', () => {
     const pannerSpy = setupPannerSpy();
     const mixer = new AudioManager();
@@ -63,7 +63,7 @@ describe('AudioManager.update()', () => {
     const tick1 = vi.spyOn(voice1, '_tickSpatial');
     const tick2 = vi.spyOn(voice2, '_tickSpatial');
 
-    mixer.update();
+    mixer.preUpdate();
 
     expect(tick1).toHaveBeenCalledTimes(1);
     expect(tick2).toHaveBeenCalledTimes(1);
@@ -80,7 +80,7 @@ describe('AudioManager.update()', () => {
     // sound.position remains null — not spatial
     const voice = mixer.play(sound) as SoundVoice;
     const tickSpy = vi.spyOn(voice, '_tickSpatial');
-    mixer.update();
+    mixer.preUpdate();
     expect(tickSpy).not.toHaveBeenCalled();
     sound.destroy();
   });
@@ -179,7 +179,7 @@ describe('AudioManager.update()', () => {
     const voice = mixer.play(sound, { position: { x: 0, y: 0 } });
     voice.stop(); // mark ended
 
-    expect(() => mixer.update()).not.toThrow();
+    expect(() => mixer.preUpdate()).not.toThrow();
     pannerSpy.restore();
     sound.destroy();
   });

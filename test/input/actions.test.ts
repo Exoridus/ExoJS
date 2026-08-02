@@ -697,7 +697,7 @@ describe('ActionMap × InputManager lifecycle', () => {
     im.attach(map);
     expect(map.attached).toBe(true);
 
-    im.update(0 as never);
+    im.preUpdate(0 as never);
     expect(map.jump.active).toBe(false); // no channel activity, but no throw either
 
     im.destroy();
@@ -714,7 +714,7 @@ describe('ActionMap × InputManager lifecycle', () => {
 
     // Directly poking the action after detach must not throw, and reflects
     // whatever state the map was left at rather than being force-reset.
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     im.destroy();
   });
@@ -730,8 +730,8 @@ describe('ActionMap × InputManager lifecycle', () => {
     expect(map.attached).toBe(true);
 
     // Still tracked by `other` only — `im` must have let go of it.
-    im.update(0 as never);
-    other.update(0 as never);
+    im.preUpdate(0 as never);
+    other.preUpdate(0 as never);
 
     im.destroy();
     other.destroy();
@@ -748,7 +748,7 @@ describe('ActionMap × InputManager lifecycle', () => {
 
     imCanvas.dispatchEvent(new FocusEvent('focus'));
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     expect(map.jump.active).toBe(true);
     expect(map.jump.pressed).toBe(true);
@@ -756,7 +756,7 @@ describe('ActionMap × InputManager lifecycle', () => {
     // The map moves to a different manager — an entirely unrelated channel
     // buffer, where Space was never pressed.
     other.attach(map);
-    other.update(0 as never);
+    other.preUpdate(0 as never);
 
     expect(map.jump.active).toBe(false);
     expect(map.jump.pressed).toBe(false);
@@ -786,7 +786,7 @@ describe('ActionMap × InputManager lifecycle', () => {
 
     canvas.dispatchEvent(new FocusEvent('focus'));
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
-    im.update(0 as never);
+    im.preUpdate(0 as never);
     expect(map.jump.pressed).toBe(true);
 
     // Simulate a scene suspend: detach, reset — key stays physically held.
@@ -801,7 +801,7 @@ describe('ActionMap × InputManager lifecycle', () => {
     expect(map.jump.active).toBe(true);
     expect(map.jump.pressed).toBe(false);
 
-    im.update(0 as never);
+    im.preUpdate(0 as never);
     expect(map.jump.pressed).toBe(false); // still just held, no fresh edge
 
     im.destroy();
@@ -824,7 +824,7 @@ describe('ActionMap × InputManager lifecycle', () => {
     // the release would look like an already-0 channel instead of a real
     // 1 → 0 transition.
     window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space' }));
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     expect(map.jump.active).toBe(false);
     expect(map.jump.pressed).toBe(false);
@@ -840,7 +840,7 @@ describe('ActionMap × InputManager lifecycle', () => {
 
     canvas.dispatchEvent(new FocusEvent('focus'));
     im.attach(map);
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     map.detach();
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
@@ -851,7 +851,7 @@ describe('ActionMap × InputManager lifecycle', () => {
     // of 'baseline' and skip the re-seed entirely, misreporting the
     // already-held key as a brand-new press.
     im.attach(map);
-    im.update(0 as never);
+    im.preUpdate(0 as never);
 
     expect(map.jump.active).toBe(true);
     expect(map.jump.pressed).toBe(false);

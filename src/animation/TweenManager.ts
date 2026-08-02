@@ -146,11 +146,11 @@ export class TweenManager {
 
   /**
    * Advance all active tweens by the frame `delta` (read as seconds), then
-   * advance all registered tickers. Ticked once per frame via
-   * {@link Application.systems}. Uses snapshots so callbacks that add or
+   * advance all registered tickers. The {@link SystemMethods.preUpdate} phase,
+   * at {@link SystemOrder.CoreTweens}. Uses snapshots so callbacks that add or
    * remove tweens/tickers do not corrupt mid-iteration.
    */
-  public update(delta: Time): void {
+  public preUpdate(delta: Time): void {
     if (this._destroyed) return;
 
     const snapshot = [...this._tweens];
@@ -164,15 +164,6 @@ export class TweenManager {
     for (const ticker of tickerSnapshot) {
       ticker.update(delta.seconds);
     }
-  }
-
-  /**
-   * @internal Invoked once per frame by {@link Application.update}'s
-   * internal prepare stage, after audio and ahead of fixed steps — not a
-   * public {@link System} phase. Thin wrapper over {@link TweenManager.update}.
-   */
-  public preUpdate(delta: Time): void {
-    this.update(delta);
   }
 
   /**

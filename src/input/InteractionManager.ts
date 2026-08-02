@@ -487,7 +487,7 @@ export class InteractionManager implements InteractionHooks {
    * than deferring it, so a pointer-down queued before a transition never
    * replays once it clears.
    */
-  public update(_delta: Time): void {
+  private _dispatchFrame(): void {
     if (!this._dirty) return;
 
     const state = this._app.scenes.state;
@@ -519,9 +519,9 @@ export class InteractionManager implements InteractionHooks {
    * pair be a single system: `order` alone could not express "B runs after A
    * even when A throws".
    */
-  public preUpdate(delta: Time): void {
+  public preUpdate(_delta: Time): void {
     try {
-      this.update(delta);
+      this._dispatchFrame();
     } finally {
       this._app.input._finishInteractionFrame();
     }

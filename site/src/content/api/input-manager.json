@@ -6,10 +6,10 @@
   "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 41,
+  "memberCount": 40,
   "counts": {
     "constructors": 1,
-    "methods": 10,
+    "methods": 9,
     "properties": 8,
     "events": 22
   },
@@ -860,57 +860,10 @@
         },
         {
           "name": "preUpdate",
-          "signature": "preUpdate(delta: Time): void",
+          "signature": "preUpdate(_delta: Time): void",
           "signatureTokens": [
             {
               "text": "preUpdate",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "delta",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Time",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "delta",
-              "type": "Time",
-              "optional": false
-            }
-          ],
-          "returnType": "void",
-          "description": "SystemMethods.preUpdate phase: build this frame's input snapshot before any simulation runs. Registered on app.systems by the Application at SystemOrder.CoreInput, ahead of every other core system."
-        },
-        {
-          "name": "update",
-          "signature": "update(_delta: Time): void",
-          "signatureTokens": [
-            {
-              "text": "update",
               "kind": "name"
             },
             {
@@ -950,7 +903,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Per-frame entry point invoked by Application.update. Polls the gamepad API, drains queued keyboard/pointer/wheel deltas into the channel buffer, fires the corresponding Signals, then evaluates each registered binding."
+          "description": "SystemMethods.preUpdate phase, registered on app.systems by the Application at SystemOrder.CoreInput — ahead of every other core system, so this frame's snapshot is current before anything simulates. Polls the gamepad API, drains queued keyboard/pointer/wheel deltas into the channel buffer, fires the corresponding Signals, then evaluates each registered binding."
         }
       ],
       "paragraphs": [],

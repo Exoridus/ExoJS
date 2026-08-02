@@ -66,6 +66,7 @@ const createApp = (): {
     // InteractionManager owns the focus controller, which listens for keys.
     onKeyDown: new Signal<[number]>(),
     onKeyUp: new Signal<[number]>(),
+    _finishInteractionFrame: (): void => undefined,
   };
 
   const canvas = document.createElement('canvas');
@@ -130,7 +131,7 @@ describe('InteractionManager: hit-testing children of a translated RetainedConta
 
     // World position of the child's 0..50 rect is 200..250 x 100..150.
     dispatchPointer(signals.onPointerDown, { x: 225, y: 125 });
-    im.update();
+    im.preUpdate();
 
     expect(handler).toHaveBeenCalledTimes(1);
 
@@ -159,7 +160,7 @@ describe('InteractionManager: hit-testing children of a translated RetainedConta
     // (25, 25) is inside the child's GROUP-LOCAL rect but on screen the child
     // sits at 200..250 x 100..150 — a click here must miss.
     dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
-    im.update();
+    im.preUpdate();
 
     expect(handler).not.toHaveBeenCalled();
 
@@ -186,7 +187,7 @@ describe('InteractionManager: hit-testing children of a translated RetainedConta
 
     // Identity group: world rect 0..50.
     dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
-    im.update();
+    im.preUpdate();
     expect(handler).toHaveBeenCalledTimes(1);
 
     handler.mockClear();
@@ -195,11 +196,11 @@ describe('InteractionManager: hit-testing children of a translated RetainedConta
     group.setPosition(-300, 0);
 
     dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
-    im.update();
+    im.preUpdate();
     expect(handler).not.toHaveBeenCalled();
 
     dispatchPointer(signals.onPointerDown, { x: -275, y: 25 });
-    im.update();
+    im.preUpdate();
     expect(handler).toHaveBeenCalledTimes(1);
 
     im.destroy();
@@ -231,7 +232,7 @@ describe('InteractionManager: hit-testing children of a translated RetainedConta
     const worldCenter = new Vector(25, 25).transform(child.getWorldTransform());
 
     dispatchPointer(signals.onPointerDown, { x: worldCenter.x, y: worldCenter.y });
-    im.update();
+    im.preUpdate();
     expect(handler).toHaveBeenCalledTimes(1);
 
     handler.mockClear();
@@ -240,7 +241,7 @@ describe('InteractionManager: hit-testing children of a translated RetainedConta
     // (but inside where the unrotated AABB around the origin would reach) —
     // must miss.
     dispatchPointer(signals.onPointerDown, { x: 250, y: 300 });
-    im.update();
+    im.preUpdate();
     expect(handler).not.toHaveBeenCalled();
 
     im.destroy();
@@ -270,13 +271,13 @@ describe('InteractionManager: hit-testing children of a translated RetainedConta
     child.onPointerDown.add(handler);
 
     dispatchPointer(signals.onPointerDown, { x: 225, y: 125 });
-    im.update();
+    im.preUpdate();
     expect(handler).toHaveBeenCalledTimes(1);
 
     handler.mockClear();
 
     dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
-    im.update();
+    im.preUpdate();
     expect(handler).not.toHaveBeenCalled();
 
     im.destroy();
@@ -312,7 +313,7 @@ describe('InteractionManager: hit-testing children of a translated RetainedConta
     groupChild.onPointerDown.add(groupHandler);
 
     dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
-    im.update();
+    im.preUpdate();
 
     expect(groupHandler).toHaveBeenCalledTimes(1);
     expect(worldHandler).not.toHaveBeenCalled();
@@ -345,7 +346,7 @@ describe('InteractionManager: hit-testing children of a translated RetainedConta
 
     // Identity group: the child's world rect is 0..50 — a click there hits.
     dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
-    im.update();
+    im.preUpdate();
     expect(handler).toHaveBeenCalledTimes(1);
 
     handler.mockClear();
@@ -356,14 +357,14 @@ describe('InteractionManager: hit-testing children of a translated RetainedConta
     group.setPosition(200, 100);
 
     dispatchPointer(signals.onPointerDown, { x: 225, y: 125 });
-    im.update();
+    im.preUpdate();
     expect(handler).toHaveBeenCalledTimes(1);
 
     handler.mockClear();
 
     // ...and a click at the child's OLD position must now miss.
     dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
-    im.update();
+    im.preUpdate();
     expect(handler).not.toHaveBeenCalled();
 
     im.destroy();
@@ -393,7 +394,7 @@ describe('InteractionManager: hit-testing children of a translated RetainedConta
     grandChild.onPointerDown.add(handler);
 
     dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
-    im.update();
+    im.preUpdate();
     expect(handler).toHaveBeenCalledTimes(1);
 
     handler.mockClear();
@@ -401,7 +402,7 @@ describe('InteractionManager: hit-testing children of a translated RetainedConta
     group.setPosition(200, 100);
 
     dispatchPointer(signals.onPointerDown, { x: 225, y: 125 });
-    im.update();
+    im.preUpdate();
     expect(handler).toHaveBeenCalledTimes(1);
 
     im.destroy();

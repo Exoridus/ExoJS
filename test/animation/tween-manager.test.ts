@@ -25,7 +25,7 @@ describe('TweenManager', () => {
     manager.create(a).to({ x: 100 }, 1.0).start();
     manager.create(b).to({ x: 200 }, 1.0).start();
 
-    manager.update(sec(0.5));
+    manager.preUpdate(sec(0.5));
     expect(a.x).toBeCloseTo(50, 5);
     expect(b.x).toBeCloseTo(100, 5);
   });
@@ -35,11 +35,11 @@ describe('TweenManager', () => {
     const target = makeTarget();
     const tween = manager.create(target).to({ x: 100 }, 1.0).start();
 
-    manager.update(sec(1.0)); // completes
+    manager.preUpdate(sec(1.0)); // completes
     expect(tween.state).toBe(TweenState.Complete);
 
     // Further updates should not error and target should stay at 100
-    manager.update(sec(1.0));
+    manager.preUpdate(sec(1.0));
     expect(target.x).toBe(100);
   });
 
@@ -49,7 +49,7 @@ describe('TweenManager', () => {
     const tween = new Tween(target).to({ x: 100 }, 1.0).start();
 
     manager.add(tween);
-    manager.update(sec(0.5));
+    manager.preUpdate(sec(0.5));
     expect(target.x).toBeCloseTo(50, 5);
   });
 
@@ -59,7 +59,7 @@ describe('TweenManager', () => {
     const tween = manager.create(target).to({ x: 100 }, 1.0).start();
 
     manager.add(tween); // add again
-    manager.update(sec(1.0)); // should complete once, not advance twice
+    manager.preUpdate(sec(1.0)); // should complete once, not advance twice
     expect(target.x).toBe(100);
     expect(tween.state).toBe(TweenState.Complete);
   });
@@ -69,9 +69,9 @@ describe('TweenManager', () => {
     const target = makeTarget();
     const tween = manager.create(target).to({ x: 100 }, 1.0).start();
 
-    manager.update(sec(0.3));
+    manager.preUpdate(sec(0.3));
     manager.remove(tween);
-    manager.update(sec(0.7));
+    manager.preUpdate(sec(0.7));
     expect(target.x).toBeCloseTo(30, 5); // frozen at 0.3s
   });
 
@@ -112,7 +112,7 @@ describe('TweenManager', () => {
       // exactly matches each tween's duration, completing t1 chain-starts
       // t2, which is then ticked later in the very same snapshot pass and
       // also completes, cascading into t3 — all within one update() call.
-      manager.update(sec(1.0));
+      manager.preUpdate(sec(1.0));
 
       expect(t1.state).toBe(TweenState.Complete);
       expect(t2.state).toBe(TweenState.Complete);
@@ -150,7 +150,7 @@ describe('TweenManager', () => {
     manager.create(makeTarget()).to({ x: 200 }, 1.0).onComplete(onComplete).start();
 
     manager.clear();
-    manager.update(sec(1.0)); // no tweens remain — nothing should fire
+    manager.preUpdate(sec(1.0)); // no tweens remain — nothing should fire
     expect(onComplete).not.toHaveBeenCalled();
   });
 
@@ -160,7 +160,7 @@ describe('TweenManager', () => {
 
     manager.create(target).to({ x: 100 }, 1.0).start();
     manager.destroy();
-    manager.update(sec(1.0));
+    manager.preUpdate(sec(1.0));
     expect(target.x).toBe(0); // never advanced
   });
 
@@ -175,7 +175,7 @@ describe('TweenManager', () => {
       manager.create(b).to({ x: 200 }, 1.0).start();
     });
 
-    expect(() => manager.update(sec(1.0))).not.toThrow();
+    expect(() => manager.preUpdate(sec(1.0))).not.toThrow();
     expect(tweenA.state).toBe(TweenState.Complete);
   });
 });

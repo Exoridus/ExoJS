@@ -126,6 +126,7 @@ const createApp = (): {
     // InteractionManager owns the focus controller, which listens for keys.
     onKeyDown: new Signal<[number]>(),
     onKeyUp: new Signal<[number]>(),
+    _finishInteractionFrame: (): void => undefined,
   };
 
   const canvas = document.createElement('canvas');
@@ -183,6 +184,7 @@ const createAppNoScene = (
     // InteractionManager owns the focus controller, which listens for keys.
     onKeyDown: new Signal<[number]>(),
     onKeyUp: new Signal<[number]>(),
+    _finishInteractionFrame: (): void => undefined,
   };
 
   const canvas = document.createElement('canvas');
@@ -221,7 +223,7 @@ const createAppNoScene = (
  * node listeners.
  */
 const flushInteractions = (im: InteractionManager): void => {
-  im.update();
+  im.preUpdate();
 };
 
 // ---------------------------------------------------------------------------
@@ -1352,12 +1354,12 @@ describe('InteractionManager — multi-Application isolation', () => {
     // singleton the node registered with whichever manager was constructed
     // last, breaking exactly this case.
     dispatchPointer(b.signals.onPointerDown, { x: 25, y: 25 });
-    imB.update();
+    imB.preUpdate();
     expect(down).not.toHaveBeenCalled();
 
     // Only app A's own pointer reaches it.
     dispatchPointer(a.signals.onPointerDown, { x: 25, y: 25 });
-    imA.update();
+    imA.preUpdate();
     expect(down).toHaveBeenCalledTimes(1);
 
     imA.destroy();
@@ -2470,7 +2472,7 @@ describe('InteractionManager — miscellaneous', () => {
 
     im.attachRoot(scene.root);
 
-    expect(() => im.update()).not.toThrow();
+    expect(() => im.preUpdate()).not.toThrow();
 
     im.destroy();
   });
@@ -2526,7 +2528,7 @@ describe('InteractionManager — dispatch gating', () => {
     sprite.onPointerDown.add(onDown);
 
     dispatchPointer(signals.onPointerDown, { x: 10, y: 10 });
-    im.update();
+    im.preUpdate();
 
     expect(onDown).not.toHaveBeenCalled();
 
@@ -2547,7 +2549,7 @@ describe('InteractionManager — dispatch gating', () => {
     sprite.onPointerDown.add(onDown);
 
     dispatchPointer(signals.onPointerDown, { x: 10, y: 10 });
-    im.update();
+    im.preUpdate();
 
     expect(onDown).toHaveBeenCalledTimes(1);
 
@@ -2571,7 +2573,7 @@ describe('InteractionManager — dispatch gating', () => {
     sprite.onPointerDown.add(onDown);
 
     dispatchPointer(signals.onPointerDown, { x: 10, y: 10 });
-    im.update();
+    im.preUpdate();
 
     expect(onDown).toHaveBeenCalledTimes(1);
 
@@ -2595,11 +2597,11 @@ describe('InteractionManager — dispatch gating', () => {
     sprite.onPointerDown.add(onDown);
 
     dispatchPointer(signals.onPointerDown, { x: 10, y: 10 });
-    im.update();
+    im.preUpdate();
     expect(onDown).not.toHaveBeenCalled();
 
     appMutable.scenes._transitionGateOpen = false;
-    im.update(); // the stale queued event must NOT replay once the gate reopens
+    im.preUpdate(); // the stale queued event must NOT replay once the gate reopens
 
     expect(onDown).not.toHaveBeenCalled();
 
@@ -2613,7 +2615,7 @@ describe('InteractionManager — dispatch gating', () => {
 
     expect(() => {
       dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
-      im.update();
+      im.preUpdate();
     }).not.toThrow();
 
     im.destroy();

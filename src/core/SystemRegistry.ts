@@ -1,5 +1,6 @@
 import type { RenderingContext } from '#rendering/RenderingContext';
 
+import { logger } from './logging';
 import { Signal } from './Signal';
 import { hookOwnerName, requireSynchronousHook } from './syncHooks';
 import type { System } from './System';
@@ -23,10 +24,10 @@ export interface SystemRegistrationOptions {
    * part in every phase whose method it defines, which is what almost every
    * system wants.
    *
-   * Pass this when an object happens to carry a method that shares a phase
-   * name without meaning to be that phase — the engine's own core managers
-   * expose a public `update()` for driving them manually, but participate only
-   * in `preUpdate`. Naming a phase the system does not implement is ignored.
+   * Pass this when an object happens to carry a method whose name matches a
+   * phase without meaning to be that phase — a controller with its own
+   * `update()` that should only draw, say. Naming a phase the system does not
+   * implement is ignored.
    */
   readonly phases?: readonly SystemPhase[];
 }
@@ -174,7 +175,7 @@ const removeRegistration = (list: SystemRegistration[], registration: SystemRegi
  * Phase-dispatching registry of {@link System}s, shared by `Scene` (as
  * `scene.systems`) and `Application` (as `app.systems`). Each system
  * participates only in the scheduler phases it implements
- * (`fixedUpdate`/`update`/`draw`); within a phase, systems run in ascending
+ * (`preUpdate`/`fixedUpdate`/`update`/`draw`); within a phase, systems run in ascending
  * `order` (ties keep registration order) and are destroyed in reverse
  * registration order when the registry is destroyed.
  *
@@ -199,6 +200,9 @@ const removeRegistration = (list: SystemRegistration[], registration: SystemRegi
  */
 export class SystemRegistry implements Destroyable {
   private readonly _registrations = new Map<System, SystemRegistration>();
+  /** Systems the owning Application registered as its own; removing one stops part of the engine. */
+  private readonly _coreSystems = new Set<System>();
+
   private readonly _preUpdateList: SystemRegistration[] = [];
   private readonly _fixedList: SystemRegistration[] = [];
   private readonly _updateList: SystemRegistration[] = [];
@@ -244,6 +248,13 @@ export class SystemRegistry implements Destroyable {
    * structural cleanup and {@link SystemRegistry.onRemove}.
    */
   public remove(system: System): boolean {
+    if (__DEV__ && this._coreSystems.has(system)) {
+      logger.warn(
+        "SystemRegistry.remove(): removing one of the engine's own core systems stops that part of the engine for good — input, interaction, audio, tweens or rendering will no longer run. This is allowed on purpose, but it is almost never what you want; to reorder around one, use `before`/`after` against it instead.",
+        { source: 'SystemRegistry', once: 'systems:remove-core' },
+      );
+    }
+
     if (this._pendingAdds.has(system)) {
       this._pendingAdds.delete(system);
 
@@ -307,6 +318,26 @@ export class SystemRegistry implements Destroyable {
     }
 
     this._pending.length = 0;
+  }
+
+  /**
+   * Register a system the owning {@link Application} owns. Identical to
+   * {@link SystemRegistry.add} apart from marking it, so that removing it later
+   * warns in development and so that the owner can take it back out at teardown
+   * without tripping that warning.
+   * @internal
+   */
+  public _addCoreSystem<T extends System>(system: T, options?: SystemRegistrationOptions): T {
+    this._coreSystems.add(system);
+
+    return this.add(system, options);
+  }
+
+  /** @internal Counterpart to {@link _addCoreSystem}: unregister without the development warning. */
+  public _removeCoreSystem(system: System): boolean {
+    this._coreSystems.delete(system);
+
+    return this.remove(system);
   }
 
   /** @internal Dispatched once per frame, ahead of every fixed step. */

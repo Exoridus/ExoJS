@@ -79,11 +79,11 @@ describe('InputManager gamepad lifecycle', () => {
       inputManager.onGamepadDisconnected.add(onDisconnected);
 
       setSnapshot([null, null, null, null]);
-      inputManager.update();
+      inputManager.preUpdate();
       expect(inputManager.gamepads[0].connected).toBe(false);
 
       setSnapshot([createNativeGamepad('Vendor: 045e Product: 0b13', 0, [1]), null, null, null]);
-      inputManager.update();
+      inputManager.preUpdate();
 
       expect(inputManager.gamepads[0].connected).toBe(true);
       expect(inputManager.gamepads[0].mappingFamily).toBe(GamepadMappingFamily.Xbox);
@@ -95,7 +95,7 @@ describe('InputManager gamepad lifecycle', () => {
       expect(channels[buttonSouthChannel]).toBe(1);
 
       setSnapshot([null, null, null, null]);
-      inputManager.update();
+      inputManager.preUpdate();
 
       expect(inputManager.gamepads[0].connected).toBe(false);
       expect(channels[buttonSouthChannel]).toBe(0);
@@ -114,7 +114,7 @@ describe('InputManager gamepad lifecycle', () => {
 
       // Frame 1 — connect with the South button RELEASED.
       setSnapshot([createNativeGamepad('Vendor: 045e Product: 0b13', 0, [0]), null, null, null]);
-      inputManager.update();
+      inputManager.preUpdate();
       expect(inputManager.gamepads[0].connected).toBe(true);
       expect(channels[buttonSouthChannel]).toBe(0);
 
@@ -122,12 +122,12 @@ describe('InputManager gamepad lifecycle', () => {
       // now reports the button PRESSED. The engine must poll the new snapshot,
       // not the stale one captured at connect.
       setSnapshot([createNativeGamepad('Vendor: 045e Product: 0b13', 0, [1]), null, null, null]);
-      inputManager.update();
+      inputManager.preUpdate();
       expect(channels[buttonSouthChannel]).toBe(1);
 
       // Frame 3 — released again must clear (no "stuck" button after release).
       setSnapshot([createNativeGamepad('Vendor: 045e Product: 0b13', 0, [0]), null, null, null]);
-      inputManager.update();
+      inputManager.preUpdate();
       expect(channels[buttonSouthChannel]).toBe(0);
     });
 
@@ -145,7 +145,7 @@ describe('InputManager gamepad lifecycle', () => {
       expect(inputManager.getGamepad(2)).toBe(inputManager.gamepads[2]);
 
       setSnapshot([createNativeGamepad('Vendor: 045e Product: 0b13', 0), null, createNativeGamepad('Vendor: 054c Product: 0ce6', 2), null]);
-      inputManager.update();
+      inputManager.preUpdate();
 
       expect(inputManager.hasGamepad).toBe(true);
       expect(inputManager.connectedGamepadCount).toBe(2);
@@ -174,7 +174,7 @@ describe('InputManager gamepad lifecycle', () => {
       const padC = createNativeGamepad('Vendor: 057e Product: 2009', 2);
 
       setSnapshot([padA, padB, padC, null]);
-      inputManager.update();
+      inputManager.preUpdate();
 
       expect(inputManager.gamepads[0].mappingFamily).toBe(GamepadMappingFamily.Xbox);
       expect(inputManager.gamepads[1].mappingFamily).toBe(GamepadMappingFamily.PlayStation);
@@ -182,7 +182,7 @@ describe('InputManager gamepad lifecycle', () => {
 
       // Drop padA (slot 0). Compact should shift padB → 0, padC → 1, slot 2 empty.
       setSnapshot([null, padB, padC, null]);
-      inputManager.update();
+      inputManager.preUpdate();
 
       expect(inputManager.gamepads[0].mappingFamily).toBe(GamepadMappingFamily.PlayStation);
       expect(inputManager.gamepads[1].mappingFamily).toBe(GamepadMappingFamily.SwitchPro);
@@ -214,14 +214,14 @@ describe('InputManager gamepad lifecycle', () => {
       const padB = createNativeGamepad('Vendor: 054c Product: 0ce6', 1);
 
       setSnapshot([padA, padB, null, null]);
-      inputManager.update();
+      inputManager.preUpdate();
 
       expect(inputManager.gamepads[0].connected).toBe(true);
       expect(inputManager.gamepads[1].connected).toBe(true);
 
       // Both physical pads vanish in the SAME polling frame.
       setSnapshot([null, null, null, null]);
-      inputManager.update();
+      inputManager.preUpdate();
 
       expect(inputManager.gamepads[0].connected).toBe(false);
       expect(inputManager.gamepads[1].connected).toBe(false);
@@ -243,7 +243,7 @@ describe('InputManager gamepad lifecycle', () => {
       let observedConnected: boolean | null = null;
 
       setSnapshot([padA, padB, null, null]);
-      inputManager.update();
+      inputManager.preUpdate();
 
       // Subscribe AFTER bind so we observe the disconnect signal directly.
       inputManager.gamepads[1].onDisconnect.add(() => {
@@ -251,7 +251,7 @@ describe('InputManager gamepad lifecycle', () => {
       });
 
       setSnapshot([padA, null, null, null]);
-      inputManager.update();
+      inputManager.preUpdate();
 
       // The dispatch happens on the slot that ended up empty (slot 1).
       expect(observedConnected).toBe(false);
@@ -267,7 +267,7 @@ describe('InputManager gamepad lifecycle', () => {
       expect(inputManager.gamepads[0].internalIndex).toBe(null);
 
       setSnapshot([null, null, createNativeGamepad('Vendor: 045e Product: 0b13', 2), null]);
-      inputManager.update();
+      inputManager.preUpdate();
 
       expect(inputManager.gamepads[0].internalIndex).toBe(2);
     });

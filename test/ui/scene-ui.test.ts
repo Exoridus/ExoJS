@@ -66,6 +66,7 @@ const createUIApp = (): {
     onContextMenu: new Signal<[ContextMenuRequest]>(),
     onKeyDown: new Signal<[number]>(),
     onKeyUp: new Signal<[number]>(),
+    _finishInteractionFrame: (): void => undefined,
   };
   const canvas = document.createElement('canvas');
   const scene = new Scene();
@@ -124,7 +125,7 @@ describe('UI interaction routing', () => {
 
     button.onPointerDown.add(handler);
     dispatchPointer(signals.onPointerDown, 80, 80);
-    im.update();
+    im.preUpdate();
 
     expect(handler).toHaveBeenCalledTimes(1);
   });
@@ -146,7 +147,7 @@ describe('UI interaction routing', () => {
     button.onPointerDown.add(uiHandler);
     worldSprite.onPointerDown.add(worldHandler);
     dispatchPointer(signals.onPointerDown, 80, 80);
-    im.update();
+    im.preUpdate();
 
     expect(uiHandler).toHaveBeenCalledTimes(1);
     expect(worldHandler).not.toHaveBeenCalled();
@@ -169,7 +170,7 @@ describe('UI interaction routing', () => {
     button.onPointerDown.add(uiHandler);
     worldSprite.onPointerDown.add(worldHandler);
     dispatchPointer(signals.onPointerDown, 400, 400);
-    im.update();
+    im.preUpdate();
 
     expect(uiHandler).not.toHaveBeenCalled();
     expect(worldHandler).toHaveBeenCalledTimes(1);
