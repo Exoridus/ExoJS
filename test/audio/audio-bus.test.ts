@@ -102,6 +102,35 @@ class StubFilter implements AudioEffect {
   }
 }
 
+/**
+ * An effect built from more than one node, like every wet/dry effect in
+ * `@codexo/exojs-audio-fx`: the edges leaving `inputNode` are the effect's own
+ * internal wiring, not something the bus created.
+ */
+class WiredFilter implements AudioEffect {
+  public readonly inputNode: AudioNode;
+  public readonly outputNode: AudioNode;
+  public readonly ready: Promise<void> = Promise.resolve();
+  public destroyed = false;
+
+  /** Records whether anything cut the edges leaving this effect's input. */
+  public readonly inputDisconnect: MockInstance;
+  public readonly outputDisconnect: MockInstance;
+
+  public constructor() {
+    const ctx = getAudioContext();
+    this.inputNode = ctx.createGain();
+    this.outputNode = ctx.createGain();
+    this.inputNode.connect(this.outputNode);
+    this.inputDisconnect = vi.spyOn(this.inputNode, 'disconnect');
+    this.outputDisconnect = vi.spyOn(this.outputNode, 'disconnect');
+  }
+
+  public destroy(): void {
+    this.destroyed = true;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -738,5 +767,30 @@ describe('AudioBus', () => {
     (bus as unknown as { _setup: unknown })._setup = null;
 
     expect(() => (bus as unknown as { _connectUpstream: () => void })._connectUpstream()).not.toThrow();
+  });
+
+  // Rebuilding the chain must only cut the edges the bus itself created. An
+  // effect's input node is off limits: for any effect made of more than one
+  // node, the edges leaving it are the effect's internal wiring, and cutting
+  // them silences the effect for good — every rebuild would leave the bus
+  // passing dead effects.
+  test('a chain rebuild leaves each effect internal wiring intact', () => {
+    const bus = new AudioBus('wiring-test');
+    const first = new WiredFilter();
+    const second = new WiredFilter();
+
+    bus.addEffect(first);
+    // A second insertion rebuilds the whole chain, which is where `first`
+    // used to lose its wiring.
+    bus.addEffect(second);
+    bus.removeEffect(second);
+
+    expect(first.inputDisconnect).not.toHaveBeenCalled();
+    expect(second.inputDisconnect).not.toHaveBeenCalled();
+
+    // The edges the bus does own are still cut on every rebuild.
+    expect(first.outputDisconnect).toHaveBeenCalled();
+
+    bus.destroy();
   });
 });

@@ -332,10 +332,14 @@ export class AudioBus {
       return;
     }
 
-    // Disconnect current chain
+    // Disconnect current chain. Only the edges this bus created are cut: the
+    // bus input, each effect's output, and the pan stage. An effect's *input*
+    // node is deliberately left alone — for any effect built from more than
+    // one node (a wet/dry mix, a filter bank) the edges leaving its input node
+    // are its own internal wiring, and disconnecting them silences the effect
+    // permanently.
     inputNode.disconnect();
     for (const effect of this._effects) {
-      effect.inputNode.disconnect();
       effect.outputNode.disconnect();
     }
     panNode.disconnect();
