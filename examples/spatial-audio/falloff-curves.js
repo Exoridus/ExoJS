@@ -32,7 +32,7 @@ class FalloffCurvesScene extends Scene {
     // Canvas-relative plot geometry computed in init().
     plot = { x: 0, y: 0, w: 0, h: 0 };
     hud;
-    async init() {
+    async load() {
         const app = this.app;
         if (app === null)
             throw new Error('Scene.app is unavailable before the scene is attached to an Application.');

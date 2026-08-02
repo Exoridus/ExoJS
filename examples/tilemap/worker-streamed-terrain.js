@@ -168,7 +168,7 @@ class WorkerStreamedTerrainScene extends Scene {
     hudTimer = 0;
     frameMs = 0;
     hud;
-    async init() {
+    async load() {
         const tilesTexture = await this.loader.load(Asset.type('texture', assets.demo.tilesets.map.image));
         this.tileset = new TileSet({
             name: 'biomes',

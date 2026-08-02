@@ -11,7 +11,7 @@ class MusicLoopScene extends Scene {
     bar = { x: 0, y: 0, w: 0, h: 28 };
     hud;
     panel;
-    async init() {
+    async load() {
         const app = this.app;
         if (app === null)
             throw new Error('Scene.app is unavailable before the scene is attached to an Application.');

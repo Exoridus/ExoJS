@@ -38,7 +38,7 @@ class TiledMapImportScene extends Scene {
     zoneObjects = [];
     filterIndex = 0;
     hud;
-    async init() {
+    async load() {
         // Advanced path: parsed TiledMap -> map property lookup -> manual
         // toTileMap() conversion (the common-case Asset.type('tileMap', ...)
         // binding does the same conversion internally).
