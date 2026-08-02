@@ -12,6 +12,7 @@ import { Color } from '#core/Color';
 import { Graphics } from '#rendering/primitives/Graphics';
 import { RenderingContext } from '#rendering/RenderingContext';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
+import { TextureFormat } from '#rendering/types';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { wireCoreRenderers } from './_coreRenderers';
@@ -85,13 +86,13 @@ describe('RenderTo WebGPU browser', () => {
 
     try {
       // rgba16float and rgba32float are core color-renderable in WebGPU.
-      expect(backend.supportsColorFormat('rgba8')).toBe(true);
-      expect(backend.supportsColorFormat('rgba16f')).toBe(true);
-      expect(backend.supportsColorFormat('rgba32f')).toBe(true);
+      expect(backend.supportsColorFormat(TextureFormat.Rgba8)).toBe(true);
+      expect(backend.supportsColorFormat(TextureFormat.Rgba16F)).toBe(true);
+      expect(backend.supportsColorFormat(TextureFormat.Rgba32F)).toBe(true);
 
       // rgba32f: clearing into the float target proves the attachment is valid.
       device.pushErrorScope('validation');
-      const full = new RenderTexture(32, 32, { format: 'rgba32f' });
+      const full = new RenderTexture(32, 32, { format: TextureFormat.Rgba32F });
       backend.setRenderTarget(full);
       backend.clear(new Color(255, 0, 0));
       backend.setRenderTarget(backend.renderTarget);
@@ -103,7 +104,7 @@ describe('RenderTo WebGPU browser', () => {
       // rgba16f: a full engine draw exercises the real render pipeline built for a
       // float target format — the pipeline's color format must match the pass's.
       device.pushErrorScope('validation');
-      const half = new RenderTexture(32, 32, { format: 'rgba16f' });
+      const half = new RenderTexture(32, 32, { format: TextureFormat.Rgba16F });
       const green = new Graphics();
       green.fillColor = new Color(0, 255, 0);
       green.drawRectangle(0, 0, 32, 32);

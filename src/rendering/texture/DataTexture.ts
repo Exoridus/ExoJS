@@ -1,39 +1,36 @@
-import { ScaleModes, WrapModes } from '#rendering/types';
+import { ScaleModes, TextureFormat, WrapModes } from '#rendering/types';
 
 import type { SamplerOptions } from './Sampler';
 import { Texture } from './Texture';
 
 /**
- * Pixel format for {@link DataTexture}.
- *
- * - `r8`     — single-channel 8-bit unsigned. Buffer is `Uint8Array`. 1 byte/pixel.
- * - `r32f`   — single-channel 32-bit float. Buffer is `Float32Array`. 4 bytes/pixel.
- * - `rgba8`  — 4-channel 8-bit unsigned. Buffer is `Uint8Array`. 4 bytes/pixel.
- * - `rgba32f`— 4-channel 32-bit float. Buffer is `Float32Array`. 16 bytes/pixel.
+ * Pixel format for {@link DataTexture} — the {@link TextureFormat} subset that
+ * can be uploaded from a typed array. Excludes `Rgba16F`, which has no
+ * matching JS buffer kind.
  *
  * Float formats are core in WebGL2 and WebGPU; no extension probe required.
  */
-export type DataTextureFormat = 'r8' | 'r32f' | 'rgba8' | 'rgba32f';
+export type DataTextureFormat = TextureFormat.R8 | TextureFormat.R32F | TextureFormat.Rgba8 | TextureFormat.Rgba32F;
 
 /** Buffer typed-array kind for a given format. */
-export type DataTextureBuffer<F extends DataTextureFormat = DataTextureFormat> = F extends 'r8' | 'rgba8'
+export type DataTextureBuffer<F extends DataTextureFormat = DataTextureFormat> = F extends TextureFormat.R8 | TextureFormat.Rgba8
   ? Uint8Array
-  : F extends 'r32f' | 'rgba32f'
+  : F extends TextureFormat.R32F | TextureFormat.Rgba32F
     ? Float32Array
     : Uint8Array | Float32Array;
 
 const channelsForFormat: Record<DataTextureFormat, number> = {
-  r8: 1,
-  r32f: 1,
-  rgba8: 4,
-  rgba32f: 4,
+  [TextureFormat.R8]: 1,
+  [TextureFormat.R32F]: 1,
+  [TextureFormat.Rgba8]: 4,
+  [TextureFormat.Rgba32F]: 4,
 };
 
 const bytesPerChannelForFormat: Record<DataTextureFormat, number> = {
-  r8: 1,
-  r32f: 4,
-  rgba8: 1,
-  rgba32f: 4,
+  [TextureFormat.R8]: 1,
+  [TextureFormat.R32F]: 4,
+  [TextureFormat.Rgba8]: 1,
+  [TextureFormat.Rgba32F]: 4,
 };
 
 /**
@@ -101,10 +98,10 @@ export interface DataTextureOptions {
  *
  * The TypeScript type system narrows `buffer` based on `format`:
  *
- *   const r8 = new DataTexture({ width: 256, height: 1, format: 'r8' });
+ *   const r8 = new DataTexture({ width: 256, height: 1, format: TextureFormat.R8 });
  *   r8.buffer  // Uint8Array
  *
- *   const r32f = new DataTexture({ width: 256, height: 1, format: 'r32f' });
+ *   const r32f = new DataTexture({ width: 256, height: 1, format: TextureFormat.R32F });
  *   r32f.buffer  // Float32Array
  */
 export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extends Texture {
@@ -248,5 +245,5 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
 }
 
 function isFloatFormat(format: DataTextureFormat): boolean {
-  return format === 'r32f' || format === 'rgba32f';
+  return format === TextureFormat.R32F || format === TextureFormat.Rgba32F;
 }

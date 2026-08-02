@@ -3,6 +3,7 @@ import type { Cloneable, Destroyable } from '#core/types';
 import { clamp } from '#math/utils';
 import { DataTexture } from '#rendering/texture/DataTexture';
 import type { SamplerOptions } from '#rendering/texture/Sampler';
+import { TextureFormat } from '#rendering/types';
 
 /** Discriminant identifying the concrete gradient kind (`gradient.type`). */
 export type GradientType = 'linear' | 'radial';
@@ -13,7 +14,7 @@ export interface GradientStop {
 }
 
 export interface GradientToTextureOptions {
-  readonly format?: 'rgba8' | 'rgba32f';
+  readonly format?: TextureFormat.Rgba8 | TextureFormat.Rgba32F;
   readonly samplerOptions?: Partial<SamplerOptions>;
 }
 
@@ -89,14 +90,18 @@ export abstract class Gradient implements Cloneable, Destroyable {
     return this._geometryEquals(other);
   }
 
-  public toTexture(width: number, height: number, options?: GradientToTextureOptions & { format?: 'rgba8' }): DataTexture<'rgba8'>;
-  public toTexture(width: number, height: number, options: GradientToTextureOptions & { format: 'rgba32f' }): DataTexture<'rgba32f'>;
-  public toTexture(width: number, height: number, options: GradientToTextureOptions = {}): DataTexture<'rgba8'> | DataTexture<'rgba32f'> {
+  public toTexture(width: number, height: number, options?: GradientToTextureOptions & { format?: TextureFormat.Rgba8 }): DataTexture<TextureFormat.Rgba8>;
+  public toTexture(width: number, height: number, options: GradientToTextureOptions & { format: TextureFormat.Rgba32F }): DataTexture<TextureFormat.Rgba32F>;
+  public toTexture(
+    width: number,
+    height: number,
+    options: GradientToTextureOptions = {},
+  ): DataTexture<TextureFormat.Rgba8> | DataTexture<TextureFormat.Rgba32F> {
     if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) {
       throw new Error('Gradient.toTexture() width/height must be positive integers.');
     }
 
-    if (options.format === 'rgba32f') {
+    if (options.format === TextureFormat.Rgba32F) {
       return this._toRgba32fTexture(width, height, options);
     }
 
@@ -176,11 +181,11 @@ export abstract class Gradient implements Cloneable, Destroyable {
       .sort(sortedStopOffset);
   }
 
-  private _toRgba8Texture(width: number, height: number, options: GradientToTextureOptions): DataTexture<'rgba8'> {
+  private _toRgba8Texture(width: number, height: number, options: GradientToTextureOptions): DataTexture<TextureFormat.Rgba8> {
     const texture = new DataTexture({
       width,
       height,
-      format: 'rgba8',
+      format: TextureFormat.Rgba8,
       ...(options.samplerOptions !== undefined && { samplerOptions: options.samplerOptions }),
     });
     const buffer = texture.buffer;
@@ -209,11 +214,11 @@ export abstract class Gradient implements Cloneable, Destroyable {
     return texture;
   }
 
-  private _toRgba32fTexture(width: number, height: number, options: GradientToTextureOptions): DataTexture<'rgba32f'> {
+  private _toRgba32fTexture(width: number, height: number, options: GradientToTextureOptions): DataTexture<TextureFormat.Rgba32F> {
     const texture = new DataTexture({
       width,
       height,
-      format: 'rgba32f',
+      format: TextureFormat.Rgba32F,
       ...(options.samplerOptions !== undefined && { samplerOptions: options.samplerOptions }),
     });
     const buffer = texture.buffer;

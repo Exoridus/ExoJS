@@ -73,19 +73,50 @@ export enum WrapModes {
 }
 
 /**
- * Color attachment format for an offscreen {@link RenderTexture}.
+ * Every pixel format the engine names, across both the textures it renders
+ * into and the textures it uploads raw data to.
  *
- * - `'rgba8'` — 8-bit fixed-point RGBA (the default; universally supported).
- * - `'rgba16f'` — half-float RGBA. Stores values outside `[0, 1]` at reduced
- *   precision; usually enough for feedback/state buffers.
- * - `'rgba32f'` — full-float RGBA. Highest precision, 16 bytes per pixel.
+ * Unlike the GLenum-valued enums above, these carry no GPU constant: each
+ * backend maps them to its own vocabulary (`Rgba8` becomes `rgba8unorm` on
+ * WebGPU, an internal-format/format/type triple on WebGL2). The values stay
+ * readable strings so the mapping tables and any serialized format stay
+ * legible.
+ *
+ * Not every format is valid everywhere — {@link ColorTextureFormat} and
+ * `DataTextureFormat` carve out the subset each use accepts.
+ *
+ * | Format | Channels | Bytes/px | Buffer |
+ * |---|---:|---:|---|
+ * | `R8` | 1 | 1 | `Uint8Array` |
+ * | `R32F` | 1 | 4 | `Float32Array` |
+ * | `Rgba8` | 4 | 4 | `Uint8Array` |
+ * | `Rgba16F` | 4 | 8 | — (render targets only) |
+ * | `Rgba32F` | 4 | 16 | `Float32Array` |
+ * @stable
+ */
+export enum TextureFormat {
+  /** Single-channel 8-bit unsigned. */
+  R8 = 'r8',
+  /** Single-channel 32-bit float. */
+  R32F = 'r32f',
+  /** 4-channel 8-bit unsigned — the universally supported default. */
+  Rgba8 = 'rgba8',
+  /** 4-channel half-float. Stores values outside `[0, 1]` at reduced precision; usually enough for feedback/state buffers. */
+  Rgba16F = 'rgba16f',
+  /** 4-channel full-float. Highest precision, 16 bytes per pixel. */
+  Rgba32F = 'rgba32f',
+}
+
+/**
+ * Color attachment format for an offscreen {@link RenderTexture} — the
+ * {@link TextureFormat} subset that can be rendered into.
  *
  * The float formats require `EXT_color_buffer_float` to be *rendered into*
  * (WebGL2). Allocating one on a context without the extension throws at
  * render-target preparation. Float render targets default to `nearest`
  * sampling; linear filtering additionally requires `OES_texture_float_linear`.
  */
-export type ColorTextureFormat = 'rgba8' | 'rgba16f' | 'rgba32f';
+export type ColorTextureFormat = TextureFormat.Rgba8 | TextureFormat.Rgba16F | TextureFormat.Rgba32F;
 
 /**
  * GPU primitive topology used when issuing draw calls.

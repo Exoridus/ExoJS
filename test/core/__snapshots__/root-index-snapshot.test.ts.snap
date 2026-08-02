@@ -201,6 +201,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "TextStyle",
   "Texture",
   "TextureFactory",
+  "TextureFormat",
   "TextureRegion",
   "Time",
   "Timer",

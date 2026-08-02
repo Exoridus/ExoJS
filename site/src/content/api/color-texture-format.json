@@ -1,0 +1,80 @@
+{
+  "title": "ColorTextureFormat",
+  "description": "Color attachment format for an offscreen RenderTexture — the TextureFormat subset that can be rendered into. The float formats require `EXT_color_buffer_float` to be *rendered into* (WebGL2). Allocating one on a context without the extension throws at render-target preparation. Float render targets default to `nearest` sampling; linear filtering additionally requires `OES_texture_float_linear`.",
+  "symbol": "ColorTextureFormat",
+  "kind": "type",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Color attachment format for an offscreen RenderTexture — the TextureFormat subset that can be rendered into.",
+        "The float formats require `EXT_color_buffer_float` to be *rendered into* (WebGL2). Allocating one on a context without the extension throws at render-target preparation. Float render targets default to `nearest` sampling; linear filtering additionally requires `OES_texture_float_linear`."
+      ],
+      "importLine": "import { ColorTextureFormat } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "ColorTextureFormat",
+          "signature": "TextureFormat.Rgba8 | TextureFormat.Rgba16F | TextureFormat.Rgba32F",
+          "signatureTokens": [
+            {
+              "text": "TextureFormat.Rgba8",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureFormat.Rgba16F",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureFormat.Rgba32F",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/types.ts"
+}

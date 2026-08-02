@@ -7,7 +7,7 @@ import type { TextPageQuads } from '#rendering/text/Text';
 import { Text } from '#rendering/text/Text';
 import { DataTexture } from '#rendering/texture/DataTexture';
 import type { Texture } from '#rendering/texture/Texture';
-import { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
+import { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives, TextureFormat } from '#rendering/types';
 
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
 import textVertSource from './glsl/text.vert';
@@ -98,7 +98,7 @@ interface TextRetainedRendererData {
  * the bundle on destroy.
  */
 class TextRetainedReplayState implements WebGl2RetainedRendererReplayState {
-  public nodeDataTexture: DataTexture<'rgba32f'> | null = null;
+  public nodeDataTexture: DataTexture<TextureFormat.Rgba32F> | null = null;
   public nodeDataFloats: Float32Array | null = null;
   public nodeDataCapacity = 0;
   public quadCount = 0;
@@ -710,7 +710,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
 
       state.nodeDataTexture?.destroy();
       state.nodeDataFloats = new Float32Array(capacity * nodeFloats);
-      state.nodeDataTexture = new DataTexture({ width: nodeTexels, height: capacity, format: 'rgba32f', data: state.nodeDataFloats });
+      state.nodeDataTexture = new DataTexture({ width: nodeTexels, height: capacity, format: TextureFormat.Rgba32F, data: state.nodeDataFloats });
       state.nodeDataCapacity = capacity;
     }
 

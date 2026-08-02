@@ -32,7 +32,7 @@ import { DataTexture, type DataTextureFormat } from '#rendering/texture/DataText
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import { TransformBuffer } from '#rendering/TransformBuffer';
-import { BlendModes, type ColorTextureFormat } from '#rendering/types';
+import { BlendModes, type ColorTextureFormat, TextureFormat } from '#rendering/types';
 import type { View } from '#rendering/View';
 
 import { WebGl2BackdropBlendCompositor } from './WebGl2BackdropBlendCompositor';
@@ -258,14 +258,14 @@ export class WebGl2Backend implements RenderBackend {
   private readonly _stats: RenderStats = createRenderStats();
   private readonly _accountant: GpuResourceAccountant = new GpuResourceAccountant(this._stats);
   private readonly _transformBuffer = new TransformBuffer();
-  private _transformTexture: DataTexture<'rgba32f'> | null = null;
+  private _transformTexture: DataTexture<TextureFormat.Rgba32F> | null = null;
   private _transformTextureHash = 0;
   private _transformTextureCount = -1;
   // Tint's own rgba8 texture (see TransformBuffer's class doc for why it's
   // split out of the fp32 transform texture): created/uploaded alongside the
   // transform texture in bindTransformBufferTexture (same dirty-range
   // consumption), bound separately by renderers that read tint.
-  private _tintTexture: DataTexture<'rgba8'> | null = null;
+  private _tintTexture: DataTexture<TextureFormat.Rgba8> | null = null;
   private _activeDrawCommand: DrawCommand | null = null;
   private _drawPlanDepth = 0;
   private readonly _planBaseStack: number[] = [];
@@ -843,7 +843,7 @@ export class WebGl2Backend implements RenderBackend {
    * before allocating a float target and fall back to `'rgba8'` themselves.
    */
   public supportsColorFormat(format: ColorTextureFormat): boolean {
-    return format === 'rgba8' || this._floatRenderable;
+    return format === TextureFormat.Rgba8 || this._floatRenderable;
   }
 
   public acquireRenderTexture(width: number, height: number): RenderTexture {
@@ -970,7 +970,7 @@ export class WebGl2Backend implements RenderBackend {
       this._transformTexture = new DataTexture({
         width: 2,
         height: this._transformBuffer.capacity,
-        format: 'rgba32f',
+        format: TextureFormat.Rgba32F,
         data: this._transformBuffer.data,
       });
       this._transformTextureHash = 0;
@@ -989,7 +989,7 @@ export class WebGl2Backend implements RenderBackend {
       this._tintTexture = new DataTexture({
         width: 1,
         height: this._transformBuffer.capacity,
-        format: 'rgba8',
+        format: TextureFormat.Rgba8,
         data: this._transformBuffer.tintData,
       });
     }
@@ -1979,9 +1979,9 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   private _prepareRenderTarget(target: RenderTarget): ManagedRenderTargetState {
-    if (target instanceof RenderTexture && target.format !== 'rgba8' && !this._floatRenderable) {
+    if (target instanceof RenderTexture && target.format !== TextureFormat.Rgba8 && !this._floatRenderable) {
       throw new Error(
-        `RenderTexture: format '${target.format}' requires the WebGL2 extension 'EXT_color_buffer_float', which this context does not support. Check backend.supportsColorFormat() and fall back to 'rgba8'.`,
+        `RenderTexture: format '${target.format}' requires the WebGL2 extension 'EXT_color_buffer_float', which this context does not support. Check backend.supportsColorFormat() and fall back to TextureFormat.Rgba8.`,
       );
     }
 
@@ -2298,15 +2298,15 @@ interface WebGl2DataTextureFormatInfo {
 function webgl2DataTextureFormat(format: DataTextureFormat | ColorTextureFormat): WebGl2DataTextureFormatInfo {
   const gl = WebGL2RenderingContext;
   switch (format) {
-    case 'r8':
+    case TextureFormat.R8:
       return { internalFormat: gl.R8, format: gl.RED, type: gl.UNSIGNED_BYTE, channels: 1, bytesPerPixel: 1 };
-    case 'r32f':
+    case TextureFormat.R32F:
       return { internalFormat: gl.R32F, format: gl.RED, type: gl.FLOAT, channels: 1, bytesPerPixel: 4 };
-    case 'rgba8':
+    case TextureFormat.Rgba8:
       return { internalFormat: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, channels: 4, bytesPerPixel: 4 };
-    case 'rgba16f':
+    case TextureFormat.Rgba16F:
       return { internalFormat: gl.RGBA16F, format: gl.RGBA, type: gl.HALF_FLOAT, channels: 4, bytesPerPixel: 8 };
-    case 'rgba32f':
+    case TextureFormat.Rgba32F:
       return { internalFormat: gl.RGBA32F, format: gl.RGBA, type: gl.FLOAT, channels: 4, bytesPerPixel: 16 };
   }
 }

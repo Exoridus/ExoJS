@@ -570,7 +570,7 @@
         },
         {
           "name": "toTexture",
-          "signature": "toTexture(width: number, height: number, options?: GradientToTextureOptions & { format?: \"rgba8\" }): DataTexture<\"rgba8\">",
+          "signature": "toTexture(width: number, height: number, options?: GradientToTextureOptions & { format?: Rgba8 }): DataTexture<Rgba8>",
           "signatureTokens": [
             {
               "text": "toTexture",
@@ -649,8 +649,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"rgba8\"",
-              "kind": "keyword"
+              "text": "Rgba8",
+              "kind": "type"
             },
             {
               "text": " }",
@@ -673,8 +673,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"rgba8\"",
-              "kind": "keyword"
+              "text": "Rgba8",
+              "kind": "type"
             },
             {
               "text": ">",
@@ -694,16 +694,16 @@
             },
             {
               "name": "options",
-              "type": "GradientToTextureOptions & { format?: \"rgba8\" }",
+              "type": "GradientToTextureOptions & { format?: Rgba8 }",
               "optional": true
             }
           ],
-          "returnType": "DataTexture<\"rgba8\">",
+          "returnType": "DataTexture<Rgba8>",
           "description": ""
         },
         {
           "name": "toTexture",
-          "signature": "toTexture(width: number, height: number, options: GradientToTextureOptions & { format: \"rgba32f\" }): DataTexture<\"rgba32f\">",
+          "signature": "toTexture(width: number, height: number, options: GradientToTextureOptions & { format: Rgba32F }): DataTexture<Rgba32F>",
           "signatureTokens": [
             {
               "text": "toTexture",
@@ -774,8 +774,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"rgba32f\"",
-              "kind": "keyword"
+              "text": "Rgba32F",
+              "kind": "type"
             },
             {
               "text": " }",
@@ -798,8 +798,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"rgba32f\"",
-              "kind": "keyword"
+              "text": "Rgba32F",
+              "kind": "type"
             },
             {
               "text": ">",
@@ -819,11 +819,11 @@
             },
             {
               "name": "options",
-              "type": "GradientToTextureOptions & { format: \"rgba32f\" }",
+              "type": "GradientToTextureOptions & { format: Rgba32F }",
               "optional": false
             }
           ],
-          "returnType": "DataTexture<\"rgba32f\">",
+          "returnType": "DataTexture<Rgba32F>",
           "description": ""
         }
       ],

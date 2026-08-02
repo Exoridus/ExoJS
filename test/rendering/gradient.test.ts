@@ -2,6 +2,7 @@ import { Color } from '#core/Color';
 import { LinearGradient } from '#rendering/gradient/LinearGradient';
 import { RadialGradient } from '#rendering/gradient/RadialGradient';
 import { Sprite } from '#rendering/sprite/Sprite';
+import { TextureFormat } from '#rendering/types';
 
 describe('Gradient toTexture()', () => {
   test('requires at least 2 stops', () => {
@@ -80,9 +81,9 @@ describe('Gradient toTexture()', () => {
       [1, 0],
     );
 
-    const texture = gradient.toTexture(2, 1, { format: 'rgba32f' });
+    const texture = gradient.toTexture(2, 1, { format: TextureFormat.Rgba32F });
 
-    expect(texture.format).toBe('rgba32f');
+    expect(texture.format).toBe(TextureFormat.Rgba32F);
     expect(readPixel32(texture.buffer, 0)).toEqual([1, 0, 0, 1]);
 
     const right = readPixel32(texture.buffer, 1);

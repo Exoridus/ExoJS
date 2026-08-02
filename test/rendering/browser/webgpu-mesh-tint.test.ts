@@ -27,7 +27,7 @@ import { LinearGradient } from '#rendering/gradient/LinearGradient';
 import { Mesh } from '#rendering/mesh/Mesh';
 import { DataTexture } from '#rendering/texture/DataTexture';
 import { Texture } from '#rendering/texture/Texture';
-import { ScaleModes } from '#rendering/types';
+import { ScaleModes, TextureFormat } from '#rendering/types';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { wireCoreRenderers } from './_coreRenderers';
@@ -143,7 +143,7 @@ describe('WebGPU mesh tint and texture sampling', () => {
       data.set([levels[i], levels[i], levels[i], 255], i * 4);
     }
 
-    const texture = new DataTexture({ width, height: 1, format: 'rgba8', data, samplerOptions: { scaleMode: ScaleModes.Nearest } });
+    const texture = new DataTexture({ width, height: 1, format: TextureFormat.Rgba8, data, samplerOptions: { scaleMode: ScaleModes.Nearest } });
     const mesh = new Mesh({ vertices: fullQuadVertices(), uvs: fullQuadUvs(), texture });
 
     try {
@@ -171,7 +171,7 @@ describe('WebGPU mesh tint and texture sampling', () => {
     const texture = new DataTexture({
       width: 2,
       height: 2,
-      format: 'rgba8',
+      format: TextureFormat.Rgba8,
       data: new Uint8Array([255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 255, 255]),
       samplerOptions: { scaleMode: ScaleModes.Nearest },
     });
@@ -264,7 +264,7 @@ describe('WebGPU mesh tint and texture sampling', () => {
     const texture = new DataTexture({
       width: 1,
       height: 1,
-      format: 'rgba8',
+      format: TextureFormat.Rgba8,
       data: new Uint8Array([255, 255, 255, 255]),
       samplerOptions: { scaleMode: ScaleModes.Nearest },
     });
@@ -298,7 +298,7 @@ describe('WebGPU mesh tint and texture sampling', () => {
     const texture = new DataTexture({
       width: 1,
       height: 1,
-      format: 'rgba8',
+      format: TextureFormat.Rgba8,
       data: new Uint8Array([255, 0, 0, 255]), // start red
       samplerOptions: { scaleMode: ScaleModes.Nearest },
     });

@@ -1031,7 +1031,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Color attachment format, fixed at construction. Defaults to 'rgba8'."
+          "description": "Color attachment format, fixed at construction. Defaults to TextureFormat.Rgba8."
         },
         {
           "name": "generateMipMap",

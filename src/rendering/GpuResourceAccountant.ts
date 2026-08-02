@@ -1,4 +1,7 @@
+import { TextureFormat } from '#rendering/types';
+
 import type { RenderStats } from './RenderStats';
+import type { DataTextureFormat } from './texture/DataTexture';
 
 /**
  * Per-backend GPU resource accountant (Slice 2g — Resource-Accounting).
@@ -136,15 +139,15 @@ export const estimateTextureBytes = (width: number, height: number, bytesPerPixe
 };
 
 /** Bytes per pixel for the {@link DataTexture} formats (shared by both backends). @internal */
-export const dataTextureBytesPerPixel = (format: 'r8' | 'r32f' | 'rgba8' | 'rgba32f'): number => {
+export const dataTextureBytesPerPixel = (format: DataTextureFormat): number => {
   switch (format) {
-    case 'r8':
+    case TextureFormat.R8:
       return 1;
-    case 'r32f':
+    case TextureFormat.R32F:
       return 4;
-    case 'rgba8':
+    case TextureFormat.Rgba8:
       return 4;
-    case 'rgba32f':
+    case TextureFormat.Rgba32F:
       return 16;
   }
 };

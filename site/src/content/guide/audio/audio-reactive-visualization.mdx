@@ -25,7 +25,7 @@ Both the analyser and the beat detector connect as parallel taps. They never aff
 An `AudioAnalyser` wraps a Web Audio `AnalyserNode` and exposes frequency and time-domain data. You point it at a source, then call its getters each frame:
 
 ```ts
-import { Asset, AudioStream, Scene } from '@codexo/exojs';
+import { Asset, AudioStream, Scene, TextureFormat } from '@codexo/exojs';
 import type { Time } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 
@@ -169,7 +169,7 @@ init() {
     this.specTex = new DataTexture({
         width: 256,    // scroll history in columns
         height: 64,    // one row per mel band
-        format: 'r8',
+        format: TextureFormat.R8,
     });
 
     this.specSprite = new Sprite(this.specTex);

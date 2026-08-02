@@ -11,6 +11,7 @@ import type { RenderTarget } from '#rendering/RenderTarget';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
+import { TextureFormat } from '#rendering/types';
 import { View } from '#rendering/View';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
@@ -794,11 +795,11 @@ describe('RenderTo WebGL2 browser', () => {
     const backend = await createBackend();
 
     try {
-      expect(backend.supportsColorFormat('rgba8')).toBe(true);
+      expect(backend.supportsColorFormat(TextureFormat.Rgba8)).toBe(true);
 
-      const floatSupported = backend.supportsColorFormat('rgba32f');
+      const floatSupported = backend.supportsColorFormat(TextureFormat.Rgba32F);
       const size = 16;
-      const target = new RenderTexture(size, size, { format: 'rgba32f' });
+      const target = new RenderTexture(size, size, { format: TextureFormat.Rgba32F });
 
       if (!floatSupported) {
         // Acceptance #5: without the extension, preparing a float target throws
