@@ -40,12 +40,14 @@ function createDecoder(overrides: { cacheStrategy?: CacheStrategy; stores?: Cach
   const { strategy } = overrides.cacheStrategy ? { strategy: overrides.cacheStrategy } : createFakeStrategy();
   const storeResource = vi.fn((_type: unknown, _alias: string, resource: unknown) => resource);
 
-  const decoder = new AssetDecoder(fakeLoader, typeRegistry, storeResource, {
+  const decoder = new AssetDecoder(fakeLoader, typeRegistry, {
     basePath: overrides.basePath ?? '',
     fetchOptions: {},
     stores,
     cacheStrategy: strategy,
   });
+
+  decoder._bindResourceStore(storeResource);
 
   return { decoder, typeRegistry, storeResource, strategy };
 }

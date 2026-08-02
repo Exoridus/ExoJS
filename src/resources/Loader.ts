@@ -248,12 +248,7 @@ export class Loader {
     const stores = options.cache ? (Array.isArray(options.cache) ? options.cache : [options.cache]) : [];
     const cacheStrategy = options.cacheStrategy ?? new CacheFirstStrategy();
 
-    // The callback below reads `this._residency` before it's assigned two
-    // statements down — safe only because AssetDecoder's constructor never
-    // invokes it synchronously (it fires later, on a real fetch resolving).
-    // If AssetDecoder's construction ever changes to eagerly call back into
-    // the loader, this ordering must change too.
-    this._decoder = new AssetDecoder(this, this._typeRegistry, (type, alias, resource) => this._residency._storeResource(type, alias, resource), {
+    this._decoder = new AssetDecoder(this, this._typeRegistry, {
       basePath: options.basePath ?? '',
       fetchOptions: options.fetchOptions ?? {},
       stores,
@@ -263,6 +258,11 @@ export class Loader {
     const signals: AssetResidencySignals = { onProgress: this.onProgress, onLoaded: this.onLoaded, onError: this.onError };
 
     this._residency = new AssetResidency(this._typeRegistry, this._decoder, signals, options.concurrency ?? 6);
+
+    // Bound last, once both collaborators exist: the decoder feeds what it
+    // decodes back into the residency, which in turn needs the decoder to
+    // dispatch fetches.
+    this._decoder._bindResourceStore((type, alias, resource) => this._residency._storeResource(type, alias, resource));
   }
 
   // -----------------------------------------------------------------------
