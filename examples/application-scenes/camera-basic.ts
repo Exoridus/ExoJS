@@ -48,7 +48,7 @@ class CameraBasicScene extends Scene {
 
     override draw(context: RenderingContext): void {
         const app = this.app;
-        const { width } = app.canvas;
+        const { width } = app;
 
         context.backend.clear();
         context.render(this.grid);

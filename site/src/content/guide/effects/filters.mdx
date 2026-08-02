@@ -48,6 +48,11 @@ Set `cacheAsBitmap = true` on a filtered subtree that doesn't change each frame:
 A box blur, not a shader — it works by rendering the input texture multiple times at symmetric pixel offsets with additive blending. Higher quality produces more offset samples per axis and a smoother result at the cost of more draw calls:
 
 ```ts
+import { BlurFilter, Sprite } from '@codexo/exojs';
+
+declare const sprite: Sprite;
+declare const tween: { progress: number };
+
 const blur = new BlurFilter({ radius: 4, quality: 2 });
 sprite.filters = [blur];
 
@@ -63,11 +68,15 @@ blur.quality = 3;
 Multiplies the rendered output by a tint color. The simplest filter — one multiplicative blend:
 
 ```ts
+import { Color, ColorFilter, Sprite } from '@codexo/exojs';
+
+declare const sprite: Sprite;
+
 const color = new ColorFilter(new Color(255, 160, 120));
 sprite.filters = [color];
 
 // Live — mutate the color without rebuilding anything
-color.color.setRGB(180, 220, 255);
+color.color.set(180, 220, 255);
 ```
 
 Use for tinting, flash effects, fade-to-black, or any per-drawable color manipulation that should happen after the node's own tint and blend mode are applied.
@@ -136,6 +145,11 @@ Both auto-bind `uTexture` (the filter input) and `uResolution` (output dimension
 Filters on a `Container` apply to the container's entire rendered subtree — every child is drawn into an off-screen target first, then the filter chain processes that target. A blur on a container blurs all children together, not individually:
 
 ```ts
+import { BlurFilter, Container, Sprite } from '@codexo/exojs';
+
+declare const hero: Sprite;
+declare const enemy: Sprite;
+
 const world = new Container();
 world.filters = [new BlurFilter({ radius: 2 })];
 world.addChild(hero);   // hero is drawn into container's RT, then blurred

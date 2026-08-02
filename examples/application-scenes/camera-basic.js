@@ -36,7 +36,7 @@ class CameraBasicScene extends Scene {
     }
     draw(context) {
         const app = this.app;
-        const { width } = app.canvas;
+        const { width } = app;
         context.backend.clear();
         context.render(this.grid);
         context.render(this.bunny);

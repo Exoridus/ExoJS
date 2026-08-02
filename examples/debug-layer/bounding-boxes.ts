@@ -27,7 +27,7 @@ class BoundingBoxesScene extends Scene {
 
     override update(delta: Time): void {
         const app = this.app;
-        const { height } = app.canvas;
+        const { height } = app;
 
         this.time += delta.seconds;
         for (const { sprite, speed } of this.sprites) {

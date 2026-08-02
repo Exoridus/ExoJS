@@ -58,7 +58,7 @@ class KeyRebindingScene extends Scene {
 
     override init(): void {
         const app = this.app;
-        const { height } = app.canvas;
+        const { height } = app;
 
         this.groundY = height - 240;
         this.heroY = this.groundY;
@@ -130,7 +130,7 @@ class KeyRebindingScene extends Scene {
 
     override draw(context: RenderingContext): void {
         const app = this.app;
-        const { width } = app.canvas;
+        const { width } = app;
 
         context.backend.clear();
         this.graphics.clear();

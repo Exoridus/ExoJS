@@ -9,9 +9,10 @@ class MinimapWithMaskScene extends Scene {
     frame;
     pipeline;
     time = 0;
+    // #region guide:minimap-setup
     init() {
         const app = this.app;
-        const { width } = app.canvas;
+        const { width } = app;
         // Park the round minimap in the top-right corner of the 16:9 canvas.
         const miniSize = 260;
         const miniX = width - miniSize - 20;
@@ -43,6 +44,7 @@ class MinimapWithMaskScene extends Scene {
             .addPass(new RenderNodePass(this.mini))
             .addPass(new RenderNodePass(this.frame));
     }
+    // #endregion guide:minimap-setup
     update(delta) {
         this.time += delta.seconds;
     }

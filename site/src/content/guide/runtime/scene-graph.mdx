@@ -74,6 +74,10 @@ Skew (shear) slants the local shape along one or both axes without scaling or ro
 Both are in degrees, consistent with `rotation`. Use the compound setter when setting both at once:
 
 ```ts
+import { Sprite } from '@codexo/exojs';
+
+declare const hero: Sprite;
+
 hero.skewX = 15;           // lean right 15°
 hero.skewY = -5;           // tilt top-left slightly
 
@@ -110,6 +114,14 @@ Children paint in the order you add them — last added sits on top. For depth t
 The container API covers the common cases:
 
 ```ts
+import { Container } from '@codexo/exojs';
+
+declare const parent: Container;
+declare const child: Container;
+declare const a: Container;
+declare const b: Container;
+const index = 0;
+
 parent.addChild(child);              // append (variadic — pass multiple)
 parent.addChildAt(child, index);     // insert at a specific index
 parent.removeChild(child);           // remove by reference
@@ -136,13 +148,15 @@ Each level is independent: rotating the player rotates everything inside it with
 Each render node has a `mask` property that clips its rendering to a shape. The mask source can be a `Rectangle`, a `Texture`, another `RenderNode`, or `null` (no mask). Masks are applied during render, not during transform — children of a masked container are still positioned normally, but only the visible region is drawn.
 
 ```ts
-import { Rectangle } from '@codexo/exojs';
+import { Container, Rectangle } from '@codexo/exojs';
 
-this.viewport = new Container();
-this.viewport.mask = new Rectangle(0, 0, 400, 300);
+declare const sceneRoot: Container;
+declare const world: Container;
 
-this.viewport.addChild(this.world);
-this.addChild(this.viewport);
+const viewport = new Container();
+viewport.mask = new Rectangle(0, 0, 400, 300);
+viewport.addChild(world);
+sceneRoot.addChild(viewport);
 ```
 
 This pattern is useful for HUD windows, minimaps, and any area where you want to clip a complex subtree to a simple shape.

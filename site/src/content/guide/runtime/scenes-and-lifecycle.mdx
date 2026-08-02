@@ -45,6 +45,10 @@ Scene structure stays in your code. State lives on `this`, organized however you
 Register the scene's constructor and hand it to `app.start`; the application takes over:
 
 ```ts
+import { Application, Scene } from '@codexo/exojs';
+
+class TitleScene extends Scene {}
+
 const app = new Application({ scenes: { TitleScene } });
 app.start(TitleScene);
 ```
@@ -56,6 +60,10 @@ From this point on, the application runs the scene's `update` and `draw` once pe
 Most non-trivial projects have more than one scene. The application owns a scene director (`app.scenes`) that drives the active scene. Use `change` to swap in a new scene, and register scene constructors up front so `change` knows which classes are valid targets:
 
 ```ts
+import { Application, FadeSceneTransition, Scene } from '@codexo/exojs';
+
+class GameScene extends Scene {}
+
 const app = new Application({ scenes: { GameScene } });
 
 // Replace the active scene with a fresh instance
@@ -210,6 +218,8 @@ fixedUpdate(delta: Time) {
 Behind the scenes, the application accumulates each frame's elapsed time and drains it in fixed-size chunks — `1 / 60` s by default, configurable via `fixedTimeStep` (seconds) on the `Application` constructor options:
 
 ```ts
+import { Application } from '@codexo/exojs';
+
 const app = new Application({ fixedTimeStep: 1 / 30 });
 ```
 

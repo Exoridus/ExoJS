@@ -8,6 +8,7 @@ import { Application, Color, Graphics, Label, ProgressBar, type RenderingContext
  * `scene.root`; the HUD (a label + a live health bar) lives on `scene.ui` and
  * is auto-rendered on top.
  */
+// #region guide:hud-scene
 class GameScene extends Scene {
     private angle = 0;
     private time = 0;
@@ -44,7 +45,9 @@ class GameScene extends Scene {
         context.render(this.ring);
     }
 }
+// #endregion guide:hud-scene
 
+// #region guide:hud-app
 const app = new Application({
     scenes: { GameScene },
     canvas: {
@@ -57,3 +60,4 @@ const app = new Application({
 });
 
 void app.start(GameScene);
+// #endregion guide:hud-app

@@ -39,7 +39,7 @@ describe('guide and example runtime contracts', () => {
   });
 
   it('uses logical application dimensions for scene layout', () => {
-    const backingStoreLayout = /(?:\{\s*width\s*,\s*height\s*\}\s*=\s*(?:this\.)?app\.canvas|(?:this\.)?app\.canvas\.(?:width|height))/g;
+    const backingStoreLayout = /(?:\{[^}\n]*\b(?:width|height)\b[^}\n]*\}\s*=\s*(?:this\.)?app\.canvas|(?:this\.)?app\.canvas\.(?:width|height))/g;
     expect([...violations(exampleFiles, backingStoreLayout), ...guideCodeViolations(backingStoreLayout)]).toEqual([]);
   });
 

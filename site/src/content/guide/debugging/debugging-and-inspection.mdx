@@ -16,8 +16,10 @@ ExoJS ships five diagnostic layers in the `@codexo/exojs/debug` optional entrypo
 The [`DebugOverlay`](/ExoJS/en/api/debug-overlay/) is the entry point. Create one against your application, toggle individual layers by setting their `visible` flag:
 
 ```ts
+import { Application } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
 
+const app = new Application();
 const debug = new DebugOverlay(app);
 
 // During development — just flip a flag
@@ -49,6 +51,9 @@ Press F1 or set `debug.layers.performance.visible = true` to enable it.
 The [`BoundingBoxesLayer`](/ExoJS/en/api/bounding-boxes-layer/) draws colored rectangle outlines around every visible `RenderNode` with non-zero bounds. Each node's outline hue cycles by its `zIndex` — adjacent z-indices get visually distinct colors. This layer renders in world space, so boxes move and rotate with the scene:
 
 ```ts
+import { DebugOverlay } from '@codexo/exojs/debug';
+
+declare const debug: DebugOverlay;
 debug.layers.boundingBoxes.visible = true;  // or F2
 ```
 
@@ -69,6 +74,9 @@ The [`HitTestLayer`](/ExoJS/en/api/hit-test-layer/) color-codes interactive node
 This layer renders in world space. Combined with `debug.layers.pointerStack.visible` (F4), which lists which nodes are under the cursor in a screen-space panel, you can trace the full hit-test path from pointer position to interactive node:
 
 ```ts
+import { DebugOverlay } from '@codexo/exojs/debug';
+
+declare const debug: DebugOverlay;
 debug.layers.hitTest.visible = true;       // or F3
 debug.layers.pointerStack.visible = true;  // or F4
 ```

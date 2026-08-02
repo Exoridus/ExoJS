@@ -22,7 +22,7 @@ class BoundingBoxesScene extends Scene {
     }
     update(delta) {
         const app = this.app;
-        const { height } = app.canvas;
+        const { height } = app;
         this.time += delta.seconds;
         for (const { sprite, speed } of this.sprites) {
             sprite.setRotation(this.time * 35 * speed);
