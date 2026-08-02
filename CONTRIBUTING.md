@@ -122,6 +122,35 @@ package version or official revision.
 
 See `src/core/BuildInfo.ts` for the public runtime API (`buildInfo`).
 
+## Immutability: `readonly` first, `Object.freeze` only where it earns it
+
+Express immutability in the type. `readonly` and `readonly T[]` cost nothing at
+runtime and catch the mistake at the call site, which is where it is cheapest to
+fix. Reach for `Object.freeze` only when the type cannot carry the guarantee.
+
+Two cases justify it:
+
+- **A shared cached snapshot.** `Container.children` hands the same array to
+  every reader until the next structural change, so a stray `push` from one
+  caller would corrupt what all the others see — including the engine's own
+  paint-order pass. The type alone cannot stop a JavaScript caller, and the
+  freeze happens once per structural change, not per frame.
+- **Engine-owned values copied from caller input**, where a later mutation of
+  the caller's object must not reach into engine state (see
+  `TextureRegion`'s extrusion insets).
+
+Everywhere else, prefer `readonly` in the type and, if a runtime check is worth
+having, gate the freeze on `__DEV__` — the pattern `TextureRegion` uses on its
+own instances. Production then pays nothing while development still fails loudly.
+
+Never freeze per-frame: `RenderPlanPlayer` deliberately skips a per-draw
+`Object.freeze` for exactly this reason, and that decision should stay the norm
+for anything on the playback path.
+
+For a field a subclass may read but must not mutate, neither is needed — make
+the field private and expose a `readonly` getter, as `Container` does for its
+child list.
+
 ## Distribution
 
 - npm packages are **modular and self-contained**: `@codexo/exojs` ships Core only;
