@@ -682,7 +682,7 @@ describe('ChordAction/SequenceAction composed with an ActionMap owner', () => {
     map._update(driver.sample);
     expect(map.combo.progress).toBeCloseTo(0.5);
 
-    // Availability lost mid-pattern (e.g. a scene pause under a `when: 'active'`
+    // Availability lost mid-pattern (e.g. a scene pause under a `when: SceneAvailability.Active`
     // policy — see SceneInputs.attach): the map forces a reset, discarding the
     // half-completed sequence rather than leaving it armed while unobserved.
     available = false;

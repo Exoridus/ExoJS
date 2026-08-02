@@ -2,6 +2,7 @@ import { Tween } from '#animation/Tween';
 import { TweenSequencer } from '#animation/TweenSequencer';
 import type { Application } from '#core/Application';
 import { SceneTweens } from '#core/scene/SceneTweens';
+import { SceneAvailability } from '#core/SceneAvailability';
 import { SceneState } from '#core/SceneState';
 
 const createAppStub = (createResult: unknown, sequencerResult?: unknown): Application =>
@@ -175,7 +176,7 @@ describe('SceneTweens', () => {
       const app = createAppStub(tween);
       const tweens = new SceneTweens(app, () => SceneState.Active);
 
-      tweens.create({}, { when: 'active' });
+      tweens.create({}, { when: SceneAvailability.Active });
 
       tweens.pause();
       expect(tween.pause).toHaveBeenCalledTimes(1);
@@ -189,7 +190,7 @@ describe('SceneTweens', () => {
       const app = createAppStub(tween);
       const tweens = new SceneTweens(app, () => SceneState.Active);
 
-      tweens.add(tween as never, { when: 'paused' });
+      tweens.add(tween as never, { when: SceneAvailability.Paused });
 
       tweens.pause();
       expect(tween.resume).toHaveBeenCalledTimes(1);
@@ -217,7 +218,7 @@ describe('SceneTweens', () => {
       const app = createAppStub(tween);
       const tweens = new SceneTweens(app, () => SceneState.Active);
 
-      tweens.create({}, { when: 'active' });
+      tweens.create({}, { when: SceneAvailability.Active });
 
       tweens.pause(); // freezes it, records it
       tween.resume(); // user manually resumes it themselves before the scene resumes
@@ -233,7 +234,7 @@ describe('SceneTweens', () => {
       const app = createAppStub(makeStubTween(), sequencer);
       const tweens = new SceneTweens(app, () => SceneState.Active);
 
-      tweens.createSequencer({ when: 'active' });
+      tweens.createSequencer({ when: SceneAvailability.Active });
 
       tweens.pause();
       expect(sequencer.pause).toHaveBeenCalledTimes(1);

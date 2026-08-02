@@ -1,6 +1,7 @@
 import type { Pausable, Playable, Voice } from '#audio/Playable';
 import type { Application } from '#core/Application';
 import { SceneAudio } from '#core/scene/SceneAudio';
+import { SceneAvailability } from '#core/SceneAvailability';
 import { SceneState } from '#core/SceneState';
 import { Signal } from '#core/Signal';
 
@@ -124,7 +125,7 @@ describe('SceneAudio', () => {
       const app = createAppStub(voice);
       const audio = new SceneAudio(app, () => SceneState.Active);
 
-      audio.add(voice, { when: 'active' });
+      audio.add(voice, { when: SceneAvailability.Active });
 
       audio.pause();
       expect(voice.pause).toHaveBeenCalledTimes(1);
@@ -138,7 +139,7 @@ describe('SceneAudio', () => {
       const app = createAppStub(voice);
       const audio = new SceneAudio(app, () => SceneState.Active);
 
-      audio.add(voice, { when: 'paused' });
+      audio.add(voice, { when: SceneAvailability.Paused });
 
       audio.pause();
       expect(voice.resume).toHaveBeenCalledTimes(1);
@@ -166,7 +167,7 @@ describe('SceneAudio', () => {
       const app = createAppStub(voice);
       const audio = new SceneAudio(app, () => SceneState.Active);
 
-      audio.add(voice, { when: 'active' });
+      audio.add(voice, { when: SceneAvailability.Active });
 
       expect(() => audio.pause()).not.toThrow();
       expect(() => audio.resume()).not.toThrow();
@@ -177,7 +178,7 @@ describe('SceneAudio', () => {
       const app = createAppStub(voice);
       const audio = new SceneAudio(app, () => SceneState.Active);
 
-      audio.add(voice, { when: 'active' });
+      audio.add(voice, { when: SceneAvailability.Active });
 
       audio.pause(); // freezes it, records it
       voice.resume(); // caller manually resumes it themselves before the scene resumes
@@ -294,7 +295,7 @@ describe('SceneAudio — Preparing gate', () => {
     const app = createAppStub(real);
     const audio = new SceneAudio(app, () => SceneState.Preparing);
 
-    audio.play(fakePlayable, { when: 'active' });
+    audio.play(fakePlayable, { when: SceneAvailability.Active });
     audio._flushPending();
 
     // If the `when` policy were lost during the flush swap, pause() would

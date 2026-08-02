@@ -3,11 +3,9 @@ import { TweenSequencer } from '#animation/TweenSequencer';
 import { TweenSequencerState } from '#animation/TweenSequencer';
 import { TweenState } from '#animation/types';
 import type { Application } from '#core/Application';
+import { SceneAvailability } from '#core/SceneAvailability';
 import { SceneState } from '#core/SceneState';
 import type { Destroyable } from '#core/types';
-
-/** Availability of a tracked tween/sequencer relative to the owning scene's pause state. Default `'always'`. */
-export type SceneTweenAvailability = 'active' | 'paused' | 'always';
 
 /** Options accepted by every `SceneTweens` tracking method. */
 export interface SceneTweenOptions {
@@ -21,7 +19,7 @@ export interface SceneTweenOptions {
    * creation time — an item created while the scene is already paused starts
    * running immediately and is only corrected at the next pause/resume cycle.
    */
-  when?: SceneTweenAvailability;
+  when?: SceneAvailability;
 }
 
 /**
@@ -41,8 +39,8 @@ export interface SceneTweenOptions {
  * {@link SceneTweens.suspend}/{@link SceneTweens.restore} for retention.
  */
 export class SceneTweens implements Destroyable {
-  private readonly _tweens = new Map<Tween, SceneTweenAvailability>();
-  private readonly _sequencers = new Map<TweenSequencer, SceneTweenAvailability>();
+  private readonly _tweens = new Map<Tween, SceneAvailability>();
+  private readonly _sequencers = new Map<TweenSequencer, SceneAvailability>();
   private readonly _cold = new Set<Tween>();
   private readonly _coldPaused = new Set<Tween>();
   private readonly _coldSequencers = new Set<TweenSequencer>();
@@ -66,7 +64,7 @@ export class SceneTweens implements Destroyable {
    * class doc.
    */
   public create<T extends object>(target: T, options?: SceneTweenOptions): Tween<T> {
-    const when = options?.when ?? 'always';
+    const when = options?.when ?? SceneAvailability.Always;
 
     if (this._getState() !== SceneState.Active) {
       const tween = new Tween(target);
@@ -94,7 +92,7 @@ export class SceneTweens implements Destroyable {
    * it in. Returns `this` for chaining.
    */
   public add(tween: Tween, options?: SceneTweenOptions): this {
-    const when = options?.when ?? 'always';
+    const when = options?.when ?? SceneAvailability.Always;
 
     this._app.tweens.add(tween);
     this._tweens.set(tween, when);
@@ -115,7 +113,7 @@ export class SceneTweens implements Destroyable {
    * {@link SceneTweens.create}) and bound to the real one at activation.
    */
   public createSequencer(options?: SceneTweenOptions): TweenSequencer {
-    const when = options?.when ?? 'always';
+    const when = options?.when ?? SceneAvailability.Always;
 
     if (this._getState() !== SceneState.Active) {
       const sequencer = new TweenSequencer();
@@ -240,10 +238,10 @@ export class SceneTweens implements Destroyable {
     const thawedTweens = new Set<Tween>();
 
     for (const [tween, when] of this._tweens) {
-      if (when === 'active' && tween.state === TweenState.Active) {
+      if (when === SceneAvailability.Active && tween.state === TweenState.Active) {
         tween.pause();
         frozenTweens.add(tween);
-      } else if (when === 'paused' && tween.state === TweenState.Paused) {
+      } else if (when === SceneAvailability.Paused && tween.state === TweenState.Paused) {
         tween.resume();
         thawedTweens.add(tween);
       }
@@ -256,10 +254,10 @@ export class SceneTweens implements Destroyable {
     const thawedSequencers = new Set<TweenSequencer>();
 
     for (const [sequencer, when] of this._sequencers) {
-      if (when === 'active' && sequencer.state === TweenSequencerState.Active) {
+      if (when === SceneAvailability.Active && sequencer.state === TweenSequencerState.Active) {
         sequencer.pause();
         frozenSequencers.add(sequencer);
-      } else if (when === 'paused' && sequencer.state === TweenSequencerState.Paused) {
+      } else if (when === SceneAvailability.Paused && sequencer.state === TweenSequencerState.Paused) {
         sequencer.resume();
         thawedSequencers.add(sequencer);
       }

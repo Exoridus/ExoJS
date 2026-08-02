@@ -156,6 +156,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "Sampler",
   "ScaleModes",
   "Scene",
+  "SceneAvailability",
   "SceneDirector",
   "SceneInstanceNotFoundError",
   "SceneNavigationAbortedError",

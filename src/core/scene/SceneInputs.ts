@@ -1,36 +1,34 @@
 import type { Application } from '#core/Application';
+import { SceneAvailability } from '#core/SceneAvailability';
 import { SceneState } from '#core/SceneState';
 import type { Destroyable } from '#core/types';
 import type { ActionMap, ActionRecord } from '#input/actions/ActionMap';
 import type { InputBinding, InputBindingOptions, InputChannel } from '#input/InputBinding';
 
-/** Visible-scene states in which a {@link SceneInputs} binding may dispatch. Default: `'active'`. */
-export type SceneInputAvailability = 'active' | 'paused' | 'always';
-
 /** Construction options for every {@link SceneInputs} factory method. */
 export interface SceneInputBindingOptions extends InputBindingOptions {
   /** Visible scene states in which this binding may dispatch. Default: `'active'`. */
-  readonly when?: SceneInputAvailability;
+  readonly when?: SceneAvailability;
 }
 
 /** Availability policy for a scene-owned ActionMap. */
 export interface SceneActionMapOptions {
   /** Visible scene states in which this map may sample. Default: `'active'`. */
-  readonly when?: SceneInputAvailability;
+  readonly when?: SceneAvailability;
 }
 
 const gatedStates = new Set<SceneState>([SceneState.Preparing, SceneState.Ready, SceneState.Suspended, SceneState.Destroying, SceneState.Destroyed]);
 
-function whenPolicyAllows(when: SceneInputAvailability, state: SceneState, paused: boolean): boolean {
+function whenPolicyAllows(when: SceneAvailability, state: SceneState, paused: boolean): boolean {
   if (gatedStates.has(state)) {
     return false;
   }
 
-  if (when === 'always') {
+  if (when === SceneAvailability.Always) {
     return true;
   }
 
-  return when === 'active' ? !paused : paused;
+  return when === SceneAvailability.Active ? !paused : paused;
 }
 
 type BindingKind = 'onStart' | 'onActive' | 'onStop' | 'onTrigger';
@@ -78,7 +76,7 @@ export class SceneInputs implements Destroyable {
    * the suspend does not surface as a fresh press on resume.
    */
   public attach<T extends ActionRecord>(map: ActionMap<T>, options: SceneActionMapOptions = {}): ActionMap<T> {
-    const when = options.when ?? 'active';
+    const when = options.when ?? SceneAvailability.Active;
     map._attach(this, () => this._allowedNow(when));
     this._actionMaps.add(map);
 
@@ -104,7 +102,7 @@ export class SceneInputs implements Destroyable {
    * `on*` binding (see {@link SceneInputs._bind}) — the two must never drift
    * apart, so neither inlines this check itself.
    */
-  private _allowedNow(when: SceneInputAvailability): boolean {
+  private _allowedNow(when: SceneAvailability): boolean {
     return !this._suspended && !this._app.scenes._transitionGateOpen && whenPolicyAllows(when, this._getState(), this._getPaused());
   }
 
@@ -212,7 +210,7 @@ export class SceneInputs implements Destroyable {
     callback: (value: number) => void,
     options?: SceneInputBindingOptions,
   ): InputBinding {
-    const when = options?.when ?? 'active';
+    const when = options?.when ?? SceneAvailability.Active;
     const forwarded: InputBindingOptions | undefined =
       options === undefined
         ? undefined

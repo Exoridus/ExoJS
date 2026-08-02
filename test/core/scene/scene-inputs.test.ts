@@ -1,5 +1,6 @@
 import type { Application } from '#core/Application';
 import { SceneInputs } from '#core/scene/SceneInputs';
+import { SceneAvailability } from '#core/SceneAvailability';
 import { SceneState } from '#core/SceneState';
 import { Signal } from '#core/Signal';
 import { ActionMap } from '#input/actions/ActionMap';
@@ -170,13 +171,13 @@ describe('SceneInputs — when policy availability matrix', () => {
     );
     const onStart = vi.fn();
 
-    inputs.onStart(1, onStart, { when: 'active', threshold: 500 });
+    inputs.onStart(1, onStart, { when: SceneAvailability.Active, threshold: 500 });
 
     // The `when` key must never reach app.input — only InputBindingOptions fields do.
     expect(app.input.onStart).toHaveBeenCalledWith(1, expect.any(Function), { threshold: 500 });
 
     bindings[0]!.onStart.dispatch(1);
-    expect(onStart).not.toHaveBeenCalled(); // paused, when: 'active' -> disallowed
+    expect(onStart).not.toHaveBeenCalled(); // paused, when: SceneAvailability.Active -> disallowed
   });
 
   test('the transition gate suppresses dispatch even for when: "always"', () => {
@@ -188,7 +189,7 @@ describe('SceneInputs — when policy availability matrix', () => {
     );
     const onActive = vi.fn();
 
-    inputs.onActive(1, onActive, { when: 'always' });
+    inputs.onActive(1, onActive, { when: SceneAvailability.Always });
     bindings[0]!.onStart.dispatch(1);
     transitionGateOpen.value = true;
 
@@ -209,7 +210,7 @@ describe('SceneInputs — edge rules', () => {
     );
     const onTrigger = vi.fn();
 
-    inputs.onTrigger(1, onTrigger, { when: 'active' });
+    inputs.onTrigger(1, onTrigger, { when: SceneAvailability.Active });
 
     bindings[0]!.onStart.dispatch(1);
 
@@ -231,7 +232,7 @@ describe('SceneInputs — edge rules', () => {
     );
     const onTrigger = vi.fn();
 
-    inputs.onTrigger(1, onTrigger, { when: 'active' });
+    inputs.onTrigger(1, onTrigger, { when: SceneAvailability.Active });
 
     bindings[0]!.onStart.dispatch(1); // press edge disallowed
 
@@ -252,7 +253,7 @@ describe('SceneInputs — edge rules', () => {
     );
     const onTrigger = vi.fn();
 
-    inputs.onTrigger(1, onTrigger, { when: 'active' });
+    inputs.onTrigger(1, onTrigger, { when: SceneAvailability.Active });
 
     bindings[0]!.onStart.dispatch(1);
 
@@ -275,7 +276,7 @@ describe('SceneInputs — edge rules', () => {
     );
     const onTrigger = vi.fn();
 
-    inputs.onTrigger(1, onTrigger, { when: 'active' });
+    inputs.onTrigger(1, onTrigger, { when: SceneAvailability.Active });
 
     bindings[0]!.onStart.dispatch(1);
     bindings[0]!.onStop.dispatch(0);
@@ -293,7 +294,7 @@ describe('SceneInputs — edge rules', () => {
     );
     const onStop = vi.fn();
 
-    inputs.onStop(1, onStop, { when: 'active' });
+    inputs.onStop(1, onStop, { when: SceneAvailability.Active });
 
     bindings[0]!.onStart.dispatch(1);
     bindings[0]!.onStop.dispatch(0);
@@ -332,7 +333,7 @@ describe('SceneInputs — suspend()/resume()', () => {
     );
     const onActive = vi.fn();
 
-    inputs.onActive(1, onActive, { when: 'always' });
+    inputs.onActive(1, onActive, { when: SceneAvailability.Always });
     bindings[0]!.onStart.dispatch(1);
 
     inputs.suspend();
@@ -349,7 +350,7 @@ describe('SceneInputs — suspend()/resume()', () => {
     );
     const onActive = vi.fn();
 
-    inputs.onActive(1, onActive, { when: 'always' });
+    inputs.onActive(1, onActive, { when: SceneAvailability.Always });
     inputs.suspend();
     inputs.resume();
 
