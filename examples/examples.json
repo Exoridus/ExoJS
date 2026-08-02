@@ -112,6 +112,23 @@
             "level": "intermediate"
         },
         {
+            "slug": "loading-screen",
+            "path": "application-scenes/loading-screen.js",
+            "language": "typescript",
+            "title": "Loading Screen",
+            "description": "Drive one progress bar from the loader-wide signals (onLoadStart, onLoadProgress, onLoadError, onLoadComplete), unsubscribe in unload, and guard the hand-over to the game scene.",
+            "backend": "core",
+            "tags": [
+                "scene",
+                "loader",
+                "assets"
+            ],
+            "level": "intermediate",
+            "capabilities": [
+                "keyboard"
+            ]
+        },
+        {
             "slug": "hud-overlay-scene",
             "path": "application-scenes/hud-overlay-scene.js",
             "language": "typescript",
@@ -1701,6 +1718,23 @@
                 "rendering"
             ],
             "level": "intro"
+        },
+        {
+            "slug": "asset-catalogs",
+            "path": "sprites-textures/asset-catalogs.js",
+            "language": "typescript",
+            "title": "Asset Catalogs",
+            "description": "Declare a typed Assets catalog, merge catalogs with compose, derive one with extend, and load them through two parallel queues with per-queue progress.",
+            "backend": "core",
+            "tags": [
+                "loader",
+                "assets",
+                "sprite"
+            ],
+            "level": "intermediate",
+            "capabilities": [
+                "keyboard"
+            ]
         },
         {
             "slug": "spritesheet-frames",

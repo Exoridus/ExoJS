@@ -5,6 +5,7 @@ description: 'The asset pipeline — how the loader registers, fetches, and reso
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 import Callout from '../../../components/Callout.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 
 # Loading and resources
 
@@ -55,9 +56,9 @@ When you need several assets of the same type, load them in parallel and keep th
 
 ```ts
 async load() {
-    [this.hero, this.ground, this.coin] = await Promise.all([
+    [this.hero, this.terrain, this.coin] = await Promise.all([
         this.loader.load('image/hero.png'),
-        this.loader.load('image/ground.png'),
+        this.loader.load('image/terrain.png'),
         this.loader.load('image/coin.png'),
     ]);
 }
@@ -75,20 +76,15 @@ Because the path is the identity, the same source path returns the very same `Te
 
 ## Dynamic paths and non-seamless types
 
-A bare string only works for a _literal_ path — the type is inferred at compile time from the extension. When the path is computed at runtime, or the type can't be inferred from a path at all, use the canonical `Asset.type(...)` descriptor:
+A bare string only works for a _literal_ path — the type is inferred at compile time from the extension. When the path is computed at runtime, use the canonical `Asset.type(...)` descriptor:
 
-```ts
-import { Asset } from '@codexo/exojs';
+<SourceSnippet source="examples/sprites-textures/asset-catalogs.ts" region="dynamic-path" title="A path chosen at runtime" />
 
-// Dynamic path — not a string literal, so it needs an explicit type
-async _changeLevel(levelName: string) {
-    const bg = await this.app.loader.load(Asset.type('texture', `image/levels/${levelName}.png`));
-    this.background.setTexture(bg);
-}
+The snippets on this page that come from a runnable example open with a `const app = this.app; if (app === null) …` guard. `Scene.app` is `null` until the scene is attached, and the examples are compiled under `strict`, so they narrow it once and reuse the local — shorter prose snippets elsewhere just write `this.app` directly.
 
-// Non-leaf types do not have a bare-path form, even for a literal path
-const music = await this.app.loader.load(Asset.type('music', 'audio/theme.ogg'));
-```
+Types that can't be inferred from a path at all need the same descriptor, even when the path _is_ a literal:
+
+<SourceSnippet source="examples/sprites-textures/asset-catalogs.ts" region="non-leaf-load" title="A non-leaf type" />
 
 <Callout type="hint" title="get(Asset.type(...)) is the dynamic-path escape hatch">
   For seamless and value types, `this.loader.get(Asset.type(type, dynamicPath))` returns a handle or `AssetRef` immediately and starts the asynchronous load. Capture
@@ -124,21 +120,20 @@ For value assets such as `Json` (and `TextAsset`, `CsvAsset`, and the other data
 
 Build mixed groups with `Assets.from(...)`. This is the canonical catalog API; the old inline-record `loader.load({ alias: config })` call shape has been removed.
 
+<SourceSnippet source="examples/sprites-textures/asset-catalogs.ts" region="catalog-declare" title="A mixed catalog" />
+
+Awaiting the catalog returns an object whose keys match the input and whose values are the resolved resource instances directly, so it destructures:
+
 ```ts
-const SceneAssets = Assets.from({
-    hero: 'image/hero.png',
-    click: Asset.type('sound', 'audio/click.ogg'),
-});
-
 async load() {
-    const { hero, click } = await this.loader.load(SceneAssets);
+    const { logo, click, atlas } = await this.loader.load(SharedAssets);
 
-    this.hero  = new Sprite(hero);
+    this.logo  = new Sprite(logo);
     this.click = click;
 }
 ```
 
-The result is an object whose keys match the input and whose values are the resolved resource instances directly — no separate `get()` step needed, though `this.loader.get('image/hero.png')` / `this.loader.get('audio/click.ogg')` still work afterward since the source path remains the identity.
+No separate `get()` step is needed, though `this.loader.get('image/uv-grid-256.png')` / `this.loader.get('audio/ui-click.ogg')` still work afterward since the source path remains the identity.
 
 ## Reusable asset references
 
@@ -157,17 +152,19 @@ export const TitleAssets = Assets.from({
 Every property is a real, usable handle _before_ any loader touches it — `TitleAssets.logo` is already a `Texture` (in the `'loading'` state), and `TitleAssets.config` is already an `AssetRef`. Load the whole catalog, then read the same properties:
 
 ```ts
-// Fetches every entry and heals each handle in place
-await this.loader.load(TitleAssets);
+async load() {
+    // Fetches every entry and heals each handle in place
+    await this.loader.load(TitleAssets);
 
-// Same objects as before load() — now populated
-this.logo = new Sprite(TitleAssets.logo);
-this.startLevel = TitleAssets.config.value;
+    // Same objects as before load() — now populated
+    this.logo = new Sprite(TitleAssets.logo);
+    this.startLevel = TitleAssets.config.value;
+}
 ```
 
 Typed properties on the catalog give autocomplete and type inference for free:
 
-```ts
+```ts no-check
 TitleAssets.logo; // Texture
 TitleAssets.music; // AudioStream
 TitleAssets.config; // AssetRef<{ startLevel: string }>
@@ -176,7 +173,9 @@ TitleAssets.config; // AssetRef<{ startLevel: string }>
 `Assets` also exposes an `.entries` record for iteration and inspection. To load several existing catalogs concurrently, keep their types intact and start both queues:
 
 ```ts
-await Promise.all([this.loader.load(CommonAssets), this.loader.load(TitleAssets)]);
+async load() {
+    await Promise.all([this.loader.load(CommonAssets), this.loader.load(TitleAssets)]);
+}
 ```
 
 The key `'entries'` is reserved and will throw if you try to use it as an asset name inside an `Assets` container.
@@ -185,45 +184,30 @@ The key `'entries'` is reserved and will throw if you try to use it as an asset 
 
 Catalogs compose. `Assets.compose(...)` merges several existing catalogs into one — the result is an ordinary, fully typed `Assets` object, so it loads, releases, and autocompletes exactly like a hand-written one:
 
-```ts
-import { Assets } from '@codexo/exojs';
+<SourceSnippet source="examples/sprites-textures/asset-catalogs.ts" region="catalog-compose" title="Merging catalogs" />
 
-const SharedAssets = Assets.from({ logo: 'sprites/logo.png' });
-const ForestLocalAssets = Assets.from({ tree: 'sprites/tree.png' });
-
-export const ForestAssets = Assets.compose(SharedAssets, ForestLocalAssets);
-
-ForestAssets.logo; // Texture — the very same handle as SharedAssets.logo
-ForestAssets.tree; // Texture
-```
-
-A composition **shares** its inputs' handles instead of copying them: `ForestAssets.logo === SharedAssets.logo`, so loading the composition heals the handles the shared catalog already handed out. It adds no ownership of its own — loading and releasing behave exactly as they would for the underlying keys.
+A composition **shares** its inputs' handles instead of copying them: `LevelAssets.logo === SharedAssets.logo`, so loading the composition heals the handles the shared catalog already handed out. It adds no ownership of its own — loading and releasing behave exactly as they would for the underlying keys.
 
 Two _different_ catalogs may not define the same key. That ambiguity is caught at compile time (the result types as a message naming the key) and always throws at runtime:
 
-```ts
-// Assets.compose(): duplicate catalog key "logo" — two catalogs define it,
+```ts no-check
+// Assets.compose(): duplicate catalog key "ship" — two catalogs define it,
 // use Assets.extend() to override it deliberately.
-Assets.compose(SharedAssets, Assets.from({ logo: 'sprites/other.png' }));
+Assets.compose(LevelLocalAssets, Assets.from({ ship: 'image/other-ship.png' }));
 ```
 
 The same catalog arriving twice along different paths — a diamond — is not a conflict and deduplicates:
 
-```ts
-const Left = Assets.compose(SharedAssets, Assets.from({ tree: 'sprites/tree.png' }));
-const Right = Assets.compose(SharedAssets, Assets.from({ rock: 'sprites/rock.png' }));
+```ts no-check
+const Left = Assets.compose(SharedAssets, Assets.from({ tree: 'image/tree.png' }));
+const Right = Assets.compose(SharedAssets, Assets.from({ rock: 'image/rock.png' }));
 
-Assets.compose(Left, Right); // { logo, tree, rock } — `logo` counted once
+Assets.compose(Left, Right); // { logo, click, atlas, tree, rock } — shared keys counted once
 ```
 
 To re-declare a key on purpose, derive with `Assets.extend(base, entries)`. New keys are added, existing keys are deliberately overridden, and the base catalog is never mutated:
 
-```ts
-export const CustomizedAssets = Assets.extend(SharedAssets, {
-  logo: 'sprites/forest-logo.png', // deliberate override — SharedAssets keeps its own
-  tree: 'sprites/tree.png', // new key
-});
-```
+<SourceSnippet source="examples/sprites-textures/asset-catalogs.ts" region="catalog-extend" title="Deriving a catalog" />
 
 An override is a new declaration, so composing a derived catalog back together with the base it overrode conflicts on that key — as two independent declarations should.
 
@@ -231,15 +215,7 @@ An override is a new declaration, so composing a derived catalog back together w
 
 Every `loader.load(...)` call returns a `LoadingQueue<T>`. It implements `PromiseLike<T>`, so `await` and `Promise.all` both work. It also exposes per-queue progress via `onProgress`:
 
-```ts
-const loading = this.loader.load(TitleAssets);
-
-loading.onProgress.add(progress => {
-  bar.value = progress.loaded / progress.total;
-});
-
-const title = await loading;
-```
+<SourceSnippet source="examples/sprites-textures/asset-catalogs.ts" region="queue-progress" title="Per-queue progress" />
 
 `LoadingProgress` fields:
 
@@ -252,11 +228,9 @@ const title = await loading;
 
 Start two queues simultaneously and wait for both:
 
-```ts
-const [title, game] = await Promise.all([this.loader.load(TitleAssets), this.loader.load(GameAssets)]);
-```
+<SourceSnippet source="examples/sprites-textures/asset-catalogs.ts" region="catalog-parallel" title="Two queues, one await" />
 
-Each queue tracks its own progress independently. The result tuple is typed: `title` has the shape of `TitleAssets`, `game` has the shape of `GameAssets`.
+Each queue tracks its own progress independently. The result tuple is typed: `day` has the shape of `LevelAssets`, `night` has the shape of `NightAssets`.
 
 A practical startup pattern — show the title screen as soon as title assets are ready, while game assets continue loading in the background:
 
@@ -293,32 +267,7 @@ async load() {
 
 Because the batch is shared, `total` can grow mid-flight: if a new `loader.load(...)` call starts while others are still pending, its assets are added to the same running total rather than starting a fresh count at 0. That is exactly what you want for a boot screen — one progress bar that stays accurate no matter how many scenes or systems kick off loads concurrently.
 
-```ts
-class BootScene extends Scene {
-  init() {
-    this.app.loader.onLoadStart.add((key, url) => {
-      this.progressBar.visible = true;
-    });
-
-    this.app.loader.onLoadProgress.add((loaded, total, key) => {
-      this.progressBar.value = loaded / total;
-    });
-
-    this.app.loader.onLoadError.add((key, error) => {
-      console.warn(`Failed to load "${key}":`, error);
-      // onLoadComplete still fires once the rest of the batch settles
-    });
-
-    this.app.loader.onLoadComplete.add(() => {
-      this.progressBar.visible = false;
-      this._enterGame();
-    });
-
-    // Trigger loads from anywhere — the signals above see all of them
-    this.loader.load(TitleAssets);
-  }
-}
-```
+<SourceSnippet source="examples/application-scenes/loading-screen.ts" region="boot-signals" title="Subscribing a boot scene" />
 
 Unlike `LoadingQueue.onProgress`, which you attach to the return value of one `loader.load(...)` call, these four are properties on the `Loader` itself — subscribe once (for example in your boot scene's `init`) and they report every foreground load for the lifetime of that loader.
 
@@ -331,79 +280,41 @@ app-level `stop()`/`destroy()` mid-load, are both real cases. Check
 signals in `unload()` so a listener from a torn-down scene never fires
 `change()` against a Director that has since moved on:
 
-```ts
-class BootScene extends Scene {
-  init() {
-    this._onLoadComplete = () => {
-      this.progressBar.visible = false;
-      this._enterGame();
-    };
+<SourceSnippet source="examples/application-scenes/loading-screen.ts" region="boot-unsubscribe" title="Unsubscribing and guarding the hand-over" />
 
-    this.app.loader.onLoadStart.add((key, url) => {
-      this.progressBar.visible = true;
-    });
-    this.app.loader.onLoadProgress.add((loaded, total, key) => {
-      this.progressBar.value = loaded / total;
-    });
-    this.app.loader.onLoadError.add((key, error) => {
-      console.warn(`Failed to load "${key}":`, error);
-    });
-    this.app.loader.onLoadComplete.add(this._onLoadComplete);
-
-    this.loader.load(TitleAssets);
-  }
-
-  unload() {
-    // this.app is still valid here — unload() runs before the scene is
-    // detached (see Scene.attached below).
-    this.app.loader.onLoadComplete.remove(this._onLoadComplete);
-  }
-
-  _enterGame() {
-    // Check this.attached first — it never throws, unlike this.state,
-    // which throws once the scene has been fully detached (destroyed).
-    // this.state is 'active' only while this scene is still the one
-    // driving the screen — suspended, unloading, or detached must not
-    // navigate.
-    if (!this.attached || this.state !== 'active') {
-      return;
-    }
-
-    this.app.scenes.change(GameScene);
-  }
-}
-```
+`Scene.state` is a `SceneState` enum, not a string — compare against `SceneState.Active` rather than `'active'`.
 
 ## Status channel instead of throwing
 
 For leaf-capable types, the path (or an `Asset.type(...)` descriptor) identifies the loaded payload — there's no separate alias to register or forget. Every handle and `AssetRef` exposes the same small status contract:
 
+<SourceSnippet source="src/resources/AssetStatus.ts" region="asset-status" title="The status contract" />
+
+`LoadStateValue` is `'idle' | 'loading' | 'ready' | 'failed'` — `'idle'` is the state of a catalog leaf no loader has adopted yet.
+
 ```ts
-interface AssetStatus {
-  readonly state: 'loading' | 'ready' | 'failed';
-  readonly ready: boolean; // true iff state === 'ready'
-  readonly error: Error | null;
+async load() {
+    const tex = this.loader.get('image/hero.png'); // synchronous for a valid, registered suffix
+
+    if (tex.ready) {
+        // draw it
+    } else if (tex.state === 'failed') {
+        // tex still renders a visible "missing" checker texture
+    }
+
+    await tex.loaded; // Promise<this> — resolves once ready, rejects on failure
 }
 ```
 
-```ts
-const tex = this.loader.get('hero.png'); // synchronous for a valid, registered suffix
+The same `.state` / `.ready` / `.error` / `.loaded` contract applies to `AssetRef` values such as JSON or text — read `.value` once `.ready` is `true`. A bare path yields an `AssetRef<unknown>`, so name the payload shape with `Asset.type<T>(...)` when you want to read into it:
 
-if (tex.ready) {
-  // draw it
-} else if (tex.state === 'failed') {
-  // tex still renders a visible "missing" checker texture
+```ts
+async load() {
+    const config = this.loader.get(Asset.type<{ startLevel: string }>('json', 'data/config.json'));
+
+    await config.loaded;
+    console.log(config.value.startLevel);
 }
-
-await tex.loaded; // Promise<this> — resolves once ready, rejects on failure
-```
-
-The same `.state` / `.ready` / `.error` / `.loaded` contract applies to `AssetRef` values such as JSON or text — read `.value` once `.ready` is `true`:
-
-```ts
-const config = this.loader.get('data/config.json'); // AssetRef<unknown>
-await config.loaded;
-console.log(config.value.startLevel);
 ```
 
 `get()` returns before network work settles. A later load failure moves the handle/ref to `'failed'`, rejects its `.loaded` promise, and is reported through `this.app.loader.onError`; calling `get()` again retries and can heal that same source-keyed handle. By contrast, the awaitable returned by `load()` rejects at the call site on failure and reports the same `Error` through `this.app.loader.onError`. Invalid input or a missing type/handler is a synchronous configuration error for either API. A catalog entry's optional `parse` transform must be synchronous — if it returns a Promise (or anything else thenable), the ref it belongs to fails with an explicit error instead of silently awaiting it; do any asynchronous decoding inside the asset handler's load phase instead.
@@ -446,16 +357,9 @@ The lifecycle guarantees that:
 
 ## Loading on demand
 
-`this.loader.load(...)` (or `this.app.loader.load(...)` for an app-lifetime claim) works any time, not just inside the `load` hook. A computed path isn't a string literal, so use `Asset.type('texture', ...)`:
+`this.loader.load(...)` (or `this.app.loader.load(...)` for an app-lifetime claim) works any time, not just inside the `load` hook — the [`Asset.type(...)`](#dynamic-paths-and-non-seamless-types) call shown earlier is exactly that case:
 
-```ts
-async _changeLevel(levelName: string) {
-    const bg = await this.app.loader.load(
-        Asset.type('texture', `image/levels/${levelName}.png`)
-    );
-    this.background.setTexture(bg);
-}
-```
+<SourceSnippet source="examples/sprites-textures/asset-catalogs.ts" region="dynamic-path" title="Loading outside the load hook" />
 
 The frame loop continues running while the promise is pending.
 
@@ -499,15 +403,7 @@ Loading is idempotent: a catalog whose leaves are already resident resolves imme
 
 `loader.load(catalog)` returns a `LoadingQueue` — attach `onProgress` for a per-catalog bar, exactly as in [Progress and parallel loading](#progress-and-parallel-loading):
 
-```ts
-const loading = this.app.loader.load(Level1Assets);
-
-loading.onProgress.add(p => {
-  this.bar.value = p.loaded / p.total;
-});
-
-await loading;
-```
+<SourceSnippet source="examples/sprites-textures/asset-catalogs.ts" region="queue-progress" title="A per-catalog bar" />
 
 For one screen that reflects every load regardless of how many catalogs are in flight, use the loader-wide signals from [Signals for a global loading screen](#signals-for-a-global-loading-screen).
 
@@ -515,16 +411,7 @@ For one screen that reflects every load regardless of how many catalogs are in f
 
 Awaiting a catalog rejects if any leaf fails. Wrap the await and read each leaf's status channel to find which one — a failed seamless handle still renders a visible "missing" fallback, so the scene keeps running:
 
-```ts
-try {
-  await this.app.loader.load(Level1Assets);
-} catch {
-  if (Level1Assets.tiles.state === 'failed') {
-    console.warn('tiles failed:', Level1Assets.tiles.error);
-    // substitute a fallback, or surface a retry prompt
-  }
-}
-```
+<SourceSnippet source="examples/sprites-textures/asset-catalogs.ts" region="catalog-failure" title="Finding the leaf that failed" />
 
 There is no separate bundle error type — every leaf carries its own `.state` / `.error` (see [Status channel](#status-channel-instead-of-throwing)).
 
@@ -555,12 +442,14 @@ const loader = new Loader({
 When constructing the loader through `Application`, pass `LoaderOptions` under the `loader` key:
 
 ```ts
-const app = new Application({
-  loader: {
-    basePath: '/assets/',
-    cache: new IndexedDbStore('my-game'),
-  },
-});
+import { Application, IndexedDbStore, type LoaderOptions } from '@codexo/exojs';
+
+const loader: LoaderOptions = {
+  basePath: '/assets/',
+  cache: new IndexedDbStore('my-game'),
+};
+
+const app = new Application({ loader });
 ```
 
 On first load, assets are fetched from the network and written to IndexedDB. On subsequent sessions they load from the database instead. The default store configuration covers all built-in asset types and the `fetch*` context helpers used by custom handlers.
@@ -647,7 +536,7 @@ Supply an optional `getIdentityKey(req)` on the handler to control in-flight ded
 
 Install the binding by passing it on an [`Extension`](/ExoJS/en/api/extension/) to `ApplicationOptions.extensions`. Once installed, the type works everywhere the built-ins do:
 
-```ts
+```ts no-check
 // Dynamic path or explicit reference
 const field = await this.loader.load(Asset.type('heightField', 'maps/level-1.hf'));
 
@@ -685,6 +574,14 @@ The built-in `texture` and `sound` bindings are the reference for a seamless res
 <ExamplePreview chapter="sprites-textures" slug="texture-loader" />
 
 The minimum loader workflow — register textures during `load`, retrieve them during `init`, track per-queue progress with `LoadingQueue.onProgress`.
+
+<ExamplePreview chapter="sprites-textures" slug="asset-catalogs" />
+
+The catalog snippets on this page, end to end: a mixed `Assets.from` group, a composition, a derived catalog, two parallel queues, and a runtime-computed path.
+
+<ExamplePreview chapter="application-scenes" slug="loading-screen" />
+
+The boot-scene snippets on this page — one bar driven by the loader-wide signals, unsubscribed in `unload`, with a guarded hand-over to the game scene.
 
 ## Where to go next
 

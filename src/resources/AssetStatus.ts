@@ -7,6 +7,7 @@ import type { LoadStateValue } from '#core/LoadState';
  * `ready`, and `error` directly (plus their own `loaded` promise), so they
  * structurally satisfy this interface. No separate status object is created.
  */
+// #region guide:asset-status
 export interface AssetStatus {
   /** Current load lifecycle: `'idle' | 'loading' | 'ready' | 'failed'`. */
   readonly state: LoadStateValue;
@@ -15,3 +16,4 @@ export interface AssetStatus {
   /** The error the last load failed with, or `null` outside `'failed'`. */
   readonly error: Error | null;
 }
+// #endregion guide:asset-status
