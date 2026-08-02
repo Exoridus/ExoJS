@@ -17,6 +17,8 @@
 
 import { Asset, Assets, type Loader, type Scene, type Texture } from '@codexo/exojs';
 
+import { LoadPriority } from '#resources/Loader';
+
 import type { CatalogResourceLeaf, CatalogValueLeaf } from './helpers/catalog-leaf';
 
 type Equal<A, B> = (<G>() => G extends A ? 1 : 2) extends <G>() => G extends B ? 1 : 2 ? true : false;
@@ -80,7 +82,7 @@ export async function loads(): Promise<void> {
   const explicitResult = await loader.load(explicit);
   expectType<Equal<typeof explicitResult, { readonly player: Texture; readonly config: LevelData }>>();
 
-  const mixedResult = await loader.load(mixed, { background: true });
+  const mixedResult = await loader.load(mixed, { priority: LoadPriority.Background });
   expectType<Equal<typeof mixedResult.player, Texture>>();
   expectType<Equal<typeof mixedResult.raw, unknown>>();
   expectType<Equal<typeof mixedResult.level, LevelData>>();
@@ -93,7 +95,7 @@ export async function loads(): Promise<void> {
   expectType<Equal<typeof composedResult.trees, unknown>>();
 
   // An extended catalog keeps the base keys and adds the new one.
-  const extendedResult = await loader.load(extended, { background: true });
+  const extendedResult = await loader.load(extended, { priority: LoadPriority.Background });
   expectType<Equal<typeof extendedResult.player, Texture>>();
   expectType<Equal<typeof extendedResult.config, unknown>>();
   expectType<Equal<typeof extendedResult.enemy, Texture>>();
@@ -102,7 +104,7 @@ export async function loads(): Promise<void> {
   const sceneResult = await scene.loader.load(bare);
   expectType<Equal<typeof sceneResult, { readonly player: Texture; readonly config: unknown }>>();
 
-  const sceneComposed = await scene.loader.load(composed, { background: true });
+  const sceneComposed = await scene.loader.load(composed, { priority: LoadPriority.Background });
   expectType<Equal<typeof sceneComposed.tree, Texture>>();
 
   // `get()`/`release()` take the very same catalogs — same root cause, same fix.

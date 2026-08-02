@@ -3,7 +3,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { Asset } from '#resources/Asset';
 import { Assets } from '#resources/Assets';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
-import { Loader } from '#resources/Loader';
+import { Loader, LoadPriority } from '#resources/Loader';
 
 /** Loader with all core asset bindings (mirrors createCoreLoader in loader-seamless.test.ts). */
 function createCoreLoader(): Loader {
@@ -140,7 +140,7 @@ describe('Loader.release() scope safety', () => {
     loader.setConcurrency(0); // nothing drains
 
     const catalog = new Assets({ late: { type: 'texture', source: 'late.png' } });
-    loader.load(catalog, { background: true });
+    loader.load(catalog, { priority: LoadPriority.Background });
 
     const queue = (loader as unknown as { _residency: { _backgroundQueue: unknown[] } })._residency._backgroundQueue;
     expect(queue.length).toBe(1);

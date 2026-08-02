@@ -6,7 +6,7 @@ import type { AssetInspection } from '#resources/AssetResidency';
 import { Assets } from '#resources/Assets';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
 import { defineAsset } from '#resources/defineAsset';
-import { Loader } from '#resources/Loader';
+import { Loader, LoadPriority } from '#resources/Loader';
 import { TextAsset } from '#resources/tokens';
 
 // A test-only, non-leaf asset kind — no seamless adapter, `isValue: false` —
@@ -272,9 +272,11 @@ describe('Loader.inspect() snapshot contract', () => {
     loader.setConcurrency(0); // nothing drains
 
     const catalog = new Assets({ late: { type: 'texture', source: 'late.png' } });
-    loader.load(catalog, { background: true });
+    loader.load(catalog, { priority: LoadPriority.Background });
 
     const row = loader.inspect().find(r => r.source === 'late.png');
+    // `background` here is the inspection row's own field — whether the key is
+    // sitting in the queue right now, not the priority it was requested with.
     expect(row).toMatchObject({ state: 'queued', background: true, inFlight: false, claims: 1 });
   });
 

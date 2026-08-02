@@ -6,7 +6,7 @@ import { materializeAssetBindings } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 import { Assets } from '#resources/Assets';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
-import { Loader } from '#resources/Loader';
+import { Loader, LoadPriority } from '#resources/Loader';
 
 function createCoreLoader(): Loader {
   const loader = new Loader();
@@ -51,7 +51,7 @@ describe('idle load state', () => {
     const assets = Assets.from({ ship: { type: 'texture', source: 'ship.png' } });
     expect(assets.ship.state).toBe('idle');
 
-    loader.load(assets, { background: true });
+    loader.load(assets, { priority: LoadPriority.Background });
     expect(assets.ship.state).toBe('loading');
   });
 });

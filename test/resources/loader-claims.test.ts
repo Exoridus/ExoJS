@@ -5,7 +5,7 @@ import { materializeAssetBindings } from '#extensions/materialize';
 import { Asset } from '#resources/Asset';
 import { Assets } from '#resources/Assets';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
-import { Loader, type LoaderOptions } from '#resources/Loader';
+import { Loader, type LoaderOptions, LoadPriority } from '#resources/Loader';
 
 /** Loader with all core asset bindings (mirrors createCoreLoader in loader-seamless.test.ts). */
 function createCoreLoader(options?: LoaderOptions): Loader {
@@ -120,7 +120,7 @@ describe('refcount / claims', () => {
     // eviction queue-drop splice is actually exercised (at the default cap of 6
     // all three drain synchronously and the queue is already empty).
     const loader = createCoreLoader({ concurrency: 1 });
-    loader.load(Assets.from({ a: 'a.ogg', b: 'b.ogg', c: 'c.ogg' }), { background: true });
+    loader.load(Assets.from({ a: 'a.ogg', b: 'b.ogg', c: 'c.ogg' }), { priority: LoadPriority.Background });
 
     expect(loader['_residency']['_isQueuedInBackground'](Sound, 'c.ogg')).toBe(true); // still queued behind the cap
     loader.release(Sound, 'c.ogg');

@@ -1,0 +1,77 @@
+{
+  "title": "LoadPriority",
+  "description": "How urgently a Loader.load call should fetch what it adopts. An enum rather than a boolean because priority is the axis a residency model grows along: further levels (and, later, eviction or streaming policy) can be added here without changing the shape of LoadOptions.",
+  "symbol": "LoadPriority",
+  "kind": "enum",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "How urgently a Loader.load call should fetch what it adopts.",
+        "An enum rather than a boolean because priority is the axis a residency model grows along: further levels (and, later, eviction or streaming policy) can be added here without changing the shape of LoadOptions."
+      ],
+      "importLine": "import { LoadPriority } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "members",
+      "title": "Members",
+      "members": [
+        {
+          "name": "Background",
+          "signature": "Background",
+          "signatureTokens": [
+            {
+              "text": "Background",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Immediate",
+          "signature": "Immediate",
+          "signatureTokens": [
+            {
+              "text": "Immediate",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/Loader.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/Loader.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts"
+}

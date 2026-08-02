@@ -98,17 +98,29 @@ export interface LoaderOptions {
 }
 
 /**
- * Options for the catalog/asset/leaf {@link Loader.load} forms.
+ * How urgently a {@link Loader.load} call should fetch what it adopts.
  *
- * With `background: true` every adopted leaf is still claimed and registered
- * (so it heals in place and a later {@link Loader.get} returns the same
- * instance), but its fetch is routed through the low-priority background queue
- * instead of started immediately: it streams concurrency-capped, drops from the
- * queue if released at refcount 0, and is boosted to fetch now on a direct
- * `get()`. Foreground loading (no options) is unaffected.
+ * An enum rather than a boolean because priority is the axis a residency model
+ * grows along: further levels (and, later, eviction or streaming policy) can be
+ * added here without changing the shape of {@link LoadOptions}.
  */
+export enum LoadPriority {
+  /** Fetch now. The default, and what `load()` does with no options at all. */
+  Immediate = 'immediate',
+  /**
+   * Route the fetch through the low-priority background queue. Every adopted
+   * leaf is still claimed and registered — it heals in place and a later
+   * {@link Loader.get} returns the same instance — but instead of starting
+   * immediately it streams concurrency-capped, drops from the queue if released
+   * at refcount 0, and is boosted to fetch now on a direct `get()`.
+   */
+  Background = 'background',
+}
+
+/** Options for the catalog/asset/leaf {@link Loader.load} forms. */
 export interface LoadOptions {
-  background?: boolean;
+  /** Defaults to {@link LoadPriority.Immediate}. */
+  priority?: LoadPriority;
 }
 
 // ---------------------------------------------------------------------------
@@ -127,7 +139,7 @@ export interface LoadOptions {
  * Assets can be loaded in two ways:
  * - **Direct** — `loader.load(Assets.from({ hero: 'hero.png' }))` fetches
  *   immediately and resolves to the finished assets.
- * - **Background** — pass `{ background: true }` to `load(...)` to pre-warm
+ * - **Background** — pass `{ priority: LoadPriority.Background }` to `load(...)` to pre-warm
  *   assets at low priority; {@link awaitBackground} resolves once the queue drains.
  *
  * Once loaded, assets are stored in memory and returned from cache on
@@ -462,7 +474,7 @@ export class Loader {
       if (arg1 !== undefined) {
         throw new Error(
           'Loader: load(Asset.type(...), options) is not supported. Put per-asset options in Asset.type(type, path, options); ' +
-            'background LoadOptions apply only to Assets catalogs and their leaves.',
+            'LoadOptions apply only to Assets catalogs and their leaves.',
         );
       }
 
@@ -477,7 +489,7 @@ export class Loader {
     // loaded values/handles. The container's own leaves heal in place.
     if (arg0 instanceof AssetsImpl) {
       const entries = Object.entries((arg0 as AssetsImpl<Record<string, AssetInput>>).entries) as Array<[string, object]>;
-      const background = (arg1 as LoadOptions | undefined)?.background === true;
+      const background = (arg1 as LoadOptions | undefined)?.priority === LoadPriority.Background;
 
       for (const [, leaf] of entries) {
         this._adopt(leaf, claimer, background);
@@ -498,7 +510,7 @@ export class Loader {
     // resolve its loaded value/handle directly.
     if (_readMeta(arg0) !== undefined) {
       const leaf = arg0 as object;
-      const background = (arg1 as LoadOptions | undefined)?.background === true;
+      const background = (arg1 as LoadOptions | undefined)?.priority === LoadPriority.Background;
       this._adopt(leaf, claimer, background);
 
       return this._createAdoptedQueue([['value', leaf]], results => results.get('value'));
@@ -571,7 +583,7 @@ export class Loader {
 
   /**
    * Resolves when the low-priority background queue has fully drained — every
-   * leaf enqueued via `load(target, { background: true })` has finished loading
+   * leaf enqueued via `load(target, { priority: LoadPriority.Background })` has finished loading
    * (successfully or not). Kicks the queue first, so a concurrency change that
    * left pending entries unstarted still makes progress.
    *
@@ -1027,7 +1039,7 @@ export class Loader {
    * With `background`, the leaf is still registered + claimed + healed in place,
    * but its fetch is diverted into the low-priority background queue (see
    * `AssetResidency._enqueueBackgroundFetch`) instead of started immediately —
-   * `load(target, { background: true })`.
+   * `load(target, { priority: LoadPriority.Background })`.
    * @internal
    */
   public _adopt(handle: object, claimer: symbol, background = false): void {

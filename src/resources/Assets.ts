@@ -401,7 +401,7 @@ type AssetsFacade = AssetsConstructorFn & {
    * @example
    * ```ts
    * const chunk = Assets.one({ type: 'json', source: `chunks/${cx}_${cy}.json` });
-   * loader.load(chunk, { background: true });
+   * loader.load(chunk, { priority: LoadPriority.Background });
    * await chunk.loaded;
    * ```
    */

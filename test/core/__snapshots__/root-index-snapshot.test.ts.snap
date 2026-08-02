@@ -102,6 +102,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "Label",
   "Line",
   "LinearGradient",
+  "LoadPriority",
   "Loader",
   "LoadingQueue",
   "LogSeverity",

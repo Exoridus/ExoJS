@@ -1,7 +1,7 @@
 import { materializeAssetBindings } from '#extensions/materialize';
 import { Assets } from '#resources/Assets';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
-import { Loader } from '#resources/Loader';
+import { Loader, LoadPriority } from '#resources/Loader';
 
 /** Loader with all core asset bindings (mirrors createCoreLoader in the sibling resource specs). */
 function createCoreLoader(): Loader {
@@ -85,7 +85,7 @@ describe('a synchronous throw out of the fetch dispatch', () => {
 
     // load() rejects for a failed leaf even in background mode — settle it here
     // so the assertion below is about the queue draining, not about that.
-    loader.load(catalog, { background: true }).catch(() => {});
+    loader.load(catalog, { priority: LoadPriority.Background }).catch(() => {});
 
     await expect(loader.awaitBackground()).resolves.toBeUndefined();
   });

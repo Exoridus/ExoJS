@@ -1,7 +1,7 @@
 import { materializeAssetBindings } from '#extensions/materialize';
 import { Assets } from '#resources/Assets';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
-import { Loader } from '#resources/Loader';
+import { Loader, LoadPriority } from '#resources/Loader';
 
 /** Loader with all core asset bindings (mirrors createCoreLoader in the sibling adopt/background specs). */
 function createCoreLoader(): Loader {
@@ -44,7 +44,7 @@ const mockFetchJson = (payload: unknown): ReturnType<typeof vi.fn> => {
 const isQueued = (loader: Loader, alias: string): boolean =>
   (loader as unknown as { _residency: { _backgroundQueue: Array<{ alias: string }> } })._residency._backgroundQueue.some(e => e.alias === alias);
 
-describe('load(target, { background: true })', () => {
+describe('load(target, { priority: LoadPriority.Background })', () => {
   beforeEach(() => {
     vi.stubGlobal(
       'createImageBitmap',
@@ -64,7 +64,7 @@ describe('load(target, { background: true })', () => {
     loader.setConcurrency(0); // park the queue so the divert is observable
 
     const catalog = new Assets({ ship: { type: 'texture', source: 'ship.png' } });
-    loader.load(catalog, { background: true });
+    loader.load(catalog, { priority: LoadPriority.Background });
 
     // Adopted (registered + claimed) but NOT fetched — the leaf sits in the background queue.
     expect(catalog.ship.loadState).toBe('loading');
@@ -91,7 +91,7 @@ describe('load(target, { background: true })', () => {
       ship: { type: 'texture', source: 'ship.png' },
       logo: { type: 'texture', source: 'logo.png' },
     });
-    loader.load(catalog, { background: true });
+    loader.load(catalog, { priority: LoadPriority.Background });
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect(isQueued(loader, 'ship.png')).toBe(true);
@@ -128,7 +128,7 @@ describe('load(target, { background: true })', () => {
     const ticks: Array<[number, number]> = [];
 
     loader.onProgress.add((loaded, total) => ticks.push([loaded, total]));
-    loader.load(Assets.from({ ship: 'ship.png', logo: 'logo.png' }), { background: true });
+    loader.load(Assets.from({ ship: 'ship.png', logo: 'logo.png' }), { priority: LoadPriority.Background });
     await loader.awaitBackground();
 
     expect(ticks.at(-1)).toEqual([2, 2]);
@@ -141,7 +141,7 @@ describe('load(target, { background: true })', () => {
     loader.setConcurrency(0);
 
     const catalog = new Assets({ config: { type: 'json', source: 'cfg.json' } });
-    loader.load(catalog, { background: true });
+    loader.load(catalog, { priority: LoadPriority.Background });
 
     expect(catalog.config.loadState).toBe('loading');
     expect(isQueued(loader, 'cfg.json')).toBe(true);
@@ -161,7 +161,7 @@ describe('load(target, { background: true })', () => {
     loader.setConcurrency(0);
 
     const catalog = new Assets({ ship: { type: 'texture', source: 'ship.png' } });
-    loader.load(catalog, { background: true });
+    loader.load(catalog, { priority: LoadPriority.Background });
 
     expect(isQueued(loader, 'ship.png')).toBe(true);
 

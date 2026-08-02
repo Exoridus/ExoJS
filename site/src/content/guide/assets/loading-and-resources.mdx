@@ -417,11 +417,11 @@ There is no separate bundle error type — every leaf carries its own `.state` /
 
 ### Pre-warming in the background
 
-To fetch a catalog ahead of time without blocking the current scene, pass `{ background: true }`. Every leaf is still claimed and heals in place, but its fetch is routed through a low-priority queue while the frame loop keeps running:
+To fetch a catalog ahead of time without blocking the current scene, pass `{ priority: LoadPriority.Background }`. Every leaf is still claimed and heals in place, but its fetch is routed through a low-priority queue while the frame loop keeps running:
 
 ```ts
 // Kick off the next level while the player is still in this one
-this.app.loader.load(Level2Assets, { background: true });
+this.app.loader.load(Level2Assets, { priority: LoadPriority.Background });
 ```
 
 A backgrounded leaf is boosted to fetch immediately if something `get()`s or foreground-`load()`s it before the queue reaches it — so there's nothing to guard against. Request it in the background early, then `await this.app.loader.load(Level2Assets)` when you actually need it and it resolves as soon as the in-flight fetch finishes. `this.app.loader.awaitBackground()` resolves once the background queue has fully drained.
