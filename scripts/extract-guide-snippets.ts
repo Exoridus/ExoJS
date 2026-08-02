@@ -74,11 +74,28 @@
  * Each file is named after its source MDX path (and block index, for
  * standalone blocks) and carries a header comment mapping back to the
  * original guide location.
+ *
+ * PARTIAL BUDGET — blocks that fall into none of the checkable buckets and
+ * carry no `no-check` tag used to be dropped without a trace. They are now
+ * counted per guide file and ratcheted against a committed baseline
+ * (`guide-partial-baseline.json`); see `guide-partial-baseline.ts` for why the
+ * budget is per file and why it fails in both directions. Run this script with
+ * `--update-baseline` (or `pnpm typecheck:guides:update-baseline`) to record
+ * the current numbers.
  */
 
 import { mkdirSync, readdirSync, rmSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import ts from 'typescript';
+
+import {
+  diffPartialBaseline,
+  formatBaselineFailure,
+  isBaselineClean,
+  mergePartialBaseline,
+  readPartialBaseline,
+  writePartialBaseline,
+} from './guide-partial-baseline.ts';
 
 const REPO_ROOT = join(import.meta.dirname, '..');
 const GUIDE_DIR = join(REPO_ROOT, 'site', 'src', 'content', 'guide');
@@ -91,6 +108,23 @@ const FOLDER_FILTER = (process.env.GUIDE_SNIPPET_FOLDERS ?? '')
   .split(',')
   .map(name => name.trim())
   .filter(name => name.length > 0);
+
+const BASELINE_PATH = join(REPO_ROOT, 'scripts', 'guide-partial-baseline.json');
+const BASELINE_REL = 'scripts/guide-partial-baseline.json';
+const BASELINE_UPDATE_COMMAND = 'pnpm typecheck:guides:update-baseline';
+const BASELINE_NOTE =
+  'Per-guide budget of `partial` code blocks — ts/js fences that extract-guide-snippets.ts ' +
+  'cannot turn into checkable code, and that therefore no type-checker ever sees. The count ' +
+  'may only go down; both an increase and an un-recorded decrease fail `pnpm typecheck:guides`. ' +
+  `Run \`${BASELINE_UPDATE_COMMAND}\` to record a decrease. A guide with no such blocks is absent from this file.`;
+const UPDATE_BASELINE = process.argv.includes('--update-baseline');
+
+/** Whether a guide-relative MDX path belongs to a folder this run visited. */
+function isInScope(rel: string): boolean {
+  if (FOLDER_FILTER.length === 0) return true;
+
+  return FOLDER_FILTER.includes(rel.split('/')[0]);
+}
 
 const CHECKED_LANGS = new Set(['ts', 'tsx', 'typescript', 'js', 'javascript']);
 
@@ -241,6 +275,27 @@ const RESERVED_OR_GLOBAL = new Set([
   'isNaN',
   'isFinite',
   'Scene',
+  // Built-in TypeScript utility types. An anchor class spliced in from a real
+  // example may use them (`ReturnType<typeof mountControls>`), and a fallback
+  // `type X = any;` here would SHADOW the real generic and break the anchor.
+  'Awaited',
+  'Partial',
+  'Required',
+  'Readonly',
+  'Record',
+  'Pick',
+  'Omit',
+  'Exclude',
+  'Extract',
+  'NonNullable',
+  'Parameters',
+  'ConstructorParameters',
+  'ReturnType',
+  'InstanceType',
+  'NoInfer',
+  'ThisParameterType',
+  'OmitThisParameter',
+  'ThisType',
 ]);
 
 // Collects all top-level declared names (const/let/var/function/class) in
@@ -698,11 +753,14 @@ let skippedMeta = 0;
 let skippedPartial = 0;
 let bareFiles = 0;
 let bareBlocksTotal = 0;
+/** Guide-relative MDX path → `partial` blocks seen in it, for the budget gate. */
+const partialsByFile = new Map<string, number>();
 
 for (const file of files) {
   const content = readFileSync(file, 'utf8');
   const rel = relative(GUIDE_DIR, file).replaceAll('\\', '/');
   const slug = rel.replace(/\.(mdx?|tsx?)$/, '').replaceAll('/', '__');
+  partialsByFile.set(rel, 0);
 
   let blockIndex = 0;
   const bareBodies: string[] = [];
@@ -752,6 +810,7 @@ for (const file of files) {
     }
 
     skippedPartial++;
+    partialsByFile.set(rel, (partialsByFile.get(rel) ?? 0) + 1);
   }
 
   if (bareBodies.length === 0) continue;
@@ -874,3 +933,23 @@ console.log(
   `guide-snippets: ${extracted} extracted, ${bareBlocksTotal} bare (merged into ${bareFiles} file(s)), ` +
     `${skippedMeta} no-check, ${skippedPartial} partial (${total} total blocks)`,
 );
+
+// ---------------------------------------------------------------------------
+// Partial-block budget
+// ---------------------------------------------------------------------------
+
+const baseline = readPartialBaseline(BASELINE_PATH, BASELINE_NOTE);
+
+if (UPDATE_BASELINE) {
+  const next = mergePartialBaseline({ ...baseline, note: BASELINE_NOTE }, partialsByFile, isInScope);
+  writePartialBaseline(BASELINE_PATH, next);
+  const budget = Object.values(next.files).reduce((sum, count) => sum + count, 0);
+  console.log(`guide-snippets: baseline written to ${BASELINE_REL} — ${budget} partial block(s) across ${Object.keys(next.files).length} file(s). Commit it.`);
+} else {
+  const diff = diffPartialBaseline(baseline, partialsByFile, isInScope);
+
+  if (!isBaselineClean(diff)) {
+    console.error(`\n${formatBaselineFailure(diff, BASELINE_REL, BASELINE_UPDATE_COMMAND)}\n`);
+    process.exit(1);
+  }
+}
