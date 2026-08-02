@@ -49,6 +49,22 @@ International (CC-BY 4.0) license: https://creativecommons.org/licenses/by/4.0/
 
 © Blender Foundation | www.blender.org
 
+## Adventure Kid Small Room Impulse Responses
+
+The 30 impulse responses under `audio/ir/` are from the Adventure Kid Reverb
+Toolkit "AK-SROOMS" set — small rooms and enclosures captured for convolution
+reverb, 44.1 kHz stereo, tails from 1 ms to 593 ms.
+
+Licensed under the Creative Commons Attribution 4.0 International (CC-BY 4.0)
+license: https://creativecommons.org/licenses/by/4.0/
+
+Source: https://www.adventurekid.se/akrt/free-reverb-impulse-responses/
+
+© Adventure Kid / Kristoffer Ekstrand
+
+Only `AK-SROOMS__018.wav` was renamed (to `AK-SROOMS_018.wav`) so the file names
+form one consistent series; the audio is unmodified.
+
 ## All Other Assets
 
 All other assets in this package are original works created for the ExoJS
