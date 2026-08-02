@@ -36,6 +36,22 @@ function createSample(): SampleDriver {
   };
 }
 
+/**
+ * Presents a pattern the way a caller who assembled it at runtime does —
+ * read from a key-binding config, joined from parts, or handed over from
+ * JavaScript — by giving it the type such a caller has: plain `string`.
+ *
+ * The string parser is the ONLY guard those callers get, so the rejections
+ * asserted below are exactly the ones that matter for them. As a literal, a
+ * malformed pattern is rejected one layer earlier, by the compile-time check
+ * in `ValidatedChordBinding`/`ValidatedSequenceBinding` (covered in
+ * `test/type-tests/action-patterns.type-test.ts`), and would never reach the
+ * parser at all — which is why these cases have to arrive as non-literals to
+ * test anything. Keep this in place: without it the assertions still pass at
+ * runtime, but the file no longer type-checks.
+ */
+const runtimePattern = (pattern: string): string => pattern;
+
 describe('ChordAction', () => {
   test('presses only when every member is held and releases when one leaves', () => {
     const driver = createSample();
@@ -183,11 +199,11 @@ describe('ChordAction', () => {
   });
 
   test('rejects a `>` step separator, naming SequenceAction as the alternative', () => {
-    expect(() => new ChordAction('A>B')).toThrow(/ChordAction.*SequenceAction/);
+    expect(() => new ChordAction(runtimePattern('A>B'))).toThrow(/ChordAction.*SequenceAction/);
   });
 
   test('rejects an unknown keyboard token with a ChordAction-labeled message', () => {
-    expect(() => new ChordAction('Control+Nope')).toThrow(/ChordAction: unknown keyboard token/);
+    expect(() => new ChordAction(runtimePattern('Control+Nope'))).toThrow(/ChordAction: unknown keyboard token/);
   });
 
   test.each([
@@ -286,9 +302,9 @@ describe('ChordAction: `|` alternation', () => {
   });
 
   test('rejects an empty alternative in a string pattern', () => {
-    expect(() => new ChordAction('Control+S|')).toThrow(/ChordAction:.*alternative.*empty/);
-    expect(() => new ChordAction('|Control+S')).toThrow(/ChordAction:.*alternative.*empty/);
-    expect(() => new ChordAction('Control+S||Meta+S')).toThrow(/ChordAction:.*alternative.*empty/);
+    expect(() => new ChordAction(runtimePattern('Control+S|'))).toThrow(/ChordAction:.*alternative.*empty/);
+    expect(() => new ChordAction(runtimePattern('|Control+S'))).toThrow(/ChordAction:.*alternative.*empty/);
+    expect(() => new ChordAction(runtimePattern('Control+S||Meta+S'))).toThrow(/ChordAction:.*alternative.*empty/);
   });
 
   test('rejects a single empty alternative in an array pattern, distinct from an entirely empty chord', () => {
@@ -457,8 +473,8 @@ describe('SequenceAction', () => {
     // over the Keyboard enum, not a text-entry or IME surface: composed
     // characters and other non-enum tokens are always rejected, never
     // silently accepted as "whatever the user typed".
-    expect(() => new SequenceAction('é')).toThrow(/unknown keyboard token/);
-    expect(() => new SequenceAction('あ')).toThrow(/unknown keyboard token/);
+    expect(() => new SequenceAction(runtimePattern('é'))).toThrow(/unknown keyboard token/);
+    expect(() => new SequenceAction(runtimePattern('あ'))).toThrow(/unknown keyboard token/);
   });
 
   test('tolerates whitespace around every token and separator', () => {
@@ -609,7 +625,7 @@ describe('SequenceAction: `|` alternation', () => {
   });
 
   test('rejects an empty alternative in a string pattern, naming the correct step', () => {
-    expect(() => new SequenceAction('A>B|')).toThrow(/SequenceAction:.*alternative.*step 2.*empty/);
+    expect(() => new SequenceAction(runtimePattern('A>B|'))).toThrow(/SequenceAction:.*alternative.*step 2.*empty/);
   });
 
   test('rejects a single empty alternative in an array pattern step', () => {

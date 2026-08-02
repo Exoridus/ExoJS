@@ -476,6 +476,8 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "UniformValue: type alias",
   "UnloadOptions: interface",
   "UnregisteredSceneError: class",
+  "ValidatedChordBinding: type alias",
+  "ValidatedSequenceBinding: type alias",
   "ValueAsset: type alias",
   "ValueOf: type alias",
   "Vector: class",

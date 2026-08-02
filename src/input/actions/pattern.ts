@@ -59,14 +59,14 @@ const keyboardByName = new Map<string, number>(
  * `'Control+K'` are equivalent. Array bindings are unaffected: an alias is a
  * string-pattern-only convenience, never a second {@link Keyboard} member.
  */
-const keyboardAliases: ReadonlyArray<readonly [alias: string, canonical: keyof typeof Keyboard]> = [
+const keyboardAliases = [
   ['ctrl', 'Control'],
   ['cmd', 'Meta'],
   ['command', 'Meta'],
   ['super', 'Meta'],
   ['opt', 'Alt'],
   ['esc', 'Escape'],
-];
+] as const satisfies ReadonlyArray<readonly [alias: string, canonical: keyof typeof Keyboard]>;
 
 for (const [alias, canonical] of keyboardAliases) {
   keyboardByName.set(alias, Keyboard[canonical]);
@@ -203,3 +203,215 @@ export function normalizeSequence(input: string | InputSequence, gamepadSlot: 0 
 
   return rawSteps.map((step, index) => normalizeStep(step, index, chord, gamepadSlot, owner));
 }
+
+/*
+ * Type-level mirror of the string parser above.
+ *
+ * Everything below is a compile-time SECOND opinion, never a replacement: it
+ * only ever sees string LITERALS, so a pattern read from a config file, built
+ * at runtime, or passed from JavaScript still reaches the parser above and
+ * still throws the same errors. The two layers are kept in step by deriving
+ * from the same sources — the `Keyboard` enum itself and the one
+ * `keyboardAliases` table — and by wording each rejection like the runtime
+ * message it stands for, so a compile error and the throw it prevents read
+ * the same.
+ *
+ * The recursion is bounded by the pattern's `'>'` step count, not by its
+ * token count: forty steps of three tokens each still validate, while a
+ * pattern of roughly a hundred steps exhausts the compiler's instantiation
+ * depth (TS2589). A pattern that long is not a keyboard shortcut, and it is
+ * still parsed and validated at runtime — but if one is ever needed, widening
+ * it to `string` (or reaching for the array form) sidesteps this layer
+ * entirely.
+ */
+
+/** Whitespace `String.prototype.trim` strips, for {@link PatternTrim}. */
+type PatternWhitespace = ' ' | '\t' | '\n' | '\r' | '\f' | '\v';
+
+type PatternTrimStart<S extends string> = S extends `${PatternWhitespace}${infer Rest}` ? PatternTrimStart<Rest> : S;
+type PatternTrimEnd<S extends string> = S extends `${infer Rest}${PatternWhitespace}` ? PatternTrimEnd<Rest> : S;
+
+/**
+ * Type-level `String.prototype.trim`, mirroring the `.trim()` calls in
+ * `normalizeSequence`/`parseStepText`/`resolveToken` — `' Control + A '` must
+ * validate exactly like `'Control+A'`.
+ */
+type PatternTrim<S extends string> = PatternTrimEnd<PatternTrimStart<S>>;
+
+/**
+ * Alias name to the canonical lowercase {@link Keyboard} member name it stands
+ * for, derived from the one runtime {@link keyboardAliases} table so the two
+ * can never drift apart.
+ */
+type KeyboardAliasMap = { [Entry in (typeof keyboardAliases)[number] as Entry[0]]: Lowercase<Entry[1]> };
+
+/** Every lowercase name `resolveToken`'s lookup map holds: the reflexive {@link Keyboard} members plus the aliases. */
+type KeyboardTokenName = Lowercase<keyof typeof Keyboard> | keyof KeyboardAliasMap;
+
+/** One token reduced to `resolveToken`'s lookup key: trimmed, lowercased, optional `Keyboard.` prefix stripped. */
+type TokenLookupKey<S extends string> = Lowercase<PatternTrim<S>> extends `keyboard.${infer Rest}` ? Rest : Lowercase<PatternTrim<S>>;
+
+/**
+ * {@link TokenLookupKey} with an alias folded onto the member it resolves to,
+ * so `'ctrl'` and `'Control'` compare equal — the type-level stand-in for
+ * comparing the resolved channel NUMBERS, which is what `normalizeStep`'s
+ * duplicate check actually does. Sound because no two {@link Keyboard} members
+ * share a channel, so equal channels and equal canonical names coincide.
+ */
+type CanonicalToken<S extends string> = TokenLookupKey<S> extends infer Key extends keyof KeyboardAliasMap ? KeyboardAliasMap[Key] : TokenLookupKey<S>;
+
+/** The first of two checks that found something, or `never` when neither did. Encodes the runtime's left-to-right, throw-on-first-problem order. */
+type FirstPatternError<First, Second> = [First] extends [never] ? Second : First;
+
+/** `resolveToken`'s rejection. */
+type CheckToken<Token extends string, Pattern extends string, Owner extends PatternOwner> =
+  CanonicalToken<Token> extends KeyboardTokenName
+    ? never
+    : `${Owner}: unknown keyboard token "${PatternTrim<Token>}" in pattern "${Pattern}". Use a Keyboard enum name or pass numeric channels.`;
+
+/** `parseStepText`'s empty-`'+'`-segment rejection, for one token. */
+type CheckEmptyToken<Token extends string, Pattern extends string, Owner extends PatternOwner, Where extends string> =
+  PatternTrim<Token> extends '' ? `${Owner}: ${Where} of pattern "${Pattern}" contains an empty token.` : never;
+
+/** {@link CheckEmptyToken} across one alternative's `'+'`-joined tokens — a whole pass of its own, because the runtime checks every token for emptiness before resolving any of them. */
+type CheckEmptyTokens<
+  Rest extends string,
+  Pattern extends string,
+  Owner extends PatternOwner,
+  Where extends string,
+> = Rest extends `${infer Head}+${infer Tail}`
+  ? FirstPatternError<CheckEmptyToken<Head, Pattern, Owner, Where>, CheckEmptyTokens<Tail, Pattern, Owner, Where>>
+  : CheckEmptyToken<Rest, Pattern, Owner, Where>;
+
+/** {@link CheckToken} across one alternative's `'+'`-joined tokens. */
+type CheckTokens<Rest extends string, Pattern extends string, Owner extends PatternOwner> = Rest extends `${infer Head}+${infer Tail}`
+  ? FirstPatternError<CheckToken<Head, Pattern, Owner>, CheckTokens<Tail, Pattern, Owner>>
+  : CheckToken<Rest, Pattern, Owner>;
+
+/** One `'+'`-joined alternative: empty tokens first, then unknown ones, matching `parseStepText`. */
+type CheckAlternative<Text extends string, Pattern extends string, Owner extends PatternOwner, Where extends string> = FirstPatternError<
+  CheckEmptyTokens<Text, Pattern, Owner, Where>,
+  CheckTokens<Text, Pattern, Owner>
+>;
+
+/** One alternative of a step that DOES contain `'|'`, where an empty alternative is its own error rather than an empty token. */
+type CheckNamedAlternative<Text extends string, Pattern extends string, Owner extends PatternOwner, Where extends string> =
+  PatternTrim<Text> extends '' ? `${Owner}: ${Where} of pattern "${Pattern}" is empty — remove the stray '|'.` : CheckAlternative<Text, Pattern, Owner, Where>;
+
+/** Position label for the n-th `'|'`-separated alternative of a step, worded like `parseStepText`'s `location`. */
+type AlternativeWhere<Where extends string, Index extends readonly unknown[]> = `alternative ${[...Index, unknown]['length']} of ${Where}`;
+
+/** {@link CheckNamedAlternative} across a step's `'|'`-separated alternatives. */
+type CheckAlternatives<
+  Rest extends string,
+  Pattern extends string,
+  Owner extends PatternOwner,
+  Where extends string,
+  Index extends readonly unknown[],
+> = Rest extends `${infer Head}|${infer Tail}`
+  ? FirstPatternError<
+      CheckNamedAlternative<Head, Pattern, Owner, AlternativeWhere<Where, Index>>,
+      CheckAlternatives<Tail, Pattern, Owner, Where, [...Index, unknown]>
+    >
+  : CheckNamedAlternative<Rest, Pattern, Owner, AlternativeWhere<Where, Index>>;
+
+/** One `'>'`-separated step. A step with no `'|'` is one implicit alternative and is never described as one, exactly as `parseStepText` words it. */
+type CheckStep<Step extends string, Pattern extends string, Owner extends PatternOwner, Where extends string> = Step extends `${string}|${string}`
+  ? CheckAlternatives<Step, Pattern, Owner, Where, []>
+  : CheckAlternative<Step, Pattern, Owner, Where>;
+
+/** Position label for the n-th step — a {@link ChordAction} has no user-facing notion of "step N", only "the chord". */
+type StepWhere<Owner extends PatternOwner, Index extends readonly unknown[]> = Owner extends 'ChordAction'
+  ? 'the chord'
+  : `step ${[...Index, unknown]['length']}`;
+
+/** {@link CheckStep} across a pattern's `'>'`-separated steps. */
+type CheckSteps<
+  Rest extends string,
+  Pattern extends string,
+  Owner extends PatternOwner,
+  Index extends readonly unknown[],
+> = Rest extends `${infer Head}>${infer Tail}`
+  ? FirstPatternError<CheckStep<Head, Pattern, Owner, StepWhere<Owner, Index>>, CheckSteps<Tail, Pattern, Owner, [...Index, unknown]>>
+  : CheckStep<Rest, Pattern, Owner, StepWhere<Owner, Index>>;
+
+/** One alternative's tokens as canonical names, for {@link HasRepeatedToken}. */
+type TokenNames<Rest extends string> = Rest extends `${infer Head}+${infer Tail}` ? [CanonicalToken<Head>, ...TokenNames<Tail>] : [CanonicalToken<Rest>];
+
+type HasRepeatedToken<Names extends readonly string[]> = Names extends readonly [infer Head extends string, ...infer Tail extends string[]]
+  ? Head extends Tail[number]
+    ? true
+    : HasRepeatedToken<Tail>
+  : false;
+
+/** `normalizeStep`'s duplicate-channel rejection for one alternative. Unlike the parse errors above it does not quote the pattern, matching the runtime message. */
+type CheckDuplicates<Text extends string, Owner extends PatternOwner, Where extends string> =
+  HasRepeatedToken<TokenNames<Text>> extends true ? `${Owner}: ${Where} contains the same channel more than once.` : never;
+
+type CheckDuplicateAlternatives<
+  Rest extends string,
+  Owner extends PatternOwner,
+  Where extends string,
+  Index extends readonly unknown[],
+> = Rest extends `${infer Head}|${infer Tail}`
+  ? FirstPatternError<CheckDuplicates<Head, Owner, AlternativeWhere<Where, Index>>, CheckDuplicateAlternatives<Tail, Owner, Where, [...Index, unknown]>>
+  : CheckDuplicates<Rest, Owner, AlternativeWhere<Where, Index>>;
+
+type CheckDuplicateStep<Step extends string, Owner extends PatternOwner, Where extends string> = Step extends `${string}|${string}`
+  ? CheckDuplicateAlternatives<Step, Owner, Where, []>
+  : CheckDuplicates<Step, Owner, Where>;
+
+/** {@link CheckDuplicateStep} across every step — a pass of its own, because `normalizeSequence` parses every step before it normalizes any of them. */
+type CheckDuplicateSteps<Rest extends string, Owner extends PatternOwner, Index extends readonly unknown[]> = Rest extends `${infer Head}>${infer Tail}`
+  ? FirstPatternError<CheckDuplicateStep<Head, Owner, StepWhere<Owner, Index>>, CheckDuplicateSteps<Tail, Owner, [...Index, unknown]>>
+  : CheckDuplicateStep<Rest, Owner, StepWhere<Owner, Index>>;
+
+type CountSteps<Rest extends string, Counted extends readonly unknown[] = [unknown]> = Rest extends `${string}>${infer Tail}`
+  ? CountSteps<Tail, [...Counted, unknown]>
+  : Counted['length'];
+
+/** Every rejection `normalizeSequence` can reach for a string pattern, in the order it reaches them. */
+type PatternTextError<Pattern extends string, Owner extends PatternOwner> = FirstPatternError<
+  CheckSteps<PatternTrim<Pattern>, Pattern, Owner, []>,
+  CheckDuplicateSteps<PatternTrim<Pattern>, Owner, []>
+>;
+
+/** {@link PatternTextError} plus `ChordAction`'s own one-step rule, checked last because its constructor checks it only after `normalizeSequence` returns. */
+type ChordTextError<Pattern extends string> = FirstPatternError<
+  PatternTextError<Pattern, 'ChordAction'>,
+  PatternTrim<Pattern> extends `${string}>${string}`
+    ? `ChordAction: a chord binding ("${Pattern}") must resolve to exactly one simultaneous step, not ${CountSteps<PatternTrim<Pattern>>}. Use SequenceAction for '>' patterns.`
+    : never
+>;
+
+/** The binding itself when it passes, the rejection message when it does not. */
+type OrPatternError<Binding, Error> = [Error] extends [never] ? Binding : Error;
+
+/**
+ * A {@link ChordAction} binding, checked at compile time when it is a string
+ * LITERAL. A valid pattern types as itself, an invalid one as the message
+ * explaining why — so `new ChordAction('Ctrl+Sv')` fails to compile with
+ * `Argument of type '"Ctrl+Sv"' is not assignable to parameter of type
+ * '"ChordAction: unknown keyboard token \"Sv\" …"'`.
+ *
+ * A plain `string` (a pattern read from a config file, built at runtime, or
+ * handed over from JavaScript) bails out and passes through untouched: only
+ * the parser above can judge it, and it still does. Array bindings pass
+ * through untouched as well, constrained by `ChordAction`'s own type
+ * parameter.
+ */
+export type ValidatedChordBinding<P> = P extends string ? (string extends P ? P : OrPatternError<P, ChordTextError<P>>) : P;
+
+/** {@link ValidatedChordBinding} for {@link SequenceAction}, which allows `'>'` and therefore more than one step. */
+export type ValidatedSequenceBinding<P> = P extends string ? (string extends P ? P : OrPatternError<P, PatternTextError<P, 'SequenceAction'>>) : P;
+
+// Compile-time guard: every alias is lowercase and none shadows a real member,
+// so the lowercased key `resolveToken` builds reaches exactly one entry.
+type AssertAliasesAreUsableKeys =
+  keyof KeyboardAliasMap extends Lowercase<keyof KeyboardAliasMap>
+    ? [keyof KeyboardAliasMap & Lowercase<keyof typeof Keyboard>] extends [never]
+      ? true
+      : never
+    : never;
+const _keyboardAliasesAreUsableKeys: AssertAliasesAreUsableKeys = true;
+void _keyboardAliasesAreUsableKeys;
