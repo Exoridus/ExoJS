@@ -41,6 +41,7 @@ import { WebGpuMaskCompositor } from './WebGpuMaskCompositor';
 import { WebGpuMeshRenderer } from './WebGpuMeshRenderer';
 import { WebGpuPassCoordinator } from './WebGpuPassCoordinator';
 import {
+  retainedTintSlotBytes,
   retainedTransformSlotBytes,
   type WebGpuRetainedBatchPayload,
   type WebGpuRetainedBatchReplayer,
@@ -1001,7 +1002,7 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   /** @internal */
-  public getTransformStorageBuffer(minCount: number): { readonly buffer: GPUBuffer; readonly count: number } {
+  public getTransformStorageBuffer(minCount: number): { readonly buffer: GPUBuffer; readonly tintBuffer: GPUBuffer; readonly count: number } {
     return this._getTransformStorage().getBuffer(this.device, minCount, this._accountant);
   }
 
@@ -1438,11 +1439,12 @@ export class WebGpuBackend implements RenderBackend {
 
     const rowCount = hasSharedTransformRange ? maxNodeIndex - base + 1 : 0;
     const transformBytes = rowCount * retainedTransformSlotBytes;
+    const tintBytes = rowCount * retainedTintSlotBytes;
 
     // Growth is safe against the open pass: a bundle can only be re-recorded
     // on a frame whose set was invalid at collect time, so no draw recorded
     // into the open pass references the buffers replaced here.
-    bundle.ensureCapacity(device, frame.totalBytes, transformBytes);
+    bundle.ensureCapacity(device, frame.totalBytes, transformBytes, tintBytes);
 
     for (const batch of staged) {
       // Rebase this batch's instance node indices to group-local indices —
@@ -1461,14 +1463,18 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     if (hasSharedTransformRange) {
-      // Copy the group's transform rows [base, base + rowCount) — written by
-      // this playback's Phase-1 pre-pass into the frame-scoped CPU buffer —
-      // into the group-owned storage at group-local row 0. Rows carry tint
-      // (texel 2), so tint is covered by the copy.
-      const transformData = this._getTransformStorage().buffer.data;
+      // Copy the group's transform + tint rows [base, base + rowCount) —
+      // written by this playback's Phase-1 pre-pass into the frame-scoped CPU
+      // buffers — into the group-owned storage at group-local row 0. Tint
+      // lives in its own buffer (see TransformBuffer's class doc), copied
+      // separately from the same frame-scoped source.
+      const transformStorage = this._getTransformStorage().buffer;
+      const transformData = transformStorage.data;
+      const tintData = transformStorage.tintData;
 
       device.queue.writeBuffer(bundle.transformBuffer!, 0, transformData.buffer, transformData.byteOffset + base * retainedTransformSlotBytes, transformBytes);
-      this._accountant.recordBufferUpload(frame.totalBytes + transformBytes);
+      device.queue.writeBuffer(bundle.tintBuffer!, 0, tintData.buffer, tintData.byteOffset + base * retainedTintSlotBytes, tintBytes);
+      this._accountant.recordBufferUpload(frame.totalBytes + transformBytes + tintBytes);
     } else {
       this._accountant.recordBufferUpload(frame.totalBytes);
     }

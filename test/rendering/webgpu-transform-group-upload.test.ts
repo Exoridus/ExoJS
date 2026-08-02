@@ -4,6 +4,7 @@ import { type DrawCommand, drawCommandUsesSharedTransform, type MaterialKey, Ren
 import { RenderPlanPlayer } from '#rendering/plan/RenderPlanPlayer';
 import type { DrawScopeEntry, GroupScope, ScopeEntry } from '#rendering/plan/RenderScope';
 import type { RenderBackend } from '#rendering/RenderBackend';
+import { TRANSFORM_FLOATS_PER_ROW } from '#rendering/TransformBuffer';
 import { WebGpuTransformStorage } from '#rendering/webgpu/WebGpuTransformStorage';
 
 import { forEachGroupCommand } from './helpers/collectRenderGroups';
@@ -159,7 +160,7 @@ describe('WebGPU group-upload: consuming vs non-consuming writes', () => {
     // Highest written slot is node 3 → count 4.
     expect(storage.buffer.count).toBe(4);
 
-    const floatsPerSlot = 12;
+    const floatsPerSlot = TRANSFORM_FLOATS_PER_ROW;
 
     // Node 'a' (nodeIndex 0) at position (10, 20).
     expect(storage.buffer.data[4]).toBe(10);
@@ -252,7 +253,7 @@ describe('WebGPU group-upload: draw order is unchanged', () => {
 
 describe('WebGPU group-upload: nodeIndex slot contract', () => {
   test('each command writes to its own stable nodeIndex slot', () => {
-    const floatsPerSlot = 12;
+    const floatsPerSlot = TRANSFORM_FLOATS_PER_ROW;
     const a = new ConsumingDrawable(11, 22, new Color());
     const b = new ConsumingDrawable(33, 44, new Color());
     const scope = groupScope([drawEntry(createDrawCommand(a, 5, 1, 1)), drawEntry(createDrawCommand(b, 7, 1, 1))]);
@@ -307,7 +308,7 @@ describe('WebGPU group-upload: direct/synthetic push path is unaffected', () => 
   });
 
   test('push() writes the correct position into the allocated slot', () => {
-    const floatsPerSlot = 12;
+    const floatsPerSlot = TRANSFORM_FLOATS_PER_ROW;
     const storage = new WebGpuTransformStorage();
 
     storage.begin(4);

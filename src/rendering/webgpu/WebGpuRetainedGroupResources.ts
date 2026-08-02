@@ -10,8 +10,11 @@ import type { View } from '#rendering/View';
 
 import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
 
-/** Bytes of one transform slot (3 × vec4<f32>, matches the WGSL `TransformSlot`). */
-export const retainedTransformSlotBytes = 48;
+/** Bytes of one transform slot (2 × vec4<f32>, matches the WGSL `TransformSlot`). */
+export const retainedTransformSlotBytes = 32;
+
+/** Bytes of one packed rgba8 tint slot (one `u32`, matches the WGSL `tints` storage array). */
+export const retainedTintSlotBytes = 4;
 
 /**
  * Reference to the renderer-owned, persistent, SHARED geometry an indexed
@@ -211,6 +214,8 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
   private _instanceCapacity = 0;
   private _transformBuffer: GPUBuffer | null = null;
   private _transformCapacity = 0;
+  private _tintBuffer: GPUBuffer | null = null;
+  private _tintCapacity = 0;
   // Slice 4c in-place patch state: the shared-buffer row the stored rows were
   // rebased from, how many rows the store currently holds (bounds guard), and
   // the device whose queue the sub-range write goes through. All set at capture
@@ -221,6 +226,7 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
   private _uniformBuffer: GPUBuffer | null = null;
   private _bindGroup: GPUBindGroup | null = null;
   private _bindGroupLayout: GPUBindGroupLayout | null = null;
+  private _bindGroupIncludesTint = false;
   private readonly _accountant: GpuResourceAccountant;
   private _accountedBytes = 0;
   private _onRelease: ((bundle: WebGpuRetainedGroupBundle) => void) | null;
@@ -263,6 +269,10 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
     return this._transformBuffer;
   }
 
+  public get tintBuffer(): GPUBuffer | null {
+    return this._tintBuffer;
+  }
+
   /**
    * The shared frame-buffer row the stored transform rows were rebased from
    * (Slice 4c, {@link RetainedGroupBundle.transformRowBase}). A group-local row
@@ -279,15 +289,16 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
 
   /** Whether all GPU resources exist (false before the first finalized capture / after device loss). */
   public get isReady(): boolean {
-    return this._instanceBuffer !== null && this._transformBuffer !== null && this._uniformBuffer !== null;
+    return this._instanceBuffer !== null && this._transformBuffer !== null && this._tintBuffer !== null && this._uniformBuffer !== null;
   }
 
   /**
-   * Ensure the grow-only buffers cover `instanceBytes` + `transformBytes`.
-   * Recreating any buffer bumps {@link generation} (draws recorded against
-   * the old buffer must never replay) and drops the cached bind group.
+   * Ensure the grow-only buffers cover `instanceBytes` + `transformBytes` +
+   * `tintBytes`. Recreating any buffer bumps {@link generation} (draws
+   * recorded against the old buffer must never replay) and drops the cached
+   * bind group.
    */
-  public ensureCapacity(device: GPUDevice, instanceBytes: number, transformBytes: number): void {
+  public ensureCapacity(device: GPUDevice, instanceBytes: number, transformBytes: number, tintBytes: number): void {
     let recreated = false;
 
     if (this._instanceBuffer === null || this._instanceCapacity < instanceBytes) {
@@ -316,6 +327,19 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
       recreated = true;
     }
 
+    if (this._tintBuffer === null || this._tintCapacity < tintBytes) {
+      const capacity = growCapacity(this._tintCapacity, tintBytes);
+
+      this._tintBuffer?.destroy();
+      this._tintBuffer = device.createBuffer({
+        label: 'sprite:retained-tint-buffer',
+        size: capacity,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+      });
+      this._tintCapacity = capacity;
+      recreated = true;
+    }
+
     if (this._uniformBuffer === null) {
       this._uniformBuffer = device.createBuffer({
         label: 'sprite:retained-uniform-buffer',
@@ -329,7 +353,10 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
     if (recreated) {
       this._generation++;
       this._bindGroup = null;
-      this._accountedBytes = this._accountant.reallocate(this._accountedBytes, this._instanceCapacity + this._transformCapacity + retainedGroupUniformBytes);
+      this._accountedBytes = this._accountant.reallocate(
+        this._accountedBytes,
+        this._instanceCapacity + this._transformCapacity + this._tintCapacity + retainedGroupUniformBytes,
+      );
     }
   }
 
@@ -348,11 +375,12 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
 
   /**
    * Slice 4c fast patch: overwrite one group-local transform row in place with
-   * `floats` (12 = one `TransformSlot`, the {@link TransformBuffer} row layout)
-   * via a single `queue.writeBuffer` of that row's 48-byte sub-range. Mirrors
+   * `floats` (8 = one `TransformSlot`, the {@link TransformBuffer} row layout)
+   * via a single `queue.writeBuffer` of that row's 32-byte sub-range. Mirrors
    * {@link WebGl2RetainedGroupResources._patchTransformRow}: deliberately does
    * NOT bump the generation — the recorded instance bytes reference this row by
-   * index and stay valid; only the transform behind the index moved.
+   * index and stay valid; only the transform behind the index moved. Tint is
+   * not touched (a moved node's tint doesn't change).
    *
    * Out-of-range rows are ignored (a stale queue entry after a recapture shrank
    * the store), as is any patch before a range is recorded or after device loss
@@ -373,23 +401,35 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
   }
 
   /**
-   * The bind group(0) pairing the group UBO with the group transform storage,
-   * against the sprite renderer's existing uniform layout. Cached; rebuilt
-   * when a buffer or the layout (device restore) changed identity.
+   * The bind group(0) pairing the group UBO with the group transform storage
+   * (and, for a renderer that reads per-instance tint — sprite — the tint
+   * storage too), against the calling renderer's own uniform layout. Cached;
+   * rebuilt when a buffer, `includeTint`, or the layout (device restore)
+   * changed. `includeTint` MUST match what `layout` actually declares
+   * (binding 2 present or not) — the entries list below is built to fit
+   * exactly, since WebGPU bind group creation requires an exact match against
+   * the layout's binding set (nine-slice/repeating's layout has no binding 2).
    */
-  public getBindGroup(device: GPUDevice, layout: GPUBindGroupLayout): GPUBindGroup {
-    if (this._bindGroup !== null && this._bindGroupLayout === layout) {
+  public getBindGroup(device: GPUDevice, layout: GPUBindGroupLayout, includeTint: boolean): GPUBindGroup {
+    if (this._bindGroup !== null && this._bindGroupLayout === layout && this._bindGroupIncludesTint === includeTint) {
       return this._bindGroup;
     }
 
     this._bindGroupLayout = layout;
+    this._bindGroupIncludesTint = includeTint;
     this._bindGroup = device.createBindGroup({
       label: 'sprite:retained-bind-group',
       layout,
-      entries: [
-        { binding: 0, resource: { buffer: this._uniformBuffer! } },
-        { binding: 1, resource: { buffer: this._transformBuffer! } },
-      ],
+      entries: includeTint
+        ? [
+            { binding: 0, resource: { buffer: this._uniformBuffer! } },
+            { binding: 1, resource: { buffer: this._transformBuffer! } },
+            { binding: 2, resource: { buffer: this._tintBuffer! } },
+          ]
+        : [
+            { binding: 0, resource: { buffer: this._uniformBuffer! } },
+            { binding: 1, resource: { buffer: this._transformBuffer! } },
+          ],
     });
 
     return this._bindGroup;
@@ -405,14 +445,17 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
     if (destroyBuffers) {
       this._instanceBuffer?.destroy();
       this._transformBuffer?.destroy();
+      this._tintBuffer?.destroy();
       this._uniformBuffer?.destroy();
     }
 
     this._instanceBuffer = null;
     this._transformBuffer = null;
+    this._tintBuffer = null;
     this._uniformBuffer = null;
     this._instanceCapacity = 0;
     this._transformCapacity = 0;
+    this._tintCapacity = 0;
     this._transformRowCount = 0;
     this._patchDevice = null;
     this._bindGroup = null;

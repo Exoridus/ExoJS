@@ -1,5 +1,6 @@
 import { Drawable } from '#rendering/Drawable';
 import { type DrawCommand, type MaterialKey, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import { TRANSFORM_FLOATS_PER_ROW } from '#rendering/TransformBuffer';
 import { WebGpuTransformStorage } from '#rendering/webgpu/WebGpuTransformStorage';
 
 // Minimal WebGPU device mock sufficient for storage-buffer creation/destruction.
@@ -109,8 +110,9 @@ describe('WebGpuTransformStorage.reserve', () => {
     storage.begin(4);
     storage.reserve(device as unknown as GPUDevice, 4);
 
-    expect(device.createBuffer).toHaveBeenCalledTimes(1);
-    expect(device.buffers.length).toBe(1);
+    // One transform buffer + one tint buffer, grown together.
+    expect(device.createBuffer).toHaveBeenCalledTimes(2);
+    expect(device.buffers.length).toBe(2);
   });
 
   test('reserve with sufficient capacity is a no-op (same buffer, no extra allocations)', () => {
@@ -122,13 +124,13 @@ describe('WebGpuTransformStorage.reserve', () => {
 
     const firstBuffer = device.buffers[0];
 
-    expect(device.createBuffer).toHaveBeenCalledTimes(1);
+    expect(device.createBuffer).toHaveBeenCalledTimes(2);
 
     // A second reserve with ≤ the original count must not create a new buffer.
     storage.reserve(device as unknown as GPUDevice, 4);
     storage.reserve(device as unknown as GPUDevice, 8);
 
-    expect(device.createBuffer).toHaveBeenCalledTimes(1);
+    expect(device.createBuffer).toHaveBeenCalledTimes(2);
     expect(firstBuffer.destroy).not.toHaveBeenCalled();
   });
 
@@ -147,7 +149,7 @@ describe('WebGpuTransformStorage.reserve', () => {
     const result = storage.getBuffer(device as unknown as GPUDevice, 4);
 
     // No additional buffer should have been created.
-    expect(device.createBuffer).toHaveBeenCalledTimes(1);
+    expect(device.createBuffer).toHaveBeenCalledTimes(2);
     expect(result.buffer).toBe(reservedBuffer);
   });
 
@@ -158,7 +160,7 @@ describe('WebGpuTransformStorage.reserve', () => {
     storage.begin(4);
     storage.reserve(device as unknown as GPUDevice, 4);
 
-    expect(device.createBuffer).toHaveBeenCalledTimes(1);
+    expect(device.createBuffer).toHaveBeenCalledTimes(2);
 
     const firstBuffer = device.buffers[0];
 
@@ -166,9 +168,10 @@ describe('WebGpuTransformStorage.reserve', () => {
     storage.writeCommand(makeCommand(0));
     storage.getBuffer(device as unknown as GPUDevice, 64);
 
-    expect(device.createBuffer).toHaveBeenCalledTimes(2);
+    // Second growth creates a new transform + tint buffer pair (4 total).
+    expect(device.createBuffer).toHaveBeenCalledTimes(4);
     expect(firstBuffer.destroy).toHaveBeenCalledTimes(1);
-    expect(device.buffers.length).toBe(2);
+    expect(device.buffers.length).toBe(4);
   });
 
   test('reserve with recordCount = 0 still allocates at least one slot', () => {
@@ -178,7 +181,7 @@ describe('WebGpuTransformStorage.reserve', () => {
     storage.begin(0);
     storage.reserve(device as unknown as GPUDevice, 0);
 
-    expect(device.createBuffer).toHaveBeenCalledTimes(1);
+    expect(device.createBuffer).toHaveBeenCalledTimes(2);
   });
 
   test('write/skip/upload counters are unaffected by reserve', () => {
@@ -276,7 +279,7 @@ describe('WebGpuTransformStorage.reserve: no reallocation across multiple getBuf
     const flush1 = storage.getBuffer(device as unknown as GPUDevice, 3);
 
     expect(flush1.buffer).toBe(reservedBuffer);
-    expect(device.createBuffer).toHaveBeenCalledTimes(1);
+    expect(device.createBuffer).toHaveBeenCalledTimes(2);
 
     // Group B: nodes 3-5 written before second flush.
     storage.writeCommand(makeCommand(3));
@@ -286,8 +289,8 @@ describe('WebGpuTransformStorage.reserve: no reallocation across multiple getBuf
     const flush2 = storage.getBuffer(device as unknown as GPUDevice, 6);
 
     expect(flush2.buffer).toBe(reservedBuffer);
-    // Still only the one buffer from reserve — no mid-frame reallocation.
-    expect(device.createBuffer).toHaveBeenCalledTimes(1);
+    // Still only the one transform+tint pair from reserve — no mid-frame reallocation.
+    expect(device.createBuffer).toHaveBeenCalledTimes(2);
     expect(reservedBuffer.destroy).not.toHaveBeenCalled();
   });
 
@@ -303,15 +306,15 @@ describe('WebGpuTransformStorage.reserve: no reallocation across multiple getBuf
     storage.writeCommand(makeCommand(0));
     storage.getBuffer(device as unknown as GPUDevice, 3);
 
-    expect(device.createBuffer).toHaveBeenCalledTimes(1);
+    expect(device.createBuffer).toHaveBeenCalledTimes(2);
 
     const firstBuffer = device.buffers[0];
 
-    // Second flush needs 6 slots — old buffer is too small, reallocation happens.
+    // Second flush needs 6 slots — old buffers are too small, reallocation happens.
     storage.writeCommand(makeCommand(5));
     storage.getBuffer(device as unknown as GPUDevice, 6);
 
-    expect(device.createBuffer).toHaveBeenCalledTimes(2);
+    expect(device.createBuffer).toHaveBeenCalledTimes(4);
     expect(firstBuffer.destroy).toHaveBeenCalledTimes(1);
   });
 });
@@ -330,7 +333,7 @@ describe('WebGpuTransformStorage.reserve: Color/tint correctness after multi-flu
   test('data written across two groups is intact after both flushes complete', () => {
     const device = createMockDevice();
     const storage = new WebGpuTransformStorage();
-    const floatsPerSlot = 12;
+    const floatsPerSlot = TRANSFORM_FLOATS_PER_ROW;
 
     storage.begin(4);
     storage.reserve(device as unknown as GPUDevice, 4);
@@ -381,7 +384,7 @@ describe('WebGpuTransformStorage.reserve: begin across frames', () => {
     storage.getBuffer(device as unknown as GPUDevice, 1);
 
     expect(storage.buffer.uploadCount).toBe(1);
-    expect(device.createBuffer).toHaveBeenCalledTimes(1);
+    expect(device.createBuffer).toHaveBeenCalledTimes(2);
 
     const buf = device.buffers[0];
 
@@ -391,10 +394,10 @@ describe('WebGpuTransformStorage.reserve: begin across frames', () => {
     expect(storage.buffer.writeCount).toBe(0);
     expect(storage.buffer.uploadCount).toBe(0);
 
-    // Reserve again — buffer is already large enough; no new allocation.
+    // Reserve again — buffers are already large enough; no new allocation.
     storage.reserve(device as unknown as GPUDevice, 4);
 
-    expect(device.createBuffer).toHaveBeenCalledTimes(1);
+    expect(device.createBuffer).toHaveBeenCalledTimes(2);
     expect(buf.destroy).not.toHaveBeenCalled();
   });
 });

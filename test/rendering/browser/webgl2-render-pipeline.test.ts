@@ -25,6 +25,7 @@ in uint a_textureSlot;
 in uint a_nodeIndex;
 uniform mat3 u_projection;
 uniform sampler2D u_transforms;
+uniform sampler2D u_tintTexture;
 out vec2 v_uv;
 out vec4 v_color;
 flat out uint v_textureSlot;
@@ -46,7 +47,7 @@ void main() {
   vec3 clip = u_projection * vec3(world, 1.0);
   gl_Position = vec4(clip.xy, 0.0, 1.0);
   v_uv = uv;
-  v_color = texelFetch(u_transforms, ivec2(2, int(a_nodeIndex)), 0);
+  v_color = texelFetch(u_tintTexture, ivec2(0, int(a_nodeIndex)), 0);
   v_textureSlot = a_textureSlot;
 }`,
   meshVertexSource: `#version 300 es
@@ -57,6 +58,7 @@ in vec4 a_color;
 in uint a_nodeIndex;
 uniform mat3 u_projection;
 uniform sampler2D u_transforms;
+uniform sampler2D u_tintTexture;
 out vec2 v_uv;
 out vec4 v_color;
 out vec4 v_tint;
@@ -70,7 +72,7 @@ void main() {
   gl_Position = vec4(clip.xy, 0.0, 1.0);
   v_uv = a_texcoord;
   v_color = a_color;
-  v_tint = texelFetch(u_transforms, ivec2(2, row), 0);
+  v_tint = texelFetch(u_tintTexture, ivec2(0, row), 0);
 }`,
   meshFragmentSource: `#version 300 es
 precision mediump float;

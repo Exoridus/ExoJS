@@ -53,6 +53,7 @@ in uint a_nodeIndex;
 uniform mat3 u_projection;
 uniform mat3 u_group;
 uniform sampler2D u_transforms;
+uniform sampler2D u_tintTexture;
 out vec2 v_uv;
 out vec4 v_color;
 flat out uint v_textureSlot;
@@ -73,7 +74,7 @@ void main() {
   vec2 world = vec2(m0.x * local.x + m0.y * local.y + m1.x, m0.z * local.x + m0.w * local.y + m1.y);
   vec3 clip = u_projection * u_group * vec3(world, 1.0);
   gl_Position = vec4(clip.xy, 0.0, 1.0);
-  v_uv = uv; v_color = texelFetch(u_transforms, ivec2(2, int(a_nodeIndex)), 0); v_textureSlot = a_textureSlot;
+  v_uv = uv; v_color = texelFetch(u_tintTexture, ivec2(0, int(a_nodeIndex)), 0); v_textureSlot = a_textureSlot;
 }`,
 
   // Real production mesh.vert (canonical TransformSlot column order + u_group).
@@ -88,6 +89,7 @@ layout(location = 6) in uint a_nodeIndex;
 uniform mat3 u_projection;
 uniform mat3 u_group;
 uniform sampler2D u_transforms;
+uniform sampler2D u_tintTexture;
 
 out vec2 v_texcoord;
 out vec4 v_color;
@@ -106,7 +108,7 @@ void main(void) {
     gl_Position = vec4((u_projection * u_group * transform * vec3(a_position, 1.0)).xy, 0.0, 1.0);
     v_texcoord = a_texcoord;
     v_color = a_color;
-    v_tint = texelFetch(u_transforms, ivec2(2, row), 0);
+    v_tint = texelFetch(u_tintTexture, ivec2(0, row), 0);
 }`,
 
   // Real production mesh.frag.

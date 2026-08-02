@@ -3,13 +3,14 @@ import type { RetainedGroupBundle } from '#rendering/plan/RetainedInstructionSet
 import { DataTexture } from '#rendering/texture/DataTexture';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
-import { TRANSFORM_FLOATS_PER_ROW } from '#rendering/TransformBuffer';
+import { TRANSFORM_FLOATS_PER_ROW, TRANSFORM_TINT_BYTES_PER_ROW } from '#rendering/TransformBuffer';
 import { type BlendModes, BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
 
 import { WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
 
 const transformFloatsPerRow = TRANSFORM_FLOATS_PER_ROW;
+const tintBytesPerRow = TRANSFORM_TINT_BYTES_PER_ROW;
 const initialInstanceWordCapacity = 256;
 const initialTransformRowCapacity = 16;
 
@@ -176,6 +177,10 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
   private _transformRowCount = 0;
   private _transformRowBase = 0;
   private _transformTexture: DataTexture<'rgba32f'> | null = null;
+  // Parallel tint rows (see TransformBuffer's class doc): same row capacity/
+  // count/base as the transform store, grown and stored together.
+  private _tintBytes: Uint8Array | null = null;
+  private _tintTexture: DataTexture<'rgba8'> | null = null;
 
   // Device-side resources, created lazily at the first capture finalize.
   private _gl: WebGL2RenderingContext | null = null;
@@ -217,6 +222,11 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
   /** Group-owned transform store (`null` until the first capture stored rows). */
   public get transformTexture(): DataTexture<'rgba32f'> | null {
     return this._transformTexture;
+  }
+
+  /** Group-owned tint store (`null` until the first capture stored rows). */
+  public get tintTexture(): DataTexture<'rgba8'> | null {
+    return this._tintTexture;
   }
 
   /** Transform rows stored by the current/last capture. */
@@ -262,13 +272,13 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
   }
 
   /**
-   * Copy `rowCount` transform rows starting at `firstRow` from the shared
-   * frame-scoped transform buffer into the group-owned store (rows rebased to
-   * 0) and mark them for upload. Growth recreates the DataTexture (its buffer
-   * reference is fixed); the generation was already bumped by
+   * Copy `rowCount` transform + tint rows starting at `firstRow` from the
+   * shared frame-scoped buffers into the group-owned stores (rows rebased to
+   * 0) and mark them for upload. Growth recreates both DataTextures (their
+   * buffer references are fixed); the generation was already bumped by
    * {@link _beginCapture}, so growth needs no extra invalidation.
    */
-  public _storeTransformRows(source: Float32Array, firstRow: number, rowCount: number): void {
+  public _storeTransformRows(source: Float32Array, tintSource: Uint8Array, firstRow: number, rowCount: number): void {
     if (rowCount <= 0) {
       return;
     }
@@ -281,31 +291,43 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
       }
 
       this._transformTexture?.destroy();
+      this._tintTexture?.destroy();
       this._transformFloats = new Float32Array(next * transformFloatsPerRow);
       this._transformTexture = new DataTexture({
-        width: 3,
+        width: 2,
         height: next,
         format: 'rgba32f',
         data: this._transformFloats,
+      });
+      this._tintBytes = new Uint8Array(next * tintBytesPerRow);
+      this._tintTexture = new DataTexture({
+        width: 1,
+        height: next,
+        format: 'rgba8',
+        data: this._tintBytes,
       });
       this._transformRowCapacity = next;
     }
 
     // Non-null: the branch above allocated it when missing (the texture null
-    // check narrows the texture itself, but not the floats field).
+    // check narrows the texture itself, but not the floats/bytes fields).
     this._transformFloats!.set(source.subarray(firstRow * transformFloatsPerRow, (firstRow + rowCount) * transformFloatsPerRow), 0);
-    this._transformTexture.commitRect(0, 0, 3, rowCount);
+    this._transformTexture.commitRect(0, 0, 2, rowCount);
+    this._tintBytes!.set(tintSource.subarray(firstRow * tintBytesPerRow, (firstRow + rowCount) * tintBytesPerRow), 0);
+    this._tintTexture!.commitRect(0, 0, 1, rowCount);
     this._transformRowCount = rowCount;
     this._transformRowBase = firstRow;
   }
 
   /**
    * Slice 4b fast patch: overwrite one group-local transform row in place with
-   * `floats` (12 = 3 rgba32f texels, the {@link TransformBuffer} row layout)
+   * `floats` (8 = 2 rgba32f texels, the {@link TransformBuffer} row layout)
    * and mark ONLY that row's sub-range for upload. Deliberately does NOT bump
    * the generation — the recorded instance bytes reference this row by index
-   * and stay valid; only the transform behind the index moved. Out-of-range
-   * rows are ignored (a stale queue entry after a recapture shrank the store).
+   * and stay valid; only the transform behind the index moved. Tint is not
+   * touched (a moved node's tint doesn't change — see
+   * {@link RetainedContainer._tryPatchTransformRow}). Out-of-range rows are
+   * ignored (a stale queue entry after a recapture shrank the store).
    */
   public _patchTransformRow(localRow: number, floats: Float32Array): void {
     if (this._transformTexture === null || this._transformFloats === null || localRow < 0 || localRow >= this._transformRowCount) {
@@ -313,7 +335,7 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
     }
 
     this._transformFloats.set(floats.subarray(0, transformFloatsPerRow), localRow * transformFloatsPerRow);
-    this._transformTexture.commitRect(0, localRow, 3, 1);
+    this._transformTexture.commitRect(0, localRow, 2, 1);
   }
 
   /**
@@ -400,6 +422,9 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
     this._transformTexture?.destroy();
     this._transformTexture = null;
     this._transformFloats = null;
+    this._tintTexture?.destroy();
+    this._tintTexture = null;
+    this._tintBytes = null;
     this._transformRowCapacity = 0;
     this._transformRowCount = 0;
     this._usedWords = 0;

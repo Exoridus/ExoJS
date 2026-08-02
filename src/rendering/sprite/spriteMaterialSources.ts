@@ -13,9 +13,10 @@
  * material keeps the single `drawArraysInstanced` / `drawIndexed` batch.
  *
  * Both paths (locations 0, 3, 5, 6) fetch each instance's world transform and
- * tint from the shared transform storage keyed by `a_nodeIndex` / `nodeIndex`: the
- * WebGL2 path samples the `u_transforms` texture, the WGSL path reads the
- * `transforms` storage buffer (group(0) binding(1)).
+ * tint keyed by `a_nodeIndex` / `nodeIndex`: the WebGL2 path samples the
+ * `u_transforms` texture (transform) and `u_tintTexture` (rgba8 tint), the
+ * WGSL path reads the `transforms` storage buffer (group(0) binding(1)) and
+ * the `tints` packed-rgba8 storage buffer (group(0) binding(2)).
  *
  * A custom fragment receives the interpolated `v_texcoord` and premultiplied
  * `v_color`, plus the per-batch base texture bound as `u_texture` (WebGL2 unit 0
@@ -44,7 +45,8 @@ layout(location = 6) in uint a_nodeIndex;       // row into the shared transform
 uniform mat3 u_projection;
 uniform mat3 u_group;
 uniform vec4 u_viewport;                        // device-pixel snap rect (x, y, width, height)
-uniform sampler2D u_transforms;                 // shared per-frame transform buffer (3 texels/row)
+uniform sampler2D u_transforms;                 // shared per-frame transform buffer (2 texels/row)
+uniform sampler2D u_tintTexture;                // shared per-frame tint buffer (rgba8, 1 texel/row)
 
 out vec2 v_texcoord;
 out vec4 v_color;
@@ -68,13 +70,13 @@ void main(void) {
     float localX = (cornerX == 0) ? a_localBounds.x : a_localBounds.z;
     float localY = (cornerY == 0) ? a_localBounds.y : a_localBounds.w;
 
-    // Fetch the per-instance world transform and tint from the shared buffer
-    // (row = a_nodeIndex): texel 0 = (a, b, c, d), texel 1 = (tx, ty, snapMode, 0),
-    // texel 2 = tint (rgb 0..1, a).
+    // Fetch the per-instance world transform and tint (row = a_nodeIndex):
+    // transform texel 0 = (a, b, c, d), texel 1 = (tx, ty, snapMode, 0); tint
+    // is its own rgba8 texel (0..1 already, hardware-normalized).
     int row = int(a_nodeIndex);
     vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
     vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
-    vec4 m2 = texelFetch(u_transforms, ivec2(2, row), 0);
+    vec4 m2 = texelFetch(u_tintTexture, ivec2(0, row), 0);
 
     // Geometry boundary snap (m1.z == 2.0, axis-aligned only): round each local
     // corner to the device grid so the quad edges land on whole device pixels.
@@ -144,11 +146,13 @@ struct ProjectionUniforms {
 struct TransformSlot {
     m0: vec4<f32>,
     m1: vec4<f32>,
-    m2: vec4<f32>,
 };
 
 @group(0) @binding(0) var<uniform> projection: ProjectionUniforms;
 @group(0) @binding(1) var<storage, read> transforms: array<TransformSlot>;
+// Packed rgba8 tint (r|g|b|a, 8 bits each, unpacked via unpack4x8unorm), one
+// u32 per instance.
+@group(0) @binding(2) var<storage, read> tints: array<u32>;
 
 @group(1) @binding(0) var u_texture: texture_2d<f32>;
 @group(1) @binding(1) var u_sampler: sampler;
@@ -187,10 +191,11 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
     var localX = select(input.localBounds.x, input.localBounds.z, cornerX == 1u);
     var localY = select(input.localBounds.y, input.localBounds.w, cornerY == 1u);
 
-    // Fetch this instance's world transform and tint from the shared storage
-    // buffer, keyed by nodeIndex: m0 = (a, b, c, d), m1 = (tx, ty, snapMode, 0),
-    // m2 = tint (rgb 0..1, a).
+    // Fetch this instance's world transform and tint, keyed by nodeIndex:
+    // m0 = (a, b, c, d), m1 = (tx, ty, snapMode, 0); tint is its own packed
+    // rgba8 word, unpacked to 0..1 by the GPU (no manual math needed).
     let slot = transforms[input.nodeIndex];
+    let tint = unpack4x8unorm(tints[input.nodeIndex]);
 
     // Geometry boundary snap (slot.m1.z == 2.0, axis-aligned only): round each
     // local corner to the device grid so the quad edges land on whole device
@@ -236,7 +241,7 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
     let v = select(input.uvBounds.y, input.uvBounds.w, cornerY == 1u);
     output.texcoord = vec2<f32>(u, v);
 
-    output.color = vec4<f32>(slot.m2.rgb * slot.m2.a, slot.m2.a);
+    output.color = vec4<f32>(tint.rgb * tint.a, tint.a);
 
     return output;
 }

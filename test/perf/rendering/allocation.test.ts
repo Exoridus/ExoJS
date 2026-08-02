@@ -71,7 +71,15 @@ const BASELINE_KB = {
   static: 248,
   moving: 574,
   nested: 363,
-  mesh: 646,
+  // Re-baselined for #422 (transform/tint buffer split): mesh bundles now sync
+  // a second per-instance DataTexture (tint) alongside transform every frame,
+  // a deliberate, permanent cost of the split, not a bug. CI (Linux runner,
+  // the environment that gates this test) measured 748.11 KB and 747.13 KB
+  // medians across two independent runs on the post-split code — stable to
+  // <0.2%. This dev box (Windows) measures ~692 KB for the same code, which
+  // is why a Windows-only re-run cannot be used to validate this budget; the
+  // baseline must track the CI environment.
+  mesh: 748,
   filtered: 823,
 } as const;
 

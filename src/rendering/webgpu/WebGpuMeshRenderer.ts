@@ -100,7 +100,6 @@ struct VertexOutput {
 struct TransformSlot {
     m0: vec4<f32>,
     m1: vec4<f32>,
-    m2: vec4<f32>,
 };
 
 struct TransformUniforms {
@@ -112,16 +111,21 @@ struct TransformUniforms {
 
 @group(0) @binding(0) var<uniform> uniforms: TransformUniforms;
 @group(0) @binding(1) var<storage, read> transforms: array<TransformSlot>;
+// Packed rgba8 tint (r|g|b|a, 8 bits each, unpacked via unpack4x8unorm), one
+// u32 per instance.
+@group(0) @binding(2) var<storage, read> tints: array<u32>;
 
 @group(1) @binding(0) var meshTexture: texture_2d<f32>;
 @group(1) @binding(1) var meshSampler: sampler;
 
 @vertex
 fn vertexMain(input: VertexInput) -> VertexOutput {
-    // Shared TransformSlot convention: m0 = (a, b, c, d), m1 = (tx, ty, 0, 0),
+    // Shared TransformSlot convention: m0 = (a, b, c, d), m1 = (tx, ty, snapMode, 0),
     // so world = (a*x + b*y + tx, c*x + d*y + ty) — identical to the sprite
     // WGSL and the WebGL2 vertex shaders (see src/rendering/affinePacking.ts).
+    // Tint is its own packed rgba8 word, unpacked to 0..1 by the GPU.
     let slot = transforms[input.nodeIndex];
+    let tint = unpack4x8unorm(tints[input.nodeIndex]);
     let world = vec3<f32>(
         slot.m0.x * input.position.x + slot.m0.y * input.position.y + slot.m1.x,
         slot.m0.z * input.position.x + slot.m0.w * input.position.y + slot.m1.y,
@@ -145,7 +149,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     output.position = position;
     output.texcoord = input.texcoord;
     output.color = input.color;
-    output.tint = slot.m2;
+    output.tint = tint;
     output.premultiplySample = u32(uniforms.flags.x);
     return output;
 }
@@ -283,6 +287,7 @@ class MeshRetainedReplayState implements WebGpuRetainedRendererReplayState {
   public bindGroup: GPUBindGroup | null = null;
   public bindGroupUniform: GPUBuffer | null = null;
   public bindGroupTransform: GPUBuffer | null = null;
+  public bindGroupTint: GPUBuffer | null = null;
   // The (view, updateId) the currently-written slots were projected for; a
   // change while this bundle's draws sit in the open pass is the RT+main
   // double-replay hazard and ends the pass first (mirrors the sprite UBO guard).
@@ -297,6 +302,7 @@ class MeshRetainedReplayState implements WebGpuRetainedRendererReplayState {
     this.bindGroup = null;
     this.bindGroupUniform = null;
     this.bindGroupTransform = null;
+    this.bindGroupTint = null;
     this.uboView = null;
     this.uboViewUpdateId = -1;
     this.drawsInPass = null;
@@ -351,6 +357,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   private _instancedNodeIndexByteOffset = 0;
   private _instancedTransformBindGroup: GPUBindGroup | null = null;
   private _instancedTransformStorageBuffer: GPUBuffer | null = null;
+  private _instancedTintStorageBuffer: GPUBuffer | null = null;
   private _uniformAlignment = 256;
   private _vertexBufferCapacity = 0;
   private _indexBufferCapacity = 0;
@@ -478,7 +485,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     const pass = backend._passCoordinator.acquirePass().pass;
 
     pass.setPipeline(this._getInstancedPipeline({ blendMode: mesh.blendMode, format: renderTargetFormat, stencil }));
-    pass.setBindGroup(0, this._getOrCreateInstancedTransformBindGroup(storage.buffer), [0]);
+    pass.setBindGroup(0, this._getOrCreateInstancedTransformBindGroup(storage.buffer, storage.tintBuffer), [0]);
     pass.setBindGroup(1, this._getTextureBindGroup(backend, texture));
     pass.setVertexBuffer(0, staticGeometry.vertexBuffer);
     pass.setVertexBuffer(1, instanceNodeIndexBuffer);
@@ -715,7 +722,9 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
           const storage = backend.getTransformStorageBuffer(maxNodeIndex + 1);
 
           this._writeInstancedUniformSlot(instancedDrawCursor, backend, dc.premultiplySample);
-          pass.setBindGroup(0, this._getOrCreateInstancedTransformBindGroup(storage.buffer), [instancedDrawCursor * this._uniformAlignment]);
+          pass.setBindGroup(0, this._getOrCreateInstancedTransformBindGroup(storage.buffer, storage.tintBuffer), [
+            instancedDrawCursor * this._uniformAlignment,
+          ]);
 
           if (dc.texture !== lastTexture) {
             lastTexture = dc.texture;
@@ -959,6 +968,11 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
           visibility: GPUShaderStage.VERTEX,
           buffer: { type: 'read-only-storage' },
         },
+        {
+          binding: 2,
+          visibility: GPUShaderStage.VERTEX,
+          buffer: { type: 'read-only-storage' },
+        },
       ],
     });
     this._instancedPipelineLayout = this._device.createPipelineLayout({
@@ -992,6 +1006,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     this._instancedNodeIndexBuffer = null;
     this._instancedTransformBindGroup = null;
     this._instancedTransformStorageBuffer = null;
+    this._instancedTintStorageBuffer = null;
     this._pipelineLayout = null;
     this._instancedPipelineLayout = null;
     this._textureBindGroupLayout = null;
@@ -1294,6 +1309,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       });
       this._instancedTransformBindGroup = null;
       this._instancedTransformStorageBuffer = null;
+      this._instancedTintStorageBuffer = null;
     }
   }
 
@@ -1369,7 +1385,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       geometry === undefined ||
       !bundle.isReady ||
       bundle.instanceBuffer === null ||
-      bundle.transformBuffer === null
+      bundle.transformBuffer === null ||
+      bundle.tintBuffer === null
     ) {
       // Defensive: such a bundle never validates (generation), so a spliced
       // replay cannot reach here; skip rather than crash mid-frame.
@@ -1439,7 +1456,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     device.queue.writeBuffer(state.uniformBuffer!, slot * this._uniformAlignment, data.buffer, data.byteOffset, transformUniformByteLength);
 
     const textureBindGroup = this._getTextureBindGroup(backend, texture);
-    const bindGroup = this._getMeshReplayBindGroup(state, device, bundle.transformBuffer);
+    const bindGroup = this._getMeshReplayBindGroup(state, device, bundle.transformBuffer, bundle.tintBuffer);
 
     const active = coordinator.acquirePass();
     const pass = active.pass;
@@ -1502,8 +1519,13 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     state.bindGroupUniform = null;
   }
 
-  private _getMeshReplayBindGroup(state: MeshRetainedReplayState, device: GPUDevice, transformBuffer: GPUBuffer): GPUBindGroup {
-    if (state.bindGroup !== null && state.bindGroupUniform === state.uniformBuffer && state.bindGroupTransform === transformBuffer) {
+  private _getMeshReplayBindGroup(state: MeshRetainedReplayState, device: GPUDevice, transformBuffer: GPUBuffer, tintBuffer: GPUBuffer): GPUBindGroup {
+    if (
+      state.bindGroup !== null &&
+      state.bindGroupUniform === state.uniformBuffer &&
+      state.bindGroupTransform === transformBuffer &&
+      state.bindGroupTint === tintBuffer
+    ) {
       return state.bindGroup;
     }
 
@@ -1513,20 +1535,27 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       entries: [
         { binding: 0, resource: { buffer: state.uniformBuffer!, size: transformUniformByteLength } },
         { binding: 1, resource: { buffer: transformBuffer } },
+        { binding: 2, resource: { buffer: tintBuffer } },
       ],
     });
     state.bindGroupUniform = state.uniformBuffer;
     state.bindGroupTransform = transformBuffer;
+    state.bindGroupTint = tintBuffer;
 
     return state.bindGroup;
   }
 
-  private _getOrCreateInstancedTransformBindGroup(storageBuffer: GPUBuffer): GPUBindGroup {
-    if (this._instancedTransformBindGroup !== null && this._instancedTransformStorageBuffer === storageBuffer) {
+  private _getOrCreateInstancedTransformBindGroup(storageBuffer: GPUBuffer, tintBuffer: GPUBuffer): GPUBindGroup {
+    if (
+      this._instancedTransformBindGroup !== null &&
+      this._instancedTransformStorageBuffer === storageBuffer &&
+      this._instancedTintStorageBuffer === tintBuffer
+    ) {
       return this._instancedTransformBindGroup;
     }
 
     this._instancedTransformStorageBuffer = storageBuffer;
+    this._instancedTintStorageBuffer = tintBuffer;
     this._instancedTransformBindGroup = this._device!.createBindGroup({
       label: 'mesh:instanced-transform-bind-group',
       layout: this._instancedTransformBindGroupLayout!,
@@ -1542,6 +1571,12 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
           binding: 1,
           resource: {
             buffer: storageBuffer,
+          },
+        },
+        {
+          binding: 2,
+          resource: {
+            buffer: tintBuffer,
           },
         },
       ],

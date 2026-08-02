@@ -1,11 +1,11 @@
 /**
- * WebGL2 Sprite browser test — real `sprite.vert` texel-2 tint pixel proof
+ * WebGL2 Sprite browser test — real `sprite.vert` tint pixel proof
  * (closes #321).
  *
- * B-11 moved sprite tint out of a per-instance `a_color` attribute and into
- * the shared transform texture's texel 2 (`ivec2(2, nodeIndex)`, channels
- * r/g/b/a, premultiplied in the vertex shader as
- * `vec4(m2.rgb * m2.a, m2.a)`). Every OTHER `browser-webgl-chromium` pixel
+ * Sprite tint lives in its own rgba8 texture (`u_tintTexture`, one texel per
+ * row, keyed by `nodeIndex`), separate from the fp32 transform texture —
+ * premultiplied in the vertex shader as `vec4(m2.rgb * m2.a, m2.a)`. Every
+ * OTHER `browser-webgl-chromium` pixel
  * spec stubs `.vert`/`.frag` to `""` and substitutes hand-written mock GLSL
  * (see `webgl2-sprite-solid-color.test.ts`), and the one spec that DOES load
  * the real file (`webgl2-shader-compile.test.ts`) only compiles/links it —
@@ -69,6 +69,7 @@ in vec4 a_color;
 in uint a_nodeIndex;
 uniform mat3 u_projection;
 uniform sampler2D u_transforms;
+uniform sampler2D u_tintTexture;
 out vec2 v_uv; out vec4 v_color; out vec4 v_tint;
 void main() {
   int row = int(a_nodeIndex);
@@ -79,7 +80,7 @@ void main() {
   vec3 clip = u_projection * world;
   gl_Position = vec4(clip.xy, 0.0, 1.0);
   v_uv = a_texcoord; v_color = a_color;
-  v_tint = texelFetch(u_transforms, ivec2(2, row), 0);
+  v_tint = texelFetch(u_tintTexture, ivec2(0, row), 0);
 }`,
 
   meshFrag: `#version 300 es
@@ -198,18 +199,18 @@ const createSolidTexture = (color: string, width = 16, height = 16): Texture => 
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('WebGL2 Sprite — real sprite.vert texel-2 tint (#321)', () => {
+describe('WebGL2 Sprite — real sprite.vert tint (#321)', () => {
   test('the real shader source made it past the stub (not an empty string)', async () => {
     const real = await import('../../../src/rendering/webgl2/glsl/sprite.vert?raw');
 
     expect(real.default.length).toBeGreaterThan(0);
-    expect(real.default).toContain('ivec2(2, row)');
+    expect(real.default).toContain('texelFetch(u_tintTexture, ivec2(0, row), 0)');
   });
 
-  test('full-opaque tint renders the exact tint colour (texel-2 index + rgb swizzle)', async () => {
+  test('full-opaque tint renders the exact tint colour (tint texture index + rgb swizzle)', async () => {
     const backend = await createBackend();
     // Opaque white texture: sampleColor is (1,1,1,1), so the rendered pixel is
-    // driven entirely by the tint the shader reads from transform texel 2.
+    // driven entirely by the tint the shader reads from the tint texture.
     const texture = createSolidTexture('#ffffff', 16, 16);
     const root = new Container();
     const sprite = new Sprite(texture);

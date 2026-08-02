@@ -99,6 +99,17 @@ interface ManagedTextureState {
   height: number;
   /** GPU bytes currently booked for this texture's storage (0 until first upload). */
   accountedBytes: number;
+  /**
+   * Reusable packing buffer for a partial `DataTexture` upload (see
+   * `_syncTexture`'s partial branch), sized to the largest region packed so
+   * far and never shrunk. Kept per-texture (not a shared backend scratch) so
+   * concurrently-tracked `DataTexture`s (e.g. the transform + tint pair, each
+   * syncing every flush of a barrier-heavy scene) never race over one buffer.
+   * `null` until the first partial upload; the array kind narrows to the
+   * texture's own buffer kind (`Float32Array` for `rgba32f`/`r32f`, `Uint8Array`
+   * for `rgba8`/`r8`) and never changes for a given texture instance.
+   */
+  partialUploadScratch: Float32Array | Uint8Array | null;
 }
 
 interface ManagedRenderTargetState {
@@ -250,6 +261,11 @@ export class WebGl2Backend implements RenderBackend {
   private _transformTexture: DataTexture<'rgba32f'> | null = null;
   private _transformTextureHash = 0;
   private _transformTextureCount = -1;
+  // Tint's own rgba8 texture (see TransformBuffer's class doc for why it's
+  // split out of the fp32 transform texture): created/uploaded alongside the
+  // transform texture in bindTransformBufferTexture (same dirty-range
+  // consumption), bound separately by renderers that read tint.
+  private _tintTexture: DataTexture<'rgba8'> | null = null;
   private _activeDrawCommand: DrawCommand | null = null;
   private _drawPlanDepth = 0;
   private readonly _planBaseStack: number[] = [];
@@ -952,7 +968,7 @@ export class WebGl2Backend implements RenderBackend {
       transformTexture?.destroy();
 
       this._transformTexture = new DataTexture({
-        width: 3,
+        width: 2,
         height: this._transformBuffer.capacity,
         format: 'rgba32f',
         data: this._transformBuffer.data,
@@ -961,10 +977,28 @@ export class WebGl2Backend implements RenderBackend {
       this._transformTextureCount = -1;
     }
 
+    // Tint's capacity always grows in lockstep with the transform buffer (see
+    // TransformBuffer._ensureCapacity), so the same capacity check catches
+    // both a first bind and a growth — no separate dirty-hash tracking needed;
+    // both textures upload from the one dirty-range consumption below.
+    const tintTexture = this._tintTexture;
+
+    if (tintTexture?.height !== this._transformBuffer.capacity || tintTexture.buffer !== this._transformBuffer.tintData) {
+      tintTexture?.destroy();
+
+      this._tintTexture = new DataTexture({
+        width: 1,
+        height: this._transformBuffer.capacity,
+        format: 'rgba8',
+        data: this._transformBuffer.tintData,
+      });
+    }
+
     const snapshot = this._transformBuffer.commitSnapshot(requiredCount);
     const nextTransformTexture = this._transformTexture;
+    const nextTintTexture = this._tintTexture;
 
-    if (nextTransformTexture === null) {
+    if (nextTransformTexture === null || nextTintTexture === null) {
       throw new Error('Transform texture must be initialized before binding.');
     }
 
@@ -976,10 +1010,13 @@ export class WebGl2Backend implements RenderBackend {
       // Upload only the rows actually written since the last upload (delta), so
       // barrier-heavy frames don't re-upload the whole growing buffer. A reused
       // slot below the high-water mark is in the dirty range, so it re-uploads.
+      // Single consumption feeds BOTH textures — consumeDirtyRange clears the
+      // range as a side effect, so it must only be called once per flush.
       const { firstRow, rowCount } = this._transformBuffer.consumeDirtyRange(snapshot.count);
 
       if (rowCount > 0) {
-        nextTransformTexture.commitRect(0, firstRow, 3, rowCount);
+        nextTransformTexture.commitRect(0, firstRow, 2, rowCount);
+        nextTintTexture.commitRect(0, firstRow, 1, rowCount);
         this._transformBuffer.recordUpload(rowCount);
       }
 
@@ -988,6 +1025,22 @@ export class WebGl2Backend implements RenderBackend {
     }
 
     return this.bindTexture(nextTransformTexture, unit);
+  }
+
+  /**
+   * Bind the tint texture (uploaded as part of {@link bindTransformBufferTexture},
+   * which must be called first this flush) to `unit`. Only renderers that read
+   * per-node tint from the shared buffer (sprite, mesh) call this.
+   * @internal
+   */
+  public bindTintBufferTexture(unit: number): this {
+    const tintTexture = this._tintTexture;
+
+    if (tintTexture === null) {
+      throw new Error('Tint texture must be initialized (via bindTransformBufferTexture) before binding.');
+    }
+
+    return this.bindTexture(tintTexture, unit);
   }
 
   public setBlendMode(blendMode: BlendModes | null): this {
@@ -1215,7 +1268,7 @@ export class WebGl2Backend implements RenderBackend {
         payload.replayer._rebaseRetainedNodeIndices(payload, range.min);
       }
 
-      frame.bundle._storeTransformRows(this._transformBuffer.data, range.min, range.max - range.min + 1);
+      frame.bundle._storeTransformRows(this._transformBuffer.data, this._transformBuffer.tintData, range.min, range.max - range.min + 1);
     }
 
     frame.bundle._connectDevice(this._context, this._accountant);
@@ -1485,6 +1538,11 @@ export class WebGl2Backend implements RenderBackend {
       this._transformTexture = null;
     }
 
+    if (this._tintTexture !== null) {
+      this._tintTexture.destroy();
+      this._tintTexture = null;
+    }
+
     this._vao = null;
     this._renderer = null;
     this._shader = null;
@@ -1602,12 +1660,14 @@ export class WebGl2Backend implements RenderBackend {
     // dropped when its render target is evicted).
     this._destroyManagedResources();
 
-    // The shared transform texture's handle died with the context. Drop the
-    // wrapper (its GL handle was just evicted above) and reset the upload
-    // bookkeeping so a fresh DataTexture + full re-upload happens on next bind.
+    // The shared transform (+ tint) texture handles died with the context. Drop
+    // the wrappers (their GL handles were just evicted above) and reset the
+    // upload bookkeeping so fresh DataTextures + a full re-upload happen on the
+    // next bind.
     this._transformTexture = null;
     this._transformTextureCount = -1;
     this._transformTextureHash = 0;
+    this._tintTexture = null;
 
     // Disconnect renderers so they release their (dead) buffers / VAOs / shader
     // programs, then reconnect to rebuild them against the fresh context. This
@@ -1778,6 +1838,7 @@ export class WebGl2Backend implements RenderBackend {
         width: 0,
         height: 0,
         accountedBytes: 0,
+        partialUploadScratch: null,
       };
 
       this._textureStates.set(texture, state);
@@ -2036,6 +2097,27 @@ export class WebGl2Backend implements RenderBackend {
     gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
   }
 
+  /**
+   * Return a packing scratch view sized exactly `length`, backed by
+   * `state.partialUploadScratch` (grown on demand, never shrunk, kind-matched
+   * to `source`). Reusing this buffer across every partial `DataTexture`
+   * upload — instead of allocating a fresh temporary array per sync — is what
+   * keeps a barrier-heavy scene's per-frame CPU garbage flat instead of
+   * scaling with flush count: each flush's transform (and now separate tint)
+   * sync would otherwise allocate its own throwaway packing buffer.
+   */
+  private _acquirePartialUploadScratch(state: ManagedTextureState, source: Float32Array | Uint8Array, length: number): Float32Array | Uint8Array {
+    const isFloat = source instanceof Float32Array;
+    let scratch = state.partialUploadScratch;
+
+    if (scratch === null || scratch.length < length || isFloat !== scratch instanceof Float32Array) {
+      scratch = isFloat ? new Float32Array(length) : new Uint8Array(length);
+      state.partialUploadScratch = scratch;
+    }
+
+    return scratch.length === length ? scratch : scratch.subarray(0, length);
+  }
+
   private _syncTexture(texture: Texture | RenderTexture): ManagedTextureState {
     const gl = this._context;
     const state = this._getTextureState(texture);
@@ -2077,19 +2159,26 @@ export class WebGl2Backend implements RenderBackend {
           this._accountant.recordTextureUpload(texture.width * texture.height * bytesPerPixel);
         } else {
           // Partial upload: pack a contiguous sub-region from the row-major
-          // buffer into a temporary view that gl.texSubImage2D can read.
+          // buffer into a reusable scratch view (grown once, never reallocated
+          // per call — see `_acquirePartialUploadScratch`) that gl.texSubImage2D
+          // can read.
           const channels = formatInfo.channels;
           const rowFloats = texture.width * channels;
           const subFloats = region.width * channels;
-          const subView =
-            texture.buffer instanceof Float32Array
-              ? new Float32Array(region.width * region.height * channels)
-              : new Uint8Array(region.width * region.height * channels);
+          const subView = this._acquirePartialUploadScratch(state, texture.buffer, region.width * region.height * channels);
 
-          for (let row = 0; row < region.height; row++) {
-            const sourceStart = (region.y + row) * rowFloats + region.x * channels;
-            const targetStart = row * subFloats;
-            subView.set(texture.buffer.subarray(sourceStart, sourceStart + subFloats), targetStart);
+          if (region.x === 0 && region.width === texture.width) {
+            // Full-width rows are contiguous in the row-major buffer — one copy.
+            const start = region.y * rowFloats;
+
+            subView.set(texture.buffer.subarray(start, start + subView.length));
+          } else {
+            for (let row = 0; row < region.height; row++) {
+              const sourceStart = (region.y + row) * rowFloats + region.x * channels;
+              const targetStart = row * subFloats;
+
+              subView.set(texture.buffer.subarray(sourceStart, sourceStart + subFloats), targetStart);
+            }
           }
 
           gl.texSubImage2D(gl.TEXTURE_2D, 0, region.x, region.y, region.width, region.height, formatInfo.format, formatInfo.type, subView);

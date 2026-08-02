@@ -4,23 +4,34 @@ import { Container } from '#rendering/Container';
 import { PixelSnapMode } from '#rendering/pixelSnap';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
-import { packTransformRow, TransformBuffer } from '#rendering/TransformBuffer';
+import { packTintRow, packTransformRow, TransformBuffer } from '#rendering/TransformBuffer';
 
 describe('TransformBuffer', () => {
   test('packTransformRow writes the snap mode at offset 6 and keeps offset 7 reserved', () => {
-    const row = new Float32Array(12).fill(Number.NaN);
+    const row = new Float32Array(8).fill(Number.NaN);
 
-    packTransformRow(row, 0, new Matrix(), Color.white, PixelSnapMode.Geometry);
+    packTransformRow(row, 0, new Matrix(), PixelSnapMode.Geometry);
 
     expect(row[6]).toBe(2);
     expect(row[7]).toBe(0);
 
-    packTransformRow(row, 0, new Matrix(), Color.white, PixelSnapMode.None);
+    packTransformRow(row, 0, new Matrix(), PixelSnapMode.None);
 
     expect(row[6]).toBe(0);
   });
 
-  test('stores transform rows and normalized tint at the requested slot', () => {
+  test('packTintRow writes r/g/b/a as 0..255 bytes', () => {
+    const row = new Uint8Array(4).fill(0xff);
+
+    packTintRow(row, 0, new Color(64, 128, 255, 0.5));
+
+    expect(row[0]).toBe(64);
+    expect(row[1]).toBe(128);
+    expect(row[2]).toBe(255);
+    expect(row[3]).toBe(128); // round(0.5 * 255)
+  });
+
+  test('stores transform rows at the requested slot, tint in the parallel tintData row', () => {
     const buffer = new TransformBuffer();
     const transform = new Matrix(2, 3, 11, 5, 7, 13, 0, 0, 1);
     const tint = new Color(64, 128, 255, 0.5);
@@ -29,6 +40,7 @@ describe('TransformBuffer', () => {
     buffer.write(0, transform, tint);
 
     const data = buffer.data;
+    const tintData = buffer.tintData;
 
     expect(buffer.count).toBe(1);
     expect(data[0]).toBe(2);
@@ -39,10 +51,10 @@ describe('TransformBuffer', () => {
     expect(data[5]).toBe(13);
     expect(data[6]).toBe(0);
     expect(data[7]).toBe(0);
-    expect(data[8]).toBeCloseTo(64 / 255, 6);
-    expect(data[9]).toBeCloseTo(128 / 255, 6);
-    expect(data[10]).toBeCloseTo(1, 6);
-    expect(data[11]).toBeCloseTo(0.5, 6);
+    expect(tintData[0]).toBe(64);
+    expect(tintData[1]).toBe(128);
+    expect(tintData[2]).toBe(255);
+    expect(tintData[3]).toBe(128); // round(0.5 * 255)
   });
 
   test('sparse nodeIndex writes keep the highest slot as frame count', () => {
@@ -113,7 +125,7 @@ describe('TransformBuffer', () => {
     expect(buffer.skippedWriteCount).toBe(2);
     // Skips never advance the slot count or write into the buffer.
     expect(buffer.count).toBe(1);
-    expect(Array.from(buffer.data.subarray(12, 24))).toEqual(new Array(12).fill(0));
+    expect(Array.from(buffer.data.subarray(8, 16))).toEqual(new Array(8).fill(0));
   });
 
   test('recordUpload accumulates upload count and uploaded record count', () => {
@@ -165,8 +177,10 @@ describe('TransformBuffer', () => {
     buffer.begin();
     buffer.write(slot, global, child.tint);
 
-    const offset = slot * 12;
+    const offset = slot * 8;
+    const tintOffset = slot * 4;
     const data = buffer.data;
+    const tintData = buffer.tintData;
 
     expect(buffer.count).toBe(8);
     expect(data[offset + 0]).toBeCloseTo(global.a, 5);
@@ -175,10 +189,10 @@ describe('TransformBuffer', () => {
     expect(data[offset + 3]).toBeCloseTo(global.d, 5);
     expect(data[offset + 4]).toBeCloseTo(global.x, 5);
     expect(data[offset + 5]).toBeCloseTo(global.y, 5);
-    expect(data[offset + 8]).toBeCloseTo(child.tint.r / 255, 6);
-    expect(data[offset + 9]).toBeCloseTo(child.tint.g / 255, 6);
-    expect(data[offset + 10]).toBeCloseTo(child.tint.b / 255, 6);
-    expect(data[offset + 11]).toBeCloseTo(child.tint.a, 6);
+    expect(tintData[tintOffset + 0]).toBe(child.tint.r);
+    expect(tintData[tintOffset + 1]).toBe(child.tint.g);
+    expect(tintData[tintOffset + 2]).toBe(child.tint.b);
+    expect(tintData[tintOffset + 3]).toBe(Math.round(child.tint.a * 255));
 
     parent.destroy();
   });

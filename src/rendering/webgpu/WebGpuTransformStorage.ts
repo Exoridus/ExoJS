@@ -4,9 +4,10 @@ import type { Drawable } from '#rendering/Drawable';
 import type { GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
 import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { DrawCommand } from '#rendering/plan/RenderCommand';
-import { TransformBuffer } from '#rendering/TransformBuffer';
+import { TRANSFORM_FLOATS_PER_ROW, TRANSFORM_TINT_BYTES_PER_ROW, TransformBuffer } from '#rendering/TransformBuffer';
 
-const slotFloatCount = 12;
+const slotFloatCount = TRANSFORM_FLOATS_PER_ROW;
+const tintSlotBytes = TRANSFORM_TINT_BYTES_PER_ROW;
 
 /** @internal */
 export class WebGpuTransformStorage {
@@ -19,6 +20,11 @@ export class WebGpuTransformStorage {
   private _accountant: GpuResourceAccountant | null = null;
   /** GPU bytes currently booked for the storage buffer with the resource accountant. */
   private _accountedBytes = 0;
+  // Tint's own storage buffer (see TransformBuffer's class doc): grown and
+  // uploaded in lockstep with the transform buffer, one packed rgba8 `u32`
+  // per instance.
+  private _tintStorageBuffer: GPUBuffer | null = null;
+  private _tintAccountedBytes = 0;
 
   /**
    * Underlying shared transform buffer. Exposed for internal stats / tests
@@ -87,7 +93,7 @@ export class WebGpuTransformStorage {
       return;
     }
 
-    this._growBuffer(device, requiredBytes);
+    this._growBuffers(device, minCount);
   }
 
   /**
@@ -102,7 +108,11 @@ export class WebGpuTransformStorage {
     return this._storageBuffer === null || requiredBytes > this._storageCapacity;
   }
 
-  public getBuffer(device: GPUDevice, minCount: number, accountant?: GpuResourceAccountant): { readonly buffer: GPUBuffer; readonly count: number } {
+  public getBuffer(
+    device: GPUDevice,
+    minCount: number,
+    accountant?: GpuResourceAccountant,
+  ): { readonly buffer: GPUBuffer; readonly tintBuffer: GPUBuffer; readonly count: number } {
     this._accountant = accountant ?? this._accountant;
 
     const requiredCount = Math.max(1, minCount);
@@ -110,7 +120,7 @@ export class WebGpuTransformStorage {
     const snapshot = this._buffer.commitSnapshot(requiredCount);
 
     if (this._storageBuffer === null || requiredBytes > this._storageCapacity) {
-      this._growBuffer(device, requiredBytes);
+      this._growBuffers(device, requiredCount);
     }
 
     // A skipped flush (all three guards false) leaves the dirty range uncleared
@@ -122,16 +132,19 @@ export class WebGpuTransformStorage {
       // the full-upload path (post-grow) or the delta path runs below. Both paths
       // are inside this if-branch; the skip case (snapshot unchanged) never reaches
       // here, so the dirty range is only consumed when an upload is actually issued.
+      // Single consumption feeds BOTH buffers (transform + tint) — consumeDirtyRange
+      // clears the range as a side effect, so it must only be called once per flush.
       const { firstRow, rowCount } = this._buffer.consumeDirtyRange(snapshot.count);
 
       const slotBytes = slotFloatCount * Float32Array.BYTES_PER_ELEMENT;
 
       if (this._needsFullUpload) {
-        // Post-grow: the new GPUBuffer is empty; upload the full [0, snapshot.count)
+        // Post-grow: the new GPUBuffers are empty; upload the full [0, snapshot.count)
         // range so rows already consumed by earlier flushes this frame are present.
         device.queue.writeBuffer(this._storageBuffer!, 0, this._buffer.data.buffer, this._buffer.data.byteOffset, snapshot.count * slotBytes);
+        device.queue.writeBuffer(this._tintStorageBuffer!, 0, this._buffer.tintData.buffer, this._buffer.tintData.byteOffset, snapshot.count * tintSlotBytes);
         this._buffer.recordUpload(snapshot.count);
-        this._accountant?.recordBufferUpload(snapshot.count * slotBytes);
+        this._accountant?.recordBufferUpload(snapshot.count * slotBytes + snapshot.count * tintSlotBytes);
         this._needsFullUpload = false;
       } else if (rowCount > 0) {
         // Normal delta path: upload only the rows written since the last upload.
@@ -143,8 +156,15 @@ export class WebGpuTransformStorage {
           this._buffer.data.byteOffset + firstRow * slotBytes,
           rowCount * slotBytes,
         );
+        device.queue.writeBuffer(
+          this._tintStorageBuffer!,
+          firstRow * tintSlotBytes,
+          this._buffer.tintData.buffer,
+          this._buffer.tintData.byteOffset + firstRow * tintSlotBytes,
+          rowCount * tintSlotBytes,
+        );
         this._buffer.recordUpload(rowCount);
-        this._accountant?.recordBufferUpload(rowCount * slotBytes);
+        this._accountant?.recordBufferUpload(rowCount * slotBytes + rowCount * tintSlotBytes);
       }
 
       this._storageHash = snapshot.hash;
@@ -153,6 +173,7 @@ export class WebGpuTransformStorage {
 
     return {
       buffer: this._storageBuffer!,
+      tintBuffer: this._tintStorageBuffer!,
       count: snapshot.count,
     };
   }
@@ -168,14 +189,29 @@ export class WebGpuTransformStorage {
       this._accountant?.free(this._accountedBytes);
       this._accountedBytes = 0;
     }
+
+    this._tintStorageBuffer?.destroy();
+    this._tintStorageBuffer = null;
+
+    if (this._tintAccountedBytes > 0) {
+      this._accountant?.free(this._tintAccountedBytes);
+      this._tintAccountedBytes = 0;
+    }
   }
 
-  private _growBuffer(device: GPUDevice, requiredBytes: number): void {
+  private _growBuffers(device: GPUDevice, requiredCount: number): void {
+    const requiredBytes = requiredCount * slotFloatCount * Float32Array.BYTES_PER_ELEMENT;
     let nextCapacity = Math.max(this._storageCapacity, slotFloatCount * Float32Array.BYTES_PER_ELEMENT);
 
     while (nextCapacity < requiredBytes) {
       nextCapacity *= 2;
     }
+
+    // Tint's own capacity, grown to cover the SAME slot count as the transform
+    // buffer (nextCapacity / slotBytes), so the two buffers never diverge on
+    // how many rows they cover.
+    const nextSlotCount = nextCapacity / (slotFloatCount * Float32Array.BYTES_PER_ELEMENT);
+    const nextTintCapacity = nextSlotCount * tintSlotBytes;
 
     this._storageBuffer?.destroy();
     this._storageBuffer = device.createBuffer({
@@ -184,10 +220,19 @@ export class WebGpuTransformStorage {
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
     this._storageCapacity = nextCapacity;
+
+    this._tintStorageBuffer?.destroy();
+    this._tintStorageBuffer = device.createBuffer({
+      label: 'transform:tint-storage-buffer',
+      size: nextTintCapacity,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    });
+
     this._storageHash = 0;
     this._storageCount = -1;
     this._needsFullUpload = true;
-    // Re-book the storage footprint (free the prior buffer's bytes, allocate the new).
+    // Re-book the storage footprint (free the prior buffers' bytes, allocate the new).
     this._accountedBytes = this._accountant?.reallocate(this._accountedBytes, nextCapacity) ?? this._accountedBytes;
+    this._tintAccountedBytes = this._accountant?.reallocate(this._tintAccountedBytes, nextTintCapacity) ?? this._tintAccountedBytes;
   }
 }
