@@ -1232,8 +1232,7 @@ coordinated release pipeline.
 
 ### Migration guide
 
-- ExoJS `v0.9.0` includes pre-1.0 API consolidation changes. Migration steps and before/after examples:
-  <https://exoridus.github.io/ExoJS/en/guide/migration/v0-8-x-to-v0-9-0/>
+- ExoJS `v0.9.0` includes the pre-1.0 API consolidation changes listed below.
 
 ### Breaking — Public API consolidation
 

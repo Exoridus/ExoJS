@@ -31,6 +31,10 @@ g.drawCircle(200, 40, 40);
 Each draw call creates a separate `Mesh`. Changing `fillColor` between calls produces multi-colored output without creating a new `Graphics` instance:
 
 ```ts
+import { Color, Graphics } from '@codexo/exojs';
+
+const g = new Graphics();
+
 g.fillColor = Color.tomato;
 g.drawCircle(0, 0, 30);
 
@@ -40,64 +44,49 @@ g.drawRectangle(40, -20, 60, 40);
 
 ## Built-in shapes
 
-Seven shape methods cover the common cases. All coordinates are in the `Graphics` object's local space and participate in its transform.
+Seven shape methods cover the common cases. All coordinates are in the `Graphics` object's local space and participate in its transform:
 
-**Rectangles:**
 ```ts
-g.drawRectangle(x, y, width, height);
+import { Graphics } from '@codexo/exojs';
+
+const g = new Graphics();
+
+g.drawRectangle(10, 20, 120, 80);
+g.drawCircle(200, 60, 30);
+g.drawEllipse(300, 60, 50, 25);
+g.drawPolygon([0, -30, 30, 30, -30, 30]);
+g.drawStar(400, 60, 5, 40, 20, Math.PI / 2);
+g.drawLine(0, 150, 120, 180);
+g.drawPath([150, 150, 200, 180, 250, 150]);
 ```
 
-**Circles:**
-```ts
-g.drawCircle(centerX, centerY, radius);
-```
-
-**Ellipses:**
-```ts
-g.drawEllipse(centerX, centerY, radiusX, radiusY);
-```
-
-**Polygons** from a flat `[x0, y0, x1, y1, ...]` array:
-```ts
-g.drawPolygon([0, -30, 30, 30, -30, 30]); // triangle
-```
-
-**Stars** with configurable points, inner radius, and rotation in radians (default inner radius is half the outer radius):
-```ts
-g.drawStar(centerX, centerY, points, radius, innerRadius, rotationRadians);
-```
-
-**Lines** between two explicit points (does not use or affect the pen position):
-```ts
-g.drawLine(startX, startY, endX, endY);
-```
-
-**Paths** from a flat point array, drawn as a stroked polyline:
-```ts
-g.drawPath([x0, y0, x1, y1, x2, y2, ...]);
-```
+`drawLine` uses two explicit endpoints and does not affect the pen position. `drawPath` accepts a flat `[x0, y0, x1, y1, ...]` array. `drawStar` takes center, point count, outer radius, inner radius, and rotation in radians; the inner radius defaults to half the outer radius.
 
 ## Path and pen commands
 
 `Graphics` tracks a cursor position. Path commands move the cursor and emit stroked line segments:
 
 ```ts
+import { Graphics } from '@codexo/exojs';
+
+const g = new Graphics();
+
 g.moveTo(50, 50);
 g.lineTo(150, 100);
 g.lineTo(100, 200);
 
 // Quadratic Bézier curve: one control point
 g.moveTo(20, 20);
-g.quadraticCurveTo(cpX, cpY, toX, toY);
+g.quadraticCurveTo(80, 20, 120, 80);
 
 // Cubic Bézier curve: two control points
-g.bezierCurveTo(cpX1, cpY1, cpX2, cpY2, toX, toY);
+g.bezierCurveTo(140, 20, 180, 120, 220, 60);
 
 // Arc tangent to two lines through (x1,y1)
-g.arcTo(x1, y1, x2, y2, radius);
+g.arcTo(220, 60, 260, 100, 20);
 
 // Explicit arc
-g.drawArc(centerX, centerY, radius, startAngle, endAngle, anticlockwise);
+g.drawArc(320, 80, 30, 0, Math.PI, false);
 ```
 
 Each of these emits a `drawPath` call behind the scenes. The `currentPoint` property reflects where the pen currently sits.

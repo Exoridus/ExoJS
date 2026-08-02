@@ -1,12 +1,4 @@
 {
   "note": "Per-guide budget of `partial` code blocks — ts/js fences that extract-guide-snippets.ts cannot turn into checkable code, and that therefore no type-checker ever sees. The count may only go down; both an increase and an un-recorded decrease fail `pnpm typecheck:guides`. Run `pnpm typecheck:guides:update-baseline` to record a decrease. A guide with no such blocks is absent from this file.",
-  "files": {
-    "audio/audio-basics.mdx": 7,
-    "audio/audio-effects.mdx": 16,
-    "audio/beat-detection.mdx": 9,
-    "audio/spatial-audio.mdx": 12,
-    "rendering/animation.mdx": 9,
-    "rendering/graphics.mdx": 9,
-    "shipping/v0-8-x-to-v0-9-0.mdx": 5
-  }
+  "files": {}
 }

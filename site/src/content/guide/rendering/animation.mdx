@@ -96,16 +96,21 @@ Ease.elasticIn  Ease.elasticOut  Ease.elasticInOut
 Chain tweens to build sequenced motion without nesting callbacks:
 
 ```ts
-const moveRight = this.app.tweens.create(sprite.position)
+import { type Application, Ease, Sprite } from '@codexo/exojs';
+
+declare const application: Application;
+declare const sprite: Sprite;
+
+const moveRight = application.tweens.create(sprite.position)
     .to({ x: 700 }, 1.0)
     .easing(Ease.cubicInOut);
 
-const moveDown = this.app.tweens.create(sprite.position)
+const moveDown = application.tweens.create(sprite.position)
     .to({ y: 500 }, 0.8)
     .easing(Ease.cubicOut);
 
-const fadeOut = this.app.tweens.create(sprite)
-    .to({ alpha: 0 }, 0.5);
+const fadeOut = application.tweens.create(sprite.tint)
+    .to({ a: 0 }, 0.5);
 
 moveRight.chain(moveDown);
 moveDown.chain(fadeOut);
@@ -115,14 +120,19 @@ moveRight.start();
 Because `chain()` returns the next tween, keep a reference to the first tween and start that first tween:
 
 ```ts
-const first = this.app.tweens.create(sprite.position)
+import { type Application, Sprite } from '@codexo/exojs';
+
+declare const application: Application;
+declare const sprite: Sprite;
+
+const first = application.tweens.create(sprite.position)
     .to({ x: 700 }, 1.0)
 
-const second = this.app.tweens.create(sprite.position)
+const second = application.tweens.create(sprite.position)
     .to({ y: 500 }, 0.8);
 
-const third = this.app.tweens.create(sprite)
-    .to({ alpha: 0 }, 0.5);
+const third = application.tweens.create(sprite.tint)
+    .to({ a: 0 }, 0.5);
 
 first.chain(second);
 second.chain(third);
@@ -136,21 +146,26 @@ Only the first tween in the chain needs a `start()` call — each chained tween 
 `chain()` links exactly one tween to exactly one successor — fine for a short relay, but it can't express "run these two tweens together, then move on" or "pause for a beat between steps" without extra bookkeeping. [`TweenSequencer`](/ExoJS/en/api/tween-sequencer/) covers those cases. Create one with `app.tweens.createSequencer()` and build it up with `.then()` and `.wait()`:
 
 ```ts
-const fadeIn = this.app.tweens.create(sprite)
-    .to({ alpha: 1 }, 0.4);
+import { type Application, Ease, Sprite } from '@codexo/exojs';
 
-const moveLeft = this.app.tweens.create(sprite.position)
+declare const application: Application;
+declare const sprite: Sprite;
+
+const fadeIn = application.tweens.create(sprite.tint)
+    .to({ a: 1 }, 0.4);
+
+const moveLeft = application.tweens.create(sprite.position)
     .to({ x: 200 }, 0.6)
     .easing(Ease.cubicOut);
 
-const scaleUp = this.app.tweens.create(sprite.scale)
+const scaleUp = application.tweens.create(sprite.scale)
     .to({ x: 1.2, y: 1.2 }, 0.6)
     .easing(Ease.cubicOut);
 
-const fadeOut = this.app.tweens.create(sprite)
-    .to({ alpha: 0 }, 0.4);
+const fadeOut = application.tweens.create(sprite.tint)
+    .to({ a: 0 }, 0.4);
 
-this.app.tweens.createSequencer()
+application.tweens.createSequencer()
     .then(fadeIn)
     .wait(0.5)
     .then([moveLeft, scaleUp])
@@ -189,9 +204,11 @@ Tween interpolation is purely numeric. Attempting to tween a non-number property
 ### Defining clips
 
 ```ts
-import { AnimatedSprite, Rectangle } from '@codexo/exojs';
+import { AnimatedSprite, Rectangle, Texture } from '@codexo/exojs';
 
-const player = new AnimatedSprite(texture);
+declare const spriteTexture: Texture;
+
+const player = new AnimatedSprite(spriteTexture);
 
 player.defineClip('walk', {
     frames: [
@@ -210,6 +227,10 @@ player.defineClip('walk', {
 Multiple clips can be registered on the same `AnimatedSprite`:
 
 ```ts
+import { AnimatedSprite, Rectangle } from '@codexo/exojs';
+
+declare const player: AnimatedSprite;
+
 player.defineClip('idle', { frames: [new Rectangle(0, 32, 32, 32)], fps: 1 });              // repeat: -1 (default) — loops forever
 player.defineClip('jump', { frames: [new Rectangle(128, 0, 32, 32)], fps: 1, repeat: 1 });  // plays once
 ```
@@ -224,6 +245,13 @@ Two optional clip fields cover cases a single `fps` value can't express:
 - **`frameOffsets`** — a per-frame local draw offset (`{ x, y }` in local pixels), parallel to `frames`. Use it to keep frames anchored to a stable point when the source frames are trimmed to different sizes — without it, differently-trimmed frames jitter around their own top-left corner.
 
 ```ts
+import { AnimatedSprite, Rectangle } from '@codexo/exojs';
+
+declare const player: AnimatedSprite;
+declare const frame0: Rectangle;
+declare const frame1: Rectangle;
+declare const frame2: Rectangle;
+
 player.defineClip('hit', {
     frames: [frame0, frame1, frame2],
     frameDurations: [80, 40, 200],                                    // ms per frame — frame1 is a quick flash, frame2 lingers
@@ -236,6 +264,10 @@ Both arrays are usually populated automatically rather than written by hand: the
 ### Playback control
 
 ```ts
+import { AnimatedSprite } from '@codexo/exojs';
+
+declare const player: AnimatedSprite;
+
 player.play('walk');                        // start from frame 0
 player.play('walk', { restart: false });    // resume if same clip
 player.play('walk', { repeat: 1 });         // override repeat count for this play
@@ -248,6 +280,10 @@ player.stop();     // stop and rewind to frame 0
 The `onFrame` signal fires on every frame advance; `onComplete` fires when the clip completes its final `repeat` cycle:
 
 ```ts
+import { AnimatedSprite } from '@codexo/exojs';
+
+declare const player: AnimatedSprite;
+
 player.onFrame.add((clip, frame) => {
     console.log(`Frame ${frame} of clip "${clip}"`);
 });
@@ -270,9 +306,12 @@ update(delta: Time) {
 If a `Spritesheet` has animation data, `AnimatedSprite.fromSpritesheet()` creates a configured instance directly:
 
 ```ts
-import { AnimatedSprite, Spritesheet } from '@codexo/exojs';
+import { AnimatedSprite, Spritesheet, type SpritesheetData, Texture } from '@codexo/exojs';
 
-const sheet = new Spritesheet(texture, spritesheetJson);
+declare const spriteTexture: Texture;
+declare const sheetData: SpritesheetData;
+
+const sheet = new Spritesheet(spriteTexture, sheetData);
 const hero = AnimatedSprite.fromSpritesheet(sheet);
 hero.play('walk');
 ```

@@ -49,9 +49,8 @@ describe('guide and example runtime contracts', () => {
   });
 
   it('does not describe superseded scene and coordinate contracts', () => {
-    const currentGuides = guideFiles.filter(file => !file.endsWith('v0-8-x-to-v0-9-0.mdx'));
     const staleContract =
       /`Scene\.app` is `null`|app\.start\(\) expects a `Scene` instance|`scene\.currentScene|\(canvas\.width, canvas\.height\).*bottom-right/g;
-    expect(violations(currentGuides, staleContract)).toEqual([]);
+    expect(violations(guideFiles, staleContract)).toEqual([]);
   });
 });

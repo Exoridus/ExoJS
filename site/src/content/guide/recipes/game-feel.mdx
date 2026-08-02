@@ -76,9 +76,9 @@ this.app.tweens.create(this.sprite)
     .start();
 
 // Fade flash — full white overlay that fades out
-this.overlay.alpha = 1;
-this.app.tweens.create(this.overlay)
-    .to({ alpha: 0 }, 0.3)
+this.overlay.tint.a = 1;
+this.app.tweens.create(this.overlay.tint)
+    .to({ a: 0 }, 0.3)
     .start();
 ```
 
