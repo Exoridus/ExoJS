@@ -89,7 +89,7 @@ const app = new Application({
         mount: document.body,
         sizingMode: 'fit',
     },
-    clearColor: new Color(0.02, 0.03, 0.06, 1),
+    clearColor: new Color(5, 8, 15, 1),
     backend: { type: 'webgpu' },
 });
 
