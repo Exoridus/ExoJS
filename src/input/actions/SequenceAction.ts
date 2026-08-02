@@ -1,4 +1,4 @@
-import { type InputSequence, type NormalizedStep, normalizeSequence } from './pattern';
+import { type InputSequence, type NormalizedStep, normalizeSequence, type ValidatedSequenceBinding } from './pattern';
 import type { ActionOptions, ActionSample } from './types';
 
 /**
@@ -58,6 +58,13 @@ export interface SequenceActionOptions extends ActionOptions {
  * `Keyboard` member. Use an {@link InputSequence} array of channels/chords/
  * alternations directly to include pointer or gamepad channels.
  *
+ * A string LITERAL is additionally checked at compile time, so a typo
+ * (`'Up>Up>Dwon'`) or a stray separator (`'A>>B'`) is a type error naming the
+ * reason rather than a throw on the first frame that constructs the action. A
+ * pattern that is only known at runtime — read from a config file, assembled
+ * from parts, or passed in from JavaScript — types as plain `string` and is
+ * checked by the parser alone, exactly as before.
+ *
  * @example
  * ```ts
  * const konami = new SequenceAction('Up>Up>Down>Down>Left>Right>Left>Right>B>A', { maxGap: 800 });
@@ -68,7 +75,7 @@ export interface SequenceActionOptions extends ActionOptions {
  * const save = new SequenceAction('Control+K|Meta+K>S');
  * ```
  */
-export class SequenceAction {
+export class SequenceAction<const Pattern extends SequenceBinding = SequenceBinding> {
   /** One entry per step; each is one entry per alternative, each the channels that alternative requires together. */
   private readonly _steps: readonly NormalizedStep[];
   /** One entry per step — every channel across all of that step's alternatives, flattened and deduplicated, for "does this batch touch this step at all" checks. */
@@ -89,9 +96,11 @@ export class SequenceAction {
    * @throws {Error} If the pattern is empty, a string pattern contains an
    * unknown `Keyboard` token or an empty `+`/`>`/`|` segment, a mix of a bare
    * channel and a nested alternative within the same step, or any single
-   * alternative repeats the same channel twice.
+   * alternative repeats the same channel twice. A string literal is rejected
+   * at compile time for the same reasons — see
+   * {@link ValidatedSequenceBinding}.
    */
-  public constructor(pattern: SequenceBinding, options: SequenceActionOptions = {}) {
+  public constructor(pattern: ValidatedSequenceBinding<Pattern>, options: SequenceActionOptions = {}) {
     this._steps = normalizeSequence(pattern, options.gamepadSlot ?? 0, 'SequenceAction');
     this._stepChannels = this._steps.map(step => [...new Set(step.flat())]);
     this._channels = [...new Set(this._stepChannels.flat())];

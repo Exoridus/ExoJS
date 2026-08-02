@@ -1,5 +1,5 @@
 import { ButtonLikeAction } from './ButtonLikeAction';
-import { type InputAlternation, type InputChord, normalizeSequence } from './pattern';
+import { type InputAlternation, type InputChord, normalizeSequence, type ValidatedChordBinding } from './pattern';
 import type { ActionOptions } from './types';
 
 /**
@@ -57,13 +57,21 @@ function weakestAt(values: Float32Array, indices: readonly number[]): number {
  * {@link InputChannel}s directly to include pointer or gamepad channels, or
  * for a sequence with more than one step, use {@link SequenceAction}.
  *
+ * A string LITERAL is additionally checked at compile time, so a typo
+ * (`'Ctrl+Sv'`), a stray separator (`'A++B'`) or a `'>'` that belongs to
+ * {@link SequenceAction} is a type error naming the reason rather than a throw
+ * on the first frame that constructs the action. A pattern that is only known
+ * at runtime — read from a config file, assembled from parts, or passed in
+ * from JavaScript — types as plain `string` and is checked by the parser
+ * alone, exactly as before.
+ *
  * @example
  * ```ts
  * const save = new ChordAction('Control+S|Meta+S');
  * const swap = new ChordAction([GamepadButton.LeftShoulder, GamepadButton.RightShoulder]);
  * ```
  */
-export class ChordAction extends ButtonLikeAction {
+export class ChordAction<const Binding extends ChordBinding = ChordBinding> extends ButtonLikeAction {
   /** One entry per alternative; each lists that alternative's channels as indices into {@link ButtonLikeAction._values}. */
   private readonly _alternativeIndices: ReadonlyArray<readonly number[]>;
 
@@ -71,9 +79,11 @@ export class ChordAction extends ButtonLikeAction {
    * @throws {Error} If a string binding contains a `>` step separator (use
    * {@link SequenceAction}), an unknown `Keyboard` token, an empty `+`/`|`
    * segment, a mix of a bare channel and a nested alternative within the
-   * same binding, or the same channel twice within one alternative.
+   * same binding, or the same channel twice within one alternative. A string
+   * literal is rejected at compile time for the same reasons — see
+   * {@link ValidatedChordBinding}.
    */
-  public constructor(binding: ChordBinding, options: ActionOptions = {}) {
+  public constructor(binding: ValidatedChordBinding<Binding>, options: ActionOptions = {}) {
     const steps = normalizeSequence(typeof binding === 'string' ? binding : [binding], options.gamepadSlot ?? 0, 'ChordAction');
 
     if (steps.length !== 1) {

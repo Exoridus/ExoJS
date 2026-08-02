@@ -1,6 +1,6 @@
 {
   "title": "ChordAction",
-  "description": "Button-like action active while every channel in a chord is held at once — `Control+S`, a modifier held alongside a gamepad button, and so on. Exposes the same `active`/`pressed`/`released`/`value` quartet as ButtonAction, but the aggregate is the weakest of every bound channel instead of the strongest of a set of alternatives: `min(|v|) > threshold` for every bound channel holds if and only if every one of them individually exceeds threshold, so a chord is only ever as \"on\" as its least-engaged member. For an analog chord (a gamepad trigger held alongside a button, say), value reports the trigger's pull limited by whether the button is engaged at all — `0` the instant any member releases, never the button's own binary 0/1. `'|'` alternates between whole chords — `'Control+S|Meta+S'` is active while EITHER modifier is held alongside `S`. This composes the same strongest/weakest reduction one level deeper: each alternative reports its own weakest member as above, and the action reports the strongest of those alternatives, so an analog alternative's `value` still reflects its own least-engaged member rather than collapsing to a plain boolean. A string binding resolves `+`/`|`-joined tokens as case-insensitive Keyboard enum names (`'Control+S'`, `'control+s'`). This is a shortcut list syntax for enum lookups, not text or IME input — it never decodes typed characters, dead keys, or composed input, and rejects any token that is not a known `Keyboard` member. Use an array of InputChannels directly to include pointer or gamepad channels, or for a sequence with more than one step, use SequenceAction.",
+  "description": "Button-like action active while every channel in a chord is held at once — `Control+S`, a modifier held alongside a gamepad button, and so on. Exposes the same `active`/`pressed`/`released`/`value` quartet as ButtonAction, but the aggregate is the weakest of every bound channel instead of the strongest of a set of alternatives: `min(|v|) > threshold` for every bound channel holds if and only if every one of them individually exceeds threshold, so a chord is only ever as \"on\" as its least-engaged member. For an analog chord (a gamepad trigger held alongside a button, say), value reports the trigger's pull limited by whether the button is engaged at all — `0` the instant any member releases, never the button's own binary 0/1. `'|'` alternates between whole chords — `'Control+S|Meta+S'` is active while EITHER modifier is held alongside `S`. This composes the same strongest/weakest reduction one level deeper: each alternative reports its own weakest member as above, and the action reports the strongest of those alternatives, so an analog alternative's `value` still reflects its own least-engaged member rather than collapsing to a plain boolean. A string binding resolves `+`/`|`-joined tokens as case-insensitive Keyboard enum names (`'Control+S'`, `'control+s'`). This is a shortcut list syntax for enum lookups, not text or IME input — it never decodes typed characters, dead keys, or composed input, and rejects any token that is not a known `Keyboard` member. Use an array of InputChannels directly to include pointer or gamepad channels, or for a sequence with more than one step, use SequenceAction. A string LITERAL is additionally checked at compile time, so a typo (`'Ctrl+Sv'`), a stray separator (`'A++B'`) or a `'>'` that belongs to SequenceAction is a type error naming the reason rather than a throw on the first frame that constructs the action. A pattern that is only known at runtime — read from a config file, assembled from parts, or passed in from JavaScript — types as plain `string` and is checked by the parser alone, exactly as before.",
   "symbol": "ChordAction",
   "kind": "class",
   "subsystem": "input",
@@ -21,7 +21,8 @@
       "paragraphs": [
         "Button-like action active while every channel in a chord is held at once — `Control+S`, a modifier held alongside a gamepad button, and so on. Exposes the same `active`/`pressed`/`released`/`value` quartet as ButtonAction, but the aggregate is the weakest of every bound channel instead of the strongest of a set of alternatives: `min(|v|) > threshold` for every bound channel holds if and only if every one of them individually exceeds threshold, so a chord is only ever as \"on\" as its least-engaged member. For an analog chord (a gamepad trigger held alongside a button, say), value reports the trigger's pull limited by whether the button is engaged at all — `0` the instant any member releases, never the button's own binary 0/1.",
         "`'|'` alternates between whole chords — `'Control+S|Meta+S'` is active while EITHER modifier is held alongside `S`. This composes the same strongest/weakest reduction one level deeper: each alternative reports its own weakest member as above, and the action reports the strongest of those alternatives, so an analog alternative's `value` still reflects its own least-engaged member rather than collapsing to a plain boolean.",
-        "A string binding resolves `+`/`|`-joined tokens as case-insensitive Keyboard enum names (`'Control+S'`, `'control+s'`). This is a shortcut list syntax for enum lookups, not text or IME input — it never decodes typed characters, dead keys, or composed input, and rejects any token that is not a known `Keyboard` member. Use an array of InputChannels directly to include pointer or gamepad channels, or for a sequence with more than one step, use SequenceAction."
+        "A string binding resolves `+`/`|`-joined tokens as case-insensitive Keyboard enum names (`'Control+S'`, `'control+s'`). This is a shortcut list syntax for enum lookups, not text or IME input — it never decodes typed characters, dead keys, or composed input, and rejects any token that is not a known `Keyboard` member. Use an array of InputChannels directly to include pointer or gamepad channels, or for a sequence with more than one step, use SequenceAction.",
+        "A string LITERAL is additionally checked at compile time, so a typo (`'Ctrl+Sv'`), a stray separator (`'A++B'`) or a `'>'` that belongs to SequenceAction is a type error naming the reason rather than a throw on the first frame that constructs the action. A pattern that is only known at runtime — read from a config file, assembled from parts, or passed in from JavaScript — types as plain `string` and is checked by the parser alone, exactly as before."
       ],
       "importLine": "import { ChordAction } from '@codexo/exojs'",
       "sourceLink": null
@@ -32,7 +33,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(binding: ChordBinding, options: ActionOptions): ChordAction",
+          "signature": "new(binding: ValidatedChordBinding<Binding>, options: ActionOptions): ChordAction<Binding>",
           "signatureTokens": [
             {
               "text": "new",
@@ -51,8 +52,20 @@
               "kind": "punctuation"
             },
             {
-              "text": "ChordBinding",
+              "text": "ValidatedChordBinding",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Binding",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": ", ",
@@ -81,12 +94,24 @@
             {
               "text": "ChordAction",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Binding",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [
             {
               "name": "binding",
-              "type": "ChordBinding",
+              "type": "ValidatedChordBinding<Binding>",
               "optional": false
             },
             {
@@ -95,7 +120,7 @@
               "optional": false
             }
           ],
-          "returnType": "ChordAction",
+          "returnType": "ChordAction<Binding>",
           "description": ""
         }
       ],
