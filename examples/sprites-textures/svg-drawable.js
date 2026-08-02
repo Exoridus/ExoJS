@@ -3,7 +3,7 @@ import { Application, Asset, Color, Scene, Sprite, Texture } from '@codexo/exojs
 class SvgDrawableScene extends Scene {
     texture;
     sprite;
-    async init() {
+    async load() {
         const app = this.app;
         if (app === null)
             throw new Error('Scene.app is unavailable before the scene is attached to an Application.');

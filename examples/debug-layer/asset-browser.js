@@ -138,7 +138,7 @@ class AssetBrowserScene extends Scene {
     assetLoader = null;
     loadedCats = new Set();
     loadingCats = new Set();
-    async init() {
+    async load() {
         const app = this.app;
         if (app === null)
             throw new Error('Scene.app is unavailable before the scene is attached to an Application.');

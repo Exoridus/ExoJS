@@ -15,7 +15,7 @@ class AudioVisualisationScene extends Scene {
     screen;
     hud;
     tapPrompt;
-    async init() {
+    async load() {
         const app = this.app;
         if (app === null)
             throw new Error('Scene.app is unavailable before the scene is attached to an Application.');

@@ -32,7 +32,7 @@ class TileChunksAndBandsScene extends Scene {
     moveX = 0;
     moveY = 0;
     hud;
-    async init() {
+    async load() {
         // ── Tileset + two layers, built entirely in code ──────────────────
         // Await the atlas load: TileSet needs a TextureRegion with real
         // dimensions, so a not-yet-hydrated `loader.get()` handle is not enough.

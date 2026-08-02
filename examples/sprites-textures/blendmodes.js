@@ -39,7 +39,7 @@ class BlendmodesScene extends Scene {
     // is awaited here purely to seed the fetch with `scaleMode: Nearest`; its
     // return value is intentionally unused. The subsequent 2-argument `get()`
     // calls for the same sources are unaffected and stay seamless.
-    async init() {
+    async load() {
         const app = this.app;
         if (app === null)
             throw new Error('Scene.app is unavailable before the scene is attached to an Application.');

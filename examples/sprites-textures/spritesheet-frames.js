@@ -10,7 +10,7 @@ class SpritesheetFramesScene extends Scene {
     elapsed = 0;
     playing = true;
     hud;
-    async init() {
+    async load() {
         const app = this.app;
         if (app === null)
             throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
