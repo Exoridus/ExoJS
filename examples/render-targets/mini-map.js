@@ -13,9 +13,7 @@ class MiniMapScene extends Scene {
     time = 0;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         const miniX = width - 220 - 20;
         const miniY = 20;
         // Grid + player live in one container so the same subtree can be drawn at
@@ -49,9 +47,7 @@ class MiniMapScene extends Scene {
     }
     update(delta) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         const marginX = 80;
         const marginY = 60;
         this.time += delta.seconds;

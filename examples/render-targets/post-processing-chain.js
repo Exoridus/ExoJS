@@ -12,9 +12,7 @@ class PostProcessingChainScene extends Scene {
     time = 0;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         this.scene = new Graphics();
         this.a = new RenderTexture(width, height);
         this.b = new RenderTexture(width, height);
@@ -31,9 +29,7 @@ class PostProcessingChainScene extends Scene {
     }
     update(delta) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         this.time += delta.seconds;
         this.scene.clear();
         this.scene.fillColor = new Color(80, 130, 255);

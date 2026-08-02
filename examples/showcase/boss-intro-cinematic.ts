@@ -22,8 +22,7 @@ class BossIntroCinematicScene extends Scene {
 
     override async load(): Promise<void> {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         this.width = width;
         this.height = height;
 
@@ -71,7 +70,6 @@ class BossIntroCinematicScene extends Scene {
 
     private replay(): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         if (app.audio.locked) {
             return;
         }
@@ -88,7 +86,6 @@ class BossIntroCinematicScene extends Scene {
 
     private playSequence(): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const { width, height } = this;
 
         // Wipe any in-flight tweens and reset the visible state to frame zero.
@@ -129,7 +126,6 @@ class BossIntroCinematicScene extends Scene {
 
     override draw(context: RenderingContext): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const { width, height } = this;
 
         context.backend.clear(new Color(16, 16, 24));

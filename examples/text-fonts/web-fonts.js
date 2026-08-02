@@ -5,10 +5,8 @@ class WebFontsScene extends Scene {
     loaded;
     async load() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         await this.loader.load(Asset.type('font', 'font/Kenney Future.ttf', { family: 'Kenney Future' }));
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         this.default = new Text('Default Font', { fillColor: Color.white, fontSize: 52, align: 'center' });
         this.default.setAnchor(0.5, 0.5);
         this.default.setPosition(width / 2, height / 2 - 60);

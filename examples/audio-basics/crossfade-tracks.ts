@@ -32,8 +32,7 @@ class CrossfadeTracksScene extends Scene {
 
     override async load(): Promise<void> {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
 
         // Spread the two meters across the wide canvas: each sits a third of the
         // way in from its side, centred on the meter width.
@@ -118,7 +117,6 @@ class CrossfadeTracksScene extends Scene {
 
     override draw(context: RenderingContext): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
         this.graphics.clear();
 

@@ -7,9 +7,7 @@ class SpriteStressScene extends Scene {
     spriteLayer;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         const atlasTexture = createAtlasTexture();
         this.sprites = [];
         this.spriteLayer = new Container();
@@ -47,8 +45,6 @@ class SpriteStressScene extends Scene {
     }
     update(delta) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const time = app.activeTime.seconds;
         this.spriteLayer.rotate(delta.seconds * 2.5);
         for (const entry of this.sprites) {

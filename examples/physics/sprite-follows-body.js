@@ -23,9 +23,7 @@ class SpriteFollowsBodyScene extends Scene {
     }
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         // Gravity in px/s², +Y down — matches the engine's screen space.
         this.world = new PhysicsWorld({ gravity: { x: 0, y: 1400 } });
         this.systems.add(this.world, { order: SystemOrder.Physics });
@@ -68,9 +66,7 @@ class SpriteFollowsBodyScene extends Scene {
     }
     update(delta) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         const body = this.actorBody;
         const restingSpeed = Math.hypot(body.linearVelocityX, body.linearVelocityY);
         if (body.y > this.floorY - 60 && restingSpeed < 6) {

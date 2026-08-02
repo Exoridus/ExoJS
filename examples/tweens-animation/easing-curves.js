@@ -52,9 +52,7 @@ class EasingCurvesScene extends Scene {
     cellHeight = 0;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         this.cellWidth = width / COLS;
         this.cellHeight = (height - HEADER) / ROWS;
         this.labels = EASINGS.map(([name], index) => {

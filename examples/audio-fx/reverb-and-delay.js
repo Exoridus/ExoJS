@@ -17,9 +17,7 @@ class ReverbAndDelayScene extends Scene {
     panel;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         // A large click pad centred on the canvas.
         this.pad = { x: width / 2 - 240, y: height * 0.36, w: 480, h: 160 };
         // Path-only get() infers Sound from the .ogg extension — sidesteps a
@@ -116,8 +114,6 @@ class ReverbAndDelayScene extends Scene {
     }
     draw(context) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
         this.gfx.clear();
         // A big click pad that flashes on each trigger so the play action reads.

@@ -24,9 +24,7 @@ class DuckingScene extends Scene {
     hud;
     async load() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         // Wide meters centred on the 16:9 canvas.
         this.barX = width * 0.1;
         this.barW = width * 0.8;
@@ -89,8 +87,6 @@ class DuckingScene extends Scene {
     }
     draw(context) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         // RMS reads 0 in silence, so the meters are honest (flat until audio plays).
         const music = this.musicLevel.getRms();
         const voice = this.voiceLevel.getRms();

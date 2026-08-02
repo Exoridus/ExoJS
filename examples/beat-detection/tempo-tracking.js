@@ -17,9 +17,7 @@ class TempoTrackingScene extends Scene {
     tapPrompt;
     async load() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         const marginX = width * 0.08;
         // AudioStream has no seamless adapter — await it explicitly.
         const track = await this.loader.load(Asset.type('music', 'audio/demo-loop-main.ogg'));
@@ -56,15 +54,13 @@ class TempoTrackingScene extends Scene {
     }
     draw(context) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const bpm = this.detector.tempo;
         const confidence = this.detector.confidence;
         const onsetNorm = Math.min(1, this.onset / this.onsetPeak);
         this.readout.text = bpm > 0 ? `BPM ${bpm.toFixed(1)}` : 'BPM —  (listening…)';
         this.confidenceLabel.text = `Confidence  ${confidence.toFixed(2)}`;
         this.onsetLabel.text = `Onset energy  ${this.onset.toFixed(2)}`;
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         const marginX = width * 0.08;
         const meterWidth = width - marginX * 2;
         const meterHeight = 30;

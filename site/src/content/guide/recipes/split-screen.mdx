@@ -16,7 +16,7 @@ Create two `View` objects. Each gets its own viewport rectangle — the left vie
 
 ```ts
 init() {
-    const { width, height } = this.app.canvas;
+    const { width, height } = this.app;
 
     // Left player view — left half of screen
     this._leftView = new View(0, 0, width / 2, height);

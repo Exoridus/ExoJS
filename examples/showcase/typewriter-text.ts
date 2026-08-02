@@ -13,8 +13,7 @@ class TypewriterTextScene extends Scene {
 
     override init(): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
 
         this.sound = this.loader.get('audio/ui-click.ogg');
         this.text = new Text('', { fillColor: Color.white, fontSize: 40, lineHeight: 56, maxWidth: 900 });
@@ -40,7 +39,6 @@ class TypewriterTextScene extends Scene {
 
     override draw(context: RenderingContext): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
         context.render(this.text);
 

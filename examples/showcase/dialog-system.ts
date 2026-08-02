@@ -32,8 +32,7 @@ class DialogSystemScene extends Scene {
 
     override init(): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
 
         // Portrait sits on the left; the dialog column runs to its right and
         // fills the wider 16:9 frame as a classic VN bottom-third box.
@@ -103,7 +102,6 @@ class DialogSystemScene extends Scene {
 
     private choose(choice: string): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         app.audio.play(this.beep, { playbackRate: 1.2, volume: 0.3 });
         this.choicePrompt.text = `You chose: ${choice}`;
         this.hud.setStatus(`Reply: ${choice}`);
@@ -121,7 +119,6 @@ class DialogSystemScene extends Scene {
 
     override update(delta: Time): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         if (!this.done && !this.awaitingChoice) {
             this.timer += delta.seconds;
             while (this.timer > 0.035 && this.chars < lines[this.lineIndex].text.length) {

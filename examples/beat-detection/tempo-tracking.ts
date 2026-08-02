@@ -20,8 +20,7 @@ class TempoTrackingScene extends Scene {
 
     override async load(): Promise<void> {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         const marginX = width * 0.08;
 
         // AudioStream has no seamless adapter — await it explicitly.
@@ -70,7 +69,6 @@ class TempoTrackingScene extends Scene {
 
     override draw(context: RenderingContext): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const bpm = this.detector.tempo;
         const confidence = this.detector.confidence;
         const onsetNorm = Math.min(1, this.onset / this.onsetPeak);
@@ -79,7 +77,7 @@ class TempoTrackingScene extends Scene {
         this.confidenceLabel.text = `Confidence  ${confidence.toFixed(2)}`;
         this.onsetLabel.text = `Onset energy  ${this.onset.toFixed(2)}`;
 
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         const marginX = width * 0.08;
         const meterWidth = width - marginX * 2;
         const meterHeight = 30;

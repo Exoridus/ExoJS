@@ -33,9 +33,9 @@ A blank canvas is most often a missing `context.render(this.root)` in `draw` —
 
 A blank or black canvas usually means one of the following:
 
-**The application is not started.** Call `app.start(scene)` after creating the application.
+**The application is not started.** Register the scene in `ApplicationOptions.scenes`, then call `app.start(SceneConstructor)` after creating the application.
 
-**The scene is not set.** `app.start()` expects a `Scene` instance. Without one, nothing draws.
+**The scene is not active.** `app.start()` without a target starts the frame loop but does not activate a scene. Pass a registered scene constructor or key, or navigate later with `app.scenes.change(...)`.
 
 **The canvas is not visible.** Check that `app.canvas` is mounted in the DOM and has non-zero dimensions. If the canvas element is in a `display: none` container or has zero width/height via CSS, nothing renders.
 

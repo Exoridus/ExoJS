@@ -17,8 +17,7 @@ class TrailFeedbackScene extends Scene {
 
     override init(): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
 
         this.rtA = new RenderTexture(width, height);
         this.rtB = new RenderTexture(width, height);
@@ -61,8 +60,7 @@ class TrailFeedbackScene extends Scene {
 
     override update(delta: Time): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         this.time += delta.seconds;
         this.bunny.setPosition(width / 2 + Math.cos(this.time * 2.0) * (width * 0.36), height / 2 + Math.sin(this.time * 2.7) * (height * 0.34));
     }

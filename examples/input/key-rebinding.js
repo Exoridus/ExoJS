@@ -45,8 +45,6 @@ class KeyRebindingScene extends Scene {
     hud;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const { height } = app.canvas;
         this.groundY = height - 240;
         this.heroY = this.groundY;
@@ -107,8 +105,6 @@ class KeyRebindingScene extends Scene {
     }
     draw(context) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const { width } = app.canvas;
         context.backend.clear();
         this.graphics.clear();

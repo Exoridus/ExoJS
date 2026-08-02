@@ -16,8 +16,7 @@ class MusicLoopScene extends Scene {
 
     override async load(): Promise<void> {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
 
         // Wide progress bar centred horizontally on the 16:9 canvas.
         this.bar = { x: width * 0.15, y: height * 0.5, w: width * 0.7, h: 28 };
@@ -94,7 +93,6 @@ class MusicLoopScene extends Scene {
 
     override draw(context: RenderingContext): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
         this.graphics.clear();
 

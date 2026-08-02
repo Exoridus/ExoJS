@@ -4,9 +4,7 @@ class MeshTriangleScene extends Scene {
     triangle;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         this.triangle = new Mesh({
             vertices: new Float32Array([0, -100, 100, 100, -100, 100]),
             colors: new Uint32Array([

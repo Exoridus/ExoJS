@@ -16,8 +16,7 @@ class MiniMapScene extends Scene {
 
     override init(): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         const miniX = width - 220 - 20;
         const miniY = 20;
 
@@ -57,8 +56,7 @@ class MiniMapScene extends Scene {
 
     override update(delta: Time): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         const marginX = 80;
         const marginY = 60;
 

@@ -47,7 +47,7 @@ A sprite's position places its anchor point in the parent's coordinate space. By
 
 ```ts
 init() {
-    const { width, height } = this.app.canvas;
+    const { width, height } = this.app;
 
     this.hero = new Sprite(this.loader.get('image/hero.png'));
     this.hero.setAnchor(0.5);

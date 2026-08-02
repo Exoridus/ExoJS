@@ -9,9 +9,7 @@ class TypewriterTextScene extends Scene {
     tapPrompt;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         this.sound = this.loader.get('audio/ui-click.ogg');
         this.text = new Text('', { fillColor: Color.white, fontSize: 40, lineHeight: 56, maxWidth: 900 });
         this.text.setAnchor(0, 0.5).setPosition(width * 0.12, height / 2);
@@ -35,8 +33,6 @@ class TypewriterTextScene extends Scene {
     }
     draw(context) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
         context.render(this.text);
         if (app.audio.locked) {

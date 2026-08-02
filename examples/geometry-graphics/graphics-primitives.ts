@@ -11,8 +11,7 @@ class GraphicsPrimitivesScene extends Scene {
 
     override init(): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
 
         this.sceneRoot = new Container();
         this.sceneRoot.setPosition(width / 2, height / 2);
@@ -38,7 +37,6 @@ class GraphicsPrimitivesScene extends Scene {
 
     override update(delta: Time): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.sceneRoot.rotate(delta.seconds * 9);
         this.star.rotate(delta.seconds * 60);
         this.circle.y = Math.sin(app.activeTime.seconds * 2) * 18;

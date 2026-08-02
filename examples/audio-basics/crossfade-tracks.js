@@ -27,9 +27,7 @@ class CrossfadeTracksScene extends Scene {
     hud;
     async load() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         // Spread the two meters across the wide canvas: each sits a third of the
         // way in from its side, centred on the meter width.
         this.meterAX = width * 0.33 - METER_W / 2;
@@ -103,8 +101,6 @@ class CrossfadeTracksScene extends Scene {
     }
     draw(context) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
         this.graphics.clear();
         // voice.volume returns the fade TARGET immediately, so ease the

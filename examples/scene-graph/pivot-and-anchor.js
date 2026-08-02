@@ -13,9 +13,7 @@ class PivotAndAnchorScene extends Scene {
     timer = 0;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setPosition(width / 2, height / 2);
         this.pivotMarker = new Graphics();
         this.label = new Text('', { fillColor: Color.white, fontSize: 18 });

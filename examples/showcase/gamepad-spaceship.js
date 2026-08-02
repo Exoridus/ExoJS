@@ -20,9 +20,7 @@ class GamepadSpaceshipScene extends Scene {
     hud;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         this.ship = new Sprite(this.loader.get(assets.demo.textures.shipA)).setAnchor(0.5).setScale(0.5).setPosition(width / 2, height / 2);
         this.engine = app.audio.play(new AudioGenerator({ type: 'sawtooth', frequency: 90 }), { volume: 0 });
         this.fx = new Graphics();
@@ -96,9 +94,7 @@ class GamepadSpaceshipScene extends Scene {
     }
     update(delta) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         const mag = Math.min(1, Math.hypot(this.thrust.x, this.thrust.y));
         if (mag > 0.05) {
             this.facing = Math.atan2(this.thrust.y, this.thrust.x);

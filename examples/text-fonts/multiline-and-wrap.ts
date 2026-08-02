@@ -17,8 +17,7 @@ class MultilineAndWrapScene extends Scene {
 
     override init(): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
 
         // Three wrap modes side by side across the 16:9 canvas: one column each.
         const colWidth = width / 3;

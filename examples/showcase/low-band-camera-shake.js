@@ -12,9 +12,7 @@ class LowBandCameraShakeScene extends Scene {
     tapPrompt;
     async load() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         // AudioStream is a non-leaf resource kind (no seamless placeholder), so it
         // is loaded directly through `Asset.type('music', ...)` and awaited rather
         // than fetched synchronously via `get()`.
@@ -51,8 +49,6 @@ class LowBandCameraShakeScene extends Scene {
     }
     draw(context) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear(new Color(22, 24, 34));
         context.backend.setView(this.view);
         context.render(this.sprite);

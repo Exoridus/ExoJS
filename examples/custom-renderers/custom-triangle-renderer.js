@@ -123,8 +123,6 @@ class CustomTriangleRendererScene extends Scene {
     triangleRenderer;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.triangleRenderer = new CustomTriangleRenderer(app.backend);
     }
     draw() {

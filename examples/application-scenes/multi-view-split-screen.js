@@ -19,9 +19,7 @@ class SplitScreenScene extends Scene {
     };
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         this.texture = this.loader.get('image/ship-a.png');
         this.leftView = new View(0, 0, width / 2, height).setViewport(0, 0, 0.5, 1);
         this.rightView = new View(0, 0, width / 2, height).setViewport(0.5, 0, 0.5, 1);

@@ -186,7 +186,6 @@ class AssetBrowserScene extends Scene {
 
     override async load(): Promise<void> {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.assetLoader = this.loader;
         await this.ensureCategory(this.cat);
 
@@ -465,7 +464,6 @@ class AssetBrowserScene extends Scene {
 
     private toggleAudio(): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         if (!this.key) return;
         const map = this.currentPlayingMap();
         if (!map) return;

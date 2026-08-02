@@ -211,7 +211,7 @@ class AudioReactiveScene extends Scene {
     }
 
     init() {
-        const { width, height } = this.app.canvas;
+        const { width, height } = this.app;
 
         this.app.audio.play(this.music, { loop: true });
 
@@ -226,7 +226,7 @@ class AudioReactiveScene extends Scene {
 
     update(delta: Time) {
         const bands = this.analyser.getSpectrumMel(null, { bands: 32 });
-        const { width, height } = this.app.canvas;
+        const { width, height } = this.app;
         const barW = width / bands.length;
 
         this.bars.clear();

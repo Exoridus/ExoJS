@@ -20,9 +20,7 @@ class SoundPoolScene extends Scene {
     hud;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         // impactHeavy is long enough (~0.5 s) that rapid fire actually overlaps -
         // a short click ends before the next shot and the pool never fills.
         // Path-only get() infers Sound from the .ogg extension — sidesteps a
@@ -61,8 +59,6 @@ class SoundPoolScene extends Scene {
     }
     spawnVoice() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         // Retire any voices that have finished naturally.
         this.voices = this.voices.filter(end => end > this.clock);
         // At capacity the engine evicts the oldest source; mirror that here.
@@ -76,8 +72,6 @@ class SoundPoolScene extends Scene {
     }
     update(delta) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.clock += delta.seconds;
         // Drop voices that have ended this frame so the meter reads truthfully.
         this.voices = this.voices.filter(end => end > this.clock);
@@ -93,8 +87,6 @@ class SoundPoolScene extends Scene {
     }
     draw(context) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
         this.graphics.clear();
         const active = this.voices.length;

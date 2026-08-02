@@ -8,9 +8,7 @@ class PlaySoundScene extends Scene {
     index = 0;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         // Keep example SFX comfortable — full volume is jarring in the docs.
         app.audio.sound.volume = 0.5;
         // Path-only get() infers Sound from the .ogg extension — sidesteps a

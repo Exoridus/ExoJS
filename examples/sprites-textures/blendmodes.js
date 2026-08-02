@@ -41,9 +41,7 @@ class BlendmodesScene extends Scene {
     // calls for the same sources are unaffected and stay seamless.
     async load() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         const samplerOptions = { scaleMode: ScaleModes.Nearest };
         await this.loader.load(Asset.type('texture', ALPHA_RINGS, { samplerOptions }));
         await this.loader.load(Asset.type('texture', assets.demo.textures.shipA, { samplerOptions }));
@@ -91,9 +89,7 @@ class BlendmodesScene extends Scene {
     }
     update(delta) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         const offset = (Math.cos(this.ticker * 1.4) * 0.5 + 0.5) * (width * 0.22);
         this.left.setPosition(width / 2 - offset, height / 2);
         this.right.setPosition(width / 2 + offset, height / 2);

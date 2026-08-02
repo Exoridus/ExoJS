@@ -8,9 +8,7 @@ class ScreenShakeOnExplosionScene extends Scene {
     burst;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         this.view = new View(width / 2, height / 2, width, height);
         this.ps = new ParticleSystem(this.loader.get('image/particle-light.png'), { capacity: 5000 });
         this.systems.add(this.ps);

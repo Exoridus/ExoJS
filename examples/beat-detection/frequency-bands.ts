@@ -36,7 +36,6 @@ class FrequencyBandsScene extends Scene {
 
     override async load(): Promise<void> {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         // AudioStream has no seamless adapter — await it explicitly.
         const track = await this.loader.load(Asset.type('music', 'audio/demo-loop-main.ogg'));
         this.music = track;
@@ -56,7 +55,7 @@ class FrequencyBandsScene extends Scene {
 
         this.bars = new Graphics();
 
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         const gap = 16;
         const slotWidth = (width - gap) / BAND_COUNT;
         const barWidth = slotWidth - gap;
@@ -103,10 +102,9 @@ class FrequencyBandsScene extends Scene {
 
     override draw(context: RenderingContext): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
 
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         const gap = 16;
         const slotWidth = (width - gap) / BAND_COUNT;
         const barWidth = slotWidth - gap;

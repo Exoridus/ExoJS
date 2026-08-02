@@ -101,7 +101,6 @@ class PlayScene extends Scene {
 
     override update(delta: Time): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.elapsed += delta.seconds;
         this.spawnTimer += delta.seconds;
 
@@ -199,7 +198,6 @@ class GameOverScene extends Scene<GameOverData> {
 
     override init(data: Readonly<GameOverData>): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.title = new Text('GAME OVER', {
             align: 'center',
             fillColor: new Color(255, 80, 80),

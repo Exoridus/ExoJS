@@ -34,9 +34,7 @@ class FalloffCurvesScene extends Scene {
     hud;
     async load() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         // Sources spread across the lower half; the listener starts centred.
         const sourceY = height * 0.72;
         this.sources = MODELS.map(({ model, color, tx }) => ({ model, color, x: width * tx, y: sourceY }));
@@ -87,8 +85,6 @@ class FalloffCurvesScene extends Scene {
     }
     draw(context) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
         this.graphics.clear();
         // Falloff-curve plots in the upper canvas area.

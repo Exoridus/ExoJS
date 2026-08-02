@@ -8,9 +8,7 @@ class MultiTextureStressScene extends Scene {
     textureInfos;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         this.sprites = [];
         this.spriteLayer = new Container();
         this.spriteLayer.setPosition(width / 2, height / 2);
@@ -48,8 +46,6 @@ class MultiTextureStressScene extends Scene {
     }
     update(delta) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const time = app.activeTime.seconds;
         this.spriteLayer.rotation = Math.sin(time * 0.45) * 5;
         for (const entry of this.sprites) {

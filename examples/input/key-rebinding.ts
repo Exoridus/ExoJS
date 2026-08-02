@@ -58,7 +58,6 @@ class KeyRebindingScene extends Scene {
 
     override init(): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const { height } = app.canvas;
 
         this.groundY = height - 240;
@@ -131,7 +130,6 @@ class KeyRebindingScene extends Scene {
 
     override draw(context: RenderingContext): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const { width } = app.canvas;
 
         context.backend.clear();

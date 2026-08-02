@@ -25,9 +25,7 @@ class CompressorScene extends Scene {
     hud;
     async load() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         // Wide horizontal bars centred on the 16:9 canvas; labels sit to the left.
         this.barW = width * 0.45;
         this.barX = width * 0.32;
@@ -87,8 +85,6 @@ class CompressorScene extends Scene {
     }
     draw(context) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
         this.gfx.clear();
         for (let i = 0; i < sliders.length; i++) {

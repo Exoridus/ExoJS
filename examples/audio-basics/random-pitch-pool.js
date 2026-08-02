@@ -20,9 +20,7 @@ class RandomPitchPoolScene extends Scene {
     hud;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         this.centerX = width / 2;
         this.trackY = height * 0.55;
         this.trackHalf = width * 0.38;
@@ -62,8 +60,6 @@ class RandomPitchPoolScene extends Scene {
     }
     update(delta) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.flash = Math.max(0, this.flash - delta.seconds * 4);
         // Core defers playback until the AudioContext unlocks on the first
         // gesture; skip firing while audio is still locked.
@@ -79,8 +75,6 @@ class RandomPitchPoolScene extends Scene {
     }
     draw(context) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
         this.graphics.clear();
         // Centre baseline.

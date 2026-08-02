@@ -6,9 +6,7 @@ class BoundingBoxesScene extends Scene {
     time = 0;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         const count = 7;
         const margin = width * 0.12;
         const step = (width - 2 * margin) / (count - 1);
@@ -24,8 +22,6 @@ class BoundingBoxesScene extends Scene {
     }
     update(delta) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const { height } = app.canvas;
         this.time += delta.seconds;
         for (const { sprite, speed } of this.sprites) {

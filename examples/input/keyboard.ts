@@ -26,8 +26,7 @@ class KeyboardScene extends Scene {
 
     override init(): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
 
         this.square = new Graphics();
         this.position = { x: width / 2, y: height / 2 };
@@ -60,8 +59,7 @@ class KeyboardScene extends Scene {
 
     override update(delta: Time): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         const speed = 280 * delta.seconds;
         const moveX = (this.right.active ? 1 : 0) - (this.left.active ? 1 : 0);
         const moveY = (this.down.active ? 1 : 0) - (this.up.active ? 1 : 0);

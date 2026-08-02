@@ -11,8 +11,6 @@ class MinimapWithMaskScene extends Scene {
     time = 0;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const { width } = app.canvas;
         // Park the round minimap in the top-right corner of the 16:9 canvas.
         const miniSize = 260;
@@ -50,9 +48,7 @@ class MinimapWithMaskScene extends Scene {
     }
     drawWorld(backend) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         const marginX = 80;
         const marginY = 60;
         const right = width - marginX;

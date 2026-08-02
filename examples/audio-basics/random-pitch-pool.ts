@@ -24,8 +24,7 @@ class RandomPitchPoolScene extends Scene {
 
     override init(): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
 
         this.centerX = width / 2;
         this.trackY = height * 0.55;
@@ -72,7 +71,6 @@ class RandomPitchPoolScene extends Scene {
 
     override update(delta: Time): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.flash = Math.max(0, this.flash - delta.seconds * 4);
 
         // Core defers playback until the AudioContext unlocks on the first
@@ -90,7 +88,6 @@ class RandomPitchPoolScene extends Scene {
 
     override draw(context: RenderingContext): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
         this.graphics.clear();
 

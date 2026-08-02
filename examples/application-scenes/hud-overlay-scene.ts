@@ -34,8 +34,7 @@ class GameScene extends Scene {
 
     override draw(context: RenderingContext): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
 
         context.backend.clear(new Color(20, 32, 58));
         this.ring.clear();

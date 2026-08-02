@@ -25,9 +25,7 @@ class AudioBusesScene extends Scene {
     hud;
     async load() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         // Centre the bus mixer horizontally and spread the bars across the wide
         // 16:9 canvas.
         this.trackW = width * 0.5;
@@ -98,8 +96,6 @@ class AudioBusesScene extends Scene {
     }
     draw(context) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
         this.graphics.clear();
         rows.forEach((row, index) => {

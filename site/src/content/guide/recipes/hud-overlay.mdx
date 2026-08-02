@@ -43,8 +43,8 @@ class GameScene extends Scene {
 Start the scene as normal — `scene.ui` is rendered automatically:
 
 ```ts
-const game = new GameScene();
-await app.start(game);
+const app = new Application({ scenes: { GameScene } });
+await app.start(GameScene);
 ```
 
 ## Why `scene.ui`, not manual draw-order

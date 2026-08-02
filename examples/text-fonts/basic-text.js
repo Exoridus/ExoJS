@@ -5,10 +5,8 @@ class BasicTextScene extends Scene {
     text;
     async load() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         await this.loader.load(Asset.type('font', 'font/Kenney Future.ttf', { family: 'Kenney Future' }));
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         this.time = new Time();
         this.text = new Text('Hello World!', {
             align: 'left',

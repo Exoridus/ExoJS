@@ -12,8 +12,7 @@ class ParallaxStarfieldScene extends Scene {
 
     override init(): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         const margin = 80;
 
         this.pointer = { x: width / 2, y: height / 2 };
@@ -37,8 +36,7 @@ class ParallaxStarfieldScene extends Scene {
 
     override draw(context: RenderingContext): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         context.backend.clear();
         for (let i = 0; i < this.layers.length; i++) {
             const layer = this.layers[i];

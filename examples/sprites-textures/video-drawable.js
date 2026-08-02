@@ -20,9 +20,7 @@ class VideoDrawableScene extends Scene {
     switching = false;
     async load() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         // Video is a non-leaf resource kind (no seamless placeholder, unlike
         // Texture/Sound), so it is loaded directly through `Asset.type('video', ...)`
         // and awaited rather than fetched synchronously via `get()`.
@@ -59,9 +57,7 @@ class VideoDrawableScene extends Scene {
     /** Sizing + playback options shared by every video the example swaps in. */
     configureVideo() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         this.video.width = width;
         this.video.height = height;
         // Muted playback autoplays reliably under browser autoplay policy without
@@ -93,10 +89,8 @@ class VideoDrawableScene extends Scene {
     }
     update(delta) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.elapsed += delta.seconds;
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         // Drift the composited sprite across the video so the overlay is obvious.
         this.overlay.setPosition(width / 2 + Math.sin(this.elapsed) * (width * 0.3), height / 2 + Math.cos(this.elapsed * 0.7) * (height * 0.25));
         this.overlay.rotate(delta.seconds * 60);
