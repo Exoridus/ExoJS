@@ -40,8 +40,7 @@ class ParticleStressScene extends Scene {
 
     override init(): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
 
         this.sharedTexture = createParticleTexture();
         this.particleSystems = [];
@@ -148,7 +147,6 @@ class ParticleStressScene extends Scene {
 
     override update(_delta: Time): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const time = app.activeTime.seconds;
 
         for (let i = 0; i < this.particleSystems.length; i++) {

@@ -18,9 +18,7 @@ class BossIntroCinematicScene extends Scene {
     height = 0;
     async load() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         this.width = width;
         this.height = height;
         // Start the camera left of the boss so the push-in sweeps across to it.
@@ -62,8 +60,6 @@ class BossIntroCinematicScene extends Scene {
     }
     replay() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         if (app.audio.locked) {
             return;
         }
@@ -78,8 +74,6 @@ class BossIntroCinematicScene extends Scene {
     }
     playSequence() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const { width, height } = this;
         // Wipe any in-flight tweens and reset the visible state to frame zero.
         app.tweens.clear();
@@ -116,8 +110,6 @@ class BossIntroCinematicScene extends Scene {
     }
     draw(context) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const { width, height } = this;
         context.backend.clear(new Color(16, 16, 24));
         this.bg.clear();

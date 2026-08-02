@@ -15,21 +15,30 @@ Every bus in ExoJS carries a filter chain — an ordered list of [`AudioEffect`]
 A bus's filter chain is `inputNode → [filter₁ → filter₂ → ...] → panNode → outputNode`. Adding a filter appends it to the end of the chain. Order matters — a compressor before reverb sounds different from a compressor after reverb.
 
 ```ts
+import type { Application } from '@codexo/exojs';
 import { CompressorEffect, DelayEffect, ReverbEffect } from '@codexo/exojs-audio-fx';
+
+declare const application: Application;
 
 const compressor = new CompressorEffect({ threshold: -20, ratio: 8 });
 const reverb = new ReverbEffect({ wet: 0.3 });
 const delay = new DelayEffect({ delaySeconds: 0.25, wet: 0.2, feedback: 0.4 });
 
-app.audio.master.addEffect(compressor);
-app.audio.master.addEffect(reverb);
-app.audio.sound.addEffect(delay);
+application.audio.master.addEffect(compressor);
+application.audio.master.addEffect(reverb);
+application.audio.sound.addEffect(delay);
 ```
 
 Remove a filter to take it out of the chain without destroying it:
 
 ```ts
-app.audio.master.removeEffect(reverb);
+import type { Application } from '@codexo/exojs';
+import { ReverbEffect } from '@codexo/exojs-audio-fx';
+
+declare const application: Application;
+declare const reverb: ReverbEffect;
+
+application.audio.master.removeEffect(reverb);
 ```
 
 Filters are reusable — move one from bus to bus by removing it from the old bus and adding it to the new one. Destroy a filter with `filter.destroy()` when it's no longer needed anywhere.
@@ -43,6 +52,11 @@ Filters are reusable — move one from bus to bus by removing it from the old bu
 A dynamics compressor that clamps the dynamic range of audio passing through it. Useful for evening out volume, adding punch to SFX, and preventing clipping when many sounds play simultaneously:
 
 ```ts
+import type { Application } from '@codexo/exojs';
+import { CompressorEffect } from '@codexo/exojs-audio-fx';
+
+declare const application: Application;
+
 const compressor = new CompressorEffect({
     threshold: -24,   // dBFS — signals above this get compressed
     ratio: 12,        // 1:1 = no compression, 20:1 = near-limiting
@@ -51,7 +65,7 @@ const compressor = new CompressorEffect({
     knee: 30,         // dB — softens the threshold transition
 });
 
-app.audio.master.addEffect(compressor);
+application.audio.master.addEffect(compressor);
 ```
 
 All properties are live get/set. The `compressor.reduction` getter returns the current gain reduction in dB (always ≤ 0) — useful for live level metering:
@@ -68,6 +82,8 @@ update(delta: Time) {
 `ReverbEffect` simulates acoustic space by convolving audio through a procedurally-generated impulse response:
 
 ```ts
+import { ReverbEffect } from '@codexo/exojs-audio-fx';
+
 const reverb = new ReverbEffect({
     durationSeconds: 2,   // IR length — longer = bigger space
     decay: 2,             // exponential decay factor
@@ -82,6 +98,8 @@ Changing `durationSeconds` or `decay` on a live `ReverbEffect` rebuilds its impu
 `DelayEffect` creates an echo with configurable feedback:
 
 ```ts
+import { DelayEffect } from '@codexo/exojs-audio-fx';
+
 const delay = new DelayEffect({
     delaySeconds: 0.3,    // echo interval
     feedback: 0.45,       // 0 = one echo, 0.95 = long tail
@@ -96,11 +114,13 @@ Both expose live `wet`, `delaySeconds`, `feedback`, `decay`, and `durationSecond
 A sidechain compressor — when the sidechain bus exceeds a threshold, the main signal is attenuated. Common use case: automatically lower music volume when voice-over plays:
 
 ```ts
-import { AudioBus } from '@codexo/exojs';
+import { type Application, AudioBus } from '@codexo/exojs';
 import { DuckingEffect } from '@codexo/exojs-audio-fx';
 
-const voiceBus = new AudioBus('voice-over', { parent: app.audio.master });
-app.audio.registerBus(voiceBus);
+declare const application: Application;
+
+const voiceBus = new AudioBus('voice-over', { parent: application.audio.master });
+application.audio.registerBus(voiceBus);
 
 const ducker = new DuckingEffect({
     sidechain: voiceBus,
@@ -110,7 +130,7 @@ const ducker = new DuckingEffect({
     releaseMs: 260,   // how fast audio recovers after sidechain drops
 });
 
-app.audio.music.addEffect(ducker);
+application.audio.music.addEffect(ducker);
 ```
 
 `threshold`, `ratio`, `attackMs`, and `releaseMs` are live get/set. The `filter.ready` promise resolves when the worklet processor is loaded and the chain is fully wired.
@@ -145,10 +165,13 @@ Like `ChorusEffect`, the six filters below are built from native Web Audio nodes
 Soft-clip saturation through a tanh-based `WaveShaperNode` curve, followed by a tone-control lowpass on the wet path. `drive` (0..1) controls clip intensity and `tone` (0..1) sweeps the wet-path cutoff logarithmically from 100 Hz to 20 kHz:
 
 ```ts
+import type { Application } from '@codexo/exojs';
 import { DistortionEffect } from '@codexo/exojs-audio-fx';
 
+declare const application: Application;
+
 const dist = new DistortionEffect({ drive: 0.6, tone: 0.7, wet: 0.8 });
-app.audio.sound.addEffect(dist);
+application.audio.sound.addEffect(dist);
 ```
 
 ### PhaserEffect
@@ -156,10 +179,13 @@ app.audio.sound.addEffect(dist);
 Sweeps a cascade of allpass filters with a sine LFO, producing moving notches in the spectrum. `stages` (an even number, 2..12) sets the notch count and `feedback` (0..0.9) sharpens the resonance:
 
 ```ts
+import type { Application } from '@codexo/exojs';
 import { PhaserEffect } from '@codexo/exojs-audio-fx';
 
+declare const application: Application;
+
 const phaser = new PhaserEffect({ stages: 6, rateHz: 0.3, depth: 0.8, feedback: 0.4, wet: 0.6 });
-app.audio.music.addEffect(phaser);
+application.audio.music.addEffect(phaser);
 ```
 
 ### FlangerEffect
@@ -167,10 +193,13 @@ app.audio.music.addEffect(phaser);
 A short (0.5–20 ms) LFO-modulated delay with a feedback loop, producing the classic sweeping "jet-plane" comb-filter sound. Unlike `ChorusEffect` — a longer, feedback-free delay used for thickening — the feedback here reinforces phase cancellation:
 
 ```ts
+import type { Application } from '@codexo/exojs';
 import { FlangerEffect } from '@codexo/exojs-audio-fx';
 
+declare const application: Application;
+
 const flanger = new FlangerEffect({ delayMs: 3, depthMs: 2, rateHz: 0.25, feedback: 0.5, wet: 0.5 });
-app.audio.sound.addEffect(flanger);
+application.audio.sound.addEffect(flanger);
 ```
 
 ### TremoloEffect
@@ -178,10 +207,13 @@ app.audio.sound.addEffect(flanger);
 Amplitude-modulates the signal with a sine LFO for classic volume pulsing. Set `autoPan: true` to have the same LFO drive stereo panning in sync with the pulse:
 
 ```ts
+import type { Application } from '@codexo/exojs';
 import { TremoloEffect } from '@codexo/exojs-audio-fx';
 
+declare const application: Application;
+
 const tremolo = new TremoloEffect({ rateHz: 5, depth: 0.7, autoPan: true });
-app.audio.music.addEffect(tremolo);
+application.audio.music.addEffect(tremolo);
 ```
 
 ### RingModulatorEffect
@@ -189,10 +221,13 @@ app.audio.music.addEffect(tremolo);
 Multiplies the input by a carrier oscillator, producing sum/difference sidebands while suppressing the fundamental. Mid-range carrier frequencies (100–1000 Hz) give the classic robotic ring-mod timbre; sub-audio rates (< 20 Hz) sound like tremolo:
 
 ```ts
+import type { Application } from '@codexo/exojs';
 import { RingModulatorEffect } from '@codexo/exojs-audio-fx';
 
+declare const application: Application;
+
 const ringMod = new RingModulatorEffect({ frequency: 220, waveform: 'sine', wet: 0.8 });
-app.audio.sound.addEffect(ringMod);
+application.audio.sound.addEffect(ringMod);
 ```
 
 ### AutoWahEffect
@@ -200,10 +235,13 @@ app.audio.sound.addEffect(ringMod);
 An envelope-driven wah: a rectifier and smoothing filter track input loudness and sweep a resonant bandpass filter upward from `baseFrequency`. `sensitivity` sets the maximum sweep in Hz and `responseMs` controls how snappy or legato the response feels:
 
 ```ts
+import type { Application } from '@codexo/exojs';
 import { AutoWahEffect } from '@codexo/exojs-audio-fx';
 
+declare const application: Application;
+
 const wah = new AutoWahEffect({ baseFrequency: 300, sensitivity: 2500, q: 5, wet: 0.8 });
-app.audio.sound.addEffect(wah);
+application.audio.sound.addEffect(wah);
 ```
 
 ## Ping-pong delay, limiting, and convolution
@@ -213,10 +251,13 @@ app.audio.sound.addEffect(wah);
 A stereo delay whose taps cross-feed between channels, bouncing echoes hard-left/hard-right. `delayTime` sets the per-tap interval in seconds and `feedback` (0..0.9) controls how long the bounce sustains:
 
 ```ts
+import type { Application } from '@codexo/exojs';
 import { PingPongDelayEffect } from '@codexo/exojs-audio-fx';
 
+declare const application: Application;
+
 const pingPong = new PingPongDelayEffect({ delayTime: 0.3, feedback: 0.5, wet: 0.5 });
-app.audio.music.addEffect(pingPong);
+application.audio.music.addEffect(pingPong);
 ```
 
 ### LimiterEffect
@@ -224,10 +265,13 @@ app.audio.music.addEffect(pingPong);
 A brick-wall limiter — a `DynamicsCompressorNode` fixed at a high ratio and hard knee — meant as a safety net at the end of a chain to catch peaks before they clip:
 
 ```ts
+import type { Application } from '@codexo/exojs';
 import { LimiterEffect } from '@codexo/exojs-audio-fx';
 
+declare const application: Application;
+
 const limiter = new LimiterEffect({ threshold: -3, release: 0.1 });
-app.audio.master.addEffect(limiter);
+application.audio.master.addEffect(limiter);
 ```
 
 ### ConvolutionEffect
@@ -235,11 +279,14 @@ app.audio.master.addEffect(limiter);
 Convolves the signal with a real impulse response instead of `ReverbEffect`'s procedurally generated one — useful for captured spaces, cabinet/speaker simulation, or telephone-style filtering. Pass a decoded `AudioBuffer` or a loaded `Sound`; call `setImpulse()` to swap the IR later:
 
 ```ts
+import { type Application, Sound } from '@codexo/exojs';
 import { ConvolutionEffect } from '@codexo/exojs-audio-fx';
 
-const hall = await loader.load('hall.wav');
+declare const application: Application;
+declare const hall: Sound;
+
 const convReverb = new ConvolutionEffect({ impulse: hall, wet: 0.6 });
-app.audio.master.addEffect(convReverb);
+application.audio.master.addEffect(convReverb);
 ```
 
 ## Worklet-based effects
@@ -273,15 +320,20 @@ All four have live `wet` controls. `PitchShiftEffect` exposes `pitch`; `Granular
 Bus-level filters affect everything on that bus. Create isolated chains for specific sound categories:
 
 ```ts
-const ambientBus = new AudioBus('ambient', { parent: app.audio.master });
-app.audio.registerBus(ambientBus);
+import { type Application, AudioBus, LowpassFilter, Sound } from '@codexo/exojs';
+import { ReverbEffect } from '@codexo/exojs-audio-fx';
+
+declare const application: Application;
+declare const wind: Sound;
+
+const ambientBus = new AudioBus('ambient', { parent: application.audio.master });
+application.audio.registerBus(ambientBus);
 
 ambientBus.addEffect(new ReverbEffect({ wet: 0.6, durationSeconds: 3 }));
 ambientBus.addEffect(new LowpassFilter({ frequency: 800 }));
 
-const wind = loader.get('audio/wind.ogg');
 // Route this play onto the ambient bus — reverb + lowpass applied.
-this.app.audio.play(wind, { bus: ambientBus, loop: true });
+application.audio.play(wind, { bus: ambientBus, loop: true });
 ```
 
 `registerBus` stores the bus by name, retrievable later via `app.audio.getBus('ambient')`. `unregisterBus` removes and destroys a custom bus. The three built-in buses (`master`, `music`, `sound`) cannot be unregistered.

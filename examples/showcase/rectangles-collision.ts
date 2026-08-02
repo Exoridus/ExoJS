@@ -14,8 +14,7 @@ class RectanglesCollisionScene extends Scene {
 
     override init(): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         const texture = this.loader.get('image/hue-ramp.png');
 
         // Two axis-aligned rectangles (no rotation) so collision is a true AABB

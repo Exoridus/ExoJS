@@ -17,20 +17,28 @@ This chapter covers what the detector does and the events it fires. The next cha
 The detector taps a live audio source — an `AudioBus`, a `Voice`, an `AudioNode`, or a `MediaStream` — as a parallel branch that does not affect the source's main signal chain. It does not accept a `Sound`/`AudioStream` descriptor; tap the bus the audio plays through (e.g. `app.audio.music`) or the individual `Voice` you got back from `play()`:
 
 ```ts
-import { Asset, AudioStream } from '@codexo/exojs';
+import { type Application, AudioStream } from '@codexo/exojs';
 import { BeatDetector } from '@codexo/exojs-audio-fx';
 
-const track = await loader.load(Asset.type('music', 'audio/track.ogg'));
-this.app.audio.play(track, { loop: true });
+declare const application: Application;
+declare const track: AudioStream;
+
+application.audio.play(track, { loop: true });
 
 const detector = new BeatDetector();
-detector.source = this.app.audio.music; // the bus the track plays through
+detector.source = application.audio.music; // the bus the track plays through
 ```
 
 You can also pass the source as a constructor option, or point it at a single voice:
 
 ```ts
-const voice = this.app.audio.play(track, { loop: true });
+import { type Application, AudioStream } from '@codexo/exojs';
+import { BeatDetector } from '@codexo/exojs-audio-fx';
+
+declare const application: Application;
+declare const track: AudioStream;
+
+const voice = application.audio.play(track, { loop: true });
 const detector = new BeatDetector({ source: voice });
 ```
 
@@ -50,6 +58,10 @@ update(delta: Time) {
 `tempo` returns 0 until the detector has enough data to lock onto a stable beat. `confidence` rises as the beat grid stabilises. The `onTempoChange` signal fires when the detector settles on a new tempo:
 
 ```ts
+import { BeatDetector } from '@codexo/exojs-audio-fx';
+
+declare const detector: BeatDetector;
+
 detector.onTempoChange.add((newBpm, oldBpm) => {
     console.log(`Tempo changed from ${oldBpm} to ${newBpm} BPM`);
 });
@@ -71,9 +83,15 @@ Four signals fire at discrete moments in the music:
 Use `onBeat` for things that should happen on every beat — a sprite pulses, a particle burst fires, a UI element flashes:
 
 ```ts
+import { BeatDetector } from '@codexo/exojs-audio-fx';
+
+declare const detector: BeatDetector;
+declare const particleBurst: { reset(): void };
+const visualState = { pulse: 0 };
+
 detector.onBeat.add(info => {
-    this.pulse = 0.3;
-    this.particleBurst.reset();
+    visualState.pulse = 0.3;
+    particleBurst.reset();
 });
 ```
 
@@ -84,14 +102,23 @@ detector.onBeat.add(info => {
 Use `onDownbeat` for events that should only fire on the "one" — a brighter flash, a bar-level visual change, a camera shake:
 
 ```ts
+import { BeatDetector } from '@codexo/exojs-audio-fx';
+
+declare const detector: BeatDetector;
+const visualState = { barFlash: 0 };
+
 detector.onDownbeat.add(info => {
-    this.barFlash = 0.5;
+    visualState.barFlash = 0.5;
 });
 ```
 
 `BeatInfo` carries `isDownbeat` and `beatInBar` so you can use the general `onBeat` signal and filter inside the callback:
 
 ```ts
+import { BeatDetector } from '@codexo/exojs-audio-fx';
+
+declare const detector: BeatDetector;
+
 detector.onBeat.add(info => {
     if (info.isDownbeat) {
         // big effect on beat 1
@@ -106,6 +133,10 @@ detector.onBeat.add(info => {
 The detector exposes read-only state you can poll every frame:
 
 ```ts
+import { BeatDetector } from '@codexo/exojs-audio-fx';
+
+declare const detector: BeatDetector;
+
 detector.tempo              // BPM, or 0 before lock
 detector.confidence         // 0..1 locking quality
 detector.beatPhase          // 0..1 phase within current beat
@@ -130,6 +161,8 @@ Beats arrive `'provisional'` first — low-latency and ideal for snappy visual r
 The detector attempts 4/4 vs. 3/4 time-signature detection when `enableTimeSignatureDetection` is `true` (the default). Set it `false` in the constructor to lock to 4/4:
 
 ```ts
+import { BeatDetector } from '@codexo/exojs-audio-fx';
+
 const detector = new BeatDetector({
     enableTimeSignatureDetection: false,
 });
@@ -148,6 +181,11 @@ Beat/state messages are posted from the worklet and handled asynchronously on th
 Construction options with their defaults:
 
 ```ts
+import type { Application } from '@codexo/exojs';
+import { BeatDetector } from '@codexo/exojs-audio-fx';
+
+declare const application: Application;
+
 const detector = new BeatDetector({
     minBpm: 50,                            // minimum detectable tempo
     maxBpm: 300,                           // maximum detectable tempo
@@ -160,7 +198,7 @@ const detector = new BeatDetector({
     emitProvisionalBeats: true,            // emit early provisional beats for visual reactivity
     melBands: 24,                          // mel filterbank bands
     enableTimeSignatureDetection: true,    // auto-detect 3/4 vs 4/4
-    source: app.audio.music,               // initial source: bus or Voice (optional)
+    source: application.audio.music,       // initial source: bus or Voice (optional)
 });
 ```
 

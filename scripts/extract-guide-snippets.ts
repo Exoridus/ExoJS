@@ -350,8 +350,9 @@ function isStandaloneSnippet(body: string): boolean {
   // body.matchAll() always starts from position 0 on a fresh copy.
   const hasClassBody = /\bclass\s+\w/.test(body);
   if (!hasClassBody) {
-    const declared = topLevelDeclaredNames(body);
-    for (const m of body.matchAll(CONTEXT_VAR_RE)) {
+    const codeOnly = stripStringsAndComments(body);
+    const declared = topLevelDeclaredNames(codeOnly);
+    for (const m of codeOnly.matchAll(CONTEXT_VAR_RE)) {
       if (!declared.has(m[1])) return false;
     }
   }

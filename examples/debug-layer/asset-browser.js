@@ -140,8 +140,6 @@ class AssetBrowserScene extends Scene {
     loadingCats = new Set();
     async load() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.assetLoader = this.loader;
         await this.ensureCategory(this.cat);
         app.input.onPointerTap.add(p => this.onTap(p.x, p.y));
@@ -390,8 +388,6 @@ class AssetBrowserScene extends Scene {
     }
     toggleAudio() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         if (!this.key)
             return;
         const map = this.currentPlayingMap();

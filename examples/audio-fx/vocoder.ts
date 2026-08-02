@@ -23,8 +23,7 @@ class VocoderScene extends Scene {
 
     override init(): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
 
         // The spoken voice is the modulator: route every phrase onto its own bus
         // so the vocoder can read its spectral envelope.
@@ -77,7 +76,6 @@ class VocoderScene extends Scene {
 
     private speak(): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         // The pointer gesture also unlocks the AudioContext; speaking while
         // still locked would be silent, so wait until audio is ready.
         if (app.audio.locked) {
@@ -94,7 +92,6 @@ class VocoderScene extends Scene {
 
     override draw(context: RenderingContext): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
         context.render(this.phraseLabel);
 

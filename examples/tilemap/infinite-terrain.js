@@ -105,7 +105,7 @@ class InfiniteTerrainScene extends Scene {
         this.worldRoot.addChild(this.mapView.band('terrain'), actorLayer);
         // Camera follows the explorer — no setBounds: an unbounded map has no
         // edges to clamp the camera to.
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         this.camera = new View(this.explorer.x, this.explorer.y, width, height);
         this.camera.follow(this.explorer, { lerp: 0.12 });
         this.rebuildStreamer();

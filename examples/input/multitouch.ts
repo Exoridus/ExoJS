@@ -33,7 +33,6 @@ class MultitouchScene extends Scene {
 
     override init(): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.graphics = new Graphics();
 
         // Reusable label pool — one Text per possible touch, repositioned each frame.

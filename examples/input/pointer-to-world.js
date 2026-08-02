@@ -19,8 +19,6 @@ class PointerToWorldScene extends Scene {
     hud;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const width = app.width;
         const height = app.height;
         this.view = new View(width / 2, height / 2, width, height);
@@ -62,8 +60,6 @@ class PointerToWorldScene extends Scene {
     }
     update(delta) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const width = app.width;
         const height = app.height;
         this.elapsed += delta.seconds;

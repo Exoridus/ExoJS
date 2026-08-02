@@ -9,8 +9,6 @@ class MouseParallaxScene extends Scene {
     hud;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const width = app.width;
         const height = app.height;
         this.pointer = { x: width / 2, y: height / 2 };
@@ -39,8 +37,6 @@ class MouseParallaxScene extends Scene {
     }
     draw(context) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const width = app.width;
         const height = app.height;
         context.backend.clear(new Color(18, 22, 34));

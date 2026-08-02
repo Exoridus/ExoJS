@@ -7,8 +7,6 @@ class GradientScene extends Scene {
     orb;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const centerX = app.width / 2;
         const centerY = app.height / 2;
         this.backgroundGradient = new LinearGradient([
@@ -28,8 +26,6 @@ class GradientScene extends Scene {
     }
     update(delta) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.background.rotate(delta.seconds * 8);
         this.orb.rotate(-delta.seconds * 30);
         this.orb.setScale(1 + Math.sin(app.activeTime.seconds * 2) * 0.07);

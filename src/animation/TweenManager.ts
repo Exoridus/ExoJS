@@ -48,7 +48,7 @@ export class TweenManager {
    * @example
    * ```ts
    * const move = manager.create(sprite).to({ x: 400 }, 0.5);
-   * const fade = manager.create(sprite).to({ alpha: 0 }, 0.3);
+   * const fade = manager.create(sprite.tint).to({ a: 0 }, 0.3);
    * manager.sequence([move, fade]).start();
    * ```
    */

@@ -12,11 +12,9 @@ class GamepadScene extends Scene {
     container;
     async load() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const buttonsData = (await this.loader.load(Asset.type('json', 'json/buttons.json')));
         this.buttons = new Spritesheet(this.loader.get('image/buttons.png'), buttonsData);
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         this.status = this.createStatus(width, height);
         this.container = this.createGamepad(width, height);
         for (const sprite of this.mappingButtons.values()) {
@@ -46,8 +44,6 @@ class GamepadScene extends Scene {
             return;
         }
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const next = app.input.gamepads.find(other => other !== pad && other.connected) || null;
         this.setActivePad(next);
     }

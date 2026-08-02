@@ -36,8 +36,6 @@ class TiledMapPhysicsActorScene extends Scene {
     }
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.world = new PhysicsWorld({ gravity: { x: 0, y: 1500 } });
         this.systems.add(this.world, { order: SystemOrder.Physics });
         // ── Tileset + a single ground tile layer ──────────────────────────
@@ -124,9 +122,7 @@ class TiledMapPhysicsActorScene extends Scene {
     }
     update(_delta) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         const body = this.actorBody;
         // Loop the demo: nudge the actor again once it settles, and rescue it if
         // it ever escapes the bounds.

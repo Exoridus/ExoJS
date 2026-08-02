@@ -7,9 +7,7 @@ class CameraBasicScene extends Scene {
     zoom = 1;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         this.bunny = new Sprite(this.loader.get('image/ship-a.png'));
         this.bunny.setAnchor(0.5).setPosition(width / 2, height / 2);
         this.grid = new Graphics();
@@ -34,15 +32,11 @@ class CameraBasicScene extends Scene {
     }
     update(delta) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         app.rendering.view.rotation += delta.seconds * 15;
     }
     draw(context) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width } = app.canvas;
+        const { width } = app;
         context.backend.clear();
         context.render(this.grid);
         context.render(this.bunny);

@@ -8,9 +8,7 @@ class GraphicsGradientScene extends Scene {
     badge;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         this.sceneRoot = new Container();
         this.sceneRoot.setPosition(width / 2, height / 2);
         this.panel = new Graphics();
@@ -44,8 +42,6 @@ class GraphicsGradientScene extends Scene {
     }
     update(delta) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.sceneRoot.rotate(delta.seconds * 8);
         this.badge.rotate(delta.seconds * 60);
         this.orb.setScale(1 + Math.sin(app.activeTime.seconds * 2) * 0.06);

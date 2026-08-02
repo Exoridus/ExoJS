@@ -7,9 +7,7 @@ class GpuParticlesScene extends Scene {
     hud;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         this.system = new ParticleSystem(this.loader.get('image/particle-light.png'), { capacity: CAPACITY });
         this.systems.add(this.system);
         this.system.setPosition(width / 2, height - 80);

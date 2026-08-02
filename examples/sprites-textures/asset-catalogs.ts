@@ -97,8 +97,7 @@ class AssetCatalogsScene extends Scene {
 
     override init(): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
 
         // A catalog's properties are the same objects that existed before the
         // load — now populated. There is no separate `get()` step.
@@ -149,7 +148,6 @@ class AssetCatalogsScene extends Scene {
     /** Replaces the ground texture with a variant chosen at runtime. */
     private async useVariant(variant: string): Promise<void> {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
 
         // The path is computed rather than a literal, so its type cannot be
         // inferred from the extension — name it with `Asset.type(...)`.

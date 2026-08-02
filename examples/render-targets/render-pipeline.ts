@@ -21,9 +21,8 @@ class RenderPipelineScene extends Scene {
 
     override init(): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const screenView = app.rendering.screenView;
-        const { width, height } = app.canvas;
+        const { width, height } = app;
 
         this.sceneRt = new RenderTexture(width, height);
         this.blurredRt = new RenderTexture(width, height);
@@ -67,8 +66,7 @@ class RenderPipelineScene extends Scene {
 
     override update(delta: Time): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         this.time += delta.seconds;
 
         // `enabled` lives on the pass — flip it and the composer skips the step next frame.

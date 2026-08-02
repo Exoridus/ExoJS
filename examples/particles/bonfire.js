@@ -6,9 +6,7 @@ class BonfireScene extends Scene {
     smokeSystem;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         this.fireSystem = new ParticleSystem(this.loader.get(assets.demo.textures.particleFlame));
         this.systems.add(this.fireSystem);
         this.fireSystem.setPosition(width * 0.5, height * 0.75);

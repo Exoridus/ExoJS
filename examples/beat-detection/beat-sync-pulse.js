@@ -16,9 +16,7 @@ class BeatSyncPulseScene extends Scene {
     tapPrompt;
     async load() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         // AudioStream has no seamless adapter — await it explicitly.
         const track = await this.loader.load(Asset.type('music', 'audio/demo-loop-main.ogg'));
         this.music = track;
@@ -72,8 +70,6 @@ class BeatSyncPulseScene extends Scene {
     }
     draw(context) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
         context.render(this.particles);
         context.render(this.sprite);

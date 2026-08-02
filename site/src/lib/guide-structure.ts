@@ -776,10 +776,6 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                 level: 'intermediate',
                 prerequisites: ['recipes/build-orb-dodge'],
             },
-            {
-                slug: 'v0-8-x-to-v0-9-0',
-                level: 'intermediate',
-            },
         ],
     },
 ];

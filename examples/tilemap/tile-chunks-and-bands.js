@@ -74,7 +74,7 @@ class TileChunksAndBandsScene extends Scene {
         // tiles visually cover the explorer whenever they overlap.
         this.worldRoot.addChild(this.mapView.band('ground'), actorLayer, this.mapView.band('canopy'));
         // ── Camera: follows the explorer, clamped to the map bounds ───────
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         this.camera = new View(this.explorer.x, this.explorer.y, width, height);
         this.camera.follow(this.explorer, { lerp: 0.12 });
         this.camera.setBounds(new Rectangle(0, 0, MAP_WIDTH, MAP_HEIGHT));

@@ -5,6 +5,7 @@ description: 'Compose gameplay and UI layers without coupling scene logic.'
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 import Callout from '../../../components/Callout.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 
 # HUD overlay
 
@@ -14,38 +15,11 @@ A HUD (heads-up display) renders UI elements on top of the game world — health
 
 Add HUD elements directly to `scene.ui` instead of creating a separate overlay scene. The world (game nodes, sprites, graphics) lives under `scene.root`; the HUD (labels, progress bars, panels) lives on `scene.ui` and is composited on top automatically — no extra scene or stack needed.
 
-```ts
-class GameScene extends Scene {
-    init() {
-        this._angle = 0;
-
-        // HUD elements on scene.ui — screen-space, always on top.
-        this._scoreText = new Label('SCORE 1240', { fontSize: 22 });
-        this._scoreText.anchorIn(this.ui, 'top-left', 18, 14);
-        this.ui.addChild(this._scoreText);
-
-        this._health = new ProgressBar({ width: 220, height: 8, value: 1 });
-        this._health.anchorIn(this.ui, 'top-left', 18, 48);
-        this.ui.addChild(this._health);
-    }
-
-    update(delta) {
-        this._angle += delta.seconds * 90;
-    }
-
-    draw(context) {
-        context.backend.clear(new Color(20, 32, 58));
-        // ... draw game world ...
-    }
-}
-```
+<SourceSnippet source="examples/application-scenes/hud-overlay-scene.ts" region="hud-scene" title="A scene with a screen-fixed HUD" />
 
 Start the scene as normal — `scene.ui` is rendered automatically:
 
-```ts
-const game = new GameScene();
-await app.start(game);
-```
+<SourceSnippet source="examples/application-scenes/hud-overlay-scene.ts" region="hud-app" title="Register and start the scene" />
 
 ## Why `scene.ui`, not manual draw-order
 
@@ -56,34 +30,13 @@ The alternative — rendering HUD elements after the world in a single scene's `
 
 ## Mini-map with a mask
 
-A mini-map is a special HUD element: it needs a second `View` to render the world from a zoomed-out perspective into a `RenderTexture`, which is then displayed as a sprite in the corner of the HUD. The capture is a [`CallbackRenderPass`](/ExoJS/en/api/callback-render-pass/) with a `{ target }`, run once per frame from the scene's pipeline:
+A mini-map is a special HUD element: render the world into a `RenderTexture`, then compose that texture as a screen-positioned sprite. With a custom scene pipeline, a [`CallbackRenderPass`](/ExoJS/en/api/callback-render-pass/) captures the world and later node passes draw the masked sprite and its frame at logical screen coordinates:
 
 <Callout type="pitfall" title="Draw with context.backend inside a target pass">
 Inside a `{ target }` render redirect, issue your draws through `context.backend` directly. A `context.render(node)` call there resets the active view back to the camera, so the off-screen capture would render from the wrong viewpoint.
 </Callout>
 
-```ts
-// In GameScene.init: build the capture pass once.
-const miniRt = new RenderTexture(260, 260);
-const capturePass = new CallbackRenderPass(
-    (context) => {
-        // Render the world from a wide view into miniRt (immediate-mode draws via context.backend)
-        this.drawWorld(context.backend);
-    },
-    { target: miniRt }, // redirects the callback's output off-screen; clears the target first if you pass `clear`
-);
-
-// Add the mini-map sprite to scene.ui so it stays in screen space.
-const miniSprite = new Sprite(miniRt);
-miniSprite.anchorIn(this.ui, 'top-right', -280, 20);
-this.ui.addChild(miniSprite);
-
-// Clamp to a circle with a mask
-const mask = new Graphics();
-mask.fillColor = Color.white;
-mask.drawCircle(130, 130, 120);
-miniSprite.mask = mask;
-```
+<SourceSnippet source="examples/showcase/minimap-with-mask.ts" region="minimap-setup" title="A masked minimap render pipeline" />
 
 The [`CallbackRenderPass`](/ExoJS/en/api/callback-render-pass/) with `{ target }` redirects the callback's drawing into the texture; inside a target redirect, issue immediate-mode draws through `context.backend` (a `context.render(node)` there would reset the view back to the camera). The mask clips the mini-map to a circle. See [Render targets](/ExoJS/en/guide/rendering/render-targets/) and [Masks](/ExoJS/en/guide/runtime/scene-graph/#masks) for details.
 

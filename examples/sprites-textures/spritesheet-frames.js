@@ -12,9 +12,7 @@ class SpritesheetFramesScene extends Scene {
     hud;
     async load() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         const texture = this.loader.get('image/platformer-characters.png');
         const data = (await this.loader.load(Asset.type('json', 'json/platformer-characters.json')));
         this.spritesheet = new Spritesheet(texture, data);

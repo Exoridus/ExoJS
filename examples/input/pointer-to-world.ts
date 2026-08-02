@@ -20,7 +20,6 @@ class PointerToWorldScene extends Scene {
 
     override init(): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const width = app.width;
         const height = app.height;
 
@@ -72,7 +71,6 @@ class PointerToWorldScene extends Scene {
 
     override update(delta: Time): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const width = app.width;
         const height = app.height;
 

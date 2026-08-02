@@ -44,9 +44,7 @@ class CustomWgslModuleScene extends Scene {
     reportedMode = false;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         this.system = new ParticleSystem(this.loader.get(assets.demo.textures.particleLight), { capacity: 26000 });
         this.systems.add(this.system);
         this.system.setPosition(width / 2, height - 60);

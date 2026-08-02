@@ -19,15 +19,20 @@ The listener and every source sit on one plane (Z=0), panned with the Web Audio 
 The [`AudioListener`](/ExoJS/en/api/audio-listener/) is a singleton at `app.audio.listener`. Set its position directly or point it at a target that updates every frame:
 
 ```ts
+import { type Application, SceneNode } from '@codexo/exojs';
+
+declare const application: Application;
+declare const player: SceneNode;
+
 // Static listener — audio doesn't move
-app.audio.listener.position.set(400, 300);
+application.audio.listener.position.set(400, 300);
 
 // Dynamic listener — audio follows a scene node
-app.audio.listener.target = this.player;
+application.audio.listener.target = player;
 
 // Dynamic listener — audio follows a plain object (useful with views)
-this.camera = { x: 0, y: 0 };
-app.audio.listener.target = this.camera;
+const camera = { x: 0, y: 0 };
+application.audio.listener.target = camera;
 ```
 
 When `target` is set, the listener reads the target's `x` and `y` each frame automatically. Use `target` for cameras, player characters, or any moving viewpoint. Set `position` directly when the listener is fixed.
@@ -43,8 +48,12 @@ Valid target types are:
 `Sound` itself carries no spatial state — position and distance model live on the `Voice` that `app.audio.play()` returns. Seed the initial position via `PlayOptions`:
 
 ```ts
-const pickup = this.loader.get('audio/pickup.wav');
-const voice = this.app.audio.play(pickup, { position: { x: 320, y: 180 } });
+import { type Application, Sound } from '@codexo/exojs';
+
+declare const application: Application;
+declare const pickup: Sound;
+
+const voice = application.audio.play(pickup, { position: { x: 320, y: 180 } });
 ```
 
 The audio pans left when the source is left of the listener, right when to the right. Volume attenuates with distance according to the configured distance model.
@@ -52,11 +61,17 @@ The audio pans left when the source is left of the listener, right when to the r
 To move a source *while it plays*, drive the live `Voice` — spatial voices are `Spatializable`, exposing `position` and `follow()`:
 
 ```ts
+import { SceneNode, type Spatializable, type Voice } from '@codexo/exojs';
+
+declare const voice: Voice & Spatializable;
+declare const item: { x: number; y: number };
+declare const enemy: SceneNode;
+
 // Move the live source each frame...
 voice.position = { x: item.x, y: item.y };
 
 // ...or have it track a scene node automatically.
-voice.follow(this.enemy);   // reads the node's global position every frame
+voice.follow(enemy);   // reads the node's global position every frame
 voice.follow(null);         // stop tracking, fall back to voice.position
 ```
 
@@ -93,6 +108,10 @@ const voice = this.app.audio.play(ambient, {
 All four attenuation properties are also live setters on the `Voice` — reassign them to change the model or falloff of a sound that's already playing:
 
 ```ts
+import type { Spatializable, Voice } from '@codexo/exojs';
+
+declare const voice: Voice & Spatializable;
+
 voice.distanceModel = 'inverse';
 voice.refDistance = 80;
 voice.rolloffFactor = 2;
@@ -105,13 +124,23 @@ The `PannerNode` behind every spatial voice supports two panning algorithms. `'e
 Switch the app-wide default once:
 
 ```ts
-app.audio.spatial.panningModel = 'HRTF';
+import type { Application } from '@codexo/exojs';
+
+declare const application: Application;
+
+application.audio.spatial.panningModel = 'HRTF';
 ```
 
 Or override it per source, leaving the app-wide default untouched for everything else:
 
 ```ts
-const voice = app.audio.play(footsteps, {
+import { type Application, SceneNode, Sound } from '@codexo/exojs';
+
+declare const application: Application;
+declare const footsteps: Sound;
+declare const npc: SceneNode;
+
+const voice = application.audio.play(footsteps, {
     position: { x: npc.x, y: npc.y },
     panningModel: 'HRTF',
 });
@@ -120,6 +149,10 @@ const voice = app.audio.play(footsteps, {
 A voice's `panningModel` is also a live setter — set it back to `null` to drop the override and re-inherit `app.audio.spatial.panningModel`:
 
 ```ts
+import type { Spatializable, Voice } from '@codexo/exojs';
+
+declare const voice: Voice & Spatializable;
+
 voice.panningModel = null;
 ```
 
@@ -130,7 +163,13 @@ A spatial voice can face a direction and attenuate sound outside a cone in front
 `orientation` alone has no audible effect — a source is omnidirectional until you narrow `coneInnerAngle`/`coneOuterAngle` below the default `360°`. Inside `coneInnerAngle` the source plays at full volume; between `coneInnerAngle` and `coneOuterAngle` it fades toward `coneOuterGain`; beyond `coneOuterAngle` it plays at `coneOuterGain`.
 
 ```ts
-const alarm = app.audio.play(alarmLoop, {
+import { type Application, SceneNode, Sound } from '@codexo/exojs';
+
+declare const application: Application;
+declare const alarmLoop: Sound;
+declare const turret: SceneNode;
+
+const alarm = application.audio.play(alarmLoop, {
     loop: true,
     position: { x: turret.x, y: turret.y },
     orientation: turret.rotation,
@@ -156,7 +195,11 @@ update(delta: Time) {
 Doppler pitch-shifting is off by default (`app.audio.spatial.dopplerFactor` is `0`) — enabling it costs nothing extra when unused, since the engine skips the calculation entirely while the factor is zero. Turn it on app-wide with:
 
 ```ts
-app.audio.spatial.dopplerFactor = 1;
+import type { Application } from '@codexo/exojs';
+
+declare const application: Application;
+
+application.audio.spatial.dopplerFactor = 1;
 ```
 
 `1` is a physically-scaled shift (relative to the tunable `app.audio.spatial.speedOfSound`); many games deliberately exaggerate beyond `1` for a punchier effect on fast-moving sources like vehicles or projectiles.
@@ -164,12 +207,21 @@ app.audio.spatial.dopplerFactor = 1;
 The effect needs a velocity to work with. Set it explicitly on a voice:
 
 ```ts
+import type { Spatializable, Voice } from '@codexo/exojs';
+
+declare const voice: Voice & Spatializable;
+
 voice.velocity = { x: 120, y: 0 };
 ```
 
 Or omit it entirely and let the engine derive it automatically each frame from the position deltas of a followed node:
 
 ```ts
+import { SceneNode, type Spatializable, type Voice } from '@codexo/exojs';
+
+declare const voice: Voice & Spatializable;
+declare const car: SceneNode;
+
 voice.follow(car); // no explicit velocity — derived from car's frame-to-frame position
 ```
 
@@ -203,8 +255,12 @@ A voice played without a `position` plays non-spatially — full volume in both 
 For ambient sounds that should follow the listener's general area but not overlap, set a large `refDistance`:
 
 ```ts
-const waterfall = this.loader.get('audio/waterfall.ogg');
-const voice = this.app.audio.play(waterfall, {
+import { type Application, Sound } from '@codexo/exojs';
+
+declare const application: Application;
+declare const waterfall: Sound;
+
+const voice = application.audio.play(waterfall, {
     loop: true,
     position: { x: 600, y: 200 },
     distanceModel: 'inverse',

@@ -70,9 +70,7 @@ class ImmediateModeScene extends Scene {
     panel;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         const centerX = width / 2;
         const centerY = height / 2;
         // --- Procedural gears: each drawn with its own drawGeometry call. ---
@@ -130,9 +128,7 @@ class ImmediateModeScene extends Scene {
     }
     draw(context) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         const centerX = width / 2;
         const centerY = height / 2;
         const time = this.elapsed;

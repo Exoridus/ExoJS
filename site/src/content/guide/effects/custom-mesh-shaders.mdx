@@ -250,9 +250,13 @@ When a mesh is destroyed, its `MeshMaterial` is left untouched. The material out
 When you write shaders for both GLSL and WGSL, keeping uniform names synchronized across languages becomes a manual task. The reflection helpers live on the `ShaderSource`, reachable through `material.shader`. `getDeclaredUniforms()` reflects uniform declarations from each language's source via lightweight regex parsing. Companion method `detectUniformDrift()` compares the two and reports names that appear in only one language:
 
 ```ts
-const drift = waveMaterial.shader.detectUniformDrift();
-// drift.onlyInGlsl → ['u_waveAmp']
-// drift.onlyInWgsl → ['u_displacement']
+import { MeshMaterial } from '@codexo/exojs';
+
+function reportUniformDrift(material: MeshMaterial): void {
+    const drift = material.shader.detectUniformDrift();
+    console.log(drift.onlyInGlsl); // for example: ['u_waveAmp']
+    console.log(drift.onlyInWgsl); // for example: ['u_displacement']
+}
 ```
 
 Auto-bound uniforms (`u_projection`, `u_translation`, `u_tint`, `u_texture`, `u_mesh`) are excluded from the comparison — they are intentionally declared differently across languages. Use `detectUniformDrift` in a CI check to catch typos and mismatches:

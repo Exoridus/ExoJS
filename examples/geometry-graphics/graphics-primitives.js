@@ -8,9 +8,7 @@ class GraphicsPrimitivesScene extends Scene {
     star;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         this.sceneRoot = new Container();
         this.sceneRoot.setPosition(width / 2, height / 2);
         this.panel = new Graphics();
@@ -29,8 +27,6 @@ class GraphicsPrimitivesScene extends Scene {
     }
     update(delta) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.sceneRoot.rotate(delta.seconds * 9);
         this.star.rotate(delta.seconds * 60);
         this.circle.y = Math.sin(app.activeTime.seconds * 2) * 18;

@@ -26,8 +26,6 @@ class BootScene extends Scene {
     // #region guide:boot-signals
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.bar = new Graphics();
         this.label = new Text('', { fillColor: Color.white, fontSize: 20, align: 'center' });
         this.label.setAnchor(0.5, 0);
@@ -62,8 +60,6 @@ class BootScene extends Scene {
         // detached, so the listeners can still be removed from the very loader
         // they were added to.
         const app = this.app;
-        if (app === null)
-            return;
         app.loader.onLoadStart.remove(this.onLoadStart);
         app.loader.onLoadProgress.remove(this.onLoadProgress);
         app.loader.onLoadError.remove(this.onLoadError);
@@ -71,21 +67,19 @@ class BootScene extends Scene {
     }
     /** Leaves for the game — but only while this scene is still the one on screen. */
     enterGame() {
-        const app = this.app;
         // Check `attached` first: it never throws, unlike `state`, which does
         // once the scene has been fully detached. `Active` is the only state
         // allowed to navigate — suspended, unloading, or detached must not.
-        if (app === null || !this.attached || this.state !== SceneState.Active) {
+        if (!this.attached || this.state !== SceneState.Active) {
             return;
         }
+        const app = this.app;
         void app.scenes.change(PlayScene);
     }
     // #endregion guide:boot-unsubscribe
     draw(context) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         context.backend.clear(new Color(12, 16, 24));
         const barWidth = width * 0.5;
         const barX = (width - barWidth) / 2;
@@ -108,9 +102,7 @@ class PlayScene extends Scene {
     hud;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         // Already resident: BootScene claimed the catalog on the application
         // loader, so reading the same handles here costs nothing.
         this.ship = new Sprite(GameAssets.ship).setAnchor(0.5).setPosition(width / 2, height / 2);

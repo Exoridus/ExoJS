@@ -16,8 +16,10 @@ Performance in ExoJS is about three things: how many drawables you push per fram
 Before making changes, measure. The [`PerformanceLayer`](/ExoJS/en/api/performance-layer/) from `@codexo/exojs/debug` gives you FPS, frame time, draw-call count, and node count in real time:
 
 ```ts
+import { Application } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
 
+const app = new Application();
 const debug = new DebugOverlay(app);
 debug.layers.performance.visible = true;
 ```
@@ -43,8 +45,12 @@ Every filter on a drawable adds one render pass for that drawable. A container w
 The [`RenderPassInspectorLayer`](/ExoJS/en/api/render-pass-inspector-layer/) shows exactly who is adding passes. Enable it during development when frame time rises and you suspect filter overhead:
 
 ```ts
+import { Application } from '@codexo/exojs';
 import { RenderPassInspectorLayer } from '@codexo/exojs/debug';
-// See 7.6 Render pipeline debugging for setup
+
+const app = new Application();
+const inspector = new RenderPassInspectorLayer(app);
+inspector.visible = true;
 ```
 
 The two highest-impact reductions: remove filters you don't need, and set `cacheAsBitmap = true` on filtered containers that don't change every frame. For the full set of strategies with examples, see [Render pipeline debugging](/ExoJS/en/guide/debugging/debugging-and-inspection/).

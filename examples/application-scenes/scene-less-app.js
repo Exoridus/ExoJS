@@ -18,7 +18,7 @@ const square = new Sprite(app.loader.get(assets.demo.textures.pixelWhite)).setAn
 square.width = 80;
 square.height = 80;
 square.tint = new Color(90, 160, 255);
-square.setPosition(app.canvas.width / 2, app.canvas.height / 2);
+square.setPosition(app.width / 2, app.height / 2);
 let angle = 0;
 app.systems.add({
     update(delta) {

@@ -12,8 +12,7 @@ class MasksScene extends Scene {
 
     override init(): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         const tex = this.loader.get(ALPHA_RINGS);
 
         this.rectSprite = new Sprite(tex);
@@ -36,8 +35,7 @@ class MasksScene extends Scene {
 
     override update(delta: Time): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         this.time += delta.seconds;
 
         const r = 80;

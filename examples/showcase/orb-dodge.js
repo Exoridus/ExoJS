@@ -101,8 +101,6 @@ class PlayScene extends Scene {
     }
     update(delta) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.elapsed += delta.seconds;
         this.spawnTimer += delta.seconds;
         if (this.spawnTimer >= SPAWN_INTERVAL) {
@@ -117,6 +115,7 @@ class PlayScene extends Scene {
         this.px = Math.max(PLAYER_RADIUS, Math.min(CANVAS_WIDTH - PLAYER_RADIUS, this.px));
         this.py = Math.max(PLAYER_RADIUS, Math.min(CANVAS_HEIGHT - PLAYER_RADIUS, this.py));
         this.player.setPosition(this.px, this.py);
+        // #region guide:collision-loop
         let gameEnded = false;
         const survived = [];
         for (const orb of this.orbs) {
@@ -157,6 +156,7 @@ class PlayScene extends Scene {
             return;
         }
         this.timeText.text = `${this.elapsed.toFixed(1)} s`;
+        // #endregion guide:collision-loop
     }
     draw(context) {
         context.backend.clear();
@@ -178,8 +178,6 @@ class GameOverScene extends Scene {
     hint;
     init(data) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.title = new Text('GAME OVER', {
             align: 'center',
             fillColor: new Color(255, 80, 80),

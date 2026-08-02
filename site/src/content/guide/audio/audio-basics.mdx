@@ -75,8 +75,13 @@ Browsers won't start audio until the user interacts with the page. Trigger the f
 Per-play overrides are passed to `play()`; everything afterwards is controlled on the returned `Voice`:
 
 ```ts
+import { type Application, Sound } from '@codexo/exojs';
+
+declare const application: Application;
+declare const sound: Sound;
+
 // Per-play overrides (bus, volume, loop, playbackRate, detune, time, muted)
-const voice = this.app.audio.play(sound, { volume: 0.5, loop: true, playbackRate: 1.2 });
+const voice = application.audio.play(sound, { volume: 0.5, loop: true, playbackRate: 1.2 });
 
 voice.volume = 0.8;     // live volume, range [0, 1]
 voice.fade(0.2, 500);   // ramp volume to 0.2 over 500ms (no stop)
@@ -87,11 +92,23 @@ voice.stop(800);        // fade out over 800ms, then stop
 Every `Voice` carries `volume` (get/set), `fade(to, ms)`, `stop(fadeMs?)`, an `ended` flag, an `onEnd` signal, the bus it routes through (`voice.bus`), and an `output` node you can tap for analysis. Beyond that base, a voice mixes in only the capabilities its backing node actually supports — narrow with a cast or an `'x' in voice` check:
 
 ```ts
-import { Pausable, Seekable } from '@codexo/exojs';
+import {
+    type Application,
+    AudioStream,
+    type Loopable,
+    type Pausable,
+    type RatePitched,
+    type Seekable,
+    type Voice,
+} from '@codexo/exojs';
+
+declare const application: Application;
+declare const stream: AudioStream;
+type StreamVoice = Voice & Seekable & Pausable & Loopable & RatePitched;
 
 // A SoundVoice is Seekable + Loopable + RatePitched + Spatializable.
 // An AudioStreamVoice adds Pausable on top of those.
-const streamVoice = this.app.audio.play(stream, { loop: true });
+const streamVoice = application.audio.play(stream, { loop: true }) as StreamVoice;
 
 streamVoice.seek(10);        // Seekable: jump to 10s
 streamVoice.time;            // current position in seconds
@@ -113,6 +130,10 @@ Voice volume is linear gain in the range `[0, 1]`, where 1 is "as authored". The
 `fade(to, ms)` ramps a voice's volume without stopping it; `stop(fadeMs)` ramps to zero and then releases the voice:
 
 ```ts
+import type { Voice } from '@codexo/exojs';
+
+declare const voice: Voice;
+
 // Fade out over 800ms, then stop
 voice.stop(800);
 
@@ -145,18 +166,27 @@ Pass `{ toVolume }` to fade the incoming voice to something other than full, and
 For rapid-fire SFX (gunshots, footsteps, UI clicks), set `poolSize` higher and use the default FIFO strategy:
 
 ```ts
-const gunshot = this.loader.get('audio/gunshot.ogg');
+import { type Application, Sound } from '@codexo/exojs';
+
+declare const application: Application;
+declare const gunshot: Sound;
+
 gunshot.poolSize = 24;
 
 // ... hold spacebar to fire rapidly ...
-this.app.audio.play(gunshot); // oldest voice gets evicted when the pool is full
+application.audio.play(gunshot); // oldest voice gets evicted when the pool is full
 ```
 
 Pitch variation for a richer sound is one line — randomise `playbackRate` per play:
 
 ```ts
+import { type Application, Sound } from '@codexo/exojs';
+
+declare const application: Application;
+declare const sound: Sound;
+
 const cents = Math.random() * 300 - 150; // -150 to +150 cents
-this.app.audio.play(sound, { playbackRate: Math.pow(2, cents / 1200) });
+application.audio.play(sound, { playbackRate: Math.pow(2, cents / 1200) });
 ```
 
 ## Buses
@@ -166,15 +196,18 @@ The audio manager exposes three built-in buses: `app.audio.master`, `app.audio.m
 Route a play through a specific bus with the `bus` option, or reassign a live voice's `bus`:
 
 ```ts
-import { AudioBus } from '@codexo/exojs';
+import { type Application, AudioBus, Sound } from '@codexo/exojs';
 
-const voiceBus = new AudioBus('voice-over', { parent: app.audio.master });
-app.audio.registerBus(voiceBus);
+declare const application: Application;
+declare const sound: Sound;
+
+const voiceBus = new AudioBus('voice-over', { parent: application.audio.master });
+application.audio.registerBus(voiceBus);
 
 // Per-play:
-const line = this.app.audio.play(sound, { bus: voiceBus });
+const line = application.audio.play(sound, { bus: voiceBus });
 // Or reroute the live voice:
-line.bus = app.audio.master;
+line.bus = application.audio.master;
 ```
 
 Buses have independent `volume` (0..2), `muted`, and `pan` controls, plus a filter chain. The [Audio effects](/ExoJS/en/guide/audio/audio-effects/) chapter covers bus filters in detail.
@@ -184,6 +217,10 @@ Buses have independent `volume` (0..2), `muted`, and `pan` controls, plus a filt
 A `Sound` can define named sub-regions ("sprites") on the descriptor — useful when you bake several effects into a single file and want to address them by name rather than by offset:
 
 ```ts
+import { Sound } from '@codexo/exojs';
+
+declare const sound: Sound;
+
 sound.defineSprite('impact', { start: 0.5, end: 0.8 });
 sound.defineSprite('whoosh', { start: 1.2, end: 1.6 });
 ```

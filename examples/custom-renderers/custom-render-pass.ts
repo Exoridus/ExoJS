@@ -11,8 +11,7 @@ class CustomRenderPassScene extends Scene {
 
     override init(): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
 
         this.back = new Sprite(this.loader.get('image/ship-a.png'))
             .setAnchor(0.5)
@@ -32,7 +31,7 @@ class CustomRenderPassScene extends Scene {
             .addPass(new RenderNodePass(this.back, { clear: Color.black }))
             .addPass(
                 new CallbackRenderPass((context) => {
-                    const { width: w, height: h } = app.canvas;
+                    const { width: w, height: h } = app;
                     this.between.clear();
                     this.between.lineWidth = 10;
                     this.between.lineColor = new Color(130, 240, 170);

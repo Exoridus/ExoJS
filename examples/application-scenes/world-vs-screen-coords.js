@@ -8,8 +8,6 @@ class WorldScreenScene extends Scene {
     pointer = { x: 0, y: 0 };
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const width = app.width;
         const height = app.height;
         this.view = new View(260, 160, width, height);

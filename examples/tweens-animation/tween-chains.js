@@ -4,9 +4,7 @@ class TweenChainsScene extends Scene {
     sprite;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         // A rectangle centred in the frame, spread across the wider 16:9 space.
         const left = width / 2 - width * 0.28;
         const right = width / 2 + width * 0.28;

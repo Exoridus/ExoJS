@@ -5,9 +5,7 @@ class PointerAndHittestScene extends Scene {
     sprites;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         this.sprites = [];
         for (let i = 0; i < 5; i++) {
             const sprite = new Sprite(this.loader.get('image/ship-a.png'))

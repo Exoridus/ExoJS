@@ -5,9 +5,7 @@ class SvgDrawableScene extends Scene {
     sprite;
     async load() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         // SvgAsset has no seamless adapter (unlike Texture/Sound), so it is
         // awaited via `load()` rather than fetched synchronously via `get()`.
         // The exo.js wordmark SVG carries only a viewBox (no width/height), so

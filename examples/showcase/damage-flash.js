@@ -10,9 +10,7 @@ class DamageFlashScene extends Scene {
     hits = 0;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         this.hit = new Signal();
         this.ship = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setScale(2.2).setPosition(width / 2, height / 2);
         this.filterColor = new Color(255, 255, 255, 1);

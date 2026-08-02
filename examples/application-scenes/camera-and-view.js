@@ -9,9 +9,7 @@ class CameraViewScene extends Scene {
     zoom = 0;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         this.camera = new View(0, 0, width, height);
         this.world = new Graphics();
         this.world.lineWidth = 2;

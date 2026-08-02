@@ -11,9 +11,7 @@ class TextureLoaderScene extends Scene {
     progress = { loaded: 0, total: 3 };
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         // Seamless get() returns placeholder handles immediately; each pops in
         // (loadState → 'ready') as its fetch completes, polled in update().
         this.textures = [this.loader.get('image/ship-a.png'), this.loader.get('image/hue-ramp.png'), this.loader.get('image/uv-grid-256.png')];

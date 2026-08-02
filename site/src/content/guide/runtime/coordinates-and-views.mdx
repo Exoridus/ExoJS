@@ -8,7 +8,7 @@ import Callout from '../../../components/Callout.astro';
 
 # Coordinates and views
 
-ExoJS keeps two coordinate systems in mind at once. Drawables are positioned in **world space** — the coordinate system you write game logic in. The renderer paints into **canvas space** — pixels on the actual canvas the user sees. A [`View`](/ExoJS/en/api/view/) sits between the two and handles the mapping.
+ExoJS keeps two coordinate systems in mind at once. Drawables are positioned in **world space** — the coordinate system you write game logic in. Input and view APIs use logical **canvas space**, also called design or screen space. A [`View`](/ExoJS/en/api/view/) sits between the two and handles the mapping.
 
 Understanding this split makes camera follow, zoom, split-screen, and HUD overlays straightforward. Confusing them is the source of most "the position is wrong" bugs.
 
@@ -20,12 +20,12 @@ In a typical 2D project, world space has the X axis pointing right and the Y axi
 
 ## Canvas space
 
-Canvas space is what the GPU paints into: pixels of the application's canvas. `(0, 0)` is the top-left, `(canvas.width, canvas.height)` is the bottom-right. Mouse events arrive in canvas space — when the user clicks at pixel `(245, 110)`, that's a canvas-space coordinate.
+Canvas space runs from `(0, 0)` at the top-left to `(app.width, app.height)` at the bottom-right. Pointer events arrive in these logical design pixels, independent of CSS size and device pixel ratio. The DOM element's `app.canvas.width` and `app.canvas.height` are physical backing-store dimensions and are normally only relevant to low-level rendering code.
 
 If you placed every sprite at its world position and the camera never moved, world space and canvas space would line up exactly. The moment you move the camera, scale the canvas, or render to a sub-region, the two diverge.
 
 <Callout type="pitfall" title="Clicks go wrong once the camera moves">
-Pointer events always arrive in canvas space. Once the camera has panned or zoomed, convert them to world space before hit-testing — otherwise a click lands on the wrong object. The world-vs-screen-coords example below shows the conversion.
+Pointer events always arrive in logical canvas space. Once the camera has panned or zoomed, convert them to world space before hit-testing — otherwise a click lands on the wrong object. The world-vs-screen-coords example below shows the conversion.
 </Callout>
 
 ## The active view
@@ -93,8 +93,8 @@ A handful of misalignments come up regularly:
 
 - **Hardcoded canvas-relative positions.** Setting a sprite to `(400, 300)` because that "looks centered for an 800×600 canvas" breaks the moment the canvas resizes. Use the active view's center, the canvas size at runtime, or anchor-aware containers instead.
 - **Anchor confusion.** A sprite's position is the world-space location of its anchor. The default anchor is the top-left, so `setPosition(400, 300)` puts the top-left of the sprite at `(400, 300)`, not its middle. Call `setAnchor(0.5)` to pivot at the center.
-- **Pointer events without view conversion.** Pointer events arrive in canvas space. If your camera has moved, you need to convert them back to world space before testing whether the click hit a world-space object. The world-vs-screen-coords example below shows the conversion.
-- **HUD inside the world.** A health bar should not move when the camera moves. Put HUD elements in a separate container that you render *after* `context.render(world)`, with their positions in canvas space.
+- **Pointer events without view conversion.** Pointer events arrive in logical canvas space. If your camera has moved, you need to convert them back to world space before testing whether the click hit a world-space object. The world-vs-screen-coords example below shows the conversion.
+- **HUD inside the world.** A health bar should not move when the camera moves. Add HUD elements to `scene.ui`; it stays in logical canvas space and renders above the world automatically.
 
 ## Multiple views
 

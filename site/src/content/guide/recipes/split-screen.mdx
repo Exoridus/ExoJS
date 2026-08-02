@@ -16,7 +16,7 @@ Create two `View` objects. Each gets its own viewport rectangle — the left vie
 
 ```ts
 init() {
-    const { width, height } = this.app.canvas;
+    const { width, height } = this.app;
 
     // Left player view — left half of screen
     this._leftView = new View(0, 0, width / 2, height);
@@ -85,11 +85,13 @@ This means you can have objects visible in both views (a shared flag, a power-up
 Two players on one keyboard means binding different key sets to each player — WASD for player 1, arrow keys for player 2 — both registered via the same scene's `this.inputs`. For gamepad co-op, bind each pad slot to a different player:
 
 ```ts
-const pad0 = this.app.input.getGamepad(0);
-pad0.onActive(GamepadAxis.LeftStickX, v => { this._player1.move.x = v; });
+init() {
+    const pad0 = this.app.input.getGamepad(0);
+    pad0.onActive(GamepadAxis.LeftStickX, v => { this._player1.move.x = v; });
 
-const pad1 = this.app.input.getGamepad(1);
-pad1.onActive(GamepadAxis.LeftStickX, v => { this._player2.move.x = v; });
+    const pad1 = this.app.input.getGamepad(1);
+    pad1.onActive(GamepadAxis.LeftStickX, v => { this._player2.move.x = v; });
+}
 ```
 
 Four split-screen views with four gamepad slots is the same pattern extended — one view per player, one pad per slot, one shared scene rendered four times.

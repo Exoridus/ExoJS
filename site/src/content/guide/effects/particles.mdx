@@ -43,12 +43,12 @@ const app = new Application(); // picks up particlesExtension automatically
 A particle system needs a texture and a capacity:
 
 ```ts
-import { BlendModes } from '@codexo/exojs';
+import { Texture } from '@codexo/exojs';
 import { ParticleSystem } from '@codexo/exojs-particles';
 
-const system = new ParticleSystem(loader.get('image/spark.png'), {
-    capacity: 4000,
-});
+function createParticles(particleTexture: Texture): ParticleSystem {
+    return new ParticleSystem(particleTexture, { capacity: 4000 });
+}
 ```
 
 `capacity` (default 4096) is the maximum number of particles the system can have alive at once. It's fixed at construction — the backing typed arrays are allocated immediately.
@@ -56,6 +56,11 @@ const system = new ParticleSystem(loader.get('image/spark.png'), {
 The system is a `Drawable`, so it has a position, rotation, scale, tint, blend mode, and participates in the scene graph like any sprite:
 
 ```ts
+import { BlendModes } from '@codexo/exojs';
+import { ParticleSystem } from '@codexo/exojs-particles';
+
+declare const system: ParticleSystem;
+
 system.setPosition(400, 500);
 system.setBlendMode(BlendModes.Additive);
 ```
@@ -197,13 +202,20 @@ system.addDeathModule(new SpawnOnDeath(
 `ParticleSystem` is a `Drawable` — it renders itself when you call `context.render(system)` in `draw`. Call `system.update(delta)` in your scene's `update`:
 
 ```ts
-update(delta: Time) {
-    this.system.update(delta);
-}
+import { type RenderingContext, Scene, type Time } from '@codexo/exojs';
+import { ParticleSystem } from '@codexo/exojs-particles';
 
-draw(context: RenderingContext) {
-    context.backend.clear();
-    context.render(this.system);
+class ParticleScene extends Scene {
+    private system!: ParticleSystem;
+
+    override update(delta: Time): void {
+        this.system.update(delta);
+    }
+
+    override draw(context: RenderingContext): void {
+        context.backend.clear();
+        context.render(this.system);
+    }
 }
 ```
 
@@ -214,6 +226,11 @@ The update loop runs spawn modules, advances particle state (velocity integratio
 For manual spawning or custom logic, the system exposes its internal arrays as public `readonly` references:
 
 ```ts
+import { ParticleSystem } from '@codexo/exojs-particles';
+
+declare const system: ParticleSystem;
+const i = 0;
+
 system.posX[i]         // X position of particle i
 system.posY[i]         // Y position
 system.velX[i]         // X velocity

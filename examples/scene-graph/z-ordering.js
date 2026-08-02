@@ -6,9 +6,7 @@ class ZOrderingScene extends Scene {
     sprites;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         const texture = this.loader.get('image/ship-a.png');
         this.group = new Container();
         this.label = new Text('Press 1, 2, 3 — front: 3 (blue)', { fillColor: Color.white, fontSize: 18 });

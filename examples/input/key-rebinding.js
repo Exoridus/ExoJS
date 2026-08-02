@@ -45,9 +45,7 @@ class KeyRebindingScene extends Scene {
     hud;
     init() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { height } = app.canvas;
+        const { height } = app;
         this.groundY = height - 240;
         this.heroY = this.groundY;
         this.graphics = new Graphics();
@@ -107,9 +105,7 @@ class KeyRebindingScene extends Scene {
     }
     draw(context) {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width } = app.canvas;
+        const { width } = app;
         context.backend.clear();
         this.graphics.clear();
         // Static ground line, just below where the hero square rests.

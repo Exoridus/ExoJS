@@ -101,7 +101,6 @@ class PlayScene extends Scene {
 
     override update(delta: Time): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.elapsed += delta.seconds;
         this.spawnTimer += delta.seconds;
 
@@ -119,6 +118,7 @@ class PlayScene extends Scene {
         this.py = Math.max(PLAYER_RADIUS, Math.min(CANVAS_HEIGHT - PLAYER_RADIUS, this.py));
         this.player.setPosition(this.px, this.py);
 
+        // #region guide:collision-loop
         let gameEnded = false;
         const survived: OrbData[] = [];
 
@@ -168,6 +168,7 @@ class PlayScene extends Scene {
         }
 
         this.timeText.text = `${this.elapsed.toFixed(1)} s`;
+        // #endregion guide:collision-loop
     }
 
     override draw(context: RenderingContext): void {
@@ -199,7 +200,6 @@ class GameOverScene extends Scene<GameOverData> {
 
     override init(data: Readonly<GameOverData>): void {
         const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.title = new Text('GAME OVER', {
             align: 'center',
             fillColor: new Color(255, 80, 80),

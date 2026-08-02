@@ -80,7 +80,7 @@ A bare string only works for a _literal_ path — the type is inferred at compil
 
 <SourceSnippet source="examples/sprites-textures/asset-catalogs.ts" region="dynamic-path" title="A path chosen at runtime" />
 
-The snippets on this page that come from a runnable example open with a `const app = this.app; if (app === null) …` guard. `Scene.app` is `null` until the scene is attached, and the examples are compiled under `strict`, so they narrow it once and reuse the local — shorter prose snippets elsewhere just write `this.app` directly.
+Inside every scene lifecycle hook, `Scene.app` is already available and non-null. Access before attachment, such as from a scene constructor, throws; use `Scene.attached` only when code genuinely needs a non-throwing attachment probe.
 
 Types that can't be inferred from a path at all need the same descriptor, even when the path _is_ a literal:
 

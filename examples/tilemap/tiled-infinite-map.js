@@ -45,7 +45,7 @@ class TiledInfiniteMapScene extends Scene {
         if (!groundSource || !propsSource) {
             throw new Error('drift-fields.tmj\'s "Ground"/"Props" layers are not chunked — is "infinite" true?');
         }
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         // Free camera: moved directly by WASD, not following any actor — no
         // setBounds, since an unbounded map has no edges to clamp to.
         this.camera = new View(0, 0, width, height);

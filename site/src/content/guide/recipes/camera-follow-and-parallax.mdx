@@ -119,9 +119,14 @@ The layer position is set relative to the camera center *before* rendering. Sinc
 Parallax layers need to be wider than the viewport, or you see edges when the camera shifts. For tiled backgrounds, draw the tile pattern across a range that extends beyond the viewport boundaries by at least the maximum parallax offset:
 
 ```ts
+import { Graphics } from '@codexo/exojs';
+
 const viewW = 800;
 const maxOffset = viewW * 0.3; // 30% for the slowest layer
 const totalW = viewW + maxOffset * 2;
+const tileWidth = 128;
+const tileHeight = 600;
+const g = new Graphics();
 
 // Tile the pattern across [(-maxOffset), (viewW + maxOffset)]
 for (let x = -maxOffset; x < viewW + maxOffset; x += tileWidth) {

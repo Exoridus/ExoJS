@@ -9,11 +9,9 @@ class BitmapTextBasicScene extends Scene {
     frame = 0;
     async load() {
         const app = this.app;
-        if (app === null)
-            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.font = await this.loader.load(Asset.type('bmFont', assets.demo.fonts.kenneyBlocksFnt));
         const font = this.font;
-        const { width, height } = app.canvas;
+        const { width, height } = app;
         const marginX = width * 0.08;
         this.title = new BitmapText('BITMAP TEXT', font, { scale: 1.5 });
         this.title.tint = new Color(255, 220, 80);
