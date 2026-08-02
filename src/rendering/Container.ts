@@ -26,14 +26,25 @@ import { RenderNode } from './RenderNode';
  * @stable
  */
 export class Container extends RenderNode {
-  // Subclasses mutating this directly must also call `_invalidateChildOrder()`,
-  // or the public `children` snapshot (and the paint-order/child-index caches
-  // derived from it) silently desyncs from the true list.
-  protected readonly _children: RenderNode[] = [];
+  private readonly _childList: RenderNode[] = [];
   private _retainedPlan: RetainedPlanCache | null = null;
   private _childrenView: readonly RenderNode[] | null = null;
   private _paintChildrenView: readonly RenderNode[] | null = null;
   private _childIndexView: ReadonlyMap<RenderNode, number> | null = null;
+
+  /**
+   * The live child list, readable by subclasses and mutable only from here.
+   *
+   * Typed `readonly` on purpose: the public {@link children} snapshot and the
+   * paint-order/child-index caches derived from it are invalidated by the
+   * mutation methods below, so a subclass splicing the array directly would
+   * leave all three silently stale. Unlike {@link children} this is the array
+   * itself — no copy, no freeze — so reading it in a hot path costs nothing.
+   * Go through `addChild`/`removeChild`/`setChildIndex` to change it.
+   */
+  protected get _children(): readonly RenderNode[] {
+    return this._childList;
+  }
 
   /**
    * Snapshot of the current children in document order. Frozen and cached —
@@ -47,7 +58,7 @@ export class Container extends RenderNode {
    * and bounds invalidation stay consistent.
    */
   public get children(): readonly RenderNode[] {
-    return (this._childrenView ??= Object.freeze([...this._children]));
+    return (this._childrenView ??= Object.freeze([...this._childList]));
   }
 
   /** Cached renderer-compatible child order. @internal */
@@ -130,7 +141,7 @@ export class Container extends RenderNode {
    */
   public addChild(...children: RenderNode[]): this {
     for (const child of children) {
-      this.addChildAt(child, this._children.length);
+      this.addChildAt(child, this._childList.length);
     }
 
     return this;
@@ -143,8 +154,8 @@ export class Container extends RenderNode {
    * this container (would create a cycle). Self-as-child is a no-op.
    */
   public addChildAt(child: RenderNode, index: number): this {
-    if (index < 0 || index > this._children.length) {
-      throw new Error(`The index ${index} is out of bounds ${this._children.length}`);
+    if (index < 0 || index > this._childList.length) {
+      throw new Error(`The index ${index} is out of bounds ${this._childList.length}`);
     }
 
     if (child === this) {
@@ -179,7 +190,7 @@ export class Container extends RenderNode {
     }
 
     child._setParent(this);
-    this._children.splice(index, 0, child);
+    this._childList.splice(index, 0, child);
     this._invalidateChildOrder();
     this.invalidateCache();
     this._markStructureDirty();
@@ -198,8 +209,8 @@ export class Container extends RenderNode {
       const firstIndex = this.getChildIndex(firstChild);
       const secondIndex = this.getChildIndex(secondChild);
 
-      this._children[firstIndex] = secondChild;
-      this._children[secondIndex] = firstChild;
+      this._childList[firstIndex] = secondChild;
+      this._childList[secondIndex] = firstChild;
       this._invalidateChildOrder();
       this.invalidateCache();
       this._markStructureDirty();
@@ -212,8 +223,8 @@ export class Container extends RenderNode {
     if (this._childIndexView === null) {
       const map = new Map<RenderNode, number>();
 
-      for (let i = 0; i < this._children.length; i++) {
-        map.set(this._children[i]!, i);
+      for (let i = 0; i < this._childList.length; i++) {
+        map.set(this._childList[i]!, i);
       }
 
       this._childIndexView = map;
@@ -226,13 +237,13 @@ export class Container extends RenderNode {
   }
 
   public setChildIndex(child: RenderNode, index: number): this {
-    if (index < 0 || index >= this._children.length) {
-      throw new Error(`The index ${index} is out of bounds ${this._children.length}`);
+    if (index < 0 || index >= this._childList.length) {
+      throw new Error(`The index ${index} is out of bounds ${this._childList.length}`);
     }
 
-    removeArrayItems(this._children, this.getChildIndex(child), 1);
+    removeArrayItems(this._childList, this.getChildIndex(child), 1);
 
-    this._children.splice(index, 0, child);
+    this._childList.splice(index, 0, child);
     this._invalidateChildOrder();
     this.invalidateCache();
     this._markStructureDirty();
@@ -241,17 +252,17 @@ export class Container extends RenderNode {
   }
 
   public getChildAt(index: number): RenderNode {
-    if (index < 0 || index >= this._children.length) {
+    if (index < 0 || index >= this._childList.length) {
       throw new Error(`getChildAt: Index (${index}) does not exist.`);
     }
 
     // Bounds-checked above.
-    return this._children[index]!;
+    return this._childList[index]!;
   }
 
   /** Remove `child` from this container. No-op if not present. */
   public removeChild(child: RenderNode): this {
-    const index = this._children.indexOf(child);
+    const index = this._childList.indexOf(child);
 
     if (index !== -1) {
       this.removeChildAt(index);
@@ -261,9 +272,9 @@ export class Container extends RenderNode {
   }
 
   public removeChildAt(index: number): this {
-    const child = this._children[index];
+    const child = this._childList[index];
 
-    removeArrayItems(this._children, index, 1);
+    removeArrayItems(this._childList, index, 1);
     // Invalidate the children-view cache immediately after the array write,
     // before any of the notify calls below can run user code (e.g. an
     // onBlur handler) that reads `container.children` — otherwise that read
@@ -290,7 +301,7 @@ export class Container extends RenderNode {
    * Remove children in the half-open range `[begin, end)`. Defaults to
    * the entire child list. Throws if the range is invalid.
    */
-  public removeChildren(begin = 0, end: number = this._children.length): this {
+  public removeChildren(begin = 0, end: number = this._childList.length): this {
     const range = end - begin;
 
     if (range < 0 || range > end) {
@@ -303,7 +314,7 @@ export class Container extends RenderNode {
     }
 
     for (let i = begin; i < end; i++) {
-      const child = this._children[i];
+      const child = this._childList[i];
 
       if (child?.parent === this) {
         child._setParent(null);
@@ -314,7 +325,7 @@ export class Container extends RenderNode {
       }
     }
 
-    removeArrayItems(this._children, begin, range);
+    removeArrayItems(this._childList, begin, range);
     this._invalidateChildOrder();
     this.invalidateCache();
     this._markStructureDirty();
@@ -343,14 +354,14 @@ export class Container extends RenderNode {
 
     this._stage = stage;
 
-    for (const child of this._children) {
+    for (const child of this._childList) {
       child._setStage(stage);
     }
   }
 
   /** @internal */
   protected override _collectContent(builder: RenderPlanBuilder): void {
-    if (this._children.length === 0) {
+    if (this._childList.length === 0) {
       return;
     }
 
@@ -389,7 +400,7 @@ export class Container extends RenderNode {
     const slots = this._retainedPlan!.slots;
     let slotIndex = 0;
 
-    for (let index = 0; index < this._children.length; index++) {
+    for (let index = 0; index < this._childList.length; index++) {
       const slot = slots[slotIndex];
 
       if (slot?.childIndex === index) {
@@ -397,7 +408,7 @@ export class Container extends RenderNode {
         slotIndex++;
       } else {
         // In-bounds: index < length.
-        this._children[index]!._collect(builder, index);
+        this._childList[index]!._collect(builder, index);
       }
     }
   }
@@ -416,9 +427,9 @@ export class Container extends RenderNode {
     // starts already-begun.
     this._retainedPlan?._beginCapture();
 
-    for (let index = 0; index < this._children.length; index++) {
+    for (let index = 0; index < this._childList.length; index++) {
       // In-bounds: index < length.
-      const child = this._children[index]!;
+      const child = this._childList[index]!;
 
       // Only a plain, non-barrier drawable can ever produce a retained slot
       // (exactly one Draw entry for itself). Every other child skips the
@@ -463,7 +474,7 @@ export class Container extends RenderNode {
   }
 
   public override contains(x: number, y: number): boolean {
-    const children = this._children;
+    const children = this._childList;
 
     for (let i = 0; i < children.length; i++) {
       // In-bounds: i < length.
@@ -478,7 +489,7 @@ export class Container extends RenderNode {
   public override updateBounds(): this {
     this._bounds.reset().addRect(this.getLocalBounds(), this.getGlobalTransform());
 
-    for (const child of this._children) {
+    for (const child of this._childList) {
       if (child.visible) {
         this._bounds.addRect(child.getBounds());
       }
