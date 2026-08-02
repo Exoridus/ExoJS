@@ -376,6 +376,27 @@
         "audio"
       ],
       "level": "intermediate"
+    },
+    {
+      "slug": "effect-chains",
+      "path": "audio-fx/effect-chains.js",
+      "language": "typescript",
+      "title": "Effect Chains",
+      "description": "Cycle a looping track through ten named effect chains — telephone, underwater, arcade, cathedral — and bypass any of them to A/B against the dry signal.",
+      "backend": "core",
+      "tags": [
+        "audio",
+        "fx",
+        "chain",
+        "spectrum",
+        "analyser"
+      ],
+      "capabilities": [
+        "pointer",
+        "keyboard",
+        "audio"
+      ],
+      "level": "intermediate"
     }
   ],
   "beat-detection": [
