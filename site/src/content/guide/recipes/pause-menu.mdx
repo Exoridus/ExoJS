@@ -19,8 +19,18 @@ One scene, one UI layer. The pause overlay (a `Panel` + `Label`) lives on `scene
 </Callout>
 
 ```ts
+import {
+    Application, BlurFilter, Color, Keyboard, Label, Panel,
+    type RenderingContext, Scene, Sprite, type Time,
+} from '@codexo/exojs';
+
 class GameScene extends Scene {
-    init() {
+    private player!: Sprite;
+    private blur!: BlurFilter;
+    private pausePanel!: Panel;
+    private pauseLabel!: Label;
+
+    override init(): void {
         this.player = new Sprite(this.loader.get('image/hero.png'));
         this.addChild(this.player);
         // ... game setup ...
@@ -44,21 +54,22 @@ class GameScene extends Scene {
         this.inputs.onTrigger(Keyboard.Escape, () => this.togglePause(), { when: 'always' });
     }
 
-    update(delta) {
+    override update(_delta: Time): void {
         // Not called while paused — the director skips update() + systems.
         // ... normal game logic ...
     }
 
-    draw(context) {
+    override draw(context: RenderingContext): void {
         context.backend.clear(new Color(20, 24, 34));
         context.render(this.root);
     }
 
-    destroy() {
+    override destroy(): void {
         this.root.clearFilters();
+        super.destroy();
     }
 
-    togglePause() {
+    private togglePause(): void {
         const pausing = !this.paused;
 
         if (pausing) {
@@ -73,7 +84,7 @@ class GameScene extends Scene {
         if (pausing) {
             this.blur.radius = 0;
             this.root.filters = [this.blur];
-            this.tweens.create(this.blur).to({ radius: 6 }, 0.35).start();
+            this.app.tweens.create(this.blur).to({ radius: 6 }, 0.35).start();
         } else {
             this.root.clearFilters();
         }
@@ -113,14 +124,17 @@ The `destroy` hook clears the blur filter from `scene.root`. Without this, the f
 If the pause menu offers options like "Return to main menu" or "Quit", use `app.scenes.change(...)` to navigate away — it unloads the current scene and loads the next one, optionally with a fade transition:
 
 ```ts
-// Inside a resume button's onClick handler:
-resumeButton.onClick.add(() => {
-    this.togglePause(); // unpause first
-});
+import { Application, Button, FadeSceneTransition, Scene } from '@codexo/exojs';
 
-// Inside a "main menu" button's onClick handler:
+class MainMenuScene extends Scene {}
+
+const app = new Application({ scenes: { MainMenuScene } });
+const resumeButton = new Button({ label: 'Resume' });
+const mainMenuButton = new Button({ label: 'Main menu' });
+
+resumeButton.onClick.add(() => app.scenes.resume());
 mainMenuButton.onClick.add(() => {
-    this.app.scenes.change(MainMenuScene, { transition: new FadeSceneTransition() });
+    void app.scenes.change(MainMenuScene, { transition: new FadeSceneTransition() });
 });
 ```
 

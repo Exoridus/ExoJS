@@ -69,6 +69,9 @@ update(delta: Time) {
 `app.input` exposes two lower-level signals that fire on raw keydown/keyup events, regardless of the current scene:
 
 ```ts
+import { Application } from '@codexo/exojs';
+
+const app = new Application();
 app.input.onKeyDown.add(channel => {
     console.log('Key pressed:', channel);
 });
@@ -175,8 +178,11 @@ directly.
 Keyboard input is gated on canvas focus. When the user tabs away or clicks outside the canvas, all held keys are released automatically and no further key events fire until focus returns. The `app.input.onCanvasFocusChange` signal notifies you of transitions:
 
 ```ts
+import { Application } from '@codexo/exojs';
+
+const app = new Application();
 app.input.onCanvasFocusChange.add(focused => {
-    if (!focused) this.pause();
+    if (!focused) app.scenes.pause();
 });
 ```
 

@@ -118,6 +118,7 @@ class PlayScene extends Scene {
         this.py = Math.max(PLAYER_RADIUS, Math.min(CANVAS_HEIGHT - PLAYER_RADIUS, this.py));
         this.player.setPosition(this.px, this.py);
 
+        // #region guide:collision-loop
         let gameEnded = false;
         const survived: OrbData[] = [];
 
@@ -167,6 +168,7 @@ class PlayScene extends Scene {
         }
 
         this.timeText.text = `${this.elapsed.toFixed(1)} s`;
+        // #endregion guide:collision-loop
     }
 
     override draw(context: RenderingContext): void {

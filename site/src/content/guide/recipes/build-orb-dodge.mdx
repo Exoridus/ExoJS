@@ -160,25 +160,12 @@ Orbs are stored in an array of `{ gfx, vx, vy, danger }` objects. Danger orbs ar
 
 Each frame, move every orb and check its distance to the player. Distance collision is reliable for circles because it captures overlap without axis-aligned assumptions:
 
-```ts
-const dist = Math.hypot(ox - this.px, oy - this.py);
-if (dist < PLAYER_RADIUS + ORB_RADIUS) {
-    this.world.removeChild(orb.gfx);
-    orb.gfx.destroy();
-    if (orb.danger) {
-        // clean up remaining orbs, switch to game over
-        for (const o of survived) {
-            this.world.removeChild(o.gfx);
-            o.gfx.destroy();
-        }
-        gameEnded = true;
-        continue;
-    }
-    this.score++;
-    this.scoreText.text = `Score: ${this.score}`;
-    continue;
-}
-```
+<SourceSnippet
+  source="examples/showcase/orb-dodge.ts"
+  region="collision-loop"
+  language="ts"
+  title="examples/showcase/orb-dodge.ts — collision loop"
+/>
 
 Orbs that leave the canvas are also removed. After the loop, if `gameEnded` is true, call `change` to switch to the game-over screen. Use a flag instead of breaking early so all remaining orbs are cleaned up in the same loop pass.
 
@@ -217,16 +204,7 @@ When the player restarts, `change(PlayScene)` switches back. `SceneDirector` alw
 
 ## How scenes reference each other
 
-Both scenes are registered by constructor in `ApplicationOptions.scenes`, and navigate to each other by constructor — never by a pre-built instance:
-
-```ts
-const app = new Application({
-    scenes: { PlayScene, GameOverScene },
-    // ...
-});
-
-app.start(PlayScene);
-```
+Both scenes are registered by constructor in the [application setup](#application-setup), and navigate to each other by constructor — never by a pre-built instance.
 
 `PlayScene` calls `void this.app.scenes.change(GameOverScene, { data: { score: this.score, time: this.elapsed } })`. `GameOverScene` calls `void this.app.scenes.change(PlayScene)`. Each call constructs a brand-new instance of the target scene — there's no shared mutable state between activations, and no forward-reference ordering to worry about, since both classes are declared once and referenced by name.
 

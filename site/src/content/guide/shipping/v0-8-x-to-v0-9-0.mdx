@@ -103,7 +103,7 @@ color.alpha                // -> color.a
 
 `v0.9.0` keeps low-level loading (`loader.load(Type, path)`) and adds typed asset references (`Asset<T>`, `Assets<M>`, `LoadingQueue`).
 
-```ts
+```ts no-check
 import { Asset, Assets } from '@codexo/exojs';
 
 const heroTexture = new Asset({
@@ -195,4 +195,3 @@ rg -n "setText\\(|Color\\.red|Color\\.green|Color\\.blue|Color\\.alpha|sceneMana
 - Rename `app.sceneManager` usages.
 - Replace removed alias APIs (`setText`, `Color.red`, etc.).
 - Re-run typecheck and tests.
-

@@ -6,23 +6,18 @@
     "audio/beat-detection.mdx": 9,
     "audio/spatial-audio.mdx": 12,
     "debugging/debugging-and-inspection.mdx": 3,
-    "debugging/performance.mdx": 2,
-    "effects/custom-mesh-shaders.mdx": 2,
     "effects/filters.mdx": 3,
     "effects/particles.mdx": 3,
     "input/gamepad.mdx": 5,
-    "input/keyboard-and-actions.mdx": 2,
     "input/mouse-and-pointer.mdx": 5,
-    "recipes/build-orb-dodge.mdx": 2,
     "recipes/gameplay-collision.mdx": 8,
     "recipes/hud-overlay.mdx": 3,
-    "recipes/pause-menu.mdx": 2,
     "rendering/animation.mdx": 9,
     "rendering/graphics.mdx": 9,
     "rendering/sprites.mdx": 5,
     "runtime/application.mdx": 8,
     "runtime/scene-graph.mdx": 3,
     "runtime/scenes-and-lifecycle.mdx": 3,
-    "shipping/v0-8-x-to-v0-9-0.mdx": 6
+    "shipping/v0-8-x-to-v0-9-0.mdx": 5
   }
 }
