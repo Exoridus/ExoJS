@@ -1,6 +1,5 @@
 import { Application } from '#core/Application';
 import { Color } from '#core/Color';
-import { Scene } from '#core/Scene';
 import { Container } from '#rendering/Container';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { RetainedContainer } from '#rendering/RetainedContainer';
@@ -140,8 +139,10 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
 
       // Boot the full production init path (awaits the backend's async
       // initialize), then halt the engine's rAF loop so the harness drives
-      // frames explicitly via `renderFrame`.
-      await instance.start(new Scene());
+      // frames explicitly via `renderFrame`. No scene target: the harness owns
+      // its own `root` container and renders it directly through
+      // `app.rendering.render(root)`, so the director never needs a scene.
+      await instance.start();
       instance.stop();
 
       app = instance;
