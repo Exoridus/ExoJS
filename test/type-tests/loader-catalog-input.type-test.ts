@@ -12,8 +12,8 @@
 // `tsconfig.type-tests.json` (the example project's settings),
 // `tsconfig.type-tests-strict.json` (the engine's own profile —
 // `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noUnusedLocals`)
-// and `tsconfig.type-tests-loose.json` (`strictNullChecks: false`). Every
-// assertion below must hold identically in all three.
+// and `tsconfig.type-tests.json` again with `--strictNullChecks false` on the
+// command line. Every assertion below must hold identically in all three.
 
 import { Asset, Assets, type Loader, type Scene, type Texture } from '@codexo/exojs';
 

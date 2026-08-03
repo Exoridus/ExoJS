@@ -3,10 +3,15 @@
   // settings and module resolution (`strict: true` — the example catalog is a
   // copy-paste surface for strict-by-default scaffolds), but compiles only the
   // dedicated type-test sources, not the whole example catalog, so it stays
-  // fast. Wired into `verify:quick` via `typecheck:type-tests`, which also runs
-  // the two narrower lanes beside it: `tsconfig.type-tests-strict.json` (the
-  // engine's own stricter profile) and `tsconfig.type-tests-loose.json`
-  // (`strictNullChecks: false`).
+  // fast. Wired into `verify:quick` via `typecheck:type-tests`, which also
+  // compiles this same file set two more times: once via
+  // `tsconfig.type-tests-strict.json` (a separate file — a different
+  // `extends` base, the engine's own stricter profile, which isn't reachable
+  // by overriding flags on this one), and once via a plain CLI override on
+  // THIS config (`--strict false --strictNullChecks false`) rather than a
+  // dedicated `tsconfig.type-tests-loose.json` — `tsc -p` genuinely applies
+  // compiler-option flags over the resolved project (confirmed with
+  // `--showConfig`), so a strictness-only lane doesn't need its own file.
   "extends": "./tsconfig.examples.json",
   "include": ["test/type-tests/**/*.ts", "src/typings.d.ts"]
 }
