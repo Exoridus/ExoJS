@@ -5,19 +5,23 @@ export type RgbaTuple = readonly [number, number, number, number];
 /**
  * Default per-channel slack for sampled comparisons.
  *
- * Anchored on the slack the suite already asked for, not chosen by feel: of the
- * 71 per-call tolerances the browser specs declared before they shared this
- * module, 8 was the single most common (22 calls), with 40 calls at 8 or below
- * and 31 above — 12 (17), 16 (10) and 18 (4).
+ * Measured, not guessed. Before the specs shared this module they declared 71
+ * separate tolerances between 4 and 18 (8 being the most common). Re-running
+ * both lanes with the constant walked down to 0 shows what they actually need:
  *
- * That makes it the right starting point but not the finished answer. Calls
- * that sat above 8 are the ones this default can turn red, and each is a
- * finding to explain rather than a reason to raise the constant. Every
- * comparison records its actual per-channel delta ({@link recordedDeltas}), so
- * once enough specs run through here the value can be re-derived from what the
- * backends really produce.
+ * - WebGL2 — every one of the 262 assertions is byte-exact. Delta 0.
+ * - WebGPU — a single assertion drifts, by 1, on the green channel of a
+ *   decoded video frame (`webgpu-video`); YUV→RGB rounding. Everything else
+ *   is byte-exact.
+ *
+ * So the real requirement is 1. The value is held at 4 rather than 1 because
+ * that measurement comes from one machine, while CI renders through different
+ * adapters (SwiftShader for WebGPU) whose rounding may differ by a step or
+ * two. It stays far tighter than the 8–18 it replaces, and a comparison
+ * needing materially more is a finding about the backends, not a reason to
+ * raise this.
  */
-export const PIXEL_TOLERANCE = 8;
+export const PIXEL_TOLERANCE = 4;
 
 /** For comparisons that must match exactly, such as self-describing fixtures. */
 export const EXACT_TOLERANCE = 0;
