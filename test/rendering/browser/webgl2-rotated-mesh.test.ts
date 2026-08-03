@@ -21,12 +21,11 @@ import { View } from '#rendering/View';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import { wireCoreRenderers } from './_coreRenderers';
+import { expectPixelNear, type RgbaTuple } from './_pixels';
 
 // ---------------------------------------------------------------------------
 // Infrastructure helpers
 // ---------------------------------------------------------------------------
-
-type RgbaTuple = readonly [number, number, number, number];
 
 const canvasSize = 64;
 
@@ -119,14 +118,6 @@ const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
   gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
 
   return [pixel[0], pixel[1], pixel[2], pixel[3]];
-};
-
-const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 6): void => {
-  for (let index = 0; index < 4; index++) {
-    expect(Math.abs(actual[index] - expected[index]), `channel ${index}: got [${actual.join(', ')}] expected [${expected.join(', ')}]`).toBeLessThanOrEqual(
-      tolerance,
-    );
-  }
 };
 
 describe('WebGL2 rotated mesh: single-draw vs. instanced parity', () => {

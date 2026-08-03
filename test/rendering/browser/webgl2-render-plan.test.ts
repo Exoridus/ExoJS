@@ -12,8 +12,7 @@ import { BlendModes } from '#rendering/types';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import { wireCoreRenderers } from './_coreRenderers';
-
-type RgbaTuple = readonly [number, number, number, number];
+import { expectPixelNear, type RgbaTuple } from './_pixels';
 
 interface BackendRuntime {
   backend: WebGl2Backend;
@@ -73,12 +72,6 @@ const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
   gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
 
   return [pixel[0], pixel[1], pixel[2], pixel[3]];
-};
-
-const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 4): void => {
-  for (let index = 0; index < 4; index++) {
-    expect(Math.abs(actual[index] - expected[index])).toBeLessThanOrEqual(tolerance);
-  }
 };
 
 const createSolidTexture = (color: string, width = 16, height = 16): Texture => {

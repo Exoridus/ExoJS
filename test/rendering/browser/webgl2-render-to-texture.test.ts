@@ -16,6 +16,7 @@ import { View } from '#rendering/View';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import { wireCoreRenderers } from './_coreRenderers';
+import { expectPixelNear } from './_pixels';
 
 type RGBATuple = [number, number, number, number];
 
@@ -69,14 +70,6 @@ const readPixelsFromTarget = (backend: WebGl2Backend, target: RenderTarget, x: n
   gl.readPixels(Math.floor(x), target.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
   backend.setRenderTarget(previousTarget);
   return [pixel[0], pixel[1], pixel[2], pixel[3]];
-};
-
-const expectPixelNear = (actual: RGBATuple, expected: RGBATuple, tolerance = 8): void => {
-  for (let index = 0; index < 4; index++) {
-    if (Math.abs(actual[index] - expected[index]) > tolerance) {
-      throw new Error(`Pixel mismatch at channel ${index}: expected ${expected.toString()}, got ${actual.toString()} (tolerance ${tolerance})`);
-    }
-  }
 };
 
 const createSolidTexture = (color: string, width = 16, height = 16): Texture => {

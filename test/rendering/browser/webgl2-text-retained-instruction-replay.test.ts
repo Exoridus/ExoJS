@@ -33,6 +33,7 @@ import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 import { WebGl2TextRenderer } from '#rendering/webgl2/WebGl2TextRenderer';
 
 import { wireCoreRenderers } from './_coreRenderers';
+import { expectPixelNear, type RgbaTuple } from './_pixels';
 
 // ---------------------------------------------------------------------------
 // Shader wiring — REAL shipped text GLSL via `?raw` (the stub plugin only
@@ -43,8 +44,6 @@ import { wireCoreRenderers } from './_coreRenderers';
 // ---------------------------------------------------------------------------
 // Infrastructure helpers (shared shape with the sibling browser specs).
 // ---------------------------------------------------------------------------
-
-type RgbaTuple = readonly [number, number, number, number];
 
 const canvasSize = 96;
 
@@ -107,12 +106,6 @@ const readCanvas = (backend: WebGl2Backend): Uint8Array => {
   gl.readPixels(0, 0, canvasSize, canvasSize, gl.RGBA, gl.UNSIGNED_BYTE, buf);
 
   return buf;
-};
-
-const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 8): void => {
-  for (let i = 0; i < 4; i++) {
-    expect(Math.abs(actual[i]! - expected[i]!)).toBeLessThanOrEqual(tolerance);
-  }
 };
 
 interface FragmentCarrier {

@@ -36,6 +36,7 @@ import { TextureRegion } from '#rendering/texture/TextureRegion';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import { wireCoreRenderers } from './_coreRenderers';
+import { expectPixelNear, type RgbaTuple } from './_pixels';
 
 // RepeatingSprite's own GLSL is authored inline in
 // WebGl2RepeatingSpriteRenderer.ts rather than imported, so only the Sprite/
@@ -45,8 +46,6 @@ import { wireCoreRenderers } from './_coreRenderers';
 // ---------------------------------------------------------------------------
 // Infrastructure helpers
 // ---------------------------------------------------------------------------
-
-type RgbaTuple = readonly [number, number, number, number];
 
 const canvasSize = 64;
 
@@ -109,12 +108,6 @@ const readCanvas = (backend: WebGl2Backend): Uint8Array => {
   gl.readPixels(0, 0, canvasSize, canvasSize, gl.RGBA, gl.UNSIGNED_BYTE, buf);
 
   return buf;
-};
-
-const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 8): void => {
-  for (let i = 0; i < 4; i++) {
-    expect(Math.abs(actual[i] - expected[i])).toBeLessThanOrEqual(tolerance);
-  }
 };
 
 /** A 16x8 source: left half red (x 0..8), right half green (x 8..16). */

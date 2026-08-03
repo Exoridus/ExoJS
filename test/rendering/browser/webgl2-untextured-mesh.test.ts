@@ -20,6 +20,7 @@ import type { RenderingContext } from '#rendering/RenderingContext';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import { wireCoreRenderers } from './_coreRenderers';
+import { expectPixelNear } from './_pixels';
 
 type RgbaTuple = [number, number, number, number];
 
@@ -69,14 +70,6 @@ const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
   gl.readPixels(Math.floor(x), gl.drawingBufferHeight - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
 
   return [pixel[0]!, pixel[1]!, pixel[2]!, pixel[3]!];
-};
-
-const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 8): void => {
-  for (let index = 0; index < 4; index++) {
-    expect(Math.abs(actual[index]! - expected[index]!), `channel ${index}: got [${actual.join(', ')}] expected [${expected.join(', ')}]`).toBeLessThanOrEqual(
-      tolerance,
-    );
-  }
 };
 
 describe('WebGL2 untextured mesh rendering', () => {

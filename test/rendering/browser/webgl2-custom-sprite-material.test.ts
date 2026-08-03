@@ -10,6 +10,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import { wireCoreRenderers } from './_coreRenderers';
+import { expectPixelNear, type RgbaTuple } from './_pixels';
 
 // The browser project rewrites `.vert`/`.frag` imports to empty strings, so the
 // default engine shaders the backend compiles on connect must be mocked with
@@ -19,7 +20,6 @@ import { wireCoreRenderers } from './_coreRenderers';
 // location-pinned). The custom path compiles
 // the real `spriteVertexGlsl` constant — that module is not a `.vert` import and
 // is therefore NOT mocked.
-type RgbaTuple = readonly [number, number, number, number];
 
 const canvasSize = 64;
 const defaultWebGlAttributes: WebGLContextAttributes = {
@@ -73,12 +73,6 @@ const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
   gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
 
   return [pixel[0], pixel[1], pixel[2], pixel[3]];
-};
-
-const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 5): void => {
-  for (let index = 0; index < 4; index++) {
-    expect(Math.abs(actual[index] - expected[index])).toBeLessThanOrEqual(tolerance);
-  }
 };
 
 const createSolidTexture = (r: number, g: number, b: number, a = 255, size = 16): Texture => {

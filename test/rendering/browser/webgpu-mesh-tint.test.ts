@@ -31,9 +31,8 @@ import { ScaleModes, TextureFormat } from '#rendering/types';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { wireCoreRenderers } from './_coreRenderers';
+import { expectPixelNear, type RgbaTuple } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
-
-type RgbaTuple = readonly [number, number, number, number];
 
 const canvasSize = 64;
 
@@ -87,14 +86,6 @@ const readCanvas = (backend: WebGpuBackend): ((x: number, y: number) => RgbaTupl
 
     return [data[0], data[1], data[2], data[3]];
   };
-};
-
-const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 4): void => {
-  for (let index = 0; index < 4; index++) {
-    expect(Math.abs(actual[index] - expected[index]), `channel ${index}: got [${actual.join(', ')}] expected [${expected.join(', ')}]`).toBeLessThanOrEqual(
-      tolerance,
-    );
-  }
 };
 
 // On the software (swiftshader) adapter the WebGPU device can drop mid-test;

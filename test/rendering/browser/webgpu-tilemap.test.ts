@@ -18,10 +18,9 @@ import { Color } from '#core/Color';
 import type { RenderNode } from '#rendering/RenderNode';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
+import { expectPixelNear, type RgbaTuple } from './_pixels';
 import { createQuadrantTexture, createSolidTexture, makeTileset, singleTileMap, wireTilemapRenderers, wireViaTiledExtension } from './_tilemapScene';
 import { getBackendDevice } from './webgpu-test-helpers';
-
-type RgbaTuple = readonly [number, number, number, number];
 
 const canvasSize = 64;
 
@@ -61,12 +60,6 @@ const readCanvas = (backend: WebGpuBackend): ((x: number, y: number) => RgbaTupl
 
     return [data[0], data[1], data[2], data[3]];
   };
-};
-
-const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 18): void => {
-  for (let i = 0; i < 4; i++) {
-    expect(Math.abs(actual[i] - expected[i])).toBeLessThanOrEqual(tolerance);
-  }
 };
 
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');

@@ -20,9 +20,8 @@ import { Color } from '#core/Color';
 import type { RenderNode } from '#rendering/RenderNode';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { expectPixelNear, type RgbaTuple } from './_pixels';
 import { createSolidTexture, makeTileset, singleTileMap, wireTilemapRenderers } from './_tilemapScene';
-
-type RgbaTuple = readonly [number, number, number, number];
 
 const canvasSize = 64;
 
@@ -73,12 +72,6 @@ const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
   gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, buf);
 
   return [buf[0], buf[1], buf[2], buf[3]];
-};
-
-const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 12): void => {
-  for (let i = 0; i < 4; i++) {
-    expect(Math.abs(actual[i] - expected[i])).toBeLessThanOrEqual(tolerance);
-  }
 };
 
 const RED: RgbaTuple = [255, 0, 0, 255];

@@ -25,6 +25,7 @@ import { ScaleModes, TextureFormat } from '#rendering/types';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import { wireCoreRenderers } from './_coreRenderers';
+import { expectPixelNear, type RgbaTuple } from './_pixels';
 
 // The browser project rewrites `.vert`/`.frag` imports to empty strings, so the
 // default engine shaders the backend compiles on connect must be mocked with
@@ -33,7 +34,6 @@ import { wireCoreRenderers } from './_coreRenderers';
 // Mesh renders through. Every default renderer is connected on
 // backend.initialize() and extracts its declared attributes, so each default
 // shader needs valid sources with the exact attributes its renderer expects.
-type RgbaTuple = readonly [number, number, number, number];
 
 const canvasSize = 64;
 const defaultWebGlAttributes: WebGLContextAttributes = {
@@ -87,14 +87,6 @@ const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
   gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
 
   return [pixel[0], pixel[1], pixel[2], pixel[3]];
-};
-
-const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 8): void => {
-  for (let index = 0; index < 4; index++) {
-    expect(Math.abs(actual[index] - expected[index]), `channel ${index}: got [${actual.join(', ')}] expected [${expected.join(', ')}]`).toBeLessThanOrEqual(
-      tolerance,
-    );
-  }
 };
 
 // A full-canvas quad in pixel space with UVs spanning the whole texture.

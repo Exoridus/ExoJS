@@ -22,10 +22,9 @@ import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { RenderNode } from '#rendering/RenderNode';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
+import { expectPixelNear, type RgbaTuple } from './_pixels';
 import { createSolidTexture, makeTileset, wireTilemapRenderers } from './_tilemapScene';
 import { getBackendDevice } from './webgpu-test-helpers';
-
-type RgbaTuple = readonly [number, number, number, number];
 
 const canvasSize = 64;
 
@@ -66,12 +65,6 @@ const readCanvas = (backend: WebGpuBackend): ((x: number, y: number) => RgbaTupl
 
     return [data[0], data[1], data[2], data[3]];
   };
-};
-
-const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 18): void => {
-  for (let i = 0; i < 4; i++) {
-    expect(Math.abs(actual[i] - expected[i])).toBeLessThanOrEqual(tolerance);
-  }
 };
 
 // On the software (swiftshader) adapter the WebGPU device can be dropped

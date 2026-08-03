@@ -20,13 +20,13 @@ import { View } from '#rendering/View';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import { wireCoreRenderers } from './_coreRenderers';
+import { expectPixelNear, type RgbaTuple } from './_pixels';
 
 // The browser project rewrites `.vert`/`.frag` imports to empty strings, so the
 // default engine shaders the renderers compile on connect must be mocked with
 // valid sources. The mesh sources keep the REAL pinned attribute locations
 // (0/1/2/6) and the shared TransformBuffer fetch so the synthetic transform path
 // renders correctly.
-type RgbaTuple = readonly [number, number, number, number];
 
 const canvasSize = 64;
 const defaultWebGlAttributes: WebGLContextAttributes = {
@@ -114,14 +114,6 @@ const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
   gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
 
   return [pixel[0], pixel[1], pixel[2], pixel[3]];
-};
-
-const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 5): void => {
-  for (let index = 0; index < 4; index++) {
-    expect(Math.abs(actual[index] - expected[index]), `channel ${index}: got [${actual.join(', ')}] expected [${expected.join(', ')}]`).toBeLessThanOrEqual(
-      tolerance,
-    );
-  }
 };
 
 describe('WebGL2 RenderingContext.drawGeometry', () => {

@@ -38,6 +38,7 @@ import { TextureRegion } from '#rendering/texture/TextureRegion';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import { wireCoreRenderers } from './_coreRenderers';
+import { type RgbaTuple } from './_pixels';
 
 // ---------------------------------------------------------------------------
 // Shader wiring — substitute the REAL sprite.vert/frag (the snap logic under
@@ -48,8 +49,6 @@ import { wireCoreRenderers } from './_coreRenderers';
 // ---------------------------------------------------------------------------
 // Infrastructure
 // ---------------------------------------------------------------------------
-
-type RgbaTuple = readonly [number, number, number, number];
 
 const canvasSize = 64;
 

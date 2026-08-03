@@ -27,12 +27,11 @@ import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import { wireCoreRenderers } from './_coreRenderers';
+import { expectPixelNear, type RgbaTuple } from './_pixels';
 
 // ---------------------------------------------------------------------------
 // Infrastructure helpers
 // ---------------------------------------------------------------------------
-
-type RgbaTuple = readonly [number, number, number, number];
 
 const canvasSize = 64;
 
@@ -95,12 +94,6 @@ const readCanvas = (backend: WebGl2Backend): Uint8Array => {
   gl.readPixels(0, 0, canvasSize, canvasSize, gl.RGBA, gl.UNSIGNED_BYTE, buf);
 
   return buf;
-};
-
-const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 8): void => {
-  for (let i = 0; i < 4; i++) {
-    expect(Math.abs(actual[i] - expected[i])).toBeLessThanOrEqual(tolerance);
-  }
 };
 
 const createSolidTexture = (color: string, width = 16, height = 16): Texture => {

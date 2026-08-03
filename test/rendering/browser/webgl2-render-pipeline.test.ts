@@ -11,6 +11,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import { wireCoreRenderers } from './_coreRenderers';
+import { expectPixelNear } from './_pixels';
 
 // Simplified shaders mocked in place of the real .vert/.frag string imports
 // (the test environment has no loader for them). Hoisted so the sync vi.mock
@@ -73,14 +74,6 @@ const readPixelFromTarget = (backend: WebGl2Backend, target: RenderTarget, x: nu
   backend.setRenderTarget(previousTarget);
 
   return [pixel[0], pixel[1], pixel[2], pixel[3]];
-};
-
-const expectPixelNear = (actual: RGBATuple, expected: RGBATuple, tolerance = 8): void => {
-  for (let index = 0; index < 4; index++) {
-    if (Math.abs(actual[index] - expected[index]) > tolerance) {
-      throw new Error(`Pixel mismatch at channel ${index}: expected ${expected.toString()}, got ${actual.toString()} (tolerance ${tolerance})`);
-    }
-  }
 };
 
 const createSolidSprite = (color: string): { sprite: Sprite; texture: Texture } => {
