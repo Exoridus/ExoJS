@@ -375,7 +375,10 @@ export class FocusController implements FocusHooks {
     }
 
     const currentIndex = this._focused === null ? -1 : focusables.indexOf(this._focused);
-    let nextIndex = currentIndex === -1 ? (direction === 1 ? 0 : count - 1) : currentIndex;
+    // With nothing focused yet, entering forwards starts at the first candidate
+    // and entering backwards at the last.
+    const entryIndex = direction === 1 ? 0 : count - 1;
+    let nextIndex = currentIndex === -1 ? entryIndex : currentIndex;
 
     for (let attempt = 0; attempt < count; attempt++) {
       if (currentIndex !== -1 || attempt > 0) {

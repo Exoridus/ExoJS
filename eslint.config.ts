@@ -1291,7 +1291,9 @@ export default defineConfig([
     rules: {
       'no-console': 'warn',
       '@typescript-eslint/no-require-imports': 'warn',
-      '@typescript-eslint/no-unused-vars': 'warn',
+      // Base no-unused-vars handled by `unused-imports/no-unused-vars`, which
+      // honours the `_` prefix this repo uses for deliberately unused bindings.
+      '@typescript-eslint/no-unused-vars': 'off',
       'unicorn/prefer-node-protocol': 'warn',
       'security/detect-non-literal-fs-filename': 'off',
     },
@@ -1376,7 +1378,9 @@ export default defineConfig([
       'simple-import-sort/exports': 'error',
       'unused-imports/no-unused-imports': 'error',
       '@typescript-eslint/no-empty-function': 'warn',
-      '@typescript-eslint/no-unused-vars': 'warn',
+      // Base no-unused-vars handled by `unused-imports/no-unused-vars` below,
+      // which honours the `_` prefix; leaving both on double-reports.
+      '@typescript-eslint/no-unused-vars': 'off',
       'unused-imports/no-unused-vars': [
         'error',
         {

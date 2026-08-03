@@ -114,6 +114,8 @@ describe('WebGPU split-screen viewport', () => {
         validationError = await device.popErrorScope();
       } catch (error) {
         if (isDeviceLoss(error)) {
+          // Runtime skip for a lost device, not a disabled test.
+          // eslint-disable-next-line vitest/no-disabled-tests
           ctx.skip('WebGPU device lost mid-test — unstable software adapter');
 
           return;
@@ -173,6 +175,8 @@ describe('WebGPU split-screen viewport', () => {
         validationError = await device.popErrorScope();
       } catch (error) {
         if (isDeviceLoss(error)) {
+          // Runtime skip for a lost device, not a disabled test.
+          // eslint-disable-next-line vitest/no-disabled-tests
           ctx.skip('WebGPU device lost mid-test — unstable software adapter');
 
           return;
@@ -228,6 +232,8 @@ describe('WebGPU split-screen viewport', () => {
         validationError = await device.popErrorScope();
       } catch (error) {
         if (isDeviceLoss(error)) {
+          // Runtime skip for a lost device, not a disabled test.
+          // eslint-disable-next-line vitest/no-disabled-tests
           ctx.skip('WebGPU device lost mid-test — unstable software adapter');
 
           return;
@@ -285,6 +291,8 @@ describe('WebGPU split-screen viewport', () => {
         validationError = await device.popErrorScope();
       } catch (error) {
         if (isDeviceLoss(error)) {
+          // Runtime skip for a lost device, not a disabled test.
+          // eslint-disable-next-line vitest/no-disabled-tests
           ctx.skip('WebGPU device lost mid-test — unstable software adapter');
 
           return;

@@ -1,4 +1,4 @@
-import type { View } from '@codexo/exojs';
+import { logger, type View } from '@codexo/exojs';
 
 import type { ChunkPayload, ChunkSource } from './ChunkSource';
 import type { ChunkRange, TileLayer } from './TileLayer';
@@ -219,9 +219,11 @@ export class ChunkStreamer {
       result = this._source.getChunk(cx, cy);
     } catch (error) {
       this._inFlight.delete(key);
-      if (__DEV__) {
-        console.warn(`[ChunkStreamer] source.getChunk(${cx}, ${cy}) threw synchronously:`, error);
-      }
+      logger.warn(`ChunkStreamer: source.getChunk(${cx}, ${cy}) threw synchronously.`, {
+        source: 'ChunkStreamer',
+        error: error instanceof Error ? error : new Error(String(error)),
+      });
+
       return;
     }
 
@@ -230,9 +232,10 @@ export class ChunkStreamer {
         payload => { this._onResolved(key, cx, cy, token, payload); },
         (error: unknown) => {
           this._inFlight.delete(key);
-          if (__DEV__) {
-            console.warn(`[ChunkStreamer] source.getChunk(${cx}, ${cy}) rejected:`, error);
-          }
+          logger.warn(`ChunkStreamer: source.getChunk(${cx}, ${cy}) rejected.`, {
+            source: 'ChunkStreamer',
+            error: error instanceof Error ? error : new Error(String(error)),
+          });
         },
       );
       return;
