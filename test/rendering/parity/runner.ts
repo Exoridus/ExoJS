@@ -8,8 +8,8 @@
  * verification — the thing a suite of green tests structurally cannot.
  */
 
-import { commands } from '@vitest/browser/context';
 import { afterAll, describe, expect, test } from 'vitest';
+import { commands } from 'vitest/browser';
 
 import type { EvidenceRow } from './evidenceSink';
 import { cappedEvidence, type Property, type Scene } from './types';
