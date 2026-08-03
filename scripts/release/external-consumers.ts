@@ -68,8 +68,10 @@ import { LdtkMap, ldtkExtension } from '@codexo/exojs-ldtk';
 export class DemoScene extends Scene {}
 
 export function verifyCoreProtocols(container: Container): void {
+    // ActionMap exposes its actions as named properties, not as an iterable —
+    // unlike Container below, which does implement Symbol.iterator.
     const actions = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
-    for (const action of actions) void action;
+    void actions.jump.active;
     for (const child of container) void child;
 
     // The binding is constructed (and therefore owned) right here, not
