@@ -4,6 +4,8 @@ import { createJsdomTestProject, shaderStubPlugin, srcConditions, workletTransfo
 import { playwright } from '@vitest/browser-playwright';
 import { defineConfig } from 'vitest/config';
 
+import { resetParityEvidence, writeParityEvidence } from './test/rendering/parity/evidenceSink';
+
 // Note: Vite alias matching uses longest-first order. Subpath aliases must come
 // before the root alias so '@codexo/exojs/renderer-sdk' resolves before '@codexo/exojs'.
 // These map the PUBLIC cross-package specifiers to source for in-repo tests.
@@ -89,6 +91,10 @@ const browserSetupFiles = ['./test/rendering/browser/_setup-dev-global.ts'];
 // which takes precedence over these.
 const renderingBrowserSetupFiles = [...browserSetupFiles, './test/rendering/browser/_glslMocks.ts'];
 
+// The parity runner executes in the browser and cannot write files, so it hands
+// its evidence rows to these node-side commands.
+const parityCommands = { writeParityEvidence, resetParityEvidence };
+
 export default defineConfig({
   test: {
     coverage: {
@@ -137,7 +143,9 @@ export default defineConfig({
         name: 'exojs',
         alias: aliasConfig,
         include: ['test/**/*.test.ts'],
-        exclude: ['test/rendering/browser/**/*.test.ts', 'test/perf/rendering/**/*.test.ts'],
+        // The parity matrix runs in `browser-webgpu`: its runner imports the
+        // browser context module, which throws on import under jsdom.
+        exclude: ['test/rendering/browser/**/*.test.ts', 'test/rendering/parity/**/*.test.ts', 'test/perf/rendering/**/*.test.ts'],
       }),
       createJsdomTestProject({
         name: 'exojs-particles',
@@ -280,9 +288,10 @@ export default defineConfig({
           name: 'browser-webgpu',
           globals: true,
           setupFiles: renderingBrowserSetupFiles,
-          include: ['test/rendering/browser/webgpu-*.test.ts'],
+          include: ['test/rendering/browser/webgpu-*.test.ts', 'test/rendering/parity/**/*.test.ts'],
           browser: {
             enabled: true,
+            commands: parityCommands,
             headless: !webgpuCiHeaded,
             provider: playwright({
               launchOptions: {
