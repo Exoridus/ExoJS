@@ -3,7 +3,7 @@
   "description": "Options accepted by FontFactory.create.",
   "symbol": "FontFactoryOptions",
   "kind": "interface",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 3,
@@ -111,11 +111,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/factories/FontFactory.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/FontFactory.ts"
+        "label": "src/assets/factories/FontFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/FontFactory.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/factories/FontFactory.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/FontFactory.ts"
+  "sourcePath": "src/assets/factories/FontFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/FontFactory.ts"
 }

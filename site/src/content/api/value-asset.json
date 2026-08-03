@@ -3,7 +3,7 @@
   "description": "A value/ref-type asset descriptor (asset-system v2 delta §4). Structurally an Asset, but branded so a catalog classifies its leaf as a deferred `AssetRef<T>` — even when `T` is an object type (e.g. typed JSON), where the plain `T extends object` heuristic would otherwise misread it as a resource. The brand is a phantom (never present at runtime).",
   "symbol": "ValueAsset",
   "kind": "type",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 0,
@@ -89,11 +89,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/Asset.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Asset.ts"
+        "label": "src/assets/Asset.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Asset.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/Asset.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Asset.ts"
+  "sourcePath": "src/assets/Asset.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Asset.ts"
 }

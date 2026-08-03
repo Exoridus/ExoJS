@@ -3,7 +3,7 @@
   "description": "Construction options for TextureFactory.create.",
   "symbol": "TextureFactoryOptions",
   "kind": "interface",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 2,
@@ -102,11 +102,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/factories/TextureFactory.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/TextureFactory.ts"
+        "label": "src/assets/factories/TextureFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/TextureFactory.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/factories/TextureFactory.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/TextureFactory.ts"
+  "sourcePath": "src/assets/factories/TextureFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/TextureFactory.ts"
 }

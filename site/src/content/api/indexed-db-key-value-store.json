@@ -3,7 +3,7 @@
   "description": "KeyValueStore over IndexedDB (via IndexedDbStore), using the **structured-clone** algorithm. Unlike WebStorageStore, values are stored *directly* — no `JSON.stringify`. So `Blob`s, `ArrayBuffer`s, typed arrays and nested objects round-trip natively, and there is no string-size ceiling beyond the (large) IndexedDB quota. Use this for binary or large saves; use `WebStorageStore` for small synchronous JSON.",
   "symbol": "IndexedDbKeyValueStore",
   "kind": "class",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 7,
@@ -440,11 +440,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/IndexedDbKeyValueStore.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/IndexedDbKeyValueStore.ts"
+        "label": "src/assets/IndexedDbKeyValueStore.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/IndexedDbKeyValueStore.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/IndexedDbKeyValueStore.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/IndexedDbKeyValueStore.ts"
+  "sourcePath": "src/assets/IndexedDbKeyValueStore.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/IndexedDbKeyValueStore.ts"
 }

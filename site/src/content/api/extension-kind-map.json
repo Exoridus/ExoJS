@@ -3,7 +3,7 @@
   "description": "Type-level twin of the runtime `extensionKindRegistry`: file suffix → asset type, for bare-string path inference in `Assets.from()`/`get()`/`load()` (asset-system v2 §5). Restricted to LEAF-CAPABLE types, exactly mirroring the runtime `registerExtensionKind` calls made by `defineAsset`. This is the single declaration-merging surface for bare-path suffix inference: ```ts declare module '@codexo/exojs' { interface ExtensionKindMap { 'atlas.json': 'spriteAtlas'; } } ```",
   "symbol": "ExtensionKindMap",
   "kind": "interface",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 19,
@@ -439,11 +439,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/AssetDefinitions.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/AssetDefinitions.ts"
+        "label": "src/assets/AssetDefinitions.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetDefinitions.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/AssetDefinitions.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/AssetDefinitions.ts"
+  "sourcePath": "src/assets/AssetDefinitions.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetDefinitions.ts"
 }

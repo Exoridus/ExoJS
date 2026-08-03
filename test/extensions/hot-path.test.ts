@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { beforeEach } from 'vitest';
 
+import { Loader } from '#assets/Loader';
 import type { RendererBinding } from '#extensions/Extension';
 import { ExtensionRegistry } from '#extensions/ExtensionRegistry';
 import { materializeRendererBindings } from '#extensions/materialize';
@@ -10,7 +11,6 @@ import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { DrawableConstructor, Renderer } from '#rendering/Renderer';
 import { RendererRegistry } from '#rendering/RendererRegistry';
-import { Loader } from '#resources/Loader';
 
 class TestDrawable extends Drawable {}
 

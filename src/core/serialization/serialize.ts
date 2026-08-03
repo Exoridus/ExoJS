@@ -1,9 +1,9 @@
+import type { AssetConstructor } from '#assets/FactoryRegistry';
+import type { Loader } from '#assets/Loader';
 import { logger } from '#core/logging';
 import type { SceneNode } from '#core/SceneNode';
 import type { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
-import type { AssetConstructor } from '#resources/FactoryRegistry';
-import type { Loader } from '#resources/Loader';
 
 import { applyCommonFields, writeCommonFields } from './commonFields';
 import { registerCoreSerializers } from './coreSerializers';

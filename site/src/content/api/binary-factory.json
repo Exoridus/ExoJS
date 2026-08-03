@@ -3,7 +3,7 @@
   "description": "AssetFactory implementation that loads arbitrary binary files and exposes them as raw ArrayBuffer instances. Use this for any binary format that does not have a dedicated factory (e.g. custom data files, packed archives, or proprietary formats).",
   "symbol": "BinaryFactory",
   "kind": "class",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 7,
@@ -350,11 +350,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/factories/BinaryFactory.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/BinaryFactory.ts"
+        "label": "src/assets/factories/BinaryFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/BinaryFactory.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/factories/BinaryFactory.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/BinaryFactory.ts"
+  "sourcePath": "src/assets/factories/BinaryFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/BinaryFactory.ts"
 }

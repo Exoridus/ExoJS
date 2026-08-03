@@ -19,13 +19,13 @@
  * container is unpacked at runtime via `loader.loadContainer(url)`.
  *
  * Shares the format with the runtime reader through `encodeContainer`
- * (src/resources/AssetContainer.ts), so builder and reader never drift.
+ * (src/assets/AssetContainer.ts), so builder and reader never drift.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import process from 'node:process';
 
-import { type ContainerInput, encodeContainer } from '../src/resources/AssetContainer';
+import { type ContainerInput, encodeContainer } from '../src/assets/AssetContainer';
 
 interface ManifestAsset {
   alias: string;

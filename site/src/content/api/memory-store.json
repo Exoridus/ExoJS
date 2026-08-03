@@ -3,7 +3,7 @@
   "description": "In-memory KeyValueStore backed by a `Map`. Holds values **by reference** — no cloning, no serialization — so it accepts any value but does not persist across sessions and does not isolate the caller from later mutation of a stored object. Ideal for tests and ephemeral data, and as a drop-in store when persistence is not needed.",
   "symbol": "MemoryStore",
   "kind": "class",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 6,
@@ -384,11 +384,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/MemoryStore.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/MemoryStore.ts"
+        "label": "src/assets/MemoryStore.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/MemoryStore.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/MemoryStore.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/MemoryStore.ts"
+  "sourcePath": "src/assets/MemoryStore.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/MemoryStore.ts"
 }

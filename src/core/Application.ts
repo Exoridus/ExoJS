@@ -1,4 +1,6 @@
 import { TweenManager } from '#animation/TweenManager';
+import { coreAssetBindings } from '#assets/coreAssetBindings';
+import { Loader, type LoaderOptions } from '#assets/Loader';
 import { AudioManager } from '#audio/AudioManager';
 import type { Extension } from '#extensions/Extension';
 import { getGlobalSnapshotInternal } from '#extensions/ExtensionRegistry';
@@ -21,8 +23,6 @@ import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
-import { coreAssetBindings } from '#resources/coreAssetBindings';
-import { Loader, type LoaderOptions } from '#resources/Loader';
 
 import { Capabilities } from './capabilities';
 import { Clock } from './Clock';

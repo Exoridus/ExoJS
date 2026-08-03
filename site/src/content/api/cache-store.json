@@ -3,7 +3,7 @@
   "description": "Persistent storage backend used by the Loader to cache processed asset data between sessions. Each method accepts a `storageName` namespace (sourced from AssetFactory.storageName) and a per-asset `key`, allowing a single store to hold data for multiple asset types. IndexedDbStore is the built-in implementation backed by the browser's IndexedDB API.",
   "symbol": "CacheStore",
   "kind": "interface",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 5,
@@ -390,11 +390,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/CacheStore.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/CacheStore.ts"
+        "label": "src/assets/CacheStore.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CacheStore.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/CacheStore.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/CacheStore.ts"
+  "sourcePath": "src/assets/CacheStore.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CacheStore.ts"
 }

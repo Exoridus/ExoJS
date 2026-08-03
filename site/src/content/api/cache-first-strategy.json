@@ -3,7 +3,7 @@
   "description": "CacheStrategy that checks every provided CacheStore before falling back to the network. On a cache hit the stored value is fed directly to `request.factory.create`; if that throws (stale or corrupt entry) the entry is deleted and the next store is tried. Only once all stores miss does the strategy fetch from the network and write the processed source back to every store. Quota or serialisation errors during write are swallowed silently so that a full storage can never prevent an asset from loading. Returns the fully constructed resource — callers do not need to call `request.factory.create` again.",
   "symbol": "CacheFirstStrategy",
   "kind": "class",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 2,
@@ -172,11 +172,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/CacheFirstStrategy.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/CacheFirstStrategy.ts"
+        "label": "src/assets/CacheFirstStrategy.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CacheFirstStrategy.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/CacheFirstStrategy.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/CacheFirstStrategy.ts"
+  "sourcePath": "src/assets/CacheFirstStrategy.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CacheFirstStrategy.ts"
 }

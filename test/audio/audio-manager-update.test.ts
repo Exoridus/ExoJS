@@ -96,7 +96,7 @@ describe('AudioManager.update()', () => {
 
     vi.doMock('#rendering/webgl2/WebGl2Backend', () => ({ WebGl2Backend: vi.fn() }));
     vi.doMock('#rendering/webgpu/WebGpuBackend', () => ({ WebGpuBackend: vi.fn() }));
-    vi.doMock('#resources/Loader', () => ({
+    vi.doMock('#assets/Loader', () => ({
       Loader: vi.fn(function () {
         return { destroy: vi.fn() };
       }),

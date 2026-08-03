@@ -288,7 +288,7 @@ signals in `unload()` so a listener from a torn-down scene never fires
 
 For leaf-capable types, the path (or an `Asset.type(...)` descriptor) identifies the loaded payload — there's no separate alias to register or forget. Every handle and `AssetRef` exposes the same small status contract:
 
-<SourceSnippet source="src/resources/AssetStatus.ts" region="asset-status" title="The status contract" />
+<SourceSnippet source="src/assets/AssetStatus.ts" region="asset-status" title="The status contract" />
 
 `LoadStateValue` is `'idle' | 'loading' | 'ready' | 'failed'` — `'idle'` is the state of a catalog leaf no loader has adopted yet.
 

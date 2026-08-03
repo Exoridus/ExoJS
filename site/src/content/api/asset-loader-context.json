@@ -3,7 +3,7 @@
   "description": "Context object passed to custom asset-type load handlers bound via `bindAsset` / `defineAsset`. The `fetch*` helpers route through the loader's configured cache strategy and IDB stores, giving custom handlers the same caching behaviour as built-in asset types.",
   "symbol": "AssetLoaderContext",
   "kind": "interface",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 5,
@@ -269,11 +269,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/Loader.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts"
+        "label": "src/assets/Loader.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Loader.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/Loader.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts"
+  "sourcePath": "src/assets/Loader.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Loader.ts"
 }

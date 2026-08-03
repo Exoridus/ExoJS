@@ -3,7 +3,7 @@
   "description": "Async key/value store for application data — game saves, settings, profiles, cached payloads. A single, uniform surface so calling code does not care whether the backing store is synchronous or asynchronous. The backend is the axis you choose by capability, not a flag: - WebStorageStore — `localStorage`/`sessionStorage`: small, synchronous, JSON-only (no Blobs/ArrayBuffers). The moral successor of the old `JsonStore`. - IndexedDbKeyValueStore — IndexedDB: large, structured-clone, so Blobs, `ArrayBuffer`s and nested objects round-trip without JSON. - MemoryStore — in-memory: ephemeral, holds references directly. For tests and throwaway data. Pair with Scene.serialize / Scene.deserialize for a save system: `store.set(slot, scene.serialize())` to save, `scene.deserialize(await store.get(slot))` to restore. Slot naming, profiles and autosave policy are the game's concern, not the engine's.",
   "symbol": "KeyValueStore",
   "kind": "interface",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 5,
@@ -348,11 +348,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/KeyValueStore.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/KeyValueStore.ts"
+        "label": "src/assets/KeyValueStore.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/KeyValueStore.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/KeyValueStore.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/KeyValueStore.ts"
+  "sourcePath": "src/assets/KeyValueStore.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/KeyValueStore.ts"
 }

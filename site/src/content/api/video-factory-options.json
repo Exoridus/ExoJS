@@ -3,7 +3,7 @@
   "description": "Construction options for VideoFactory.create.",
   "symbol": "VideoFactoryOptions",
   "kind": "interface",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 5,
@@ -189,11 +189,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/factories/VideoFactory.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/VideoFactory.ts"
+        "label": "src/assets/factories/VideoFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/VideoFactory.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/factories/VideoFactory.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/VideoFactory.ts"
+  "sourcePath": "src/assets/factories/VideoFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/VideoFactory.ts"
 }

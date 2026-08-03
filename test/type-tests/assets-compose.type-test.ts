@@ -11,7 +11,7 @@ import type { CatalogResourceLeaf, CatalogValueLeaf } from './helpers/catalog-le
 type Equal<A, B> = (<G>() => G extends A ? 1 : 2) extends <G>() => G extends B ? 1 : 2 ? true : false;
 type Expect<T extends true> = T;
 
-// Mirrors the (deliberately non-exported) diagnostic type in src/resources/Assets.ts.
+// Mirrors the (deliberately non-exported) diagnostic type in src/assets/Assets.ts.
 interface Conflict<K extends string> {
   readonly _assetsComposeError: `Assets.compose(): duplicate catalog key "${K}" — two catalogs define it, use Assets.extend() to override it deliberately.`;
   readonly _conflictingKeys: K;

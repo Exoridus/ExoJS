@@ -3,7 +3,7 @@
   "description": "Any abstract or concrete constructor whose instances are the asset type produced by a factory (e.g. `typeof Texture`, `typeof Sound`).",
   "symbol": "AssetConstructor",
   "kind": "type",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 0,
@@ -77,11 +77,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/FactoryRegistry.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/FactoryRegistry.ts"
+        "label": "src/assets/FactoryRegistry.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/FactoryRegistry.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/FactoryRegistry.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/FactoryRegistry.ts"
+  "sourcePath": "src/assets/FactoryRegistry.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/FactoryRegistry.ts"
 }

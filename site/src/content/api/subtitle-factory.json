@@ -3,7 +3,7 @@
   "description": "AssetFactory implementation that parses WebVTT (`.vtt`) and SubRip (`.srt`) subtitle files and produces an array of VTTCue instances. Format is detected from the file extension of the response URL; unknown extensions default to VTT parsing. VTT cue settings (`align`, `line`, `position`, `size`, `vertical`) are applied; SRT cues retain default positional properties.",
   "symbol": "SubtitleFactory",
   "kind": "class",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 7,
@@ -354,11 +354,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/factories/SubtitleFactory.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/SubtitleFactory.ts"
+        "label": "src/assets/factories/SubtitleFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/SubtitleFactory.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/factories/SubtitleFactory.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/SubtitleFactory.ts"
+  "sourcePath": "src/assets/factories/SubtitleFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/SubtitleFactory.ts"
 }

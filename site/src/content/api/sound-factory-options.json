@@ -3,7 +3,7 @@
   "description": "Construction options for SoundFactory.create.",
   "symbol": "SoundFactoryOptions",
   "kind": "interface",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 3,
@@ -159,11 +159,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/factories/SoundFactory.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/SoundFactory.ts"
+        "label": "src/assets/factories/SoundFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/SoundFactory.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/factories/SoundFactory.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/SoundFactory.ts"
+  "sourcePath": "src/assets/factories/SoundFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/SoundFactory.ts"
 }

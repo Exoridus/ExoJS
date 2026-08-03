@@ -16,6 +16,7 @@ const toPosix = (value: string): string => value.replaceAll('\\', '/');
 type Subsystem =
     | 'animation'
     | 'aseprite'
+    | 'assets'
     | 'audio'
     | 'core'
     | 'debug'
@@ -26,7 +27,6 @@ type Subsystem =
     | 'particles'
     | 'physics'
     | 'rendering'
-    | 'resources'
     | 'tiled'
     | 'tilemap'
     | 'ui';
@@ -36,6 +36,7 @@ type ApiTier = 'stable' | 'advanced';
 const SUBSYSTEMS: ReadonlyArray<Subsystem> = [
     'animation',
     'aseprite',
+    'assets',
     'audio',
     'core',
     'debug',
@@ -46,7 +47,6 @@ const SUBSYSTEMS: ReadonlyArray<Subsystem> = [
     'particles',
     'physics',
     'rendering',
-    'resources',
     'tiled',
     'tilemap',
     'ui',

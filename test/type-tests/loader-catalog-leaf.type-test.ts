@@ -33,7 +33,7 @@ import {
   type Video,
 } from '@codexo/exojs';
 
-import { LoadPriority } from '#resources/Loader';
+import { LoadPriority } from '#assets/Loader';
 
 import type { CatalogResourceLeaf, CatalogValueLeaf } from './helpers/catalog-leaf';
 

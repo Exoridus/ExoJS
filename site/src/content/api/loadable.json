@@ -3,7 +3,7 @@
   "description": "Any abstract or concrete constructor that can be used as an asset type token with Loader.load and related methods.",
   "symbol": "Loadable",
   "kind": "type",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 0,
@@ -77,11 +77,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/Loader.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts"
+        "label": "src/assets/Loader.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Loader.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/Loader.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts"
+  "sourcePath": "src/assets/Loader.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Loader.ts"
 }

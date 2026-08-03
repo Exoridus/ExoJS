@@ -3,7 +3,7 @@
   "description": "How urgently a Loader.load call should fetch what it adopts. An enum rather than a boolean because priority is the axis a residency model grows along: further levels (and, later, eviction or streaming policy) can be added here without changing the shape of LoadOptions.",
   "symbol": "LoadPriority",
   "kind": "enum",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 2,
@@ -67,11 +67,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/Loader.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts"
+        "label": "src/assets/Loader.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Loader.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/Loader.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts"
+  "sourcePath": "src/assets/Loader.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Loader.ts"
 }

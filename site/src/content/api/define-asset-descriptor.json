@@ -3,7 +3,7 @@
   "description": "One descriptor for a built-in asset type. Feeds three consumers from a single source: the per-Loader AssetBinding returned for `materializeAssetBindings`, the global type→placeholder strategy, and the global suffix→type inference.",
   "symbol": "DefineAssetDescriptor",
   "kind": "interface",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "advanced",
   "memberCount": 7,
@@ -287,11 +287,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/defineAsset.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/defineAsset.ts"
+        "label": "src/assets/defineAsset.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/defineAsset.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/defineAsset.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/defineAsset.ts"
+  "sourcePath": "src/assets/defineAsset.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/defineAsset.ts"
 }

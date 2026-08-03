@@ -3,7 +3,7 @@
   "description": "AssetFactory implementation that loads PNG, JPG, WebP, AVIF, and other browser-supported raster image formats and produces a GPU-ready Texture instance. MIME type detection is performed automatically from the buffer's magic bytes; pass an explicit `mimeType` to override. Sampler state (wrap, filter, etc.) can be configured via `samplerOptions`.",
   "symbol": "TextureFactory",
   "kind": "class",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 7,
@@ -371,11 +371,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/factories/TextureFactory.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/TextureFactory.ts"
+        "label": "src/assets/factories/TextureFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/TextureFactory.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/factories/TextureFactory.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/TextureFactory.ts"
+  "sourcePath": "src/assets/factories/TextureFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/TextureFactory.ts"
 }

@@ -3,7 +3,7 @@
   "description": "Construction options for Loader. `basePath` is prepended to relative asset paths at fetch time. `cache` accepts one or more CacheStore instances. `cacheStrategy` picks the policy used to consult them — defaults to CacheFirstStrategy (check stores → network → write back). `concurrency` caps the number of simultaneous background-queue fetches (default `6`).",
   "symbol": "LoaderOptions",
   "kind": "interface",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 5,
@@ -186,11 +186,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/Loader.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts"
+        "label": "src/assets/Loader.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Loader.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/Loader.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts"
+  "sourcePath": "src/assets/Loader.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Loader.ts"
 }

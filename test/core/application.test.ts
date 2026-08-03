@@ -136,7 +136,7 @@ const loadApplicationHarness = async (
   vi.doMock('#rendering/webgpu/WebGpuBackend', () => ({
     WebGpuBackend: WebGpuBackendMock,
   }));
-  vi.doMock('#resources/Loader', () => ({
+  vi.doMock('#assets/Loader', () => ({
     Loader: LoaderMock,
   }));
   vi.doMock('#extensions/materialize', () => ({
@@ -422,8 +422,8 @@ describe('Application', () => {
   test('passes grouped loader options through to Loader constructor', async () => {
     const { Application, LoaderMock } = await loadApplicationHarness();
     const fetchOptions: RequestInit = { credentials: 'include' };
-    const cache = {} as import('#resources/CacheStore').CacheStore;
-    const cacheStrategy = { resolve: vi.fn() } as unknown as import('#resources/CacheStrategy').CacheStrategy;
+    const cache = {} as import('#assets/CacheStore').CacheStore;
+    const cacheStrategy = { resolve: vi.fn() } as unknown as import('#assets/CacheStrategy').CacheStrategy;
 
     new Application({
       loader: {

@@ -1,10 +1,10 @@
+import { normalizeExtension } from '#assets/extensionKindRegistry';
+import type { AssetConstructor } from '#assets/FactoryRegistry';
+import type { Loader } from '#assets/Loader';
 import type { Application } from '#core/Application';
 import type { SerializationRegistry } from '#core/serialization/SerializationRegistry';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { DrawableConstructor } from '#rendering/Renderer';
-import { normalizeExtension } from '#resources/extensionKindRegistry';
-import type { AssetConstructor } from '#resources/FactoryRegistry';
-import type { Loader } from '#resources/Loader';
 
 import type { ApplicationSystemBinding, AssetBinding, AssetHandler, RendererBinding, SerializerBinding } from './Extension';
 

@@ -716,7 +716,7 @@ export default defineConfig([
       ],
       // Disabled for site/src to match the engine: `strict-boolean-expressions`
       // is turned off across every practical src/ directory (core, input, math,
-      // rendering, audio, resources, …). The site's URL/version/runtime helpers
+      // rendering, audio, assets, …). The site's URL/version/runtime helpers
       // are the same class of nullable-string code, so holding only site code to
       // it would be an inconsistent double standard.
       '@typescript-eslint/strict-boolean-expressions': 'off',
@@ -884,7 +884,7 @@ export default defineConfig([
   // scope are intentional here. Splitting would degrade readability and release
   // safety.
   {
-    files: ['src/resources/Loader.ts'],
+    files: ['src/assets/Loader.ts'],
     rules: {
       'no-nested-ternary': 'off',
       'max-lines': 'off',
@@ -900,7 +900,7 @@ export default defineConfig([
   // inherently branchy state machines that predate the split and were already
   // exempted from `complexity` there — same code, same justification.
   {
-    files: ['src/resources/AssetResidency.ts'],
+    files: ['src/assets/AssetResidency.ts'],
     rules: {
       '@typescript-eslint/no-unsafe-assignment': 'off',
       complexity: 'off',
@@ -908,15 +908,15 @@ export default defineConfig([
   },
 
   {
-    files: ['src/resources/factories/SubtitleFactory.ts'],
+    files: ['src/assets/factories/SubtitleFactory.ts'],
     rules: {
       '@typescript-eslint/no-unnecessary-condition': 'off',
     },
   },
 
-  // Resource internals using browser/IDB APIs with weak runtime typings.
+  // Asset internals using browser/IDB APIs with weak runtime typings.
   {
-    files: ['src/resources/IndexedDbDatabase.ts', 'src/resources/IndexedDbStore.ts', 'src/resources/factories/**/*.ts'],
+    files: ['src/assets/IndexedDbDatabase.ts', 'src/assets/IndexedDbStore.ts', 'src/assets/factories/**/*.ts'],
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
@@ -930,7 +930,7 @@ export default defineConfig([
 
   // Intentional runtime plumbing / optional lifecycle guards.
   {
-    files: ['src/core/Scene.ts', 'src/rendering/utils.ts', 'src/resources/AssetManifest.ts'],
+    files: ['src/core/Scene.ts', 'src/rendering/utils.ts', 'src/assets/AssetManifest.ts'],
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
     },
@@ -969,7 +969,7 @@ export default defineConfig([
   },
 
   {
-    files: ['src/resources/CacheStore.ts'],
+    files: ['src/assets/CacheStore.ts'],
     rules: {
       '@typescript-eslint/no-redundant-type-constituents': 'off',
     },

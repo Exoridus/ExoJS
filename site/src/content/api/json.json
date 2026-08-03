@@ -3,7 +3,7 @@
   "description": "Dispatch token for generic JSON loading. `loader.load(Asset.type('json', 'config.json'))` returns `Promise<unknown>`. Narrow via generic: `loader.load(Asset.type<Config>('json', 'config.json'))`. Handles all JSON shapes — objects, arrays, scalars.",
   "symbol": "Json",
   "kind": "class",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 1,
@@ -70,11 +70,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/tokens.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/tokens.ts"
+        "label": "src/assets/tokens.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/tokens.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/tokens.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/tokens.ts"
+  "sourcePath": "src/assets/tokens.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/tokens.ts"
 }

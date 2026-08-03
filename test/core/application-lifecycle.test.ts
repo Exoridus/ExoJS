@@ -197,7 +197,7 @@ const loadHarness = async (options: LifecycleHarnessOptions = {}): Promise<Lifec
       return webgpuManager;
     }),
   }));
-  vi.doMock('#resources/Loader', () => ({
+  vi.doMock('#assets/Loader', () => ({
     Loader: vi.fn(function () {
       return loader;
     }),

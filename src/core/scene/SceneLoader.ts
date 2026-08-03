@@ -1,11 +1,11 @@
+import type { Asset, ValueAsset } from '#assets/Asset';
+import type { CatalogEntry, KindByPath, LeafForPath, ResourceForKind } from '#assets/AssetDefinitions';
+import type { CatalogResourceLeaf, CatalogValueLeaf } from '#assets/assetMeta';
+import type { Assets, InferAssetsProperties } from '#assets/Assets';
+import type { InferLoadedMap, Loader, LoadOptions } from '#assets/Loader';
+import type { LoadingQueue } from '#assets/LoadingQueue';
 import type { Application } from '#core/Application';
 import type { Destroyable } from '#core/types';
-import type { Asset, ValueAsset } from '#resources/Asset';
-import type { CatalogEntry, KindByPath, LeafForPath, ResourceForKind } from '#resources/AssetDefinitions';
-import type { CatalogResourceLeaf, CatalogValueLeaf } from '#resources/assetMeta';
-import type { Assets, InferAssetsProperties } from '#resources/Assets';
-import type { InferLoadedMap, Loader, LoadOptions } from '#resources/Loader';
-import type { LoadingQueue } from '#resources/LoadingQueue';
 
 /**
  * Scene-scoped claim view over the application {@link Loader}. Assets claimed

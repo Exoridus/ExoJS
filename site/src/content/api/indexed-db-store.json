@@ -3,7 +3,7 @@
   "description": "CacheStore implementation that persists processed asset data in an IndexedDB database via IndexedDbDatabase. Pass an instance to LoaderOptions.cache to enable cross-session asset caching with no additional configuration beyond a database name.",
   "symbol": "IndexedDbStore",
   "kind": "class",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 6,
@@ -454,11 +454,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/IndexedDbStore.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/IndexedDbStore.ts"
+        "label": "src/assets/IndexedDbStore.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/IndexedDbStore.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/IndexedDbStore.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/IndexedDbStore.ts"
+  "sourcePath": "src/assets/IndexedDbStore.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/IndexedDbStore.ts"
 }

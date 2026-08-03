@@ -3,7 +3,7 @@
   "description": "Central asset management hub for ExoJS applications. The `Loader` orchestrates fetching, processing, caching, and retrieval of all engine asset types. It ships with built-in bindings for every first-party type (Texture, Sound, AudioStream, Video, FontFace, HTMLImageElement, Json, text, SVG, VTT, binary, and WASM) and allows registering custom types via bindAsset (or the higher-level `defineAsset`). Assets can be loaded in two ways: - **Direct** — `loader.load(Assets.from({ hero: 'hero.png' }))` fetches immediately and resolves to the finished assets. - **Background** — pass `{ priority: LoadPriority.Background }` to `load(...)` to pre-warm assets at low priority; awaitBackground resolves once the queue drains. Once loaded, assets are stored in memory and returned from cache on subsequent `load` or get calls without re-fetching.",
   "symbol": "Loader",
   "kind": "class",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 35,
@@ -2322,11 +2322,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/Loader.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts"
+        "label": "src/assets/Loader.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Loader.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/Loader.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts"
+  "sourcePath": "src/assets/Loader.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Loader.ts"
 }
