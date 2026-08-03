@@ -17,7 +17,12 @@ packages:
 # CI installs with --ignore-scripts and is unaffected by this.
 allowBuilds:
   '@parcel/watcher': true
+  # Pulled in by @vitest/browser-webdriverio, which we use only to drive Safari
+  # through the system's own safaridriver. Their postinstall steps download
+  # Edge and Firefox drivers we never launch, so they stay off.
+  edgedriver: false
   esbuild: true
+  geckodriver: false
   sharp: true
 
 # Supply-chain defense: refuse to install any package version younger than this
