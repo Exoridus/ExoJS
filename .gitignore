@@ -19,6 +19,10 @@ codexo-probe*
 codexo-montage*
 codexo-bg-*
 
+# superpowers:brainstorming/writing-plans skill defaults write here — these
+# are local planning scratch, not repo artifacts. See .workspace/ below.
+docs/
+
 # === Dotfiles: blanket-ignore, then allowlist tracked ones ===
 # Anything starting with `.` is ignored by default. Protects against tool
 # caches (.rollup.cache, .turbo, .next, .astro, …), IDE folders (.idea,
