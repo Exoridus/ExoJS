@@ -94,7 +94,7 @@ const isEnginePath = file => {
   if (file.startsWith('.github/workflows/')) return true;
   // Shared root build / test / type configuration.
   if (file === 'rollup.config.ts' || file === 'vitest.config.ts') return true;
-  if (file === 'tsconfig.json' || file === 'tsconfig.test.json' || file === 'tsconfig.eslint.json') return true;
+  if (file === 'tsconfig.json' || file === 'tsconfig.eslint.json') return true;
   // Root manifest + lockfile + workspace topology all affect the whole build.
   if (file === 'package.json' || file === 'pnpm-lock.yaml' || file === 'pnpm-workspace.yaml') return true;
   // The release version-coherence tests derive expectations from the root

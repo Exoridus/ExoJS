@@ -29,11 +29,11 @@ the PWA `icon-192/512` are referenced (relative) from `site/public/site.webmanif
 
 ## Regenerate
 
-Optimise the SVGs (from the design masters) with the repo-root `svgo.config.mjs`:
+Optimise the SVGs (from the design masters) with `svgo.config.js` in this folder:
 
 ```sh
 for f in <masters>/*.svg; do
-  npx svgo --multipass --config svgo.config.mjs -i "$f" -o "site/public/brand/$(basename "$f")"
+  npx svgo --multipass --config site/public/brand/svgo.config.js -i "$f" -o "site/public/brand/$(basename "$f")"
 done
 ```
 

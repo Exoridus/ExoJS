@@ -5,6 +5,10 @@
   // fenced blocks into .workspace/generated/guide-typecheck/ and this config
   // type-checks them against the engine source (no build required).
   //
+  // Inherits its compiler settings/paths from tsconfig.examples.json (same
+  // "check playground-style code against engine source, no build" setup) and
+  // only overrides what a guide snippet actually needs to differ on:
+  //
   // `strict` is off so a guide snippet is not buried under null-checking noise
   // that has nothing to do with drift, but `noImplicitAny` is ON: TypeScript
   // never infers an override's parameter types from the base class, so an
@@ -29,22 +33,10 @@
   //
   // Scope: all import-containing TS/JS snippets in site/src/content/guide/**
   // extracted by `pnpm typecheck:guides` (which runs the extractor first).
+  "extends": "./tsconfig.examples.json",
   "compilerOptions": {
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "target": "es2022",
-    "lib": ["es2022", "dom", "dom.iterable"],
-    "types": [],
-    "allowJs": true,
-    "checkJs": true,
-    "noEmit": true,
     "strict": false,
     "noImplicitAny": true,
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolvePackageJsonImports": true,
-    "customConditions": ["@codexo/source", "@codexo/exojs-particles-source"],
     "paths": {
       "@codexo/exojs": ["./src/index.ts"],
       "@codexo/exojs/extensions": ["./src/extensions/index.ts"],
