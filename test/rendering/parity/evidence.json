@@ -118,5 +118,125 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0
+  },
+  {
+    "scene": "sprite/canvas-texture",
+    "property": "cross-backend-parity",
+    "feature": "Sprite",
+    "browser": "firefox",
+    "backend": "webgl2",
+    "support": "supported",
+    "evidence": "frame-equal",
+    "delta": 0
+  },
+  {
+    "scene": "sprite/canvas-texture",
+    "property": "repeat-render-determinism",
+    "feature": "Sprite",
+    "browser": "firefox",
+    "backend": "webgl2",
+    "support": "supported",
+    "evidence": "frame-equal",
+    "delta": 0
+  },
+  {
+    "scene": "sprite/origin",
+    "property": "cross-backend-parity",
+    "feature": "Sprite",
+    "browser": "firefox",
+    "backend": "webgl2",
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0
+  },
+  {
+    "scene": "sprite/origin",
+    "property": "repeat-render-determinism",
+    "feature": "Sprite",
+    "browser": "firefox",
+    "backend": "webgl2",
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0
+  },
+  {
+    "scene": "sprite/translated",
+    "property": "cross-backend-parity",
+    "feature": "Sprite",
+    "browser": "firefox",
+    "backend": "webgl2",
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0
+  },
+  {
+    "scene": "sprite/translated",
+    "property": "repeat-render-determinism",
+    "feature": "Sprite",
+    "browser": "firefox",
+    "backend": "webgl2",
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0
+  },
+  {
+    "scene": "sprite/canvas-texture",
+    "property": "cross-backend-parity",
+    "feature": "Sprite",
+    "browser": "firefox",
+    "backend": "webgpu",
+    "support": "supported",
+    "evidence": "frame-equal",
+    "delta": 0
+  },
+  {
+    "scene": "sprite/canvas-texture",
+    "property": "repeat-render-determinism",
+    "feature": "Sprite",
+    "browser": "firefox",
+    "backend": "webgpu",
+    "support": "supported",
+    "evidence": "frame-equal",
+    "delta": 0
+  },
+  {
+    "scene": "sprite/origin",
+    "property": "cross-backend-parity",
+    "feature": "Sprite",
+    "browser": "firefox",
+    "backend": "webgpu",
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0
+  },
+  {
+    "scene": "sprite/origin",
+    "property": "repeat-render-determinism",
+    "feature": "Sprite",
+    "browser": "firefox",
+    "backend": "webgpu",
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0
+  },
+  {
+    "scene": "sprite/translated",
+    "property": "cross-backend-parity",
+    "feature": "Sprite",
+    "browser": "firefox",
+    "backend": "webgpu",
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0
+  },
+  {
+    "scene": "sprite/translated",
+    "property": "repeat-render-determinism",
+    "feature": "Sprite",
+    "browser": "firefox",
+    "backend": "webgpu",
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0
   }
 ]

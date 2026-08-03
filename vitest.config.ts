@@ -313,14 +313,27 @@ export default defineConfig({
       },
 
       // ── browser-webgpu-firefox — WebGPU via Firefox headed ───────────────
+      // `headless: false` is load-bearing, not a leftover: Firefox exposes
+      // `navigator.gpu` either way, but `requestAdapter()` resolves to `null`
+      // headless no matter which prefs are set (`dom.webgpu.enabled`,
+      // `gfx.webgpu.force-enabled`, …). A window is the only configuration in
+      // which Firefox has a WebGPU adapter at all — so this lane needs a real
+      // display, which is why CI cannot run it and the matrix takes its Firefox
+      // rows from local runs instead.
       {
         ...browserBase,
         test: {
           name: 'browser-webgpu-firefox',
           globals: true,
           setupFiles: renderingBrowserSetupFiles,
-          include: ['test/rendering/browser/webgpu-*.test.ts'],
-          browser: { enabled: true, headless: false, provider: playwright(), instances: [{ browser: 'firefox' }] },
+          include: ['test/rendering/browser/webgpu-*.test.ts', 'test/rendering/parity/**/*.test.ts'],
+          browser: {
+            enabled: true,
+            commands: parityCommands,
+            headless: false,
+            provider: playwright(),
+            instances: [{ browser: 'firefox' }],
+          },
         },
       },
 
