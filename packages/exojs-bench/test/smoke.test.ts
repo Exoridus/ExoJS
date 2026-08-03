@@ -75,7 +75,7 @@ describe('baseline harness smoke', () => {
 
     // Deterministic structural gate: this fixed 1k static-heavy scene issues
     // exactly ONE draw call per frame (one texture, one batch; culling is
-    // disabled cross-arm per review C4, see `archetypes.ts`). Structural
+    // disabled cross-arm, see `archetypes.ts`). Structural
     // counters are noise-free, so a change in this number for the fixed scene
     // is a real regression, not timing drift.
     expect(result.structural.drawCalls).toBe(1);

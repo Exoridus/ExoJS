@@ -14,7 +14,7 @@ import { useExoApp } from './useExoApp';
  * which initializes the render backend and begins the per-frame loop. On
  * subsequent dep-change remounts it calls `app.scenes.change(SceneClass)` to
  * switch scenes without restarting the engine. Each activation constructs a
- * fresh instance (definition §11.4) — this hook never reuses one across calls.
+ * fresh instance — this hook never reuses one across calls.
  *
  * A failure in `app.start()`/`app.scenes.change()` (e.g. a scene's `load()`
  * rejects) is caught and routed to {@link Application.onError} rather than
@@ -77,7 +77,7 @@ export function useScene<T extends Scene>(SceneClass: new () => T, deps: Depende
       cancelled = true;
       setScene(null);
       // No public API switches the director back to scene-less mid-lifetime
-      // (definition §10.1 — navigation always targets a registered
+      // (navigation always targets a registered
       // constructor). Application.destroy() (called by ExoCanvas cleanup)
       // tears down whatever scene is still active.
     };

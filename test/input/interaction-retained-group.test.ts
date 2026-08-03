@@ -110,7 +110,7 @@ const makeSprite = (): Drawable => {
   return sprite;
 };
 
-describe('InteractionManager: hit-testing children of a translated RetainedContainer (F2)', () => {
+describe('InteractionManager: hit-testing children of a translated RetainedContainer', () => {
   test('pointer over the WORLD position of a child inside a translated group fires its handler', () => {
     const { app, scene, signals } = createApp();
     const im = new InteractionManager(app);

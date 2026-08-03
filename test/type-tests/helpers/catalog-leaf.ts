@@ -7,4 +7,4 @@
 // internal module through the same `#`-subpath imports the other helpers here
 // use, rather than the brand being exported from `@codexo/exojs`.
 
-export type { CatalogResourceLeaf, CatalogValueLeaf } from '#resources/assetMeta';
+export type { CatalogResourceLeaf, CatalogValueLeaf } from '#assets/assetMeta';

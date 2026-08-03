@@ -3,7 +3,7 @@
   "description": "AssetFactory implementation that loads XML files and produces a parsed Document via the browser's built-in DOMParser. Throws if the response body is not well-formed XML. Use the returned `Document` directly with standard DOM APIs — `doc.querySelector`, `doc.getElementsByTagName`, etc. — or pass it to a format-specific parser (e.g. for Tiled TMX, BMFont, or TexturePacker XML atlas files).",
   "symbol": "XmlFactory",
   "kind": "class",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 7,
@@ -350,11 +350,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/factories/XmlFactory.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/XmlFactory.ts"
+        "label": "src/assets/factories/XmlFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/XmlFactory.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/factories/XmlFactory.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/XmlFactory.ts"
+  "sourcePath": "src/assets/factories/XmlFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/XmlFactory.ts"
 }

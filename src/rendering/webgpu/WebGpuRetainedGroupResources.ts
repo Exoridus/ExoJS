@@ -46,12 +46,12 @@ export interface WebGpuRetainedRendererReplayState {
   destroy(): void;
 }
 
-/** Bytes of the per-group uniform buffer (projection mat4 + group mat4 + snap viewport vec4, S3-D7). */
+/** Bytes of the per-group uniform buffer (projection mat4 + group mat4 + snap viewport vec4). */
 export const retainedGroupUniformBytes = 144;
 
 /**
- * Backend-owned replay descriptor for one recorded renderer flush (Track B
- * Slice 3, S3-D1). Carried as the opaque `payload` of a
+ * Backend-owned replay descriptor for one recorded renderer flush. Carried
+ * as the opaque `payload` of a
  * {@link RetainedBatchInstruction}; everything here is DATA — all state
  * (pipeline, projection/group uniforms, texture bindings) is resolved live at
  * replay by the owning {@link WebGpuRetainedBatchReplayer._replayRetainedBatch}.
@@ -85,7 +85,7 @@ export interface WebGpuRetainedBatchPayload {
   readonly textures: ReadonlyArray<Texture | RenderTexture>;
   /**
    * The managed texture views at record time, parallel to {@link textures}.
-   * Collect-time validation (S3-D3) compares them against the live managed
+   * Collect-time validation compares them against the live managed
    * views: `_syncTexture` recreates the view on RESIZE, and resized textures
    * invalidate the recorded UV words — so a view-identity mismatch must force
    * a recapture, never a replay.
@@ -104,7 +104,7 @@ export interface WebGpuRetainedBatchPayload {
 }
 
 /**
- * Mutable node-index range scratch used at record time (S3-D4), the WebGPU
+ * Mutable node-index range scratch used at record time, the WebGPU
  * counterpart of `WebGl2RetainedNodeIndexRange`. Unlike WebGL2 (which scans
  * the shared bundle store at capture END, once ranges over every batch are
  * known), WebGPU scans each batch's freshly-packed bytes immediately at
@@ -162,7 +162,7 @@ export interface WebGpuStagedRetainedBatch {
 }
 
 /**
- * Active capture window for one retained group (stacked for nesting, S3-D6):
+ * Active capture window for one retained group (stacked for nesting):
  * batches flushed while this frame is on the backend's stack are staged here
  * (bytes stored once, owned by the INNERMOST frame's bundle) and their
  * instructions appended to every active set.
@@ -176,7 +176,7 @@ export class WebGpuRetainedCaptureFrame {
   /**
    * Set when playback inside the window issued work the recorder cannot
    * replay (non-recordable renderer, custom material, compositor). Should be
-   * unreachable — the collect-time recordability predicate (S3-D5) excludes
+   * unreachable — the collect-time recordability predicate excludes
    * all of it — but wrong pixels are never an acceptable failure mode, so a
    * poisoned window is dropped and its set permanently vetoed.
    */
@@ -189,8 +189,7 @@ export class WebGpuRetainedCaptureFrame {
 }
 
 /**
- * Group-owned GPU resources for one retained group on the WebGPU backend
- * (Track B Slice 3, S3-D4/S3-D7):
+ * Group-owned GPU resources for one retained group on the WebGPU backend:
  *
  * - an instance VERTEX buffer holding the recorded batch bytes (node indices
  *   rebased group-local),
@@ -201,8 +200,8 @@ export class WebGpuRetainedCaptureFrame {
  *   as-is at replay,
  * - one cached bind group(0) pairing the two.
  *
- * Buffers are grow-only across recaptures (S3-D3 — no realloc churn under
- * motion-stop/start). {@link generation} bumps whenever GPU resources are
+ * Buffers are grow-only across recaptures — no realloc churn under
+ * motion-stop/start. {@link generation} bumps whenever GPU resources are
  * recreated or dropped (growth, device loss, destroy); instruction sets
  * stamped with an older generation fail plan-level validation and fall back
  * to entry replay.
@@ -216,7 +215,7 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
   private _transformCapacity = 0;
   private _tintBuffer: GPUBuffer | null = null;
   private _tintCapacity = 0;
-  // Slice 4c in-place patch state: the shared-buffer row the stored rows were
+  // In-place patch state: the shared-buffer row the stored rows were
   // rebased from, how many rows the store currently holds (bounds guard), and
   // the device whose queue the sub-range write goes through. All set at capture
   // finalize; cleared on device loss so a late patch cannot touch a dead buffer.
@@ -231,7 +230,7 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
   private _accountedBytes = 0;
   private _onRelease: ((bundle: WebGpuRetainedGroupBundle) => void) | null;
 
-  // ── Replay-time uniform tracking (S3-D7) ─────────────────────────────────
+  // ── Replay-time uniform tracking ─────────────────────────────────────────
   // The 128-byte mirror of the group UBO (projection at [0,16), group matrix
   // at [16,32)) plus the (view, updateId) it was written for. Replays skip
   // the writeBuffer while the content is unchanged; a content change while
@@ -247,7 +246,7 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
    * Auxiliary replay state owned by an indexed-geometry replayer (mesh). Null
    * for the sprite-layout renderers, which use this bundle's own UBO/bind
    * group. Disposed on device loss / destroy so the renderer's group(0) UBO
-   * follows the bundle's lifecycle (S3-D3 grow-only, freed on teardown).
+   * follows the bundle's lifecycle (grow-only, freed on teardown).
    */
   public rendererReplayState: WebGpuRetainedRendererReplayState | null = null;
 
@@ -275,7 +274,7 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
 
   /**
    * The shared frame-buffer row the stored transform rows were rebased from
-   * (Slice 4c, {@link RetainedGroupBundle.transformRowBase}). A group-local row
+   * (see {@link RetainedGroupBundle.transformRowBase}). A group-local row
    * is `capturedNodeIndex - transformRowBase`; the reconciler maps a moved
    * node's captured index back to the group-owned storage without re-recording.
    */
@@ -374,7 +373,7 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
   }
 
   /**
-   * Slice 4c fast patch: overwrite one group-local transform row in place with
+   * Fast patch: overwrite one group-local transform row in place with
    * `floats` (8 = one `TransformSlot`, the {@link TransformBuffer} row layout)
    * via a single `queue.writeBuffer` of that row's 32-byte sub-range. Mirrors
    * {@link WebGl2RetainedGroupResources._patchTransformRow}: deliberately does

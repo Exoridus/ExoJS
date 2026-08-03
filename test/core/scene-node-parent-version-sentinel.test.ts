@@ -22,8 +22,7 @@ class VersionProbe extends Drawable {
 }
 
 /**
- * Regression coverage for finding T3 (expert review 2026-07-11,
- * 01-rendering-core.md): `getGlobalTransform()` encodes "no parent contributes
+ * Regression coverage: `getGlobalTransform()` encodes "no parent contributes
  * to my world matrix" as `parentVersion = 0`. Before the fix the per-node
  * `_globalTransformVersion` counter ALSO started at 0, so the sentinel
  * collided with the natural initial version of a never-resolved parent. The
@@ -36,7 +35,7 @@ class VersionProbe extends Drawable {
  * and only increment, so 0 is unreachable as a legitimate version and the
  * boundary-flip compare is collision-free regardless of read order.
  */
-describe('SceneNode getGlobalTransform: no-parent sentinel cannot collide with a real version (T3)', () => {
+describe('SceneNode getGlobalTransform: no-parent sentinel cannot collide with a real version', () => {
   test('a never-resolved node reports a transform version distinct from the no-parent sentinel (0)', () => {
     const node = new VersionProbe();
 

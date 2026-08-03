@@ -1,6 +1,6 @@
 {
   "title": "ChangeSceneArgs",
-  "description": "Tuple type for `change()`'s single options parameter: present-and-required whenever `ChangeSceneOptions<Data>` has a required `data` field (`Data` is not `void`), optional otherwise. There is no runtime data/options ambiguity to resolve anymore — `data` always lives inside this one object, never as a separate positional argument (spec §6.3; this supersedes the deleted two-argument `SetSceneArgs`).",
+  "description": "Tuple type for `change()`'s single options parameter: present-and-required whenever `ChangeSceneOptions<Data>` has a required `data` field (`Data` is not `void`), optional otherwise. There is no runtime data/options ambiguity to resolve anymore — `data` always lives inside this one object, never as a separate positional argument (this supersedes the deleted two-argument `SetSceneArgs`).",
   "symbol": "ChangeSceneArgs",
   "kind": "type",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Tuple type for `change()`'s single options parameter: present-and-required whenever `ChangeSceneOptions<Data>` has a required `data` field (`Data` is not `void`), optional otherwise. There is no runtime data/options ambiguity to resolve anymore — `data` always lives inside this one object, never as a separate positional argument (spec §6.3; this supersedes the deleted two-argument `SetSceneArgs`)."
+        "Tuple type for `change()`'s single options parameter: present-and-required whenever `ChangeSceneOptions<Data>` has a required `data` field (`Data` is not `void`), optional otherwise. There is no runtime data/options ambiguity to resolve anymore — `data` always lives inside this one object, never as a separate positional argument (this supersedes the deleted two-argument `SetSceneArgs`)."
       ],
       "importLine": "import { ChangeSceneArgs } from '@codexo/exojs'",
       "sourceLink": null

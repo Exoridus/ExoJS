@@ -8,7 +8,7 @@ import { copyMaterialKeyInto, type DrawCommand, type MaterialKey } from './Rende
  * The replayable payload of one previously-collected draw: everything
  * `RenderPlanBuilder.emitDraw` computed for it (material key, bounds in the
  * capture's space convention, seq/zIndex placement). Base shape shared by the
- * Slice-1 per-child {@link RetainedDrawSlot} and the Slice-2 whole-fragment
+ * per-child {@link RetainedDrawSlot} and the whole-fragment
  * {@link RetainedFragmentDraw}.
  * @internal
  */
@@ -36,8 +36,8 @@ export interface RetainedDrawSlot extends RetainedDrawData {
 }
 
 /**
- * Mutable pooled backing record for a {@link RetainedDrawSlot} (Slice 3,
- * F11a): the cache rewrites these in place on recapture so a steady-state
+ * Mutable pooled backing record for a {@link RetainedDrawSlot}: the cache
+ * rewrites these in place on recapture so a steady-state
  * recapture of a same-shaped child list allocates zero objects. Structurally
  * satisfies the readonly {@link RetainedDrawSlot} contract consumers read.
  */
@@ -54,8 +54,8 @@ interface MutableRetainedDrawSlot {
 }
 
 /**
- * Per-`Container` fragment cache for the Wave 3 static-subtree-skip (Track B,
- * Slice 1 — design spec §5.2/§5.4). Lazily allocated by `Container` the first
+ * Per-`Container` fragment cache for the static-subtree-skip. Lazily
+ * allocated by `Container` the first
  * time a direct drawable child produces a capturable slot; containers without
  * such children never own one (`Container._retainedPlan`). Caches the
  * direct-`Drawable`-child draw slots
@@ -71,7 +71,7 @@ interface MutableRetainedDrawSlot {
  * collect (nested containers keep their own material-grouping/z-sort
  * locality), so reuse is provably semantics-neutral.
  *
- * Capture protocol (Slice 3, F11a — pooled): `_beginCapture()` once per full
+ * Capture protocol (pooled): `_beginCapture()` once per full
  * collect, `_appendSlot()` per captured direct-drawable draw (writes into a
  * grow-only record pool), `_commitCapture()` to key the capture. Records are
  * rewritten in place, so steady-state recapture allocates zero slot objects.
@@ -94,10 +94,10 @@ export class RetainedPlanCache {
   }
 
   /**
-   * Keyed on transform-revision too (Slice 4b): the cached slots hold each
+   * Keyed on transform-revision too: the cached slots hold each
    * child's screen-space AABB (`minX..maxY`), so a plain-container child move
-   * must re-collect. Own-transform mutations no longer stamp the content channel
-   * (Slice 4b dropped that co-bump), so without this the skip would replay a
+   * must re-collect. Own-transform mutations no longer stamp the content channel,
+   * so without this the skip would replay a
    * stale extent. Unlike a {@link RetainedContainer} — which patches its rows in
    * place — the plain-container skip has no per-slot patch path and simply
    * re-collects, exactly as it did when transform still content-dirtied.
@@ -181,7 +181,7 @@ export class RetainedPlanCache {
 
   /**
    * Drop the grow-only slot pool's strong references to their drawables so an
-   * evicted/destroyed drawable can be garbage-collected (P3f). The pooled slot
+   * evicted/destroyed drawable can be garbage-collected. The pooled slot
    * objects survive and their `drawable` is rewritten in place on the next
    * capture, so pool reuse is unaffected.
    */

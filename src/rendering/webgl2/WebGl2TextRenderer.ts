@@ -146,7 +146,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
   public readonly _consumesSharedTransform = false;
 
   /**
-   * Retained-batch opt-in (Track B extension): a flush whose glyph quads all
+   * Retained-batch opt-in: a flush whose glyph quads all
    * share one (shaderType, atlasTexture) — the overwhelmingly common case, one
    * font/atlas per flush — records the vertex bytes into the group instance
    * buffer and replays them with `drawElements`. A flush that spans multiple
@@ -184,7 +184,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
   // Retained-batch state: the renderer-owned, grow-only quad-index buffer (the
   // standard `0,1,2, 0,2,3` glyph pattern shared by every recorded batch) and
   // which capture windows have already recorded a Text batch this session
-  // (S3-D6 nesting-safe — one entry per capture-open call).
+  // (nesting-safe — one entry per capture-open call).
   private _retainedQuadIndexBuffer: WebGl2RenderBuffer | null = null;
   private _retainedQuadCapacity = 0;
   private readonly _retainedTextureUnit0Scratch = new Int32Array([0]);
@@ -345,8 +345,8 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     arr[base + 0] = m[0]!; // a
     arr[base + 1] = m[1]!; // c
     // texel 0's spare `.z` carries the snap-mode flag the vertex shader reads to
-    // decide whether to snap the glyph origin to the device-pixel grid (spec D2:
-    // this turns Text position snapping from a silent no-op into a real feature).
+    // decide whether to snap the glyph origin to the device-pixel grid —
+    // this turns Text position snapping from a silent no-op into a real feature.
     arr[base + 2] = node.pixelSnapMode; // snap-mode flag
     arr[base + 3] = m[6]!; // tx
     arr[base + 4] = m[3]!; // b
@@ -473,7 +473,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     const quads = this._pendingQuads;
     let i = 0;
 
-    // Retained recording (Track B extension): a recordable Text flush is a
+    // Retained recording: a recordable Text flush is a
     // SINGLE (shaderType, atlasTexture) batch. A second batch this flush (or a
     // second flush into the same capture window) poisons the capture below.
     const capturing = backend._isRetainedCapturing;
@@ -644,7 +644,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     return this._colorShader;
   }
 
-  // ── Retained-batch record/replay (Track B extension) ─────────────────────
+  // ── Retained-batch record/replay ──────────────────────────────────────────
   // Text's per-vertex "node index" addresses its OWN dense, per-flush node
   // data texture (transform + style, packed by `_packNodeData`), never a row
   // in the shared `TransformBuffer` — mirrors `WebGpuTextRenderer` exactly. So,

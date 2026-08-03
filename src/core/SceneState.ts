@@ -21,11 +21,11 @@ export enum SceneState {
   /**
    * Fully prepared (`load()`/`init()` both completed) but never yet
    * activated — a genuine, cold checkpoint between preparation and going
-   * live. Facilities keep accepting registrations (definition §4.2), but
+   * live. Facilities keep accepting registrations, but
    * still nothing dispatches, ticks, plays, or produces any
    * application-wide runtime effect. Transient for an ordinary activation
    * (immediately followed by {@link SceneScope.activate}); can be
-   * longer-lived for a pre-warmed scene in a later slice. Not
+   * longer-lived for a pre-warmed scene. Not
    * suspend-eligible — see {@link canSuspend}: a `Ready` scope that is
    * discarded before ever activating is torn down via `destroy()` directly,
    * never via {@link SceneScope.suspend}.

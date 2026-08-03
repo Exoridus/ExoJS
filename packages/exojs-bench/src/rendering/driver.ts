@@ -334,12 +334,13 @@ const startViteServer = async (version: string): Promise<ViteDevServer> => {
  * FROM THE STAGE CANVAS'S OWN CONTEXT — the same `#stage` element and context
  * the just-run matrix cells actually measured.
  *
- * Review B8: this used to `document.createElement('canvas').getContext('webgl2')`
- * on a fresh, detached, never-attached canvas. Chrome can (rarely) hand out a
- * different GPU adapter per canvas/context (e.g. multi-GPU laptops), so a
- * throwaway canvas's renderer string is not guaranteed to be the adapter that
- * actually rendered the measured cells. Reading `#stage`'s context instead
- * closes that gap — but only AFTER the matrix has run at least one cell: this
+ * A throwaway `document.createElement('canvas').getContext('webgl2')` on a
+ * fresh, detached, never-attached canvas is not reliable here: Chrome can
+ * (rarely) hand out a different GPU adapter per canvas/context (e.g.
+ * multi-GPU laptops), so a throwaway canvas's renderer string is not
+ * guaranteed to be the adapter that actually rendered the measured cells.
+ * Reading `#stage`'s context instead closes that gap — but only AFTER the
+ * matrix has run at least one cell: this
  * function must not be called before the engine's own `init()` has created
  * `#stage`'s WebGL2 context, because `HTMLCanvasElement.getContext` freezes
  * context-creation attributes (antialias, stencil, …) on the FIRST call and
@@ -595,7 +596,7 @@ const runBackend = async (options: {
     onCellResult(result);
   };
 
-  // WebGL2 renderer string, captured from `#stage`'s OWN context (review B8) the
+  // WebGL2 renderer string, captured from `#stage`'s OWN context the
   // moment the FIRST ok cell has created it. `null` until then; a run with no ok
   // cell keeps the `no-webgl2-context` provenance below. WebGPU adapter identity is
   // read once and reused across every arm's session (same GPU, same flags).

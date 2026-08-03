@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { Loadable, Loader } from '#assets/Loader';
 import { Color } from '#core/Color';
 import { Scene } from '#core/Scene';
 import { SceneNode } from '#core/SceneNode';
@@ -25,7 +26,6 @@ import type { GlyphInfo } from '#rendering/text/types';
 import { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
 import { Video } from '#rendering/video/Video';
-import type { Loadable, Loader } from '#resources/Loader';
 import { Button } from '#ui/Button';
 import { Label } from '#ui/Label';
 import { Panel } from '#ui/Panel';

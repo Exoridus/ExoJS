@@ -1,6 +1,5 @@
 /**
- * WebGPU renderer-matrix browser tests — Mesh retained instruction-set replay
- * (Track B Slice 3, mesh opt-in).
+ * WebGPU renderer-matrix browser tests — Mesh retained instruction-set replay.
  *
  * The mesh counterpart of `webgpu-nine-slice-retained-instruction-replay.test.ts`.
  * Mesh's recordable draw is an INDEXED instanced draw over a SHARED, persistent
@@ -10,7 +9,7 @@
  * `drawIndexed`. The replay tier must reproduce the record frame's pixels
  * exactly. A live sprite OUTSIDE (and before) the group keeps the group's
  * shared storage rows starting at a non-zero frame-global index, so the
- * group-local node-index rebase (S3-D4) is load-bearing — the final cell
+ * group-local node-index rebase is load-bearing — the final cell
  * neuters it and proves the probes diverge.
  *
  * The group holds two same-geometry mesh runs with DISTINCT textures (2 red +
@@ -296,7 +295,7 @@ describe('WebGPU renderer matrix: Mesh retained instruction replay cells', () =>
       expectPixelNear(readPixel(16, 32), [255, 0, 0, 255]);
 
       // Pan the camera 16px right: replayed content must appear 16px further
-      // left — projection is resolved live at replay (S3-D1).
+      // left — projection is resolved live at replay.
       backend.view.setCenter(backend.view.center.x + 16, backend.view.center.y);
 
       if (!(await renderScene(ctx, backend, scene.root))) {
@@ -327,7 +326,7 @@ describe('WebGPU renderer matrix: Mesh retained instruction replay cells', () =>
       }
 
       // The recorded batch instruction must survive the move untouched: a
-      // group move only changes the live-composed group matrix (S3-D6).
+      // group move only changes the live-composed group matrix.
       const recordedBatch = fragmentOf(scene.group).instructions!.instructions[0];
 
       scene.group.setPosition(24, 24);
@@ -364,8 +363,8 @@ describe('WebGPU renderer matrix: Mesh retained instruction replay cells', () =>
 
       const recordedBatch = fragmentOf(scene.group).instructions!.instructions[0];
 
-      // Slice 4c: a pure transform move on a direct child stays content-clean,
-      // so the recording is patched in place (no recapture). redA and redB share
+      // A pure transform move on a direct child stays content-clean, so the
+      // recording is patched in place (no recapture). redA and redB share
       // ONE batch but reference DISTINCT storage rows, so only redA moves.
       scene.redA.setPosition(0, 32); // group-local (0,32) -> world (8,56), off-canvas bottom
 

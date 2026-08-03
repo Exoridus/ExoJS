@@ -3,7 +3,7 @@
   "description": "One row of Loader.inspect's diagnostic snapshot: everything a developer needs to reason about a single claimed `(type, source)` key without reaching into `Loader`'s private residency bookkeeping — its lifecycle state, how many independent claim scopes hold it, and whether its fetch is queued, in flight, or settled. Every row is plain, frozen data: numbers, strings, booleans, and the asset's constructor token — never a `Set`, a claim symbol, or a live handle/ref object, so nothing returned here can be used to mutate residency state.",
   "symbol": "AssetInspection",
   "kind": "interface",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 7,
@@ -219,11 +219,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/AssetResidency.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/AssetResidency.ts"
+        "label": "src/assets/AssetResidency.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetResidency.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/AssetResidency.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/AssetResidency.ts"
+  "sourcePath": "src/assets/AssetResidency.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetResidency.ts"
 }

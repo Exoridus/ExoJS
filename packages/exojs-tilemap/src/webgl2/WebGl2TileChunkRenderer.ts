@@ -136,7 +136,7 @@ interface TileRendererConnection {
  */
 export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNode> implements WebGl2RetainedBatchReplayer {
   /**
-   * Retained-batch capability opt-in (Track B): a tile chunk's per-flush
+   * Retained-batch capability opt-in: a tile chunk's per-flush
    * instanced batches (fixed 32-byte layout, tile word at word 7) can be
    * recorded into a group's instruction set and replayed from group-owned
    * resources. Pixel-snapped draws are excluded by the collect-time
@@ -339,7 +339,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
     backend.stats.batches++;
     backend.stats.drawCalls++;
 
-    // Retained recording (Track B): while a capture window is open, hand the
+    // Retained recording: while a capture window is open, hand the
     // exact packed instance words of this flush to the backend — byte-
     // identical to what just drew. A batch always binds a single tileset
     // texture (slot 0); a pixel-snapped node already poisoned the capture in
@@ -386,7 +386,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
     backend._stageViewportUniform(this._shader);
   }
 
-  // ── Retained-batch record/replay (Track B) ────────────────────────────────
+  // ── Retained-batch record/replay ──────────────────────────────────────────
   // The bundle stores raw instance bytes; this renderer owns the 32-byte
   // layout (tile word at word 7: transform row in bits 0..28, diagonal flip in
   // bit 29), so the layout-aware finalize steps (node-index scan/rebase, VAO

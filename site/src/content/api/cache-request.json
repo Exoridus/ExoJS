@@ -3,7 +3,7 @@
   "description": "All the information a CacheStrategy needs to resolve a single asset. Bundles the target factory, cache namespace, lookup key, the fetch parameters, and any factory-specific options into one value so strategies remain stateless.",
   "symbol": "CacheRequest",
   "kind": "interface",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 6,
@@ -171,11 +171,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/CacheStrategy.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/CacheStrategy.ts"
+        "label": "src/assets/CacheStrategy.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CacheStrategy.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/CacheStrategy.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/CacheStrategy.ts"
+  "sourcePath": "src/assets/CacheStrategy.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CacheStrategy.ts"
 }

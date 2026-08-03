@@ -2,7 +2,7 @@
 
 /**
  * WebGPU prewarm + flush-path caching for the instanced/text renderers — real
- * device (issue #277, finding F5b). Companion to the structural Node tests in
+ * device. Companion to the structural Node tests in
  * test/rendering/webgpu-instanced-flush-caching.test.ts and the prewarm
  * cache-key tests in test/rendering/webgpu-pipeline-prewarm.test.ts, this suite
  * exercises the actual WebGPU device to prove the caches behave on a conformant

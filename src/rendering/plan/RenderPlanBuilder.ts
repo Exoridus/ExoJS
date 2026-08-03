@@ -23,10 +23,10 @@ import type { RetainedInstructionSet } from './RetainedInstructionSet';
 import type { RetainedDrawData } from './RetainedPlanCache';
 
 /**
- * Collect-time view of the backend's retained-batch hooks (Track B Slice 3).
+ * Collect-time view of the backend's retained-batch hooks.
  * `_replayRetainedBatch` gates the splice tier, the capture pair gates record
  * arming, and `_validateRetainedInstructionSet` is the backend's optional
- * extra collect-time validation (e.g. WebGPU texture-view identity, S3-D3) on
+ * extra collect-time validation (e.g. WebGPU texture-view identity) on
  * top of the plan-level generation check.
  *
  * `_validateRetainedInstructionSet` failure contract — the backend chooses
@@ -60,7 +60,7 @@ interface MutableGroupScope extends GroupScope {
 }
 
 /**
- * Effect-less descriptor shared by every sub-branch escape barrier (F13/R3):
+ * Effect-less descriptor shared by every sub-branch escape barrier:
  * all effect stages are disabled, so {@link RenderEffectExecutor.play} is a
  * pure passthrough into the child plan. The barrier entry exists only for its
  * playback semantics — the group uniform is suspended (the branch collected
@@ -109,7 +109,7 @@ export class RenderPlanBuilder {
   private readonly _scopeStack: MutableGroupScope[] = [];
   private _groupPoolCursor = 0;
 
-  // Frame-persistent free-lists (Slice 2b). Each lives on the builder INSTANCE
+  // Frame-persistent free-lists. Each lives on the builder INSTANCE
   // (never module-global) to keep the multi-instance invariant: a second app /
   // backend uses its own builder and its own pools. Cursors reset every frame in
   // build() + _resetRuntimeState(); the backing objects survive and are mutated
@@ -135,7 +135,7 @@ export class RenderPlanBuilder {
 
   private _nodeIndex = 0;
 
-  // Track B Slice 2: count of transform-group boundaries currently being
+  // Count of transform-group boundaries currently being
   // collected below. See `_isViewCullSuppressed`.
   private _viewCullSuppression = 0;
 
@@ -253,14 +253,14 @@ export class RenderPlanBuilder {
       return;
     }
 
-    // Sub-branch escape (F13/R3): a DIRECT child of the engaged transform-
+    // Sub-branch escape: a DIRECT child of the engaged transform-
     // group boundary being collected (the scope guard keeps this off every
     // other emit) whose subtree contains a deep barrier leaves the group,
     // while its siblings keep retention + the group transform. Wrap it in an
     // effect-less barrier entry — playback suspends the group uniform (the
     // branch resolves world-space transforms via the matching
     // `_escapesTransformGroup` seam) and fragment capture records a live
-    // re-dispatch (spec §8) — then re-enter emitNode inside the child plan,
+    // re-dispatch — then re-enter emitNode inside the child plan,
     // where the guard no longer matches and the node collects through its
     // normal path (a nested boundary still gets its own transformNode scope).
     if (node.parent !== null && this._currentScope().transformNode === node.parent && node.parent._childEscapesTransformGroup(node)) {
@@ -366,7 +366,7 @@ export class RenderPlanBuilder {
    * @internal — true while collecting below a transform-group boundary.
    * Inside a group, child bounds are group-local, so testing them against the
    * world-space view rect would be meaningless; the group is culled as a
-   * whole by RetainedContainer._collect instead (spec §6).
+   * whole by RetainedContainer._collect instead.
    */
   public get _isViewCullSuppressed(): boolean {
     return this._viewCullSuppression > 0;
@@ -386,11 +386,11 @@ export class RenderPlanBuilder {
    * @internal — replay a single previously-captured {@link RetainedDrawData}
    * into the current scope: reuses its cached material key and screen-space
    * bounds verbatim, only assigning a fresh frame-local `nodeIndex`. Used by
-   * {@link RetainedPlanCache} for the Wave 3 static-subtree skip and by
-   * {@link _replayRetainedFragment} for the Slice 2 whole-fragment splice;
+   * {@link RetainedPlanCache} for the static-subtree skip and by
+   * {@link _replayRetainedFragment} for the whole-fragment splice;
    * callers must have already verified the owning container's subtree is
    * unchanged (content + structure revision, and backend all match the
-   * capture — plus view for the Slice-1 per-child cache).
+   * capture — plus view for the per-child cache).
    */
   public _replayRetainedDraw(slot: RetainedDrawData): void {
     // Mirror the scope bookkeeping that `_reserveEntryPlacement` maintains on the
@@ -432,7 +432,7 @@ export class RenderPlanBuilder {
   }
 
   /**
-   * @internal — instruction splice (Track B Slice 3, S3-D2): when the current
+   * @internal — instruction splice: when the current
    * scope belongs to a clean RetainedContainer whose fragment holds a valid
    * recorded instruction set for this backend, mark the scope and push NO
    * entries. The plan player replays the recorded batches in O(batches);
@@ -452,12 +452,12 @@ export class RenderPlanBuilder {
   }
 
   /**
-   * @internal — arm instruction recording for the current scope (Slice 3):
+   * @internal — arm instruction recording for the current scope:
    * called on a CLEAN entry-replay frame (record-on-first-clean-frame
    * policy), so the record cost is never wasted on a frame whose capture is
    * about to be invalidated. No-op when the backend lacks the capture hooks
    * (dormant fallback — shipped behavior unchanged) or the fragment fails the
-   * v1 recordability predicate (S3-D5).
+   * v1 recordability predicate.
    */
   public _armRetainedRecord(fragment: RetainedGroupFragment): void {
     const hooks = this.backend as RenderBackend & RetainedBackendHooks;
@@ -477,7 +477,7 @@ export class RenderPlanBuilder {
     this._currentScope().retainedRecordTarget = fragment.instructionsForRecording();
   }
 
-  /** Collect-time replay eligibility (S3-D3) for `set` on this backend. */
+  /** Collect-time replay eligibility for `set` on this backend. */
   private _validateRetainedSet(set: RetainedInstructionSet): boolean {
     const hooks = this.backend as RenderBackend & RetainedBackendHooks;
 
@@ -494,11 +494,11 @@ export class RenderPlanBuilder {
 
   /**
    * @internal — replay a captured fragment into the current scope: the
-   * whole-range splice (spec §4.2). No scene-graph walk, no cull, no bounds,
+   * whole-range splice. No scene-graph walk, no cull, no bounds,
    * no material keys — draws re-acquire pooled commands with fresh
    * frame-local nodeIndex values (multi-render() bases stay coherent), nested
    * groups re-acquire pooled scopes, and barrier nodes re-dispatch through a
-   * normal `_collect` (spec §8).
+   * normal `_collect`.
    */
   public _replayRetainedFragment(entries: readonly RetainedFragmentEntry[]): void {
     for (const entry of entries) {
@@ -514,8 +514,8 @@ export class RenderPlanBuilder {
 
   private _replayRetainedGroup(fragment: RetainedFragmentGroup): void {
     // A nested group that SPLICED its instruction set during the capture
-    // frame was recorded with EMPTY entries + the set reference (Slice 3,
-    // S3-D6). If the set is still replay-eligible, reproduce the splice; if
+    // frame was recorded with EMPTY entries + the set reference.
+    // If the set is still replay-eligible, reproduce the splice; if
     // it went stale (bundle generation, backend validation), re-dispatch the
     // live node so the inner container rebuilds from its own fragment —
     // never replay the empty scope as-is.

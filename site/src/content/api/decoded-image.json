@@ -3,7 +3,7 @@
   "description": "Decoded image result from ImageFactory.create.",
   "symbol": "DecodedImage",
   "kind": "type",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 0,
@@ -61,11 +61,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/factories/ImageFactory.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/ImageFactory.ts"
+        "label": "src/assets/factories/ImageFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/ImageFactory.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/factories/ImageFactory.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/ImageFactory.ts"
+  "sourcePath": "src/assets/factories/ImageFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/ImageFactory.ts"
 }

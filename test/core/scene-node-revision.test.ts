@@ -41,7 +41,7 @@ describe('NodeRevision', () => {
 });
 
 describe('SceneNode content/structure revision propagation', () => {
-  test('setPosition bumps the TRANSFORM revision on the node and every ancestor up to root, NOT content (Slice 4b)', () => {
+  test('setPosition bumps the TRANSFORM revision on the node and every ancestor up to root, NOT content', () => {
     const root = new Container();
     const mid = new Container();
     const leaf = new Drawable();

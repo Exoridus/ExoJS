@@ -147,8 +147,8 @@ interface DestroyListenable {
   removeDestroyListener(listener: () => void): unknown;
 }
 
-// One open retained-capture window (Track B Slice 3). Frames stack for nested
-// recording groups (S3-D6): a flushed batch's bytes are stored once in the
+// One open retained-capture window. Frames stack for nested
+// recording groups: a flushed batch's bytes are stored once in the
 // INNERMOST frame's bundle, while its instruction is appended to every open
 // frame's set. `payloads` collects this frame's own recorded batches for the
 // capture-end finalize (node-index rebase, transform-row copy, VAO wiring).
@@ -270,7 +270,7 @@ export class WebGl2Backend implements RenderBackend {
   private _drawPlanDepth = 0;
   private readonly _planBaseStack: number[] = [];
   private readonly _planHashStack: number[] = [];
-  // Retained instruction-set capture state (Track B Slice 3, Tasks 6/7).
+  // Retained instruction-set capture state.
   private readonly _retainedCaptures: RetainedCaptureFrame[] = [];
   private readonly _retainedBundles = new Set<WebGl2RetainedGroupResources>();
   // Reused scratch for the capture-end node-index scan (record frames only).
@@ -576,7 +576,7 @@ export class WebGl2Backend implements RenderBackend {
   public draw(drawable: Drawable): this {
     const renderer = this.rendererRegistry.resolve(drawable);
 
-    // Belt-and-braces for retained recording (S3-D5.1): the recordability
+    // Belt-and-braces for retained recording: the recordability
     // predicate keeps non-capable renderers from ever arming a capture. If
     // one still draws inside an open capture window, poison the recording so
     // the set never validates — entry replay instead of missing draws.
@@ -1125,8 +1125,8 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   /**
-   * Active per-group transform for the draws submitted until the next call
-   * (Track B Slice 2, S2-D2). `null` means identity (no retained group).
+   * Active per-group transform for the draws submitted until the next call.
+   * `null` means identity (no retained group).
    * Renderers fold it into their vertex stage as `u_group`.
    * @internal
    */
@@ -1146,7 +1146,7 @@ export class WebGl2Backend implements RenderBackend {
 
   /**
    * Playback hook (RenderPlanPlayer): enter/leave a retained transform group.
-   * A group is a flush boundary by design (S2-D2) — the pending batch must
+   * A group is a flush boundary by design — the pending batch must
    * drain under the OLD group matrix before the new one takes effect.
    * @internal
    */
@@ -1156,13 +1156,13 @@ export class WebGl2Backend implements RenderBackend {
     this._renderGroupTransformId++;
   }
 
-  // ── Retained instruction-set hooks (Track B Slice 3, Tasks 6/7) ──────────
+  // ── Retained instruction-set hooks ────────────────────────────────────────
 
   /**
    * Whether at least one retained-capture window is open. Read by capable
    * renderers at flush time to hand their packed batch to
    * {@link _recordRetainedBatch}, and at render time for the belt-and-braces
-   * poison checks (S3-D5).
+   * poison checks.
    * @internal
    */
   public get _isRetainedCapturing(): boolean {
@@ -1216,7 +1216,7 @@ export class WebGl2Backend implements RenderBackend {
    * Playback hook (RenderPlanPlayer): the recording scope's playback ended.
    * The pending batch flushes INTO the still-open captures (the group's
    * trailing draws belong to the set), then this frame finalizes: node
-   * indices in the recorded bytes are rebased group-local (S3-D4), the
+   * indices in the recorded bytes are rebased group-local, the
    * group's shared-buffer transform rows are copied into the group-owned
    * store, the instance bytes upload into the persistent buffer, and each
    * batch gets its offset-based VAO.
@@ -1295,7 +1295,7 @@ export class WebGl2Backend implements RenderBackend {
    * Record one just-drawn renderer flush into the open capture windows: the
    * instance words are copied once into the INNERMOST frame's bundle, and one
    * batch instruction referencing that bundle is appended to EVERY open
-   * frame's set (S3-D6 — outer sets hold inner bundles' batches verbatim).
+   * frame's set (outer sets hold inner bundles' batches verbatim).
    * Called by capable renderers from `flush()` while a capture is open.
    * @internal
    */
@@ -1373,7 +1373,7 @@ export class WebGl2Backend implements RenderBackend {
    * recorded generation can never match its bundle — the resulting sets fail
    * collect-time validation forever and the group stays on the (correct)
    * entry-replay tier. Belt-and-braces for draws the recordability predicate
-   * should have excluded (S3-D5); never expected on a healthy path.
+   * should have excluded; never expected on a healthy path.
    * @internal
    */
   public _poisonRetainedCaptures(): void {
@@ -1394,7 +1394,7 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   /**
-   * Collect-time backend validation (S3-D3) on top of the plan-level
+   * Collect-time backend validation on top of the plan-level
    * generation check — the WebGPU view-identity guard's WebGL2 counterpart:
    * every recorded batch's textures must still have their record-time size
    * and flipY orientation. The per-instance UV words baked into the group
@@ -1643,7 +1643,7 @@ export class WebGl2Backend implements RenderBackend {
    * rebuild the pieces needed to draw against the fresh one. User-facing
    * handles ({@link Texture}, {@link RenderTexture}, {@link RenderTarget})
    * keep their identity — their GPU-side state is recreated lazily on next
-   * use. Mirrors the WebGPU backend's `_teardownDeviceState` (B-09).
+   * use. Mirrors the WebGPU backend's `_teardownDeviceState`.
    */
   private _reinitializeDeviceState(): void {
     const gl = this._context;
@@ -1697,7 +1697,7 @@ export class WebGl2Backend implements RenderBackend {
     // Every retained group bundle's GL objects died with the lost context:
     // drop them and bump the generations so all recorded instruction sets
     // fail collect-time validation and re-record against the restored
-    // context (S3-D3, stale-instruction pitfall #9). Any capture in flight is
+    // context. Any capture in flight is
     // abandoned — its instructions keep the sentinel generation.
     for (const bundle of this._retainedBundles) {
       bundle._invalidateDeviceResources();

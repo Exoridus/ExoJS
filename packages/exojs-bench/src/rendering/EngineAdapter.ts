@@ -21,8 +21,8 @@ export interface ArchetypeSpec {
   /**
    * Whether frustum/off-screen culling is enabled for this archetype (drives
    * `.cullable` on every spine container and leaf sprite in both adapters).
-   * Currently `false` for every archetype in `archetypes.ts` (review C4
-   * fairness fix): every archetype keeps its sprites on-screen, so a cull
+   * Currently `false` for every archetype in `archetypes.ts`: keeping every
+   * archetype's sprites on-screen means a cull
    * check can only ever be a no-op there, and the two engines do NOT pay the
    * same cost for an identically-set flag. ExoJS's `cullable` drives a real
    * per-node bounds+intersection check in the render walk
@@ -65,9 +65,9 @@ export interface CellSpec {
   readonly timedFrames: number;
   /**
    * Number of discarded warmup frames run before timing starts, per
-   * {@link warmupFramesFor} (review B7: scales up with node count so the
+   * {@link warmupFramesFor}: scales up with node count so the
    * necessarily-short timed window at large N is not diluted by residual
-   * shader-compile/texture-upload/JIT settling cost).
+   * shader-compile/texture-upload/JIT settling cost.
    */
   readonly warmupFrames: number;
 }
@@ -123,7 +123,7 @@ export interface EngineAdapter {
    * {@link buildScene} selected (see `mutation.ts::mutationSignature`). The
    * harness compares it against the canonical selection for the cell and fails
    * loudly on any divergence, so the cross-arm comparison rests on an assertion
-   * rather than a manual contract (review B3). Optional: an arm that omits it is
+   * rather than a manual contract. Optional: an arm that omits it is
    * skipped with a warning, leaving its determinism unverified rather than
    * blocking the run.
    */

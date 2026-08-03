@@ -197,7 +197,7 @@ const loadHarness = async (options: LifecycleHarnessOptions = {}): Promise<Lifec
       return webgpuManager;
     }),
   }));
-  vi.doMock('#resources/Loader', () => ({
+  vi.doMock('#assets/Loader', () => ({
     Loader: vi.fn(function () {
       return loader;
     }),
@@ -1119,10 +1119,10 @@ describe('Application lifecycle / getters / sizing', () => {
   });
 
   // -------------------------------------------------------------------------
-  // _stopFrameLoop() -> scenes._abortInFlightNavigation() wiring (Slice 7 Group B)
+  // _stopFrameLoop() -> scenes._abortInFlightNavigation() wiring
   // -------------------------------------------------------------------------
 
-  describe('_stopFrameLoop() -> scenes._abortInFlightNavigation() wiring (Slice 7 Group B)', () => {
+  describe('_stopFrameLoop() -> scenes._abortInFlightNavigation() wiring', () => {
     test('stop() calls scenes._abortInFlightNavigation() before its own _clearScene() call', async () => {
       const { Application, ApplicationStatus, sceneDirector } = await loadHarness();
       const app = new Application({ backend: { type: 'webgl2' } });

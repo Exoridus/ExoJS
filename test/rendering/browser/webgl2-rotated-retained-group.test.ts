@@ -1,7 +1,7 @@
 /**
  * WebGL2 renderer-matrix browser tests — RetainedContainer under ROTATION,
- * mirroring webgpu-rotated-retained-group.test.ts 1:1 (review findings
- * F3/B-01 + B-07 cross-backend gate for the per-group matrix).
+ * mirroring webgpu-rotated-retained-group.test.ts 1:1 (cross-backend gate
+ * for the per-group matrix).
  *
  * WebGL2 uploads the group matrix via Matrix.toArray(false) and is the
  * ground truth; both files assert the SAME expected pixels for a rotated

@@ -3,7 +3,7 @@
   "description": "The LOADED payload a CatalogEntry resolves to — what a `loader.load(catalog)` result map holds, as opposed to the handle-hybrid leaf InferCatalogLeaf materializes on the catalog itself. A bare path string is classified by its file suffix exactly as LeafForPath does, but resolves to the raw resource for every type: a value type's LOAD result is its decoded value (`unknown` for `json`), not the `AssetRef` wrapper its catalog property holds. Descriptors and explicit configs delegate to InferAssetResource unchanged.",
   "symbol": "InferLoadedEntry",
   "kind": "type",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 0,
@@ -214,11 +214,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/AssetDefinitions.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/AssetDefinitions.ts"
+        "label": "src/assets/AssetDefinitions.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetDefinitions.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/AssetDefinitions.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/AssetDefinitions.ts"
+  "sourcePath": "src/assets/AssetDefinitions.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetDefinitions.ts"
 }

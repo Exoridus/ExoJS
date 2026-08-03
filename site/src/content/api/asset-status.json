@@ -1,9 +1,9 @@
 {
   "title": "AssetStatus",
-  "description": "Uniform, read-only load-status contract surfaced by every asset handle and ref (asset-system v2 §6). A public projection of the handle's internal `LoadState`: `Texture`, `Sound`, and AssetRef each expose `state`, `ready`, and `error` directly (plus their own `loaded` promise), so they structurally satisfy this interface. No separate status object is created.",
+  "description": "Uniform, read-only load-status contract surfaced by every asset handle and ref. A public projection of the handle's internal `LoadState`: `Texture`, `Sound`, and AssetRef each expose `state`, `ready`, and `error` directly (plus their own `loaded` promise), so they structurally satisfy this interface. No separate status object is created.",
   "symbol": "AssetStatus",
   "kind": "interface",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 3,
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Uniform, read-only load-status contract surfaced by every asset handle and ref (asset-system v2 §6). A public projection of the handle's internal `LoadState`: `Texture`, `Sound`, and AssetRef each expose `state`, `ready`, and `error` directly (plus their own `loaded` promise), so they structurally satisfy this interface. No separate status object is created."
+        "Uniform, read-only load-status contract surfaced by every asset handle and ref. A public projection of the handle's internal `LoadState`: `Texture`, `Sound`, and AssetRef each expose `state`, `ready`, and `error` directly (plus their own `loaded` promise), so they structurally satisfy this interface. No separate status object is created."
       ],
       "importLine": "import { AssetStatus } from '@codexo/exojs'",
       "sourceLink": null
@@ -111,11 +111,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/AssetStatus.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/AssetStatus.ts"
+        "label": "src/assets/AssetStatus.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetStatus.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/AssetStatus.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/AssetStatus.ts"
+  "sourcePath": "src/assets/AssetStatus.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetStatus.ts"
 }

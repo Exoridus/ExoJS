@@ -1,8 +1,7 @@
 /**
- * Real Application integration tests for the v0.17 Slice F app-system
- * extension bindings (implementation spec §12). Only the WebGL2 backend is
- * mocked (kept out of jsdom) — input, interaction, focus, audio, tweens, and
- * the app SystemRegistry all run for real.
+ * Real Application integration tests for the app-system extension bindings.
+ * Only the WebGL2 backend is mocked (kept out of jsdom) — input, interaction,
+ * focus, audio, tweens, and the app SystemRegistry all run for real.
  */
 
 import { Application } from '#core/Application';
@@ -57,7 +56,7 @@ afterEach(() => {
   rafSpy.mockRestore();
 });
 
-describe('Application app-system extension bindings (Slice F)', () => {
+describe('Application app-system extension bindings', () => {
   test('create() runs after every core manager exists', () => {
     let seenApp: Application | undefined;
     const binding: ApplicationSystemBinding = {

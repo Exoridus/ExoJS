@@ -33,7 +33,7 @@ describe('Sprite', () => {
     });
   });
 
-  describe('not-yet-loaded texture (#309)', () => {
+  describe('not-yet-loaded texture', () => {
     // A deferred texture handle (loader.get(...)) starts 0x0 until its payload
     // arrives. Constructing a Sprite from one must not divide size by a zero
     // frame and poison scale with NaN, and the sprite must pick up the real

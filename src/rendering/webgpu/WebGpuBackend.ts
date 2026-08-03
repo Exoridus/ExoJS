@@ -201,17 +201,17 @@ export class WebGpuBackend implements RenderBackend {
   private _drawPlanDepth = 0;
   private readonly _planBaseStack: number[] = [];
   private readonly _planHashStack: number[] = [];
-  // Retained instruction-set record/replay (Track B Slice 3, Tasks 9/10).
-  // Active capture windows, innermost last (S3-D6); live bundle registry for
+  // Retained instruction-set record/replay.
+  // Active capture windows, innermost last; live bundle registry for
   // device-loss generation bumps; permanently vetoed (poisoned) sets.
   private readonly _retainedCaptureFrames: WebGpuRetainedCaptureFrame[] = [];
   private readonly _retainedBundles = new Set<WebGpuRetainedGroupBundle>();
   private readonly _rejectedRetainedSets = new WeakSet<RetainedInstructionSet>();
-  // Reused across per-batch scans at record time (S3-D4) to avoid an
+  // Reused across per-batch scans at record time to avoid an
   // allocation per flush; the renderer-agnostic counterpart of WebGL2's
   // capture-end `_retainedIndexRange` (WebGPU scans per batch, not per capture).
   private readonly _retainedBatchIndexRange: WebGpuRetainedNodeIndexRange = { min: 0, max: 0 };
-  // Render-error surface (S3 diagnostics): dedupe keys for onRenderError, and
+  // Render-error surface: dedupe keys for onRenderError, and
   // the bound uncapturederror listener (re-installed by _initialize after
   // device-loss recovery).
   private readonly _reportedErrorKeys = new Set<string>();
@@ -421,7 +421,7 @@ export class WebGpuBackend implements RenderBackend {
 
       if (drawCommandUsesSharedTransform(command, this)) {
         // Upload the RAW world transform + snap-mode flag; the vertex stage snaps
-        // the device-pixel origin (spec D3-D5). No CPU snap at this seam anymore.
+        // the device-pixel origin. No CPU snap at this seam anymore.
         storage.writeCommand(command, undefined, command.drawable.pixelSnapMode);
       } else {
         storage.recordSkippedWrite();
@@ -478,7 +478,7 @@ export class WebGpuBackend implements RenderBackend {
 
     const renderer = this.rendererRegistry.resolve(drawable);
 
-    // Defensive (S3-D5): a draw the recorder cannot capture inside an active
+    // Defensive: a draw the recorder cannot capture inside an active
     // window poisons it — the predicate excludes these at collect time, but
     // an incomplete replay stream must never be committable.
     if (this._retainedCaptureFrames.length > 0 && (renderer as { _supportsRetainedBatches?: boolean })._supportsRetainedBatches !== true) {
@@ -1074,8 +1074,8 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   /**
-   * Active per-group transform for the draws submitted until the next call
-   * (Track B Slice 2, S2-D2). `null` means identity (no retained group).
+   * Active per-group transform for the draws submitted until the next call.
+   * `null` means identity (no retained group).
    * Renderers fold it into their vertex stage as the projection UBO's `group`.
    * @internal
    */
@@ -1095,9 +1095,9 @@ export class WebGpuBackend implements RenderBackend {
 
   /**
    * Playback hook (RenderPlanPlayer): enter/leave a retained transform group.
-   * A group is a flush boundary by design (S2-D2) — the pending batch must
+   * A group is a flush boundary by design — the pending batch must
    * drain under the OLD group matrix before the new one takes effect. The GPU
-   * pass deliberately stays OPEN across the boundary (B-06, S3-D7): renderers
+   * pass deliberately stays OPEN across the boundary: renderers
    * that share a per-flush projection UBO guard it themselves against content
    * changes within an open pass (`_endPassOnProjectionChange`, so uncached
    * playback splits lazily at the next conflicting flush instead of eagerly
@@ -1112,7 +1112,7 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   // ───────────────────────────────────────────────────────────────────────────
-  // Retained instruction-set record/replay (Track B Slice 3, S3-D1/D3/D7).
+  // Retained instruction-set record/replay.
   // ───────────────────────────────────────────────────────────────────────────
 
   /** Whether at least one retained capture window is active. @internal */
@@ -1121,7 +1121,7 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   /**
-   * The innermost active capture window (S3-D6), or `null` when none is open.
+   * The innermost active capture window, or `null` when none is open.
    * A fresh `WebGpuRetainedCaptureFrame` instance is created per capture-open
    * call (even across re-records of the same bundle) and discarded at
    * `_endRetainedCapture`, so its identity is a precise "this specific
@@ -1194,8 +1194,8 @@ export class WebGpuBackend implements RenderBackend {
 
   /**
    * Playback hook: replay one recorded batch from group-owned resources into
-   * the OPEN pass (no end/submit at group boundaries on the cached path,
-   * B-06). All state — pipeline, projection/group uniforms, texture bindings
+   * the OPEN pass (no end/submit at group boundaries on the cached path).
+   * All state — pipeline, projection/group uniforms, texture bindings
    * — is resolved live; only the recorded data is reused. Dispatches to the
    * renderer that recorded the batch (any {@link WebGpuRetainedBatchReplayer},
    * not just the sprite renderer).
@@ -1220,7 +1220,7 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   /**
-   * Collect-time backend validation (S3-D3) on top of the plan-level
+   * Collect-time backend validation on top of the plan-level
    * generation check: every recorded batch's managed texture views must still
    * be the recorded identities — `_syncTexture` recreates the view on resize,
    * and resized textures invalidate the UV words baked into the cached
@@ -1283,7 +1283,7 @@ export class WebGpuBackend implements RenderBackend {
   /**
    * Stage one recorded renderer flush (called by any capable renderer, e.g.
    * the sprite renderer, while a capture window is active): copies the
-   * packed instance bytes (owned by the INNERMOST capture's bundle, S3-D6),
+   * packed instance bytes (owned by the INNERMOST capture's bundle),
    * resolves the recorded texture views, and appends one shared instruction
    * to every active set.
    * @internal
@@ -1448,7 +1448,7 @@ export class WebGpuBackend implements RenderBackend {
 
     for (const batch of staged) {
       // Rebase this batch's instance node indices to group-local indices —
-      // the cached bytes become immune to frame-local index shifts (S3-D4)
+      // the cached bytes become immune to frame-local index shifts
       // and address the group-owned row copy below. Layout-aware — delegated
       // to the renderer that packed the bytes (the payload was already
       // created at record time, so its renderer is in hand here). A
@@ -1479,7 +1479,7 @@ export class WebGpuBackend implements RenderBackend {
       this._accountant.recordBufferUpload(frame.totalBytes);
     }
 
-    // Slice 4c: record the rebase base + row count so a later child move can
+    // Record the rebase base + row count so a later child move can
     // patch its one row in place (O(k)) instead of dropping the recording.
     bundle._recordTransformRowRange(device, hasSharedTransformRange ? base : 0, rowCount);
   }
@@ -1802,7 +1802,7 @@ export class WebGpuBackend implements RenderBackend {
 
     // Retained group bundles hold buffers of the dead device: drop the GPU
     // handles and bump every generation so recorded instruction sets fail
-    // validation and re-record against the fresh device (S3-D3). Any capture
+    // validation and re-record against the fresh device. Any capture
     // in flight is abandoned (its instructions keep the -1 sentinel).
     for (const bundle of this._retainedBundles) {
       bundle.invalidateDeviceState(false);

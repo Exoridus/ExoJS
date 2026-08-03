@@ -1,6 +1,6 @@
 /**
- * WebGPU renderer-matrix browser tests — TileChunkNode retained instruction-set
- * replay (Track B).
+ * WebGPU renderer-matrix browser tests — TileChunkNode retained
+ * instruction-set replay.
  *
  * The WebGPU counterpart of `webgl2-tilemap-retained-instruction-replay.test.ts`.
  * A live TileMapNode OUTSIDE (and before) the retained group keeps the group's

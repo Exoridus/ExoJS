@@ -3,7 +3,7 @@
   "description": "",
   "symbol": "InferAssetsEntries",
   "kind": "type",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 0,
@@ -51,11 +51,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/Assets.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Assets.ts"
+        "label": "src/assets/Assets.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Assets.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/Assets.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Assets.ts"
+  "sourcePath": "src/assets/Assets.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Assets.ts"
 }

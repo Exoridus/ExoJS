@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { Loadable, Loader } from '#assets/Loader';
 import {
   asNumberArray,
   asObject,
@@ -23,7 +24,6 @@ import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { type Text } from '#rendering/text/Text';
 import type { GlyphInfo } from '#rendering/text/types';
 import { Texture } from '#rendering/texture/Texture';
-import type { Loadable, Loader } from '#resources/Loader';
 
 // Text construction needs a GlyphAtlasPool; inject a mock so the Text-based
 // cases run without a real canvas 2D context (mirrors serialization.test.ts).

@@ -11,7 +11,7 @@ class NotAScene {}
 // Bare-constructor registry, inferred.
 new Application({ scenes: { title: TitleScene } });
 
-// Descriptor form, including a registered default `transition` (spec §3.10).
+// Descriptor form, including a registered default `transition`.
 new Application({
   scenes: {
     title: TitleScene,
@@ -24,7 +24,7 @@ new Application();
 new Application({});
 
 // A plain interface (no index signature) satisfies the registry constraint
-// as an explicit class type argument (spec §6.1's own TypeScript-verified claim).
+// as an explicit class type argument.
 interface GameScenesRegistry {
   readonly title: typeof TitleScene;
   readonly game: typeof GameScene;

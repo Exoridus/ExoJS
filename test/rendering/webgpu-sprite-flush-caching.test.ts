@@ -1,5 +1,5 @@
 /**
- * WebGPU sprite flush hot-path caching (review finding F5b/B-05).
+ * WebGPU sprite flush hot-path caching.
  *
  * The sprite flush used to create a fresh texture bind group (8 texture views
  * + 8 samplers) and rewrite the 128-byte projection/group uniform on EVERY

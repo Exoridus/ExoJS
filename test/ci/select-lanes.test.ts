@@ -174,12 +174,12 @@ describe('CI lane selection — engine/site areas', () => {
   });
 });
 
-describe('CI lane selection — PR #119 regression', () => {
-  // The exact shape of PR #119 (the merged v0.13 hardening): only files under
-  // the two extension packages. Before this fix `engine` stayed false, so the
-  // unit, package-verify and all three browser lanes were SKIPPED while Required
-  // CI still went green. This locks in the corrected behavior.
-  const PR_119_FILES = [
+describe('CI lane selection — package-only change must not skip engine lanes', () => {
+  // A change touching only files under the two extension packages (tiled,
+  // tilemap), with no core engine files. If `engine` stayed false here, the
+  // unit, package-verify and all three browser lanes would be SKIPPED while
+  // Required CI still went green. This locks in the corrected behavior.
+  const EXTENSION_PACKAGE_ONLY_FILES = [
     'packages/exojs-tiled/README.md',
     'packages/exojs-tiled/src/TiledMap.ts',
     'packages/exojs-tiled/src/public.ts',
@@ -198,8 +198,8 @@ describe('CI lane selection — PR #119 regression', () => {
     'packages/exojs-tilemap/test/view.test.ts',
   ];
 
-  it('selects every lane that PR #119 wrongly skipped', () => {
-    const { areas, lanes } = decide(...PR_119_FILES);
+  it('selects every lane that a naive package-only check would wrongly skip', () => {
+    const { areas, lanes } = decide(...EXTENSION_PACKAGE_ONLY_FILES);
     expect(areas).toMatchObject({ engine: true, site: true, audioFx: false, tilemapWorker: true });
     // Previously skipped — must now run:
     expect(lanes.unit).toBe(true);
@@ -212,7 +212,7 @@ describe('CI lane selection — PR #119 regression', () => {
     expect(lanes.typecheck).toBe(true);
     expect(lanes.lint).toBe(true);
     expect(lanes.siteBuild).toBe(true);
-    // PR #119 touched no audio-fx code — the browser-audio lane stays off.
+    // This change touched no audio-fx code — the browser-audio lane stays off.
     expect(lanes.browserAudio).toBe(false);
   });
 });

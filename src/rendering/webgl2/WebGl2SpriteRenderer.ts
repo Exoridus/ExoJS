@@ -85,7 +85,7 @@ interface SpriteRendererConnection {
 
 export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> implements WebGl2RetainedBatchReplayer {
   /**
-   * Retained-batch capability opt-in (Track B Slice 3, S3-D5.1): the DEFAULT
+   * Retained-batch capability opt-in: the DEFAULT
    * path's flushes can be recorded into a group's instruction set and
    * replayed from group-owned resources. Custom-material and pixel-snapped
    * draws are excluded by the plan-level recordability predicate (and
@@ -159,7 +159,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     const backend = this.getBackend();
     const material = sprite.material;
 
-    // Belt-and-braces for retained recording (S3-D5.2): the collect-time
+    // Belt-and-braces for retained recording: the collect-time
     // recordability predicate excludes custom-material draws from ever arming a
     // capture (both pixel-snap modes are resolved in-shader and stay recordable).
     // If one still arrives inside an active capture window, poison the recording
@@ -265,7 +265,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     backend.stats.batches++;
     backend.stats.drawCalls++;
 
-    // Retained recording (Slice 3, Task 6): while a capture window is open,
+    // Retained recording: while a capture window is open,
     // hand the exact packed instance words of this DEFAULT-path flush to the
     // backend — byte-identical to what just drew, no duplicated packing
     // logic. Custom-material batches are never recorded (the render()-time
@@ -291,7 +291,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
    * Stage `u_projection` (live view) and `u_group` (live composed group
    * matrix) on the default shader, guarded by the cached view/group stamps.
    * Shared by the live flush path and retained-batch replay — replay resolves
-   * exactly the same live state a slow-path flush would (S3-D1).
+   * exactly the same live state a slow-path flush would.
    */
   private _stageDefaultViewUniforms(backend: WebGl2Backend): void {
     const view = backend.view;
@@ -313,7 +313,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     backend._stageViewportUniform(this._shader);
   }
 
-  // ── Retained-batch record/replay (Track B Slice 3, Tasks 6/7) ────────────
+  // ── Retained-batch record/replay ──────────────────────────────────────────
   // The bundle stores raw instance bytes; this renderer owns the 32-byte
   // layout, so the layout-aware finalize steps (node-index scan/rebase, VAO
   // attribute wiring) and the replay dispatch live here.
@@ -338,7 +338,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     }
   }
 
-  /** @internal See {@link WebGl2RetainedBatchReplayer._rebaseRetainedNodeIndices} (S3-D4: group-local indices). */
+  /** @internal See {@link WebGl2RetainedBatchReplayer._rebaseRetainedNodeIndices} (rebases to group-local indices). */
   public _rebaseRetainedNodeIndices(payload: WebGl2RetainedBatchPayload, base: number): void {
     const words = payload.bundle.instanceWords;
     const start = payload.byteOffset / Uint32Array.BYTES_PER_ELEMENT;
@@ -377,7 +377,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   }
 
   /**
-   * Replay one recorded default-path batch (Task 7): all STATE is resolved
+   * Replay one recorded default-path batch: all STATE is resolved
    * live — blend mode via the backend's dedup, `u_projection` from the live
    * view, `u_group` from the live composed group matrix (the camera-pan /
    * group-move win), texture bindings by recorded slot order — and only the
@@ -416,7 +416,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     }
 
     // The group-owned transform store replaces the shared frame buffer on the
-    // SAME unit/sampler — zero GLSL changes (S3-D4). The next live flush
+    // SAME unit/sampler — zero GLSL changes. The next live flush
     // re-binds the shared texture through bindTransformBufferTexture.
     backend.bindTexture(transformTexture, transformTextureUnit);
 

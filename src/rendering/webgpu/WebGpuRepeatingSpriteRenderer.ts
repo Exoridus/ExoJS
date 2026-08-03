@@ -237,7 +237,7 @@ function repeatModeToAddressMode(mode: RepeatMode): GPUAddressMode {
 /** Instanced renderer for {@link RepeatingSprite} using WebGPU. */
 export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<RepeatingSprite> implements WebGpuRetainedBatchReplayer {
   /**
-   * Retained-batch capability opt-in (Track B Slice 3, S3-D5.1). Only the
+   * Retained-batch capability opt-in. Only the
    * GEOMETRY path (TextureRegion source) is recorded: its 32-byte instance
    * layout (node index at word 7 of the 8-word instance) matches the sprite
    * renderer's batch shape exactly, so it records and replays through the
@@ -311,7 +311,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
   private _currentModeY: RepeatMode | null = null;
   private _currentPath: 'shader' | 'geometry' | null = null;
 
-  // Retained-batch record/replay scratch (Track B Slice 3). One-texture list
+  // Retained-batch record/replay scratch. One-texture list
   // reused for every geometry-path record call; the group matrix scratch and
   // the open pass a replay last drew into mirror WebGpuSpriteRenderer's own
   // (separate from the live-flush projection tracking above, so a replay
@@ -428,7 +428,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     const modeX = sprite.modeX;
     const modeY = sprite.modeY;
 
-    // Retained recording (Track B Slice 3): only the geometry path is
+    // Retained recording: only the geometry path is
     // replayable (see _supportsRetainedBatches). A shader-path draw inside an
     // active capture window cannot be replayed from group-owned resources, so
     // poison the window — the group falls back to entry replay (correct, never
@@ -747,7 +747,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     backend.stats.batches++;
     backend.stats.drawCalls++;
 
-    // Retained recording (Track B Slice 3): while a capture window is open,
+    // Retained recording: while a capture window is open,
     // hand the exact packed geometry-path bytes of this flush to the backend —
     // byte-identical to what just drew. A single base texture binds to group(1),
     // so the recorded slot list is one entry. Shader-path batches never reach
@@ -766,7 +766,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     }
   }
 
-  // ── Retained-batch record/replay (Track B Slice 3) ───────────────────────
+  // ── Retained-batch record/replay ──────────────────────────────────────────
   // Only geometry-path batches ever reach here (see _supportsRetainedBatches).
   // Their 32-byte (8-word) layout puts the node index at word 7 — the same
   // position WebGpuSpriteRenderer uses — so scan/rebase mirror it exactly.
@@ -789,7 +789,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     }
   }
 
-  /** @internal See {@link WebGpuRetainedBatchReplayer._rebaseRetainedNodeIndices} (S3-D4: group-local indices). */
+  /** @internal See {@link WebGpuRetainedBatchReplayer._rebaseRetainedNodeIndices} (rebases to group-local indices). */
   public _rebaseRetainedNodeIndices(bytes: Uint8Array, base: number): void {
     const words = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / Uint32Array.BYTES_PER_ELEMENT);
 

@@ -1,6 +1,6 @@
-// Type contract for the multiphase `System` type (v0.17 core spec §9, slice
-// A): at least one of `fixedUpdate`/`update`/`draw` is required, `destroy`
-// and `order` are optional, and an object literal passed through
+// Type contract for the multiphase `System` type: at least one of
+// `fixedUpdate`/`update`/`draw` is required, `destroy` and `order` are
+// optional, and an object literal passed through
 // `SystemRegistry.add()`'s generic inference keeps its own `this`. Compiled
 // by `tsconfig.type-tests.json` via `pnpm typecheck:type-tests`.
 

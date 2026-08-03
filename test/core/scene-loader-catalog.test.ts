@@ -1,13 +1,13 @@
+import { Assets } from '#assets/Assets';
+import { coreAssetBindings } from '#assets/coreAssetBindings';
+import { Loader } from '#assets/Loader';
+import type { LoadingQueue } from '#assets/LoadingQueue';
 import type { Application } from '#core/Application';
 import { SceneLoader } from '#core/scene/SceneLoader';
 import { materializeAssetBindings } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
-import { Assets } from '#resources/Assets';
-import { coreAssetBindings } from '#resources/coreAssetBindings';
-import { Loader } from '#resources/Loader';
-import type { LoadingQueue } from '#resources/LoadingQueue';
 
-// Mirrors test/resources/catalog-adopt.test.ts's texture harness (createImageBitmap
+// Mirrors test/assets/catalog-adopt.test.ts's texture harness (createImageBitmap
 // stub + fetch mock) combined with test/core/scene-loader.test.ts's fake-Application
 // pattern (a real Loader wrapped in `{ loader } as unknown as Application`).
 const originalFetch = global.fetch;

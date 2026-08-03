@@ -37,7 +37,7 @@ const armRecording = (group: RetainedContainer, backend: RenderBackend): void =>
   set.commitRecording();
 };
 
-describe('RetainedContainer: Slice 4b transform-row seam', () => {
+describe('RetainedContainer: transform-row patch seam', () => {
   test('a direct child move enqueues that node on the group fragment', () => {
     const backend = createTestBackend();
     const group = new RetainedContainer();
@@ -334,7 +334,7 @@ const snapshot = (draws: readonly DrawCommand[]) =>
     maxY: d.maxY,
   }));
 
-describe('RetainedContainer: revision decoupling (spec 4.3)', () => {
+describe('RetainedContainer: revision decoupling', () => {
   test('moving the container bumps the group-matrix version, NOT its content revision', () => {
     const group = new RetainedContainer();
 
@@ -376,7 +376,7 @@ describe('RetainedContainer: revision decoupling (spec 4.3)', () => {
 
     const before = group._contentRevision;
 
-    // Slice 4b: a transform move no longer content-dirties the group (it patches
+    // A transform move no longer content-dirties the group (it patches
     // the row); a genuine content change (tint) still propagates content up.
     leaf.setTint(new Color(9, 9, 9));
 
@@ -385,7 +385,7 @@ describe('RetainedContainer: revision decoupling (spec 4.3)', () => {
     group.destroy();
   });
 
-  test('a transform-only mutation INSIDE the subtree does NOT content-dirty the container (Slice 4b flip)', () => {
+  test('a transform-only mutation INSIDE the subtree does NOT content-dirty the container', () => {
     const group = new RetainedContainer();
     const leaf = new Drawable();
 
@@ -414,7 +414,7 @@ describe('RetainedContainer: revision decoupling (spec 4.3)', () => {
   });
 });
 
-describe('RetainedContainer: group bounds and group-level culling (spec 6)', () => {
+describe('RetainedContainer: group bounds and group-level culling', () => {
   test('getBounds() lifts group-local child bounds into world space', () => {
     const group = new RetainedContainer();
     const leaf = new LeafDrawable('a'); // local bounds 0..16
@@ -528,8 +528,8 @@ describe('RetainedContainer: group bounds and group-level culling (spec 6)', () 
     // Engaged RetainedContainer: the group is culled as a whole (its AABB is
     // in view), and per-child culling inside the boundary is suppressed, so
     // the far child's draw command must be collected. Its group-local bounds
-    // are meaningless against the world-space view rect (spec 6) -- culling
-    // it per-child here would be wrong, not just slow.
+    // are meaningless against the world-space view rect -- culling it
+    // per-child here would be wrong, not just slow.
     const retained = buildScene(new RetainedContainer());
     const retainedDraws = collectDraws(retained.root, backend);
 
@@ -541,7 +541,7 @@ describe('RetainedContainer: group bounds and group-level culling (spec 6)', () 
   });
 });
 
-describe('RetainedContainer: deep-barrier escape output equivalence (plan D-P4 spec 8, scoped per F13/R3)', () => {
+describe('RetainedContainer: deep-barrier escape output equivalence', () => {
   test('the escaped branch renders byte-identical to the same branch in a plain Container scene (world space)', () => {
     const backend = createTestBackend();
 
@@ -575,7 +575,7 @@ describe('RetainedContainer: deep-barrier escape output equivalence (plan D-P4 s
   });
 });
 
-describe('RetainedContainer: whole-range fragment splice (spec 4.2)', () => {
+describe('RetainedContainer: whole-range fragment splice', () => {
   test('a clean second frame replays without getBounds()/material-key work for any descendant', () => {
     const backend = createTestBackend();
     const root = new Container();
@@ -633,7 +633,7 @@ describe('RetainedContainer: whole-range fragment splice (spec 4.2)', () => {
   });
 });
 
-describe('RetainedContainer: pooled fragment snapshot (Slice 3, F11a)', () => {
+describe('RetainedContainer: pooled fragment snapshot', () => {
   interface FragmentCarrier {
     _fragment: RetainedGroupFragment;
   }
@@ -764,7 +764,7 @@ describe('RetainedContainer: invalidation gates and view independence', () => {
 
     // A real pan (bumps View.updateId) small enough that the group's 0..16
     // world AABB still overlaps the 800x600 view centered here — a large pan
-    // would legitimately whole-group-cull it (spec 6), which is a different
+    // would legitimately whole-group-cull it, which is a different
     // code path than the one this test pins.
     backend.view.setCenter(50, 50);
 
@@ -821,8 +821,8 @@ describe('RetainedContainer: invalidation gates and view independence', () => {
     root.addChild(group);
 
     collectDraws(root, backend);
-    // Slice 4b: a transform move would be patched, not re-collected — use a
-    // genuine content change (tint) to force the invalidate -> re-collect rung.
+    // A transform move would be patched, not re-collected — use a genuine
+    // content change (tint) to force the invalidate -> re-collect rung.
     leaf.setTint(new Color(200, 0, 0));
 
     const materialSpy = vi.spyOn(leaf, '_getOrComputeMaterialKey');
@@ -969,7 +969,7 @@ describe('RetainedContainer: invalidation gates and view independence', () => {
 
     // World draws overlap the group draw NUMERICALLY (group-local 0..16 vs
     // world 0..16) but live in different spaces; the segment boundary must
-    // prevent any cross-space comparison/merge (spec §6, recon §12 audit).
+    // prevent any cross-space comparison/merge.
     group.addChild(inside);
     root.addChild(before);
     root.addChild(group);
@@ -994,8 +994,8 @@ describe('RetainedContainer: invalidation gates and view independence', () => {
     // fragment is SPLICED (not re-collected) must still drive
     // `_setRenderGroupTransform` with the live group world matrix at play
     // time, and the drawable underneath must be issued while that transform
-    // is active -- exactly the group x relative-world composition spec 4.3/5
-    // promises. Uses a mock/spy backend rather than a real GPU backend.
+    // is active -- exactly the group x relative-world composition contract
+    // this test pins. Uses a mock/spy backend rather than a real GPU backend.
     const backend = createTestBackend();
     const root = new Container();
     const group = new RetainedContainer();
@@ -1042,7 +1042,7 @@ describe('RetainedContainer: invalidation gates and view independence', () => {
   });
 });
 
-describe('RetainedContainer: alpha/tint staleness guard (spec 8, plan D-P2)', () => {
+describe('RetainedContainer: alpha/tint staleness guard', () => {
   test('the engine has no container-level alpha/tint surface that could bypass invalidation', () => {
     const group = new RetainedContainer();
 
@@ -1072,8 +1072,8 @@ describe('RetainedContainer: alpha/tint staleness guard (spec 8, plan D-P2)', ()
 
     collectDraws(root, backend);
 
-    // A real re-collect happened (Pixi #10757 class: tint/alpha must never
-    // be served from a stale retained frame).
+    // A real re-collect happened — tint/alpha must never be served from a
+    // stale retained frame.
     expect(materialSpy).toHaveBeenCalled();
 
     root.destroy();
@@ -1103,7 +1103,7 @@ describe('RetainedContainer: alpha/tint staleness guard (spec 8, plan D-P2)', ()
   });
 });
 
-describe('RetainedContainer: capture suppression under thrash (Slice 3, F11b)', () => {
+describe('RetainedContainer: capture suppression under thrash', () => {
   test('continuous per-frame mutation performs a bounded number of captures, then plain collects only', () => {
     const backend = createTestBackend();
     const captureSpy = vi.spyOn(RetainedGroupFragment.prototype, 'capture');
@@ -1117,14 +1117,14 @@ describe('RetainedContainer: capture suppression under thrash (Slice 3, F11b)', 
     root.addChild(group);
 
     for (let frame = 0; frame < 120; frame++) {
-      // Slice 4b: a move is patched, not invalidating — thrash the CONTENT
-      // channel (a per-frame distinct tint) to exercise the suppression path.
+      // A move is patched, not invalidating — thrash the CONTENT channel (a
+      // per-frame distinct tint) to exercise the suppression path.
       leaf.setTint(new Color((frame % 200) + 1, 0, 0));
       collectDraws(root, backend);
     }
 
     // F1 captures fresh; F2 recaptures once (single-shot grace, so a lone
-    // mutation between replays keeps Slice-2 recapture behavior); from F3 on
+    // mutation between replays keeps the recapture behavior); from F3 on
     // the fragment knows the captures are pure waste and every dirty frame is
     // a plain collect. Bounded — NOT O(frames).
     expect(captureSpy).toHaveBeenCalledTimes(2);
@@ -1237,7 +1237,7 @@ describe('RetainedContainer: capture suppression under thrash (Slice 3, F11b)', 
     backend.destroy();
   });
 
-  test('a single mutation between replays keeps the Slice-2 recapture behavior (no suppression)', () => {
+  test('a single mutation between replays keeps the recapture behavior (no suppression)', () => {
     const backend = createTestBackend();
     const captureSpy = vi.spyOn(RetainedGroupFragment.prototype, 'capture');
 
@@ -1273,7 +1273,7 @@ describe('RetainedContainer: capture suppression under thrash (Slice 3, F11b)', 
   });
 });
 
-describe('RetainedContainer: dev diagnostic for pathological invalidation (S2-D1)', () => {
+describe('RetainedContainer: dev diagnostic for pathological invalidation', () => {
   test('warns once when the fragment invalidates on effectively every frame of the observation window', () => {
     const backend = createTestBackend();
     const warnSpy = vi.spyOn(logger, 'warn');
@@ -1729,7 +1729,7 @@ describe('RetainedContainer: deep-barrier escape scoped to the offending sub-bra
   });
 });
 
-describe('RetainedContainer: destroyed-child eviction (P3f)', () => {
+describe('RetainedContainer: destroyed-child eviction', () => {
   test('a child destroy()ed without removeChild is evicted from the replay next frame and warns once', () => {
     const backend = createTestBackend();
     const warnSpy = vi.spyOn(logger, 'warn');

@@ -205,7 +205,7 @@ describe('SceneDirector', () => {
 
     await expect(manager.change(FailScene)).rejects.toThrow('load failed');
     expect(manager.currentScene).toBeNull();
-    // definition §16: unload() is never called for a scene that never completed activation.
+    // unload() is never called for a scene that never completed activation.
     expect(unload).not.toHaveBeenCalled();
     expect(destroySpy).toHaveBeenCalledTimes(1);
     expect(changeSpy).not.toHaveBeenCalled();
@@ -381,7 +381,7 @@ describe('SceneDirector', () => {
     expect(fixedUpdate).toHaveBeenCalledTimes(2);
   });
 
-  test('setScene always creates a fresh instance, even for the same constructor (definition §11.4)', async () => {
+  test('setScene always creates a fresh instance, even for the same constructor', async () => {
     const init = vi.fn(() => undefined);
     const unload = vi.fn(async () => undefined);
     const TestScene = makeSceneClass({ init, unload });
@@ -463,7 +463,7 @@ describe('SceneDirector', () => {
     }
   });
 
-  describe('registry — descriptor form (spec §6.1)', () => {
+  describe('registry — descriptor form', () => {
     test('accepts a descriptor-form registration ({ scene, transition }) exactly like a bare constructor', async () => {
       const TestScene = makeSceneClass();
       const manager = new SceneDirector(createApplicationStub(), { test: { scene: TestScene, transition: false } });
@@ -1494,7 +1494,7 @@ describe('SceneDirector — unload', () => {
     await expect(unloadPromise).resolves.toBe(true);
 
     expect(initSpy).toHaveBeenCalledTimes(1); // prepare() ran to completion (reached Ready), not aborted mid-way
-    expect(unloadHook).toHaveBeenCalledTimes(1); // Ready-scope cleanup: unload() DOES run (spec §2.1/§3.5.1)
+    expect(unloadHook).toHaveBeenCalledTimes(1); // Ready-scope cleanup: unload() DOES run
     expect(destroySpy).toHaveBeenCalledTimes(1);
 
     destroySpy.mockRestore();
@@ -1691,7 +1691,7 @@ describe('SceneDirector — transition session driving', () => {
     expect(manager.currentScene).toBeInstanceOf(OtherScene);
   });
 
-  test('a session that self-terminates (update() throws) mid-commit — after commitSwitch began its async prepare but before it resolved — does NOT activate the incoming scene once prepare later resolves (§3.7 session-identity guard)', async () => {
+  test('a session that self-terminates (update() throws) mid-commit — after commitSwitch began its async prepare but before it resolved — does NOT activate the incoming scene once prepare later resolves (session-identity guard)', async () => {
     const app = createApplicationStub();
     const First = makeSceneClass();
 
@@ -1740,7 +1740,7 @@ describe('SceneDirector — transition session driving', () => {
     // `_abortInFlightNavigation`: `session.update()` throws, so
     // `_updateTransition` calls `_finishActiveSession` directly — rejecting the
     // navigation and clearing `_activeSession`, but NOT bumping
-    // `_navigationGeneration`. The generation term of the §3.7 guard therefore
+    // `_navigationGeneration`. The generation term of the abort guard therefore
     // cannot detect this; only the session-identity term can.
     session.update = () => {
       throw new Error('session update blew up mid-prepare');
@@ -1752,7 +1752,7 @@ describe('SceneDirector — transition session driving', () => {
     await expect(navigation).rejects.toThrow('session update blew up mid-prepare');
 
     // Now prepare finally resolves and commitSwitch's continuation resumes. Its
-    // §3.7 guard must hit the session-identity bail (generation is unchanged, so
+    // The abort guard must hit the session-identity bail (generation is unchanged, so
     // the generation term alone would MISS this) and dispose the freshly-prepared
     // scope instead of activating it.
     resolveLoad();
@@ -1763,7 +1763,7 @@ describe('SceneDirector — transition session driving', () => {
   });
 });
 
-describe('SceneDirector — transition resource provisioning (§3.4, §3.7a)', () => {
+describe('SceneDirector — transition resource provisioning', () => {
   test('currentFrame: "texture" redirects the active scope draw into a pooled texture instead of the canvas', async () => {
     const app = createApplicationStub();
     const drawSpy = vi.fn();
@@ -2343,13 +2343,13 @@ describe('SceneDirector — transition lifecycle contract', () => {
   });
 });
 
-// NOTE (§3.5.1, "Ready-scope cleanup"): the fourth pre-commit-failure concept
+// NOTE ("Ready-scope cleanup"): the fourth pre-commit-failure concept
 // — a navigation aborted after commit() was requested and prepare() was
 // already in flight, cancelled before ever reaching the atomic commit boundary
-// — requires the abort-flag machinery Slice 7 adds to Application.start()'s
-// frame loop (§3.7). It is deliberately not tested here; Slice 7's own plan
-// must add it once _frameLoopActive exists.
-describe('SceneDirector — pre-commit failure semantics (§3.5.1)', () => {
+// — requires the abort-flag machinery in Application.start()'s frame loop.
+// It is deliberately not tested here; that coverage belongs once
+// _frameLoopActive exists.
+describe('SceneDirector — pre-commit failure semantics', () => {
   test('active-scope rollback is eliminated: _activeScope is only ever reassigned once prepare() has already succeeded', async () => {
     const app = createApplicationStub();
     const First = makeSceneClass();
@@ -2462,7 +2462,7 @@ describe('SceneDirector — pre-commit failure semantics (§3.5.1)', () => {
     session.done = true; // if the restore committed, let the session finish so navigation settles
     tick(managerB, app);
 
-    // Whether this listener throw surfaces as a rejection depends on Slice 2's
+    // Whether this listener throw surfaces as a rejection depends on the
     // guarded-dispatch: onStateChange is dispatched via dispatchIsolated, so
     // the throw is reported, not thrown back — the restore commits. Assert the
     // invariant that holds regardless: the scope ends up in exactly one place.
@@ -2477,7 +2477,7 @@ describe('SceneDirector — pre-commit failure semantics (§3.5.1)', () => {
   });
 });
 
-describe('SceneDirector — composability (§3.8)', () => {
+describe('SceneDirector — composability', () => {
   test('a transitioned restore() runs through the same commit/session machinery as change()', async () => {
     const First = makeSceneClass();
     const Second = makeSceneClass();
@@ -2626,7 +2626,7 @@ const driveZeroDurationTransition = async (manager: SceneDirector, app: ReturnTy
   tick(manager, app);
 };
 
-describe('SceneDirector — registry-default transition resolution (spec §3.10)', () => {
+describe('SceneDirector — registry-default transition resolution', () => {
   test("change() uses the target's registered default transition when no call-site transition is given", async () => {
     const registeredDefault = new RecordingPhaseForDirectorTest({ duration: 0 });
     const app = createApplicationStub();
@@ -2699,7 +2699,7 @@ describe('SceneDirector — registry-default transition resolution (spec §3.10)
   });
 });
 
-describe('SceneDirector._abortInFlightNavigation() (Slice 7 Group B, §3.7)', () => {
+describe('SceneDirector._abortInFlightNavigation()', () => {
   test('returns false when no navigation is in flight (nothing to abort)', () => {
     const director = new SceneDirector(createApplicationStub(), {});
 
@@ -2863,7 +2863,7 @@ describe('SceneDirector._abortInFlightNavigation() (Slice 7 Group B, §3.7)', ()
     await expect(director.restore(First)).resolves.toBe(director);
   });
 
-  test('aborting a transitioned change() while its commit prepare() is mid-flight never resurrects the active scope in the background (§3.7 race)', async () => {
+  test('aborting a transitioned change() while its commit prepare() is mid-flight never resurrects the active scope in the background', async () => {
     const app = createApplicationStub();
     const First = makeSceneClass();
     let resolveLoad!: () => void;
@@ -2922,7 +2922,7 @@ describe('SceneDirector._abortInFlightNavigation() (Slice 7 Group B, §3.7)', ()
     // `unload()` never actually reaches this code path — SceneScope's own
     // safety net already covers it. To exercise the specific gap this test
     // guards (SceneDirector's OWN handling of a rejected `_disposeScene()`
-    // call in the §3.7 race guard, independent of SceneScope's guarantee),
+    // call in the abort race guard, independent of SceneScope's guarantee),
     // `scope.destroy()` itself is mocked to reject directly.
     const app = createApplicationStub();
     const First = makeSceneClass();

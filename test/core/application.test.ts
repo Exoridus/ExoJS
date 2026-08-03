@@ -136,7 +136,7 @@ const loadApplicationHarness = async (
   vi.doMock('#rendering/webgpu/WebGpuBackend', () => ({
     WebGpuBackend: WebGpuBackendMock,
   }));
-  vi.doMock('#resources/Loader', () => ({
+  vi.doMock('#assets/Loader', () => ({
     Loader: LoaderMock,
   }));
   vi.doMock('#extensions/materialize', () => ({
@@ -422,8 +422,8 @@ describe('Application', () => {
   test('passes grouped loader options through to Loader constructor', async () => {
     const { Application, LoaderMock } = await loadApplicationHarness();
     const fetchOptions: RequestInit = { credentials: 'include' };
-    const cache = {} as import('#resources/CacheStore').CacheStore;
-    const cacheStrategy = { resolve: vi.fn() } as unknown as import('#resources/CacheStrategy').CacheStrategy;
+    const cache = {} as import('#assets/CacheStore').CacheStore;
+    const cacheStrategy = { resolve: vi.fn() } as unknown as import('#assets/CacheStrategy').CacheStrategy;
 
     new Application({
       loader: {
@@ -536,7 +536,7 @@ describe('Application', () => {
     const sceneTeardownError = new Error('scene teardown failed');
     const sceneDirector = {
       _clearScene: vi.fn().mockRejectedValue(sceneTeardownError),
-      // _stopFrameLoop() (Slice 7 Group B, spec §3.7) always aborts any
+      // _stopFrameLoop() always aborts any
       // in-flight navigation before scene teardown runs — false here means
       // "nothing was in flight," matching this test's own setup, so stop()
       // falls through to the _clearScene() path under test.

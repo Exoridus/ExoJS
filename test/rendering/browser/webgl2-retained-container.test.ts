@@ -1,14 +1,14 @@
 /**
  * WebGL2 renderer-matrix browser tests — RetainedContainer pixel cells
- * (Track B Slice 2, spec §8/§10(d) correctness gate).
+ * (correctness gate for real rendered output).
  *
- * Seven cells asserting real rendered output for the retained-group feature
- * shipped across tasks 3-8: camera motion over a retained fragment, a group
- * move via the group matrix, a child mutation inside the group, a tint/alpha
- * change inside the group, bitmap text lifted by the group uniform, an
- * effect-bearing direct child (cacheAsBitmap) that escapes the group
- * convention, and a depth-2 effect node whose branch escapes the group
- * (F13/R3 sub-branch escape) while keeping pixel-correct output.
+ * Seven cells asserting real rendered output for the retained-group feature:
+ * camera motion over a retained fragment, a group move via the group matrix,
+ * a child mutation inside the group, a tint/alpha change inside the group,
+ * bitmap text lifted by the group uniform, an effect-bearing direct child
+ * (cacheAsBitmap) that escapes the group convention, and a depth-2 effect
+ * node whose branch escapes the group (sub-branch escape) while keeping
+ * pixel-correct output.
  *
  * Run via:  pnpm test:browser:webgl
  */
@@ -38,9 +38,9 @@ import { wireCoreRenderers } from './_coreRenderers';
 // this file only ever renders Sprite/BitmapText nodes.
 //
 // spriteVert and the extended textVert both declare/multiply `u_group`
-// (copied from webgl2-group-uniform.test.ts, task 3's proof entry) so the
-// group uniform lifts both sprite and bitmap-text vertices the same way the
-// production shaders do (spec §7 text exception).
+// (copied from webgl2-group-uniform.test.ts) so the group uniform lifts both
+// sprite and bitmap-text vertices the same way the production shaders do
+// (text exception).
 // ---------------------------------------------------------------------------
 
 const shaderSources = vi.hoisted(() => ({
@@ -375,7 +375,7 @@ describe('WebGL2 renderer matrix: RetainedContainer cells', () => {
       expectPixelNear(readPixel(backend, 38, 38), [255, 0, 0, 255]);
 
       // Move the group by (16, 0): text bakes group-relative vertices, so the
-      // u_group uniform must lift them (spec §7 text exception) — the glyph
+      // u_group uniform must lift them (text exception) — the glyph
       // now covers (24,8)-(56,40).
       group.setPosition(16, 0);
       render(backend, root); // frame 2: spliced — the group matrix alone must relocate it
@@ -465,7 +465,7 @@ describe('WebGL2 renderer matrix: RetainedContainer cells', () => {
     }
   });
 
-  test('cell 8 — pixelSnapMode is group-aware: a snapped sprite inside a fractional group renders through the composed path (R2)', async () => {
+  test('cell 8 — pixelSnapMode is group-aware: a snapped sprite inside a fractional group renders through the composed path', async () => {
     const backend = await createBackend();
     const texture = createSolidTexture('#ff0000', 16, 16);
     const root = new Container();

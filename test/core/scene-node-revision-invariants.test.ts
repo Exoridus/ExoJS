@@ -70,7 +70,7 @@ const containerWithSizedChild = (): Container => {
 // without a row here is a review error; a row whose bump assertion fails is an
 // engine bug.
 const cases: readonly MutatorCase[] = [
-  // SceneNode transform family — transform-dirty ONLY (Slice 4b flip): an
+  // SceneNode transform family — transform-dirty ONLY: an
   // own-transform move stamps the transform channel, not content/structure, so
   // an enclosing RetainedContainer patches the row instead of re-collecting.
   drawableCase('setPosition', 'transform', n => n.setPosition(10, 20)),
@@ -108,7 +108,7 @@ const cases: readonly MutatorCase[] = [
   // WHICH draws a collect emits). These are two of the five audit gaps.
   drawableCase('cullable setter', 'structure', n => (n.cullable = false)),
   drawableCase('cullArea setter', 'structure', n => (n.cullArea = new Rectangle(0, 0, 8, 8))),
-  // SceneNode visibility — structure-dirty (D6, already wired in Slice 1).
+  // SceneNode visibility — structure-dirty, already wired for containers.
   drawableCase('visible setter', 'structure', n => (n.visible = false)),
   // RenderNode effect/plan-shape family. First three are audit gaps.
   drawableCase('preserveDrawOrder setter', 'structure', n => (n.preserveDrawOrder = true)),
@@ -124,7 +124,7 @@ const cases: readonly MutatorCase[] = [
   drawableCase('setTint', 'content', n => n.setTint(new Color(10, 20, 30))),
   drawableCase('setBlendMode', 'content', n => n.setBlendMode(BlendModes.Add)),
   drawableCase('pixelSnapMode setter', 'content', n => (n.pixelSnapMode = PixelSnapMode.Geometry)),
-  // Container structural mutators — structure-dirty (wired in Slice 1).
+  // Container structural mutators — structure-dirty.
   containerCase('addChild', 'structure', n => n.addChild(new Drawable())),
   // addChild is itself a structure-dirty mutator (tested above), so the
   // sized child needed to make the width/height division non-trivial must be
@@ -133,12 +133,12 @@ const cases: readonly MutatorCase[] = [
   // polluted by the addChild call rather than reflecting the width/height
   // setter alone.
   // width/height set the container's SCALE to hit a target extent — a spatial
-  // transform, so transform-dirty after the Slice-4b flip (not content).
+  // transform, so transform-dirty (not content).
   containerCase('width setter', 'transform', n => (n.width = 128), containerWithSizedChild),
   containerCase('height setter', 'transform', n => (n.height = 128), containerWithSizedChild),
 ];
 
-// SUBCLASS mutator table (C1, expert review 2026-07-11). The base table above
+// SUBCLASS mutator table. The base table above
 // only guards SceneNode/RenderNode/Drawable/Container; a Drawable subclass that
 // mutates a transform-relevant / visual-source field (texture, frame, geometry,
 // nine-slice metrics) routes through `invalidateCache`/`_markContentDirty` just
@@ -212,7 +212,7 @@ describe('revision invariants: every public visual mutator bumps the right revis
       mutatorCase.mutate(node);
 
       if (mutatorCase.expects === 'transform') {
-        // Slice 4b: an own-transform move travels the transform channel ONLY —
+        // An own-transform move travels the transform channel ONLY —
         // it must NOT content- or structure-dirty (that decoupling is what lets
         // a RetainedContainer patch the row instead of re-collecting).
         expect(node._transformRevision).toBeGreaterThan(nodeTransformBefore);
@@ -290,10 +290,10 @@ describe('revision invariants: every public visual mutator bumps the right revis
   });
 });
 
-// C1: RetainedContainer is the one Drawable subclass whose transform-relevant
+// RetainedContainer is the one Drawable subclass whose transform-relevant
 // mutator deliberately DIVERGES from the base contract — an own-transform move
 // reroutes to the group-matrix version instead of content-dirtying the
-// retained fragment (spec §4.3). The base table cannot express this (it asserts
+// retained fragment. The base table cannot express this (it asserts
 // content propagation on every transform mutator), so the divergence is pinned
 // here explicitly. This is the reason the base-table rule must carry the "OR a
 // subclass" clause: a subclass author extending RetainedContainer, or adding a
@@ -321,7 +321,7 @@ describe('revision invariants: RetainedContainer reroutes its OWN transform muta
     group.destroy();
   });
 
-  test('a transform-only mutation INSIDE the subtree transform-dirties the group but NOT its content (Slice 4b flip)', () => {
+  test('a transform-only mutation INSIDE the subtree transform-dirties the group but NOT its content', () => {
     const group = new RetainedContainer();
     const leaf = new Drawable();
 
@@ -373,13 +373,13 @@ describe('revision invariants: RetainedContainer reroutes its OWN transform muta
   });
 });
 
-// The transform-revision channel (Slice 4a groundwork, Slice 4b flip). An
-// own-transform mutation bumps a dedicated `_transformRevision` (propagated to
-// ancestors like content) and — since the 4b flip — NOT the content channel, so
-// a descendant move no longer invalidates a retained fragment; the group patches
-// the moved node's transform row in place instead. Representative transform
-// mutators only; the full mutator surface is guarded by the table above.
-describe('revision invariants: transform-revision channel (Slice 4a/4b)', () => {
+// The transform-revision channel. An own-transform mutation bumps a
+// dedicated `_transformRevision` (propagated to ancestors like content) and
+// NOT the content channel, so a descendant move no longer invalidates a
+// retained fragment; the group patches the moved node's transform row in
+// place instead. Representative transform mutators only; the full mutator
+// surface is guarded by the table above.
+describe('revision invariants: transform-revision channel', () => {
   const transformMutators: ReadonlyArray<readonly [string, (n: Drawable) => void]> = [
     ['setPosition', n => n.setPosition(10, 20)],
     ['setRotation', n => n.setRotation(45)],
@@ -405,8 +405,9 @@ describe('revision invariants: transform-revision channel (Slice 4a/4b)', () => 
 
       expect(node._transformRevision).toBeGreaterThan(nodeTransformBefore);
       expect(parent._transformRevision).toBeGreaterThan(parentTransformBefore);
-      // Slice 4b: the content channel is now decoupled — a transform move does
-      // NOT bump content (that is what keeps a retained fragment valid).
+      // The content channel is decoupled from the transform channel — a
+      // transform move does NOT bump content (that is what keeps a retained
+      // fragment valid).
       expect(node._contentRevision).toBe(nodeContentBefore);
 
       parent.destroy();

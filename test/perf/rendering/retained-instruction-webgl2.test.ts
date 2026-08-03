@@ -1,11 +1,11 @@
 /**
- * Structural gates for the WebGL2 retained instruction-set tier (Track B
- * Slice 3, Tasks 6/7): the real WebGl2Backend + sprite renderer run against
- * the recording fake GL context, driving the full collect ladder
- * (capture -> record -> splice) through `root.render(backend)` exactly like
- * production. Deterministic, GPU-free, CI-safe.
+ * Structural gates for the WebGL2 retained instruction-set tier: the real
+ * WebGl2Backend + sprite renderer run against the recording fake GL context,
+ * driving the full collect ladder (capture -> record -> splice) through
+ * `root.render(backend)` exactly like production. Deterministic, GPU-free,
+ * CI-safe.
  *
- * What these pin, per S3-D1/S3-D4:
+ * What these pin:
  * - the record frame captures the DEFAULT-path sprite flushes byte-identical
  *   (instance words land in the group bundle, node indices rebased group-local),
  * - the splice frame replays O(batches) with ZERO instance re-upload and zero
@@ -47,7 +47,7 @@ const withHarness = (fn: (harness: WebGl2Harness) => void): void => {
 
 /**
  * One sprite OUTSIDE (and before) the retained group so the group's shared
- * transform rows never start at 0 — the group-local index rebase (S3-D4) is
+ * transform rows never start at 0 — the group-local index rebase is
  * load-bearing in every cell, not incidentally satisfied.
  */
 const buildScene = () => {
@@ -131,7 +131,7 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
     });
   });
 
-  it('rebases recorded node indices group-local and copies the group-relative transform rows (S3-D4)', () => {
+  it('rebases recorded node indices group-local and copies the group-relative transform rows', () => {
     withHarness(harness => {
       const { root, group } = buildScene();
 
@@ -246,7 +246,7 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
       const beginSpy = vi.spyOn(harness.backend, '_beginRetainedCapture');
       const replaySpy = vi.spyOn(harness.backend, '_replayRetainedBatch');
 
-      // Content mutation (Slice 4b: a bare move would be row-patched instead —
+      // Content mutation (a bare move would be row-patched instead —
       // exercised by the fast-patch gate below): content-dirty wins, so the
       // dirty frame is a plain collect — no replay, no capture. The move rides
       // along so the re-recorded row still carries fresh position data.
@@ -280,7 +280,7 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
     });
   });
 
-  it('a texture RESIZE inside the group fails collect-time validation, falls back and re-records the same frame (S3-D3)', () => {
+  it('a texture RESIZE inside the group fails collect-time validation, falls back and re-records the same frame', () => {
     withHarness(harness => {
       const { root, group, textureA } = buildScene();
 
@@ -317,7 +317,7 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
     });
   });
 
-  it('nested retained groups: the outer set replays the whole spine; a nested group move stays replay-only (S3-D6)', () => {
+  it('nested retained groups: the outer set replays the whole spine; a nested group move stays replay-only', () => {
     withHarness(harness => {
       const [texture] = makeTextures(1);
       const root = new Container();
@@ -398,7 +398,7 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
     });
   });
 
-  it('destroying the group releases the bundle and frees its accounted GPU memory (S3-D9)', () => {
+  it('destroying the group releases the bundle and frees its accounted GPU memory', () => {
     withHarness(harness => {
       const { root, group } = buildScene();
 
@@ -420,7 +420,7 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
     });
   });
 
-  it('a pixel-snapped draw inside an open capture validates normally: snapping is resolved in-shader, not on the CPU (S3-D5.3 belt-and-braces)', () => {
+  it('a pixel-snapped draw inside an open capture validates normally: snapping is resolved in-shader, not on the CPU (belt-and-braces)', () => {
     withHarness(harness => {
       const [texture] = makeTextures(1);
       const backend = harness.backend;
@@ -448,7 +448,7 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
   });
 });
 
-describe('WebGL2 retained instruction set: Slice 4b fast transform-row patch', () => {
+describe('WebGL2 retained instruction set: fast transform-row patch', () => {
   it('a transform-only direct-child move patches the row in place: replay continues, NO re-record, only the moved row uploads', () => {
     withHarness(harness => {
       const { root, group, inside } = buildScene();

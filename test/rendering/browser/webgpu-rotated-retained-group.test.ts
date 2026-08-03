@@ -1,8 +1,8 @@
 /**
  * WebGPU renderer-matrix browser tests — RetainedContainer under ROTATION
- * (review findings F3/B-01 + B-07 pixel gate for the per-group matrix).
+ * (pixel gate for the per-group matrix).
  *
- * Track B Slice 2 routes a retained group's matrix to the GPU as the
+ * A retained group routes its matrix to the GPU as the
  * projection UBO's `group` (sprite/nine-slice/repeating mat4x4, mesh/text
  * mat3x3). A transposed packing of that matrix is invisible for the
  * translation-only group moves the existing cells exercise, but flips every

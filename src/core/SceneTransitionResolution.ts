@@ -20,7 +20,7 @@ function resolveSelectionValue(selection: SceneTransitionSelection): SceneTransi
 
 /**
  * Resolve a navigation call's `transition` option against a target scene's
- * registry-level default, per the exact per-operation order in spec §3.10:
+ * registry-level default, per the exact per-operation order:
  *
  * 1. An explicit call-site `transition` — a {@link SceneTransition},
  *    {@link SceneTransitionPhases}, or `false` — is used as-is, never
@@ -29,11 +29,11 @@ function resolveSelectionValue(selection: SceneTransitionSelection): SceneTransi
  *    applicable default; a real transition/phases value is composed via
  *    {@link resolvePhasedSelection} as needed.
  * 2. No call-site value: `change`/`restore` (and `start`, which delegates
- *    to `change()` — spec §3.7) fall back to the target's registry
+ *    to `change()`) fall back to the target's registry
  *    default, if any. `unload` never does, regardless of match kind — an
  *    unload is a discard, not an "entering" of the target.
  * 3. No call-site value and no applicable registry default: `null` — the
- *    direct, transition-free fast path (spec §3.3).
+ *    direct, transition-free fast path.
  *
  * Returns a ready-to-use {@link SceneTransition} (composing a
  * `{ enter, exit }` selection via {@link resolvePhasedSelection} if

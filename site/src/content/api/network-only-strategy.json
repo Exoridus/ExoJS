@@ -3,7 +3,7 @@
   "description": "CacheStrategy that always fetches from the network and never reads from or writes to any CacheStore. Useful for assets that must always be fresh (e.g. live configuration files) or for environments where persistent storage is unavailable. The `stores` argument is accepted but intentionally ignored. Returns the fully constructed resource — callers do not need to call `request.factory.create` again.",
   "symbol": "NetworkOnlyStrategy",
   "kind": "class",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 2,
@@ -172,11 +172,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/NetworkOnlyStrategy.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/NetworkOnlyStrategy.ts"
+        "label": "src/assets/NetworkOnlyStrategy.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/NetworkOnlyStrategy.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/NetworkOnlyStrategy.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/NetworkOnlyStrategy.ts"
+  "sourcePath": "src/assets/NetworkOnlyStrategy.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/NetworkOnlyStrategy.ts"
 }

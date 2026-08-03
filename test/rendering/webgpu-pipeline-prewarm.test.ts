@@ -7,8 +7,8 @@
  * EXACTLY the keys the hot-path lookup queries: a key mismatch silently turns
  * the whole prewarm into dead weight — the async machinery runs, the cache
  * fills with unreachable entries, and every first draw still compiles
- * synchronously (review finding F5a/B-03: the sprite prewarm keyed
- * `${blend}:${format}` while lookups query `${blend}:${format}:${s|n}`).
+ * synchronously — the sprite prewarm used to key
+ * `${blend}:${format}` while lookups query `${blend}:${format}:${s|n}`.
  *
  * These tests run the real prewarm against a stub device, then perform the
  * real lookup for every prewarmed combination and require ZERO synchronous

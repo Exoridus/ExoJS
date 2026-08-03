@@ -721,8 +721,8 @@ describe('RenderTo WebGL2 browser', () => {
   });
 
   test('a full 16-texture batch renders into a RenderTexture without a feedback loop (slot 15 vs sync unit)', async () => {
-    // Regression (review P1-1): the backend used texture unit 15 as its
-    // render-target sync scratch unit. _flushActiveRenderer re-binds the
+    // Regression: the backend used texture unit 15 as its render-target sync
+    // scratch unit. _flushActiveRenderer re-binds the
     // active target (unconditionally binding the target's own color texture
     // on that unit) BEFORE the sprite renderer flushes — so with 16 batch
     // slots, sampler slot 15 pointed at the target's own texture. Drawing

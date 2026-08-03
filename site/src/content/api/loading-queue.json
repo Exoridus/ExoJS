@@ -3,7 +3,7 @@
   "description": "An awaitable, progress-aware load operation. Implements `PromiseLike<T>` so it can be `await`ed directly and composed with `Promise.all([queue1, queue2])` without wrapping. Progress is updated as individual items complete via _notifyItem.",
   "symbol": "LoadingQueue",
   "kind": "class",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 5,
@@ -512,11 +512,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/LoadingQueue.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/LoadingQueue.ts"
+        "label": "src/assets/LoadingQueue.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/LoadingQueue.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/LoadingQueue.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/LoadingQueue.ts"
+  "sourcePath": "src/assets/LoadingQueue.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/LoadingQueue.ts"
 }

@@ -15,7 +15,7 @@ const fakeBackendA = {} as RenderBackend;
 const fakeBackendB = {} as RenderBackend;
 
 // A scope entry as the builder's current scope would hold it — the fragment
-// deep-copies it into its own pooled records at capture (Slice 3, F11a).
+// deep-copies it into its own pooled records at capture.
 const makeScopeDrawEntry = (drawable: Drawable, nodeIndex = 0): DrawScopeEntry => ({
   kind: RenderEntryKind.Draw,
   seq: 0,
@@ -72,7 +72,7 @@ describe('RetainedGroupFragment', () => {
     drawable.destroy();
   });
 
-  test('captures each top-level draw nodeIndex and looks it up by drawable (Slice 4b row map)', () => {
+  test('captures each top-level draw nodeIndex and looks it up by drawable (row map)', () => {
     const fragment = new RetainedGroupFragment();
     const spriteA = new Drawable();
     const spriteB = new Drawable();
@@ -103,7 +103,7 @@ describe('RetainedGroupFragment', () => {
     sprite.destroy();
   });
 
-  test('dirty-transform-row queue dedups moved nodes and clears (Slice 4b)', () => {
+  test('dirty-transform-row queue dedups moved nodes and clears', () => {
     const fragment = new RetainedGroupFragment();
     const a = new Drawable();
     const b = new Drawable();
@@ -139,7 +139,7 @@ describe('RetainedGroupFragment', () => {
     drawable.destroy();
   });
 
-  test('_devHasDestroyedDrawable reports a destroyed captured drawable (P3f)', () => {
+  test('_devHasDestroyedDrawable reports a destroyed captured drawable', () => {
     const fragment = new RetainedGroupFragment();
     const drawable = new Drawable();
 
@@ -152,7 +152,7 @@ describe('RetainedGroupFragment', () => {
     expect(fragment._devHasDestroyedDrawable()).toBe(true);
   });
 
-  test('invalidate() releases the pooled strong reference to drawables so they can GC (P3f)', () => {
+  test('invalidate() releases the pooled strong reference to drawables so they can GC', () => {
     const fragment = new RetainedGroupFragment();
     const drawable = new Drawable();
 
@@ -312,8 +312,8 @@ class LeafDrawable extends Drawable {
 }
 
 class SnapshotProbeContainer extends BoundaryContainer {
-  // Snapshotting is fragment-owned since Slice 3 (F11a): the probe captures
-  // its scope entries into a fragment exactly like RetainedContainer does.
+  // Snapshotting is fragment-owned: the probe captures its scope entries into
+  // a fragment exactly like RetainedContainer does.
   public readonly probeFragment = new RetainedGroupFragment();
   public lastSnapshot: readonly RetainedFragmentEntry[] | null = null;
 

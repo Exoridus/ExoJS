@@ -65,7 +65,7 @@ describe('mutationSignature', () => {
   });
 
   // Regression lock for the canonical dynamic-heavy 1k signature: this is the
-  // exact value the harness asserts each engine arm against (review B3). If it
+  // exact value the harness asserts each engine arm against. If it
   // changes, the cross-arm determinism guard's baseline moved.
   test('locks the canonical dynamic-heavy 1k signature', () => {
     expect(mutationSignature(selectMutationIndices(1_000, 0.075, SEED))).toBe('fa80f958');

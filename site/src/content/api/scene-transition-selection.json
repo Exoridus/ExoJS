@@ -1,6 +1,6 @@
 {
   "title": "SceneTransitionSelection",
-  "description": "The full set of values accepted for a `transition` option — call-site (`change()`/`restore()`/`unload()`) or registry-level default (§3.10): a single SceneTransition (or PhasedSceneTransition, which is one), a `{ enter, exit }` pair to compose, or `false` (the explicit \"no transition, even if a registry default exists\" escape hatch).",
+  "description": "The full set of values accepted for a `transition` option — call-site (`change()`/`restore()`/`unload()`) or registry-level default: a single SceneTransition (or PhasedSceneTransition, which is one), a `{ enter, exit }` pair to compose, or `false` (the explicit \"no transition, even if a registry default exists\" escape hatch).",
   "symbol": "SceneTransitionSelection",
   "kind": "type",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "The full set of values accepted for a `transition` option — call-site (`change()`/`restore()`/`unload()`) or registry-level default (§3.10): a single SceneTransition (or PhasedSceneTransition, which is one), a `{ enter, exit }` pair to compose, or `false` (the explicit \"no transition, even if a registry default exists\" escape hatch)."
+        "The full set of values accepted for a `transition` option — call-site (`change()`/`restore()`/`unload()`) or registry-level default: a single SceneTransition (or PhasedSceneTransition, which is one), a `{ enter, exit }` pair to compose, or `false` (the explicit \"no transition, even if a registry default exists\" escape hatch)."
       ],
       "importLine": "import { SceneTransitionSelection } from '@codexo/exojs'",
       "sourceLink": null

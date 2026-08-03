@@ -83,7 +83,7 @@ Every arm implements (full JSDoc in `../EngineAdapter.ts`):
   `mutationSignature(selectedIndices)` (from `../../shared/mutation.ts`) for the
   set your most recent `buildScene` selected. The harness asserts it against the
   canonical selection and **fails the run loudly** if it diverges, so the
-  cross-arm comparison rests on a check rather than prose (review B3). An arm
+  cross-arm comparison rests on a check rather than prose. An arm
   that omits it runs, but prints a warning that its determinism is unverified.
 
 ### Cross-arm fairness contract (MANDATORY)
@@ -95,7 +95,7 @@ comparison is meaningless. `exojs.ts` follows these rules and any new adapter
 1. **Same node set.** Build exactly `nodeCount` leaves for the archetype, laid
    out and nested as `spec` describes (`nestingDepth`, `textureCount`,
    `cullingEnabled`, the `overdraw` stacking). `cullingEnabled` is currently
-   `false` on every archetype (review C4): ExoJS's `.cullable` drives a real
+   `false` on every archetype: ExoJS's `.cullable` drives a real
    per-node bounds check in the render walk, but Pixi's `.cullable` is inert
    unless the app registers `CullerPlugin` — an identically-set flag does NOT
    cost the same on both arms. A new adapter that wants culling on must give

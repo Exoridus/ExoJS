@@ -10,7 +10,7 @@ import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
  * (`adapters/exojs.ts`, `adapters/pixi.ts`) and mutates the identical leaf set
  * selected by the shared `selectMutationIndices`, exposing the result through
  * {@link EngineAdapter.mutationSignature} so the harness's cross-arm determinism
- * check (review B3) asserts every arm did the same work. The scene structure
+ * check asserts every arm did the same work. The scene structure
  * (nested spine of transform-only actors, round-robin leaf distribution,
  * per-bucket texture cycling, overdraw stacking, top-left anchoring) is a
  * faithful transcription of the other arms.
@@ -28,7 +28,7 @@ import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
  * → endDrawLifecycle`. Only the DRAW half runs; the update systems (motion,
  * collision, the off-screen culling tagger) are never stepped, so only
  * Excalibur's render path is measured and no off-screen culling is applied
- * (matching `cullingEnabled: false` on every archetype — review C4 / #326).
+ * (matching `cullingEnabled: false` on every archetype).
  */
 
 /** Fixed design-space viewport the harness canvas renders (see `page/index.html`). Identical to the ExoJS/Pixi arms. */
@@ -172,7 +172,7 @@ export const createExcaliburAdapter = (): EngineAdapter => {
 
       // Shared, canonical mutation selection — the SAME helper every arm routes
       // through, so all arms select the byte-for-byte identical index set and the
-      // harness's cross-arm determinism assertion holds (review B3).
+      // harness's cross-arm determinism assertion holds.
       const selectedIndices = selectMutationIndices(nodeCount, spec.mutationFraction, seed);
       const selectedSet = new Set(selectedIndices);
       const leaves: MutableLeaf[] = [];

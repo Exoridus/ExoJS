@@ -253,7 +253,7 @@ interface CustomShaderResources {
   meshUniformBufferCapacity: number;
   meshUniformBindGroup: GPUBindGroup | null;
   // User-uniform UBO: buffer reused across frames; the persistent scratch +
-  // cached user bind group re-upload/rebuild only on an actual change (B-10).
+  // cached user bind group re-upload/rebuild only on an actual change.
   userUniformBuffer: GPUBuffer | null;
   userUniformBufferCapacity: number;
   userUniform: UserUniformState;
@@ -273,7 +273,7 @@ const meshUniformAlignment = 256;
 const maxCustomTextureSlots = 7; // user texture uniforms; group 2 binding 1..N
 
 /**
- * Per-bundle mesh replay state (Track B Slice 3 mesh opt-in, option (a)). Parked
+ * Per-bundle mesh replay state (mesh opt-in). Parked
  * on the group bundle's {@link WebGpuRetainedGroupBundle.rendererReplayState} so
  * it shares the bundle's grow-only / explicitly-freed lifecycle. Holds the mesh
  * group(0) `TransformUniforms` UBO (one dynamic-offset slot per recorded batch,
@@ -311,7 +311,7 @@ class MeshRetainedReplayState implements WebGpuRetainedRendererReplayState {
 
 export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements WebGpuRetainedBatchReplayer {
   /**
-   * Retained-batch opt-in (Track B Slice 3, S3-D5.1): the default static
+   * Retained-batch opt-in: the default static
    * INSTANCED draw (runs of ≥2 same-geometry meshes) is a recordable
    * flush-level batch. Single meshes take the CPU-baked default path (view
    * baked into vertices — uncacheable) and custom-material meshes their own
@@ -658,7 +658,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       );
 
       // Refresh the user uniform UBO from the material — uploaded only when the
-      // uniform values actually changed since the last frame (B-10).
+      // uniform values actually changed since the last frame.
       this._uploadUserUniforms(material, resources);
     }
 
@@ -1329,7 +1329,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     this._device!.queue.writeBuffer(this._instancedUniformBuffer!, slot * this._uniformAlignment, data.buffer, data.byteOffset, transformUniformByteLength);
   }
 
-  // ── Retained-batch record/replay (Track B Slice 3, mesh opt-in) ──────────
+  // ── Retained-batch record/replay (mesh opt-in) ────────────────────────────
   // Mesh's recordable draw is an INDEXED instanced draw: shared per-Geometry
   // vertex+index buffers (referenced via `payload.geometry`, never copied into
   // the group bundle) plus a group-owned per-instance node-index stream (one
@@ -1353,7 +1353,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     }
   }
 
-  /** @internal See {@link WebGpuRetainedBatchReplayer._rebaseRetainedNodeIndices} (S3-D4: group-local indices). */
+  /** @internal See {@link WebGpuRetainedBatchReplayer._rebaseRetainedNodeIndices} (rebases to group-local indices). */
   public _rebaseRetainedNodeIndices(bytes: Uint8Array, base: number): void {
     const words = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / Uint32Array.BYTES_PER_ELEMENT);
 
@@ -1363,7 +1363,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   }
 
   /**
-   * Replay one recorded default-path mesh batch into the OPEN pass (B-06). All
+   * Replay one recorded default-path mesh batch into the OPEN pass. All
    * STATE is resolved live — the instanced pipeline, `TransformUniforms`
    * (projection + group) from the live view/group, the per-batch premultiply
    * flag, the texture — and only DATA is reused: the SHARED geometry
@@ -1417,7 +1417,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // further growth happens this frame.
     this._ensureMeshReplayUniformCapacity(state, device, coordinator, slot + 1);
 
-    // Same-frame texture-mutation guard (S3-D7): resolving the texture binding
+    // Same-frame texture-mutation guard: resolving the texture binding
     // may re-upload mutated content on the queue timeline before the deferred
     // submit, retroactively changing draws already in the open pass. End it
     // first so those draws keep their pre-mutation content.
@@ -1829,7 +1829,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
     const device = this._device;
     // Routed through the backend so WGSL compilation errors in user-supplied
-    // material shaders surface via backend.onRenderError (S3 diagnostics).
+    // material shaders surface via backend.onRenderError.
     const shaderModule = this.getBackend()._createShaderModule(material.shader.wgsl, 'mesh:material-shader');
 
     const meshUniformLayout = device.createBindGroupLayout({

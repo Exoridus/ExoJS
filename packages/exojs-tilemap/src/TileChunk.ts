@@ -80,7 +80,7 @@ export class TileChunk implements ReadonlyTileChunk {
    * Render-node-owned callbacks notified whenever `_revision` advances.
    * `TileChunkNode.pages` caches geometry against `revision`, but that cache
    * is only consulted from `render()` — a call the engine skips entirely for
-   * a content-clean subtree under a `RetainedContainer` (Track B). Without
+   * a content-clean subtree under a `RetainedContainer`. Without
    * this push, an in-place tile edit after capture would replay stale cached
    * geometry forever. Package-internal; not part of {@link ReadonlyTileChunk}.
    */

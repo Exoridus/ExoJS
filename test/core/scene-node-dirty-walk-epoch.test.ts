@@ -31,8 +31,8 @@ describe('SceneNode dirty-walk epoch early-out (F10)', () => {
     // Consumer read: starts a fresh epoch (like a plan build would).
     void root._transformRevision;
 
-    // Slice 4b: a transform move stamps the TRANSFORM channel (not content),
-    // and the epoch early-out mirrors the content walk on that channel.
+    // A transform move stamps the TRANSFORM channel (not content), and the
+    // epoch early-out mirrors the content walk on that channel.
     const touchSpy = vi.spyOn(NodeRevision.prototype, 'touchTransform');
 
     for (let index = 1; index <= mutations; index++) {

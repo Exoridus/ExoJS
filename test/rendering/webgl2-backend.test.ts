@@ -130,7 +130,7 @@ describe('Application.setCursor', () => {
     }));
 
     // stub out non-rendering deps
-    vi.doMock('#resources/Loader', () => ({
+    vi.doMock('#assets/Loader', () => ({
       Loader: vi.fn(function () {
         return {
           destroy: vi.fn(),

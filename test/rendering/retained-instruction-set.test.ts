@@ -58,7 +58,7 @@ class UnregisteredLeaf extends Drawable {
   }
 }
 
-// v1 capability flag carrier (S3-D5.1): sprite-renderer default path only.
+// Capability flag carrier: sprite-renderer default path only.
 const flaggedRenderer = { _supportsRetainedBatches: true };
 const unflaggedRenderer = {};
 
@@ -159,7 +159,7 @@ const captureFragment = (group: RetainedContainer, backend: RenderBackend): Reta
   return (group as unknown as FragmentCarrier)._fragment;
 };
 
-describe('recordability predicate (S3-D5): v1 records default-path flagged renderers only', () => {
+describe('recordability predicate: records default-path flagged renderers only', () => {
   test('a fragment of flagged default-path drawables is recordable, including through nested plain containers', () => {
     const backend = createTestBackend();
     const group = new RetainedContainer();
@@ -178,7 +178,7 @@ describe('recordability predicate (S3-D5): v1 records default-path flagged rende
     backend.destroy();
   });
 
-  test('a renderer without the capability flag makes the fragment non-recordable (S3-D5.1)', () => {
+  test('a renderer without the capability flag makes the fragment non-recordable', () => {
     const backend = createTestBackend();
     const group = new RetainedContainer();
 
@@ -193,7 +193,7 @@ describe('recordability predicate (S3-D5): v1 records default-path flagged rende
     backend.destroy();
   });
 
-  test('a drawable with its own material makes the fragment non-recordable (S3-D5.2)', () => {
+  test('a drawable with its own material makes the fragment non-recordable', () => {
     const backend = createTestBackend();
     const group = new RetainedContainer();
 
@@ -207,7 +207,7 @@ describe('recordability predicate (S3-D5): v1 records default-path flagged rende
     backend.destroy();
   });
 
-  test('a geometry-snapped drawable stays recordable (snapping is resolved in-shader, S3-D5.3)', () => {
+  test('a geometry-snapped drawable stays recordable (snapping is resolved in-shader)', () => {
     const backend = createTestBackend();
     const group = new RetainedContainer();
     const snapped = new RecordableLeaf('a');
@@ -239,7 +239,7 @@ describe('recordability predicate (S3-D5): v1 records default-path flagged rende
     backend.destroy();
   });
 
-  test('any barrier record in the fragment makes it non-recordable (S3-D5.4)', () => {
+  test('any barrier record in the fragment makes it non-recordable', () => {
     const backend = createTestBackend();
     const group = new RetainedContainer();
     const clipped = new RecordableLeaf('clipped');
@@ -299,7 +299,7 @@ describe('recordability predicate (S3-D5): v1 records default-path flagged rende
   });
 });
 
-describe('RetainedInstructionSet: recording lifecycle and validity (S3-D3)', () => {
+describe('RetainedInstructionSet: recording lifecycle and validity', () => {
   const makeBatch = (bundle: { generation: number }, generation = bundle.generation): RetainedBatchInstruction => ({
     kind: RetainedInstructionKind.Batch,
     bundle,
@@ -384,7 +384,7 @@ describe('RetainedInstructionSet: recording lifecycle and validity (S3-D3)', () 
     backend.destroy();
   });
 
-  test('a stale bundle generation invalidates the set (S3-D6 belt-and-braces)', () => {
+  test('a stale bundle generation invalidates the set (belt-and-braces)', () => {
     const backend = createTestBackend();
     const set = new RetainedInstructionSet();
     const bundle = { generation: 1 };
@@ -545,7 +545,7 @@ const createRecordingBackend = (): RecordingBackendHarness => {
       flushPending();
     },
     _setRenderGroupTransform(transform: Matrix | null): void {
-      flushPending(); // groups are flush boundaries (S2-D2 / hook contract)
+      flushPending(); // groups are flush boundaries (hook contract)
       activeTransform = transform;
       events.push(`transform:${transformLabel()}`);
     },
@@ -763,7 +763,7 @@ describe('RenderPlanPlayer: retained replay (Task 4 replay hook)', () => {
     backend.destroy();
   });
 
-  test('an inner set replayed while an outer group records is appended verbatim — same descriptor objects (S3-D6)', () => {
+  test('an inner set replayed while an outer group records is appended verbatim — same descriptor objects', () => {
     const { backend, events } = createRecordingBackend();
     const root = new Container();
     const outer = new RetainedContainer();
@@ -872,7 +872,7 @@ describe('collect switch: fallback ladder end-to-end (Task 5)', () => {
     backend.destroy();
   });
 
-  test('a stale bundle generation degrades to entry replay and re-records (S3-D3 validation)', () => {
+  test('a stale bundle generation degrades to entry replay and re-records', () => {
     const { backend, events, bundle } = createRecordingBackend();
     const root = new Container();
     const group = new RetainedContainer();
@@ -928,8 +928,8 @@ describe('collect switch: fallback ladder end-to-end (Task 5)', () => {
 
     playFrame(root, backend); // F3: splice
 
-    // Slice 4b: a transform move would be row-patched (set stays valid); a
-    // genuine content change is what invalidates the recording + fragment.
+    // A transform move would be row-patched (set stays valid); a genuine
+    // content change is what invalidates the recording + fragment.
     leaf.invalidateContent();
 
     // F4: dirty -> full collect; the stale recording is gone, nothing replays.
@@ -1000,7 +1000,7 @@ describe('collect switch: fallback ladder end-to-end (Task 5)', () => {
     backend.destroy();
   });
 
-  test('a non-recordable fragment (unflagged renderer) never arms recording — Slice-2 entry replay forever', () => {
+  test('a non-recordable fragment (unflagged renderer) never arms recording — stays on entry replay forever', () => {
     const { backend, events } = createRecordingBackend();
     const root = new Container();
     const group = new RetainedContainer();
@@ -1051,7 +1051,7 @@ describe('collect switch: fallback ladder end-to-end (Task 5)', () => {
     backend.destroy();
   });
 
-  test('nested groups through the collect switch: inner set splices inside the outer fragment and records verbatim into the outer set (S3-D6)', () => {
+  test('nested groups through the collect switch: inner set splices inside the outer fragment and records verbatim into the outer set', () => {
     const { backend, events } = createRecordingBackend();
     const root = new Container();
     const outer = new RetainedContainer();
@@ -1069,8 +1069,8 @@ describe('collect switch: fallback ladder end-to-end (Task 5)', () => {
     // F1: everything dirty -> captures, no arming.
     playFrame(root, backend);
 
-    // F2: outer dirty (mutated direct child, content-dirty — Slice 4b: a move
-    // would patch instead), inner clean -> inner arms and records its own set
+    // F2: outer dirty (mutated direct child, content-dirty — a move would
+    // patch instead), inner clean -> inner arms and records its own set
     // during the outer's full collect.
     dynamic.invalidateContent();
     playFrame(root, backend);
@@ -1138,7 +1138,7 @@ describe('collect switch: fallback ladder end-to-end (Task 5)', () => {
 
     // Same cadence as above up to the outer capture holding the spliced set.
     playFrame(root, backend); // F1
-    dynamic.invalidateContent(); // content-dirty keeps the OUTER dirty (Slice 4b: a move would patch)
+    dynamic.invalidateContent(); // content-dirty keeps the OUTER dirty (a move would patch)
     playFrame(root, backend); // F2: inner records
     dynamic.invalidateContent();
     playFrame(root, backend); // F3: inner splices, outer suppressed

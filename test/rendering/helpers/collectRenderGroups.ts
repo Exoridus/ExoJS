@@ -9,7 +9,7 @@ import type { GroupScope, ScopeEntry } from '#rendering/plan/RenderScope';
  * The optimizer ({@link RenderPlanOptimizer}) stamps this grouping implicitly
  * onto each {@link DrawCommand.groupIndex}; a `RenderGroup` makes that batch unit
  * explicit as a value. The plan player no longer materializes these per frame —
- * it walks `groupIndex` adjacency over `scope.entries` inline (Slice 2c). This
+ * it walks `groupIndex` adjacency over `scope.entries` inline. This
  * collector survives only as a **test helper**: render-plan tests assert grouping
  * structure against it without re-deriving the adjacency rule, and the upload-
  * boundary mocks reconstruct the group's commands from the entries range.

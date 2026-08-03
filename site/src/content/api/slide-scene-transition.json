@@ -1,6 +1,6 @@
 {
   "title": "SlideSceneTransition",
-  "description": "Directional slide transition — covers menu/inventory/page-style navigation (definition spec §8). Three modes: - `'push'` (default): the outgoing scene exits toward `direction` while the incoming scene enters from the opposite edge. Phase-split at the commit boundary (not a full `SceneTransition`), so there is a brief single-frame gap at the exact commit instant where neither scene is on-screen. - `'reveal'`: only the outgoing scene animates, sliding away toward `direction` to reveal the (already-committed) incoming scene underneath. - `'cover'`: only the incoming scene animates, sliding in from the opposite edge over a frozen snapshot of the (already-gone) outgoing scene.",
+  "description": "Directional slide transition — covers menu/inventory/page-style navigation. Three modes: - `'push'` (default): the outgoing scene exits toward `direction` while the incoming scene enters from the opposite edge. Phase-split at the commit boundary (not a full `SceneTransition`), so there is a brief single-frame gap at the exact commit instant where neither scene is on-screen. - `'reveal'`: only the outgoing scene animates, sliding away toward `direction` to reveal the (already-committed) incoming scene underneath. - `'cover'`: only the incoming scene animates, sliding in from the opposite edge over a frozen snapshot of the (already-gone) outgoing scene.",
   "symbol": "SlideSceneTransition",
   "kind": "class",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Directional slide transition — covers menu/inventory/page-style navigation (definition spec §8). Three modes: - `'push'` (default): the outgoing scene exits toward `direction` while the incoming scene enters from the opposite edge. Phase-split at the commit boundary (not a full `SceneTransition`), so there is a brief single-frame gap at the exact commit instant where neither scene is on-screen. - `'reveal'`: only the outgoing scene animates, sliding away toward `direction` to reveal the (already-committed) incoming scene underneath. - `'cover'`: only the incoming scene animates, sliding in from the opposite edge over a frozen snapshot of the (already-gone) outgoing scene."
+        "Directional slide transition — covers menu/inventory/page-style navigation. Three modes: - `'push'` (default): the outgoing scene exits toward `direction` while the incoming scene enters from the opposite edge. Phase-split at the commit boundary (not a full `SceneTransition`), so there is a brief single-frame gap at the exact commit instant where neither scene is on-screen. - `'reveal'`: only the outgoing scene animates, sliding away toward `direction` to reveal the (already-committed) incoming scene underneath. - `'cover'`: only the incoming scene animates, sliding in from the opposite edge over a frozen snapshot of the (already-gone) outgoing scene."
       ],
       "importLine": "import { SlideSceneTransition } from '@codexo/exojs'",
       "sourceLink": null
@@ -540,7 +540,7 @@
             }
           ],
           "returnType": "SceneTransitionPhaseRequirements",
-          "description": "Director entry point — mirrors SceneTransition.beginSession/ createSession() (spec §3.1a): the Director (and, for { enter, exit } composition, a sibling PhasedSceneTransition instance's own session driver) calls this directly on a phase instance it doesn't own the hierarchy of, which the protected PhasedSceneTransition.getPhaseRequirements authoring hook cannot support on its own. Authors implement getPhaseRequirements(); nothing else calls it directly."
+          "description": "Director entry point — mirrors SceneTransition.beginSession/ createSession(): the Director (and, for { enter, exit } composition, a sibling PhasedSceneTransition instance's own session driver) calls this directly on a phase instance it doesn't own the hierarchy of, which the protected PhasedSceneTransition.getPhaseRequirements authoring hook cannot support on its own. Authors implement getPhaseRequirements(); nothing else calls it directly."
         },
         {
           "name": "runPhase",

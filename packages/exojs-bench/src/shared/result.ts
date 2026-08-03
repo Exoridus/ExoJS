@@ -1,6 +1,5 @@
 /**
- * Domain-agnostic cell-result core (review #325: `CellResult` was
- * rendering-coupled and living under `rendering/`).
+ * Domain-agnostic cell-result core.
  *
  * Every benchmark domain measures a matrix of cells and reports, per cell,
  * whether it completed and an optional explanation — regardless of what the

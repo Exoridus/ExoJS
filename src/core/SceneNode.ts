@@ -62,7 +62,7 @@ enum SceneNodeVectorChannel {
 const orientedCorners = [new Vector(), new Vector(), new Vector(), new Vector()];
 
 /**
- * Process-wide dirty-walk epoch (F10). Advanced by EVERY consumer read of a
+ * Process-wide dirty-walk epoch. Advanced by EVERY consumer read of a
  * node revision ({@link SceneNode._contentRevision}/`_structureRevision` —
  * plan builds read them, so each build starts a fresh epoch implicitly and
  * any extra read only bumps more often, which is the conservative direction:
@@ -75,7 +75,7 @@ let dirtyWalkEpoch = 1;
 
 /**
  * Process-wide count of live transform-group boundaries ({@link RetainedContainer}).
- * The Slice-4b transform-move seam ({@link SceneNode._notifyEnclosingRetainedGroup})
+ * The transform-move seam ({@link SceneNode._notifyEnclosingRetainedGroup})
  * walks to the nearest boundary on EVERY own-transform mutation; when no boundary
  * exists anywhere (the common case — most scenes use no RetainedContainer) that
  * walk would run to the root for nothing. Gating on this count makes the seam O(1)
@@ -89,7 +89,7 @@ let dirtyWalkEpoch = 1;
  */
 let transformGroupBoundaryCount = 0;
 
-/** @internal — a transform-group boundary was created; arm the Slice-4b move seam. */
+/** @internal — a transform-group boundary was created; arm the transform-move seam. */
 export const registerTransformGroupBoundary = (): void => {
   transformGroupBoundaryCount++;
 };
@@ -105,7 +105,7 @@ export const unregisterTransformGroupBoundary = (): void => {
  * Sentinel `parentVersion` used by {@link SceneNode.getGlobalTransform} when
  * NOTHING above this node contributes to its world matrix — the node is a
  * root, or its parent is an engaged transform-group boundary the node does not
- * escape (T3, expert review 2026-07-11). It is deliberately outside the range
+ * escape. It is deliberately outside the range
  * of every real `_globalTransformVersion` (which starts at 1 and only
  * increments), so a boundary flip that later reads a real, still-unresolved
  * parent version can never false-match a child that previously cached this
@@ -176,7 +176,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    * by {@link getWorldTransform}. Consumers caching a composition against this
    * node's world matrix compare the stamp instead of the matrix contents.
    *
-   * T3 guard (review): stamps are drawn from {@link nextNodeRevision} (a
+   * Stamps are drawn from {@link nextNodeRevision} (a
    * process-wide monotonic counter starting at 1), never from the small
    * per-node `_globalTransformVersion` sequence, so a source flip between the
    * delegated path (world === global) and the composed path can never produce
@@ -204,7 +204,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    *
    * Starts at 1, never 0: {@link NO_PARENT_VERSION} reserves 0 as the
    * no-parent-contribution sentinel, so a real version can never collide with
-   * it (T3). The initial value is otherwise irrelevant — the first
+   * it. The initial value is otherwise irrelevant — the first
    * {@link getGlobalTransform} recompute increments it, and every consumer
    * compares against a `-1` "unset" of its own.
    */
@@ -548,7 +548,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   /**
    * `true` on transform-group boundary nodes ({@link RetainedContainer}):
    * descendants combine against identity instead of this node's world matrix,
-   * so their global transforms are group-relative (Track B Slice 2, §5).
+   * so their global transforms are group-relative.
    * A getter, not a field, read live on every seam evaluation below:
    * subclasses may flip it at runtime, and descendants pick a flip up lazily
    * through the parent-version compare.
@@ -559,7 +559,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   }
 
   /**
-   * @internal — Slice 4b seam: the nearest enclosing retained transform group
+   * @internal — the nearest enclosing retained transform group
    * is notified when a descendant's OWN transform moves, so it can patch that
    * node's group-owned transform row in place (O(1)) instead of re-collecting
    * the whole subtree. No-op on a plain node; {@link RetainedContainer}
@@ -571,9 +571,9 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    * Whether this node opts back OUT of a parent transform-group boundary and
    * resolves world-space transforms. Overridden by RenderNode for
    * barrier-effect nodes (filters/mask/clip/cacheAsBitmap), whose effect
-   * machinery composites in world space (plan decision D-P4), and for direct
+   * machinery composites in world space, and for direct
    * children a RetainedContainer pushed out because their subtree contains a
-   * DEEP barrier — the sub-branch escape (F13/R3). Escapes are LIVE state,
+   * DEEP barrier — the sub-branch escape. Escapes are LIVE state,
    * picked up lazily through the same parent-version seam as boundary flips.
    * @internal
    */
@@ -619,7 +619,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    * {@link getGlobalTransform} matrix (same instance, no extra work). With
    * one, it lazily caches `groupLocal × groupWorld` and revalidates on read
    * via version/stamp compares — including runtime space flips such as
-   * RetainedContainer's deep-barrier sub-branch escape (F13/R3).
+   * RetainedContainer's deep-barrier sub-branch escape.
    */
   public getWorldTransform(): Matrix {
     const anchor = this._resolveTransformGroupAnchor();
@@ -673,7 +673,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    * is already world-space. Mirrors the exact seam getGlobalTransform uses:
    * the boundary getter and {@link _escapesTransformGroup} are both LIVE
    * (flips are picked up on every call), and an escaping direct child — its
-   * own barrier effects, or the deep-barrier sub-branch escape (F13/R3) —
+   * own barrier effects, or the deep-barrier sub-branch escape —
    * takes its whole subtree back to world space with it.
    * @internal
    */
@@ -959,7 +959,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   }
 
   /**
-   * @internal — aggregate transform-dirty stamp (Slice 4a) for this node's
+   * @internal — aggregate transform-dirty stamp for this node's
    * subtree: own-transform mutations (position/rotation/scale/skew/origin) at
    * or below. Orthogonal to {@link _contentRevision} — a content change does
    * not bump it and it does not bump content. Read by {@link RetainedContainer}
@@ -973,13 +973,13 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     return this._nodeRevision.transform;
   }
 
-  /** Dirty-walk epoch stamps for the F10 early-out — see {@link _markContentDirty}. */
+  /** Dirty-walk epoch stamps for the early-out below — see {@link _markContentDirty}. */
   private _contentWalkEpoch = 0;
   private _structureWalkEpoch = 0;
   private _transformWalkEpoch = 0;
 
   /**
-   * @internal — Slice-4b dirty-transform-row dedup stamp: the enclosing group's
+   * @internal — dirty-transform-row dedup stamp: the enclosing group's
    * dirty-row epoch at the last time this node was enqueued. Compared against
    * that group's current epoch to skip a second push in the same collect cycle
    * (see {@link RetainedGroupFragment.enqueueDirtyTransformRow}). The epoch is a
@@ -991,10 +991,10 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   /**
    * @internal — mark this node's content dirty and propagate the stamp up to
    * the root. The walk deliberately runs THROUGH transform-group boundaries
-   * (nested retained snapshots key on ancestor revisions — plan decision D7
-   * is superseded; do not add boundary stops here).
+   * (nested retained snapshots key on ancestor revisions; do not add
+   * boundary stops here).
    *
-   * F10 early-out: a second revision bump of an ancestor is redundant exactly
+   * Early-out: a second revision bump of an ancestor is redundant exactly
    * when no consumer has read revisions since the first bump — the consumer
    * only needs to observe SOME new value relative to its last read, not the
    * newest one. Every consumer read (the revision getters above) advances the
@@ -1052,7 +1052,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   }
 
   /**
-   * @internal — mark this node's transform dirty (Slice 4a) and propagate the
+   * @internal — mark this node's transform dirty and propagate the
    * stamp up to the root, exactly like {@link _markContentDirty} but on the
    * orthogonal transform channel (its own walk epoch, keyed independently so a
    * transform walk and a content walk never block each other). Consumed by
@@ -1077,22 +1077,21 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   /**
    * Tail of every own-transform mutation path (position/rotation/scale/origin/
    * skew). Cascades bounds (flag-based, revision-independent) and stamps ONLY
-   * the transform channel — NOT content (the Slice-4b flip): an own-transform
+   * the transform channel — NOT content: an own-transform
    * move no longer invalidates a retained fragment, so an enclosing
    * {@link RetainedContainer} keeps its recorded instruction set and patches
    * just this node's transform row in place ({@link _notifyEnclosingRetainedGroup}).
    * Content-dirty is now reserved for genuine content changes (tint/blend/
    * geometry/texture). {@link RetainedContainer} overrides this to bump its
-   * group-matrix version for its OWN move instead (§4.3).
+   * group-matrix version for its OWN move instead.
    * @internal
    */
   protected _markOwnTransformDirty(): void {
-    // Flag-only bounds cascade (NOT _invalidateBoundsCascade): the Slice-4b flip
-    // means a transform move must refresh ancestor world bounds for culling/
-    // getBounds WITHOUT content-dirtying — the content stamp would invalidate the
-    // retained fragment and defeat the row patch. Consumers that needed the old
-    // content bump on a move (the Wave-3 plain-container static skip) now key on
-    // the transform channel instead (slice 4b part 1).
+    // Flag-only bounds cascade (NOT _invalidateBoundsCascade): a transform move
+    // must refresh ancestor world bounds for culling/getBounds WITHOUT
+    // content-dirtying — the content stamp would invalidate the retained
+    // fragment and defeat the row patch. Consumers that needed the old content
+    // bump on a move now key on the transform channel instead.
     this._invalidateBoundsFlags();
     this._markTransformDirty();
     this._notifyEnclosingRetainedGroup();
@@ -1100,7 +1099,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
 
   /**
    * Walk to the nearest enclosing transform-group boundary and hand it this
-   * node so it can fast-patch the row (Slice 4b). Stops at the FIRST boundary —
+   * node so it can fast-patch the row. Stops at the FIRST boundary —
    * that group owns this node's group-local transform row. Runs on every
    * own-transform mutation, so it must not allocate — and short-circuits when
    * no boundary exists anywhere (the common case), turning the walk into a

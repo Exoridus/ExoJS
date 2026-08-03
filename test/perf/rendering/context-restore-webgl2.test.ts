@@ -1,5 +1,5 @@
 /**
- * WebGl2Backend — context-loss / restore handle-invalidation bookkeeping (B-09).
+ * WebGl2Backend — context-loss / restore handle-invalidation bookkeeping.
  *
  * These run in Node against the recording fake WebGL2 context (see
  * `harness.ts`), driving the REAL backend + renderers. They assert the
@@ -33,7 +33,7 @@ interface BackendInternals {
 
 const internals = (harness: WebGl2Harness): BackendInternals => harness.backend as unknown as BackendInternals;
 
-describe('WebGl2Backend: real context-restore handle invalidation (B-09)', () => {
+describe('WebGl2Backend: real context-restore handle invalidation', () => {
   test('webglcontextlost cancels the default so the browser can restore', () => {
     const harness = createWebGl2Harness();
 

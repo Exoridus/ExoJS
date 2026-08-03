@@ -1,9 +1,9 @@
 {
   "title": "PreSizeOptions",
-  "description": "Pre-sizing options for deferred texture handles (spec §4.1 — the layout-jump fix).",
+  "description": "Pre-sizing options for deferred texture handles — reserves placeholder dimensions to avoid a layout jump when the payload arrives.",
   "symbol": "PreSizeOptions",
   "kind": "interface",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 2,
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Pre-sizing options for deferred texture handles (spec §4.1 — the layout-jump fix)."
+        "Pre-sizing options for deferred texture handles — reserves placeholder dimensions to avoid a layout jump when the payload arrives."
       ],
       "importLine": "import { PreSizeOptions } from '@codexo/exojs'",
       "sourceLink": null
@@ -90,11 +90,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/seamless.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/seamless.ts"
+        "label": "src/assets/seamless.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/seamless.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/seamless.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/seamless.ts"
+  "sourcePath": "src/assets/seamless.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/seamless.ts"
 }

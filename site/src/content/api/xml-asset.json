@@ -3,7 +3,7 @@
   "description": "Dispatch token for XML document loading. `loader.load(Asset.type('xml', 'data.xml'))` returns `Promise<Document>`. Throws if the file cannot be parsed as well-formed XML.",
   "symbol": "XmlAsset",
   "kind": "class",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 1,
@@ -70,11 +70,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/tokens.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/tokens.ts"
+        "label": "src/assets/tokens.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/tokens.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/tokens.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/tokens.ts"
+  "sourcePath": "src/assets/tokens.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/tokens.ts"
 }

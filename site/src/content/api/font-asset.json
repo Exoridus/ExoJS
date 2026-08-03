@@ -3,7 +3,7 @@
   "description": "Dispatch token for font loading. `loader.load(Asset.type('font', 'font.woff2', { family: 'MyFont' }))` returns `Promise<FontFace>`.",
   "symbol": "FontAsset",
   "kind": "class",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 1,
@@ -70,11 +70,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/tokens.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/tokens.ts"
+        "label": "src/assets/tokens.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/tokens.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/tokens.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/tokens.ts"
+  "sourcePath": "src/assets/tokens.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/tokens.ts"
 }

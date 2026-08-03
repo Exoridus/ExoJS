@@ -3,7 +3,7 @@
   "description": "Construction options for SvgFactory.create.",
   "symbol": "SvgFactoryOptions",
   "kind": "interface",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 2,
@@ -90,11 +90,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/factories/SvgFactory.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/SvgFactory.ts"
+        "label": "src/assets/factories/SvgFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/SvgFactory.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/factories/SvgFactory.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/SvgFactory.ts"
+  "sourcePath": "src/assets/factories/SvgFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/SvgFactory.ts"
 }

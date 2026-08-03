@@ -66,25 +66,25 @@ const patchRowScratch = new Float32Array(TRANSFORM_FLOATS_PER_ROW);
  */
 type PatchableRetainedGroupBundle = RetainedGroupBundle & { _patchTransformRow: NonNullable<RetainedGroupBundle['_patchTransformRow']> };
 
-/** Observation window for the S2-D1 retention diagnostic, in fragment builds (~frames). */
+/** Observation window for the retention diagnostic, in fragment builds (~frames). */
 const retainedDiagnosticWindow = 120;
 /** Invalidated builds within one window that trigger the warning (90% — "effectively every frame"). */
 const retainedDiagnosticThreshold = 108;
 
 /**
  * A {@link Container} that declares its subtree "mostly static and/or moves
- * as a whole" (Track B Wave 4). While the subtree is unchanged, its whole
+ * as a whole". While the subtree is unchanged, its whole
  * previously-collected command range is spliced into the render plan — no
  * walk, no per-child culling, no material keys — and moving the container
  * (or the camera) changes only one per-group GPU matrix instead of touching
  * every descendant.
  *
- * Opt-in at construction; there is no runtime toggle (S2-D1). The existing
+ * Opt-in at construction; there is no runtime toggle. The existing
  * revision contract ({@link RenderNode.invalidateContent} and the automatic
  * bumps on built-in mutation paths) is the entire authoring surface: any
  * mutation inside the subtree drops the retained fragment for one frame.
  *
- * Trade-offs of the group-local space convention (spec §5/§6): descendants
+ * Trade-offs of the group-local space convention: descendants
  * resolve group-relative transforms, so hit-testing/`getBounds()` inside the
  * group are group-local; per-child view culling is disabled inside the group
  * (the group is culled as a whole); particle-extension drawables bake their own
@@ -96,12 +96,12 @@ const retainedDiagnosticThreshold = 108;
  * {@link RenderNode.cacheAsBitmap}. Nodes with filters/mask/clip/
  * cacheAsBitmap are supported as DIRECT children (they stay world-space and
  * re-collect every frame); nesting one deeper pushes ONLY the direct child
- * branch containing it out of the group (F13/R3) — that sub-branch renders
+ * branch containing it out of the group — that sub-branch renders
  * world-space and re-collects every frame like a direct barrier child, while
  * retention and the group transform stay active for the rest of the group —
  * and warns once in dev builds. Note that any escaped branch keeps the
  * group's fragment off the recorded-instruction tier (barrier entries are
- * not batch-recordable, S3-D5); the group stays on entry replay.
+ * not batch-recordable); the group stays on entry replay.
  *
  * World-space queries against nodes inside the group (picking, spatial
  * audio, physics, cross-group math) go through
@@ -127,15 +127,14 @@ export class RetainedContainer extends Container {
 
   public constructor() {
     super();
-    // Arm the Slice-4b transform-move seam: while at least one boundary is live,
+    // Arm the transform-move seam: while at least one boundary is live,
     // own-transform mutations walk to their enclosing group (see SceneNode's
     // transformGroupBoundaryCount). Balanced by destroy().
     registerTransformGroupBoundary();
   }
 
   /**
-   * The boundary is ALWAYS engaged (F13/R3 superseded the whole-group
-   * deep-barrier disengage of plan D-P4 Option A): a deep barrier now pushes
+   * The boundary is ALWAYS engaged: a deep barrier now pushes
    * only its own direct-child branch out of the group via
    * {@link _childEscapesTransformGroup}, and affected descendants pick a flip
    * up lazily through the getGlobalTransform parent-version seam.
@@ -146,7 +145,7 @@ export class RetainedContainer extends Container {
   }
 
   /**
-   * Monotonic stamp of the container's own transform mutations (spec §4.3).
+   * Monotonic stamp of the container's own transform mutations.
    * The retained fragment does not key on it — the group matrix is read live
    * at playback — but diagnostics and tests observe decoupling through it.
    * @internal
@@ -159,7 +158,7 @@ export class RetainedContainer extends Container {
    * Own-transform mutations move the whole group: bump the group-matrix
    * version and refresh ancestor bounds flags (the group's world AABB
    * moved), but do NOT content-dirty the fragment — that decoupling is the
-   * entire point of the retained tier (spec §4.3).
+   * entire point of the retained tier.
    */
   protected override _markOwnTransformDirty(): void {
     this._groupVersion = nextNodeRevision();
@@ -173,20 +172,20 @@ export class RetainedContainer extends Container {
   }
 
   /**
-   * Slice 4b seam: a descendant's own transform moved. Queue its row on the
-   * fragment; {@link _collectContent} patches the queued rows in place on a
-   * content/structure-clean frame instead of re-collecting. The group's OWN
-   * move does not route here — {@link _markOwnTransformDirty} above handles it
-   * as a one-matrix group move.
+   * The descendant transform-move seam: a descendant's own transform moved. Queue
+   * its row on the fragment; {@link _collectContent} patches the queued rows in
+   * place on a content/structure-clean frame instead of re-collecting. The
+   * group's OWN move does not route here — {@link _markOwnTransformDirty}
+   * above handles it as a one-matrix group move.
    *
-   * Gated on a live committed recording (F4): only the recorded-instruction
+   * Gated on a live committed recording: only the recorded-instruction
    * tier ever consumes a queued row. On every tier without one — entry
    * replay, and a recording-less group (e.g. an escaped-branch group, whose
    * `_fragment.dispose()` drops any recording) — transforms are re-read live
    * and {@link _reconcileTransformRows} would just drain the queue unread on
    * the next collect. Skipping the enqueue there is free: nothing else
    * observes the queue between now and that drain. (A recording backend
-   * lacking patch support, e.g. pre-4c WebGPU, DOES still enqueue here —
+   * lacking patch support DOES still enqueue here —
    * `hasRecording` is true — and {@link _reconcileTransformRows} is the one
    * that drops the recording and falls back to entry replay.)
    */
@@ -198,7 +197,7 @@ export class RetainedContainer extends Container {
     this._fragment.enqueueDirtyTransformRow(node);
   }
 
-  // ── F12: group-local bounds aggregate cache ─────────────────────────────
+  // ── Group-local bounds aggregate cache ──────────────────────────────────
   // The group-local child aggregate only changes when the SUBTREE changes,
   // which the content/structure revisions already key exactly — a group move
   // (camera pan, every frame) only changes the lift matrix. Cache the
@@ -208,7 +207,7 @@ export class RetainedContainer extends Container {
    * Direct children whose rects must be re-read on EVERY updateBounds because
    * their bounds move without bumping this container's revisions: barrier
    * children are world-space and follow world ancestors; nested transform
-   * groups decouple their own moves from the content revision (spec §4.3).
+   * groups decouple their own moves from the content revision.
    * Membership is revision-keyed: effect toggles and reparenting bump
    * content/structure, so the list rebuilds exactly when it can change.
    */
@@ -219,11 +218,11 @@ export class RetainedContainer extends Container {
 
   /**
    * World AABB of the group: children aggregate in group-local space, so
-   * the aggregate rect is lifted by the group's own world matrix (spec §6 —
-   * group-local aggregate × group matrix). Barrier-bearing direct children
-   * escape the group convention (plan D-P4) and are already world-space.
+   * the aggregate rect is lifted by the group's own world matrix
+   * (group-local aggregate × group matrix). Barrier-bearing direct children
+   * escape the group convention and are already world-space.
    *
-   * The group-local aggregate is served from a revision-keyed cache (F12);
+   * The group-local aggregate is served from a revision-keyed cache;
    * under a rotated group the lifted AABB of the cached union is a slightly
    * looser (still conservative) cover than per-child lifting — fine for the
    * culling/hit-prefilter consumers of container bounds.
@@ -243,9 +242,9 @@ export class RetainedContainer extends Container {
     const structureRevision = this._structureRevision;
     const transformRevision = this._transformRevision;
 
-    // Keyed on the transform channel too (Slice 4b): a descendant transform-only
-    // move changes its group-local rect but no longer stamps content (the 4b
-    // flip), so without the transform key the cached aggregate would go stale.
+    // Keyed on the transform channel too: a descendant transform-only
+    // move changes its group-local rect but no longer stamps content,
+    // so without the transform key the cached aggregate would go stale.
     if (
       this._aggregateContentRevision !== contentRevision ||
       this._aggregateStructureRevision !== structureRevision ||
@@ -275,7 +274,7 @@ export class RetainedContainer extends Container {
     return this;
   }
 
-  /** Rebuild the cached group-local aggregate + the live-children list (see the F12 block comment). */
+  /** Rebuild the cached group-local aggregate + the live-children list (see the block comment above {@link updateBounds}). */
   private _rebuildGroupAggregate(): void {
     this._groupAggregate.reset().addRect(this.getLocalBounds());
     this._liveBoundsChildren.length = 0;
@@ -316,19 +315,19 @@ export class RetainedContainer extends Container {
       this._fragment.invalidate();
       this._warnReplayedDestroyed();
     } else if (fragmentClean) {
-      // Slice 4b: a content/structure-clean frame may still carry transform-only
-      // descendant moves (the flip: an own-transform move no longer content-
-      // dirties). The recorded instruction set's baked transform rows are stale
+      // A content/structure-clean frame may still carry transform-only
+      // descendant moves, since an own-transform move no longer content-
+      // dirties. The recorded instruction set's baked transform rows are stale
       // for those nodes — patch the changed rows in place (O(k)), or drop the
       // recording so entry replay re-reads live transforms this frame.
       if (this._fragment.hasDirtyTransformRows()) {
         this._reconcileTransformRows(builder.backend);
       }
 
-      // Fast tier (Slice 3, S3-D2): a valid recorded instruction set splices
+      // Fast tier: a valid recorded instruction set splices
       // as an EMPTY scope — the player replays O(batches), the optimizer sees
       // nothing. Falls through the ladder: instruction replay -> entry replay
-      // (Slice 2) -> plain collect; every gate failure degrades to today's
+      // -> plain collect; every gate failure degrades to today's
       // correct behavior, never to wrong pixels.
       const set = this._fragment.instructions;
 
@@ -342,15 +341,15 @@ export class RetainedContainer extends Container {
         return;
       }
 
-      // The whole-range splice (spec §4.2): no walk, no cull, no material
+      // The whole-range splice: no walk, no cull, no material
       // keys. The key deliberately omits View.updateId (group-level culling
       // makes the fragment view-independent — the camera-pan win) and the
       // container's own transform (a move only changes the group matrix).
       builder._replayRetainedFragment(this._fragment.entries);
       this._fragment.markReplayed();
-      // Record-on-first-clean-frame (S3-D8 composition): this clean playback
+      // Record-on-first-clean-frame: this clean playback
       // is the recording source; the player captures it if the backend
-      // implements the hooks and the fragment is recordable (S3-D5).
+      // implements the hooks and the fragment is recordable.
       builder._armRetainedRecord(this._fragment);
 
       if (__DEV__) {
@@ -360,12 +359,12 @@ export class RetainedContainer extends Container {
       return;
     }
 
-    // For the S2-D1 diagnostic, a dirty build "invalidates" whenever prior
+    // For the retention diagnostic, a dirty build "invalidates" whenever prior
     // retention state existed — a live capture OR an active suppression
-    // window (F11b) — so per-frame thrash keeps counting as invalidation
+    // window — so per-frame thrash keeps counting as invalidation
     // even while suppressed frames no longer carry a capture.
     const invalidated = this._fragment.hasCapture || this._fragment.captureSuppressed;
-    // Thrash suppression (Slice 3, F11b): when the previous captures were
+    // Thrash suppression: when the previous captures were
     // never replayed, this dirty frame skips the snapshot entirely and pays
     // only the plain collect.
     const suppressCapture = this._fragment.shouldSuppressCapture(this._contentRevision, this._structureRevision);
@@ -385,7 +384,7 @@ export class RetainedContainer extends Container {
   }
 
   /**
-   * Slice 4b: reconcile the queued transform-only moves against the recorded
+   * Reconcile the queued transform-only moves against the recorded
    * instruction set before replay. On the recorded tier the transforms are
    * baked into the group-owned store, so each moved DIRECT drawable child's row
    * is patched in place (O(k) rows + one sub-range upload). Any ineligible move
@@ -401,8 +400,8 @@ export class RetainedContainer extends Container {
 
     if (set === null || !set.hasRecording || bundle === null || typeof bundle._patchTransformRow !== 'function' || bundle.transformRowBase === undefined) {
       // The set holds a recording whose baked transform rows we cannot patch
-      // (a backend without row-patch support — e.g. WebGPU before slice 4c),
-      // yet a transform-only move must still take effect. Drop the recording so
+      // (a backend without row-patch support), yet a transform-only move must
+      // still take effect. Drop the recording so
       // `_markCurrentScopeRetained` fails validation and the group falls to
       // entry replay (live transforms) + re-record this frame. Without this the
       // group keeps splicing the stale rows and the moved node renders frozen.
@@ -415,11 +414,11 @@ export class RetainedContainer extends Container {
       return;
     }
 
-    // The group-local row origin is the fragment's CAPTURE-frame (F1) minimum
-    // draw index — NOT `bundle.transformRowBase` (the record-frame F2 rebase
+    // The group-local row origin is the fragment's CAPTURE-frame minimum
+    // draw index — NOT `bundle.transformRowBase` (the record-frame's rebase
     // base). The two frames can start the group at different absolute rows, and
-    // the store rows are group-local, so only the F1 subtree base maps a
-    // captured index to its store row (see directDrawBaseNodeIndex).
+    // the store rows are group-local, so only the capture-frame subtree base
+    // maps a captured index to its store row (see directDrawBaseNodeIndex).
     const base = this._fragment.directDrawBaseNodeIndex();
     // The guard above already confirmed `_patchTransformRow` is present; carry
     // that guarantee into the callee's parameter type instead of asserting
@@ -443,10 +442,10 @@ export class RetainedContainer extends Container {
 
   /**
    * Patch one moved node's group-local transform row, or return `false` when it
-   * is not fast-patch-eligible (spec §3 eligibility). Eligible: a direct
+   * is not fast-patch-eligible. Eligible: a direct
    * drawable child, non-snapped, present in the recorded row map. The
    * group-local matrix is `getGlobalTransform()` composed to this boundary — the
-   * exact value the recorder wrote (S3-D4).
+   * exact value the recorder wrote.
    *
    * A renderer that opts out of the shared `TransformBuffer` (its resolved
    * renderer exposes {@link OwnTransformRowPatcher}, e.g. Text) is dispatched
@@ -487,7 +486,7 @@ export class RetainedContainer extends Container {
       return false;
     }
 
-    // Transform-only patch (spec §3): tint is not part of this row anymore (it
+    // Transform-only patch: tint is not part of this row anymore (it
     // lives in the bundle's separate tint texture) and a moved node's tint
     // doesn't change, so there is nothing to patch there.
     packTransformRow(patchRowScratch, 0, node.getGlobalTransform(), drawable.pixelSnapMode);
@@ -515,7 +514,7 @@ export class RetainedContainer extends Container {
       unregisterTransformGroupBoundary();
     }
 
-    // dispose(): invalidates AND releases the retained GPU bundle (Slice 3, S3-D3).
+    // dispose(): invalidates AND releases the retained GPU bundle.
     this._fragment.dispose();
     this._groupAggregate.destroy();
     this._liveBoundsChildren.length = 0;
@@ -525,7 +524,7 @@ export class RetainedContainer extends Container {
   }
 
   /**
-   * S2-D1 dev diagnostic: count fragment builds vs invalidations over a
+   * Dev diagnostic: count fragment builds vs invalidations over a
    * tumbling window and warn ONCE when this container invalidates on
    * effectively every frame — the retention is pure overhead there (the
    * reference's retained arm measured 1.5x slower than immediate mode on
@@ -586,7 +585,7 @@ export class RetainedContainer extends Container {
   }
   private _deepBarrierWarned = false;
   /**
-   * Direct children whose subtrees contain a deep barrier (F13/R3): they
+   * Direct children whose subtrees contain a deep barrier: they
    * escape the group — world-space transforms, effect-less barrier wrap at
    * collect, live re-dispatch on fragment replay — while their siblings keep
    * retention and the group transform. Membership is revision-keyed by
@@ -597,7 +596,7 @@ export class RetainedContainer extends Container {
   /** @internal */
   public override _collect(builder: RenderPlanBuilder, seq?: number): void {
     // Re-evaluate branch escapes BEFORE culling/bounds run, so an escape
-    // flip never mixes spaces within one frame (plan D-P4). Skipped entirely
+    // flip never mixes spaces within one frame. Skipped entirely
     // while the subtree revisions are unchanged.
     this._refreshBranchEscapes();
     super._collect(builder, seq);
@@ -605,7 +604,7 @@ export class RetainedContainer extends Container {
 
   /**
    * @internal — the transform-seam and collect-time query for the sub-branch
-   * escape (F13/R3). Lazily refreshes the revision-keyed escape set so every
+   * escape. Lazily refreshes the revision-keyed escape set so every
    * consumer (getGlobalTransform seam, plan builder, interaction anchors)
    * observes the same membership.
    */
@@ -616,8 +615,7 @@ export class RetainedContainer extends Container {
   }
 
   /**
-   * Sub-branch escape decision (F13/R3, superseding the whole-group
-   * disengage of plan D-P4 Option A). Re-scans the subtree only when its
+   * Sub-branch escape decision. Re-scans the subtree only when its
    * content/structure revisions changed since the last check — every effect
    * toggle and attach/detach bumps them, so the runtime-toggle path
    * invalidates for free, and the scan cost lands only on frames that
@@ -637,8 +635,8 @@ export class RetainedContainer extends Container {
     for (let index = 0; index < this._children.length; index++) {
       const child = this._children[index]!;
       // A direct barrier child escapes on its own (supported, world-space
-      // wholesale), so its subtree is skipped — same rule the pre-R3 scan
-      // used. Only Containers can hold a deep barrier.
+      // wholesale), so its subtree is skipped. Only Containers can hold a
+      // deep barrier.
       const escapes = !child._renderPlanHasBarrierEffects() && child instanceof Container && this._scanForBarriers(child);
 
       if (escapes) {
@@ -674,9 +672,9 @@ export class RetainedContainer extends Container {
     // Spaces flipped under at least one branch: the fragment (captured in
     // the other space) and the aggregate bounds must drop immediately. While
     // any branch is escaped the fragment can never record instructions
-    // (barrier records gate S3-D5), so the retained GPU bundle is released
-    // with it; a fully re-engaged group keeps the grow-only bundle for the
-    // next recording (S3-D3).
+    // (barrier records are not batch-recordable), so the retained GPU bundle
+    // is released with it; a fully re-engaged group keeps the grow-only
+    // bundle for the next recording.
     if (this._escapedBranches.size > 0) {
       this._fragment.dispose();
     } else {
@@ -703,7 +701,7 @@ export class RetainedContainer extends Container {
    * (InteractionManager buckets nodes by group anchor) must be told per-node.
    * The manager filters to tracked interactive nodes (O(1) Set-miss for the
    * rest); flips are rare and already pay an O(subtree) barrier scan, so the
-   * walk is in budget — and it is scoped to the flipped branch only (F13/R3),
+   * walk is in budget — and it is scoped to the flipped branch only,
    * never the whole group.
    */
   private _notifyBranchSpaceFlipped(branch: RenderNode): void {

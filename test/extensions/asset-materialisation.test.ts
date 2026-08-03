@@ -1,18 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { Asset } from '#assets/Asset';
+import type { AssetLoaderContext } from '#assets/Loader';
+import { Loader } from '#assets/Loader';
 import type { AssetBinding, AssetHandler, AssetLoadRequest } from '#extensions/Extension';
 import { materializeAssetBindings } from '#extensions/materialize';
 import { resetExtensionRegistryForTesting } from '#extensions/testing';
-import { Asset } from '#resources/Asset';
-import type { AssetLoaderContext } from '#resources/Loader';
-import { Loader } from '#resources/Loader';
 
 // Minimal test asset types
 class TypeA {}
 class TypeB {}
 class TypeC {}
 
-declare module '#resources/AssetDefinitions' {
+declare module '#assets/AssetDefinitions' {
   interface AssetDefinitions {
     withOpts: { resource: unknown; config: { source: string; family?: string; size?: number } };
     noOpts: { resource: unknown; config: { source: string } };

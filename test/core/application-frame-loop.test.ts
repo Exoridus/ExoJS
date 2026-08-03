@@ -1,8 +1,8 @@
 /**
- * Slice 7 Group B — Application.start() startup-sequencing fix (spec §3.7):
- * _frameLoopActive decouples the per-frame loop's gate from `_status`, so a
- * frame-driven transition session can progress during the very first
- * `start()` call (before `_status` flips to Running).
+ * Application.start() startup-sequencing: _frameLoopActive decouples the
+ * per-frame loop's gate from `_status`, so a frame-driven transition session
+ * can progress during the very first `start()` call (before `_status` flips
+ * to Running).
  */
 import { Application, ApplicationStatus } from '#core/Application';
 import { Scene } from '#core/Scene';
@@ -56,7 +56,7 @@ function sessionActive(app: Application): boolean {
   return scenes['_activeSession'] !== null && scenes['_activeSession'] !== undefined;
 }
 
-describe('Application — _frameLoopActive (Slice 7 Group B)', () => {
+describe('Application — _frameLoopActive', () => {
   let rafSpy: MockInstance;
   let cafSpy: MockInstance;
   let rafCallbacks: FrameRequestCallback[];
@@ -126,8 +126,8 @@ describe('Application — _frameLoopActive (Slice 7 Group B)', () => {
     expect(frameLoopActive(app)).toBe(true);
     // activeTime is a live Clock read — a non-zero value here (rather than
     // waiting for start() to resolve) proves the clock started at
-    // _startFrameLoop() time, per spec §3.7's fourth "must clear/start
-    // everywhere" bullet (the _activeClock one).
+    // _startFrameLoop() time, alongside the rest of the state that must
+    // clear/start together (the _activeClock one).
     const activeTimeDuringLoading = app.activeTime.milliseconds;
 
     expect(activeTimeDuringLoading).toBeGreaterThanOrEqual(0);

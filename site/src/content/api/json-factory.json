@@ -3,7 +3,7 @@
   "description": "AssetFactory implementation that parses JSON files and exposes them as plain JavaScript values. The parsed value is typed as `unknown`; callers are expected to narrow or cast the result to their specific schema type.",
   "symbol": "JsonFactory",
   "kind": "class",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 7,
@@ -350,11 +350,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/factories/JsonFactory.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/JsonFactory.ts"
+        "label": "src/assets/factories/JsonFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/JsonFactory.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/factories/JsonFactory.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/JsonFactory.ts"
+  "sourcePath": "src/assets/factories/JsonFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/JsonFactory.ts"
 }

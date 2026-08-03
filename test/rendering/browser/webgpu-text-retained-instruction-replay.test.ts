@@ -1,6 +1,6 @@
 /**
  * WebGPU renderer-matrix browser tests — Text retained instruction-set
- * replay (Track B extension, Task 1).
+ * replay.
  *
  * Text is the first retained renderer that opts OUT of the shared
  * `TransformBuffer` (`_consumesSharedTransform === false`): it packs its own

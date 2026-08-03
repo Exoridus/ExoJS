@@ -9,7 +9,7 @@ import { isRetainedFragmentRecordable, RetainedInstructionSet } from './Retained
 
 /**
  * A captured draw: replayed verbatim with a fresh frame-local nodeIndex.
- * Fields are mutable so the fragment's grow-only record pool (Slice 3, F11a)
+ * Fields are mutable so the fragment's grow-only record pool
  * can rewrite a record in place on recapture; structurally it still satisfies
  * the readonly {@link RetainedDrawData} contract consumers replay from.
  * @internal
@@ -18,7 +18,7 @@ export interface RetainedFragmentDraw {
   readonly kind: RenderEntryKind.Draw;
   drawable: Drawable;
   /**
-   * The shared frame-buffer transform row this draw was captured on (Slice 4b).
+   * The shared frame-buffer transform row this draw was captured on.
    * A group-local row is `nodeIndex - bundle.transformRowBase`; the fast patch
    * maps a moved direct child back to its group-owned store row through it. The
    * capture frame and the record frame are the same unchanged subtree, so the
@@ -44,7 +44,7 @@ export interface RetainedFragmentGroup {
   transformNode: RenderNode | null;
   /**
    * The inner group's instruction set when it SPLICED during the capture
-   * frame (Slice 3, S3-D6): its scope had no entries, so the outer fragment
+   * frame: its scope had no entries, so the outer fragment
    * must carry the set reference to reproduce the splice at replay. The set
    * object is per-fragment stable; validity is re-checked per replay, and a
    * stale set falls back to re-dispatching `transformNode._collect`. `null`
@@ -57,7 +57,7 @@ export interface RetainedFragmentGroup {
 
 /**
  * A barrier-effect node inside the fragment. NOT captured — re-dispatched
- * through a normal `_collect` on every replay (spec §8: semantics-neutral by
+ * through a normal `_collect` on every replay (semantics-neutral by
  * construction; the node reference stays valid because any change below it
  * content-dirties the owning RetainedContainer and drops the fragment).
  * @internal
@@ -72,7 +72,7 @@ export interface RetainedFragmentBarrier {
 export type RetainedFragmentEntry = RetainedFragmentDraw | RetainedFragmentGroup | RetainedFragmentBarrier;
 
 /**
- * Process-wide monotonic epoch for the Slice-4b dirty-transform-row dedup
+ * Process-wide monotonic epoch for the dirty-transform-row dedup
  * (see {@link RetainedGroupFragment}). Each fragment reset claims a fresh value,
  * so a node's dedup stamp from any earlier cycle — this fragment's or another's
  * — can never equal a fragment's current epoch, making a false dedup (a dropped
@@ -81,14 +81,14 @@ export type RetainedFragmentEntry = RetainedFragmentDraw | RetainedFragmentGroup
 let nextDirtyRowEpoch = 1;
 
 /**
- * Whole-command-range fragment cache for one {@link RetainedContainer}
- * (Track B Slice 2, spec §4.2). Keyed on the subtree's aggregate
+ * Whole-command-range fragment cache for one {@link RetainedContainer}.
+ * Keyed on the subtree's aggregate
  * content/structure revision and the backend identity — deliberately NOT on
  * `View.updateId` (group-level culling makes the fragment view-independent;
  * this is the camera-pan win) and NOT on the container's own transform
- * (a group move only changes the group matrix, §4.3).
+ * (a group move only changes the group matrix).
  *
- * Snapshot records live in fragment-owned grow-only pools (Slice 3, F11a):
+ * Snapshot records live in fragment-owned grow-only pools:
  * a steady-state recapture of a same-shaped subtree rewrites the previous
  * records in place and allocates zero objects.
  */
@@ -99,7 +99,7 @@ export class RetainedGroupFragment {
   private _backend: RenderBackend | null = null;
   private _hasCapture = false;
 
-  // Grow-only record pools (F11a). Cursors reset per capture; the backing
+  // Grow-only record pools. Cursors reset per capture; the backing
   // records survive and are mutated in place. Each pooled group record owns
   // its own entries array, reused the same way.
   private readonly _drawPool: RetainedFragmentDraw[] = [];
@@ -109,9 +109,9 @@ export class RetainedGroupFragment {
   private readonly _barrierPool: RetainedFragmentBarrier[] = [];
   private _barrierCursor = 0;
 
-  // Thrash suppression (Slice 3, F11b): a capture that is invalidated without
+  // Thrash suppression: a capture that is invalidated without
   // ever having been replayed was pure waste. One wasted capture is tolerated
-  // (a lone mutation between replays keeps the Slice-2 recapture-immediately
+  // (a lone mutation between replays keeps the recapture-immediately
   // behavior); the SECOND consecutive wasted capture is evidence of
   // per-frame thrash — from then on dirty frames skip the snapshot entirely
   // (plain collect, cheapest possible dirty frame) until the revisions
@@ -124,25 +124,25 @@ export class RetainedGroupFragment {
   private _observedContent = -1;
   private _observedStructure = -1;
 
-  // Instruction-set tier (Slice 3, S3-D1/S3-D3). `_instructions` is a stable
+  // Instruction-set tier. `_instructions` is a stable
   // per-fragment singleton (lazily created on first record arming) so
   // captured references to it — e.g. inside an OUTER group's fragment —
   // survive re-records; validity is re-checked per collect. Recordability
-  // (S3-D5) is computed lazily per capture and cached.
+  // is computed lazily per capture and cached.
   private _instructions: RetainedInstructionSet | null = null;
   private _recordable = false;
   private _recordableFor: RenderBackend | null = null;
 
-  // Slice 4b: lazy drawable -> captured shared-row map over the TOP-LEVEL draw
+  // Lazy drawable -> captured shared-row map over the TOP-LEVEL draw
   // records (the direct drawable children — the only fast-patch-eligible ones).
   // Built on first lookup after a capture, dropped on the next capture.
   private _directRowMap: Map<Drawable, number> | null = null;
   // The smallest nodeIndex among the top-level draw records — the group's own
-  // shared-buffer base at CAPTURE (F1) time. Group-local row = nodeIndex minus
+  // shared-buffer base at CAPTURE time. Group-local row = nodeIndex minus
   // this. Computed with the row map; -1 when there are no direct draws.
   private _directRowMinIndex = -1;
 
-  // Slice 4b: nodes whose OWN transform moved since the last collect, pushed by
+  // Nodes whose OWN transform moved since the last collect, pushed by
   // the SceneNode seam through the enclosing group. A plain array (not a Set):
   // `length = 0` on reset retains capacity, so the add-k/reset-per-frame churn
   // cycle allocates nothing in steady state (unlike Set.clear). Dedup is O(1)
@@ -157,7 +157,7 @@ export class RetainedGroupFragment {
 
   /**
    * The shared transform-buffer row a DIRECT drawable child was captured on
-   * (Slice 4b fast patch), or `undefined` when `drawable` is not a top-level
+   * (fast patch), or `undefined` when `drawable` is not a top-level
    * captured draw (nested in a sub-container, or not in this group). Lazily
    * builds a drawable→row map over the top-level draw records, rebuilt after
    * each capture.
@@ -169,7 +169,7 @@ export class RetainedGroupFragment {
   }
 
   /**
-   * The group's own shared-transform-buffer base at CAPTURE (F1): the smallest
+   * The group's own shared-transform-buffer base at CAPTURE time: the smallest
    * nodeIndex among the top-level draw records. A patched node's group-local
    * store row is `directDrawNodeIndex(node) - directDrawBaseNodeIndex()`.
    *
@@ -208,7 +208,7 @@ export class RetainedGroupFragment {
     this._directRowMinIndex = min;
   }
 
-  /** Slice 4b: record that `node`'s own transform moved (from the SceneNode seam). */
+  /** Record that `node`'s own transform moved (from the SceneNode seam). */
   public enqueueDirtyTransformRow(node: RenderNode): void {
     // O(1) dedup: skip a repeat push in the same cycle without scanning.
     if (node._dirtyRowStamp === this._dirtyRowEpoch) {
@@ -242,14 +242,14 @@ export class RetainedGroupFragment {
     return this._instructions;
   }
 
-  /** The group's instruction set, created on first record arming (Task 5). */
+  /** The group's instruction set, created on first record arming. */
   public instructionsForRecording(): RetainedInstructionSet {
     return (this._instructions ??= new RetainedInstructionSet());
   }
 
   /**
    * Whether the active capture satisfies the v1 recordability predicate
-   * (S3-D5) against `backend`'s renderer registry. Computed lazily on first
+   * against `backend`'s renderer registry. Computed lazily on first
    * ask per capture (so backends without record hooks never pay the O(N)
    * walk) and cached until the next capture.
    */
@@ -266,7 +266,7 @@ export class RetainedGroupFragment {
     return this._recordable;
   }
 
-  /** `true` while capture is thrash-suppressed (F11b). */
+  /** `true` while capture is thrash-suppressed. */
   public get captureSuppressed(): boolean {
     return this._suppressed;
   }
@@ -278,7 +278,7 @@ export class RetainedGroupFragment {
 
   /**
    * Decide, on a DIRTY build (the isClean gate already failed), whether this
-   * frame's snapshot should be skipped (F11b). Mutates the suppression state
+   * frame's snapshot should be skipped. Mutates the suppression state
    * machine; call exactly once per dirty build, before collecting. Returns
    * `true` to skip the capture.
    */
@@ -293,8 +293,8 @@ export class RetainedGroupFragment {
       this._wastedCaptures++;
 
       if (this._wastedCaptures < 2) {
-        // Grace: a single wasted capture recaptures immediately (Slice-2
-        // behavior for one-shot mutations).
+        // Grace: a single wasted capture recaptures immediately
+        // (the expected behavior for one-shot mutations).
         return false;
       }
 
@@ -335,10 +335,10 @@ export class RetainedGroupFragment {
 
   /**
    * Snapshot the given scope entries into this fragment's pooled records
-   * (deep copy in place — Track B Slice 2 plan decision D-P3, pooled per
-   * Slice 3 F11a) and key the capture. Draws copy their placement/material/
-   * bounds verbatim; nested groups recurse; barrier nodes are recorded as
-   * re-dispatch references only (spec §8). Called by {@link RetainedContainer}
+   * (deep copy in place, pooled) and key the capture. Draws copy their
+   * placement/material/bounds verbatim; nested groups recurse; barrier nodes
+   * are recorded as re-dispatch references only (semantics-neutral by
+   * construction). Called by {@link RetainedContainer}
    * right after a full collect of its scope.
    */
   public capture(contentRevision: number, structureRevision: number, backend: RenderBackend, entries: readonly ScopeEntry[]): void {
@@ -362,8 +362,8 @@ export class RetainedGroupFragment {
     this._hasCapture = true;
     this._replayedSinceCapture = false;
     // The subtree changed: any recorded batches and the cached recordability
-    // verdict are stale. The instruction set keeps its GPU bundle (grow-only,
-    // S3-D3) and re-records from the next clean playback.
+    // verdict are stale. The instruction set keeps its GPU bundle (grow-only)
+    // and re-records from the next clean playback.
     this._recordableFor = null;
     this._instructions?.invalidate();
   }
@@ -402,7 +402,7 @@ export class RetainedGroupFragment {
 
   /**
    * Drop the grow-only draw pool's strong references to their drawables so an
-   * evicted/destroyed drawable can be garbage-collected (P3f). The pooled
+   * evicted/destroyed drawable can be garbage-collected. The pooled
    * record objects survive and their `drawable` is rewritten in place on the
    * next capture, so pool reuse is unaffected.
    */
@@ -414,7 +414,7 @@ export class RetainedGroupFragment {
 
   /**
    * Release the fragment's retained GPU resources along with the capture
-   * (container destroy, deep-barrier branch escape, S3-D3 lifecycle).
+   * (container destroy, deep-barrier branch escape).
    */
   public dispose(): void {
     this.invalidate();
@@ -444,7 +444,7 @@ export class RetainedGroupFragment {
         record.zIndex = entry.zIndex;
         record.preserveDrawOrder = entry.scope.preserveDrawOrder;
         record.transformNode = entry.scope.transformNode;
-        // ?? null: hand-built test scopes may omit the Slice-3 field.
+        // ?? null: hand-built test scopes may omit this field.
         record.retainedInstructions = entry.scope.retainedInstructions ?? null;
         record.entries.length = 0;
         this._snapshotInto(record.entries, entry.scope.entries);

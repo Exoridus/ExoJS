@@ -3,7 +3,7 @@
   "description": "A typed, loadable asset reference. Holds config only — no loaded resource.",
   "symbol": "Asset",
   "kind": "interface",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 2,
@@ -90,11 +90,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/Asset.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Asset.ts"
+        "label": "src/assets/Asset.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Asset.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/Asset.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Asset.ts"
+  "sourcePath": "src/assets/Asset.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Asset.ts"
 }

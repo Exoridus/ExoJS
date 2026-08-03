@@ -3,7 +3,7 @@
   "description": "Every asset type known to the engine, keyed by its `type` string. Extension packages add their own via declaration merging. An entry declares the runtime `resource` it produces and the `config` it accepts; it may also carry `isValue: true` to mirror a binding whose leaf is a deferred AssetRef rather than a heal-in-place handle — required whenever `defineAsset` is called without a `seamless` adapter (see ValueAssetKind).",
   "symbol": "AssetDefinitions",
   "kind": "interface",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 16,
@@ -1669,11 +1669,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/AssetDefinitions.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/AssetDefinitions.ts"
+        "label": "src/assets/AssetDefinitions.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetDefinitions.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/AssetDefinitions.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/AssetDefinitions.ts"
+  "sourcePath": "src/assets/AssetDefinitions.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetDefinitions.ts"
 }

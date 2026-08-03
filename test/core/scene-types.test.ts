@@ -1,12 +1,9 @@
 import { Scene } from '#core/Scene';
 import { DuplicateSceneRegistrationError, InvalidSceneRegistrationError, validateSceneRegistry } from '#core/SceneTypes';
 
-// The erased-at-runtime (data?, options?) variadic heuristic
-// (resolveSetSceneArgs/SetSceneArgs) was deleted in Slice 3 — change()/
-// restore() now take a single options object, so there is nothing left to
-// disambiguate at runtime. This file's dedicated resolveSetSceneArgs
-// coverage was deleted along with it (not renamed — there is no successor
-// function).
+// change()/restore() take a single options object, so there is no
+// (data?, options?) variadic form left to disambiguate at runtime, and
+// no resolveSetSceneArgs/SetSceneArgs function to test.
 
 describe('validateSceneRegistry', () => {
   class VoidScene extends Scene {}
@@ -54,7 +51,7 @@ describe('validateSceneRegistry', () => {
     expect(() => validateSceneRegistry({ bad: {} as never }, Scene)).toThrow(InvalidSceneRegistrationError);
   });
 
-  describe('defaultTransitions (spec §3.10)', () => {
+  describe('defaultTransitions', () => {
     test('a descriptor with a transition populates defaultTransitions for its resolved constructor', () => {
       const registeredTransition = false as const;
       const registry = validateSceneRegistry({ game: { scene: OtherScene, transition: registeredTransition } }, Scene);

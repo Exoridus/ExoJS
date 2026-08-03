@@ -1,6 +1,6 @@
 {
   "title": "SceneTransitionFrame",
-  "description": "Per-frame render inputs handed to SceneTransitionSession.render. See `SceneTransitionFrame field semantics` in the design spec (§3.7a) for the exact non-null conditions of each field.",
+  "description": "Per-frame render inputs handed to SceneTransitionSession.render. See each field below for the exact non-null conditions it holds under.",
   "symbol": "SceneTransitionFrame",
   "kind": "interface",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Per-frame render inputs handed to SceneTransitionSession.render. See `SceneTransitionFrame field semantics` in the design spec (§3.7a) for the exact non-null conditions of each field."
+        "Per-frame render inputs handed to SceneTransitionSession.render. See each field below for the exact non-null conditions it holds under."
       ],
       "importLine": "import { SceneTransitionFrame } from '@codexo/exojs'",
       "sourceLink": null

@@ -364,7 +364,7 @@ export class RenderingContext implements DrawContext {
    * mechanism {@link RenderingContext.renderTo} uses internally, generalized
    * to an arbitrary draw callback). Used by `SceneDirector` to capture a
    * scene's full render surface (`Scene.draw()` + its systems + `Scene.ui`)
-   * for `SceneTransition` resource provisioning (§3.4/§3.6) — that sequence
+   * for `SceneTransition` resource provisioning — that sequence
    * of calls cannot be expressed as a single `RenderNode`.
    */
   public _renderSurfaceInto(target: RenderTexture, clear: Color | undefined, draw: () => void): void {

@@ -6,7 +6,7 @@ import { createFakeWebGl2Context, GlRecorder } from '../perf/rendering/fakeWebGl
 
 const wordsOf = (...values: number[]): Uint32Array => Uint32Array.from(values);
 
-describe('WebGl2RetainedGroupResources: CPU-side capture store (Task 6)', () => {
+describe('WebGl2RetainedGroupResources: CPU-side capture store', () => {
   test('appended batch words land at sequential byte offsets and are copied, not aliased', () => {
     const bundle = new WebGl2RetainedGroupResources();
 
@@ -44,7 +44,7 @@ describe('WebGl2RetainedGroupResources: CPU-side capture store (Task 6)', () => 
     bundle.destroy();
   });
 
-  test('every capture rewrite bumps the generation and resets the write cursor (S3-D3)', () => {
+  test('every capture rewrite bumps the generation and resets the write cursor', () => {
     const bundle = new WebGl2RetainedGroupResources();
     const initial = bundle.generation;
 
@@ -100,7 +100,7 @@ describe('WebGl2RetainedGroupResources: CPU-side capture store (Task 6)', () => 
   });
 });
 
-describe('WebGl2RetainedGroupResources: in-place transform-row patch (Slice 4b)', () => {
+describe('WebGl2RetainedGroupResources: in-place transform-row patch', () => {
   test('_storeTransformRows records the rebase base; patch overwrites one row and marks only its sub-range dirty', () => {
     const bundle = new WebGl2RetainedGroupResources();
     const shared = new Float32Array(8 * 8);
@@ -177,7 +177,7 @@ describe('WebGl2RetainedGroupResources: device resources (Task 6)', () => {
     return { recorder, gl, stats, accountant };
   };
 
-  test('instance upload creates the persistent buffer once and books it with the accountant (S3-D9)', () => {
+  test('instance upload creates the persistent buffer once and books it with the accountant', () => {
     const { recorder, gl, stats, accountant } = createDevice();
     const bundle = new WebGl2RetainedGroupResources();
 

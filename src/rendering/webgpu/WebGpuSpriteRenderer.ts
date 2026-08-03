@@ -329,13 +329,13 @@ interface CustomSpriteResources {
   userUniformBufferCapacity: number;
   // Persistent UBO scratch + cached user bind group, reused across frames and
   // re-uploaded/rebuilt only when the material's uniform values or bound
-  // texture views actually change (B-10).
+  // texture views actually change.
   userUniform: UserUniformState;
   baseTextureBindGroups: WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView }>;
 }
 
 export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> implements WebGpuRetainedBatchReplayer {
-  /** Retained-batch capability flag (Track B Slice 3, S3-D5.1): the default path records/replays flush-level batches. */
+  /** Retained-batch capability flag: the default path records/replays flush-level batches. */
   public readonly _supportsRetainedBatches = true;
 
   private readonly _projectionData = new Float32Array(projectionByteLength / Float32Array.BYTES_PER_ELEMENT);
@@ -345,7 +345,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   // `_stagedGroupData` by `_groupContentChanged`) means the 128-byte projection
   // write can be skipped for this flush. Content comparison (not the backend's
   // group-transform id) keeps a leave-group boundary that restores identical
-  // group bytes from splitting the open pass (B-06 cached path).
+  // group bytes from splitting the open pass on the cached path.
   private _writtenView: View | null = null;
   private _writtenViewUpdateId = -1;
   private _hasWrittenProjection = false;
@@ -798,11 +798,11 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       backend._passCoordinator.acquirePass();
     }
 
-    // Retained capture (Track B Slice 3, Task 9): while a capture window is
+    // Retained capture: while a capture window is
     // active, additionally stage this batch's exact packed bytes into the
     // group-owned bundle — the recorded data IS the drawn data, byte-identical
     // by construction. Custom-material batches are unreplayable (live user
-    // uniforms, S3-D5.2) and poison the window instead; the recordability
+    // uniforms) and poison the window instead; the recordability
     // predicate makes that unreachable.
     if (this._instanceCount > 0 && backend._retainedCaptureActive) {
       if (isCustom) {
@@ -841,7 +841,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
    * the arena tracking the *current* active pass so a stale post-boundary
    * cursor never triggers a spurious split. Content comparison keeps group
    * boundaries that restore identical bytes (enter/leave around a replayed
-   * retained group) from fragmenting the single-submit frame (B-06).
+   * retained group) from fragmenting the single-submit frame.
    */
   private _endPassOnProjectionChange(backend: WebGpuBackend): void {
     const activePass = backend._passCoordinator.activePass;
@@ -925,7 +925,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     return this._transformBindGroup;
   }
 
-  // ── Retained-batch record/replay (Track B Slice 3, Tasks 9/10) ────────────
+  // ── Retained-batch record/replay ──────────────────────────────────────────
   // The bundle/stage stores raw instance bytes; this renderer owns the
   // 32-byte (8-word) layout, so the layout-aware finalize steps (node-index
   // scan/rebase) and the replay dispatch live here — the WebGPU counterpart
@@ -951,7 +951,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     }
   }
 
-  /** @internal See {@link WebGpuRetainedBatchReplayer._rebaseRetainedNodeIndices} (S3-D4: group-local indices). */
+  /** @internal See {@link WebGpuRetainedBatchReplayer._rebaseRetainedNodeIndices} (rebases to group-local indices). */
   public _rebaseRetainedNodeIndices(bytes: Uint8Array, base: number): void {
     const words = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / Uint32Array.BYTES_PER_ELEMENT);
 
@@ -962,8 +962,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   }
 
   /**
-   * Replay one recorded batch from its group-owned bundle into the OPEN pass
-   * (Track B Slice 3, Task 10 / S3-D7). Reuses only recorded DATA (instance
+   * Replay one recorded batch from its group-owned bundle into the OPEN pass.
+   * Reuses only recorded DATA (instance
    * bytes, transform rows, texture list, blend mode); every piece of STATE is
    * resolved live:
    *
@@ -979,7 +979,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
    *   pass first, mirroring the shared-UBO projection guard.
    *
    * The shared per-flush projection UBO is never touched, so group boundaries
-   * on the cached path do not fragment the single-submit frame (B-06).
+   * on the cached path do not fragment the single-submit frame.
    * @internal
    */
   public _replayRetainedBatch(payload: WebGpuRetainedBatchPayload): void {
@@ -1009,7 +1009,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     const passHasDraws =
       activePass !== null && ((this._instanceArena.cursor > 0 && this._instanceArena.tracksPass(activePass)) || this._lastReplayPass === activePass);
 
-    // Same-frame texture mutation guard (S3-D7): resolving the bindings below
+    // Same-frame texture mutation guard: resolving the bindings below
     // re-uploads mutated content on the queue timeline BEFORE the deferred
     // submit, which would retroactively change draws already recorded into
     // the open pass. End (submit) the pass first so they keep the
@@ -1456,7 +1456,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     const baseTexture = this._currentBaseTexture ?? Texture.empty;
 
     // Uploaded only when the material's uniform values changed since the last
-    // frame (B-10); a static material issues zero writes here.
+    // frame; a static material issues zero writes here.
     this._uploadUserUniforms(material, resources, device);
 
     const pipeline = this._getOrCreateCustomPipeline(resources, this._currentBlendMode!, backend.renderTargetFormat, stencil, device);
@@ -1487,7 +1487,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     // module (VertexInput/VertexOutput, group(0) projection + transform storage,
     // group(1) base texture + sampler) to the material's fragment WGSL.
     // Routed through the backend so WGSL compilation errors in user-supplied
-    // material shaders surface via backend.onRenderError (S3 diagnostics).
+    // material shaders surface via backend.onRenderError.
     const shaderModule = this.getBackend()._createShaderModule(`${spriteVertexWgsl}\n${wgsl}`, 'sprite:material-shader');
     const userLayout = this._buildUserBindGroupLayout(device, material);
     const pipelineLayout = device.createPipelineLayout({

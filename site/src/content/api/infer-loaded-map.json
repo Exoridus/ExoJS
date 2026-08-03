@@ -3,7 +3,7 @@
   "description": "Maps each key of a catalog DEFINITION record to its resolved runtime resource type. Keyed on CatalogEntry, not `AssetInput`: a materialized catalog may have been defined with bare path strings, which `AssetInput` (configs and `Asset` descriptors only) does not cover — the loader consumes the already materialized leaves and must not re-validate the definition entries.",
   "symbol": "InferLoadedMap",
   "kind": "type",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 0,
@@ -54,11 +54,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/Loader.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts"
+        "label": "src/assets/Loader.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Loader.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/Loader.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts"
+  "sourcePath": "src/assets/Loader.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Loader.ts"
 }

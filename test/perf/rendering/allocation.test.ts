@@ -8,12 +8,12 @@ import { createWebGl2Harness, type WebGl2Harness } from './harness';
 import { buildScenarioCatalog } from './scenarios';
 
 /**
- * Render-plan allocation gate (spec 04 §2a; review finding R1/R2 hardening).
+ * Render-plan allocation gate.
  * Samples the per-frame allocation RATE (throwaway garbage, not retained heap)
  * on reference scenes via the V8 allocation sampling profiler (see
  * `allocation.ts`).
  *
- * ── Methodology (R1/R2 fix) ─────────────────────────────────────────────────
+ * ── Methodology ─────────────────────────────────────────────────
  * The sampler is a STATISTICAL profiler (Poisson, one sample per 512 B), so a
  * single run scatters ±few-percent frame-to-frame. The previous gate asserted a
  * hard `toBeLessThan` on ONE such run against a budget with ~1.34× headroom —
@@ -40,7 +40,7 @@ import { buildScenarioCatalog } from './scenarios';
  * reports the LAST BUILD, not the working tree — use it only as a rough cross-check.
  */
 
-/** Independent sampling windows the median is taken over (R2: ≥5). */
+/** Independent sampling windows the median is taken over (≥5). */
 const WINDOWS = 5;
 /** Budget = baseline median × this. 15% band: catches a real ≥15% regression, absorbs sampler/machine drift. */
 const TOLERANCE = 1.15;
@@ -71,14 +71,13 @@ const BASELINE_KB = {
   static: 248,
   moving: 574,
   nested: 363,
-  // Re-baselined for #422 (transform/tint buffer split): mesh bundles now sync
-  // a second per-instance DataTexture (tint) alongside transform every frame,
-  // a deliberate, permanent cost of the split, not a bug. CI (Linux runner,
-  // the environment that gates this test) measured 748.11 KB and 747.13 KB
-  // medians across two independent runs on the post-split code — stable to
-  // <0.2%. This dev box (Windows) measures ~692 KB for the same code, which
-  // is why a Windows-only re-run cannot be used to validate this budget; the
-  // baseline must track the CI environment.
+  // Mesh bundles sync a second per-instance DataTexture (tint) alongside
+  // transform every frame — a deliberate, permanent cost of the transform/tint
+  // buffer split, not a bug. CI (Linux runner, the environment that gates this
+  // test) measured 748.11 KB and 747.13 KB medians across two independent
+  // runs — stable to <0.2%. This dev box (Windows) measures ~692 KB for the
+  // same code, which is why a Windows-only re-run cannot be used to validate
+  // this budget; the baseline must track the CI environment.
   mesh: 748,
   filtered: 823,
 } as const;

@@ -109,7 +109,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Which render layer this transition's output composites against (spec §3.6). Default 'screen'."
+          "description": "Which render layer this transition's output composites against. Default 'screen'."
         }
       ],
       "paragraphs": [],

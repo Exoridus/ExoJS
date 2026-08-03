@@ -3,7 +3,7 @@
   "description": "Shared base class for all built-in AssetFactory implementations. Manages a pool of object URLs created during asset loading so that they can be revoked in bulk when the factory is destroyed, preventing memory leaks. Concrete subclasses must implement process and create; they may call createObjectUrl instead of `URL.createObjectURL` directly so that the URL is automatically tracked and cleaned up.",
   "symbol": "AbstractAssetFactory",
   "kind": "class",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 7,
@@ -387,11 +387,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/AbstractAssetFactory.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/AbstractAssetFactory.ts"
+        "label": "src/assets/AbstractAssetFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AbstractAssetFactory.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/AbstractAssetFactory.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/AbstractAssetFactory.ts"
+  "sourcePath": "src/assets/AbstractAssetFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AbstractAssetFactory.ts"
 }

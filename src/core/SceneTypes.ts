@@ -24,7 +24,7 @@ export type SceneConstructor<Data = void> = new () => Scene<Data>;
  * the `void` arm explicitly gives every void-data scene an exact-match branch,
  * while `any` still covers every data-carrying scene.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- deliberately erases Data for heterogeneous registry storage; see spec §6.3.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- deliberately erases Data for heterogeneous registry storage.
 export type AnySceneConstructor = SceneConstructor | SceneConstructor<any>;
 
 /** Extracts the activation-data type a {@link SceneConstructor} expects. */
@@ -32,11 +32,11 @@ export type InferSceneData<C> = C extends SceneConstructor<infer Data> ? Data : 
 
 /**
  * A `{ enter, exit }` pair of independently-authored {@link PhasedSceneTransition}
- * instances (spec §3.9.1/§3.10) — a union of two variants requiring at
+ * instances — a union of two variants requiring at
  * least one of `{ enter, exit }`, never an interface with both fields
  * optional. An interface form would type-check `transition: {}` as valid,
- * which — since a call-site value fully replaces the registry default
- * (§3.10 rule 1) — would silently suppress a scene's configured default
+ * which — since a call-site value fully replaces the registry default —
+ * would silently suppress a scene's configured default
  * while looking like a no-op. Confirmed, TypeScript `--strict`: the union
  * form correctly rejects `{}` (see `test/type-tests/scene-transition-phases.type-test.ts`).
  */
@@ -46,7 +46,7 @@ export type SceneTransitionPhases =
 
 /**
  * The full set of values accepted for a `transition` option — call-site
- * (`change()`/`restore()`/`unload()`) or registry-level default (§3.10):
+ * (`change()`/`restore()`/`unload()`) or registry-level default:
  * a single {@link SceneTransition} (or {@link PhasedSceneTransition}, which
  * is one), a `{ enter, exit }` pair to compose, or `false` (the explicit
  * "no transition, even if a registry default exists" escape hatch).
@@ -65,8 +65,7 @@ export type SceneRegistration<C extends AnySceneConstructor> =
       readonly scene: C;
       /**
        * Default transition used whenever navigation targets this
-       * constructor without its own call-site `transition` option (spec
-       * §3.10).
+       * constructor without its own call-site `transition` option.
        */
       readonly transition?: SceneTransitionSelection;
     };
@@ -124,7 +123,7 @@ export type NavigableSceneConstructor<Registry> = keyof Registry extends never
   ? AnySceneConstructor
   : { [K in keyof Registry]: Registry[K] extends { scene: infer C } ? C : Registry[K] }[keyof Registry];
 
-/* eslint-disable @typescript-eslint/no-explicit-any -- ApplicationLike/ApplicationOf must accept `Application<any>` and an abstract constructor's erased argument list; see spec §6.2. */
+/* eslint-disable @typescript-eslint/no-explicit-any -- ApplicationLike/ApplicationOf must accept `Application<any>` and an abstract constructor's erased argument list. */
 /**
  * Anything that resolves to a concrete {@link Application} instance type: the
  * instance itself, its constructor, or `typeof` an already-typed instance.
@@ -137,7 +136,7 @@ export type ApplicationLike = Application<any> | (abstract new (...args: any[]) 
  * Normalizes an {@link ApplicationLike} to its concrete `Application`
  * instance type, letting {@link Scene}'s second generic accept an
  * `Application` instance type, its constructor, or `typeof someAppInstance`
- * interchangeably (spec §6.2).
+ * interchangeably.
  *
  * `typeof someAppInstance` only works once the instance already has an
  * explicit, non-inferred type — a fully-inferred `const app = new
@@ -166,11 +165,11 @@ export type ApplicationOf<T extends ApplicationLike> = T extends abstract new (.
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 /**
- * Options for {@link SceneDirector.change} (definition §6.3). Carries the
+ * Options for {@link SceneDirector.change}. Carries the
  * activation `data` (when `Data` is not `void`), `suspendCurrent`, and an
  * optional `transition` — a class-based `SceneTransition`/
  * `PhasedSceneTransition`, or an `{ enter, exit }` pair — resolved against
- * the target's registry-level default (spec §3.10) to drive the switch
+ * the target's registry-level default to drive the switch
  * through a {@link SceneTransitionSession}; see {@link SceneDirector.change}'s
  * doc comment for the full guarantee.
  */
@@ -186,7 +185,7 @@ export type ChangeSceneOptions<Data> = ([Data] extends [void] ? { data?: never }
   suspendCurrent?: boolean;
   /**
    * Transition to drive this switch through, overriding the target's
-   * registry-level default (spec §3.10) if any. `false` explicitly opts out
+   * registry-level default if any. `false` explicitly opts out
    * of a registry default with no transition at all. Omitted (`undefined`)
    * defers to that default, or the direct (non-transitioned) fast path if
    * none is registered.
@@ -199,7 +198,7 @@ export type ChangeSceneOptions<Data> = ([Data] extends [void] ? { data?: never }
  * whenever `ChangeSceneOptions<Data>` has a required `data` field (`Data`
  * is not `void`), optional otherwise. There is no runtime data/options
  * ambiguity to resolve anymore — `data` always lives inside this one
- * object, never as a separate positional argument (spec §6.3; this
+ * object, never as a separate positional argument (this
  * supersedes the deleted two-argument `SetSceneArgs`).
  */
 export type ChangeSceneArgs<Data> = [Data] extends [void] ? [options?: ChangeSceneOptions<Data>] : [options: ChangeSceneOptions<Data>];
@@ -207,7 +206,7 @@ export type ChangeSceneArgs<Data> = [Data] extends [void] ? [options?: ChangeSce
 /**
  * Options for {@link SceneDirector.restore}. No `data` field — a restored
  * scope reuses whatever activation data it was originally prepared with;
- * `load()`/`init()` never run again for it (definition §14.3).
+ * `load()`/`init()` never run again for it.
  */
 export interface RestoreSceneOptions {
   /** Suspend the currently active scene (if any) instead of ending it permanently — mirrors {@link ChangeSceneOptions.suspendCurrent}. */
@@ -226,8 +225,8 @@ export interface UnloadOptions {
    * match has nothing visible on screen to transition, and always runs the
    * direct (non-transitioned) teardown path regardless of this option. A
    * {@link SceneTransitionSelection} — unlike `change()`/`restore()`,
-   * `unload()` never consults a target's registry-level default transition
-   * (spec §3.10); this option is the only source of a transition here.
+   * `unload()` never consults a target's registry-level default transition;
+   * this option is the only source of a transition here.
    */
   transition?: SceneTransitionSelection;
   /**
@@ -322,7 +321,7 @@ export class UnregisteredSceneError extends Error {
 /**
  * Thrown when `change`/`restore` is called while another Scene
  * switch, restore, or transition session is already in flight — navigation
- * never queues (definition §11.5).
+ * never queues.
  */
 export class ConcurrentSceneNavigationError extends Error {
   public constructor() {
@@ -338,9 +337,8 @@ export class ConcurrentSceneNavigationError extends Error {
  * session was still in flight when the {@link Application} frame loop
  * stopped (a fatal frame error, or `stop()`/`destroy()` called mid-transition)
  * — the session cannot progress without frame callbacks, so the navigation
- * is aborted rather than left to hang forever (definition spec §3.7). Any
- * claimed preload/retained entry is restored, not discarded — see spec
- * §3.5.1's claim-restoration rules.
+ * is aborted rather than left to hang forever. Any
+ * claimed preload/retained entry is restored, not discarded.
  */
 export class SceneNavigationAbortedError extends Error {
   public constructor() {
@@ -423,7 +421,7 @@ export class SceneInstanceNotFoundError extends Error {
  * navigation checks (`change`'s registration/diagnostics lookups); `byKey`
  * backs key-based navigation (`change`/`restore` given a registered string
  * key); `defaultTransitions` backs registry-default transition resolution
- * (spec §3.10, {@link resolveSceneTransitionSelection}) — only constructors
+ * (see {@link resolveSceneTransitionSelection}) — only constructors
  * registered via the `{ scene, transition }` descriptor form with a
  * `transition` value have an entry; a bare-constructor registration, or a
  * descriptor with no `transition` field, has none. `Map.get()` returning

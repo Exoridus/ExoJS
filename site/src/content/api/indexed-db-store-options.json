@@ -3,7 +3,7 @@
   "description": "Configuration options for IndexedDbStore. `name` is the IndexedDB database name; `version` defaults to `1`. `storeNames` overrides the default asset-type object stores, and `migrations` provides explicit per-version schema callbacks (see IndexedDbDatabase for migration semantics).",
   "symbol": "IndexedDbStoreOptions",
   "kind": "interface",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 4,
@@ -205,11 +205,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/IndexedDbStore.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/IndexedDbStore.ts"
+        "label": "src/assets/IndexedDbStore.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/IndexedDbStore.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/IndexedDbStore.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/IndexedDbStore.ts"
+  "sourcePath": "src/assets/IndexedDbStore.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/IndexedDbStore.ts"
 }

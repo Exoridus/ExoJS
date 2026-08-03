@@ -4,8 +4,7 @@ import { arch as osArch, cpus, platform as osPlatform, release as osRelease } fr
 import { dirname, resolve } from 'node:path';
 
 /**
- * Domain-agnostic provenance primitives (review #325: the provenance header was
- * rendering-coupled and living under `rendering/`).
+ * Domain-agnostic provenance primitives.
  *
  * A wall-clock number is meaningless without the context that produced it, and
  * that context splits into a genuinely shared part — WHEN the run happened and

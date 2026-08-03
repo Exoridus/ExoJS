@@ -1,6 +1,6 @@
 {
   "title": "LoadStateValue",
-  "description": "Load lifecycle of a seamless asset handle. Directly constructed assets are `'ready'`; a catalog leaf awaiting adoption is `'idle'` (asset-system v2 §7).",
+  "description": "Load lifecycle of a seamless asset handle. Directly constructed assets are `'ready'`; a catalog leaf awaiting adoption is `'idle'`.",
   "symbol": "LoadStateValue",
   "kind": "type",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Load lifecycle of a seamless asset handle. Directly constructed assets are `'ready'`; a catalog leaf awaiting adoption is `'idle'` (asset-system v2 §7)."
+        "Load lifecycle of a seamless asset handle. Directly constructed assets are `'ready'`; a catalog leaf awaiting adoption is `'idle'`."
       ],
       "importLine": "import { LoadStateValue } from '@codexo/exojs'",
       "sourceLink": null

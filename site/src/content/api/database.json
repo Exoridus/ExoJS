@@ -3,7 +3,7 @@
   "description": "Low-level key/value database abstraction used by CacheStore implementations. Data is organised into named object stores (`type`) that act as namespaces, each holding entries keyed by `name`. IndexedDbDatabase is the built-in implementation; custom backends can be provided by implementing this interface and wrapping it in a CacheStore.",
   "symbol": "Database",
   "kind": "interface",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 11,
@@ -593,11 +593,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/Database.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Database.ts"
+        "label": "src/assets/Database.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Database.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/Database.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Database.ts"
+  "sourcePath": "src/assets/Database.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Database.ts"
 }

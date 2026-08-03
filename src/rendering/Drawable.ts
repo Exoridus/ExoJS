@@ -20,7 +20,7 @@ export class Drawable extends RenderNode {
   private _pixelSnapMode: PixelSnapMode = PixelSnapMode.None;
 
   /**
-   * Cached material key (Slice 2b). `null` until first computed or after
+   * Cached material key. `null` until first computed or after
    * {@link invalidateCache}. Bound to {@link _materialKeyBackend} so a backend
    * switch (multi-app / multi-backend) recomputes rather than returning stale
    * renderer ids. Drawables that carry their own {@link Material} bypass this
@@ -124,8 +124,8 @@ export class Drawable extends RenderNode {
   }
 
   /**
-   * Resolve this drawable's {@link MaterialKey}, reusing a cached key when valid
-   * (Slice 2b). The cache busts on any tint/blend/texture/material/shader/
+   * Resolve this drawable's {@link MaterialKey}, reusing a cached key when valid.
+   * The cache busts on any tint/blend/texture/material/shader/
    * pixel-snap mutation via {@link invalidateCache}, and on a backend switch.
    *
    * Drawables that own a {@link Material} are never cached — the material can

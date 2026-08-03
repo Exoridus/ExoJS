@@ -1,3 +1,7 @@
+import type { AssetDefinitions } from '#assets/AssetDefinitions';
+import type { AssetConstructor } from '#assets/FactoryRegistry';
+import type { AssetLoaderContext, Loader } from '#assets/Loader';
+import type { SeamlessAdapter } from '#assets/seamless';
 import type { Application } from '#core/Application';
 import type { SceneNode } from '#core/SceneNode';
 import type { NodeSerializer } from '#core/serialization/NodeSerializer';
@@ -6,10 +10,6 @@ import type { System } from '#core/System';
 import type { Drawable } from '#rendering/Drawable';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { DrawableConstructor, Renderer } from '#rendering/Renderer';
-import type { AssetDefinitions } from '#resources/AssetDefinitions';
-import type { AssetConstructor } from '#resources/FactoryRegistry';
-import type { AssetLoaderContext, Loader } from '#resources/Loader';
-import type { SeamlessAdapter } from '#resources/seamless';
 
 /**
  * Per-load request passed to {@link AssetHandler.load} and

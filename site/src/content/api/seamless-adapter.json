@@ -3,7 +3,7 @@
   "description": "Per-type strategy for seamless deferred asset handles (asset-system v2). A seamless type hands out a stable placeholder handle synchronously from `loader.get(source)`; when the payload arrives, fill transplants it into the handle **in place** so every existing consumer \"pops up\" without re-wiring. fail swaps in a visible error payload instead. The handle's identity never changes across the whole lifecycle.",
   "symbol": "SeamlessAdapter",
   "kind": "interface",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "advanced",
   "memberCount": 6,
@@ -369,11 +369,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/seamless.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/seamless.ts"
+        "label": "src/assets/seamless.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/seamless.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/seamless.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/seamless.ts"
+  "sourcePath": "src/assets/seamless.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/seamless.ts"
 }

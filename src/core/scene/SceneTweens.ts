@@ -31,7 +31,7 @@ export interface SceneTweenOptions {
  * `Suspended`), `create()`/`createSequencer()` construct their result
  * without attaching it to the application-wide `TweenManager` at all, so a
  * synchronous `.start()` call made while dormant produces zero
- * application-wide effect (definition §4.2) — the manager only begins
+ * application-wide effect — the manager only begins
  * driving it once the scope becomes `Active` and this facade flushes it in.
  * `add()` (which may be handed an already-live tween) instead pauses it
  * immediately if needed, resuming it on activation only if it is still in

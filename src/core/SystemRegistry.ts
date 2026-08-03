@@ -187,7 +187,7 @@ const removeRegistration = (list: SystemRegistration[], registration: SystemRegi
  * never registered — is silently a no-op there, not an error. A cycle throws
  * once the affected phase list is next sorted.
  *
- * Structural mutations are frame-scoped (definition §9.6): a system added
+ * Structural mutations are frame-scoped: a system added
  * during a frame — whether from outside or from another system's own
  * callback — does not participate in any phase until the *next* frame, in
  * any phase. Removing a system during a callback marks it inactive

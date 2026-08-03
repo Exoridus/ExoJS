@@ -1,6 +1,5 @@
 import { Application } from '#core/Application';
 import { Color } from '#core/Color';
-import { Scene } from '#core/Scene';
 import { Container } from '#rendering/Container';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { RetainedContainer } from '#rendering/RetainedContainer';
@@ -140,8 +139,10 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
 
       // Boot the full production init path (awaits the backend's async
       // initialize), then halt the engine's rAF loop so the harness drives
-      // frames explicitly via `renderFrame`.
-      await instance.start(new Scene());
+      // frames explicitly via `renderFrame`. No scene target: the harness owns
+      // its own `root` container and renders it directly through
+      // `app.rendering.render(root)`, so the director never needs a scene.
+      await instance.start();
       instance.stop();
 
       app = instance;
@@ -161,17 +162,17 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       // Nested-container spine whose depth equals `nestingDepth`; leaves are
       // distributed evenly across it (round-robin), so a deeper archetype pays
       // for deeper transform propagation. When `config === 'retained'` every
-      // spine container is a `RetainedContainer` (Track B Slice 2): on
-      // static-heavy the whole spine retains (spec §10(a)); on dynamic-heavy
-      // the wobbling leaves invalidate their spine groups every frame (the
-      // honest §10(c) measurement of the opt-in's cost when content churns).
+      // spine container is a `RetainedContainer`: on
+      // static-heavy the whole spine retains; on dynamic-heavy
+      // the wobbling leaves invalidate their spine groups every frame (an
+      // honest measurement of the opt-in's cost when content churns).
       const createSpineContainer = (): Container => (config === 'retained' ? new RetainedContainer() : new Container());
 
       const sceneRoot = createSpineContainer();
 
       // `spec.cullingEnabled` is `false` for every archetype (see
-      // `archetypes.ts` and `EngineAdapter.ts::cullingEnabled` for the review
-      // C4 fairness rationale): the exojs render walk pays a real per-node
+      // `archetypes.ts` and `EngineAdapter.ts::cullingEnabled` for the
+      // fairness rationale): the exojs render walk pays a real per-node
       // cost for this flag that the Pixi arm's identically-set flag does not,
       // so it stays off here to keep the arms cull-symmetric.
       sceneRoot.cullable = spec.cullingEnabled;
@@ -221,10 +222,10 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
         // force genuine fill-bound behaviour; every other archetype lays
         // sprites out on a grid at their native (SPRITE_SIZE) size.
         //
-        // Review B6: previously every archetype (including `overdraw`) used
-        // the native SPRITE_SIZE (8x8px), so nodeCount stacked sprites covered
-        // ~64px^2 of overlap — negligible fill (25k x 64px ~= 1.6M writes),
-        // never analyzed, and contributing no fill-rate signal. Stretching to
+        // Using the native SPRITE_SIZE (8x8px) here would mean nodeCount
+        // stacked sprites cover only ~64px^2 of overlap — negligible fill
+        // (25k x 64px ~= 1.6M writes) contributing no fill-rate signal.
+        // Stretching to
         // the full viewport (anchor defaults to (0,0)/top-left, so the quad is
         // positioned at the origin rather than centred, to actually cover the
         // visible area rather than half of it) makes nodeCount the real fill

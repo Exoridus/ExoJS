@@ -12,7 +12,7 @@ import { createRng } from './rng';
  *
  * Factoring the selection here, rather than re-inlining the RNG loop in every
  * engine adapter, turns that contract from prose into a single shared code path
- * and gives the harness a canonical set to assert each arm against (review B3).
+ * and gives the harness a canonical set to assert each arm against.
  */
 export const selectMutationIndices = (nodeCount: number, mutationFraction: number, seed: number): number[] => {
   const rng = createRng(seed);
@@ -34,7 +34,7 @@ export const selectMutationIndices = (nodeCount: number, mutationFraction: numbe
  * indices, or a different order — changes it. The list length is folded in first
  * so an empty selection never collides with a single-element one.
  *
- * This is the cross-arm determinism guard (review B3): the harness compares each
+ * This is the cross-arm determinism guard: the harness compares each
  * arm's reported signature against the canonical {@link selectMutationIndices}
  * signature for the same `(archetype, nodeCount, seed)` and fails loudly on a
  * mismatch, catching a reference adapter that draws its RNG differently.

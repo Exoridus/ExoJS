@@ -1,4 +1,6 @@
 import { TweenManager } from '#animation/TweenManager';
+import { coreAssetBindings } from '#assets/coreAssetBindings';
+import { Loader, type LoaderOptions } from '#assets/Loader';
 import { AudioManager } from '#audio/AudioManager';
 import type { Extension } from '#extensions/Extension';
 import { getGlobalSnapshotInternal } from '#extensions/ExtensionRegistry';
@@ -21,8 +23,6 @@ import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
-import { coreAssetBindings } from '#resources/coreAssetBindings';
-import { Loader, type LoaderOptions } from '#resources/Loader';
 
 import { Capabilities } from './capabilities';
 import { Clock } from './Clock';
@@ -189,7 +189,7 @@ export interface ApplicationOptions<Registry extends SceneRegistryShape<Registry
    * `{ scene, transition? }` descriptor pairing one with a target-bound
    * default transition, consulted by {@link SceneDirector.change}/
    * {@link SceneDirector.restore} whenever navigation targets this
-   * constructor without its own call-site `transition` option (spec §3.10)
+   * constructor without its own call-site `transition` option
    * — see {@link SceneRegistration}. Required for any {@link Application.start} /
    * {@link SceneDirector.change} call that targets a constructor —
    * unregistered targets reject in development builds. Validated once at
@@ -790,7 +790,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         // The frame loop must be live BEFORE the initial navigation runs —
         // a frame-driven SceneTransitionSession needs update()/render()
         // calls to progress, and update()'s gate no longer waits for
-        // `_status === Running` (definition spec §3.7). Started as early as
+        // `_status === Running`. Started as early as
         // possible (ahead of the capabilities await, not just the scene
         // nav) so nothing downstream can observe the loop live and
         // `_status` already `Running` in the same synchronous tick — a real
@@ -841,7 +841,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * call site that can start the loop does so identically. `_status` is left
    * untouched (still `Loading` at the point {@link Application.start} calls
    * this) — {@link Application.update}'s gate reads `_frameLoopActive`, a
-   * strict superset of `_status === Running` (definition spec §3.7).
+   * strict superset of `_status === Running`.
    */
   private _startFrameLoop(): void {
     this._frameLoopActive = true;
@@ -857,7 +857,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * from every place the loop can stop (fatal frame error, {@link
    * Application.stop}, {@link Application.destroy} during the `Loading`
    * window) so `_frameLoopActive` is the single source of truth everywhere,
-   * not only where the loop starts (definition spec §3.7). Idempotent — a
+   * not only where the loop starts. Idempotent — a
    * second call while the loop is already stopped is a no-op (returns
    * `false`). Always aborts whatever scene navigation is in flight via
    * {@link SceneDirector._abortInFlightNavigation} — a transition session
@@ -909,8 +909,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    *    transition session's own visual output composites either below or
    *    above the `app.systems` draw phase depending on the session's
    *    `placement` (`'scene'`: below app overlays; `'screen'`: above them,
-   *    matching the pre-transition-runtime default) — see §3.6 of the
-   *    scene-transition design spec.
+   *    matching the pre-transition-runtime default).
    * 5. **Frame dispatch / flush** — {@link Application.onFrame}, backend GPU
    *    flush, frame-time stat write, RAF reschedule.
    *
@@ -1044,14 +1043,14 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    */
   private _handleAsyncRenderError(error: RenderError): void {
     // The backend already logged this at its first occurrence (and dedupes
-    // repeats), so the shared pipeline must NOT log it a second time (#306).
+    // repeats), so the shared pipeline must NOT log it a second time.
     this._reportError(error, false, true);
   }
 
   /**
    * Shared error-pipeline steps: log, ring buffer, `onError`, dev banner.
    * `alreadyLogged` skips the console log for errors the backend logged at
-   * source (async render errors) so they are not double-logged (#306).
+   * source (async render errors) so they are not double-logged.
    */
   private _reportError(error: Error, fatal: boolean, alreadyLogged = false): void {
     const isRenderError = error instanceof RenderError;
@@ -1085,7 +1084,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * + frame clocks. Leaves backend, input, audio, etc. intact — call
    * {@link Application.destroy} to release everything. Acts whenever the
    * frame loop is actually live (`_frameLoopActive`), including mid-`start()`
-   * — not only while `_status` is `Running` (definition spec §3.7): a
+   * — not only while `_status` is `Running`: a
    * transition-driven navigation (the initial one, or any later `change()`)
    * may still be in flight, in which case {@link SceneDirector._abortInFlightNavigation}
    * (invoked by {@link Application._stopFrameLoop} itself) rejects it with a

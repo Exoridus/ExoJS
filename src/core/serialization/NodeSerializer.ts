@@ -1,6 +1,6 @@
+import type { AssetConstructor } from '#assets/FactoryRegistry';
+import type { Loader } from '#assets/Loader';
 import type { SceneNode } from '#core/SceneNode';
-import type { AssetConstructor } from '#resources/FactoryRegistry';
-import type { Loader } from '#resources/Loader';
 
 import type { SerializedNode } from './types';
 

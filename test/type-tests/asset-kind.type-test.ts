@@ -7,7 +7,7 @@
 
 import { Asset, Json, Loader, type Texture, type ValueAsset } from '@codexo/exojs';
 
-import { LoadPriority } from '#resources/Loader';
+import { LoadPriority } from '#assets/Loader';
 
 // Compile-time exact-type assertion, independent of vitest/expectTypeOf so a bare
 // `tsc --noEmit` validates it (mirrors assets-strict-false.type-test.ts).

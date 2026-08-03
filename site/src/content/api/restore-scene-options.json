@@ -1,6 +1,6 @@
 {
   "title": "RestoreSceneOptions",
-  "description": "Options for SceneDirector.restore. No `data` field — a restored scope reuses whatever activation data it was originally prepared with; `load()`/`init()` never run again for it (definition §14.3).",
+  "description": "Options for SceneDirector.restore. No `data` field — a restored scope reuses whatever activation data it was originally prepared with; `load()`/`init()` never run again for it.",
   "symbol": "RestoreSceneOptions",
   "kind": "interface",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Options for SceneDirector.restore. No `data` field — a restored scope reuses whatever activation data it was originally prepared with; `load()`/`init()` never run again for it (definition §14.3)."
+        "Options for SceneDirector.restore. No `data` field — a restored scope reuses whatever activation data it was originally prepared with; `load()`/`init()` never run again for it."
       ],
       "importLine": "import { RestoreSceneOptions } from '@codexo/exojs'",
       "sourceLink": null

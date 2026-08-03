@@ -3,7 +3,7 @@
   "description": "AssetFactory implementation that loads short audio assets (MP3, OGG, WAV, AAC, and other Web Audio API-supported formats), fully decodes them into an AudioBuffer, and produces a Sound instance ready for low-latency playback. For long-form background music use MusicFactory instead, which streams audio without up-front decoding. Supports audio sprite sheets via the `sprites` option.",
   "symbol": "SoundFactory",
   "kind": "class",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 7,
@@ -371,11 +371,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/factories/SoundFactory.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/SoundFactory.ts"
+        "label": "src/assets/factories/SoundFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/SoundFactory.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/factories/SoundFactory.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/SoundFactory.ts"
+  "sourcePath": "src/assets/factories/SoundFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/SoundFactory.ts"
 }

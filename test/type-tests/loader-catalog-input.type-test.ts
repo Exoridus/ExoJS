@@ -17,7 +17,7 @@
 
 import { Asset, Assets, type Loader, type Scene, type Texture } from '@codexo/exojs';
 
-import { LoadPriority } from '#resources/Loader';
+import { LoadPriority } from '#assets/Loader';
 
 import type { CatalogResourceLeaf, CatalogValueLeaf } from './helpers/catalog-leaf';
 

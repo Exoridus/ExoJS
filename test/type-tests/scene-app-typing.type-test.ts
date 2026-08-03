@@ -24,10 +24,10 @@ class DirectTypeofAppScene extends Scene<void, typeof app> {}
 declare const directTypeofApp: DirectTypeofAppScene;
 const _directTypeofAppCheck: GameApplication = directTypeofApp.app;
 
-// The explicit-fixed-point anchor pattern (spec §6.2), via an intermediate
-// AppScene base declared in yet another module — the exact cross-file
-// type-only cycle the spec's TS2506/TS7022 finding says an un-anchored,
-// fully-inferred `const app` cannot support.
+// The explicit-fixed-point anchor pattern, via an intermediate AppScene base
+// declared in yet another module — the exact cross-file type-only cycle an
+// un-anchored, fully-inferred `const app` cannot support without hitting
+// TS2506/TS7022.
 class TitleScene extends AppScene {}
 declare const title: TitleScene;
 const _titleAppCheck: GameApplication = title.app;

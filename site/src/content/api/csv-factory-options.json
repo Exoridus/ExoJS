@@ -3,7 +3,7 @@
   "description": "Construction options for CsvFactory.create.",
   "symbol": "CsvFactoryOptions",
   "kind": "interface",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 1,
@@ -65,11 +65,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/factories/CsvFactory.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/CsvFactory.ts"
+        "label": "src/assets/factories/CsvFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/CsvFactory.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/factories/CsvFactory.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/CsvFactory.ts"
+  "sourcePath": "src/assets/factories/CsvFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/CsvFactory.ts"
 }

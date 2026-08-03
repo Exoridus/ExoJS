@@ -40,7 +40,7 @@ describe('shouldAbort', () => {
     expect(shouldAbort([1000, 1000], 200, 3)).toBe(false);
   });
 
-  test('does not abort on a single spike among otherwise-fast frames (review B9/C2)', () => {
+  test('does not abort on a single spike among otherwise-fast frames', () => {
     // Trailing window of 3: [5, 5, 1000] has median 5 -- one GC pause does not trip it.
     expect(shouldAbort([5, 5, 1000], 200, 3)).toBe(false);
   });

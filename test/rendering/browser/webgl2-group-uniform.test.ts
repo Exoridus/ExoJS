@@ -1,5 +1,5 @@
 /**
- * WebGL2 group-uniform browser test — v0.16 Track B Slice 2 proof entry.
+ * WebGL2 group-uniform browser test.
  *
  * Verifies that a backend-level group transform (`u_group`) offsets sprite
  * output, and that clearing it restores identity. Establishes the pixel

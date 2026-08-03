@@ -1,5 +1,5 @@
 /**
- * WebGPU custom-material user-uniform flush hot-path caching (expert review B-10).
+ * WebGPU custom-material user-uniform flush hot-path caching.
  *
  * The custom SpriteMaterial / MeshMaterial paths used to allocate a fresh
  * `Float32Array` and issue an unconditional `writeBuffer` for the group(2) user

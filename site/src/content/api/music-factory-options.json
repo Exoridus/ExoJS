@@ -3,7 +3,7 @@
   "description": "Construction options for MusicFactory.create.",
   "symbol": "MusicFactoryOptions",
   "kind": "interface",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 4,
@@ -152,11 +152,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/factories/MusicFactory.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/MusicFactory.ts"
+        "label": "src/assets/factories/MusicFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/MusicFactory.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/factories/MusicFactory.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/MusicFactory.ts"
+  "sourcePath": "src/assets/factories/MusicFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/MusicFactory.ts"
 }

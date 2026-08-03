@@ -34,7 +34,7 @@ export interface SceneAudioTrackOptions {
 
 /**
  * Stand-in {@link Voice} returned by {@link SceneAudio.play} while the owning
- * scope is still `Preparing` (definition §7.8). Buffers `volume`/`bus`/effect
+ * scope is still `Preparing`. Buffers `volume`/`bus`/effect
  * writes and replays them onto the real voice once {@link PendingVoice._flush}
  * runs at activation; `stop()` before flush cancels playback entirely — the
  * real voice is never created. Narrower than a real `Voice`: capability
@@ -188,7 +188,7 @@ class PendingVoice implements Voice {
  * what this facade started so it can stop it on teardown (and, for capable
  * voices, pause/resume it across retention suspension). Playback requested
  * while the scope is `Preparing` is queued and started once the scope
- * activates (definition §7.8) — see {@link PendingVoice}.
+ * activates — see {@link PendingVoice}.
  */
 export class SceneAudio implements Destroyable {
   private readonly _tracked = new Map<Voice, SceneAvailability>();
@@ -208,7 +208,7 @@ export class SceneAudio implements Destroyable {
    * `Preparing`, `Ready`, or `Suspended`, returns a {@link PendingVoice}
    * stand-in immediately and defers the real `app.audio.play(...)` call
    * until (re)activation — including a call made while already `Suspended`
-   * (definition §4.2: a new registration while dormant must buffer, not
+   * (a new registration while dormant must buffer, not
    * play for real, regardless of how the scope became dormant). While
    * `Destroying`/`Destroyed`, rejects instead: a dev build throws a clear
    * lifecycle error (playback requested during permanent teardown can

@@ -3,7 +3,7 @@
   "description": "Deferred handle for value assets (parsed JSON, text, CSV rows, …), returned by `loader.get(Asset.type('json', src))` / a bare value path and friends. Values cannot heal in place the way resource handles do, so the REF is the stable identity: value throws until `'ready'`, loaded resolves with the value itself, and a failed ref retries (healing in place) on the next `get`.",
   "symbol": "AssetRef",
   "kind": "class",
-  "subsystem": "resources",
+  "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 7,
@@ -201,7 +201,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Load lifecycle: 'idle' | 'loading' | 'ready' | 'failed' (asset-system v2 §6)."
+          "description": "Load lifecycle: 'idle' | 'loading' | 'ready' | 'failed'."
         },
         {
           "name": "value",
@@ -236,11 +236,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/AssetRef.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/AssetRef.ts"
+        "label": "src/assets/AssetRef.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetRef.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/AssetRef.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/AssetRef.ts"
+  "sourcePath": "src/assets/AssetRef.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetRef.ts"
 }

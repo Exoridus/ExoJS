@@ -2,8 +2,7 @@
  * WebGPU single-submit browser tests.
  *
  * Guards the pass-lifecycle contract behind the "submit the frame once instead
- * of once per batch flush" performance fix (see
- * `.workspace/specs/04-webgpu-overhead-investigation.md`). The WebGPU backend
+ * of once per batch flush" performance fix. The WebGPU backend
  * used to open a fresh command encoder + render pass and call
  * `device.queue.submit()` on EVERY batch flush — i.e. once per draw call. In the
  * `batch-breaking` archetype (many interleaved textures overflowing the

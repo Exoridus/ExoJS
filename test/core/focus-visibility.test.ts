@@ -92,7 +92,7 @@ const loadHarness = async (): Promise<FocusVisibilityHarness> => {
       return backendMock;
     }),
   }));
-  vi.doMock('#resources/Loader', () => ({
+  vi.doMock('#assets/Loader', () => ({
     Loader: vi.fn(function () {
       return {
         destroy: vi.fn(),

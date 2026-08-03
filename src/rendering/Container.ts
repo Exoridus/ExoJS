@@ -337,8 +337,8 @@ export class Container extends RenderNode {
    * @internal — whether `child` (a DIRECT child of this container) opts out of
    * this container's transform-group boundary and resolves world-space
    * transforms. Always `false` on plain containers; {@link RetainedContainer}
-   * overrides it with its revision-keyed deep-barrier branch-escape set
-   * (F13/R3). Every caller guards on the parent being an engaged boundary (or
+   * overrides it with its revision-keyed deep-barrier branch-escape set.
+   * Every caller guards on the parent being an engaged boundary (or
    * on the collect-scope's `transformNode`), so the base implementation is
    * never on a hot path.
    */
@@ -369,12 +369,12 @@ export class Container extends RenderNode {
 
     if (this._retainedPlan?.isClean(this._contentRevision, this._structureRevision, this._transformRevision, viewUpdateId, builder.backend)) {
       if (__DEV__ && this._retainedPlan._devHasDestroyedDrawable()) {
-        // P3f: a direct drawable child was destroy()ed but left attached, so
+        // A direct drawable child was destroy()ed but left attached, so
         // no revision bumped and the slot cache still looks clean. Drop the
         // stale capture (releasing the strong refs) and fall through to a full
         // collect, which skips the destroyed child (RenderNode._collect dev
         // guard) and recaptures without it. Silent here — the loud diagnostic
-        // is owned by the nearest RetainedContainer (P3f).
+        // is owned by the nearest RetainedContainer.
         this._retainedPlan.invalidate();
       } else {
         this._replayRetainedChildren(builder);
@@ -417,8 +417,8 @@ export class Container extends RenderNode {
    * Slow path (today's unmodified behavior): collect every child normally,
    * then snapshot exactly the direct-Drawable children that produced a single
    * `Draw`-kind entry (a plain, non-barrier, visible Drawable) into the
-   * cache's pooled retained slots for next frame's fast path (Slice 3, F11a:
-   * steady-state recapture allocates zero slot records).
+   * cache's pooled retained slots for next frame's fast path: a steady-state
+   * recapture allocates zero slot records.
    */
   private _collectAndCaptureChildren(builder: RenderPlanBuilder, viewUpdateId: number): void {
     let sawSlotCandidate = false;
@@ -433,9 +433,8 @@ export class Container extends RenderNode {
 
       // Only a plain, non-barrier drawable can ever produce a retained slot
       // (exactly one Draw entry for itself). Every other child skips the
-      // peek/capture bookkeeping entirely -- the S2-D4 zero-slot fix: 99.7% of
-      // containers in the Slice-1 measurement had no direct drawable children
-      // and paid pure overhead here.
+      // peek/capture bookkeeping entirely -- most containers have no direct
+      // drawable children and would otherwise pay pure overhead here.
       if (!child._isDrawableForRenderPlan() || child._renderPlanHasBarrierEffects()) {
         child._collect(builder, index);
 

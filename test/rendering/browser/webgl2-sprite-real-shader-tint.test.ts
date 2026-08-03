@@ -1,6 +1,5 @@
 /**
- * WebGL2 Sprite browser test — real `sprite.vert` tint pixel proof
- * (closes #321).
+ * WebGL2 Sprite browser test — real `sprite.vert` tint pixel proof.
  *
  * Sprite tint lives in its own rgba8 texture (`u_tintTexture`, one texel per
  * row, keyed by `nodeIndex`), separate from the fp32 transform texture —
@@ -199,7 +198,7 @@ const createSolidTexture = (color: string, width = 16, height = 16): Texture => 
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('WebGL2 Sprite — real sprite.vert tint (#321)', () => {
+describe('WebGL2 Sprite — real sprite.vert tint', () => {
   test('the real shader source made it past the stub (not an empty string)', async () => {
     const real = await import('../../../src/rendering/webgl2/glsl/sprite.vert?raw');
 

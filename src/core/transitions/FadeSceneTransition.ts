@@ -25,8 +25,7 @@ interface FadePhaseState {
  * Fade to a color, switch scenes, fade back in. `placement: 'screen'`,
  * `currentFrame: 'direct'`, `outgoingFrame: 'none'` — the live surface
  * renders straight to the screen with no extra texture pass; `render()`
- * only draws the overlay on top. The universal default transition
- * (definition spec §8).
+ * only draws the overlay on top. The universal default transition.
  * @stable
  */
 export class FadeSceneTransition extends PhasedSceneTransition<FadePhaseState> {

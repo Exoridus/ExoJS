@@ -453,7 +453,7 @@ export class WebGpuShaderFilter extends Filter {
         } else if (value instanceof Float32Array) {
           data.set(value, baseFloatIndex);
         } else if (value instanceof Int32Array) {
-          // Int32Array values — reinterpret as float (best-effort for V1)
+          // Int32Array values — reinterpret as float (best-effort)
           for (let i = 0; i < value.length; i++) {
             // In-bounds: `i` < `value.length`.
             data[baseFloatIndex + i] = value[i]!;

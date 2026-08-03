@@ -123,7 +123,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Draw this session's own visual output — not the scene itself, see the render-surface boundary (§3.6)."
+          "description": "Draw this session's own visual output — not the scene itself; it does not share the render-surface the scene draws to."
         },
         {
           "name": "update",
@@ -229,7 +229,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Which render layer this session's output composites against, read live every frame — see §3.6. May change mid-session (composed sessions, Slice 6)."
+          "description": "Which render layer this session's output composites against, read live every frame. May change mid-session for composed sessions."
         }
       ],
       "paragraphs": [],

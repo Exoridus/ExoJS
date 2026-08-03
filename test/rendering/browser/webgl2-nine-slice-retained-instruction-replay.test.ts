@@ -1,6 +1,6 @@
 /**
  * WebGL2 renderer-matrix browser tests — NineSlice retained instruction-set
- * replay (Track B Slice 3).
+ * replay.
  *
  * The nine-slice counterpart of `webgl2-retained-instruction-replay.test.ts`:
  * a retained group whose playback was recorded replays through
@@ -8,7 +8,7 @@
  * buffer + group transform texture) and must produce BYTE-IDENTICAL frames to
  * the entry-replay slow path. A nine-slice node expands to MANY quad-instances
  * that all share one transform-buffer row, so the group-local node-index
- * rebase (S3-D4) and the per-batch byte offset are load-bearing in every
+ * rebase and the per-batch byte offset are load-bearing in every
  * assertion: a live sprite OUTSIDE (and before) the group keeps the group's
  * shared rows starting at a non-zero frame-global index, so a broken rebase
  * (or a wrong byte offset) fetches the wrong / out-of-range transform row and
@@ -193,7 +193,7 @@ const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
   return [buf[0], buf[1], buf[2], buf[3]];
 };
 
-/** Full-framebuffer snapshot for byte-identical tier comparisons (S3-D10). */
+/** Full-framebuffer snapshot for byte-identical tier comparisons. */
 const readCanvas = (backend: WebGl2Backend): Uint8Array => {
   const buf = new Uint8Array(canvasSize * canvasSize * 4);
   const gl = backend.context;
@@ -226,8 +226,8 @@ const createSolidTexture = (color: string, width = 16, height = 16): Texture => 
 /**
  * Standard cell scene: one live sprite OUTSIDE (and before) the retained
  * group so the group's shared transform rows never start at row 0 — the
- * group-local node-index rebase (S3-D4) is load-bearing in every pixel
- * assertion, and the replay path interleaves with a live batch every frame.
+ * group-local node-index rebase is load-bearing in every pixel assertion,
+ * and the replay path interleaves with a live batch every frame.
  *
  * The group holds two nine-slice nodes with DISTINCT textures, so each records
  * its own single-texture batch (nine-slice binds one base texture per flush) —
@@ -396,8 +396,8 @@ describe('WebGL2 renderer matrix: NineSlice retained instruction-set replay cell
       const beginSpy = vi.spyOn(backend, '_beginRetainedCapture');
       const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
 
-      // Slice 4b: a pure transform move on a direct child stays content-clean,
-      // so the group keeps its recording and patches just this child's shared
+      // A pure transform move on a direct child stays content-clean, so the
+      // group keeps its recording and patches just this child's shared
       // transform row in place — all 9 quad-instances that reference it move
       // together. The pixel readback is the stale-render guard on a real GPU.
       scene.redNine.setPosition(32, 0); // world (40,24)-(56,40)

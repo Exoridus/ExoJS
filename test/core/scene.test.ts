@@ -208,7 +208,7 @@ describe('Scene', () => {
 
   // Every scene-bound facility getter is attach-gated: it throws a clear,
   // property-naming error before attachment and forwards to the owning
-  // SceneScope once attached (definition §4.3, impl-spec §7.2).
+  // SceneScope once attached.
   describe('facility getters', () => {
     const facilities = ['systems', 'loader', 'inputs', 'interaction', 'tweens', 'audio', 'state'] as const;
 
