@@ -24,8 +24,9 @@ import { Texture } from '#rendering/texture/Texture';
 import { ScaleModes, TextureFormat } from '#rendering/types';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
-import { expectPixelNear, type RgbaTuple } from './_pixels';
+import { expectPixelNear } from './_pixels';
 
 // The browser project rewrites `.vert`/`.frag` imports to empty strings, so the
 // default engine shaders the backend compiles on connect must be mocked with
@@ -80,15 +81,6 @@ const renderMesh = (backend: WebGl2Backend, mesh: Mesh): void => {
   backend.flush();
 };
 
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const pixel = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
-
-  return [pixel[0], pixel[1], pixel[2], pixel[3]];
-};
-
 // A full-canvas quad in pixel space with UVs spanning the whole texture.
 const fullQuadVertices = (): Float32Array => new Float32Array([0, 0, canvasSize, 0, canvasSize, canvasSize, 0, 0, canvasSize, canvasSize, 0, canvasSize]);
 const fullQuadUvs = (): Float32Array => new Float32Array([0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1]);
@@ -113,7 +105,7 @@ describe('WebGL2 mesh tint and texture sampling', () => {
       levels.forEach((level, i) => {
         const x = Math.floor(((i + 0.5) * canvasSize) / width);
 
-        expectPixelNear(readPixel(backend, x, 32), [level, level, level, 255]);
+        expectPixelNear(readWebGl2Pixel(backend, x, 32), [level, level, level, 255]);
       });
     } finally {
       mesh.destroy();
@@ -137,10 +129,10 @@ describe('WebGL2 mesh tint and texture sampling', () => {
     try {
       renderMesh(backend, mesh);
 
-      expectPixelNear(readPixel(backend, 16, 16), [255, 0, 0, 255]); // top-left
-      expectPixelNear(readPixel(backend, 48, 16), [0, 255, 0, 255]); // top-right
-      expectPixelNear(readPixel(backend, 16, 48), [0, 0, 255, 255]); // bottom-left
-      expectPixelNear(readPixel(backend, 48, 48), [255, 255, 255, 255]); // bottom-right
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [255, 0, 0, 255]); // top-left
+      expectPixelNear(readWebGl2Pixel(backend, 48, 16), [0, 255, 0, 255]); // top-right
+      expectPixelNear(readWebGl2Pixel(backend, 16, 48), [0, 0, 255, 255]); // bottom-left
+      expectPixelNear(readWebGl2Pixel(backend, 48, 48), [255, 255, 255, 255]); // bottom-right
     } finally {
       mesh.destroy();
       texture.destroy();
@@ -170,7 +162,7 @@ describe('WebGL2 mesh tint and texture sampling', () => {
     try {
       renderMesh(backend, mesh);
 
-      expectPixelNear(readPixel(backend, 32, 32), [96, 96, 96, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [96, 96, 96, 255]);
     } finally {
       mesh.destroy();
       texture.destroy();
@@ -195,9 +187,9 @@ describe('WebGL2 mesh tint and texture sampling', () => {
       renderMesh(backend, mesh);
 
       // Endpoints resolve near the pure stops; the middle is the blend (magenta).
-      expectPixelNear(readPixel(backend, 2, 32), [255, 0, 0, 255], 20); // left ≈ red
-      expectPixelNear(readPixel(backend, 32, 32), [128, 0, 128, 255], 20); // middle ≈ magenta
-      expectPixelNear(readPixel(backend, 62, 32), [0, 0, 255, 255], 20); // right ≈ blue
+      expectPixelNear(readWebGl2Pixel(backend, 2, 32), [255, 0, 0, 255], 20); // left ≈ red
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [128, 0, 128, 255], 20); // middle ≈ magenta
+      expectPixelNear(readWebGl2Pixel(backend, 62, 32), [0, 0, 255, 255], 20); // right ≈ blue
     } finally {
       mesh.destroy();
       gradient.destroy();
@@ -224,7 +216,7 @@ describe('WebGL2 mesh tint and texture sampling', () => {
     try {
       renderMesh(backend, mesh);
 
-      expectPixelNear(readPixel(backend, 32, 32), [96, 160, 224, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [96, 160, 224, 255]);
     } finally {
       mesh.destroy();
       texture.destroy();
@@ -252,7 +244,7 @@ describe('WebGL2 mesh tint and texture sampling', () => {
     try {
       renderMesh(backend, mesh);
 
-      expectPixelNear(readPixel(backend, 32, 32), [255, 0, 0, 255]); // first draw: red
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [255, 0, 0, 255]); // first draw: red
 
       // Mutate the texel and flush the dirty region; the next draw must show it.
       texture.buffer.set([0, 0, 255, 255]); // blue
@@ -260,7 +252,7 @@ describe('WebGL2 mesh tint and texture sampling', () => {
 
       renderMesh(backend, mesh);
 
-      expectPixelNear(readPixel(backend, 32, 32), [0, 0, 255, 255]); // second draw: blue
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [0, 0, 255, 255]); // second draw: blue
     } finally {
       mesh.destroy();
       texture.destroy();

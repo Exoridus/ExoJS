@@ -29,7 +29,8 @@ import { Texture } from '#rendering/texture/Texture';
 import { TextureRegion } from '#rendering/texture/TextureRegion';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
-import { expectPixelNear, type RgbaTuple } from './_pixels';
+import { readWebGl2Pixel } from './_backendSetup';
+import { expectPixelNear } from './_pixels';
 import { wireTilemapRenderers } from './_tilemapScene';
 
 const canvasSize = 64;
@@ -72,15 +73,6 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.clear(Color.black);
   node.render(backend);
   backend.flush();
-};
-
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const buf = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, buf);
-
-  return [buf[0], buf[1], buf[2], buf[3]];
 };
 
 /** Full-framebuffer snapshot for byte-identical tier comparisons. */
@@ -196,10 +188,10 @@ const buildScene = (): Scene => {
 };
 
 const expectBaseScenePixels = (backend: WebGl2Backend): void => {
-  expectPixelNear(readPixel(backend, 52, 8), [0, 0, 255, 255]); // live outside tile
-  expectPixelNear(readPixel(backend, 12, 28), [255, 0, 0, 255]); // red tile inside the group
-  expectPixelNear(readPixel(backend, 28, 44), [0, 255, 0, 255]); // green tile inside the group
-  expectPixelNear(readPixel(backend, 4, 60), [0, 0, 0, 255]); // background
+  expectPixelNear(readWebGl2Pixel(backend, 52, 8), [0, 0, 255, 255]); // live outside tile
+  expectPixelNear(readWebGl2Pixel(backend, 12, 28), [255, 0, 0, 255]); // red tile inside the group
+  expectPixelNear(readWebGl2Pixel(backend, 28, 44), [0, 255, 0, 255]); // green tile inside the group
+  expectPixelNear(readWebGl2Pixel(backend, 4, 60), [0, 0, 0, 255]); // background
 };
 
 describe('WebGL2 renderer matrix: TileChunkNode retained instruction-set replay cells', () => {
@@ -262,10 +254,10 @@ describe('WebGL2 renderer matrix: TileChunkNode retained instruction-set replay 
 
       expect(beginSpy).not.toHaveBeenCalled();
       expect(replaySpy).toHaveBeenCalled();
-      expectPixelNear(readPixel(backend, 36, 8), [0, 0, 255, 255]); // outside tile 32..48
-      expectPixelNear(readPixel(backend, 4, 28), [255, 0, 0, 255]); // red now 0..8
-      expectPixelNear(readPixel(backend, 12, 44), [0, 255, 0, 255]); // green now 8..24
-      expectPixelNear(readPixel(backend, 28, 28), [0, 0, 0, 255]); // old red spot is background
+      expectPixelNear(readWebGl2Pixel(backend, 36, 8), [0, 0, 255, 255]); // outside tile 32..48
+      expectPixelNear(readWebGl2Pixel(backend, 4, 28), [255, 0, 0, 255]); // red now 0..8
+      expectPixelNear(readWebGl2Pixel(backend, 12, 44), [0, 255, 0, 255]); // green now 8..24
+      expectPixelNear(readWebGl2Pixel(backend, 28, 28), [0, 0, 0, 255]); // old red spot is background
     } finally {
       scene.destroy();
       backend.destroy();
@@ -289,10 +281,10 @@ describe('WebGL2 renderer matrix: TileChunkNode retained instruction-set replay 
 
       expect(beginSpy).not.toHaveBeenCalled();
       expect(replaySpy).toHaveBeenCalled();
-      expectPixelNear(readPixel(backend, 28, 12), [255, 0, 0, 255]); // red 24..40 x 8..24
-      expectPixelNear(readPixel(backend, 44, 28), [0, 255, 0, 255]); // green 40..56 x 24..40
-      expectPixelNear(readPixel(backend, 12, 28), [0, 0, 0, 255]); // old red spot is background
-      expectPixelNear(readPixel(backend, 52, 8), [0, 0, 255, 255]); // live outside tile unaffected
+      expectPixelNear(readWebGl2Pixel(backend, 28, 12), [255, 0, 0, 255]); // red 24..40 x 8..24
+      expectPixelNear(readWebGl2Pixel(backend, 44, 28), [0, 255, 0, 255]); // green 40..56 x 24..40
+      expectPixelNear(readWebGl2Pixel(backend, 12, 28), [0, 0, 0, 255]); // old red spot is background
+      expectPixelNear(readWebGl2Pixel(backend, 52, 8), [0, 0, 255, 255]); // live outside tile unaffected
     } finally {
       scene.destroy();
       backend.destroy();
@@ -318,9 +310,9 @@ describe('WebGL2 renderer matrix: TileChunkNode retained instruction-set replay 
       scene.redLayer.clearTileAt(0, 0);
       render(backend, scene.root); // dirty re-collect: drops the stale recording
 
-      expectPixelNear(readPixel(backend, 12, 28), [0, 0, 0, 255]); // cleared: background, not stale red
-      expectPixelNear(readPixel(backend, 28, 44), [0, 255, 0, 255]); // untouched sibling still correct
-      expectPixelNear(readPixel(backend, 52, 8), [0, 0, 255, 255]); // live outside tile unaffected
+      expectPixelNear(readWebGl2Pixel(backend, 12, 28), [0, 0, 0, 255]); // cleared: background, not stale red
+      expectPixelNear(readWebGl2Pixel(backend, 28, 44), [0, 255, 0, 255]); // untouched sibling still correct
+      expectPixelNear(readWebGl2Pixel(backend, 52, 8), [0, 0, 255, 255]); // live outside tile unaffected
 
       const beginSpy = vi.spyOn(backend, '_beginRetainedCapture');
       const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
@@ -332,7 +324,7 @@ describe('WebGL2 renderer matrix: TileChunkNode retained instruction-set replay 
       render(backend, scene.root); // instruction splice of the NEW (post-edit) recording
 
       expect(replaySpy).toHaveBeenCalled();
-      expectPixelNear(readPixel(backend, 12, 28), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 12, 28), [0, 0, 0, 255]);
     } finally {
       scene.destroy();
       backend.destroy();

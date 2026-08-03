@@ -73,8 +73,9 @@ import { Texture } from '#rendering/texture/Texture';
 import { View } from '#rendering/View';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
-import { expectPixelNear, type RgbaTuple } from './_pixels';
+import { expectPixelNear } from './_pixels';
 
 // ---------------------------------------------------------------------------
 // Shader wiring — substitute the REAL shipped sprite GLSL via `?raw` (the stub
@@ -142,15 +143,6 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.clear(Color.black);
   node.render(backend);
   backend.flush();
-};
-
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const buf = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, buf);
-
-  return [buf[0], buf[1], buf[2], buf[3]];
 };
 
 const createSolidTexture = (color: string, width = spriteSize, height = spriteSize): Texture => {
@@ -336,11 +328,11 @@ describe('WebGL2 mobile precision — Layer 3: large-world-coordinate render', (
       render(backend, root);
 
       // Sprite present at its highp footprint.
-      expectPixelNear(readPixel(backend, 41, 41), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 44, 44), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 41, 41), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 44, 44), [255, 0, 0, 255]);
 
       // Background well outside the footprint stays clear on every backend.
-      expectPixelNear(readPixel(backend, 8, 8), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 8, 8), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();

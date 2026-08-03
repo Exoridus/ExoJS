@@ -31,8 +31,9 @@ import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
-import { expectPixelNear, type RgbaTuple } from './_pixels';
+import { expectPixelNear } from './_pixels';
 
 // ---------------------------------------------------------------------------
 // Shader mocks (Sprite/Mesh/Text — the nine-slice renderer uses inline GLSL).
@@ -86,15 +87,6 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.clear(Color.black);
   node.render(backend);
   backend.flush();
-};
-
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const buf = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, buf);
-
-  return [buf[0], buf[1], buf[2], buf[3]];
 };
 
 /** Full-framebuffer snapshot for byte-identical tier comparisons. */
@@ -167,10 +159,10 @@ const buildScene = () => {
 };
 
 const expectBaseScenePixels = (backend: WebGl2Backend): void => {
-  expectPixelNear(readPixel(backend, 52, 8), [0, 0, 255, 255]); // live outside sprite
-  expectPixelNear(readPixel(backend, 12, 28), [255, 0, 0, 255]); // red nine-slice inside the group
-  expectPixelNear(readPixel(backend, 28, 44), [0, 255, 0, 255]); // green nine-slice inside the group
-  expectPixelNear(readPixel(backend, 4, 60), [0, 0, 0, 255]); // background
+  expectPixelNear(readWebGl2Pixel(backend, 52, 8), [0, 0, 255, 255]); // live outside sprite
+  expectPixelNear(readWebGl2Pixel(backend, 12, 28), [255, 0, 0, 255]); // red nine-slice inside the group
+  expectPixelNear(readWebGl2Pixel(backend, 28, 44), [0, 255, 0, 255]); // green nine-slice inside the group
+  expectPixelNear(readWebGl2Pixel(backend, 4, 60), [0, 0, 0, 255]); // background
 };
 
 // ---------------------------------------------------------------------------
@@ -243,10 +235,10 @@ describe('WebGL2 renderer matrix: NineSlice retained instruction-set replay cell
 
       expect(beginSpy).not.toHaveBeenCalled(); // replay, not recapture
       expect(replaySpy).toHaveBeenCalled();
-      expectPixelNear(readPixel(backend, 36, 8), [0, 0, 255, 255]); // outside sprite 32..48
-      expectPixelNear(readPixel(backend, 4, 28), [255, 0, 0, 255]); // red now at 0..8 visible
-      expectPixelNear(readPixel(backend, 12, 44), [0, 255, 0, 255]); // green now 8..24
-      expectPixelNear(readPixel(backend, 28, 28), [0, 0, 0, 255]); // old red spot is background
+      expectPixelNear(readWebGl2Pixel(backend, 36, 8), [0, 0, 255, 255]); // outside sprite 32..48
+      expectPixelNear(readWebGl2Pixel(backend, 4, 28), [255, 0, 0, 255]); // red now at 0..8 visible
+      expectPixelNear(readWebGl2Pixel(backend, 12, 44), [0, 255, 0, 255]); // green now 8..24
+      expectPixelNear(readWebGl2Pixel(backend, 28, 28), [0, 0, 0, 255]); // old red spot is background
     } finally {
       scene.destroy();
       backend.destroy();
@@ -272,10 +264,10 @@ describe('WebGL2 renderer matrix: NineSlice retained instruction-set replay cell
 
       expect(beginSpy).not.toHaveBeenCalled();
       expect(replaySpy).toHaveBeenCalled();
-      expectPixelNear(readPixel(backend, 28, 12), [255, 0, 0, 255]); // red 24..40 x 8..24
-      expectPixelNear(readPixel(backend, 44, 28), [0, 255, 0, 255]); // green 40..56 x 24..40
-      expectPixelNear(readPixel(backend, 12, 28), [0, 0, 0, 255]); // old red spot is background
-      expectPixelNear(readPixel(backend, 52, 8), [0, 0, 255, 255]); // live sprite unaffected
+      expectPixelNear(readWebGl2Pixel(backend, 28, 12), [255, 0, 0, 255]); // red 24..40 x 8..24
+      expectPixelNear(readWebGl2Pixel(backend, 44, 28), [0, 255, 0, 255]); // green 40..56 x 24..40
+      expectPixelNear(readWebGl2Pixel(backend, 12, 28), [0, 0, 0, 255]); // old red spot is background
+      expectPixelNear(readWebGl2Pixel(backend, 52, 8), [0, 0, 255, 255]); // live sprite unaffected
     } finally {
       scene.destroy();
       backend.destroy();
@@ -306,8 +298,8 @@ describe('WebGL2 renderer matrix: NineSlice retained instruction-set replay cell
       // batches (nine-slice binds one base texture per flush), so each replayed
       // frame splices both — proving per-batch byte offsets across >1 batch.
       expect(replaySpy).toHaveBeenCalledTimes(2); // one frame, two batches
-      expectPixelNear(readPixel(backend, 48, 28), [255, 0, 0, 255]); // patched to the NEW spot
-      expectPixelNear(readPixel(backend, 12, 28), [0, 0, 0, 255]); // old spot cleared
+      expectPixelNear(readWebGl2Pixel(backend, 48, 28), [255, 0, 0, 255]); // patched to the NEW spot
+      expectPixelNear(readWebGl2Pixel(backend, 12, 28), [0, 0, 0, 255]); // old spot cleared
 
       // The fast tier keeps splicing the patched rows, byte-stable, no re-record.
       const patchedFrame = readCanvas(backend);
@@ -317,8 +309,8 @@ describe('WebGL2 renderer matrix: NineSlice retained instruction-set replay cell
       expect(beginSpy).not.toHaveBeenCalled();
       expect(replaySpy).toHaveBeenCalledTimes(4); // second frame, two more batch replays
       expect(readCanvas(backend)).toEqual(patchedFrame);
-      expectPixelNear(readPixel(backend, 48, 28), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 28, 44), [0, 255, 0, 255]); // green sibling untouched
+      expectPixelNear(readWebGl2Pixel(backend, 48, 28), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 28, 44), [0, 255, 0, 255]); // green sibling untouched
     } finally {
       scene.destroy();
       backend.destroy();

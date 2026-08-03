@@ -24,8 +24,9 @@ import { Texture } from '#rendering/texture/Texture';
 import { TextureRegion } from '#rendering/texture/TextureRegion';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
-import { expectPixelNear, type RgbaTuple } from './_pixels';
+import { expectPixelNear } from './_pixels';
 
 // ---------------------------------------------------------------------------
 // Infrastructure helpers
@@ -75,15 +76,6 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.flush();
 };
 
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const buf = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, buf);
-
-  return [buf[0], buf[1], buf[2], buf[3]];
-};
-
 const createSolidTexture = (color: string, width = 16, height = 16): Texture => {
   const src = document.createElement('canvas');
 
@@ -116,10 +108,10 @@ describe('WebGL2 RepeatingSprite — shader path', () => {
       render(backend, root);
 
       // Interior of the sprite should be red
-      expectPixelNear(readPixel(backend, 16, 16), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 32, 32), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [255, 0, 0, 255]);
       // Outside the sprite's bounds remains black
-      expectPixelNear(readPixel(backend, 4, 4), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 4, 4), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -144,8 +136,8 @@ describe('WebGL2 RepeatingSprite — shader path', () => {
 
       render(backend, root);
 
-      expectPixelNear(readPixel(backend, 24, 24), [0, 255, 0, 255]);
-      expectPixelNear(readPixel(backend, 4, 4), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 24), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 4, 4), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -171,7 +163,7 @@ describe('WebGL2 RepeatingSprite — shader path', () => {
       render(backend, root);
 
       // Interior pixel should have blue component (exact value varies by mirror phase)
-      const pixel = readPixel(backend, 20, 20);
+      const pixel = readWebGl2Pixel(backend, 20, 20);
 
       expect(pixel[2]).toBeGreaterThan(128);
     } finally {
@@ -194,7 +186,7 @@ describe('WebGL2 RepeatingSprite — shader path', () => {
 
       render(backend, root);
 
-      const pixel = readPixel(backend, 16, 16);
+      const pixel = readWebGl2Pixel(backend, 16, 16);
 
       expect(pixel[0]).toBeGreaterThan(128);
       expect(pixel[1]).toBeLessThan(32);
@@ -218,7 +210,7 @@ describe('WebGL2 RepeatingSprite — shader path', () => {
 
       expect(() => render(backend, root)).not.toThrow();
       // No pixels should be red — zero-size renders nothing
-      expectPixelNear(readPixel(backend, 16, 16), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -247,8 +239,8 @@ describe('WebGL2 RepeatingSprite — shader path', () => {
       render(backend, root);
 
       // Both should show red — sampler state must not corrupt the sprite
-      expectPixelNear(readPixel(backend, 12, 12), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 42, 10), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 12, 12), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 42, 10), [255, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -269,9 +261,9 @@ describe('WebGL2 RepeatingSprite — shader path', () => {
 
       render(backend, root);
 
-      expectPixelNear(readPixel(backend, 44, 44), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 44, 44), [255, 0, 0, 255]);
       // Position (10, 10) is outside the sprite's bounds
-      expectPixelNear(readPixel(backend, 10, 10), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 10, 10), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -298,8 +290,8 @@ describe('WebGL2 RepeatingSprite — geometry path', () => {
 
       render(backend, root);
 
-      expectPixelNear(readPixel(backend, 16, 16), [0, 0, 255, 255]);
-      expectPixelNear(readPixel(backend, 4, 4), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [0, 0, 255, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 4, 4), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -327,7 +319,7 @@ describe('WebGL2 RepeatingSprite — geometry path', () => {
 
       render(backend, root);
 
-      const pixel = readPixel(backend, 20, 20);
+      const pixel = readWebGl2Pixel(backend, 20, 20);
 
       // Should be orange-ish (non-zero red and green, low blue)
       expect(pixel[0]).toBeGreaterThan(128);
@@ -353,7 +345,7 @@ describe('WebGL2 RepeatingSprite — geometry path', () => {
 
       render(backend, root);
 
-      const pixel = readPixel(backend, 20, 20);
+      const pixel = readWebGl2Pixel(backend, 20, 20);
 
       expect(pixel[0]).toBeLessThan(32);
       expect(pixel[1]).toBeGreaterThan(128);
@@ -377,7 +369,7 @@ describe('WebGL2 RepeatingSprite — geometry path', () => {
       root.addChild(sprite);
 
       expect(() => render(backend, root)).not.toThrow();
-      expectPixelNear(readPixel(backend, 16, 16), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -405,7 +397,7 @@ describe('WebGL2 RepeatingSprite — geometry path', () => {
 
       render(backend, root);
 
-      const pixel = readPixel(backend, 24, 24);
+      const pixel = readWebGl2Pixel(backend, 24, 24);
 
       expect(pixel[0]).toBeGreaterThan(128);
     } finally {

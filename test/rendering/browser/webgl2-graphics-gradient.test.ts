@@ -6,8 +6,9 @@ import { Graphics } from '#rendering/primitives/Graphics';
 import type { RenderNode } from '#rendering/RenderNode';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
-import { expectPixelNear, type RgbaTuple } from './_pixels';
+import { expectPixelNear } from './_pixels';
 
 // The browser project rewrites `.vert`/`.frag` imports to empty strings, so the
 // default engine shaders the backend compiles on connect must be mocked with
@@ -62,15 +63,6 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.flush();
 };
 
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const pixel = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
-
-  return [pixel[0], pixel[1], pixel[2], pixel[3]];
-};
-
 describe('Graphics gradient fills WebGL2 browser', () => {
   test('linear gradient fill renders a red-to-blue ramp across the shape', async () => {
     const backend = await createBackend();
@@ -89,8 +81,8 @@ describe('Graphics gradient fills WebGL2 browser', () => {
     try {
       render(backend, graphics);
 
-      const left = readPixel(backend, 10, 32);
-      const right = readPixel(backend, 54, 32);
+      const left = readWebGl2Pixel(backend, 10, 32);
+      const right = readWebGl2Pixel(backend, 54, 32);
 
       // Left edge is dominantly red, right edge dominantly blue — proving the
       // gradient is sampled across the fill rather than a flat color.
@@ -102,7 +94,7 @@ describe('Graphics gradient fills WebGL2 browser', () => {
       expect(right[3]).toBeGreaterThanOrEqual(250);
 
       // Outside the rectangle stays the clear color.
-      expectPixelNear(readPixel(backend, 2, 2), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 2, 2), [0, 0, 0, 255]);
     } finally {
       graphics.destroy();
       backend.destroy();
@@ -126,8 +118,8 @@ describe('Graphics gradient fills WebGL2 browser', () => {
     try {
       render(backend, graphics);
 
-      const center = readPixel(backend, 32, 32);
-      const edge = readPixel(backend, 10, 32);
+      const center = readWebGl2Pixel(backend, 32, 32);
+      const edge = readWebGl2Pixel(backend, 10, 32);
 
       // Center samples the inner (red) stop, the mid-left edge the outer (blue).
       expect(center[0]).toBeGreaterThan(180);
@@ -159,10 +151,10 @@ describe('Graphics gradient fills WebGL2 browser', () => {
       render(backend, graphics);
 
       // Untouched region before the translated rectangle stays clear.
-      expectPixelNear(readPixel(backend, 8, 8), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 8, 8), [0, 0, 0, 255]);
 
-      const left = readPixel(backend, 22, 30);
-      const right = readPixel(backend, 42, 30);
+      const left = readWebGl2Pixel(backend, 22, 30);
+      const right = readWebGl2Pixel(backend, 42, 30);
 
       // The ramp still runs red→blue, now offset to world (20, 20)+.
       expect(left[0]).toBeGreaterThan(left[2]);

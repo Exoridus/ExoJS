@@ -29,6 +29,7 @@ import { BmFont } from '#rendering/text/BmFont';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
 
@@ -78,15 +79,6 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.clear(Color.black);
   node.render(backend);
   backend.flush();
-};
-
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const pixel = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
-
-  return [pixel[0], pixel[1], pixel[2], pixel[3]];
 };
 
 const createSolidTexture = (color: string, size: number): Texture => {
@@ -183,17 +175,17 @@ describe('WebGL2 renderer matrix: rotated RetainedContainer cells', () => {
       render(backend, root);
 
       // Local (0..16)² → world x∈(32,48), y∈(16,32).
-      expectPixelNear(readPixel(backend, 40, 24), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 40, 40), [0, 0, 0, 255]); // unrotated position stays empty
-      expectPixelNear(readPixel(backend, 24, 40), [0, 0, 0, 255]); // transposed-artifact region stays empty
+      expectPixelNear(readWebGl2Pixel(backend, 40, 24), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 40, 40), [0, 0, 0, 255]); // unrotated position stays empty
+      expectPixelNear(readWebGl2Pixel(backend, 24, 40), [0, 0, 0, 255]); // transposed-artifact region stays empty
 
       // Rotation update on the retained group: -90° maps local (x, y) to
       // world (32 - y, 32 + x) → x∈(16,32), y∈(32,48).
       group.setRotation(-90);
       render(backend, root);
 
-      expectPixelNear(readPixel(backend, 24, 40), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 40, 24), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 40), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 40, 24), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -215,9 +207,9 @@ describe('WebGL2 renderer matrix: rotated RetainedContainer cells', () => {
       group.addChild(mesh);
       render(backend, root);
 
-      expectPixelNear(readPixel(backend, 40, 24), [0, 255, 0, 255]); // rotated position
-      expectPixelNear(readPixel(backend, 24, 40), [0, 0, 0, 255]); // transposed-artifact region
-      expectPixelNear(readPixel(backend, 40, 40), [0, 0, 0, 255]); // unrotated position
+      expectPixelNear(readWebGl2Pixel(backend, 40, 24), [0, 255, 0, 255]); // rotated position
+      expectPixelNear(readWebGl2Pixel(backend, 24, 40), [0, 0, 0, 255]); // transposed-artifact region
+      expectPixelNear(readWebGl2Pixel(backend, 40, 40), [0, 0, 0, 255]); // unrotated position
     } finally {
       root.destroy();
       texture.destroy();
@@ -241,10 +233,10 @@ describe('WebGL2 renderer matrix: rotated RetainedContainer cells', () => {
       render(backend, root);
 
       expect(backend.stats.drawCalls).toBeGreaterThan(0);
-      expectPixelNear(readPixel(backend, 40, 24), [255, 0, 0, 255]); // meshA rotated center
-      expectPixelNear(readPixel(backend, 8, 24), [255, 0, 0, 255]); // meshB rotated center
-      expectPixelNear(readPixel(backend, 24, 40), [0, 0, 0, 255]); // transposed meshA artifact region
-      expectPixelNear(readPixel(backend, 40, 40), [0, 0, 0, 255]); // unrotated meshA position
+      expectPixelNear(readWebGl2Pixel(backend, 40, 24), [255, 0, 0, 255]); // meshA rotated center
+      expectPixelNear(readWebGl2Pixel(backend, 8, 24), [255, 0, 0, 255]); // meshB rotated center
+      expectPixelNear(readWebGl2Pixel(backend, 24, 40), [0, 0, 0, 255]); // transposed meshA artifact region
+      expectPixelNear(readWebGl2Pixel(backend, 40, 40), [0, 0, 0, 255]); // unrotated meshA position
     } finally {
       root.destroy();
       geometry.destroy();
@@ -262,9 +254,9 @@ describe('WebGL2 renderer matrix: rotated RetainedContainer cells', () => {
       render(backend, root);
 
       // Glyph local (0..32)² → world x∈(32,64), y∈(0,32).
-      expectPixelNear(readPixel(backend, 48, 16), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 16, 48), [0, 0, 0, 255]); // transposed-artifact region
-      expectPixelNear(readPixel(backend, 48, 48), [0, 0, 0, 255]); // unrotated position
+      expectPixelNear(readWebGl2Pixel(backend, 48, 16), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 48), [0, 0, 0, 255]); // transposed-artifact region
+      expectPixelNear(readWebGl2Pixel(backend, 48, 48), [0, 0, 0, 255]); // unrotated position
     } finally {
       text.destroy();
       root.destroy();

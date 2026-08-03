@@ -9,8 +9,9 @@ import { spriteVertexGlsl } from '#rendering/sprite/spriteMaterialSources';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
-import { expectPixelNear, type RgbaTuple } from './_pixels';
+import { expectPixelNear } from './_pixels';
 
 // The browser project rewrites `.vert`/`.frag` imports to empty strings, so the
 // default engine shaders the backend compiles on connect must be mocked with
@@ -64,15 +65,6 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.clear(Color.black);
   node.render(backend);
   backend.flush();
-};
-
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const pixel = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
-
-  return [pixel[0], pixel[1], pixel[2], pixel[3]];
 };
 
 const createSolidTexture = (r: number, g: number, b: number, a = 255, size = 16): Texture => {
@@ -140,8 +132,8 @@ describe('custom SpriteMaterial WebGL2 browser', () => {
 
       render(backend, sprite);
 
-      expectPixelNear(readPixel(backend, 24, 24), [128, 0, 64, 255]);
-      expectPixelNear(readPixel(backend, 4, 4), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 24), [128, 0, 64, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 4, 4), [0, 0, 0, 255]);
       expect(backend.stats.drawCalls).toBe(1);
     } finally {
       sprite.destroy();
@@ -162,11 +154,11 @@ describe('custom SpriteMaterial WebGL2 browser', () => {
       sprite.setPosition(16, 16);
 
       render(backend, sprite);
-      expectPixelNear(readPixel(backend, 24, 24), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 24), [255, 0, 0, 255]);
 
       material.setUniform('u_userColor', [0, 0, 1, 1]);
       render(backend, sprite);
-      expectPixelNear(readPixel(backend, 24, 24), [0, 0, 255, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 24), [0, 0, 255, 255]);
     } finally {
       sprite.destroy();
       material.destroy();
@@ -192,7 +184,7 @@ describe('custom SpriteMaterial WebGL2 browser', () => {
       render(backend, sprite);
 
       // Output is the green pattern, not the red base.
-      expectPixelNear(readPixel(backend, 24, 24), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 24), [0, 255, 0, 255]);
     } finally {
       sprite.destroy();
       material.destroy();

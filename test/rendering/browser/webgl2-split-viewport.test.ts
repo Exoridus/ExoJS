@@ -6,6 +6,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { View } from '#rendering/View';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
 
@@ -53,15 +54,6 @@ const createBackend = async (): Promise<BackendRuntime> => {
   wireCoreRenderers(backend, app.options.rendering);
 
   return { backend };
-};
-
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const pixel = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
-
-  return [pixel[0], pixel[1], pixel[2], pixel[3]];
 };
 
 const createSolidTexture = (color: string, width = 32, height = 32): Texture => {
@@ -116,8 +108,8 @@ describe('WebGL2 split-screen viewport', () => {
       greenSprite.render(backend);
       backend.flush();
 
-      expectPixelNear(readPixel(backend, 50, canvasHeight / 2), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 250, canvasHeight / 2), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 50, canvasHeight / 2), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 250, canvasHeight / 2), [0, 255, 0, 255]);
     } finally {
       redSprite.destroy();
       greenSprite.destroy();
@@ -154,8 +146,8 @@ describe('WebGL2 split-screen viewport', () => {
       yellowSprite.render(backend);
       backend.flush();
 
-      expectPixelNear(readPixel(backend, 250, canvasHeight / 2), [0, 0, 255, 255]);
-      expectPixelNear(readPixel(backend, 50, canvasHeight / 2), [255, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 250, canvasHeight / 2), [0, 0, 255, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 50, canvasHeight / 2), [255, 255, 0, 255]);
     } finally {
       blueSprite.destroy();
       yellowSprite.destroy();
@@ -188,8 +180,8 @@ describe('WebGL2 split-screen viewport', () => {
       sprite.render(backend);
       backend.flush();
 
-      expectPixelNear(readPixel(backend, 50, canvasHeight / 2), [255, 255, 255, 255]);
-      expectPixelNear(readPixel(backend, 250, canvasHeight / 2), [255, 255, 255, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 50, canvasHeight / 2), [255, 255, 255, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 250, canvasHeight / 2), [255, 255, 255, 255]);
     } finally {
       sprite.destroy();
       whiteTex.destroy();
@@ -227,8 +219,8 @@ describe('WebGL2 split-screen viewport', () => {
       // readPixel takes top-left y: the top-left viewport must paint the TOP quarter
       // red and the bottom viewport the BOTTOM quarter green (GL's bottom-left origin
       // must be flipped for partial viewports).
-      expectPixelNear(readPixel(backend, canvasWidth / 2, canvasHeight * 0.25), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, canvasWidth / 2, canvasHeight * 0.75), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, canvasWidth / 2, canvasHeight * 0.25), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, canvasWidth / 2, canvasHeight * 0.75), [0, 255, 0, 255]);
     } finally {
       red.destroy();
       green.destroy();

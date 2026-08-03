@@ -21,8 +21,9 @@ import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
-import { expectPixelNear, type RgbaTuple } from './_pixels';
+import { expectPixelNear } from './_pixels';
 
 // ---------------------------------------------------------------------------
 // Shader mocks (see webgl2-sprite-solid-color.test.ts — the registry compiles
@@ -78,15 +79,6 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.clear(Color.black);
   node.render(backend);
   backend.flush();
-};
-
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const buf = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, buf);
-
-  return [buf[0], buf[1], buf[2], buf[3]];
 };
 
 const createSolidTexture = (color: string, width = 16, height = 16): Texture => {
@@ -156,8 +148,8 @@ describe('WebGL2 real context lose/restore', () => {
 
       // Baseline: red inside the sprite, black (clear color) outside.
       render(backend, root);
-      expectPixelNear(readPixel(backend, 16, 16), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 40, 40), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 40, 40), [0, 0, 0, 255]);
 
       // Genuine GPU reset: every GL handle created before this point is dead.
       await loseAndRestoreContext(backend);
@@ -168,8 +160,8 @@ describe('WebGL2 real context lose/restore', () => {
       // rebuilt its textures / buffers / VAOs / shader programs against the
       // fresh context instead of drawing with dangling handles.
       render(backend, root);
-      expectPixelNear(readPixel(backend, 16, 16), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 40, 40), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 40, 40), [0, 0, 0, 255]);
 
       // No lingering GL error storm from stale handles.
       expect(backend.context.getError()).toBe(backend.context.NO_ERROR);
@@ -192,7 +184,7 @@ describe('WebGL2 real context lose/restore', () => {
       root.addChild(sprite);
 
       render(backend, root);
-      expectPixelNear(readPixel(backend, 16, 16), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [0, 255, 0, 255]);
 
       await loseAndRestoreContext(backend);
       await loseAndRestoreContext(backend);
@@ -208,8 +200,8 @@ describe('WebGL2 real context lose/restore', () => {
 
       render(backend, root);
 
-      expectPixelNear(readPixel(backend, 16, 16), [255, 255, 255, 255]);
-      expectPixelNear(readPixel(backend, 40, 40), [0, 0, 255, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [255, 255, 255, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 40, 40), [0, 0, 255, 255]);
       expect(backend.context.getError()).toBe(backend.context.NO_ERROR);
 
       blueTexture.destroy();

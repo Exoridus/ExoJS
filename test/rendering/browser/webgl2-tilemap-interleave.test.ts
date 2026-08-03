@@ -20,6 +20,7 @@ import { Color } from '#core/Color';
 import type { RenderNode } from '#rendering/RenderNode';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { readWebGl2Pixel } from './_backendSetup';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
 import { createSolidTexture, makeTileset, singleTileMap, wireTilemapRenderers } from './_tilemapScene';
 
@@ -63,15 +64,6 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.clear(Color.black);
   node.render(backend);
   backend.flush();
-};
-
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const buf = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, buf);
-
-  return [buf[0], buf[1], buf[2], buf[3]];
 };
 
 const RED: RgbaTuple = [255, 0, 0, 255];
@@ -134,19 +126,19 @@ describe('WebGL2 tilemap — actor interleaving (G-INTERLEAVE)', () => {
       render(backend, worldRoot);
 
       // Ground only (top-left corner): red shows through.
-      expectPixelNear(readPixel(backend, 4, 4), RED);
+      expectPixelNear(readWebGl2Pixel(backend, 4, 4), RED);
 
       // Ground ∩ actor: the actor sibling draws OVER the band below it.
-      expectPixelNear(readPixel(backend, 12, 12), GREEN);
+      expectPixelNear(readWebGl2Pixel(backend, 12, 12), GREEN);
 
       // Actor only (no band covers it): green.
-      expectPixelNear(readPixel(backend, 11, 21), GREEN);
+      expectPixelNear(readWebGl2Pixel(backend, 11, 21), GREEN);
 
       // Actor ∩ roof: the roof band draws OVER the actor.
-      expectPixelNear(readPixel(backend, 20, 20), BLUE);
+      expectPixelNear(readWebGl2Pixel(backend, 20, 20), BLUE);
 
       // Roof only (bottom-right): blue.
-      expectPixelNear(readPixel(backend, 28, 28), BLUE);
+      expectPixelNear(readWebGl2Pixel(backend, 28, 28), BLUE);
 
       expect(backend.stats.drawCalls).toBeGreaterThan(0);
     } finally {
@@ -168,7 +160,7 @@ describe('WebGL2 tilemap — actor interleaving (G-INTERLEAVE)', () => {
       render(backend, worldRoot);
 
       // Now the actor is topmost where it overlaps the roof band.
-      expectPixelNear(readPixel(backend, 20, 20), GREEN);
+      expectPixelNear(readWebGl2Pixel(backend, 20, 20), GREEN);
     } finally {
       dispose();
       backend.destroy();

@@ -19,6 +19,7 @@ import { RenderingContext } from '#rendering/RenderingContext';
 import { View } from '#rendering/View';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
 
@@ -107,15 +108,6 @@ const coloredQuad = (x0: number, y0: number, x1: number, y1: number, rgba: RgbaT
 // whole surface, top-left origin.
 const screenView = (): View => new View(canvasSize / 2, canvasSize / 2, canvasSize, canvasSize);
 
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const pixel = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
-
-  return [pixel[0], pixel[1], pixel[2], pixel[3]];
-};
-
 describe('WebGL2 RenderingContext.drawGeometry', () => {
   test('renders a colored geometry quad at its world position', async () => {
     const backend = await createBackend();
@@ -128,8 +120,8 @@ describe('WebGL2 RenderingContext.drawGeometry', () => {
       context.drawGeometry(geometry, new Matrix(), { view: screenView() });
 
       expect(backend.stats.drawCalls).toBeGreaterThan(0);
-      expectPixelNear(readPixel(backend, 32, 32), [255, 0, 0, 255]); // inside the quad
-      expectPixelNear(readPixel(backend, 4, 4), [0, 0, 0, 255]); // outside → cleared black
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [255, 0, 0, 255]); // inside the quad
+      expectPixelNear(readWebGl2Pixel(backend, 4, 4), [0, 0, 0, 255]); // outside → cleared black
     } finally {
       geometry.destroy();
       context.destroy();
@@ -148,8 +140,8 @@ describe('WebGL2 RenderingContext.drawGeometry', () => {
       // Translate the quad from (0,0)-(32,32) to (32,32)-(64,64).
       context.drawGeometry(geometry, new Matrix(1, 0, 32, 0, 1, 32), { view: screenView() });
 
-      expectPixelNear(readPixel(backend, 48, 48), [0, 255, 0, 255]); // inside the moved quad
-      expectPixelNear(readPixel(backend, 12, 12), [0, 0, 0, 255]); // original location now empty
+      expectPixelNear(readWebGl2Pixel(backend, 48, 48), [0, 255, 0, 255]); // inside the moved quad
+      expectPixelNear(readWebGl2Pixel(backend, 12, 12), [0, 0, 0, 255]); // original location now empty
     } finally {
       geometry.destroy();
       context.destroy();
@@ -168,7 +160,7 @@ describe('WebGL2 RenderingContext.drawGeometry', () => {
       backend.clear(Color.black);
       context.drawGeometry(geometry, new Matrix(), { tint: new Color(96, 160, 224), view: screenView() });
 
-      expectPixelNear(readPixel(backend, 32, 32), [96, 160, 224, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [96, 160, 224, 255]);
     } finally {
       geometry.destroy();
       context.destroy();
@@ -189,9 +181,9 @@ describe('WebGL2 RenderingContext.drawGeometry', () => {
       context.drawGeometry(red, new Matrix(), { view: screenView() });
       context.drawGeometry(blue, new Matrix(), { view: screenView() });
 
-      expectPixelNear(readPixel(backend, 12, 12), [255, 0, 0, 255]); // red-only region
-      expectPixelNear(readPixel(backend, 50, 50), [0, 0, 255, 255]); // blue-only region
-      expectPixelNear(readPixel(backend, 28, 28), [0, 0, 255, 255]); // overlap → blue on top
+      expectPixelNear(readWebGl2Pixel(backend, 12, 12), [255, 0, 0, 255]); // red-only region
+      expectPixelNear(readWebGl2Pixel(backend, 50, 50), [0, 0, 255, 255]); // blue-only region
+      expectPixelNear(readWebGl2Pixel(backend, 28, 28), [0, 0, 255, 255]); // overlap → blue on top
     } finally {
       red.destroy();
       blue.destroy();
@@ -219,10 +211,10 @@ describe('WebGL2 RenderingContext.drawBatch', () => {
 
       // All three instances are emitted as a single instanced draw call.
       expect(backend.stats.drawCalls).toBe(1);
-      expectPixelNear(readPixel(backend, 8, 8), [255, 0, 0, 255]); // instance 0 → red
-      expectPixelNear(readPixel(backend, 40, 8), [0, 255, 0, 255]); // instance 1 → green
-      expectPixelNear(readPixel(backend, 8, 40), [0, 0, 255, 255]); // instance 2 → blue
-      expectPixelNear(readPixel(backend, 60, 60), [0, 0, 0, 255]); // empty → cleared black
+      expectPixelNear(readWebGl2Pixel(backend, 8, 8), [255, 0, 0, 255]); // instance 0 → red
+      expectPixelNear(readWebGl2Pixel(backend, 40, 8), [0, 255, 0, 255]); // instance 1 → green
+      expectPixelNear(readWebGl2Pixel(backend, 8, 40), [0, 0, 255, 255]); // instance 2 → blue
+      expectPixelNear(readWebGl2Pixel(backend, 60, 60), [0, 0, 0, 255]); // empty → cleared black
     } finally {
       batch.destroy();
       geometry.destroy();

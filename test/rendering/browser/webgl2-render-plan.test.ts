@@ -11,8 +11,9 @@ import { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
-import { expectPixelNear, type RgbaTuple } from './_pixels';
+import { expectPixelNear } from './_pixels';
 
 interface BackendRuntime {
   backend: WebGl2Backend;
@@ -65,15 +66,6 @@ const render = (backend: WebGl2Backend, node: RenderNode): number => {
   return backend.stats.submittedNodes;
 };
 
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const pixel = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
-
-  return [pixel[0], pixel[1], pixel[2], pixel[3]];
-};
-
 const createSolidTexture = (color: string, width = 16, height = 16): Texture => {
   const source = document.createElement('canvas');
 
@@ -113,8 +105,8 @@ describe('RenderPlan WebGL2 browser regressions', () => {
 
       render(backend, root);
 
-      expectPixelNear(readPixel(backend, 20, 20), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 4, 4), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 20, 20), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 4, 4), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -137,8 +129,8 @@ describe('RenderPlan WebGL2 browser regressions', () => {
 
       render(backend, root);
 
-      expectPixelNear(readPixel(backend, 20, 20), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 12, 20), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 20, 20), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 12, 20), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -160,7 +152,7 @@ describe('RenderPlan WebGL2 browser regressions', () => {
       root.addChild(cachedContainer);
 
       const firstDrawCount = render(backend, root);
-      const firstPixel = readPixel(backend, 20, 20);
+      const firstPixel = readWebGl2Pixel(backend, 20, 20);
       const secondDrawCount = render(backend, root);
 
       expectPixelNear(firstPixel, [255, 0, 0, 255]);
@@ -193,8 +185,8 @@ describe('RenderPlan WebGL2 browser regressions', () => {
 
       render(backend, root);
 
-      expectPixelNear(readPixel(backend, 24, 24), [0, 255, 0, 255]);
-      expectPixelNear(readPixel(backend, 18, 18), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 24), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 18, 18), [0, 255, 0, 255]);
     } finally {
       root.destroy();
       redTexture.destroy();
@@ -218,7 +210,7 @@ describe('RenderPlan WebGL2 browser regressions', () => {
       root.addChild(sprite, mesh);
 
       const drawCount = render(backend, root);
-      const spritePixel = readPixel(backend, 10, 10);
+      const spritePixel = readWebGl2Pixel(backend, 10, 10);
 
       expectPixelNear(spritePixel, [255, 0, 0, 255]);
       expect(drawCount).toBe(2);
@@ -261,9 +253,9 @@ describe('RenderPlan WebGL2 browser regressions', () => {
       backend.flush();
 
       // Fixed: each mesh keeps its own slot — distinct color AND position.
-      expectPixelNear(readPixel(backend, 8, 8), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 32, 8), [0, 255, 0, 255]);
-      expectPixelNear(readPixel(backend, 56, 8), [0, 0, 255, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 8, 8), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 8), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 56, 8), [0, 0, 255, 255]);
     } finally {
       meshA.destroy();
       meshB.destroy();
@@ -293,12 +285,12 @@ describe('RenderPlan WebGL2 browser regressions', () => {
       expect(backend.stats.drawCalls).toBe(1);
       // Each instance resolves its own transform row, so all three land at
       // their distinct positions instead of collapsing onto a single row.
-      expectPixelNear(readPixel(backend, 10, 10), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 30, 30), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 50, 50), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 10, 10), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 30, 30), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 50, 50), [255, 0, 0, 255]);
       // The gaps between them stay clear.
-      expectPixelNear(readPixel(backend, 20, 20), [0, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 40, 40), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 20, 20), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 40, 40), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -323,9 +315,9 @@ describe('RenderPlan WebGL2 browser regressions', () => {
 
       render(backend, root);
 
-      expectPixelNear(readPixel(backend, 12, 12), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 24, 24), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 30, 30), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 12, 12), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 24), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 30, 30), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -353,8 +345,8 @@ describe('RenderPlan WebGL2 browser regressions', () => {
 
       render(backend, root);
 
-      const left = readPixel(backend, 22, 30);
-      const right = readPixel(backend, 40, 30);
+      const left = readWebGl2Pixel(backend, 22, 30);
+      const right = readWebGl2Pixel(backend, 40, 30);
 
       expect(left[0] + left[1] + left[2]).toBeGreaterThan(0);
       expect(right[0] + right[1] + right[2]).toBeGreaterThan(0);
@@ -391,9 +383,9 @@ describe('RenderPlan WebGL2 browser regressions', () => {
       render(backend, root);
 
       expect(backend.stats.drawCalls).toBe(1);
-      expectPixelNear(readPixel(backend, 10, 10), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 42, 42), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 25, 25), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 10, 10), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 42, 42), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 25, 25), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -421,7 +413,7 @@ describe('RenderPlan WebGL2 browser regressions', () => {
       render(backend, root);
 
       expect(backend.stats.drawCalls).toBe(2);
-      expectPixelNear(readPixel(backend, 10, 10), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 10, 10), [255, 0, 0, 255]);
     } finally {
       root.destroy();
       textureA.destroy();
@@ -457,8 +449,8 @@ describe('RenderPlan WebGL2 browser regressions', () => {
       // spriteA and spriteC are outside the filter; spriteB is inside.
       // Each group crossing a render-target boundary is a separate draw.
       expect(backend.stats.drawCalls).toBeGreaterThanOrEqual(2);
-      expectPixelNear(readPixel(backend, 6, 6), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 22, 22), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 6, 6), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 22, 22), [255, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();

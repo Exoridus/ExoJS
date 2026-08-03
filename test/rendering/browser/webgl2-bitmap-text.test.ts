@@ -44,8 +44,9 @@ import { BmFont } from '#rendering/text/BmFont';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
-import { expectPixelNear, type RgbaTuple } from './_pixels';
+import { expectPixelNear } from './_pixels';
 
 // ---------------------------------------------------------------------------
 // Infrastructure helpers
@@ -93,15 +94,6 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.clear(Color.black);
   node.render(backend);
   backend.flush();
-};
-
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const buf = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, buf);
-
-  return [buf[0], buf[1], buf[2], buf[3]];
 };
 
 const createSolidTexture = (color: string, size: number): Texture => {
@@ -154,11 +146,11 @@ describe('BitmapText WebGL2 browser', () => {
       expect(backend.stats.drawCalls).toBeGreaterThan(0);
 
       // Inside the 32×32 glyph quad, anchored at (8, 8).
-      expectPixelNear(readPixel(backend, 16, 16), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 38, 38), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 38, 38), [255, 0, 0, 255]);
       // Outside the glyph quad — untouched clear color.
-      expectPixelNear(readPixel(backend, 2, 2), [0, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 56, 56), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 2, 2), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 56, 56), [0, 0, 0, 255]);
     } finally {
       text.destroy();
       texture.destroy();
@@ -179,9 +171,9 @@ describe('BitmapText WebGL2 browser', () => {
 
       render(backend, root);
 
-      expectPixelNear(readPixel(backend, 16, 16), [255, 0, 0, 255]); // inside red glyph
-      expectPixelNear(readPixel(backend, 48, 16), [0, 255, 0, 255]); // inside green glyph
-      expectPixelNear(readPixel(backend, 32, 16), [0, 0, 0, 255]); // gap between them
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [255, 0, 0, 255]); // inside red glyph
+      expectPixelNear(readWebGl2Pixel(backend, 48, 16), [0, 255, 0, 255]); // inside green glyph
+      expectPixelNear(readWebGl2Pixel(backend, 32, 16), [0, 0, 0, 255]); // gap between them
     } finally {
       root.destroy();
       redTexture.destroy();
@@ -199,9 +191,9 @@ describe('BitmapText WebGL2 browser', () => {
 
       render(backend, text);
 
-      expectPixelNear(readPixel(backend, 48, 48), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 48, 48), [255, 0, 0, 255]);
       // The origin — where the glyph would sit without the transform — stays clear.
-      expectPixelNear(readPixel(backend, 8, 8), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 8, 8), [0, 0, 0, 255]);
     } finally {
       text.destroy();
       texture.destroy();

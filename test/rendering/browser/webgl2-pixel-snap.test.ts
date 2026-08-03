@@ -27,8 +27,9 @@ import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
-import { expectPixelNear, type RgbaTuple } from './_pixels';
+import { expectPixelNear } from './_pixels';
 
 const canvasSize = 64;
 
@@ -72,15 +73,6 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.clear(Color.black);
   node.render(backend);
   backend.flush();
-};
-
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const buf = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, buf);
-
-  return [buf[0], buf[1], buf[2], buf[3]];
 };
 
 const readAll = (backend: WebGl2Backend): Uint8Array => {
@@ -127,8 +119,8 @@ describe('WebGL2 pixel snapping — Sprite position mode', () => {
       render(backend, root);
 
       // Renders through the snap pipeline (interior covered, exterior clear).
-      expectPixelNear(readPixel(backend, 20, 22), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 2, 2), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 20, 22), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 2, 2), [0, 0, 0, 255]);
 
       // Render-only: logical position and world transform are unchanged.
       expect(sprite.x).toBe(12.37);
@@ -156,7 +148,7 @@ describe('WebGL2 pixel snapping — Sprite position mode', () => {
 
       render(backend, root);
 
-      expectPixelNear(readPixel(backend, 20, 22), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 20, 22), [255, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -211,7 +203,7 @@ describe('WebGL2 pixel snapping — NineSlice geometry mode', () => {
       // Scan a horizontal line well inside the panel: every pixel must be the
       // solid panel colour — a snapping-induced seam would show as black.
       for (let x = 10; x <= 44; x++) {
-        const pixel = readPixel(backend, x, 26);
+        const pixel = readWebGl2Pixel(backend, x, 26);
 
         expect(pixel[0]).toBeGreaterThan(200); // red present → no gap
       }
@@ -241,7 +233,7 @@ describe('WebGL2 pixel snapping — NineSlice geometry mode', () => {
       // Logical transform untouched by the (downgraded) snap.
       expect(panel.getGlobalTransform().equals(worldBefore)).toBe(true);
       // Still drew something blue near the centre.
-      expect(readPixel(backend, 32, 32)[2]).toBeGreaterThan(128);
+      expect(readWebGl2Pixel(backend, 32, 32)[2]).toBeGreaterThan(128);
 
       worldBefore.destroy();
     } finally {

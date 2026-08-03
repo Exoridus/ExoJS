@@ -35,8 +35,9 @@ import type { RenderNode } from '#rendering/RenderNode';
 import { Video } from '#rendering/video/Video';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
-import { expectPixelNear, type RgbaTuple } from './_pixels';
+import { expectPixelNear } from './_pixels';
 
 // ---------------------------------------------------------------------------
 // Infrastructure helpers
@@ -84,15 +85,6 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.clear(Color.black);
   node.render(backend);
   backend.flush();
-};
-
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const buf = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, buf);
-
-  return [buf[0], buf[1], buf[2], buf[3]];
 };
 
 /**
@@ -168,9 +160,9 @@ describe('WebGL2 Video — solid color frame', () => {
       render(backend, root);
 
       // Interior of the video sprite (16x16 at 8,8 → covers 8..24) should be red
-      expectPixelNear(readPixel(backend, 16, 16), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [255, 0, 0, 255]);
       // Outside the sprite's bounds remains the clear color (black)
-      expectPixelNear(readPixel(backend, 40, 40), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 40, 40), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       videoSprite.destroy();
@@ -192,7 +184,7 @@ describe('WebGL2 Video — solid color frame', () => {
 
       render(backend, root);
 
-      expectPixelNear(readPixel(backend, 16, 16), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [0, 255, 0, 255]);
     } finally {
       root.destroy();
       videoSprite.destroy();

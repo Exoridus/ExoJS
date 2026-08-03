@@ -20,6 +20,7 @@ import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { wireCoreRenderers } from './_coreRenderers';
+import type { RgbaTuple } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
 
 /**
@@ -110,6 +111,23 @@ export const renderWebGpuOnce = async (ctx: { skip: (reason: string) => void }, 
   }
 
   return true;
+};
+
+/**
+ * One top-left-indexed RGBA pixel, read straight out of the framebuffer.
+ *
+ * Cheaper than pulling a whole frame when a spec only samples a few points.
+ * The y flip goes through `renderTarget.height`; a spec where that differs
+ * from `drawingBufferHeight` — device-pixel-ratio work, say — wants its own
+ * reader.
+ */
+export const readWebGl2Pixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
+  const pixel = new Uint8Array(4);
+  const gl = backend.context;
+
+  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+
+  return [pixel[0]!, pixel[1]!, pixel[2]!, pixel[3]!];
 };
 
 /** Top-left-indexed RGBA. GL's buffer starts bottom-left, so rows are reversed. */

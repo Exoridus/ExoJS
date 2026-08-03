@@ -20,6 +20,7 @@ import { RenderingContext } from '#rendering/RenderingContext';
 import { View } from '#rendering/View';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
 
@@ -111,15 +112,6 @@ const coloredQuad = (x0: number, y0: number, x1: number, y1: number, rgba: RgbaT
 // whole surface, top-left origin.
 const screenView = (): View => new View(canvasSize / 2, canvasSize / 2, canvasSize, canvasSize);
 
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const pixel = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
-
-  return [pixel[0], pixel[1], pixel[2], pixel[3]];
-};
-
 describe('WebGL2 rotated mesh: single-draw vs. instanced parity', () => {
   test('single draw renders a +90° rotated quad at the canonical world position', async () => {
     const backend = await createBackend();
@@ -134,9 +126,9 @@ describe('WebGL2 rotated mesh: single-draw vs. instanced parity', () => {
       context.drawGeometry(geometry, rotatePlus90(32, 8), { view: screenView() });
 
       expect(backend.stats.drawCalls).toBeGreaterThan(0);
-      expectPixelNear(readPixel(backend, 24, 16), [255, 0, 0, 255]); // rotated quad center
-      expectPixelNear(readPixel(backend, 40, 4), [0, 0, 0, 255]); // transposed-artifact region stays empty
-      expectPixelNear(readPixel(backend, 48, 48), [0, 0, 0, 255]); // unrelated region
+      expectPixelNear(readWebGl2Pixel(backend, 24, 16), [255, 0, 0, 255]); // rotated quad center
+      expectPixelNear(readWebGl2Pixel(backend, 40, 4), [0, 0, 0, 255]); // transposed-artifact region stays empty
+      expectPixelNear(readWebGl2Pixel(backend, 48, 48), [0, 0, 0, 255]); // unrelated region
     } finally {
       geometry.destroy();
       context.destroy();
@@ -160,11 +152,11 @@ describe('WebGL2 rotated mesh: single-draw vs. instanced parity', () => {
 
       // All three instances are emitted as one instanced draw call.
       expect(backend.stats.drawCalls).toBe(1);
-      expectPixelNear(readPixel(backend, 24, 16), [255, 0, 0, 255]); // +90° instance center
-      expectPixelNear(readPixel(backend, 24, 32), [0, 255, 0, 255]); // -90° instance center
-      expectPixelNear(readPixel(backend, 48, 48), [0, 0, 255, 255]); // identity instance center
-      expectPixelNear(readPixel(backend, 40, 4), [0, 0, 0, 255]); // transposed +90° artifact region
-      expectPixelNear(readPixel(backend, 8, 48), [0, 0, 0, 255]); // transposed -90° artifact region
+      expectPixelNear(readWebGl2Pixel(backend, 24, 16), [255, 0, 0, 255]); // +90° instance center
+      expectPixelNear(readWebGl2Pixel(backend, 24, 32), [0, 255, 0, 255]); // -90° instance center
+      expectPixelNear(readWebGl2Pixel(backend, 48, 48), [0, 0, 255, 255]); // identity instance center
+      expectPixelNear(readWebGl2Pixel(backend, 40, 4), [0, 0, 0, 255]); // transposed +90° artifact region
+      expectPixelNear(readWebGl2Pixel(backend, 8, 48), [0, 0, 0, 255]); // transposed -90° artifact region
     } finally {
       batch.destroy();
       geometry.destroy();
@@ -185,9 +177,9 @@ describe('WebGL2 rotated mesh: single-draw vs. instanced parity', () => {
       context.drawBatch(batch, { view: screenView() });
 
       // Same expectations as the single-draw cell above.
-      expectPixelNear(readPixel(backend, 24, 16), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 40, 4), [0, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 48, 48), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 16), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 40, 4), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 48, 48), [0, 0, 0, 255]);
     } finally {
       batch.destroy();
       geometry.destroy();

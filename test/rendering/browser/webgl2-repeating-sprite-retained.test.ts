@@ -35,8 +35,9 @@ import { Texture } from '#rendering/texture/Texture';
 import { TextureRegion } from '#rendering/texture/TextureRegion';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
-import { expectPixelNear, type RgbaTuple } from './_pixels';
+import { expectPixelNear } from './_pixels';
 
 // RepeatingSprite's own GLSL is authored inline in
 // WebGl2RepeatingSpriteRenderer.ts rather than imported, so only the Sprite/
@@ -89,15 +90,6 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.clear(Color.black);
   node.render(backend);
   backend.flush();
-};
-
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const buf = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, buf);
-
-  return [buf[0], buf[1], buf[2], buf[3]];
 };
 
 /** Full-framebuffer snapshot for byte-identical tier comparisons. */
@@ -172,8 +164,8 @@ describe('WebGL2 renderer matrix: RepeatingSprite retained instruction-set repla
       const collectFrame = readCanvas(backend);
 
       expect(replaySpy).not.toHaveBeenCalled();
-      expectPixelNear(readPixel(backend, 12, 28), [255, 0, 0, 255]); // red half
-      expectPixelNear(readPixel(backend, 20, 28), [0, 255, 0, 255]); // green half
+      expectPixelNear(readWebGl2Pixel(backend, 12, 28), [255, 0, 0, 255]); // red half
+      expectPixelNear(readWebGl2Pixel(backend, 20, 28), [0, 255, 0, 255]); // green half
 
       render(backend, root); // F2 — entry replay + instruction recording
 
@@ -221,8 +213,8 @@ describe('WebGL2 renderer matrix: RepeatingSprite retained instruction-set repla
       render(backend, root); // steady replay before the mutation
 
       expect(replaySpy).toHaveBeenCalled();
-      expectPixelNear(readPixel(backend, 12, 28), [255, 0, 0, 255]); // red half (dest 0..8)
-      expectPixelNear(readPixel(backend, 20, 28), [0, 255, 0, 255]); // green half (dest 8..16)
+      expectPixelNear(readWebGl2Pixel(backend, 12, 28), [255, 0, 0, 255]); // red half (dest 0..8)
+      expectPixelNear(readWebGl2Pixel(backend, 20, 28), [0, 255, 0, 255]); // green half (dest 8..16)
 
       // Scroll by half the source width: 'repeat' wraps modulo srcLen, so the
       // sampled window shifts by exactly half a period and the two halves
@@ -243,9 +235,9 @@ describe('WebGL2 renderer matrix: RepeatingSprite retained instruction-set repla
       expect(replaySpy).toHaveBeenCalled(); // still on the fast tier — recaptured, not abandoned
       // If the replay served the STALE pre-offset bytes, these two assertions
       // would read the OLD (unswapped) colors instead.
-      expectPixelNear(readPixel(backend, 12, 28), [0, 255, 0, 255]); // now green (was red)
-      expectPixelNear(readPixel(backend, 20, 28), [255, 0, 0, 255]); // now red (was green)
-      expectPixelNear(readPixel(backend, 52, 8), [0, 0, 255, 255]); // live sibling unaffected
+      expectPixelNear(readWebGl2Pixel(backend, 12, 28), [0, 255, 0, 255]); // now green (was red)
+      expectPixelNear(readWebGl2Pixel(backend, 20, 28), [255, 0, 0, 255]); // now red (was green)
+      expectPixelNear(readWebGl2Pixel(backend, 52, 8), [0, 0, 255, 255]); // live sibling unaffected
     } finally {
       root.destroy();
       blue.destroy();
@@ -279,8 +271,8 @@ describe('WebGL2 renderer matrix: RepeatingSprite retained instruction-set repla
         render(backend, root);
       }
 
-      expectPixelNear(readPixel(backend, 12, 28), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 20, 28), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 12, 28), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 20, 28), [0, 255, 0, 255]);
 
       repeating.setOffset(8, 0);
 
@@ -288,9 +280,9 @@ describe('WebGL2 renderer matrix: RepeatingSprite retained instruction-set repla
         render(backend, root);
       }
 
-      expectPixelNear(readPixel(backend, 12, 28), [0, 255, 0, 255]);
-      expectPixelNear(readPixel(backend, 20, 28), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 52, 8), [0, 0, 255, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 12, 28), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 20, 28), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 52, 8), [0, 0, 255, 255]);
 
       expect(replaySpy).not.toHaveBeenCalled();
     } finally {

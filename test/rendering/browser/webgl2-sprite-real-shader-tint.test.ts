@@ -22,8 +22,9 @@ import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
-import { expectPixelNear, type RgbaTuple } from './_pixels';
+import { expectPixelNear } from './_pixels';
 
 // ---------------------------------------------------------------------------
 // Infrastructure helpers (mirrors webgl2-sprite-solid-color.test.ts)
@@ -73,15 +74,6 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.flush();
 };
 
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const buf = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, buf);
-
-  return [buf[0], buf[1], buf[2], buf[3]];
-};
-
 const createSolidTexture = (color: string, width = 16, height = 16): Texture => {
   const src = document.createElement('canvas');
 
@@ -128,7 +120,7 @@ describe('WebGL2 Sprite — real sprite.vert tint', () => {
       // 8-bit quantisation tolerance). A wrong texel index (e.g. reading the
       // transform texel instead of the tint texel) or a permuted rgb swizzle
       // would both produce a visibly different colour here.
-      expectPixelNear(readPixel(backend, 16, 16), [20, 180, 90, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [20, 180, 90, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -159,7 +151,7 @@ describe('WebGL2 Sprite — real sprite.vert tint', () => {
       //  - dropping the `* m2.a` multiply (would read back ~(255, 0, 0) instead)
       //  - a channel swizzle on the tint texel (would shift the 128 into the
       //    wrong channel, e.g. `m2.gbr` moves it to blue)
-      expectPixelNear(readPixel(backend, 16, 16), [128, 0, 0, 255], 10);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [128, 0, 0, 255], 10);
     } finally {
       root.destroy();
       texture.destroy();

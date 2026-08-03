@@ -32,8 +32,9 @@ import { Text } from '#rendering/text/Text';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 import { WebGl2TextRenderer } from '#rendering/webgl2/WebGl2TextRenderer';
 
+import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
-import { expectPixelNear, type RgbaTuple } from './_pixels';
+import { expectPixelNear } from './_pixels';
 
 // ---------------------------------------------------------------------------
 // Shader wiring — REAL shipped text GLSL via `?raw` (the stub plugin only
@@ -87,15 +88,6 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.clear(Color.black);
   node.render(backend);
   backend.flush();
-};
-
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const buf = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, buf);
-
-  return [buf[0]!, buf[1]!, buf[2]!, buf[3]!];
 };
 
 /** Full-framebuffer snapshot for byte-identical tier comparisons. */
@@ -189,7 +181,7 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
     try {
       for (let f = 0; f < 3; f++) render(backend, scene.root);
 
-      const before = readPixel(backend, 20, 24);
+      const before = readWebGl2Pixel(backend, 20, 24);
 
       expect(before).not.toEqual([0, 0, 0, 255]);
 
@@ -205,7 +197,7 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
 
       // Panning the camera +16px right shifts the same glyph feature 16px left:
       // what was at x=20 is now at x=4.
-      const panned = readPixel(backend, 4, 24);
+      const panned = readWebGl2Pixel(backend, 4, 24);
 
       expect(panned).not.toEqual([0, 0, 0, 255]);
       expectPixelNear(panned, before, 40);
@@ -222,7 +214,7 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
     try {
       for (let f = 0; f < 3; f++) render(backend, scene.root);
 
-      const before = readPixel(backend, 20, 24);
+      const before = readWebGl2Pixel(backend, 20, 24);
 
       expect(before).not.toEqual([0, 0, 0, 255]);
 
@@ -236,11 +228,11 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
       expect(beginSpy).not.toHaveBeenCalled();
       expect(fragmentOf(scene.group).instructions!.instructions[0]).toBe(recordedInstruction);
 
-      const moved = readPixel(backend, 40, 24);
+      const moved = readWebGl2Pixel(backend, 40, 24);
 
       expect(moved).not.toEqual([0, 0, 0, 255]);
       expectPixelNear(moved, before, 40);
-      expectPixelNear(readPixel(backend, 20, 24), [0, 0, 0, 255], 8); // old spot cleared
+      expectPixelNear(readWebGl2Pixel(backend, 20, 24), [0, 0, 0, 255], 8); // old spot cleared
     } finally {
       scene.root.destroy();
       backend.destroy();
@@ -254,7 +246,7 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
     try {
       for (let f = 0; f < 3; f++) render(backend, scene.root);
 
-      const before = readPixel(backend, 20, 24);
+      const before = readWebGl2Pixel(backend, 20, 24);
 
       expect(before).not.toEqual([0, 0, 0, 255]);
 
@@ -273,11 +265,11 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
       expect(replaySpy).toHaveBeenCalled();
       expect(fragmentOf(scene.group).instructions!.instructions[0]).toBe(recordedInstruction);
 
-      const moved = readPixel(backend, 40, 24);
+      const moved = readWebGl2Pixel(backend, 40, 24);
 
       expect(moved).not.toEqual([0, 0, 0, 255]);
       expectPixelNear(moved, before, 40);
-      expectPixelNear(readPixel(backend, 20, 24), [0, 0, 0, 255], 8); // old spot cleared
+      expectPixelNear(readWebGl2Pixel(backend, 20, 24), [0, 0, 0, 255], 8); // old spot cleared
 
       // The patched recording keeps splicing byte-stable, no re-record.
       const patchedFrame = readCanvas(backend);

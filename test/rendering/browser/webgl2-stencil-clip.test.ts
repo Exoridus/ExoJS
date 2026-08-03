@@ -8,8 +8,9 @@ import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
-import { expectPixelNear, type RgbaTuple } from './_pixels';
+import { expectPixelNear } from './_pixels';
 
 const canvasSize = 64;
 // antialias:true is required ONLY for the test environment: the headless
@@ -64,15 +65,6 @@ const render = (backend: WebGl2Backend, node: RenderNode): number => {
   backend.flush();
 
   return backend.stats.drawCalls;
-};
-
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const pixel = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
-
-  return [pixel[0], pixel[1], pixel[2], pixel[3]];
 };
 
 const createSolidTexture = (color: string, width = 64, height = 64): Texture => {
@@ -130,9 +122,9 @@ describe('WebGL2 stencil clipping', () => {
       render(backend, root);
 
       // Inside the triangle (x + y << 48): red survives.
-      expectPixelNear(readPixel(backend, 6, 6), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 6, 6), [255, 0, 0, 255]);
       // Outside the triangle (x + y >> 48): clipped to the black clear.
-      expectPixelNear(readPixel(backend, 40, 40), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 40, 40), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       (clipped.clipShape as Geometry).destroy();
@@ -159,8 +151,8 @@ describe('WebGL2 stencil clipping', () => {
 
       render(backend, root);
 
-      expectPixelNear(readPixel(backend, 24, 24), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 8, 8), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 24), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 8, 8), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -185,8 +177,8 @@ describe('WebGL2 stencil clipping', () => {
 
       render(backend, root);
 
-      expectPixelNear(readPixel(backend, 24, 24), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 8, 8), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 24), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 8, 8), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -218,11 +210,11 @@ describe('WebGL2 stencil clipping', () => {
       render(backend, root);
 
       // Intersection (top-left quadrant): visible.
-      expectPixelNear(readPixel(backend, 12, 12), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 12, 12), [255, 0, 0, 255]);
       // Only outer (bottom-left): clipped by inner.
-      expectPixelNear(readPixel(backend, 12, 48), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 12, 48), [0, 0, 0, 255]);
       // Only inner (top-right): clipped by outer.
-      expectPixelNear(readPixel(backend, 48, 12), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 48, 12), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       (outer.clipShape as Geometry).destroy();
@@ -253,11 +245,11 @@ describe('WebGL2 stencil clipping', () => {
       render(backend, root);
 
       // Top-left: inside both.
-      expectPixelNear(readPixel(backend, 12, 12), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 12, 12), [255, 0, 0, 255]);
       // Bottom-left: inside stencil, outside scissor.
-      expectPixelNear(readPixel(backend, 12, 48), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 12, 48), [0, 0, 0, 255]);
       // Top-right: inside scissor, outside stencil.
-      expectPixelNear(readPixel(backend, 48, 12), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 48, 12), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       (clipped.clipShape as Geometry).destroy();
@@ -290,11 +282,11 @@ describe('WebGL2 stencil clipping', () => {
 
       render(backend, root);
 
-      expectPixelNear(readPixel(backend, 8, 12), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 48, 12), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 8, 12), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 48, 12), [0, 255, 0, 255]);
       // Both clipped away below y=32.
-      expectPixelNear(readPixel(backend, 8, 48), [0, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 48, 48), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 8, 48), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 48, 48), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       (clipped.clipShape as Geometry).destroy();
@@ -319,8 +311,8 @@ describe('WebGL2 stencil clipping', () => {
       render(backend, root);
 
       // STENCIL_TEST is inert without a clip — the plain sprite is unchanged.
-      expectPixelNear(readPixel(backend, 16, 16), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 40, 40), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 40, 40), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();

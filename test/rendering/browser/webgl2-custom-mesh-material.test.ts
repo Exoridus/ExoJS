@@ -10,8 +10,9 @@ import { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
-import { expectPixelNear, type RgbaTuple } from './_pixels';
+import { expectPixelNear } from './_pixels';
 
 // The browser project rewrites `.vert`/`.frag` imports to empty strings, so the
 // default engine shaders the backend compiles on connect must be mocked with
@@ -67,15 +68,6 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.clear(Color.black);
   node.render(backend);
   backend.flush();
-};
-
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const pixel = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
-
-  return [pixel[0], pixel[1], pixel[2], pixel[3]];
 };
 
 const createSolidTexture = (r: number, g: number, b: number, a = 255): Texture => {
@@ -226,9 +218,9 @@ describe('custom MeshMaterial WebGL2 browser', () => {
       render(backend, mesh);
 
       // sampled (0.5,0.5,0.5) * userColor (1,0,0.5) → (0.5, 0, 0.25) → (128,0,64).
-      expectPixelNear(readPixel(backend, 32, 32), [128, 0, 64, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [128, 0, 64, 255]);
       // Outside the quad stays clear-black.
-      expectPixelNear(readPixel(backend, 4, 4), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 4, 4), [0, 0, 0, 255]);
     } finally {
       mesh.destroy();
       material.destroy();
@@ -251,11 +243,11 @@ describe('custom MeshMaterial WebGL2 browser', () => {
       mesh.setPosition(24, 24);
 
       render(backend, mesh);
-      expectPixelNear(readPixel(backend, 32, 32), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [255, 0, 0, 255]);
 
       material.setUniform('u_userColor', [0, 0, 1, 1] as const);
       render(backend, mesh);
-      expectPixelNear(readPixel(backend, 32, 32), [0, 0, 255, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [0, 0, 255, 255]);
     } finally {
       mesh.destroy();
       material.destroy();
@@ -284,8 +276,8 @@ describe('custom MeshMaterial WebGL2 browser', () => {
       render(backend, root);
 
       expect(backend.stats.drawCalls).toBe(1);
-      expectPixelNear(readPixel(backend, 12, 20), [255, 255, 255, 255]);
-      expectPixelNear(readPixel(backend, 32, 20), [255, 255, 255, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 12, 20), [255, 255, 255, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 20), [255, 255, 255, 255]);
     } finally {
       root.destroy();
       material.destroy();

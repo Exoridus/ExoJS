@@ -25,8 +25,9 @@ import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import { particlesExtension, ParticleSystem } from '../../../packages/exojs-particles/src/index';
+import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
-import { expectPixelNear, type RgbaTuple } from './_pixels';
+import { expectPixelNear } from './_pixels';
 
 const shaderSources = vi.hoisted(() => ({
   spriteVert: `#version 300 es
@@ -226,15 +227,6 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.flush();
 };
 
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const buf = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, buf);
-
-  return [buf[0], buf[1], buf[2], buf[3]];
-};
-
 const createSolidTexture = (color: string, width = 16, height = 16): Texture => {
   const src = document.createElement('canvas');
 
@@ -283,11 +275,11 @@ describe('WebGL2 ParticleSystem — solid color', () => {
       render(backend, root);
 
       // Interior of the particle quad (32,32 ± 8px) should be red.
-      expectPixelNear(readPixel(backend, 32, 32), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 28, 28), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 28, 28), [255, 0, 0, 255]);
       // A safely particle-free corner remains the clear color (black).
-      expectPixelNear(readPixel(backend, 4, 4), [0, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 60, 60), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 4, 4), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 60, 60), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -316,8 +308,8 @@ describe('WebGL2 ParticleSystem — solid color', () => {
 
       render(backend, root);
 
-      expectPixelNear(readPixel(backend, 32, 32), [0, 255, 0, 255]);
-      expectPixelNear(readPixel(backend, 4, 4), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 4, 4), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();

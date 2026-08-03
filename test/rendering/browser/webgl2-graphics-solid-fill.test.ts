@@ -16,8 +16,9 @@ import { Graphics } from '#rendering/primitives/Graphics';
 import type { RenderNode } from '#rendering/RenderNode';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
-import { expectPixelNear, type RgbaTuple } from './_pixels';
+import { expectPixelNear } from './_pixels';
 
 // The browser project rewrites `.vert`/`.frag` imports to empty strings, so the
 // default engine shaders the backend compiles on connect must be mocked with
@@ -73,15 +74,6 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.flush();
 };
 
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const pixel = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
-
-  return [pixel[0], pixel[1], pixel[2], pixel[3]];
-};
-
 describe('Graphics solid fill WebGL2 browser', () => {
   test('solid-color rectangle fill renders the fill color inside and the clear color outside', async () => {
     const backend = await createBackend();
@@ -94,11 +86,11 @@ describe('Graphics solid fill WebGL2 browser', () => {
       render(backend, graphics);
 
       // Inside the rectangle: solid fill color (Color.green is (0, 128, 0)).
-      expectPixelNear(readPixel(backend, 32, 32), [0, 128, 0, 255]);
-      expectPixelNear(readPixel(backend, 10, 10), [0, 128, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [0, 128, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 10, 10), [0, 128, 0, 255]);
       // Outside the rectangle: clear color.
-      expectPixelNear(readPixel(backend, 2, 2), [0, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 62, 62), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 2, 2), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 62, 62), [0, 0, 0, 255]);
     } finally {
       graphics.destroy();
       backend.destroy();
@@ -116,10 +108,10 @@ describe('Graphics solid fill WebGL2 browser', () => {
       render(backend, graphics);
 
       // Center of the circle: solid fill color.
-      expectPixelNear(readPixel(backend, 32, 32), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [255, 0, 0, 255]);
       // Corner well outside the circle's radius: clear color.
-      expectPixelNear(readPixel(backend, 4, 4), [0, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 60, 60), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 4, 4), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 60, 60), [0, 0, 0, 255]);
     } finally {
       graphics.destroy();
       backend.destroy();
@@ -138,9 +130,9 @@ describe('Graphics solid fill WebGL2 browser', () => {
       render(backend, graphics);
 
       // Untouched region before the translated rectangle stays clear.
-      expectPixelNear(readPixel(backend, 4, 4), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 4, 4), [0, 0, 0, 255]);
       // Inside the translated rectangle: solid fill color.
-      expectPixelNear(readPixel(backend, 32, 32), [0, 0, 255, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [0, 0, 255, 255]);
     } finally {
       graphics.destroy();
       backend.destroy();

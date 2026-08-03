@@ -20,8 +20,9 @@ import { AnimatedSprite } from '#rendering/sprite/AnimatedSprite';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
-import { expectPixelNear, type RgbaTuple } from './_pixels';
+import { expectPixelNear } from './_pixels';
 
 // ---------------------------------------------------------------------------
 // Infrastructure helpers
@@ -72,15 +73,6 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.flush();
 };
 
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const buf = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, buf);
-
-  return [buf[0], buf[1], buf[2], buf[3]];
-};
-
 /**
  * Builds a horizontal N-cell spritesheet texture, each cell filled with a
  * distinct solid color, so a frame swap is provably a different sub-rect
@@ -123,9 +115,9 @@ describe('WebGL2 AnimatedSprite — frame-region UV swap', () => {
       render(backend, root);
 
       // Interior of the sprite (16x16 at 8,8 → covers 8..24) shows cell 0 (red)
-      expectPixelNear(readPixel(backend, 16, 16), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [255, 0, 0, 255]);
       // Outside the sprite's bounds remains the clear color (black)
-      expectPixelNear(readPixel(backend, 40, 40), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 40, 40), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -147,7 +139,7 @@ describe('WebGL2 AnimatedSprite — frame-region UV swap', () => {
       root.addChild(sprite);
 
       render(backend, root);
-      expectPixelNear(readPixel(backend, 16, 16), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [255, 0, 0, 255]);
 
       // Advance exactly one frame's worth of time (fps 10 → 100ms/frame)
       sprite.update(100);
@@ -157,7 +149,7 @@ describe('WebGL2 AnimatedSprite — frame-region UV swap', () => {
 
       // Same screen position now samples cell 1 (blue) — proves the UV
       // sub-rect swap, not just a re-render of the same frame.
-      expectPixelNear(readPixel(backend, 16, 16), [0, 0, 255, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [0, 0, 255, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -187,7 +179,7 @@ describe('WebGL2 AnimatedSprite — frame-region UV swap', () => {
 
       render(backend, root);
 
-      expectPixelNear(readPixel(backend, 16, 16), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [255, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();

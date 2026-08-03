@@ -22,6 +22,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { ScaleModes } from '#rendering/types';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
 
@@ -71,15 +72,6 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.clear(Color.black);
   node.render(backend);
   backend.flush();
-};
-
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const buf = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, buf);
-
-  return [buf[0], buf[1], buf[2], buf[3]];
 };
 
 // ---------------------------------------------------------------------------
@@ -171,29 +163,29 @@ describe('WebGL2 NineSliceSprite', () => {
       render(backend, root);
 
       // Corner centers
-      expectPixelNear(readPixel(backend, 14, 14), colors.tl);
-      expectPixelNear(readPixel(backend, 50, 14), colors.tr);
-      expectPixelNear(readPixel(backend, 14, 50), colors.bl);
-      expectPixelNear(readPixel(backend, 50, 50), colors.br);
+      expectPixelNear(readWebGl2Pixel(backend, 14, 14), colors.tl);
+      expectPixelNear(readWebGl2Pixel(backend, 50, 14), colors.tr);
+      expectPixelNear(readWebGl2Pixel(backend, 14, 50), colors.bl);
+      expectPixelNear(readWebGl2Pixel(backend, 50, 50), colors.br);
 
       // Edge centers
-      expectPixelNear(readPixel(backend, 32, 14), colors.top);
-      expectPixelNear(readPixel(backend, 32, 50), colors.bottom);
-      expectPixelNear(readPixel(backend, 14, 32), colors.left);
-      expectPixelNear(readPixel(backend, 50, 32), colors.right);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 14), colors.top);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 50), colors.bottom);
+      expectPixelNear(readWebGl2Pixel(backend, 14, 32), colors.left);
+      expectPixelNear(readWebGl2Pixel(backend, 50, 32), colors.right);
 
       // Center
-      expectPixelNear(readPixel(backend, 32, 32), colors.center);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), colors.center);
 
       // Corner/edge boundary sharpness (horizontal): the TL corner column
       // ends exactly at dest x=20 — one pixel inside remains corner colour,
       // one pixel past the boundary is already the (stretched) edge colour.
-      expectPixelNear(readPixel(backend, 19, 14), colors.tl);
-      expectPixelNear(readPixel(backend, 21, 14), colors.top);
+      expectPixelNear(readWebGl2Pixel(backend, 19, 14), colors.tl);
+      expectPixelNear(readWebGl2Pixel(backend, 21, 14), colors.top);
 
       // Corner/edge boundary sharpness (vertical), same column.
-      expectPixelNear(readPixel(backend, 14, 19), colors.tl);
-      expectPixelNear(readPixel(backend, 14, 21), colors.left);
+      expectPixelNear(readWebGl2Pixel(backend, 14, 19), colors.tl);
+      expectPixelNear(readWebGl2Pixel(backend, 14, 21), colors.left);
     } finally {
       root.destroy();
       texture.destroy();
@@ -222,19 +214,19 @@ describe('WebGL2 NineSliceSprite', () => {
       render(backend, root);
 
       // Corner centers — each corner's footprint matches its own border size.
-      expectPixelNear(readPixel(backend, 4, 8), colors.tl); // 8x16
-      expectPixelNear(readPixel(backend, 52, 8), colors.tr); // 24x16
-      expectPixelNear(readPixel(backend, 4, 48), colors.bl); // 8x32
-      expectPixelNear(readPixel(backend, 52, 48), colors.br); // 24x32
+      expectPixelNear(readWebGl2Pixel(backend, 4, 8), colors.tl); // 8x16
+      expectPixelNear(readWebGl2Pixel(backend, 52, 8), colors.tr); // 24x16
+      expectPixelNear(readWebGl2Pixel(backend, 4, 48), colors.bl); // 8x32
+      expectPixelNear(readWebGl2Pixel(backend, 52, 48), colors.br); // 24x32
 
       // Edge centers
-      expectPixelNear(readPixel(backend, 24, 8), colors.top);
-      expectPixelNear(readPixel(backend, 24, 48), colors.bottom);
-      expectPixelNear(readPixel(backend, 4, 24), colors.left);
-      expectPixelNear(readPixel(backend, 52, 24), colors.right);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 8), colors.top);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 48), colors.bottom);
+      expectPixelNear(readWebGl2Pixel(backend, 4, 24), colors.left);
+      expectPixelNear(readWebGl2Pixel(backend, 52, 24), colors.right);
 
       // Center
-      expectPixelNear(readPixel(backend, 24, 24), colors.center);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 24), colors.center);
 
       // Boundary sanity, at a margin clear of GPU raster rounding right on an
       // exact integer seam: still inside the top-left corner just before its
@@ -242,9 +234,9 @@ describe('WebGL2 NineSliceSprite', () => {
       // (x=8) into the top edge, then already past the top border into the
       // left edge — proving left/top were honoured independently rather than
       // forced symmetric with right/bottom.
-      expectPixelNear(readPixel(backend, 4, 12), colors.tl);
-      expectPixelNear(readPixel(backend, 12, 8), colors.top);
-      expectPixelNear(readPixel(backend, 4, 20), colors.left);
+      expectPixelNear(readWebGl2Pixel(backend, 4, 12), colors.tl);
+      expectPixelNear(readWebGl2Pixel(backend, 12, 8), colors.top);
+      expectPixelNear(readWebGl2Pixel(backend, 4, 20), colors.left);
     } finally {
       root.destroy();
       texture.destroy();
@@ -266,10 +258,10 @@ describe('WebGL2 NineSliceSprite', () => {
       render(backend, root);
 
       // Center source colour is white; tinted red, it should render pure red.
-      expectPixelNear(readPixel(backend, 32, 32), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [255, 0, 0, 255]);
       // TR corner source colour is green; tinted red, the green channel must
       // be crushed out (red tint multiplies green/blue channels to 0).
-      const trPixel = readPixel(backend, 50, 14);
+      const trPixel = readWebGl2Pixel(backend, 50, 14);
 
       expect(trPixel[1]).toBeLessThan(32);
       expect(trPixel[2]).toBeLessThan(32);
