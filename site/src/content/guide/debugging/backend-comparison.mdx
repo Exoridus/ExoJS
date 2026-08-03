@@ -5,6 +5,7 @@ description: 'Compare backend behavior and decide what to ship.'
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 import Callout from '../../../components/Callout.astro';
+import ParityMatrix from '../../../components/ParityMatrix.astro';
 
 # Backend comparison
 
@@ -34,6 +35,22 @@ At any point, check `app.backend.backendType` (a [`RenderBackendType`](/ExoJS/en
 ## Feature parity
 
 The core rendering pipeline — sprites, meshes, graphics, text, containers, masks, filters, render-targets, views, culling — works identically on both backends. The API is the same. You write one scene and it renders on both.
+
+### What has been measured
+
+That claim is easy to make and hard to keep, so a conformance suite renders the same scenes through both backends in each browser and compares the frames pixel by pixel. The table below reports what it found — not what we believe.
+
+<ParityMatrix />
+
+Read it as evidence, not as a support promise. A `?` means nobody has measured that combination yet; it is not a statement that the feature is broken, and it is deliberately visible rather than hidden. The scenes use a texture whose every texel encodes its own coordinates, so a matching frame proves the right texel landed in the right pixel — not merely that two images happened to look alike.
+
+Chromium is measured on every CI run. Firefox and Safari need a machine with a display and are measured by hand, which is why their rows carry an older date.
+
+<Callout type="hint" title="Reproduce it yourself">
+`pnpm test:parity` runs the matrix on Chromium, `test:parity:firefox` and `test:parity:safari` on the others. Each run rewrites only the rows for the browser it exercised.
+</Callout>
+
+### Known differences
 
 Where differences exist, they are performance characteristics or rendering-path specifics, not API gaps:
 

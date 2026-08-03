@@ -22,8 +22,13 @@ export type { EvidenceClass, EvidenceRow, SupportState } from './evidenceSink';
  * precondition for a `traced` verdict: each output pixel can be checked against
  * the texel it must have come from. Anything else can only be compared frame to
  * frame, sampled, or held against an oracle.
+ *
+ * `colour-modified` is a self-describing texture the scene then tints, blends
+ * or otherwise recolours. The geometry stays exact, but the channels no longer
+ * carry coordinates, so the pixel cannot be traced back — worth stating
+ * separately from `opaque-solid`, where nothing was traceable to begin with.
  */
-export type FixtureKind = 'self-describing' | 'opaque-solid' | 'interpolated';
+export type FixtureKind = 'self-describing' | 'colour-modified' | 'opaque-solid' | 'interpolated';
 
 export interface Scene {
   /** Stable identifier, `feature/variant` by convention. Used as the matrix key. */
@@ -85,6 +90,8 @@ export type Property = PerBackendProperty | CrossBackendProperty;
  * `traced` requires a self-describing fixture under nearest sampling — without
  * both, an output pixel cannot be traced back to a specific texel, however
  * exhaustively the frames were compared, so the claim drops to `frame-equal`.
+ * A `colour-modified` fixture fails the same test for a different reason: the
+ * geometry is still exact, but the channels no longer spell out coordinates.
  * Applying this in the runner rather than trusting each property keeps the
  * class observed instead of asserted.
  */

@@ -12,15 +12,30 @@ import { crossBackendParity } from './properties/crossBackendParity';
 import { determinism } from './properties/determinism';
 import { rendersSomething } from './properties/rendersSomething';
 import { runParityMatrix } from './runner';
+import { clippingScenes } from './scenes/clipping';
+import { colourScenes } from './scenes/colour';
+import { graphicsScenes } from './scenes/graphics';
 import { meshScenes } from './scenes/mesh';
 import { nineSliceScenes } from './scenes/nineSlice';
 import { repeatingSpriteScenes } from './scenes/repeatingSprite';
 import { spriteScenes } from './scenes/sprite';
 import { spriteCanvasScenes } from './scenes/spriteCanvas';
+import { textScenes } from './scenes/text';
 import { transformScenes } from './scenes/transform';
 import type { Property, Scene } from './types';
 
-const scenes: readonly Scene[] = [...spriteScenes, ...spriteCanvasScenes, ...nineSliceScenes, ...repeatingSpriteScenes, ...meshScenes, ...transformScenes];
+const scenes: readonly Scene[] = [
+  ...spriteScenes,
+  ...spriteCanvasScenes,
+  ...nineSliceScenes,
+  ...repeatingSpriteScenes,
+  ...meshScenes,
+  ...transformScenes,
+  ...graphicsScenes,
+  ...colourScenes,
+  ...clippingScenes,
+  ...textScenes,
+];
 
 const properties: readonly Property[] = [crossBackendParity, determinism, rendersSomething];
 
