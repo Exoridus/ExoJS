@@ -22,6 +22,17 @@ import {
 import { maxChannelDelta } from '../frames';
 import type { CrossBackendProperty, PropertyResult } from '../types';
 
+/**
+ * Largest deviation still counted as agreement, in 8-bit channel steps.
+ *
+ * One step is the smallest representable difference — the last bit of a byte.
+ * Software adapters round some interpolated coordinates differently from
+ * hardware ones, which shows up on the nine-slice scenes as exactly this: 0 on
+ * a real GPU, 1 under SwiftShader in CI. Anything larger is a real disagreement
+ * and stays a failure, so this cannot hide a genuine bug behind a threshold.
+ */
+const LAST_BIT = 1;
+
 export const crossBackendParity: CrossBackendProperty = {
   name: 'cross-backend-parity',
   scope: 'cross-backend',
@@ -55,13 +66,34 @@ export const crossBackendParity: CrossBackendProperty = {
       const gpuFrame = readWebGpuFrame(gpu, scene.size);
       const delta = maxChannelDelta(glFrame, gpuFrame);
 
+      if (delta === 0) {
+        return {
+          support: 'supported',
+          // Whole-frame comparison; the runner decides whether the scene lets it
+          // count as `traced` rather than merely `frame-equal`.
+          evidence: 'traced',
+          delta,
+        };
+      }
+
+      if (delta <= LAST_BIT) {
+        // Equal to the last bit rather than bit-identical. Recorded as its own
+        // class instead of quietly passing: a reader can tell an adapter's
+        // rounding from a genuine match, and `tolerant` rows are exactly what
+        // to look at when a real difference is suspected.
+        return {
+          support: 'supported',
+          evidence: 'tolerant',
+          delta,
+          note: `backends agree within ${delta} of one channel step`,
+        };
+      }
+
       return {
-        support: delta === 0 ? 'supported' : 'divergent',
-        // Whole-frame comparison; the runner decides whether the scene lets it
-        // count as `traced` rather than merely `frame-equal`.
+        support: 'divergent',
         evidence: 'traced',
         delta,
-        ...(delta === 0 ? {} : { note: `backends differ by ${delta} on at least one channel` }),
+        note: `backends differ by ${delta} on at least one channel`,
       };
     } finally {
       gl.destroy();
