@@ -143,7 +143,9 @@ export default defineConfig({
         name: 'exojs',
         alias: aliasConfig,
         include: ['test/**/*.test.ts'],
-        exclude: ['test/rendering/browser/**/*.test.ts', 'test/perf/rendering/**/*.test.ts'],
+        // The parity matrix runs in `browser-webgpu`: its runner imports the
+        // browser context module, which throws on import under jsdom.
+        exclude: ['test/rendering/browser/**/*.test.ts', 'test/rendering/parity/**/*.test.ts', 'test/perf/rendering/**/*.test.ts'],
       }),
       createJsdomTestProject({
         name: 'exojs-particles',
