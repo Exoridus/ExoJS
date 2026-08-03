@@ -16,6 +16,8 @@ import {
   readWebGpuFrame,
   renderWebGl2Once,
   renderWebGpuOnce,
+  webGl2Available,
+  webGpuAvailable,
 } from '../../browser/_backendSetup';
 import { maxChannelDelta } from '../frames';
 import type { PerBackendProperty, PropertyResult } from '../types';
@@ -38,6 +40,10 @@ export const determinism: PerBackendProperty = {
     // A fresh graph per frame: reusing one would let retained state make the
     // second frame identical for the wrong reason.
     if (backend === 'webgl2') {
+      if (!webGl2Available()) {
+        return { support: 'unavailable', evidence: 'none', delta: null, note: 'no WebGL2 context in this browser' };
+      }
+
       const gl = await createWebGl2TestBackend(scene.size);
 
       try {
@@ -51,6 +57,10 @@ export const determinism: PerBackendProperty = {
       } finally {
         gl.destroy();
       }
+    }
+
+    if (!(await webGpuAvailable())) {
+      return { support: 'unavailable', evidence: 'none', delta: null, note: 'no WebGPU adapter in this browser' };
     }
 
     const gpu = await createWebGpuTestBackend(scene.size);

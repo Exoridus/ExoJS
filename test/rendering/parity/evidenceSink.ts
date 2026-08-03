@@ -6,6 +6,7 @@
  * Registered in `vitest.config.ts` under the rendering projects' `browser.commands`.
  */
 
+import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
@@ -29,8 +30,15 @@ import { dirname, resolve } from 'node:path';
  */
 export type EvidenceClass = 'traced' | 'frame-equal' | 'oracle' | 'tolerant' | 'sampled' | 'none';
 
-/** Whether the feature actually worked there — distinct from how well it was checked. */
-export type SupportState = 'supported' | 'divergent' | 'unknown';
+/**
+ * Whether the feature actually worked there — distinct from how well it was checked.
+ *
+ * `unavailable` is a finding, not a gap: the browser has no such backend, so
+ * there is nothing to verify and never will be until it ships one. `unknown`
+ * means the check could have run and did not — a lost device, a browser we
+ * have not measured yet.
+ */
+export type SupportState = 'supported' | 'divergent' | 'unavailable' | 'unknown';
 
 export interface EvidenceRow {
   readonly scene: string;
@@ -43,8 +51,33 @@ export interface EvidenceRow {
   readonly evidence: EvidenceClass;
   /** Largest per-channel deviation observed, when the property measured one. */
   readonly delta: number | null;
-  /** Why the row is `unknown`/`none`, when it is. */
+  /** Why the row is `unavailable`/`unknown`/`none`, when it is. */
   readonly note?: string;
+}
+
+/**
+ * A row as it is stored: what the runner observed, plus when and from where.
+ *
+ * Chromium re-measures on every CI run, Firefox and WebKit only when someone
+ * runs them on a machine with a display. Without a stamp the file would read
+ * as uniformly current, so a stale WebKit row would look exactly like a fresh
+ * Chromium one. Day resolution keeps the diff quiet — the question a reader
+ * has is "how old is this", not "at what second".
+ */
+export interface StampedEvidenceRow extends EvidenceRow {
+  /** `YYYY-MM-DD` of the run that produced this row. */
+  readonly measuredAt: string;
+  /** Short commit the run was made from, or `unknown` outside a git checkout. */
+  readonly commit: string;
+  /**
+   * Host platform of the run (`win32`, `darwin`, `linux`).
+   *
+   * The same browser name means different things per platform: Playwright's
+   * WebKit on Windows has no WebGPU at all, while Safari on macOS may. Without
+   * this, a Windows probe would file an `unavailable` that reads as a statement
+   * about Safari.
+   */
+  readonly platform: string;
 }
 
 const OUTPUT = 'test/rendering/parity/evidence.json';
@@ -53,21 +86,30 @@ const OUTPUT = 'test/rendering/parity/evidence.json';
  * Rows accumulate across spec files within one vitest run: each browser spec
  * calls this as it finishes, and the last write holds the full set.
  */
-const collected = new Map<string, EvidenceRow>();
+const collected = new Map<string, StampedEvidenceRow>();
 
 const keyOf = (row: EvidenceRow): string => `${row.browser}|${row.backend}|${row.scene}|${row.property}`;
 
 /** Rows already on disk, minus every browser the current run is reporting on. */
-const carriedOverRows = (target: string, reportedBrowsers: ReadonlySet<string>): EvidenceRow[] => {
+const carriedOverRows = (target: string, reportedBrowsers: ReadonlySet<string>): StampedEvidenceRow[] => {
   if (!existsSync(target)) return [];
 
   try {
-    const previous = JSON.parse(readFileSync(target, 'utf8')) as EvidenceRow[];
+    const previous = JSON.parse(readFileSync(target, 'utf8')) as StampedEvidenceRow[];
 
     return previous.filter(row => !reportedBrowsers.has(row.browser));
   } catch {
     // A corrupt or hand-edited artifact is replaced rather than merged into.
     return [];
+  }
+};
+
+/** The commit under measurement; `unknown` when git is absent or the call fails. */
+const currentCommit = (): string => {
+  try {
+    return execFileSync('git', ['rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim();
+  } catch {
+    return 'unknown';
   }
 };
 
@@ -84,8 +126,12 @@ const carriedOverRows = (target: string, reportedBrowsers: ReadonlySet<string>):
  * trusting a silent void.
  */
 export const writeParityEvidence = (_ctx: unknown, rows: readonly EvidenceRow[]): number => {
+  const measuredAt = new Date().toISOString().slice(0, 10);
+  const commit = currentCommit();
+  const { platform } = process;
+
   for (const row of rows) {
-    collected.set(keyOf(row), row);
+    collected.set(keyOf(row), { ...row, measuredAt, commit, platform });
   }
 
   const target = resolve(process.cwd(), OUTPUT);
