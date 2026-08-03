@@ -337,6 +337,31 @@ export default defineConfig({
         },
       },
 
+      // ── browser-parity-webkit — matrix rows from WebKit ──────────────────
+      // Only the parity matrix, never the WebGPU spec suite: the Playwright
+      // WebKit build has no `navigator.gpu` at all, so those specs would fail
+      // on construction rather than report anything. The matrix instead records
+      // `unavailable`, which is the finding. Headed for the same reason Firefox
+      // is — if a WebGPU adapter appears on macOS, a window is the likeliest
+      // configuration to get one, and a wrong `unavailable` row would be worse
+      // than a visible browser during a manual run.
+      {
+        ...browserBase,
+        test: {
+          name: 'browser-parity-webkit',
+          globals: true,
+          setupFiles: renderingBrowserSetupFiles,
+          include: ['test/rendering/parity/**/*.test.ts'],
+          browser: {
+            enabled: true,
+            commands: parityCommands,
+            headless: false,
+            provider: playwright(),
+            instances: [{ browser: 'webkit' }],
+          },
+        },
+      },
+
       // ── browser-webgpu-firefox-dark — same as above, dark colour scheme ──
       {
         ...browserBase,

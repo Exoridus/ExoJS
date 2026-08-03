@@ -91,6 +91,11 @@ export const runParityMatrix = (scenes: readonly Scene[], properties: readonly P
             for (const backend of BACKENDS) record(scene, property, backend, result);
 
             if (result.support === 'divergent') expect.fail(result.note ?? `${scene.name} diverges between backends`);
+
+            // Recorded first, then skipped: the row carries the finding, and a
+            // green test would claim a check that never ran.
+            // eslint-disable-next-line vitest/no-disabled-tests
+            if (result.support === 'unavailable') ctx.skip(result.note ?? 'backend unavailable in this browser');
           });
 
           continue;
@@ -105,6 +110,11 @@ export const runParityMatrix = (scenes: readonly Scene[], properties: readonly P
             record(scene, property, backend, result);
 
             if (result.support === 'divergent') expect.fail(result.note ?? `${property.name} fails for ${scene.name} on ${backend}`);
+
+            // Recorded first, then skipped: the row carries the finding, and a
+            // green test would claim a check that never ran.
+            // eslint-disable-next-line vitest/no-disabled-tests
+            if (result.support === 'unavailable') ctx.skip(result.note ?? `${backend} unavailable in this browser`);
           });
         }
       }

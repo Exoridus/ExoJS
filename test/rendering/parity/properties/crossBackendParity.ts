@@ -16,6 +16,8 @@ import {
   readWebGpuFrame,
   renderWebGl2Once,
   renderWebGpuOnce,
+  webGl2Available,
+  webGpuAvailable,
 } from '../../browser/_backendSetup';
 import { maxChannelDelta } from '../frames';
 import type { CrossBackendProperty, PropertyResult } from '../types';
@@ -26,6 +28,16 @@ export const crossBackendParity: CrossBackendProperty = {
   appliesTo: () => true,
 
   run: async ({ scene, skip }): Promise<PropertyResult> => {
+    // A browser missing a backend cannot be compared across backends — that is
+    // an answer about the browser, not a failure of the engine.
+    if (!webGl2Available()) {
+      return { support: 'unavailable', evidence: 'none', delta: null, note: 'no WebGL2 context in this browser' };
+    }
+
+    if (!(await webGpuAvailable())) {
+      return { support: 'unavailable', evidence: 'none', delta: null, note: 'no WebGPU adapter in this browser' };
+    }
+
     const gl = await createWebGl2TestBackend(scene.size);
     const gpu = await createWebGpuTestBackend(scene.size);
 

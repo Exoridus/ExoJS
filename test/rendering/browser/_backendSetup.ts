@@ -62,6 +62,33 @@ export const makeTestCanvas = (size: number): HTMLCanvasElement => {
 /** Software WebGPU adapters drop the device under load; such a run is skipped, not failed. */
 export const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
+/**
+ * Whether this browser can hand out a WebGPU adapter at all.
+ *
+ * `navigator.gpu` being present proves nothing: Firefox exposes it headless
+ * and still resolves `requestAdapter()` to `null`, and WebKit ships without
+ * the API entirely. A browser that cannot supply an adapter is a measurement
+ * result, not a broken test — callers record it rather than failing.
+ */
+export const webGpuAvailable = async (): Promise<boolean> => {
+  if (typeof navigator.gpu === 'undefined') return false;
+
+  try {
+    return (await navigator.gpu.requestAdapter()) !== null;
+  } catch {
+    return false;
+  }
+};
+
+/** The same question for WebGL2, which no shipping browser currently answers with `false`. */
+export const webGl2Available = (): boolean => {
+  try {
+    return document.createElement('canvas').getContext('webgl2') !== null;
+  } catch {
+    return false;
+  }
+};
+
 export const createWebGl2TestBackend = async (size: number): Promise<WebGl2Backend> => {
   const app = makeTestApp(makeTestCanvas(size), size);
   const backend = new WebGl2Backend(app);
