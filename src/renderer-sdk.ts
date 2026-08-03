@@ -23,6 +23,10 @@ export { RendererRegistry } from '#rendering/RendererRegistry';
 export type { ShaderProgram } from '#rendering/shader/Shader';
 export { Shader } from '#rendering/shader/Shader';
 export { Spritesheet } from '#rendering/sprite/Spritesheet';
+// Renderers that guard on `Texture.source === null` need this to tell "still
+// waiting on an image" from "holds its pixels in a CPU buffer" — without it an
+// extension renderer silently drops every procedurally-generated texture.
+export { DataTexture } from '#rendering/texture/DataTexture';
 export { RenderTexture } from '#rendering/texture/RenderTexture';
 export { Texture } from '#rendering/texture/Texture';
 export { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';

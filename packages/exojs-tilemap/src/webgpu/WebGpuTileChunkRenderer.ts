@@ -12,6 +12,7 @@ import type { View, WebGpuBackend } from '@codexo/exojs/renderer-sdk';
 import {
   AbstractWebGpuRenderer,
   type BlendModes,
+  DataTexture,
   getWebGpuBlendState,
   packAffineMat4,
   packSnapViewport,
@@ -299,7 +300,12 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
       return;
     }
 
-    if (texture instanceof Texture && texture.source === null) {
+    // A null `source` means a Texture still waiting on its image — but
+    // DataTexture extends Texture and keeps its pixels in a CPU buffer, so it
+    // has none by design. Without the exemption a procedurally-generated
+    // tileset renders as nothing here while WebGL2, which has no such guard,
+    // draws it.
+    if (texture instanceof Texture && !(texture instanceof DataTexture) && texture.source === null) {
       return;
     }
 

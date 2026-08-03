@@ -43,3 +43,14 @@ vi.mock('#rendering/webgl2/glsl/text-color.frag', async () => ({ default: (await
 vi.mock('#rendering/webgl2/glsl/text-msdf.frag', async () => ({ default: (await import('../../../src/rendering/webgl2/glsl/text-msdf.frag?raw')).default }));
 vi.mock('#rendering/webgl2/glsl/text-sdf.frag', async () => ({ default: (await import('../../../src/rendering/webgl2/glsl/text-sdf.frag?raw')).default }));
 vi.mock('#rendering/webgl2/glsl/text.vert', async () => ({ default: (await import('../../../src/rendering/webgl2/glsl/text.vert?raw')).default }));
+
+// Extension-package shaders. The stub plugin blanks these the same way it
+// blanks core ones, but they live outside `src/`, so they need their own
+// entries — without them a particle scene compiles an empty vertex shader and
+// draws nothing.
+vi.mock('../../../packages/exojs-particles/src/renderers/glsl/particle.frag', async () => ({
+  default: (await import('../../../packages/exojs-particles/src/renderers/glsl/particle.frag?raw')).default,
+}));
+vi.mock('../../../packages/exojs-particles/src/renderers/glsl/particle.vert', async () => ({
+  default: (await import('../../../packages/exojs-particles/src/renderers/glsl/particle.vert?raw')).default,
+}));
