@@ -9,16 +9,8 @@
 
 import { Color } from '#core/Color';
 
-import {
-  createWebGl2TestBackend,
-  createWebGpuTestBackend,
-  readWebGl2Frame,
-  readWebGpuFrame,
-  renderWebGl2Once,
-  renderWebGpuOnce,
-  webGl2Available,
-  webGpuAvailable,
-} from '../../browser/_backendSetup';
+import { readWebGl2Frame, readWebGpuFrame, renderWebGl2Once, renderWebGpuOnce, webGl2Available, webGpuAvailable } from '../../browser/_backendSetup';
+import { openWebGl2, openWebGpu } from '../backends';
 import { maxChannelDelta } from '../frames';
 import type { PerBackendProperty, PropertyResult } from '../types';
 
@@ -44,7 +36,7 @@ export const determinism: PerBackendProperty = {
         return { support: 'unavailable', evidence: 'none', delta: null, note: 'no WebGL2 context in this browser' };
       }
 
-      const gl = await createWebGl2TestBackend(scene.size);
+      const gl = await openWebGl2(scene);
 
       try {
         renderWebGl2Once(gl, scene.build(), Color.black);
@@ -63,7 +55,7 @@ export const determinism: PerBackendProperty = {
       return { support: 'unavailable', evidence: 'none', delta: null, note: 'no WebGPU adapter in this browser' };
     }
 
-    const gpu = await createWebGpuTestBackend(scene.size);
+    const gpu = await openWebGpu(scene);
 
     try {
       if (!(await renderWebGpuOnce({ skip }, gpu, scene.build(), Color.black))) {

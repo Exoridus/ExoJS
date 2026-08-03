@@ -10,6 +10,7 @@
  */
 
 import type { Container } from '#rendering/Container';
+import type { RenderBackend } from '#rendering/RenderBackend';
 
 import type { EvidenceClass, SupportState } from './evidenceSink';
 
@@ -42,6 +43,17 @@ export interface Scene {
   readonly nearestSampled: boolean;
   /** Builds a fresh scene graph. Called once per backend — never share nodes across backends. */
   readonly build: () => Container;
+  /**
+   * Registers renderers this scene needs beyond the core set, called once on a
+   * freshly initialised backend before anything is drawn.
+   *
+   * Features living in extension packages — tilemaps, particles — have no
+   * binding in `wireCoreRenderers`, so without this their nodes would silently
+   * draw nothing. Which is precisely the failure `renders-something` was added
+   * to catch, and a matrix row claiming verification of an unregistered
+   * renderer would be worse than no row at all.
+   */
+  readonly wireRenderers?: (backend: RenderBackend) => void;
 }
 
 /** What a property observed. `support` and `evidence` are deliberately separate axes. */

@@ -17,10 +17,12 @@ import { colourScenes } from './scenes/colour';
 import { graphicsScenes } from './scenes/graphics';
 import { meshScenes } from './scenes/mesh';
 import { nineSliceScenes } from './scenes/nineSlice';
+import { particleScenes } from './scenes/particles';
 import { repeatingSpriteScenes } from './scenes/repeatingSprite';
 import { spriteScenes } from './scenes/sprite';
 import { spriteCanvasScenes } from './scenes/spriteCanvas';
 import { textScenes } from './scenes/text';
+import { tilemapScenes } from './scenes/tilemap';
 import { transformScenes } from './scenes/transform';
 import type { Property, Scene } from './types';
 
@@ -35,6 +37,8 @@ const scenes: readonly Scene[] = [
   ...colourScenes,
   ...clippingScenes,
   ...textScenes,
+  ...tilemapScenes,
+  ...particleScenes,
 ];
 
 const properties: readonly Property[] = [crossBackendParity, determinism, rendersSomething];

@@ -2,6 +2,7 @@
 
 import type { BlendModes } from '@codexo/exojs/renderer-sdk';
 import type { WebGpuBackend } from '@codexo/exojs/renderer-sdk';
+import { DataTexture } from '@codexo/exojs/renderer-sdk';
 import { Texture } from '@codexo/exojs/renderer-sdk';
 import { AbstractWebGpuRenderer } from '@codexo/exojs/renderer-sdk';
 import { getWebGpuBlendState } from '@codexo/exojs/renderer-sdk';
@@ -124,7 +125,14 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     const backend = this._backend;
     const texture = system.texture;
 
-    if (backend === null || !(texture instanceof Texture) || texture.source === null || texture.width === 0 || texture.height === 0 || system.liveCount === 0) {
+    // A null `source` means a Texture still waiting on its image — but
+    // DataTexture extends Texture and keeps its pixels in a CPU buffer, so it
+    // has none by design. Without the exemption every procedurally-generated
+    // particle texture renders as nothing here while WebGL2, which has no such
+    // guard, draws it.
+    const awaitingImage = texture instanceof Texture && !(texture instanceof DataTexture) && texture.source === null;
+
+    if (backend === null || !(texture instanceof Texture) || awaitingImage || texture.width === 0 || texture.height === 0 || system.liveCount === 0) {
       return;
     }
 
