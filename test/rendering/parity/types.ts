@@ -19,9 +19,9 @@ export type { EvidenceClass, EvidenceRow, SupportState } from './evidenceSink';
  * How a scene's texture data is built.
  *
  * `self-describing` means every texel encodes its own coordinates, which is the
- * precondition for an `exact` verdict: each output pixel can be checked against
- * the texel it must have come from. Anything else can only be sampled or
- * compared against an oracle.
+ * precondition for a `traced` verdict: each output pixel can be checked against
+ * the texel it must have come from. Anything else can only be compared frame to
+ * frame, sampled, or held against an oracle.
  */
 export type FixtureKind = 'self-describing' | 'opaque-solid' | 'interpolated';
 
@@ -33,7 +33,7 @@ export interface Scene {
   /** Edge length of the square canvas this scene expects. */
   readonly size: number;
   readonly fixture: FixtureKind;
-  /** Nearest sampling is the other half of the `exact` precondition. */
+  /** Nearest sampling is the other half of the `traced` precondition. */
   readonly nearestSampled: boolean;
   /** Builds a fresh scene graph. Called once per backend — never share nodes across backends. */
   readonly build: () => Container;
@@ -82,13 +82,14 @@ export type Property = PerBackendProperty | CrossBackendProperty;
 /**
  * Caps a property's claim at what the scene can actually support.
  *
- * `exact` requires a self-describing fixture under nearest sampling — without
- * both, an output pixel cannot be traced back to a specific texel, so the
- * verdict is at best `sampled`. Applying this in the runner rather than
- * trusting each property keeps the class observed instead of asserted.
+ * `traced` requires a self-describing fixture under nearest sampling — without
+ * both, an output pixel cannot be traced back to a specific texel, however
+ * exhaustively the frames were compared, so the claim drops to `frame-equal`.
+ * Applying this in the runner rather than trusting each property keeps the
+ * class observed instead of asserted.
  */
 export const cappedEvidence = (scene: Scene, claimed: EvidenceClass): EvidenceClass => {
-  if (claimed !== 'exact') return claimed;
+  if (claimed !== 'traced') return claimed;
 
-  return scene.fixture === 'self-describing' && scene.nearestSampled ? 'exact' : 'sampled';
+  return scene.fixture === 'self-describing' && scene.nearestSampled ? 'traced' : 'frame-equal';
 };

@@ -45,7 +45,9 @@ export const crossBackendParity: CrossBackendProperty = {
 
       return {
         support: delta === 0 ? 'supported' : 'divergent',
-        evidence: 'exact',
+        // Whole-frame comparison; the runner decides whether the scene lets it
+        // count as `traced` rather than merely `frame-equal`.
+        evidence: 'traced',
         delta,
         ...(delta === 0 ? {} : { note: `backends differ by ${delta} on at least one channel` }),
       };

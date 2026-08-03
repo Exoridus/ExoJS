@@ -22,7 +22,9 @@ import type { PerBackendProperty, PropertyResult } from '../types';
 
 const verdict = (delta: number): PropertyResult => ({
   support: delta === 0 ? 'supported' : 'divergent',
-  evidence: 'exact',
+  // Whole-frame comparison; the runner decides whether the scene lets it count
+  // as `traced` rather than merely `frame-equal`.
+  evidence: 'traced',
   delta,
   ...(delta === 0 ? {} : { note: `frame 2 differs from frame 1 by ${delta}` }),
 });
