@@ -24,7 +24,9 @@ import { Texture } from '#rendering/texture/Texture';
 import { ScaleModes, TextureFormat } from '#rendering/types';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
+import { expectPixelNear } from './_pixels';
 
 // The browser project rewrites `.vert`/`.frag` imports to empty strings, so the
 // default engine shaders the backend compiles on connect must be mocked with
@@ -33,162 +35,6 @@ import { wireCoreRenderers } from './_coreRenderers';
 // Mesh renders through. Every default renderer is connected on
 // backend.initialize() and extracts its declared attributes, so each default
 // shader needs valid sources with the exact attributes its renderer expects.
-const shaderSources = vi.hoisted(() => ({
-  spriteVertexSource: `#version 300 es
-precision mediump float;
-in vec4 a_localBounds;
-in vec4 a_uvBounds;
-in vec4 a_color;
-in uint a_textureSlot;
-in uint a_nodeIndex;
-uniform mat3 u_projection;
-uniform sampler2D u_transforms;
-uniform sampler2D u_tintTexture;
-out vec2 v_uv;
-out vec4 v_color;
-flat out uint v_textureSlot;
-void main() {
-  vec2 local;
-  if (gl_VertexID == 0) local = vec2(a_localBounds.x, a_localBounds.y);
-  else if (gl_VertexID == 1) local = vec2(a_localBounds.z, a_localBounds.y);
-  else if (gl_VertexID == 2) local = vec2(a_localBounds.x, a_localBounds.w);
-  else local = vec2(a_localBounds.z, a_localBounds.w);
-
-  vec2 uv;
-  if (gl_VertexID == 0) uv = vec2(a_uvBounds.x, a_uvBounds.y);
-  else if (gl_VertexID == 1) uv = vec2(a_uvBounds.z, a_uvBounds.y);
-  else if (gl_VertexID == 2) uv = vec2(a_uvBounds.x, a_uvBounds.w);
-  else uv = vec2(a_uvBounds.z, a_uvBounds.w);
-
-  int row = int(a_nodeIndex);
-  vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
-  vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
-  vec2 world = vec2(m0.x * local.x + m0.y * local.y + m1.x, m0.z * local.x + m0.w * local.y + m1.y);
-  vec3 clip = u_projection * vec3(world, 1.0);
-
-  gl_Position = vec4(clip.xy, 0.0, 1.0);
-  v_uv = uv;
-  v_color = texelFetch(u_tintTexture, ivec2(0, int(a_nodeIndex)), 0);
-  v_textureSlot = a_textureSlot;
-}`,
-
-  meshVertexSource: `#version 300 es
-precision lowp float;
-layout(location = 0) in vec2 a_position;
-layout(location = 1) in vec2 a_texcoord;
-layout(location = 2) in vec4 a_color;
-layout(location = 6) in uint a_nodeIndex;
-uniform mat3 u_projection;
-uniform sampler2D u_transforms;
-uniform sampler2D u_tintTexture;
-out vec2 v_texcoord;
-out vec4 v_color;
-out vec4 v_tint;
-void main(void) {
-  int row = int(a_nodeIndex);
-  vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
-  vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
-  mat3 transform = mat3(
-    m0.x, m0.z, 0.0,
-    m0.y, m0.w, 0.0,
-    m1.x, m1.y, 1.0
-  );
-  gl_Position = vec4((u_projection * transform * vec3(a_position, 1.0)).xy, 0.0, 1.0);
-  v_texcoord = a_texcoord;
-  v_color = a_color;
-  v_tint = texelFetch(u_tintTexture, ivec2(0, row), 0);
-}`,
-
-  meshFragmentSource: `#version 300 es
-precision lowp float;
-uniform sampler2D u_texture;
-in vec2 v_texcoord;
-in vec4 v_color;
-in vec4 v_tint;
-layout(location = 0) out vec4 fragColor;
-void main(void) {
-  vec4 base = texture(u_texture, v_texcoord) * v_color * v_tint;
-  fragColor = vec4(base.rgb * base.a, base.a);
-}`,
-
-  particleVertexSource: `#version 300 es
-precision mediump float;
-in vec2 a_translation;
-in vec2 a_scale;
-in float a_rotation;
-in vec4 a_color;
-in vec2 a_uvMin;
-in vec2 a_uvMax;
-uniform mat3 u_projection;
-uniform mat3 u_systemTransform;
-uniform vec4 u_localBounds;
-out vec2 v_uv;
-out vec4 v_color;
-void main() {
-  vec2 corner;
-  if (gl_VertexID == 0) corner = vec2(0.0, 0.0);
-  else if (gl_VertexID == 1) corner = vec2(1.0, 0.0);
-  else if (gl_VertexID == 2) corner = vec2(1.0, 1.0);
-  else corner = vec2(0.0, 1.0);
-
-  vec2 local = mix(u_localBounds.xy, u_localBounds.zw, corner);
-  local *= a_scale;
-  float angle = radians(a_rotation);
-  mat2 rotationMatrix = mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
-  vec2 worldPos = (u_systemTransform * vec3(rotationMatrix * local + a_translation, 1.0)).xy;
-  vec3 clip = u_projection * vec3(worldPos, 1.0);
-
-  gl_Position = vec4(clip.xy, 0.0, 1.0);
-  v_uv = mix(a_uvMin, a_uvMax, corner);
-  v_color = a_color;
-}`,
-
-  particleFragmentSource: `#version 300 es
-precision mediump float;
-in vec2 v_uv;
-in vec4 v_color;
-uniform sampler2D u_texture;
-out vec4 outColor;
-void main() {
-  outColor = texture(u_texture, v_uv) * v_color;
-}`,
-
-  textVertexSource: `#version 300 es
-precision mediump float;
-in vec2 a_position;
-in vec2 a_texcoord;
-in float a_nodeIndex;
-uniform mat3 u_projection;
-out vec2 v_uv;
-void main() {
-  float nodeIndex = a_nodeIndex;
-  vec3 clip = u_projection * vec3(a_position + vec2(nodeIndex * 0.0), 1.0);
-  gl_Position = vec4(clip.xy, 0.0, 1.0);
-  v_uv = a_texcoord;
-}`,
-
-  textFragmentSource: `#version 300 es
-precision mediump float;
-in vec2 v_uv;
-uniform sampler2D u_texture;
-out vec4 outColor;
-void main() {
-  outColor = texture(u_texture, v_uv);
-}`,
-}));
-
-vi.mock('#rendering/webgl2/glsl/sprite.vert', () => ({ default: shaderSources.spriteVertexSource }));
-vi.mock('#rendering/webgl2/glsl/sprite.frag', async () => ({ default: (await import('./_spriteFragMock')).createSpriteFragMockSource('v_uv') }));
-vi.mock('#rendering/webgl2/glsl/mesh.vert', () => ({ default: shaderSources.meshVertexSource }));
-vi.mock('#rendering/webgl2/glsl/mesh.frag', () => ({ default: shaderSources.meshFragmentSource }));
-vi.mock('#rendering/webgl2/glsl/particle.vert', () => ({ default: shaderSources.particleVertexSource }));
-vi.mock('#rendering/webgl2/glsl/particle.frag', () => ({ default: shaderSources.particleFragmentSource }));
-vi.mock('#rendering/webgl2/glsl/text.vert', () => ({ default: shaderSources.textVertexSource }));
-vi.mock('#rendering/webgl2/glsl/text-color.frag', () => ({ default: shaderSources.textFragmentSource }));
-vi.mock('#rendering/webgl2/glsl/text-msdf.frag', () => ({ default: shaderSources.textFragmentSource }));
-vi.mock('#rendering/webgl2/glsl/text-sdf.frag', () => ({ default: shaderSources.textFragmentSource }));
-
-type RgbaTuple = readonly [number, number, number, number];
 
 const canvasSize = 64;
 const defaultWebGlAttributes: WebGLContextAttributes = {
@@ -235,23 +81,6 @@ const renderMesh = (backend: WebGl2Backend, mesh: Mesh): void => {
   backend.flush();
 };
 
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const pixel = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
-
-  return [pixel[0], pixel[1], pixel[2], pixel[3]];
-};
-
-const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 8): void => {
-  for (let index = 0; index < 4; index++) {
-    expect(Math.abs(actual[index] - expected[index]), `channel ${index}: got [${actual.join(', ')}] expected [${expected.join(', ')}]`).toBeLessThanOrEqual(
-      tolerance,
-    );
-  }
-};
-
 // A full-canvas quad in pixel space with UVs spanning the whole texture.
 const fullQuadVertices = (): Float32Array => new Float32Array([0, 0, canvasSize, 0, canvasSize, canvasSize, 0, 0, canvasSize, canvasSize, 0, canvasSize]);
 const fullQuadUvs = (): Float32Array => new Float32Array([0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1]);
@@ -276,7 +105,7 @@ describe('WebGL2 mesh tint and texture sampling', () => {
       levels.forEach((level, i) => {
         const x = Math.floor(((i + 0.5) * canvasSize) / width);
 
-        expectPixelNear(readPixel(backend, x, 32), [level, level, level, 255]);
+        expectPixelNear(readWebGl2Pixel(backend, x, 32), [level, level, level, 255]);
       });
     } finally {
       mesh.destroy();
@@ -300,10 +129,10 @@ describe('WebGL2 mesh tint and texture sampling', () => {
     try {
       renderMesh(backend, mesh);
 
-      expectPixelNear(readPixel(backend, 16, 16), [255, 0, 0, 255]); // top-left
-      expectPixelNear(readPixel(backend, 48, 16), [0, 255, 0, 255]); // top-right
-      expectPixelNear(readPixel(backend, 16, 48), [0, 0, 255, 255]); // bottom-left
-      expectPixelNear(readPixel(backend, 48, 48), [255, 255, 255, 255]); // bottom-right
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [255, 0, 0, 255]); // top-left
+      expectPixelNear(readWebGl2Pixel(backend, 48, 16), [0, 255, 0, 255]); // top-right
+      expectPixelNear(readWebGl2Pixel(backend, 16, 48), [0, 0, 255, 255]); // bottom-left
+      expectPixelNear(readWebGl2Pixel(backend, 48, 48), [255, 255, 255, 255]); // bottom-right
     } finally {
       mesh.destroy();
       texture.destroy();
@@ -333,7 +162,7 @@ describe('WebGL2 mesh tint and texture sampling', () => {
     try {
       renderMesh(backend, mesh);
 
-      expectPixelNear(readPixel(backend, 32, 32), [96, 96, 96, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [96, 96, 96, 255]);
     } finally {
       mesh.destroy();
       texture.destroy();
@@ -358,9 +187,9 @@ describe('WebGL2 mesh tint and texture sampling', () => {
       renderMesh(backend, mesh);
 
       // Endpoints resolve near the pure stops; the middle is the blend (magenta).
-      expectPixelNear(readPixel(backend, 2, 32), [255, 0, 0, 255], 20); // left ≈ red
-      expectPixelNear(readPixel(backend, 32, 32), [128, 0, 128, 255], 20); // middle ≈ magenta
-      expectPixelNear(readPixel(backend, 62, 32), [0, 0, 255, 255], 20); // right ≈ blue
+      expectPixelNear(readWebGl2Pixel(backend, 2, 32), [255, 0, 0, 255], 20); // left ≈ red
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [128, 0, 128, 255], 20); // middle ≈ magenta
+      expectPixelNear(readWebGl2Pixel(backend, 62, 32), [0, 0, 255, 255], 20); // right ≈ blue
     } finally {
       mesh.destroy();
       gradient.destroy();
@@ -387,7 +216,7 @@ describe('WebGL2 mesh tint and texture sampling', () => {
     try {
       renderMesh(backend, mesh);
 
-      expectPixelNear(readPixel(backend, 32, 32), [96, 160, 224, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [96, 160, 224, 255]);
     } finally {
       mesh.destroy();
       texture.destroy();
@@ -415,7 +244,7 @@ describe('WebGL2 mesh tint and texture sampling', () => {
     try {
       renderMesh(backend, mesh);
 
-      expectPixelNear(readPixel(backend, 32, 32), [255, 0, 0, 255]); // first draw: red
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [255, 0, 0, 255]); // first draw: red
 
       // Mutate the texel and flush the dirty region; the next draw must show it.
       texture.buffer.set([0, 0, 255, 255]); // blue
@@ -423,7 +252,7 @@ describe('WebGL2 mesh tint and texture sampling', () => {
 
       renderMesh(backend, mesh);
 
-      expectPixelNear(readPixel(backend, 32, 32), [0, 0, 255, 255]); // second draw: blue
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [0, 0, 255, 255]); // second draw: blue
     } finally {
       mesh.destroy();
       texture.destroy();

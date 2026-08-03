@@ -32,7 +32,9 @@ import { Text } from '#rendering/text/Text';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 import { WebGl2TextRenderer } from '#rendering/webgl2/WebGl2TextRenderer';
 
+import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
+import { expectPixelNear } from './_pixels';
 
 // ---------------------------------------------------------------------------
 // Shader wiring — REAL shipped text GLSL via `?raw` (the stub plugin only
@@ -40,59 +42,9 @@ import { wireCoreRenderers } from './_coreRenderers';
 // `wireCoreRenderers()` can eagerly compile the whole registry.
 // ---------------------------------------------------------------------------
 
-vi.mock('#rendering/webgl2/glsl/text.vert', async () => ({ default: (await import('../../../src/rendering/webgl2/glsl/text.vert?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/text-sdf.frag', async () => ({ default: (await import('../../../src/rendering/webgl2/glsl/text-sdf.frag?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/text-msdf.frag', async () => ({ default: (await import('../../../src/rendering/webgl2/glsl/text-msdf.frag?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/text-color.frag', async () => ({ default: (await import('../../../src/rendering/webgl2/glsl/text-color.frag?raw')).default }));
-
-const auxShaderSources = vi.hoisted(() => ({
-  spriteVert: `#version 300 es
-precision highp float;
-in vec4 a_localBounds; in vec4 a_uvBounds; in vec4 a_color; in uint a_textureSlot; in uint a_nodeIndex;
-uniform mat3 u_projection; uniform mat3 u_group; uniform sampler2D u_transforms;
-uniform sampler2D u_tintTexture;
-out vec2 v_uv; out vec4 v_color; flat out uint v_textureSlot;
-void main() {
-  vec2 local = vec2(a_localBounds.x, a_localBounds.y);
-  int row = int(a_nodeIndex);
-  vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
-  vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
-  vec2 world = vec2(m0.x * local.x + m0.y * local.y + m1.x, m0.z * local.x + m0.w * local.y + m1.y);
-  gl_Position = vec4((u_projection * u_group * vec3(world, 1.0)).xy, 0.0, 1.0);
-  v_uv = a_uvBounds.xy; v_color = a_color; v_textureSlot = a_textureSlot;
-}`,
-  meshVert: `#version 300 es
-precision highp float;
-in vec2 a_position; in vec2 a_texcoord; in vec4 a_color; in uint a_nodeIndex;
-uniform mat3 u_projection; uniform sampler2D u_transforms;
-uniform sampler2D u_tintTexture;
-out vec2 v_uv; out vec4 v_color; out vec4 v_tint;
-void main() {
-  int row = int(a_nodeIndex);
-  vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
-  vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
-  mat3 t = mat3(m0.x,m0.z,0.0, m0.y,m0.w,0.0, m1.x,m1.y,1.0);
-  gl_Position = vec4((u_projection * t * vec3(a_position, 1.0)).xy, 0.0, 1.0);
-  v_uv = a_texcoord; v_color = a_color; v_tint = texelFetch(u_tintTexture, ivec2(0, row), 0);
-}`,
-  meshFrag: `#version 300 es
-precision mediump float;
-in vec2 v_uv; in vec4 v_color; in vec4 v_tint;
-uniform sampler2D u_texture;
-out vec4 outColor;
-void main() { outColor = texture(u_texture, v_uv) * v_color * v_tint; }`,
-}));
-
-vi.mock('#rendering/webgl2/glsl/sprite.vert', () => ({ default: auxShaderSources.spriteVert }));
-vi.mock('#rendering/webgl2/glsl/sprite.frag', async () => ({ default: (await import('./_spriteFragMock')).createSpriteFragMockSource('v_uv') }));
-vi.mock('#rendering/webgl2/glsl/mesh.vert', () => ({ default: auxShaderSources.meshVert }));
-vi.mock('#rendering/webgl2/glsl/mesh.frag', () => ({ default: auxShaderSources.meshFrag }));
-
 // ---------------------------------------------------------------------------
 // Infrastructure helpers (shared shape with the sibling browser specs).
 // ---------------------------------------------------------------------------
-
-type RgbaTuple = readonly [number, number, number, number];
 
 const canvasSize = 96;
 
@@ -138,15 +90,6 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.flush();
 };
 
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const buf = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, buf);
-
-  return [buf[0]!, buf[1]!, buf[2]!, buf[3]!];
-};
-
 /** Full-framebuffer snapshot for byte-identical tier comparisons. */
 const readCanvas = (backend: WebGl2Backend): Uint8Array => {
   const buf = new Uint8Array(canvasSize * canvasSize * 4);
@@ -155,12 +98,6 @@ const readCanvas = (backend: WebGl2Backend): Uint8Array => {
   gl.readPixels(0, 0, canvasSize, canvasSize, gl.RGBA, gl.UNSIGNED_BYTE, buf);
 
   return buf;
-};
-
-const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 8): void => {
-  for (let i = 0; i < 4; i++) {
-    expect(Math.abs(actual[i]! - expected[i]!)).toBeLessThanOrEqual(tolerance);
-  }
 };
 
 interface FragmentCarrier {
@@ -244,7 +181,7 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
     try {
       for (let f = 0; f < 3; f++) render(backend, scene.root);
 
-      const before = readPixel(backend, 20, 24);
+      const before = readWebGl2Pixel(backend, 20, 24);
 
       expect(before).not.toEqual([0, 0, 0, 255]);
 
@@ -260,7 +197,7 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
 
       // Panning the camera +16px right shifts the same glyph feature 16px left:
       // what was at x=20 is now at x=4.
-      const panned = readPixel(backend, 4, 24);
+      const panned = readWebGl2Pixel(backend, 4, 24);
 
       expect(panned).not.toEqual([0, 0, 0, 255]);
       expectPixelNear(panned, before, 40);
@@ -277,7 +214,7 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
     try {
       for (let f = 0; f < 3; f++) render(backend, scene.root);
 
-      const before = readPixel(backend, 20, 24);
+      const before = readWebGl2Pixel(backend, 20, 24);
 
       expect(before).not.toEqual([0, 0, 0, 255]);
 
@@ -291,11 +228,11 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
       expect(beginSpy).not.toHaveBeenCalled();
       expect(fragmentOf(scene.group).instructions!.instructions[0]).toBe(recordedInstruction);
 
-      const moved = readPixel(backend, 40, 24);
+      const moved = readWebGl2Pixel(backend, 40, 24);
 
       expect(moved).not.toEqual([0, 0, 0, 255]);
       expectPixelNear(moved, before, 40);
-      expectPixelNear(readPixel(backend, 20, 24), [0, 0, 0, 255], 8); // old spot cleared
+      expectPixelNear(readWebGl2Pixel(backend, 20, 24), [0, 0, 0, 255], 8); // old spot cleared
     } finally {
       scene.root.destroy();
       backend.destroy();
@@ -309,7 +246,7 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
     try {
       for (let f = 0; f < 3; f++) render(backend, scene.root);
 
-      const before = readPixel(backend, 20, 24);
+      const before = readWebGl2Pixel(backend, 20, 24);
 
       expect(before).not.toEqual([0, 0, 0, 255]);
 
@@ -328,11 +265,11 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
       expect(replaySpy).toHaveBeenCalled();
       expect(fragmentOf(scene.group).instructions!.instructions[0]).toBe(recordedInstruction);
 
-      const moved = readPixel(backend, 40, 24);
+      const moved = readWebGl2Pixel(backend, 40, 24);
 
       expect(moved).not.toEqual([0, 0, 0, 255]);
       expectPixelNear(moved, before, 40);
-      expectPixelNear(readPixel(backend, 20, 24), [0, 0, 0, 255], 8); // old spot cleared
+      expectPixelNear(readWebGl2Pixel(backend, 20, 24), [0, 0, 0, 255], 8); // old spot cleared
 
       // The patched recording keeps splicing byte-stable, no re-record.
       const patchedFrame = readCanvas(backend);

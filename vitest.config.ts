@@ -80,6 +80,15 @@ const webgpuCiHeaded = process.env['EXOJS_WEBGPU_CI_HEADED'] === '1';
 // browserBase note) before any engine module evaluates.
 const browserSetupFiles = ['./test/rendering/browser/_setup-dev-global.ts'];
 
+// Additionally run in the rendering projects: restores the shipped GLSL that
+// `shaderStubPlugin` blanks out. It has to be a setup file rather than a
+// module the specs import — vitest hoists `vi.mock` only within the file
+// holding the calls, so a helper imported by a spec registers its mocks after
+// that spec's own imports have already pulled in the renderers. A spec needing
+// a probe shader instead of the shipped one still declares its own `vi.mock`,
+// which takes precedence over these.
+const renderingBrowserSetupFiles = [...browserSetupFiles, './test/rendering/browser/_glslMocks.ts'];
+
 export default defineConfig({
   test: {
     coverage: {
@@ -223,7 +232,7 @@ export default defineConfig({
         test: {
           name: 'browser-webgl-chromium',
           globals: true,
-          setupFiles: browserSetupFiles,
+          setupFiles: renderingBrowserSetupFiles,
           include: ['test/rendering/browser/webgl2-*.test.ts'],
           browser: {
             enabled: true,
@@ -242,7 +251,7 @@ export default defineConfig({
         test: {
           name: 'browser-webgl-firefox',
           globals: true,
-          setupFiles: browserSetupFiles,
+          setupFiles: renderingBrowserSetupFiles,
           include: ['test/rendering/browser/webgl2-*.test.ts'],
           browser: { enabled: true, headless: true, provider: playwright(), instances: [{ browser: 'firefox' }] },
         },
@@ -270,7 +279,7 @@ export default defineConfig({
         test: {
           name: 'browser-webgpu',
           globals: true,
-          setupFiles: browserSetupFiles,
+          setupFiles: renderingBrowserSetupFiles,
           include: ['test/rendering/browser/webgpu-*.test.ts'],
           browser: {
             enabled: true,
@@ -300,7 +309,7 @@ export default defineConfig({
         test: {
           name: 'browser-webgpu-firefox',
           globals: true,
-          setupFiles: browserSetupFiles,
+          setupFiles: renderingBrowserSetupFiles,
           include: ['test/rendering/browser/webgpu-*.test.ts'],
           browser: { enabled: true, headless: false, provider: playwright(), instances: [{ browser: 'firefox' }] },
         },
@@ -312,7 +321,7 @@ export default defineConfig({
         test: {
           name: 'browser-webgpu-firefox-dark',
           globals: true,
-          setupFiles: browserSetupFiles,
+          setupFiles: renderingBrowserSetupFiles,
           include: ['test/rendering/browser/webgpu-*.test.ts'],
           browser: {
             enabled: true,

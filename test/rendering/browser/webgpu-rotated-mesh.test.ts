@@ -25,10 +25,10 @@ import { RenderingContext } from '#rendering/RenderingContext';
 import { View } from '#rendering/View';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
+import { readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
+import { expectPixelNear, type RgbaTuple } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
-
-type RgbaTuple = readonly [number, number, number, number];
 
 const canvasSize = 64;
 
@@ -103,36 +103,6 @@ const coloredQuad = (x0: number, y0: number, x1: number, y1: number, rgba: RgbaT
 // whole surface, top-left origin.
 const screenView = (): View => new View(canvasSize / 2, canvasSize / 2, canvasSize, canvasSize);
 
-const readCanvas = (backend: WebGpuBackend): ((x: number, y: number) => RgbaTuple) => {
-  const source = backend.context.canvas as HTMLCanvasElement;
-  const readback = document.createElement('canvas');
-
-  readback.width = canvasSize;
-  readback.height = canvasSize;
-
-  const ctx = readback.getContext('2d');
-
-  if (!ctx) {
-    throw new Error('2D context is required for canvas readback.');
-  }
-
-  ctx.drawImage(source, 0, 0);
-
-  return (x: number, y: number): RgbaTuple => {
-    const { data } = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1);
-
-    return [data[0], data[1], data[2], data[3]];
-  };
-};
-
-const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 6): void => {
-  for (let index = 0; index < 4; index++) {
-    expect(Math.abs(actual[index] - expected[index]), `channel ${index}: got [${actual.join(', ')}] expected [${expected.join(', ')}]`).toBeLessThanOrEqual(
-      tolerance,
-    );
-  }
-};
-
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 // Run `draw` through the real flush path inside a validation error scope.
@@ -178,7 +148,7 @@ describe('WebGPU rotated mesh: single-draw vs. instanced parity', () => {
         return;
       }
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(24, 16), [255, 0, 0, 255]); // rotated quad center
       expectPixelNear(readPixel(40, 4), [0, 0, 0, 255]); // transposed-artifact region stays empty
@@ -208,7 +178,7 @@ describe('WebGPU rotated mesh: single-draw vs. instanced parity', () => {
       // exact WGSL slot-math path under test.
       expect(backend.stats.drawCalls).toBe(1);
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(24, 16), [255, 0, 0, 255]); // +90° instance center
       expectPixelNear(readPixel(24, 32), [0, 255, 0, 255]); // -90° instance center
@@ -234,7 +204,7 @@ describe('WebGPU rotated mesh: single-draw vs. instanced parity', () => {
         return;
       }
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // Same expectations as the single-draw cell above.
       expectPixelNear(readPixel(24, 16), [255, 0, 0, 255]);

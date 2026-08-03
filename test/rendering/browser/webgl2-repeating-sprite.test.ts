@@ -24,113 +24,13 @@ import { Texture } from '#rendering/texture/Texture';
 import { TextureRegion } from '#rendering/texture/TextureRegion';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
-
-// ---------------------------------------------------------------------------
-// Shader mocks
-//
-// The vitest shaderPlugin replaces every .vert/.frag import with
-// `export default ""`.  Replace the stubs with minimal but valid GLSL so
-// renderer.connect() can compile the Sprite + Mesh + Text shaders that
-// wireCoreRenderers() registers alongside our inline-GLSL renderer.
-// ---------------------------------------------------------------------------
-
-const shaderSources = vi.hoisted(() => ({
-  spriteVert: `#version 300 es
-precision mediump float;
-in vec4 a_localBounds;
-in vec4 a_uvBounds;
-in vec4 a_color;
-in uint a_textureSlot;
-in uint a_nodeIndex;
-uniform mat3 u_projection;
-uniform sampler2D u_transforms;
-uniform sampler2D u_tintTexture;
-out vec2 v_uv;
-out vec4 v_color;
-flat out uint v_textureSlot;
-void main() {
-  vec2 local;
-  if (gl_VertexID == 0) local = vec2(a_localBounds.x, a_localBounds.y);
-  else if (gl_VertexID == 1) local = vec2(a_localBounds.z, a_localBounds.y);
-  else if (gl_VertexID == 2) local = vec2(a_localBounds.x, a_localBounds.w);
-  else local = vec2(a_localBounds.z, a_localBounds.w);
-  vec2 uv;
-  if (gl_VertexID == 0) uv = vec2(a_uvBounds.x, a_uvBounds.y);
-  else if (gl_VertexID == 1) uv = vec2(a_uvBounds.z, a_uvBounds.y);
-  else if (gl_VertexID == 2) uv = vec2(a_uvBounds.x, a_uvBounds.w);
-  else uv = vec2(a_uvBounds.z, a_uvBounds.w);
-  int row = int(a_nodeIndex);
-  vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
-  vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
-  vec2 world = vec2(m0.x * local.x + m0.y * local.y + m1.x, m0.z * local.x + m0.w * local.y + m1.y);
-  vec3 clip = u_projection * vec3(world, 1.0);
-  gl_Position = vec4(clip.xy, 0.0, 1.0);
-  v_uv = uv; v_color = texelFetch(u_tintTexture, ivec2(0, int(a_nodeIndex)), 0); v_textureSlot = a_textureSlot;
-}`,
-
-  meshVert: `#version 300 es
-precision mediump float;
-in vec2 a_position;
-in vec2 a_texcoord;
-in vec4 a_color;
-in uint a_nodeIndex;
-uniform mat3 u_projection;
-uniform sampler2D u_transforms;
-uniform sampler2D u_tintTexture;
-out vec2 v_uv; out vec4 v_color; out vec4 v_tint;
-void main() {
-  int row = int(a_nodeIndex);
-  vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
-  vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
-  mat3 t = mat3(m0.x,m0.z,0.0, m0.y,m0.w,0.0, m1.x,m1.y,1.0);
-  vec3 world = t * vec3(a_position, 1.0);
-  vec3 clip = u_projection * world;
-  gl_Position = vec4(clip.xy, 0.0, 1.0);
-  v_uv = a_texcoord; v_color = a_color;
-  v_tint = texelFetch(u_tintTexture, ivec2(0, row), 0);
-}`,
-
-  meshFrag: `#version 300 es
-precision mediump float;
-in vec2 v_uv; in vec4 v_color; in vec4 v_tint;
-uniform sampler2D u_texture;
-out vec4 outColor;
-void main() { outColor = texture(u_texture, v_uv) * v_color * v_tint; }`,
-
-  textVert: `#version 300 es
-precision mediump float;
-in vec2 a_position; in vec2 a_texcoord; in float a_nodeIndex;
-uniform mat3 u_projection;
-out vec2 v_uv;
-void main() {
-  float ni = a_nodeIndex;
-  vec3 clip = u_projection * vec3(a_position + vec2(ni * 0.0), 1.0);
-  gl_Position = vec4(clip.xy, 0.0, 1.0); v_uv = a_texcoord;
-}`,
-
-  textFrag: `#version 300 es
-precision mediump float;
-in vec2 v_uv;
-uniform sampler2D u_texture;
-out vec4 outColor;
-void main() { outColor = texture(u_texture, v_uv); }`,
-}));
-
-vi.mock('#rendering/webgl2/glsl/sprite.vert', () => ({ default: shaderSources.spriteVert }));
-vi.mock('#rendering/webgl2/glsl/sprite.frag', async () => ({ default: (await import('./_spriteFragMock')).createSpriteFragMockSource('v_uv') }));
-vi.mock('#rendering/webgl2/glsl/mesh.vert', () => ({ default: shaderSources.meshVert }));
-vi.mock('#rendering/webgl2/glsl/mesh.frag', () => ({ default: shaderSources.meshFrag }));
-vi.mock('#rendering/webgl2/glsl/text.vert', () => ({ default: shaderSources.textVert }));
-vi.mock('#rendering/webgl2/glsl/text-color.frag', () => ({ default: shaderSources.textFrag }));
-vi.mock('#rendering/webgl2/glsl/text-msdf.frag', () => ({ default: shaderSources.textFrag }));
-vi.mock('#rendering/webgl2/glsl/text-sdf.frag', () => ({ default: shaderSources.textFrag }));
+import { expectPixelNear } from './_pixels';
 
 // ---------------------------------------------------------------------------
 // Infrastructure helpers
 // ---------------------------------------------------------------------------
-
-type RgbaTuple = readonly [number, number, number, number];
 
 const canvasSize = 64;
 
@@ -176,21 +76,6 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.flush();
 };
 
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const buf = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, buf);
-
-  return [buf[0], buf[1], buf[2], buf[3]];
-};
-
-const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 8): void => {
-  for (let i = 0; i < 4; i++) {
-    expect(Math.abs(actual[i] - expected[i])).toBeLessThanOrEqual(tolerance);
-  }
-};
-
 const createSolidTexture = (color: string, width = 16, height = 16): Texture => {
   const src = document.createElement('canvas');
 
@@ -223,10 +108,10 @@ describe('WebGL2 RepeatingSprite — shader path', () => {
       render(backend, root);
 
       // Interior of the sprite should be red
-      expectPixelNear(readPixel(backend, 16, 16), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 32, 32), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [255, 0, 0, 255]);
       // Outside the sprite's bounds remains black
-      expectPixelNear(readPixel(backend, 4, 4), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 4, 4), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -251,8 +136,8 @@ describe('WebGL2 RepeatingSprite — shader path', () => {
 
       render(backend, root);
 
-      expectPixelNear(readPixel(backend, 24, 24), [0, 255, 0, 255]);
-      expectPixelNear(readPixel(backend, 4, 4), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 24), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 4, 4), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -278,7 +163,7 @@ describe('WebGL2 RepeatingSprite — shader path', () => {
       render(backend, root);
 
       // Interior pixel should have blue component (exact value varies by mirror phase)
-      const pixel = readPixel(backend, 20, 20);
+      const pixel = readWebGl2Pixel(backend, 20, 20);
 
       expect(pixel[2]).toBeGreaterThan(128);
     } finally {
@@ -301,7 +186,7 @@ describe('WebGL2 RepeatingSprite — shader path', () => {
 
       render(backend, root);
 
-      const pixel = readPixel(backend, 16, 16);
+      const pixel = readWebGl2Pixel(backend, 16, 16);
 
       expect(pixel[0]).toBeGreaterThan(128);
       expect(pixel[1]).toBeLessThan(32);
@@ -325,7 +210,7 @@ describe('WebGL2 RepeatingSprite — shader path', () => {
 
       expect(() => render(backend, root)).not.toThrow();
       // No pixels should be red — zero-size renders nothing
-      expectPixelNear(readPixel(backend, 16, 16), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -354,8 +239,8 @@ describe('WebGL2 RepeatingSprite — shader path', () => {
       render(backend, root);
 
       // Both should show red — sampler state must not corrupt the sprite
-      expectPixelNear(readPixel(backend, 12, 12), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 42, 10), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 12, 12), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 42, 10), [255, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -376,9 +261,9 @@ describe('WebGL2 RepeatingSprite — shader path', () => {
 
       render(backend, root);
 
-      expectPixelNear(readPixel(backend, 44, 44), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 44, 44), [255, 0, 0, 255]);
       // Position (10, 10) is outside the sprite's bounds
-      expectPixelNear(readPixel(backend, 10, 10), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 10, 10), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -405,8 +290,8 @@ describe('WebGL2 RepeatingSprite — geometry path', () => {
 
       render(backend, root);
 
-      expectPixelNear(readPixel(backend, 16, 16), [0, 0, 255, 255]);
-      expectPixelNear(readPixel(backend, 4, 4), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [0, 0, 255, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 4, 4), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -434,7 +319,7 @@ describe('WebGL2 RepeatingSprite — geometry path', () => {
 
       render(backend, root);
 
-      const pixel = readPixel(backend, 20, 20);
+      const pixel = readWebGl2Pixel(backend, 20, 20);
 
       // Should be orange-ish (non-zero red and green, low blue)
       expect(pixel[0]).toBeGreaterThan(128);
@@ -460,7 +345,7 @@ describe('WebGL2 RepeatingSprite — geometry path', () => {
 
       render(backend, root);
 
-      const pixel = readPixel(backend, 20, 20);
+      const pixel = readWebGl2Pixel(backend, 20, 20);
 
       expect(pixel[0]).toBeLessThan(32);
       expect(pixel[1]).toBeGreaterThan(128);
@@ -484,7 +369,7 @@ describe('WebGL2 RepeatingSprite — geometry path', () => {
       root.addChild(sprite);
 
       expect(() => render(backend, root)).not.toThrow();
-      expectPixelNear(readPixel(backend, 16, 16), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -512,7 +397,7 @@ describe('WebGL2 RepeatingSprite — geometry path', () => {
 
       render(backend, root);
 
-      const pixel = readPixel(backend, 24, 24);
+      const pixel = readWebGl2Pixel(backend, 24, 24);
 
       expect(pixel[0]).toBeGreaterThan(128);
     } finally {

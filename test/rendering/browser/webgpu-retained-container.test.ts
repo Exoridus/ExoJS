@@ -32,10 +32,10 @@ import { BmFont } from '#rendering/text/BmFont';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
+import { readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
+import { expectPixelNear } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
-
-type RgbaTuple = readonly [number, number, number, number];
 
 const canvasSize = 64;
 
@@ -100,37 +100,6 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
   return backend;
 };
 
-// Read the presented WebGPU canvas back through a 2D canvas. drawImage accepts a
-// WebGPU-configured canvas as an image source, giving CPU-side pixel access
-// without touching the backend's managed GPU textures.
-const readCanvas = (backend: WebGpuBackend): ((x: number, y: number) => RgbaTuple) => {
-  const source = backend.context.canvas as HTMLCanvasElement;
-  const readback = document.createElement('canvas');
-
-  readback.width = canvasSize;
-  readback.height = canvasSize;
-
-  const ctx = readback.getContext('2d');
-
-  if (!ctx) {
-    throw new Error('2D context is required for canvas readback.');
-  }
-
-  ctx.drawImage(source, 0, 0);
-
-  return (x: number, y: number): RgbaTuple => {
-    const { data } = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1);
-
-    return [data[0], data[1], data[2], data[3]];
-  };
-};
-
-const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 12): void => {
-  for (let index = 0; index < 4; index++) {
-    expect(Math.abs(actual[index] - expected[index])).toBeLessThanOrEqual(tolerance);
-  }
-};
-
 // On the software (swiftshader) adapter used in CI the WebGPU device can be
 // dropped mid-test ("Instance dropped in popErrorScope"). Treat that as a
 // device-lost skip rather than a failure.
@@ -185,7 +154,7 @@ describe('WebGPU renderer matrix: RetainedContainer cells', () => {
         return;
       }
 
-      let readPixel = readCanvas(backend);
+      let readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(16, 16), [255, 0, 0, 255]);
 
@@ -197,7 +166,7 @@ describe('WebGPU renderer matrix: RetainedContainer cells', () => {
         return;
       }
 
-      readPixel = readCanvas(backend);
+      readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(0, 16), [255, 0, 0, 255]);
       expectPixelNear(readPixel(24, 16), [0, 0, 0, 255]);
@@ -223,7 +192,7 @@ describe('WebGPU renderer matrix: RetainedContainer cells', () => {
         return;
       }
 
-      let readPixel = readCanvas(backend);
+      let readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(8, 8), [0, 255, 0, 255]);
 
@@ -233,7 +202,7 @@ describe('WebGPU renderer matrix: RetainedContainer cells', () => {
         return;
       }
 
-      readPixel = readCanvas(backend);
+      readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(40, 40), [0, 255, 0, 255]);
       expectPixelNear(readPixel(8, 8), [0, 0, 0, 255]);
@@ -259,7 +228,7 @@ describe('WebGPU renderer matrix: RetainedContainer cells', () => {
         return;
       }
 
-      let readPixel = readCanvas(backend);
+      let readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(8, 8), [255, 0, 0, 255]);
 
@@ -269,7 +238,7 @@ describe('WebGPU renderer matrix: RetainedContainer cells', () => {
         return;
       }
 
-      readPixel = readCanvas(backend);
+      readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(32, 32), [255, 0, 0, 255]);
       expectPixelNear(readPixel(8, 8), [0, 0, 0, 255]);
@@ -295,7 +264,7 @@ describe('WebGPU renderer matrix: RetainedContainer cells', () => {
         return;
       }
 
-      let readPixel = readCanvas(backend);
+      let readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(8, 8), [255, 255, 255, 255]);
 
@@ -305,7 +274,7 @@ describe('WebGPU renderer matrix: RetainedContainer cells', () => {
         return;
       }
 
-      readPixel = readCanvas(backend);
+      readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(8, 8), [0, 255, 0, 255]);
     } finally {
@@ -330,7 +299,7 @@ describe('WebGPU renderer matrix: RetainedContainer cells', () => {
         return;
       }
 
-      let readPixel = readCanvas(backend);
+      let readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(16, 16), [255, 0, 0, 255]);
       expectPixelNear(readPixel(38, 38), [255, 0, 0, 255]);
@@ -344,7 +313,7 @@ describe('WebGPU renderer matrix: RetainedContainer cells', () => {
         return;
       }
 
-      readPixel = readCanvas(backend);
+      readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(32, 16), [255, 0, 0, 255]);
       expectPixelNear(readPixel(54, 38), [255, 0, 0, 255]);
@@ -380,7 +349,7 @@ describe('WebGPU renderer matrix: RetainedContainer cells', () => {
         return;
       }
 
-      let readPixel = readCanvas(backend);
+      let readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(24, 24), [255, 0, 0, 255]); // sprite 16..32
       expectPixelNear(readPixel(8, 8), [0, 0, 0, 255]);
@@ -391,7 +360,7 @@ describe('WebGPU renderer matrix: RetainedContainer cells', () => {
         return;
       }
 
-      readPixel = readCanvas(backend);
+      readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(24, 24), [255, 0, 0, 255]);
     } finally {
@@ -424,7 +393,7 @@ describe('WebGPU renderer matrix: RetainedContainer cells', () => {
         return;
       }
 
-      let readPixel = readCanvas(backend);
+      let readPixel = readWebGpuPixels(backend, canvasSize);
 
       // CORRECT output, not a warning: the deep effect lands at its true
       // world position (16+8 -> 24..40) via the escaped world-space branch,
@@ -440,7 +409,7 @@ describe('WebGPU renderer matrix: RetainedContainer cells', () => {
         return;
       }
 
-      readPixel = readCanvas(backend);
+      readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(36, 36), [255, 0, 0, 255]);
       expectPixelNear(readPixel(18, 18), [0, 255, 0, 255]);
@@ -476,7 +445,7 @@ describe('WebGPU renderer matrix: RetainedContainer cells', () => {
         return;
       }
 
-      let readPixel = readCanvas(backend);
+      let readPixel = readWebGpuPixels(backend, canvasSize);
 
       // Composed origin ≈ 8.7 → snapped to 9; the 16px sprite covers ~9..25.
       expectPixelNear(readPixel(16, 16), [255, 0, 0, 255]);
@@ -489,7 +458,7 @@ describe('WebGPU renderer matrix: RetainedContainer cells', () => {
         return;
       }
 
-      readPixel = readCanvas(backend);
+      readPixel = readWebGpuPixels(backend, canvasSize);
 
       expect(readPixel(16, 16)).toEqual(first);
       // Render-only: the logical world transform is never mutated by snapping.
@@ -540,7 +509,7 @@ describe('WebGPU renderer matrix: RetainedContainer cells', () => {
 
       expect(armed?.hasRecording).toBe(true);
 
-      let readPixel = readCanvas(backend);
+      let readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(8, 8), [255, 0, 0, 255]);
 
@@ -558,7 +527,7 @@ describe('WebGPU renderer matrix: RetainedContainer cells', () => {
 
       // The patched transform row is live on the real adapter: the sprite is at
       // its new position, the old one is cleared.
-      readPixel = readCanvas(backend);
+      readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(32, 32), [255, 0, 0, 255]);
       expectPixelNear(readPixel(8, 8), [0, 0, 0, 255]);

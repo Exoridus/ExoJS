@@ -27,10 +27,10 @@ import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
+import { readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
+import { expectPixelNear, type RgbaTuple } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
-
-type RgbaTuple = readonly [number, number, number, number];
 
 const canvasSize = 64;
 
@@ -81,34 +81,6 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
   await backend.initialize();
 
   return backend;
-};
-
-const readCanvas = (backend: WebGpuBackend): ((x: number, y: number) => RgbaTuple) => {
-  const source = backend.context.canvas as HTMLCanvasElement;
-  const readback = document.createElement('canvas');
-
-  readback.width = canvasSize;
-  readback.height = canvasSize;
-
-  const ctx = readback.getContext('2d');
-
-  if (!ctx) {
-    throw new Error('2D context is required for canvas readback.');
-  }
-
-  ctx.drawImage(source, 0, 0);
-
-  return (x: number, y: number): RgbaTuple => {
-    const { data } = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1);
-
-    return [data[0], data[1], data[2], data[3]];
-  };
-};
-
-const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 12): void => {
-  for (let index = 0; index < 4; index++) {
-    expect(Math.abs(actual[index] - expected[index])).toBeLessThanOrEqual(tolerance);
-  }
 };
 
 // On the software (swiftshader) adapter used in CI the WebGPU device can be
@@ -197,7 +169,7 @@ describe('WebGPU stencil composition', () => {
         backend.flush();
       });
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // Top half: the cache sprite, clipped, survives.
       expectPixelNear(readPixel(32, 12), [255, 0, 0, 255]);
@@ -252,7 +224,7 @@ describe('WebGPU stencil composition', () => {
         backend.flush();
       });
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // Whole canvas is green — no stale stencil clipped any of it.
       expectPixelNear(readPixel(12, 12), [0, 255, 0, 255]);
@@ -288,7 +260,7 @@ const renderClipIntoTextureAndSample = async (
     display.render(backend);
     backend.flush();
 
-    readPixel = readCanvas(backend);
+    readPixel = readWebGpuPixels(backend, canvasSize);
 
     display.destroy();
     offscreen.destroy();

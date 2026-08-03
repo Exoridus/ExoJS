@@ -35,10 +35,10 @@ import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
+import { readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
+import { expectPixelNear, type RgbaTuple } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
-
-type RgbaTuple = readonly [number, number, number, number];
 
 const canvasSize = 64;
 
@@ -81,34 +81,6 @@ const createSolidTexture = (color: string, size = 8): Texture => {
   context.fillRect(0, 0, size, size);
 
   return new Texture(source);
-};
-
-const readCanvas = (backend: WebGpuBackend): ((x: number, y: number) => RgbaTuple) => {
-  const source = backend.context.canvas as HTMLCanvasElement;
-  const readback = document.createElement('canvas');
-
-  readback.width = canvasSize;
-  readback.height = canvasSize;
-
-  const ctx = readback.getContext('2d');
-
-  if (!ctx) {
-    throw new Error('2D context is required for canvas readback.');
-  }
-
-  ctx.drawImage(source, 0, 0);
-
-  return (x: number, y: number): RgbaTuple => {
-    const { data } = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1);
-
-    return [data[0], data[1], data[2], data[3]];
-  };
-};
-
-const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 12): void => {
-  for (let index = 0; index < 4; index++) {
-    expect(Math.abs(actual[index] - expected[index])).toBeLessThanOrEqual(tolerance);
-  }
 };
 
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
@@ -226,7 +198,7 @@ describe('WebGPU renderer matrix: retained instruction replay cells', () => {
         [28, 44, palette36[33]!], // batch 2
         [44, 44, palette36[35]!], // batch 2
       ];
-      let readPixel = readCanvas(backend);
+      let readPixel = readWebGpuPixels(backend, canvasSize);
       const slowPixels = probes.map(([x, y]) => readPixel(x, y));
 
       for (let i = 0; i < probes.length; i++) {
@@ -238,7 +210,7 @@ describe('WebGPU renderer matrix: retained instruction replay cells', () => {
         return;
       }
 
-      readPixel = readCanvas(backend);
+      readPixel = readWebGpuPixels(backend, canvasSize);
 
       for (let i = 0; i < probes.length; i++) {
         expectPixelNear(readPixel(probes[i]![0], probes[i]![1]), slowPixels[i]!, 0);
@@ -290,7 +262,7 @@ describe('WebGPU renderer matrix: retained instruction replay cells', () => {
       expect(backend.stats.drawCalls).toBe(3);
       expect(backend.stats.submittedNodes).toBe(3);
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(8, 32), hexToRgba(colors[0]!));
       expectPixelNear(readPixel(28, 32), hexToRgba(colors[1]!));
@@ -321,7 +293,7 @@ describe('WebGPU renderer matrix: retained instruction replay cells', () => {
         }
       }
 
-      let readPixel = readCanvas(backend);
+      let readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(16, 16), [255, 0, 0, 255]);
 
@@ -333,7 +305,7 @@ describe('WebGPU renderer matrix: retained instruction replay cells', () => {
         return;
       }
 
-      readPixel = readCanvas(backend);
+      readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(0, 16), [255, 0, 0, 255]);
       expectPixelNear(readPixel(24, 16), [0, 0, 0, 255]);
@@ -361,7 +333,7 @@ describe('WebGPU renderer matrix: retained instruction replay cells', () => {
         }
       }
 
-      let readPixel = readCanvas(backend);
+      let readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(8, 8), [0, 255, 0, 255]);
 
@@ -378,7 +350,7 @@ describe('WebGPU renderer matrix: retained instruction replay cells', () => {
       expect(fragmentOf(group).instructions!.instructions[0]).toBe(recordedBatch);
       expect(fragmentOf(group).instructions!.hasRecording).toBe(true);
 
-      readPixel = readCanvas(backend);
+      readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(40, 40), [0, 255, 0, 255]);
       expectPixelNear(readPixel(8, 8), [0, 0, 0, 255]);
@@ -406,7 +378,7 @@ describe('WebGPU renderer matrix: retained instruction replay cells', () => {
         }
       }
 
-      let readPixel = readCanvas(backend);
+      let readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(8, 8), [255, 255, 255, 255]);
 
@@ -420,7 +392,7 @@ describe('WebGPU renderer matrix: retained instruction replay cells', () => {
           return;
         }
 
-        readPixel = readCanvas(backend);
+        readPixel = readWebGpuPixels(backend, canvasSize);
 
         expectPixelNear(readPixel(8, 8), [255, 0, 0, 255]);
       }
@@ -458,7 +430,7 @@ describe('WebGPU renderer matrix: retained instruction replay cells', () => {
         }
       }
 
-      let readPixel = readCanvas(backend);
+      let readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(4, 4), [255, 0, 0, 255]);
 
@@ -484,7 +456,7 @@ describe('WebGPU renderer matrix: retained instruction replay cells', () => {
           return;
         }
 
-        readPixel = readCanvas(backend);
+        readPixel = readWebGpuPixels(backend, canvasSize);
 
         expectPixelNear(readPixel(2, 4), [0, 255, 0, 255]);
         expectPixelNear(readPixel(6, 4), [0, 255, 0, 255]);

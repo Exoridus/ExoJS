@@ -73,7 +73,9 @@ import { Texture } from '#rendering/texture/Texture';
 import { View } from '#rendering/View';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
+import { expectPixelNear } from './_pixels';
 
 // ---------------------------------------------------------------------------
 // Shader wiring — substitute the REAL shipped sprite GLSL via `?raw` (the stub
@@ -82,79 +84,9 @@ import { wireCoreRenderers } from './_coreRenderers';
 // renderer registry. This mirrors `webgl2-sprite-real-shader-tint.test.ts`.
 // ---------------------------------------------------------------------------
 
-vi.mock('#rendering/webgl2/glsl/sprite.vert', async () => {
-  const real = await import('../../../src/rendering/webgl2/glsl/sprite.vert?raw');
-
-  return { default: real.default };
-});
-
-vi.mock('#rendering/webgl2/glsl/sprite.frag', async () => {
-  const real = await import('../../../src/rendering/webgl2/glsl/sprite.frag?raw');
-
-  return { default: real.default };
-});
-
-const nonSpriteShaderSources = vi.hoisted(() => ({
-  meshVert: `#version 300 es
-precision highp float;
-in vec2 a_position;
-in vec2 a_texcoord;
-in vec4 a_color;
-in uint a_nodeIndex;
-uniform mat3 u_projection;
-uniform sampler2D u_transforms;
-uniform sampler2D u_tintTexture;
-out vec2 v_uv; out vec4 v_color; out vec4 v_tint;
-void main() {
-  int row = int(a_nodeIndex);
-  vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
-  vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
-  mat3 t = mat3(m0.x,m0.z,0.0, m0.y,m0.w,0.0, m1.x,m1.y,1.0);
-  vec3 world = t * vec3(a_position, 1.0);
-  vec3 clip = u_projection * world;
-  gl_Position = vec4(clip.xy, 0.0, 1.0);
-  v_uv = a_texcoord; v_color = a_color;
-  v_tint = texelFetch(u_tintTexture, ivec2(0, row), 0);
-}`,
-
-  meshFrag: `#version 300 es
-precision mediump float;
-in vec2 v_uv; in vec4 v_color; in vec4 v_tint;
-uniform sampler2D u_texture;
-out vec4 outColor;
-void main() { outColor = texture(u_texture, v_uv) * v_color * v_tint; }`,
-
-  textVert: `#version 300 es
-precision highp float;
-in vec2 a_position; in vec2 a_texcoord; in float a_nodeIndex;
-uniform mat3 u_projection;
-out vec2 v_uv;
-void main() {
-  float ni = a_nodeIndex;
-  vec3 clip = u_projection * vec3(a_position + vec2(ni * 0.0), 1.0);
-  gl_Position = vec4(clip.xy, 0.0, 1.0); v_uv = a_texcoord;
-}`,
-
-  textFrag: `#version 300 es
-precision mediump float;
-in vec2 v_uv;
-uniform sampler2D u_texture;
-out vec4 outColor;
-void main() { outColor = texture(u_texture, v_uv); }`,
-}));
-
-vi.mock('#rendering/webgl2/glsl/mesh.vert', () => ({ default: nonSpriteShaderSources.meshVert }));
-vi.mock('#rendering/webgl2/glsl/mesh.frag', () => ({ default: nonSpriteShaderSources.meshFrag }));
-vi.mock('#rendering/webgl2/glsl/text.vert', () => ({ default: nonSpriteShaderSources.textVert }));
-vi.mock('#rendering/webgl2/glsl/text-color.frag', () => ({ default: nonSpriteShaderSources.textFrag }));
-vi.mock('#rendering/webgl2/glsl/text-msdf.frag', () => ({ default: nonSpriteShaderSources.textFrag }));
-vi.mock('#rendering/webgl2/glsl/text-sdf.frag', () => ({ default: nonSpriteShaderSources.textFrag }));
-
 // ---------------------------------------------------------------------------
 // Infrastructure helpers (mirrors the sibling browser specs)
 // ---------------------------------------------------------------------------
-
-type RgbaTuple = readonly [number, number, number, number];
 
 const canvasSize = 64;
 
@@ -211,21 +143,6 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.clear(Color.black);
   node.render(backend);
   backend.flush();
-};
-
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const buf = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, buf);
-
-  return [buf[0], buf[1], buf[2], buf[3]];
-};
-
-const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 8): void => {
-  for (let i = 0; i < 4; i++) {
-    expect(Math.abs(actual[i] - expected[i])).toBeLessThanOrEqual(tolerance);
-  }
 };
 
 const createSolidTexture = (color: string, width = spriteSize, height = spriteSize): Texture => {
@@ -411,11 +328,11 @@ describe('WebGL2 mobile precision — Layer 3: large-world-coordinate render', (
       render(backend, root);
 
       // Sprite present at its highp footprint.
-      expectPixelNear(readPixel(backend, 41, 41), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 44, 44), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 41, 41), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 44, 44), [255, 0, 0, 255]);
 
       // Background well outside the footprint stays clear on every backend.
-      expectPixelNear(readPixel(backend, 8, 8), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 8, 8), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();

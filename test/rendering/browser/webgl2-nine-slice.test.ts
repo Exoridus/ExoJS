@@ -22,116 +22,13 @@ import { Texture } from '#rendering/texture/Texture';
 import { ScaleModes } from '#rendering/types';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
-
-// ---------------------------------------------------------------------------
-// Shader mocks
-//
-// The vitest shaderPlugin replaces every .vert/.frag import with
-// `export default ""`. `WebGl2Backend#initialize` connects the renderer
-// registry eagerly (compiling every registered renderer's program, not just
-// the ones a given test renders), so the Sprite + Mesh + Text shaders that
-// `wireCoreRenderers()` registers all need valid GLSL sources even though
-// this file only ever renders a NineSliceSprite (whose renderer uses inline
-// GLSL directly, not `.vert`/`.frag` imports, so it needs no mock).
-// ---------------------------------------------------------------------------
-
-const shaderSources = vi.hoisted(() => ({
-  spriteVert: `#version 300 es
-precision mediump float;
-in vec4 a_localBounds;
-in vec4 a_uvBounds;
-in vec4 a_color;
-in uint a_textureSlot;
-in uint a_nodeIndex;
-uniform mat3 u_projection;
-uniform sampler2D u_transforms;
-uniform sampler2D u_tintTexture;
-out vec2 v_uv;
-out vec4 v_color;
-flat out uint v_textureSlot;
-void main() {
-  vec2 local;
-  if (gl_VertexID == 0) local = vec2(a_localBounds.x, a_localBounds.y);
-  else if (gl_VertexID == 1) local = vec2(a_localBounds.z, a_localBounds.y);
-  else if (gl_VertexID == 2) local = vec2(a_localBounds.x, a_localBounds.w);
-  else local = vec2(a_localBounds.z, a_localBounds.w);
-  vec2 uv;
-  if (gl_VertexID == 0) uv = vec2(a_uvBounds.x, a_uvBounds.y);
-  else if (gl_VertexID == 1) uv = vec2(a_uvBounds.z, a_uvBounds.y);
-  else if (gl_VertexID == 2) uv = vec2(a_uvBounds.x, a_uvBounds.w);
-  else uv = vec2(a_uvBounds.z, a_uvBounds.w);
-  int row = int(a_nodeIndex);
-  vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
-  vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
-  vec2 world = vec2(m0.x * local.x + m0.y * local.y + m1.x, m0.z * local.x + m0.w * local.y + m1.y);
-  vec3 clip = u_projection * vec3(world, 1.0);
-  gl_Position = vec4(clip.xy, 0.0, 1.0);
-  v_uv = uv; v_color = texelFetch(u_tintTexture, ivec2(0, int(a_nodeIndex)), 0); v_textureSlot = a_textureSlot;
-}`,
-
-  meshVert: `#version 300 es
-precision mediump float;
-in vec2 a_position;
-in vec2 a_texcoord;
-in vec4 a_color;
-in uint a_nodeIndex;
-uniform mat3 u_projection;
-uniform sampler2D u_transforms;
-uniform sampler2D u_tintTexture;
-out vec2 v_uv; out vec4 v_color; out vec4 v_tint;
-void main() {
-  int row = int(a_nodeIndex);
-  vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
-  vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
-  mat3 t = mat3(m0.x,m0.z,0.0, m0.y,m0.w,0.0, m1.x,m1.y,1.0);
-  vec3 world = t * vec3(a_position, 1.0);
-  vec3 clip = u_projection * world;
-  gl_Position = vec4(clip.xy, 0.0, 1.0);
-  v_uv = a_texcoord; v_color = a_color;
-  v_tint = texelFetch(u_tintTexture, ivec2(0, row), 0);
-}`,
-
-  meshFrag: `#version 300 es
-precision mediump float;
-in vec2 v_uv; in vec4 v_color; in vec4 v_tint;
-uniform sampler2D u_texture;
-out vec4 outColor;
-void main() { outColor = texture(u_texture, v_uv) * v_color * v_tint; }`,
-
-  textVert: `#version 300 es
-precision mediump float;
-in vec2 a_position; in vec2 a_texcoord; in float a_nodeIndex;
-uniform mat3 u_projection;
-out vec2 v_uv;
-void main() {
-  float ni = a_nodeIndex;
-  vec3 clip = u_projection * vec3(a_position + vec2(ni * 0.0), 1.0);
-  gl_Position = vec4(clip.xy, 0.0, 1.0); v_uv = a_texcoord;
-}`,
-
-  textFrag: `#version 300 es
-precision mediump float;
-in vec2 v_uv;
-uniform sampler2D u_texture;
-out vec4 outColor;
-void main() { outColor = texture(u_texture, v_uv); }`,
-}));
-
-vi.mock('#rendering/webgl2/glsl/sprite.vert', () => ({ default: shaderSources.spriteVert }));
-vi.mock('#rendering/webgl2/glsl/sprite.frag', async () => ({ default: (await import('./_spriteFragMock')).createSpriteFragMockSource('v_uv') }));
-vi.mock('#rendering/webgl2/glsl/mesh.vert', () => ({ default: shaderSources.meshVert }));
-vi.mock('#rendering/webgl2/glsl/mesh.frag', () => ({ default: shaderSources.meshFrag }));
-vi.mock('#rendering/webgl2/glsl/text.vert', () => ({ default: shaderSources.textVert }));
-vi.mock('#rendering/webgl2/glsl/text-color.frag', () => ({ default: shaderSources.textFrag }));
-vi.mock('#rendering/webgl2/glsl/text-msdf.frag', () => ({ default: shaderSources.textFrag }));
-vi.mock('#rendering/webgl2/glsl/text-sdf.frag', () => ({ default: shaderSources.textFrag }));
+import { expectPixelNear, type RgbaTuple } from './_pixels';
 
 // ---------------------------------------------------------------------------
 // Infrastructure helpers
 // ---------------------------------------------------------------------------
-
-type RgbaTuple = readonly [number, number, number, number];
 
 const canvasSize = 64;
 
@@ -175,21 +72,6 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.clear(Color.black);
   node.render(backend);
   backend.flush();
-};
-
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const buf = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, buf);
-
-  return [buf[0], buf[1], buf[2], buf[3]];
-};
-
-const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 8): void => {
-  for (let i = 0; i < 4; i++) {
-    expect(Math.abs(actual[i] - expected[i])).toBeLessThanOrEqual(tolerance);
-  }
 };
 
 // ---------------------------------------------------------------------------
@@ -281,29 +163,29 @@ describe('WebGL2 NineSliceSprite', () => {
       render(backend, root);
 
       // Corner centers
-      expectPixelNear(readPixel(backend, 14, 14), colors.tl);
-      expectPixelNear(readPixel(backend, 50, 14), colors.tr);
-      expectPixelNear(readPixel(backend, 14, 50), colors.bl);
-      expectPixelNear(readPixel(backend, 50, 50), colors.br);
+      expectPixelNear(readWebGl2Pixel(backend, 14, 14), colors.tl);
+      expectPixelNear(readWebGl2Pixel(backend, 50, 14), colors.tr);
+      expectPixelNear(readWebGl2Pixel(backend, 14, 50), colors.bl);
+      expectPixelNear(readWebGl2Pixel(backend, 50, 50), colors.br);
 
       // Edge centers
-      expectPixelNear(readPixel(backend, 32, 14), colors.top);
-      expectPixelNear(readPixel(backend, 32, 50), colors.bottom);
-      expectPixelNear(readPixel(backend, 14, 32), colors.left);
-      expectPixelNear(readPixel(backend, 50, 32), colors.right);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 14), colors.top);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 50), colors.bottom);
+      expectPixelNear(readWebGl2Pixel(backend, 14, 32), colors.left);
+      expectPixelNear(readWebGl2Pixel(backend, 50, 32), colors.right);
 
       // Center
-      expectPixelNear(readPixel(backend, 32, 32), colors.center);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), colors.center);
 
       // Corner/edge boundary sharpness (horizontal): the TL corner column
       // ends exactly at dest x=20 — one pixel inside remains corner colour,
       // one pixel past the boundary is already the (stretched) edge colour.
-      expectPixelNear(readPixel(backend, 19, 14), colors.tl);
-      expectPixelNear(readPixel(backend, 21, 14), colors.top);
+      expectPixelNear(readWebGl2Pixel(backend, 19, 14), colors.tl);
+      expectPixelNear(readWebGl2Pixel(backend, 21, 14), colors.top);
 
       // Corner/edge boundary sharpness (vertical), same column.
-      expectPixelNear(readPixel(backend, 14, 19), colors.tl);
-      expectPixelNear(readPixel(backend, 14, 21), colors.left);
+      expectPixelNear(readWebGl2Pixel(backend, 14, 19), colors.tl);
+      expectPixelNear(readWebGl2Pixel(backend, 14, 21), colors.left);
     } finally {
       root.destroy();
       texture.destroy();
@@ -332,19 +214,19 @@ describe('WebGL2 NineSliceSprite', () => {
       render(backend, root);
 
       // Corner centers — each corner's footprint matches its own border size.
-      expectPixelNear(readPixel(backend, 4, 8), colors.tl); // 8x16
-      expectPixelNear(readPixel(backend, 52, 8), colors.tr); // 24x16
-      expectPixelNear(readPixel(backend, 4, 48), colors.bl); // 8x32
-      expectPixelNear(readPixel(backend, 52, 48), colors.br); // 24x32
+      expectPixelNear(readWebGl2Pixel(backend, 4, 8), colors.tl); // 8x16
+      expectPixelNear(readWebGl2Pixel(backend, 52, 8), colors.tr); // 24x16
+      expectPixelNear(readWebGl2Pixel(backend, 4, 48), colors.bl); // 8x32
+      expectPixelNear(readWebGl2Pixel(backend, 52, 48), colors.br); // 24x32
 
       // Edge centers
-      expectPixelNear(readPixel(backend, 24, 8), colors.top);
-      expectPixelNear(readPixel(backend, 24, 48), colors.bottom);
-      expectPixelNear(readPixel(backend, 4, 24), colors.left);
-      expectPixelNear(readPixel(backend, 52, 24), colors.right);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 8), colors.top);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 48), colors.bottom);
+      expectPixelNear(readWebGl2Pixel(backend, 4, 24), colors.left);
+      expectPixelNear(readWebGl2Pixel(backend, 52, 24), colors.right);
 
       // Center
-      expectPixelNear(readPixel(backend, 24, 24), colors.center);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 24), colors.center);
 
       // Boundary sanity, at a margin clear of GPU raster rounding right on an
       // exact integer seam: still inside the top-left corner just before its
@@ -352,9 +234,9 @@ describe('WebGL2 NineSliceSprite', () => {
       // (x=8) into the top edge, then already past the top border into the
       // left edge — proving left/top were honoured independently rather than
       // forced symmetric with right/bottom.
-      expectPixelNear(readPixel(backend, 4, 12), colors.tl);
-      expectPixelNear(readPixel(backend, 12, 8), colors.top);
-      expectPixelNear(readPixel(backend, 4, 20), colors.left);
+      expectPixelNear(readWebGl2Pixel(backend, 4, 12), colors.tl);
+      expectPixelNear(readWebGl2Pixel(backend, 12, 8), colors.top);
+      expectPixelNear(readWebGl2Pixel(backend, 4, 20), colors.left);
     } finally {
       root.destroy();
       texture.destroy();
@@ -376,10 +258,10 @@ describe('WebGL2 NineSliceSprite', () => {
       render(backend, root);
 
       // Center source colour is white; tinted red, it should render pure red.
-      expectPixelNear(readPixel(backend, 32, 32), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [255, 0, 0, 255]);
       // TR corner source colour is green; tinted red, the green channel must
       // be crushed out (red tint multiplies green/blue channels to 0).
-      const trPixel = readPixel(backend, 50, 14);
+      const trPixel = readWebGl2Pixel(backend, 50, 14);
 
       expect(trPixel[1]).toBeLessThan(32);
       expect(trPixel[2]).toBeLessThan(32);

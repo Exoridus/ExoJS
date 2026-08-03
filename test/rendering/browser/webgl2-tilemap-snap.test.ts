@@ -22,9 +22,9 @@ import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { RenderNode } from '#rendering/RenderNode';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { readWebGl2Pixel } from './_backendSetup';
+import { expectPixelNear } from './_pixels';
 import { createSolidTexture, makeTileset, wireTilemapRenderers } from './_tilemapScene';
-
-type RgbaTuple = readonly [number, number, number, number];
 
 const canvasSize = 64;
 
@@ -66,21 +66,6 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.clear(Color.black);
   node.render(backend);
   backend.flush();
-};
-
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const buf = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, buf);
-
-  return [buf[0], buf[1], buf[2], buf[3]];
-};
-
-const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 12): void => {
-  for (let i = 0; i < 4; i++) {
-    expect(Math.abs(actual[i] - expected[i])).toBeLessThanOrEqual(tolerance);
-  }
 };
 
 /**
@@ -143,7 +128,7 @@ describe('WebGL2 tilemap pixel snapping — chunk seam', () => {
       // Scan a horizontal strip covering both chunks; every pixel must carry the
       // tile colour (red) — a gap would appear as the black clear colour.
       for (let x = 4; x <= 59; x++) {
-        const pixel = readPixel(backend, x, 8);
+        const pixel = readWebGl2Pixel(backend, x, 8);
 
         expect(pixel[0]).toBeGreaterThan(200); // red channel present → tile, not gap
       }
@@ -221,7 +206,7 @@ describe('WebGL2 tilemap pixel snapping — chunk seam', () => {
       // TileChunkNode chunk origins are integer multiples of tile pitch relative
       // to the snapped layer origin, so both modes produce no seam.
       for (let x = 4; x <= 59; x++) {
-        const pixel = readPixel(backend, x, 8);
+        const pixel = readWebGl2Pixel(backend, x, 8);
 
         expect(pixel[0]).toBeGreaterThan(200);
       }
@@ -245,9 +230,9 @@ describe('WebGL2 tilemap pixel snapping — chunk seam', () => {
 
       render(backend, node);
 
-      expectPixelNear(readPixel(backend, 8, 8), [255, 0, 0, 255]); // chunk 0
-      expectPixelNear(readPixel(backend, 32, 8), [255, 0, 0, 255]); // seam column
-      expectPixelNear(readPixel(backend, 40, 8), [255, 0, 0, 255]); // chunk 1
+      expectPixelNear(readWebGl2Pixel(backend, 8, 8), [255, 0, 0, 255]); // chunk 0
+      expectPixelNear(readWebGl2Pixel(backend, 32, 8), [255, 0, 0, 255]); // seam column
+      expectPixelNear(readWebGl2Pixel(backend, 40, 8), [255, 0, 0, 255]); // chunk 1
     } finally {
       node.destroy();
       texture.destroy();

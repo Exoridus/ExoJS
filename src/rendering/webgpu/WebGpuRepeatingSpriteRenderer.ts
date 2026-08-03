@@ -4,6 +4,7 @@ import { Matrix } from '#math/Matrix';
 import { packAffineMat4 } from '#rendering/affinePacking';
 import type { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { computeShaderTiling, type RepeatingSpriteQuad } from '#rendering/sprite/repeatingSpritePlan';
+import { DataTexture } from '#rendering/texture/DataTexture';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { RepeatMode } from '#rendering/texture/repeat';
 import { Texture } from '#rendering/texture/Texture';
@@ -420,7 +421,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     if (!backend) return;
 
     const texture = sprite.texture;
-    if (texture instanceof Texture && texture.source === null) return;
+    if (texture instanceof Texture && !(texture instanceof DataTexture) && texture.source === null) return;
     if (texture.width === 0 || texture.height === 0) return;
 
     const strategy = sprite.resolvedStrategy;

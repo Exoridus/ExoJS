@@ -25,135 +25,13 @@ import { BmFont } from '#rendering/text/BmFont';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
-
-// ---------------------------------------------------------------------------
-// Shader mocks
-//
-// The vitest shaderPlugin replaces every .vert/.frag import with
-// `export default ""`. `WebGl2Backend#initialize` connects the renderer
-// registry eagerly (compiling every registered renderer's program, not just
-// the ones a given test renders), so the Sprite + Mesh + Text shaders that
-// `wireCoreRenderers()` registers all need valid GLSL sources even though
-// this file only ever renders Sprite/BitmapText nodes.
-//
-// spriteVert and the extended textVert both declare/multiply `u_group`
-// (copied from webgl2-group-uniform.test.ts) so the group uniform lifts both
-// sprite and bitmap-text vertices the same way the production shaders do
-// (text exception).
-// ---------------------------------------------------------------------------
-
-const shaderSources = vi.hoisted(() => ({
-  spriteVert: `#version 300 es
-precision mediump float;
-in vec4 a_localBounds;
-in vec4 a_uvBounds;
-in vec4 a_color;
-in uint a_textureSlot;
-in uint a_nodeIndex;
-uniform mat3 u_projection;
-uniform mat3 u_group;
-uniform sampler2D u_transforms;
-uniform sampler2D u_tintTexture;
-out vec2 v_uv;
-out vec4 v_color;
-flat out uint v_textureSlot;
-void main() {
-  vec2 local;
-  if (gl_VertexID == 0) local = vec2(a_localBounds.x, a_localBounds.y);
-  else if (gl_VertexID == 1) local = vec2(a_localBounds.z, a_localBounds.y);
-  else if (gl_VertexID == 2) local = vec2(a_localBounds.x, a_localBounds.w);
-  else local = vec2(a_localBounds.z, a_localBounds.w);
-  vec2 uv;
-  if (gl_VertexID == 0) uv = vec2(a_uvBounds.x, a_uvBounds.y);
-  else if (gl_VertexID == 1) uv = vec2(a_uvBounds.z, a_uvBounds.y);
-  else if (gl_VertexID == 2) uv = vec2(a_uvBounds.x, a_uvBounds.w);
-  else uv = vec2(a_uvBounds.z, a_uvBounds.w);
-  int row = int(a_nodeIndex);
-  vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
-  vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
-  vec2 world = vec2(m0.x * local.x + m0.y * local.y + m1.x, m0.z * local.x + m0.w * local.y + m1.y);
-  vec3 clip = u_projection * u_group * vec3(world, 1.0);
-  gl_Position = vec4(clip.xy, 0.0, 1.0);
-  v_uv = uv; v_color = texelFetch(u_tintTexture, ivec2(0, int(a_nodeIndex)), 0); v_textureSlot = a_textureSlot;
-}`,
-
-  meshVert: `#version 300 es
-precision mediump float;
-in vec2 a_position;
-in vec2 a_texcoord;
-in vec4 a_color;
-in uint a_nodeIndex;
-uniform mat3 u_projection;
-uniform sampler2D u_transforms;
-uniform sampler2D u_tintTexture;
-out vec2 v_uv; out vec4 v_color; out vec4 v_tint;
-void main() {
-  int row = int(a_nodeIndex);
-  vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
-  vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
-  mat3 t = mat3(m0.x,m0.z,0.0, m0.y,m0.w,0.0, m1.x,m1.y,1.0);
-  vec3 world = t * vec3(a_position, 1.0);
-  vec3 clip = u_projection * world;
-  gl_Position = vec4(clip.xy, 0.0, 1.0);
-  v_uv = a_texcoord; v_color = a_color;
-  v_tint = texelFetch(u_tintTexture, ivec2(0, row), 0);
-}`,
-
-  meshFrag: `#version 300 es
-precision mediump float;
-in vec2 v_uv; in vec4 v_color; in vec4 v_tint;
-uniform sampler2D u_texture;
-out vec4 outColor;
-void main() { outColor = texture(u_texture, v_uv) * v_color * v_tint; }`,
-
-  // Explicit layout locations are load-bearing: WebGl2TextRenderer links this
-  // vertex source into THREE separate programs (sdf/msdf/color shaders), but
-  // wires its single shared VAO's attribute pointers from only one of them
-  // (the sdf shader). Without matching explicit locations, a GLSL linker is
-  // free to assign a_position/a_texcoord/a_nodeIndex to different locations
-  // per program even from identical source, desyncing the VAO from whichever
-  // program is actually active when a "color" (BitmapText) batch draws.
-  textVert: `#version 300 es
-precision mediump float;
-layout(location = 0) in vec2 a_position;
-layout(location = 1) in vec2 a_texcoord;
-layout(location = 2) in float a_nodeIndex;
-uniform mat3 u_projection;
-uniform mat3 u_group;
-uniform sampler2D u_nodeData;
-out vec2 v_uv;
-void main() {
-  int ni = int(a_nodeIndex);
-  vec4 t0 = texelFetch(u_nodeData, ivec2(0, ni), 0);
-  vec4 t1 = texelFetch(u_nodeData, ivec2(1, ni), 0);
-  mat3 xf = mat3(t0.x, t0.y, 0.0, t1.x, t1.y, 0.0, t0.w, t1.w, 1.0);
-  vec3 clip = u_projection * u_group * xf * vec3(a_position, 1.0);
-  gl_Position = vec4(clip.xy, 0.0, 1.0); v_uv = a_texcoord;
-}`,
-
-  textFrag: `#version 300 es
-precision mediump float;
-in vec2 v_uv;
-uniform sampler2D u_texture;
-out vec4 outColor;
-void main() { outColor = texture(u_texture, v_uv); }`,
-}));
-
-vi.mock('#rendering/webgl2/glsl/sprite.vert', () => ({ default: shaderSources.spriteVert }));
-vi.mock('#rendering/webgl2/glsl/sprite.frag', async () => ({ default: (await import('./_spriteFragMock')).createSpriteFragMockSource('v_uv') }));
-vi.mock('#rendering/webgl2/glsl/mesh.vert', () => ({ default: shaderSources.meshVert }));
-vi.mock('#rendering/webgl2/glsl/mesh.frag', () => ({ default: shaderSources.meshFrag }));
-vi.mock('#rendering/webgl2/glsl/text.vert', () => ({ default: shaderSources.textVert }));
-vi.mock('#rendering/webgl2/glsl/text-color.frag', () => ({ default: shaderSources.textFrag }));
-vi.mock('#rendering/webgl2/glsl/text-msdf.frag', () => ({ default: shaderSources.textFrag }));
-vi.mock('#rendering/webgl2/glsl/text-sdf.frag', () => ({ default: shaderSources.textFrag }));
+import { expectPixelNear } from './_pixels';
 
 // ---------------------------------------------------------------------------
 // Infrastructure helpers
 // ---------------------------------------------------------------------------
-
-type RgbaTuple = readonly [number, number, number, number];
 
 const canvasSize = 64;
 
@@ -197,21 +75,6 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.clear(Color.black);
   node.render(backend);
   backend.flush();
-};
-
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const buf = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, buf);
-
-  return [buf[0], buf[1], buf[2], buf[3]];
-};
-
-const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 8): void => {
-  for (let i = 0; i < 4; i++) {
-    expect(Math.abs(actual[i] - expected[i])).toBeLessThanOrEqual(tolerance);
-  }
 };
 
 const createSolidTexture = (color: string, width = 16, height = 16): Texture => {
@@ -266,15 +129,15 @@ describe('WebGL2 renderer matrix: RetainedContainer cells', () => {
       root.addChild(group);
 
       render(backend, root); // frame 1: full collect + capture
-      expectPixelNear(readPixel(backend, 16, 16), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [255, 0, 0, 255]);
 
       // Pan the camera 16px right: the sprite must appear 16px further left.
       // The default view of a 64x64 canvas is centered at (32, 32).
       backend.view.setCenter(backend.view.center.x + 16, backend.view.center.y);
       render(backend, root); // frame 2: spliced (no re-collect) — must still track the view
 
-      expectPixelNear(readPixel(backend, 0, 16), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 24, 16), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 0, 16), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 16), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -294,13 +157,13 @@ describe('WebGL2 renderer matrix: RetainedContainer cells', () => {
       root.addChild(group);
 
       render(backend, root);
-      expectPixelNear(readPixel(backend, 8, 8), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 8, 8), [0, 255, 0, 255]);
 
       group.setPosition(32, 32);
       render(backend, root);
 
-      expectPixelNear(readPixel(backend, 40, 40), [0, 255, 0, 255]);
-      expectPixelNear(readPixel(backend, 8, 8), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 40, 40), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 8, 8), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -320,13 +183,13 @@ describe('WebGL2 renderer matrix: RetainedContainer cells', () => {
       root.addChild(group);
 
       render(backend, root);
-      expectPixelNear(readPixel(backend, 8, 8), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 8, 8), [255, 0, 0, 255]);
 
       sprite.setPosition(24, 24);
       render(backend, root);
 
-      expectPixelNear(readPixel(backend, 32, 32), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 8, 8), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 8, 8), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -346,12 +209,12 @@ describe('WebGL2 renderer matrix: RetainedContainer cells', () => {
       root.addChild(group);
 
       render(backend, root);
-      expectPixelNear(readPixel(backend, 8, 8), [255, 255, 255, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 8, 8), [255, 255, 255, 255]);
 
       sprite.tint = new Color(0, 255, 0);
       render(backend, root);
 
-      expectPixelNear(readPixel(backend, 8, 8), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 8, 8), [0, 255, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -371,8 +234,8 @@ describe('WebGL2 renderer matrix: RetainedContainer cells', () => {
       root.addChild(group);
 
       render(backend, root); // frame 1: full collect + capture
-      expectPixelNear(readPixel(backend, 16, 16), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 38, 38), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 38, 38), [255, 0, 0, 255]);
 
       // Move the group by (16, 0): text bakes group-relative vertices, so the
       // u_group uniform must lift them (text exception) — the glyph
@@ -380,10 +243,10 @@ describe('WebGL2 renderer matrix: RetainedContainer cells', () => {
       group.setPosition(16, 0);
       render(backend, root); // frame 2: spliced — the group matrix alone must relocate it
 
-      expectPixelNear(readPixel(backend, 32, 16), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 54, 38), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 16), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 54, 38), [255, 0, 0, 255]);
       // The original (un-shifted) position is now background.
-      expectPixelNear(readPixel(backend, 16, 16), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [0, 0, 0, 255]);
     } finally {
       text.destroy();
       root.destroy();
@@ -411,12 +274,12 @@ describe('WebGL2 renderer matrix: RetainedContainer cells', () => {
       group.setPosition(16, 16);
       render(backend, root);
 
-      expectPixelNear(readPixel(backend, 24, 24), [255, 0, 0, 255]); // sprite 16..32
-      expectPixelNear(readPixel(backend, 8, 8), [0, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 40, 40), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 24), [255, 0, 0, 255]); // sprite 16..32
+      expectPixelNear(readWebGl2Pixel(backend, 8, 8), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 40, 40), [0, 0, 0, 255]);
 
       render(backend, root); // spliced frame: barrier re-dispatches, same output
-      expectPixelNear(readPixel(backend, 24, 24), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 24), [255, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
@@ -449,14 +312,14 @@ describe('WebGL2 renderer matrix: RetainedContainer cells', () => {
       // world position (16+8 -> 24..40) via the escaped world-space branch,
       // and the plain sibling stays group-local under the group uniform
       // (16..32) — retention and the group transform survive for it (F13/R3).
-      expectPixelNear(readPixel(backend, 36, 36), [255, 0, 0, 255]); // deep cached sprite only
-      expectPixelNear(readPixel(backend, 18, 18), [0, 255, 0, 255]); // plain leaf only
-      expectPixelNear(readPixel(backend, 8, 8), [0, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 46, 46), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 36, 36), [255, 0, 0, 255]); // deep cached sprite only
+      expectPixelNear(readWebGl2Pixel(backend, 18, 18), [0, 255, 0, 255]); // plain leaf only
+      expectPixelNear(readWebGl2Pixel(backend, 8, 8), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 46, 46), [0, 0, 0, 255]);
 
       render(backend, root); // second frame: identical (sibling splices, branch re-dispatches)
-      expectPixelNear(readPixel(backend, 36, 36), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 18, 18), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 36, 36), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 18, 18), [0, 255, 0, 255]);
     } finally {
       root.destroy();
       red.destroy();
@@ -487,13 +350,13 @@ describe('WebGL2 renderer matrix: RetainedContainer cells', () => {
 
       render(backend, root); // full collect + capture through the group + snap path
       // Composed origin ≈ 8.7 → snapped to 9; the 16px sprite covers ~9..25.
-      expectPixelNear(readPixel(backend, 16, 16), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 2, 2), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 2, 2), [0, 0, 0, 255]);
 
-      const first = readPixel(backend, 16, 16);
+      const first = readWebGl2Pixel(backend, 16, 16);
 
       render(backend, root); // spliced frame — deterministic, no drift
-      expect(readPixel(backend, 16, 16)).toEqual(first);
+      expect(readWebGl2Pixel(backend, 16, 16)).toEqual(first);
 
       // Render-only: the logical world transform is never mutated by snapping.
       expect(sprite.getWorldTransform().equals(worldBefore)).toBe(true);

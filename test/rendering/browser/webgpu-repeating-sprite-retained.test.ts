@@ -39,10 +39,10 @@ import { Texture } from '#rendering/texture/Texture';
 import { TextureRegion } from '#rendering/texture/TextureRegion';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
+import { readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
+import { expectPixelNear } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
-
-type RgbaTuple = readonly [number, number, number, number];
 
 const canvasSize = 64;
 
@@ -104,34 +104,6 @@ const createSolidTexture = (color: string, size = 8): Texture => {
   return new Texture(source);
 };
 
-const readCanvas = (backend: WebGpuBackend): ((x: number, y: number) => RgbaTuple) => {
-  const source = backend.context.canvas as HTMLCanvasElement;
-  const readback = document.createElement('canvas');
-
-  readback.width = canvasSize;
-  readback.height = canvasSize;
-
-  const ctx = readback.getContext('2d');
-
-  if (!ctx) {
-    throw new Error('2D context is required for canvas readback.');
-  }
-
-  ctx.drawImage(source, 0, 0);
-
-  return (x: number, y: number): RgbaTuple => {
-    const { data } = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1);
-
-    return [data[0], data[1], data[2], data[3]];
-  };
-};
-
-const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 12): void => {
-  for (let index = 0; index < 4; index++) {
-    expect(Math.abs(actual[index] - expected[index])).toBeLessThanOrEqual(tolerance);
-  }
-};
-
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 // Render a frame through the real plan path inside a validation error scope.
@@ -185,7 +157,7 @@ describe('WebGPU renderer matrix: RepeatingSprite retained instruction-set repla
       if (!(await renderScene(ctx, backend, root))) return; // F1 dirty collect + capture
       if (!(await renderScene(ctx, backend, root))) return; // F2 entry replay + record
 
-      let readPixel = readCanvas(backend);
+      let readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(12, 28), [255, 0, 0, 255]); // red half
       expectPixelNear(readPixel(20, 28), [0, 255, 0, 255]); // green half
@@ -195,7 +167,7 @@ describe('WebGPU renderer matrix: RepeatingSprite retained instruction-set repla
       if (!(await renderScene(ctx, backend, root))) return; // F3 instruction splice
 
       expect(replaySpy).toHaveBeenCalled();
-      readPixel = readCanvas(backend);
+      readPixel = readWebGpuPixels(backend, canvasSize);
       expectPixelNear(readPixel(12, 28), [255, 0, 0, 255]);
       expectPixelNear(readPixel(20, 28), [0, 255, 0, 255]);
     } finally {
@@ -232,7 +204,7 @@ describe('WebGPU renderer matrix: RepeatingSprite retained instruction-set repla
       if (!(await renderScene(ctx, backend, root))) return; // steady replay before mutation
 
       expect(replaySpy).toHaveBeenCalled();
-      let readPixel = readCanvas(backend);
+      let readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(12, 28), [255, 0, 0, 255]); // red half (dest 0..8)
       expectPixelNear(readPixel(20, 28), [0, 255, 0, 255]); // green half (dest 8..16)
@@ -254,7 +226,7 @@ describe('WebGPU renderer matrix: RepeatingSprite retained instruction-set repla
       if (!(await renderScene(ctx, backend, root))) return; // steady replay AFTER the mutation
 
       expect(replaySpy).toHaveBeenCalled(); // still on the fast tier — recaptured, not abandoned
-      readPixel = readCanvas(backend);
+      readPixel = readWebGpuPixels(backend, canvasSize);
       // If the replay served the STALE pre-offset bytes, these two assertions
       // would read the OLD (unswapped) colors instead.
       expectPixelNear(readPixel(12, 28), [0, 255, 0, 255]); // now green (was red)
@@ -294,7 +266,7 @@ describe('WebGPU renderer matrix: RepeatingSprite retained instruction-set repla
         if (!(await renderScene(ctx, backend, root))) return;
       }
 
-      let readPixel = readCanvas(backend);
+      let readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(12, 28), [255, 0, 0, 255]);
       expectPixelNear(readPixel(20, 28), [0, 255, 0, 255]);
@@ -305,7 +277,7 @@ describe('WebGPU renderer matrix: RepeatingSprite retained instruction-set repla
         if (!(await renderScene(ctx, backend, root))) return;
       }
 
-      readPixel = readCanvas(backend);
+      readPixel = readWebGpuPixels(backend, canvasSize);
       expectPixelNear(readPixel(12, 28), [0, 255, 0, 255]);
       expectPixelNear(readPixel(20, 28), [255, 0, 0, 255]);
       expectPixelNear(readPixel(52, 8), [0, 0, 255, 255]);

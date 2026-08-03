@@ -39,8 +39,7 @@ import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { ADVANCED_BLEND_MODES, expectedOpaqueBlend } from './_blendReference';
 import { wireCoreRenderers } from './_coreRenderers';
-
-type RgbaTuple = readonly [number, number, number, number];
+import { type RgbaTuple } from './_pixels';
 
 const canvasSize = 64;
 

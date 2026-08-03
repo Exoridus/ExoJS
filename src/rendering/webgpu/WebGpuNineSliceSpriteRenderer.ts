@@ -4,6 +4,7 @@ import { Matrix } from '#math/Matrix';
 import { packAffineMat4 } from '#rendering/affinePacking';
 import type { NineSliceQuad } from '#rendering/sprite/nineSlice';
 import type { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
+import { DataTexture } from '#rendering/texture/DataTexture';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
@@ -311,7 +312,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
       return;
     }
 
-    if (texture instanceof Texture && texture.source === null) {
+    if (texture instanceof Texture && !(texture instanceof DataTexture) && texture.source === null) {
       return;
     }
 

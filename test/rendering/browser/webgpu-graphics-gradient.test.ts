@@ -24,10 +24,10 @@ import { Graphics } from '#rendering/primitives/Graphics';
 import type { RenderNode } from '#rendering/RenderNode';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
+import { readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
+import { expectPixelNear } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
-
-type RgbaTuple = readonly [number, number, number, number];
 
 const canvasSize = 64;
 
@@ -90,38 +90,6 @@ const renderAndValidate = async (ctx: { skip: (reason: string) => void }, backen
   return true;
 };
 
-// Read the presented WebGPU canvas back through a 2D canvas. drawImage accepts a
-// WebGPU-configured canvas as an image source, matching other WebGPU pixel tests.
-const readCanvas = (backend: WebGpuBackend): ((x: number, y: number) => RgbaTuple) => {
-  const source = backend.context.canvas as HTMLCanvasElement;
-  const readback = document.createElement('canvas');
-
-  readback.width = canvasSize;
-  readback.height = canvasSize;
-
-  const ctx = readback.getContext('2d');
-
-  if (!ctx) {
-    throw new Error('2D context is required for canvas readback.');
-  }
-
-  ctx.drawImage(source, 0, 0);
-
-  return (x: number, y: number): RgbaTuple => {
-    const { data } = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1);
-
-    return [data[0], data[1], data[2], data[3]];
-  };
-};
-
-const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 4): void => {
-  for (let index = 0; index < 4; index++) {
-    expect(Math.abs(actual[index] - expected[index]), `channel ${index}: got [${actual.join(', ')}] expected [${expected.join(', ')}]`).toBeLessThanOrEqual(
-      tolerance,
-    );
-  }
-};
-
 describe('WebGPU Graphics gradient fills', () => {
   test('linear gradient fill renders a red-to-blue ramp across the shape', async ctx => {
     const backend = await setupBackend();
@@ -142,7 +110,7 @@ describe('WebGPU Graphics gradient fills', () => {
         return;
       }
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
       const left = readPixel(10, 32);
       const middle = readPixel(32, 32);
       const right = readPixel(54, 32);
@@ -185,7 +153,7 @@ describe('WebGPU Graphics gradient fills', () => {
         return;
       }
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
       const center = readPixel(32, 32);
       const edge = readPixel(10, 32);
 
@@ -220,7 +188,7 @@ describe('WebGPU Graphics gradient fills', () => {
         return;
       }
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
       const left = readPixel(10, 32);
       const right = readPixel(54, 32);
 
@@ -257,7 +225,7 @@ describe('WebGPU Graphics gradient fills', () => {
         return;
       }
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // Untouched region before the translated rectangle stays clear.
       expectPixelNear(readPixel(8, 8), [0, 0, 0, 255]);

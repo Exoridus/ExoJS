@@ -20,141 +20,13 @@ import { RenderingContext } from '#rendering/RenderingContext';
 import { View } from '#rendering/View';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
-
-// ---------------------------------------------------------------------------
-// Shader mocks
-//
-// The vitest shaderPlugin replaces every .vert/.frag import with
-// `export default ""`, and `WebGl2Backend#initialize` connects the renderer
-// registry eagerly, so every registered renderer's program needs valid GLSL.
-// The mesh sources are the REAL production sources (pinned attribute
-// locations, shared TransformBuffer fetch, canonical column order) — this
-// file exists to pin exactly that transform math.
-// ---------------------------------------------------------------------------
-
-const shaderSources = vi.hoisted(() => ({
-  spriteVert: `#version 300 es
-precision mediump float;
-in vec4 a_localBounds;
-in vec4 a_uvBounds;
-in vec4 a_color;
-in uint a_textureSlot;
-in uint a_nodeIndex;
-uniform mat3 u_projection;
-uniform mat3 u_group;
-uniform sampler2D u_transforms;
-uniform sampler2D u_tintTexture;
-out vec2 v_uv;
-out vec4 v_color;
-flat out uint v_textureSlot;
-void main() {
-  vec2 local;
-  if (gl_VertexID == 0) local = vec2(a_localBounds.x, a_localBounds.y);
-  else if (gl_VertexID == 1) local = vec2(a_localBounds.z, a_localBounds.y);
-  else if (gl_VertexID == 2) local = vec2(a_localBounds.x, a_localBounds.w);
-  else local = vec2(a_localBounds.z, a_localBounds.w);
-  vec2 uv;
-  if (gl_VertexID == 0) uv = vec2(a_uvBounds.x, a_uvBounds.y);
-  else if (gl_VertexID == 1) uv = vec2(a_uvBounds.z, a_uvBounds.y);
-  else if (gl_VertexID == 2) uv = vec2(a_uvBounds.x, a_uvBounds.w);
-  else uv = vec2(a_uvBounds.z, a_uvBounds.w);
-  int row = int(a_nodeIndex);
-  vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
-  vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
-  vec2 world = vec2(m0.x * local.x + m0.y * local.y + m1.x, m0.z * local.x + m0.w * local.y + m1.y);
-  vec3 clip = u_projection * u_group * vec3(world, 1.0);
-  gl_Position = vec4(clip.xy, 0.0, 1.0);
-  v_uv = uv; v_color = texelFetch(u_tintTexture, ivec2(0, int(a_nodeIndex)), 0); v_textureSlot = a_textureSlot;
-}`,
-
-  // Real production mesh.vert (canonical TransformSlot column order).
-  meshVert: `#version 300 es
-precision lowp float;
-
-layout(location = 0) in vec2 a_position;
-layout(location = 1) in vec2 a_texcoord;
-layout(location = 2) in vec4 a_color;
-layout(location = 6) in uint a_nodeIndex;
-
-uniform mat3 u_projection;
-uniform mat3 u_group;
-uniform sampler2D u_transforms;
-uniform sampler2D u_tintTexture;
-
-out vec2 v_texcoord;
-out vec4 v_color;
-out vec4 v_tint;
-
-void main(void) {
-    int row = int(a_nodeIndex);
-    vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
-    vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
-    mat3 transform = mat3(
-        m0.x, m0.z, 0.0,
-        m0.y, m0.w, 0.0,
-        m1.x, m1.y, 1.0
-    );
-
-    gl_Position = vec4((u_projection * u_group * transform * vec3(a_position, 1.0)).xy, 0.0, 1.0);
-    v_texcoord = a_texcoord;
-    v_color = a_color;
-    v_tint = texelFetch(u_tintTexture, ivec2(0, row), 0);
-}`,
-
-  // Real production mesh.frag.
-  meshFrag: `#version 300 es
-precision lowp float;
-
-uniform sampler2D u_texture;
-
-in vec2 v_texcoord;
-in vec4 v_color;
-in vec4 v_tint;
-
-layout(location = 0) out vec4 fragColor;
-
-void main(void) {
-    vec4 base = texture(u_texture, v_texcoord) * v_color * v_tint;
-    fragColor = vec4(base.rgb * base.a, base.a);
-}`,
-
-  textVert: `#version 300 es
-precision mediump float;
-layout(location = 0) in vec2 a_position;
-layout(location = 1) in vec2 a_texcoord;
-layout(location = 2) in float a_nodeIndex;
-uniform mat3 u_projection;
-uniform mat3 u_group;
-out vec2 v_uv;
-void main() {
-  float ni = a_nodeIndex;
-  vec3 clip = u_projection * u_group * vec3(a_position + vec2(ni * 0.0), 1.0);
-  gl_Position = vec4(clip.xy, 0.0, 1.0); v_uv = a_texcoord;
-}`,
-
-  textFrag: `#version 300 es
-precision mediump float;
-in vec2 v_uv;
-uniform sampler2D u_texture;
-out vec4 outColor;
-void main() { outColor = texture(u_texture, v_uv); }`,
-}));
-
-vi.mock('#rendering/webgl2/glsl/sprite.vert', () => ({ default: shaderSources.spriteVert }));
-vi.mock('#rendering/webgl2/glsl/sprite.frag', async () => ({ default: (await import('./_spriteFragMock')).createSpriteFragMockSource('v_uv') }));
-vi.mock('#rendering/webgl2/glsl/mesh.vert', () => ({ default: shaderSources.meshVert }));
-vi.mock('#rendering/webgl2/glsl/mesh.frag', () => ({ default: shaderSources.meshFrag }));
-vi.mock('#rendering/webgl2/glsl/text.vert', () => ({ default: shaderSources.textVert }));
-vi.mock('#rendering/webgl2/glsl/text-color.frag', () => ({ default: shaderSources.textFrag }));
-vi.mock('#rendering/webgl2/glsl/text-msdf.frag', () => ({ default: shaderSources.textFrag }));
-vi.mock('#rendering/webgl2/glsl/text-sdf.frag', () => ({ default: shaderSources.textFrag }));
+import { expectPixelNear, type RgbaTuple } from './_pixels';
 
 // ---------------------------------------------------------------------------
 // Infrastructure helpers
 // ---------------------------------------------------------------------------
-
-type RgbaTuple = readonly [number, number, number, number];
 
 const canvasSize = 64;
 
@@ -240,23 +112,6 @@ const coloredQuad = (x0: number, y0: number, x1: number, y1: number, rgba: RgbaT
 // whole surface, top-left origin.
 const screenView = (): View => new View(canvasSize / 2, canvasSize / 2, canvasSize, canvasSize);
 
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const pixel = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
-
-  return [pixel[0], pixel[1], pixel[2], pixel[3]];
-};
-
-const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 6): void => {
-  for (let index = 0; index < 4; index++) {
-    expect(Math.abs(actual[index] - expected[index]), `channel ${index}: got [${actual.join(', ')}] expected [${expected.join(', ')}]`).toBeLessThanOrEqual(
-      tolerance,
-    );
-  }
-};
-
 describe('WebGL2 rotated mesh: single-draw vs. instanced parity', () => {
   test('single draw renders a +90° rotated quad at the canonical world position', async () => {
     const backend = await createBackend();
@@ -271,9 +126,9 @@ describe('WebGL2 rotated mesh: single-draw vs. instanced parity', () => {
       context.drawGeometry(geometry, rotatePlus90(32, 8), { view: screenView() });
 
       expect(backend.stats.drawCalls).toBeGreaterThan(0);
-      expectPixelNear(readPixel(backend, 24, 16), [255, 0, 0, 255]); // rotated quad center
-      expectPixelNear(readPixel(backend, 40, 4), [0, 0, 0, 255]); // transposed-artifact region stays empty
-      expectPixelNear(readPixel(backend, 48, 48), [0, 0, 0, 255]); // unrelated region
+      expectPixelNear(readWebGl2Pixel(backend, 24, 16), [255, 0, 0, 255]); // rotated quad center
+      expectPixelNear(readWebGl2Pixel(backend, 40, 4), [0, 0, 0, 255]); // transposed-artifact region stays empty
+      expectPixelNear(readWebGl2Pixel(backend, 48, 48), [0, 0, 0, 255]); // unrelated region
     } finally {
       geometry.destroy();
       context.destroy();
@@ -297,11 +152,11 @@ describe('WebGL2 rotated mesh: single-draw vs. instanced parity', () => {
 
       // All three instances are emitted as one instanced draw call.
       expect(backend.stats.drawCalls).toBe(1);
-      expectPixelNear(readPixel(backend, 24, 16), [255, 0, 0, 255]); // +90° instance center
-      expectPixelNear(readPixel(backend, 24, 32), [0, 255, 0, 255]); // -90° instance center
-      expectPixelNear(readPixel(backend, 48, 48), [0, 0, 255, 255]); // identity instance center
-      expectPixelNear(readPixel(backend, 40, 4), [0, 0, 0, 255]); // transposed +90° artifact region
-      expectPixelNear(readPixel(backend, 8, 48), [0, 0, 0, 255]); // transposed -90° artifact region
+      expectPixelNear(readWebGl2Pixel(backend, 24, 16), [255, 0, 0, 255]); // +90° instance center
+      expectPixelNear(readWebGl2Pixel(backend, 24, 32), [0, 255, 0, 255]); // -90° instance center
+      expectPixelNear(readWebGl2Pixel(backend, 48, 48), [0, 0, 255, 255]); // identity instance center
+      expectPixelNear(readWebGl2Pixel(backend, 40, 4), [0, 0, 0, 255]); // transposed +90° artifact region
+      expectPixelNear(readWebGl2Pixel(backend, 8, 48), [0, 0, 0, 255]); // transposed -90° artifact region
     } finally {
       batch.destroy();
       geometry.destroy();
@@ -322,9 +177,9 @@ describe('WebGL2 rotated mesh: single-draw vs. instanced parity', () => {
       context.drawBatch(batch, { view: screenView() });
 
       // Same expectations as the single-draw cell above.
-      expectPixelNear(readPixel(backend, 24, 16), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 40, 4), [0, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 48, 48), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 16), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 40, 4), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 48, 48), [0, 0, 0, 255]);
     } finally {
       batch.destroy();
       geometry.destroy();

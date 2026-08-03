@@ -20,23 +20,13 @@ import type { RenderingContext } from '#rendering/RenderingContext';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import { wireCoreRenderers } from './_coreRenderers';
+import { expectPixelNear } from './_pixels';
 
 type RgbaTuple = [number, number, number, number];
 
 // Pass the real shader files through: the vitest config stubs bare
 // .vert/.frag imports to '' (jsdom can't use them), but the `?raw` specifier
 // is a different module id and resolves to the actual file contents.
-vi.mock('#rendering/webgl2/glsl/sprite.vert', async () => ({ default: (await import('#rendering/webgl2/glsl/sprite.vert?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/sprite.frag', async () => ({ default: (await import('#rendering/webgl2/glsl/sprite.frag?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/mesh.vert', async () => ({ default: (await import('#rendering/webgl2/glsl/mesh.vert?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/mesh.frag', async () => ({ default: (await import('#rendering/webgl2/glsl/mesh.frag?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/particle.vert', async () => ({ default: (await import('#rendering/webgl2/glsl/particle.vert?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/particle.frag', async () => ({ default: (await import('#rendering/webgl2/glsl/particle.frag?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/text.vert', async () => ({ default: (await import('#rendering/webgl2/glsl/text.vert?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/text-color.frag', async () => ({ default: (await import('#rendering/webgl2/glsl/text-color.frag?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/text-msdf.frag', async () => ({ default: (await import('#rendering/webgl2/glsl/text-msdf.frag?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/text-sdf.frag', async () => ({ default: (await import('#rendering/webgl2/glsl/text-sdf.frag?raw')).default }));
-
 const defaultWebGlAttributes: WebGLContextAttributes = {
   alpha: false,
   antialias: false,
@@ -80,14 +70,6 @@ const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
   gl.readPixels(Math.floor(x), gl.drawingBufferHeight - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
 
   return [pixel[0]!, pixel[1]!, pixel[2]!, pixel[3]!];
-};
-
-const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 8): void => {
-  for (let index = 0; index < 4; index++) {
-    expect(Math.abs(actual[index]! - expected[index]!), `channel ${index}: got [${actual.join(', ')}] expected [${expected.join(', ')}]`).toBeLessThanOrEqual(
-      tolerance,
-    );
-  }
 };
 
 describe('WebGL2 untextured mesh rendering', () => {

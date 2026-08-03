@@ -8,11 +8,10 @@
  * policy, repeating-sprite shader path, tilemap chunk pages) produce
  * identical counts under a real GPU pipeline.
  *
- * The shaderStubPlugin rewrites .vert/.frag imports to empty strings, so the
- * sprite and mesh renderer programs are compiled from the inline GLSL mocked
- * below (same attribute locations as production). NineSlice and RepeatingSprite
- * renderers use inline GLSL constants and need no mock. The tilemap renderer
- * also uses inline GLSL and requires no mock and no core-renderer wiring.
+ * The sprite and mesh programs compile from the shipped GLSL, restored by the
+ * `_glslMocks` setup file. NineSlice, RepeatingSprite and the tilemap renderer
+ * author their GLSL inline; the tilemap renderer also needs no core-renderer
+ * wiring.
  *
  * Canvas size: 1280 × 720 — large enough that ≤200 sprites scattered inside
  * always pass view-frustum culling. Tilemap tests use a smaller canvas sized
@@ -26,111 +25,6 @@
 // locations so the GL program compiles and VAOs bind correctly). Must be
 // hoisted so vi.mock calls are processed before imports.
 // ---------------------------------------------------------------------------
-
-const shaderSources = vi.hoisted(() => ({
-  spriteVertexSource: `#version 300 es
-precision highp float;
-precision highp int;
-layout(location = 0) in vec4 a_localBounds;
-layout(location = 3) in vec4 a_uvBounds;
-layout(location = 5) in uint a_textureSlot;
-layout(location = 6) in uint a_nodeIndex;
-uniform mat3 u_projection;
-uniform sampler2D u_transforms;
-uniform sampler2D u_tintTexture;
-out vec2 v_texcoord;
-out vec4 v_color;
-flat out uint v_textureSlot;
-void main() {
-  int vid = gl_VertexID;
-  int cornerX = vid & 1;
-  int cornerY = (vid >> 1) & 1;
-  float localX = (cornerX == 0) ? a_localBounds.x : a_localBounds.z;
-  float localY = (cornerY == 0) ? a_localBounds.y : a_localBounds.w;
-  int row = int(a_nodeIndex);
-  vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
-  vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
-  vec4 m2 = texelFetch(u_tintTexture, ivec2(0, row), 0);
-  float worldX = (m0.x * localX) + (m0.y * localY) + m1.x;
-  float worldY = (m0.z * localX) + (m0.w * localY) + m1.y;
-  gl_Position = vec4((u_projection * vec3(worldX, worldY, 1.0)).xy, 0.0, 1.0);
-  float u = (cornerX == 0) ? a_uvBounds.x : a_uvBounds.z;
-  float v = (cornerY == 0) ? a_uvBounds.y : a_uvBounds.w;
-  v_texcoord = vec2(u, v);
-  v_color = vec4(m2.rgb * m2.a, m2.a);
-  v_textureSlot = a_textureSlot;
-}`,
-
-  meshVertexSource: `#version 300 es
-precision lowp float;
-layout(location = 0) in vec2 a_position;
-layout(location = 1) in vec2 a_texcoord;
-layout(location = 2) in vec4 a_color;
-layout(location = 6) in uint a_nodeIndex;
-uniform mat3 u_projection;
-uniform sampler2D u_transforms;
-uniform sampler2D u_tintTexture;
-out vec2 v_texcoord;
-out vec4 v_color;
-out vec4 v_tint;
-void main(void) {
-  int row = int(a_nodeIndex);
-  vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
-  vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
-  mat3 transform = mat3(m0.x, m0.z, 0.0, m0.y, m0.w, 0.0, m1.x, m1.y, 1.0);
-  gl_Position = vec4((u_projection * transform * vec3(a_position, 1.0)).xy, 0.0, 1.0);
-  v_texcoord = a_texcoord;
-  v_color = a_color;
-  v_tint = texelFetch(u_tintTexture, ivec2(0, row), 0);
-}`,
-
-  meshFragmentSource: `#version 300 es
-precision lowp float;
-uniform sampler2D u_texture;
-in vec2 v_texcoord;
-in vec4 v_color;
-in vec4 v_tint;
-layout(location = 0) out vec4 fragColor;
-void main(void) {
-  vec4 base = texture(u_texture, v_texcoord) * v_color * v_tint;
-  fragColor = vec4(base.rgb * base.a, base.a);
-}`,
-
-  textVertexSource: `#version 300 es
-precision mediump float;
-in vec2 a_position;
-in vec2 a_texcoord;
-in float a_nodeIndex;
-uniform mat3 u_projection;
-out vec2 v_uv;
-void main() {
-  // Keep a_nodeIndex active (× 0.0) so GLSL does not strip the attribute and
-  // the text renderer's onConnect reflection finds it (mirrors the proven
-  // webgl2-custom-sprite-material.test.ts text mock).
-  float nodeIndex = a_nodeIndex;
-  vec3 clip = u_projection * vec3(a_position + vec2(nodeIndex * 0.0), 1.0);
-  gl_Position = vec4(clip.xy, 0.0, 1.0);
-  v_uv = a_texcoord;
-}`,
-
-  textFragmentSource: `#version 300 es
-precision mediump float;
-in vec2 v_uv;
-uniform sampler2D u_texture;
-out vec4 outColor;
-void main() {
-  outColor = texture(u_texture, v_uv);
-}`,
-}));
-
-vi.mock('#rendering/webgl2/glsl/sprite.vert', () => ({ default: shaderSources.spriteVertexSource }));
-vi.mock('#rendering/webgl2/glsl/sprite.frag', async () => ({ default: (await import('./_spriteFragMock')).createSpriteFragMockSource('v_texcoord') }));
-vi.mock('#rendering/webgl2/glsl/mesh.vert', () => ({ default: shaderSources.meshVertexSource }));
-vi.mock('#rendering/webgl2/glsl/mesh.frag', () => ({ default: shaderSources.meshFragmentSource }));
-vi.mock('#rendering/webgl2/glsl/text.vert', () => ({ default: shaderSources.textVertexSource }));
-vi.mock('#rendering/webgl2/glsl/text-color.frag', () => ({ default: shaderSources.textFragmentSource }));
-vi.mock('#rendering/webgl2/glsl/text-msdf.frag', () => ({ default: shaderSources.textFragmentSource }));
-vi.mock('#rendering/webgl2/glsl/text-sdf.frag', () => ({ default: shaderSources.textFragmentSource }));
 
 // ---------------------------------------------------------------------------
 // Imports (after vi.mock hoisting)

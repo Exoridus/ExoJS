@@ -36,7 +36,9 @@ import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 import { WebGl2MeshRenderer } from '#rendering/webgl2/WebGl2MeshRenderer';
 
+import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
+import { expectPixelNear } from './_pixels';
 
 // ---------------------------------------------------------------------------
 // Shader mocks. The mesh instanced mock is FAITHFUL to the real instanced mesh
@@ -45,106 +47,9 @@ import { wireCoreRenderers } from './_coreRenderers';
 // camera-pan / group-move cells exercise the live u_group / u_projection reads.
 // ---------------------------------------------------------------------------
 
-const shaderSources = vi.hoisted(() => ({
-  spriteVert: `#version 300 es
-precision mediump float;
-in vec4 a_localBounds;
-in vec4 a_uvBounds;
-in vec4 a_color;
-in uint a_textureSlot;
-in uint a_nodeIndex;
-uniform mat3 u_projection;
-uniform mat3 u_group;
-uniform sampler2D u_transforms;
-uniform sampler2D u_tintTexture;
-out vec2 v_uv;
-out vec4 v_color;
-flat out uint v_textureSlot;
-void main() {
-  vec2 local;
-  if (gl_VertexID == 0) local = vec2(a_localBounds.x, a_localBounds.y);
-  else if (gl_VertexID == 1) local = vec2(a_localBounds.z, a_localBounds.y);
-  else if (gl_VertexID == 2) local = vec2(a_localBounds.x, a_localBounds.w);
-  else local = vec2(a_localBounds.z, a_localBounds.w);
-  vec2 uv;
-  if (gl_VertexID == 0) uv = vec2(a_uvBounds.x, a_uvBounds.y);
-  else if (gl_VertexID == 1) uv = vec2(a_uvBounds.z, a_uvBounds.y);
-  else if (gl_VertexID == 2) uv = vec2(a_uvBounds.x, a_uvBounds.w);
-  else uv = vec2(a_uvBounds.z, a_uvBounds.w);
-  int row = int(a_nodeIndex);
-  vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
-  vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
-  vec2 world = vec2(m0.x * local.x + m0.y * local.y + m1.x, m0.z * local.x + m0.w * local.y + m1.y);
-  vec3 clip = u_projection * u_group * vec3(world, 1.0);
-  gl_Position = vec4(clip.xy, 0.0, 1.0);
-  v_uv = uv; v_color = texelFetch(u_tintTexture, ivec2(0, int(a_nodeIndex)), 0); v_textureSlot = a_textureSlot;
-}`,
-
-  meshVert: `#version 300 es
-precision mediump float;
-in vec2 a_position;
-in vec2 a_texcoord;
-in vec4 a_color;
-in uint a_nodeIndex;
-uniform mat3 u_projection;
-uniform mat3 u_group;
-uniform sampler2D u_transforms;
-uniform sampler2D u_tintTexture;
-out vec2 v_uv; out vec4 v_color; out vec4 v_tint;
-void main() {
-  int row = int(a_nodeIndex);
-  vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
-  vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
-  vec2 world = vec2(m0.x * a_position.x + m0.y * a_position.y + m1.x, m0.z * a_position.x + m0.w * a_position.y + m1.y);
-  vec3 clip = u_projection * u_group * vec3(world, 1.0);
-  gl_Position = vec4(clip.xy, 0.0, 1.0);
-  v_uv = a_texcoord; v_color = a_color;
-  v_tint = texelFetch(u_tintTexture, ivec2(0, row), 0);
-}`,
-
-  meshFrag: `#version 300 es
-precision mediump float;
-in vec2 v_uv; in vec4 v_color; in vec4 v_tint;
-uniform sampler2D u_texture;
-out vec4 outColor;
-void main() { outColor = texture(u_texture, v_uv) * v_color * v_tint; }`,
-
-  textVert: `#version 300 es
-precision mediump float;
-layout(location = 0) in vec2 a_position;
-layout(location = 1) in vec2 a_texcoord;
-layout(location = 2) in float a_nodeIndex;
-uniform mat3 u_projection;
-uniform mat3 u_group;
-out vec2 v_uv;
-void main() {
-  float ni = a_nodeIndex;
-  vec3 clip = u_projection * u_group * vec3(a_position + vec2(ni * 0.0), 1.0);
-  gl_Position = vec4(clip.xy, 0.0, 1.0); v_uv = a_texcoord;
-}`,
-
-  textFrag: `#version 300 es
-precision mediump float;
-in vec2 v_uv;
-uniform sampler2D u_texture;
-out vec4 outColor;
-void main() { outColor = texture(u_texture, v_uv); }`,
-}));
-
-vi.mock('#rendering/webgl2/glsl/sprite.vert', () => ({ default: shaderSources.spriteVert }));
-vi.mock('#rendering/webgl2/glsl/sprite.frag', async () => ({ default: (await import('./_spriteFragMock')).createSpriteFragMockSource('v_uv') }));
-vi.mock('#rendering/webgl2/glsl/mesh.vert', () => ({ default: shaderSources.meshVert }));
-vi.mock('#rendering/webgl2/glsl/mesh.frag', () => ({ default: shaderSources.meshFrag }));
-vi.mock('#rendering/webgl2/glsl/text.vert', () => ({ default: shaderSources.textVert }));
-vi.mock('#rendering/webgl2/glsl/text-color.frag', () => ({ default: shaderSources.textFrag }));
-vi.mock('#rendering/webgl2/glsl/text-msdf.frag', () => ({ default: shaderSources.textFrag }));
-vi.mock('#rendering/webgl2/glsl/text-sdf.frag', () => ({ default: shaderSources.textFrag }));
-
 // ---------------------------------------------------------------------------
 // Infrastructure helpers (shared shape with the sprite/nine-slice cells).
 // ---------------------------------------------------------------------------
-
-type RgbaTuple = readonly [number, number, number, number];
 
 const canvasSize = 64;
 
@@ -190,15 +95,6 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.flush();
 };
 
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const buf = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, buf);
-
-  return [buf[0], buf[1], buf[2], buf[3]];
-};
-
 /** Full-framebuffer snapshot for byte-identical tier comparisons. */
 const readCanvas = (backend: WebGl2Backend): Uint8Array => {
   const buf = new Uint8Array(canvasSize * canvasSize * 4);
@@ -207,12 +103,6 @@ const readCanvas = (backend: WebGl2Backend): Uint8Array => {
   gl.readPixels(0, 0, canvasSize, canvasSize, gl.RGBA, gl.UNSIGNED_BYTE, buf);
 
   return buf;
-};
-
-const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 8): void => {
-  for (let i = 0; i < 4; i++) {
-    expect(Math.abs(actual[i] - expected[i])).toBeLessThanOrEqual(tolerance);
-  }
 };
 
 const createSolidTexture = (color: string, width = 16, height = 16): Texture => {
@@ -312,12 +202,12 @@ const buildScene = () => {
 };
 
 const expectBaseScenePixels = (backend: WebGl2Backend): void => {
-  expectPixelNear(readPixel(backend, 52, 8), [0, 0, 255, 255]); // live outside sprite
-  expectPixelNear(readPixel(backend, 16, 32), [255, 0, 0, 255]); // redA (8,24)-(24,40)
-  expectPixelNear(readPixel(backend, 32, 32), [255, 0, 0, 255]); // redB (24,24)-(40,40)
-  expectPixelNear(readPixel(backend, 16, 48), [0, 255, 0, 255]); // greenA (8,40)-(24,56)
-  expectPixelNear(readPixel(backend, 32, 48), [0, 255, 0, 255]); // greenB (24,40)-(40,56)
-  expectPixelNear(readPixel(backend, 58, 58), [0, 0, 0, 255]); // background
+  expectPixelNear(readWebGl2Pixel(backend, 52, 8), [0, 0, 255, 255]); // live outside sprite
+  expectPixelNear(readWebGl2Pixel(backend, 16, 32), [255, 0, 0, 255]); // redA (8,24)-(24,40)
+  expectPixelNear(readWebGl2Pixel(backend, 32, 32), [255, 0, 0, 255]); // redB (24,24)-(40,40)
+  expectPixelNear(readWebGl2Pixel(backend, 16, 48), [0, 255, 0, 255]); // greenA (8,40)-(24,56)
+  expectPixelNear(readWebGl2Pixel(backend, 32, 48), [0, 255, 0, 255]); // greenB (24,40)-(40,56)
+  expectPixelNear(readWebGl2Pixel(backend, 58, 58), [0, 0, 0, 255]); // background
 };
 
 // ---------------------------------------------------------------------------
@@ -390,10 +280,10 @@ describe('WebGL2 renderer matrix: Mesh retained instruction-set replay cells', (
 
       expect(beginSpy).not.toHaveBeenCalled(); // replay, not recapture
       expect(replaySpy).toHaveBeenCalledTimes(2);
-      expectPixelNear(readPixel(backend, 36, 8), [0, 0, 255, 255]); // outside sprite 32..48
-      expectPixelNear(readPixel(backend, 16, 32), [255, 0, 0, 255]); // redB shifted to 8..24
-      expectPixelNear(readPixel(backend, 16, 48), [0, 255, 0, 255]); // greenB shifted to 8..24
-      expectPixelNear(readPixel(backend, 58, 32), [0, 0, 0, 255]); // background
+      expectPixelNear(readWebGl2Pixel(backend, 36, 8), [0, 0, 255, 255]); // outside sprite 32..48
+      expectPixelNear(readWebGl2Pixel(backend, 16, 32), [255, 0, 0, 255]); // redB shifted to 8..24
+      expectPixelNear(readWebGl2Pixel(backend, 16, 48), [0, 255, 0, 255]); // greenB shifted to 8..24
+      expectPixelNear(readWebGl2Pixel(backend, 58, 32), [0, 0, 0, 255]); // background
     } finally {
       scene.destroy();
       backend.destroy();
@@ -419,10 +309,10 @@ describe('WebGL2 renderer matrix: Mesh retained instruction-set replay cells', (
 
       expect(beginSpy).not.toHaveBeenCalled();
       expect(replaySpy).toHaveBeenCalledTimes(2);
-      expectPixelNear(readPixel(backend, 32, 32), [255, 0, 0, 255]); // redA now (24,24)-(40,40)
-      expectPixelNear(readPixel(backend, 32, 48), [0, 255, 0, 255]); // greenA now (24,40)-(40,56)
-      expectPixelNear(readPixel(backend, 16, 32), [0, 0, 0, 255]); // old red spot cleared
-      expectPixelNear(readPixel(backend, 52, 8), [0, 0, 255, 255]); // live sprite unaffected
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [255, 0, 0, 255]); // redA now (24,24)-(40,40)
+      expectPixelNear(readWebGl2Pixel(backend, 32, 48), [0, 255, 0, 255]); // greenA now (24,40)-(40,56)
+      expectPixelNear(readWebGl2Pixel(backend, 16, 32), [0, 0, 0, 255]); // old red spot cleared
+      expectPixelNear(readWebGl2Pixel(backend, 52, 8), [0, 0, 255, 255]); // live sprite unaffected
     } finally {
       scene.destroy();
       backend.destroy();
@@ -451,9 +341,9 @@ describe('WebGL2 renderer matrix: Mesh retained instruction-set replay cells', (
 
       expect(beginSpy).not.toHaveBeenCalled(); // NO re-record: the recording is patched in place
       expect(replaySpy).toHaveBeenCalledTimes(2); // one frame, two batches
-      expectPixelNear(readPixel(backend, 16, 32), [0, 0, 0, 255]); // redA's old spot cleared
-      expectPixelNear(readPixel(backend, 32, 32), [255, 0, 0, 255]); // redB (same batch) untouched
-      expectPixelNear(readPixel(backend, 16, 48), [0, 255, 0, 255]); // greenA untouched
+      expectPixelNear(readWebGl2Pixel(backend, 16, 32), [0, 0, 0, 255]); // redA's old spot cleared
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [255, 0, 0, 255]); // redB (same batch) untouched
+      expectPixelNear(readWebGl2Pixel(backend, 16, 48), [0, 255, 0, 255]); // greenA untouched
 
       const patchedFrame = readCanvas(backend);
 

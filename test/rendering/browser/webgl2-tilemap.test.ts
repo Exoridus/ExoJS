@@ -21,9 +21,9 @@ import type { Texture } from '#rendering/texture/Texture';
 import { TextureRegion } from '#rendering/texture/TextureRegion';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { readWebGl2Pixel } from './_backendSetup';
+import { expectPixelNear, type RgbaTuple } from './_pixels';
 import { createQuadrantTexture, createSolidTexture, makeTileset, singleTileMap, wireTilemapRenderers, wireViaTiledExtension } from './_tilemapScene';
-
-type RgbaTuple = readonly [number, number, number, number];
 
 const canvasSize = 64;
 
@@ -67,21 +67,6 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.flush();
 };
 
-const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
-  const buf = new Uint8Array(4);
-  const gl = backend.context;
-
-  gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, buf);
-
-  return [buf[0], buf[1], buf[2], buf[3]];
-};
-
-const expectPixelNear = (actual: RgbaTuple, expected: RgbaTuple, tolerance = 12): void => {
-  for (let i = 0; i < 4; i++) {
-    expect(Math.abs(actual[i] - expected[i])).toBeLessThanOrEqual(tolerance);
-  }
-};
-
 // ── basic rendering ─────────────────────────────────────────────────────
 
 describe('WebGL2 tilemap — single tile', () => {
@@ -94,8 +79,8 @@ describe('WebGL2 tilemap — single tile', () => {
       node.setPosition(16, 16); // tile spans screen (16,16)..(32,32)
       render(backend, node);
 
-      expectPixelNear(readPixel(backend, 24, 24), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 4, 4), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 24), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 4, 4), [0, 0, 0, 255]);
       expect(backend.stats.drawCalls).toBeGreaterThan(0);
     } finally {
       node.destroy();
@@ -124,8 +109,8 @@ describe('WebGL2 tilemap — multiple tilesets', () => {
       node.setPosition(0, 0);
       render(backend, node);
 
-      expectPixelNear(readPixel(backend, 8, 8), [255, 0, 0, 255]); // first cell red
-      expectPixelNear(readPixel(backend, 24, 8), [0, 0, 255, 255]); // second cell blue
+      expectPixelNear(readWebGl2Pixel(backend, 8, 8), [255, 0, 0, 255]); // first cell red
+      expectPixelNear(readWebGl2Pixel(backend, 24, 8), [0, 0, 255, 255]); // second cell blue
     } finally {
       node.destroy();
       red.destroy();
@@ -144,7 +129,7 @@ describe('WebGL2 tilemap — tile orientation', () => {
     const node = new TileMapNode(singleTileMap(texture, transform));
     node.setPosition(16, 16);
     render(backend, node);
-    const read = (cx: number, cy: number): RgbaTuple => readPixel(backend, cx ? 28 : 20, cy ? 28 : 20);
+    const read = (cx: number, cy: number): RgbaTuple => readWebGl2Pixel(backend, cx ? 28 : 20, cy ? 28 : 20);
     const result = [
       [read(0, 0), read(0, 1)],
       [read(1, 0), read(1, 1)],
@@ -212,9 +197,9 @@ describe('WebGL2 tilemap — chunk boundary', () => {
       render(backend, node);
 
       // Chunk boundary is at tile x=2 → screen x=32. No seam: both sides red.
-      expectPixelNear(readPixel(backend, 24, 8), [255, 0, 0, 255]); // chunk 0
-      expectPixelNear(readPixel(backend, 32, 8), [255, 0, 0, 255]); // seam
-      expectPixelNear(readPixel(backend, 40, 8), [255, 0, 0, 255]); // chunk 1
+      expectPixelNear(readWebGl2Pixel(backend, 24, 8), [255, 0, 0, 255]); // chunk 0
+      expectPixelNear(readWebGl2Pixel(backend, 32, 8), [255, 0, 0, 255]); // seam
+      expectPixelNear(readWebGl2Pixel(backend, 40, 8), [255, 0, 0, 255]); // chunk 1
     } finally {
       node.destroy();
       texture.destroy();
@@ -244,7 +229,7 @@ describe('WebGL2 tilemap — chunk culling', () => {
       render(backend, node);
       expect(backend.stats.culledNodes).toBeGreaterThan(0);
       expect(backend.stats.drawCalls).toBe(0);
-      expectPixelNear(readPixel(backend, 8, 8), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 8, 8), [0, 0, 0, 255]);
 
       // On-screen → chunks at x≥64 are off the 64px canvas and culled, but the
       // visible chunks render.
@@ -252,7 +237,7 @@ describe('WebGL2 tilemap — chunk culling', () => {
       render(backend, node);
       expect(backend.stats.drawCalls).toBeGreaterThan(0);
       expect(backend.stats.culledNodes).toBeGreaterThan(0); // chunks 2 & 3 off-screen
-      expectPixelNear(readPixel(backend, 8, 8), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 8, 8), [255, 0, 0, 255]);
     } finally {
       node.destroy();
       texture.destroy();
@@ -278,7 +263,7 @@ describe('WebGL2 tilemap — layer opacity', () => {
       render(backend, node);
 
       // White tile at opacity 0.5 over black ≈ mid grey.
-      const pixel = readPixel(backend, 24, 24);
+      const pixel = readWebGl2Pixel(backend, 24, 24);
       expect(pixel[0]).toBeGreaterThan(96);
       expect(pixel[0]).toBeLessThan(160);
       expect(pixel[1]).toBeGreaterThan(96);
@@ -303,7 +288,7 @@ describe('WebGL2 tilemap — layer opacity', () => {
       node.setPosition(16, 16);
       render(backend, node);
 
-      expectPixelNear(readPixel(backend, 24, 24), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 24), [0, 0, 0, 255]);
     } finally {
       node.destroy();
       texture.destroy();
@@ -347,8 +332,8 @@ describe('WebGL2 tilemap — batch capacity overflow', () => {
 
       expect(() => render(backend, node)).not.toThrow();
       // The visible portion is fully covered — no gaps from the run boundaries.
-      expectPixelNear(readPixel(backend, 16, 16), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 48, 48), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 48, 48), [255, 0, 0, 255]);
     } finally {
       node.destroy();
       texture.destroy();
@@ -369,7 +354,7 @@ describe('WebGL2 tilemap — one-extension Tiled wiring', () => {
       node.setPosition(16, 16);
       render(backend, node);
 
-      expectPixelNear(readPixel(backend, 24, 24), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 24), [0, 255, 0, 255]);
     } finally {
       node.destroy();
       texture.destroy();
