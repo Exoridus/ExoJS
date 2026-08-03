@@ -66,10 +66,6 @@ function run(cmd: string, opts: { cwd?: string } = {}): void {
   execSync(cmd, { stdio: 'inherit', cwd: opts.cwd ?? repoRoot });
 }
 
-function runCapture(cmd: string): string {
-  return execSync(cmd, { cwd: repoRoot, encoding: 'utf8' }).trim();
-}
-
 // ── Pre-flight checks ──────────────────────────────────────────────────────
 
 function assertCleanTree(): void {
