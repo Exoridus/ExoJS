@@ -33,52 +33,6 @@ import { getBackendDevice } from './webgpu-test-helpers';
 // plugin); restore the real text GLSL and provide minimal Sprite/Mesh mocks so
 // `wireCoreRenderers()` can compile the WebGL2 registry. The WebGPU backend
 // uses inline WGSL and is unaffected by these mocks.
-vi.mock('#rendering/webgl2/glsl/text.vert', async () => ({ default: (await import('../../../src/rendering/webgl2/glsl/text.vert?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/text-sdf.frag', async () => ({ default: (await import('../../../src/rendering/webgl2/glsl/text-sdf.frag?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/text-msdf.frag', async () => ({ default: (await import('../../../src/rendering/webgl2/glsl/text-msdf.frag?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/text-color.frag', async () => ({ default: (await import('../../../src/rendering/webgl2/glsl/text-color.frag?raw')).default }));
-
-const auxShaderSources = vi.hoisted(() => ({
-  spriteVert: `#version 300 es
-precision highp float;
-in vec4 a_localBounds; in vec4 a_uvBounds; in vec4 a_color; in uint a_textureSlot; in uint a_nodeIndex;
-uniform mat3 u_projection; uniform mat3 u_group; uniform sampler2D u_transforms;
-out vec2 v_uv; out vec4 v_color; flat out uint v_textureSlot;
-void main() {
-  vec2 local = vec2(a_localBounds.x, a_localBounds.y);
-  int row = int(a_nodeIndex);
-  vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
-  vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
-  vec2 world = vec2(m0.x * local.x + m0.y * local.y + m1.x, m0.z * local.x + m0.w * local.y + m1.y);
-  gl_Position = vec4((u_projection * u_group * vec3(world, 1.0)).xy, 0.0, 1.0);
-  v_uv = a_uvBounds.xy; v_color = a_color; v_textureSlot = a_textureSlot;
-}`,
-  meshVert: `#version 300 es
-precision highp float;
-in vec2 a_position; in vec2 a_texcoord; in vec4 a_color; in uint a_nodeIndex;
-uniform mat3 u_projection; uniform sampler2D u_transforms; uniform sampler2D u_tintTexture;
-out vec2 v_uv; out vec4 v_color; out vec4 v_tint;
-void main() {
-  int row = int(a_nodeIndex);
-  vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
-  vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
-  mat3 t = mat3(m0.x,m0.z,0.0, m0.y,m0.w,0.0, m1.x,m1.y,1.0);
-  gl_Position = vec4((u_projection * t * vec3(a_position, 1.0)).xy, 0.0, 1.0);
-  v_uv = a_texcoord; v_color = a_color; v_tint = texelFetch(u_tintTexture, ivec2(0, row), 0);
-}`,
-  meshFrag: `#version 300 es
-precision mediump float;
-in vec2 v_uv; in vec4 v_color; in vec4 v_tint;
-uniform sampler2D u_texture;
-out vec4 outColor;
-void main() { outColor = texture(u_texture, v_uv) * v_color * v_tint; }`,
-}));
-
-vi.mock('#rendering/webgl2/glsl/sprite.vert', () => ({ default: auxShaderSources.spriteVert }));
-vi.mock('#rendering/webgl2/glsl/sprite.frag', async () => ({ default: (await import('./_spriteFragMock')).createSpriteFragMockSource('v_uv') }));
-vi.mock('#rendering/webgl2/glsl/mesh.vert', () => ({ default: auxShaderSources.meshVert }));
-vi.mock('#rendering/webgl2/glsl/mesh.frag', () => ({ default: auxShaderSources.meshFrag }));
-
 const canvasSize = 96;
 
 const makeApp = (canvas: HTMLCanvasElement): Application =>

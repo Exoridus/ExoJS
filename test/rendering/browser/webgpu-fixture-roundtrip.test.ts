@@ -4,9 +4,9 @@
  * carrying the exact bytes its source texel held, so this is checked directly
  * rather than assumed.
  *
- * The WebGL2 shader mocks below load the *shipped* GLSL through `?raw`. A
- * stub fragment stage would report its own synthesised colour instead of the
- * sampled texel, which is precisely what this test must not do.
+ * The WebGL2 arm depends on the shipped GLSL that the `_glslMocks` setup file
+ * restores: a stub fragment stage would report its own synthesised colour
+ * instead of the sampled texel, which is precisely what this test must not do.
  *
  * Run via:  pnpm test:browser:webgpu
  */
@@ -17,15 +17,6 @@ import { Sprite } from '#rendering/sprite/Sprite';
 
 import { createWebGl2TestBackend, createWebGpuTestBackend, readWebGl2Frame, readWebGpuFrame, renderWebGl2Once, renderWebGpuOnce } from './_backendSetup';
 import { buildCoordinateTexture } from './_selfDescribingFixture';
-
-vi.mock('#rendering/webgl2/glsl/sprite.vert', async () => ({ default: (await import('../../../src/rendering/webgl2/glsl/sprite.vert?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/sprite.frag', async () => ({ default: (await import('../../../src/rendering/webgl2/glsl/sprite.frag?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/mesh.vert', async () => ({ default: (await import('../../../src/rendering/webgl2/glsl/mesh.vert?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/mesh.frag', async () => ({ default: (await import('../../../src/rendering/webgl2/glsl/mesh.frag?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/text.vert', async () => ({ default: (await import('../../../src/rendering/webgl2/glsl/text.vert?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/text-sdf.frag', async () => ({ default: (await import('../../../src/rendering/webgl2/glsl/text-sdf.frag?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/text-msdf.frag', async () => ({ default: (await import('../../../src/rendering/webgl2/glsl/text-msdf.frag?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/text-color.frag', async () => ({ default: (await import('../../../src/rendering/webgl2/glsl/text-color.frag?raw')).default }));
 
 const SIZE = 32;
 

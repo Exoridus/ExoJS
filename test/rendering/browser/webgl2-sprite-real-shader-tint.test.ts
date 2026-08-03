@@ -3,21 +3,13 @@
  *
  * Sprite tint lives in its own rgba8 texture (`u_tintTexture`, one texel per
  * row, keyed by `nodeIndex`), separate from the fp32 transform texture —
- * premultiplied in the vertex shader as `vec4(m2.rgb * m2.a, m2.a)`. Every
- * OTHER `browser-webgl-chromium` pixel
- * spec stubs `.vert`/`.frag` to `""` and substitutes hand-written mock GLSL
- * (see `webgl2-sprite-solid-color.test.ts`), and the one spec that DOES load
- * the real file (`webgl2-shader-compile.test.ts`) only compiles/links it —
- * it never renders a pixel. So a wrong texel index or a swizzled channel in
- * the shipped `sprite.vert` would ship completely undetected.
+ * premultiplied in the vertex shader as `vec4(m2.rgb * m2.a, m2.a)`.
  *
- * This spec closes that gap: it substitutes the REAL `sprite.vert`/
- * `sprite.frag` source (loaded through a `?raw` import — the same
- * stub-bypass technique `webgl2-shader-compile.test.ts` uses) in place of the
- * hand-written sprite mocks, then drives the actual `WebGl2SpriteRenderer`
- * through a real `Sprite`/`Container` scene and reads back rendered pixels.
- * Mesh/Text stay mocked (same reason as the solid-color spec: `initialize()`
- * eagerly compiles every registered renderer's program).
+ * This spec pins that arithmetic: it drives the actual `WebGl2SpriteRenderer`
+ * through a real `Sprite`/`Container` scene and reads the rendered pixels
+ * back, so a wrong texel index or a swizzled channel in the shipped
+ * `sprite.vert` fails here rather than shipping. `webgl2-shader-compile`
+ * covers the same file only as far as compiling and linking it.
  *
  * Run via:  pnpm test:browser:webgl
  */
@@ -31,89 +23,6 @@ import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import { wireCoreRenderers } from './_coreRenderers';
-
-// ---------------------------------------------------------------------------
-// Shader wiring
-//
-// Sprite: substitute the REAL shipped GLSL, loaded via a `?raw` import so the
-// `shaderStubPlugin` (which only stubs ids ending in `.vert`/`.frag`, not
-// `.vert?raw`/`.frag?raw`) never touches it. This is the exact bypass
-// `webgl2-shader-compile.test.ts` relies on, applied here through `vi.mock` so
-// the REAL text stands in for the renderer's normal (stubbed-to-"") import.
-//
-// Mesh/Text: hand-written mocks copied from `webgl2-sprite-solid-color.test.ts`
-// — `WebGl2Backend#initialize` connects the whole renderer registry eagerly
-// (compiling Sprite + Mesh + Text together), so those two still need *valid*
-// GLSL even though this file only ever renders a Sprite.
-// ---------------------------------------------------------------------------
-
-vi.mock('#rendering/webgl2/glsl/sprite.vert', async () => {
-  const real = await import('../../../src/rendering/webgl2/glsl/sprite.vert?raw');
-
-  return { default: real.default };
-});
-
-vi.mock('#rendering/webgl2/glsl/sprite.frag', async () => {
-  const real = await import('../../../src/rendering/webgl2/glsl/sprite.frag?raw');
-
-  return { default: real.default };
-});
-
-const nonSpriteShaderSources = vi.hoisted(() => ({
-  meshVert: `#version 300 es
-precision mediump float;
-in vec2 a_position;
-in vec2 a_texcoord;
-in vec4 a_color;
-in uint a_nodeIndex;
-uniform mat3 u_projection;
-uniform sampler2D u_transforms;
-uniform sampler2D u_tintTexture;
-out vec2 v_uv; out vec4 v_color; out vec4 v_tint;
-void main() {
-  int row = int(a_nodeIndex);
-  vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
-  vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
-  mat3 t = mat3(m0.x,m0.z,0.0, m0.y,m0.w,0.0, m1.x,m1.y,1.0);
-  vec3 world = t * vec3(a_position, 1.0);
-  vec3 clip = u_projection * world;
-  gl_Position = vec4(clip.xy, 0.0, 1.0);
-  v_uv = a_texcoord; v_color = a_color;
-  v_tint = texelFetch(u_tintTexture, ivec2(0, row), 0);
-}`,
-
-  meshFrag: `#version 300 es
-precision mediump float;
-in vec2 v_uv; in vec4 v_color; in vec4 v_tint;
-uniform sampler2D u_texture;
-out vec4 outColor;
-void main() { outColor = texture(u_texture, v_uv) * v_color * v_tint; }`,
-
-  textVert: `#version 300 es
-precision mediump float;
-in vec2 a_position; in vec2 a_texcoord; in float a_nodeIndex;
-uniform mat3 u_projection;
-out vec2 v_uv;
-void main() {
-  float ni = a_nodeIndex;
-  vec3 clip = u_projection * vec3(a_position + vec2(ni * 0.0), 1.0);
-  gl_Position = vec4(clip.xy, 0.0, 1.0); v_uv = a_texcoord;
-}`,
-
-  textFrag: `#version 300 es
-precision mediump float;
-in vec2 v_uv;
-uniform sampler2D u_texture;
-out vec4 outColor;
-void main() { outColor = texture(u_texture, v_uv); }`,
-}));
-
-vi.mock('#rendering/webgl2/glsl/mesh.vert', () => ({ default: nonSpriteShaderSources.meshVert }));
-vi.mock('#rendering/webgl2/glsl/mesh.frag', () => ({ default: nonSpriteShaderSources.meshFrag }));
-vi.mock('#rendering/webgl2/glsl/text.vert', () => ({ default: nonSpriteShaderSources.textVert }));
-vi.mock('#rendering/webgl2/glsl/text-color.frag', () => ({ default: nonSpriteShaderSources.textFrag }));
-vi.mock('#rendering/webgl2/glsl/text-msdf.frag', () => ({ default: nonSpriteShaderSources.textFrag }));
-vi.mock('#rendering/webgl2/glsl/text-sdf.frag', () => ({ default: nonSpriteShaderSources.textFrag }));
 
 // ---------------------------------------------------------------------------
 // Infrastructure helpers (mirrors webgl2-sprite-solid-color.test.ts)

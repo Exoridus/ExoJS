@@ -27,20 +27,6 @@ import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 import { particlesExtension, ParticleSystem } from '../../../packages/exojs-particles/src/index';
 import { wireCoreRenderers } from './_coreRenderers';
 
-// ---------------------------------------------------------------------------
-// Shader mocks
-//
-// The vitest shaderPlugin replaces every .vert/.frag import with
-// `export default ""`. `WebGl2Backend#initialize` connects the renderer
-// registry eagerly (compiling every registered renderer's program), and
-// `materializeRendererBindings` connects a renderer immediately when it is
-// registered on an already-initialised backend. Both the core renderers
-// (Sprite/Mesh/Text, registered by `wireCoreRenderers`) and the particle
-// renderer (registered below) therefore need valid GLSL sources even though
-// this file only ever renders a ParticleSystem. The particle shader mocks
-// below are verbatim copies of `packages/exojs-particles/src/renderers/glsl/particle.{vert,frag}`.
-// ---------------------------------------------------------------------------
-
 const shaderSources = vi.hoisted(() => ({
   spriteVert: `#version 300 es
 precision mediump float;
@@ -182,14 +168,6 @@ void main(void) {
 }`,
 }));
 
-vi.mock('#rendering/webgl2/glsl/sprite.vert', () => ({ default: shaderSources.spriteVert }));
-vi.mock('#rendering/webgl2/glsl/sprite.frag', async () => ({ default: (await import('./_spriteFragMock')).createSpriteFragMockSource('v_uv') }));
-vi.mock('#rendering/webgl2/glsl/mesh.vert', () => ({ default: shaderSources.meshVert }));
-vi.mock('#rendering/webgl2/glsl/mesh.frag', () => ({ default: shaderSources.meshFrag }));
-vi.mock('#rendering/webgl2/glsl/text.vert', () => ({ default: shaderSources.textVert }));
-vi.mock('#rendering/webgl2/glsl/text-color.frag', () => ({ default: shaderSources.textFrag }));
-vi.mock('#rendering/webgl2/glsl/text-msdf.frag', () => ({ default: shaderSources.textFrag }));
-vi.mock('#rendering/webgl2/glsl/text-sdf.frag', () => ({ default: shaderSources.textFrag }));
 vi.mock('../../../packages/exojs-particles/src/renderers/glsl/particle.vert', () => ({ default: shaderSources.particleVert }));
 vi.mock('../../../packages/exojs-particles/src/renderers/glsl/particle.frag', () => ({ default: shaderSources.particleFrag }));
 

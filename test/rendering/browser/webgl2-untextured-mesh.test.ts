@@ -26,17 +26,6 @@ type RgbaTuple = [number, number, number, number];
 // Pass the real shader files through: the vitest config stubs bare
 // .vert/.frag imports to '' (jsdom can't use them), but the `?raw` specifier
 // is a different module id and resolves to the actual file contents.
-vi.mock('#rendering/webgl2/glsl/sprite.vert', async () => ({ default: (await import('#rendering/webgl2/glsl/sprite.vert?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/sprite.frag', async () => ({ default: (await import('#rendering/webgl2/glsl/sprite.frag?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/mesh.vert', async () => ({ default: (await import('#rendering/webgl2/glsl/mesh.vert?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/mesh.frag', async () => ({ default: (await import('#rendering/webgl2/glsl/mesh.frag?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/particle.vert', async () => ({ default: (await import('#rendering/webgl2/glsl/particle.vert?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/particle.frag', async () => ({ default: (await import('#rendering/webgl2/glsl/particle.frag?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/text.vert', async () => ({ default: (await import('#rendering/webgl2/glsl/text.vert?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/text-color.frag', async () => ({ default: (await import('#rendering/webgl2/glsl/text-color.frag?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/text-msdf.frag', async () => ({ default: (await import('#rendering/webgl2/glsl/text-msdf.frag?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/text-sdf.frag', async () => ({ default: (await import('#rendering/webgl2/glsl/text-sdf.frag?raw')).default }));
-
 const defaultWebGlAttributes: WebGLContextAttributes = {
   alpha: false,
   antialias: false,
