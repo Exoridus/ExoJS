@@ -4,6 +4,8 @@ import { createJsdomTestProject, shaderStubPlugin, srcConditions, workletTransfo
 import { playwright } from '@vitest/browser-playwright';
 import { defineConfig } from 'vitest/config';
 
+import { resetParityEvidence, writeParityEvidence } from './test/rendering/parity/evidenceSink';
+
 // Note: Vite alias matching uses longest-first order. Subpath aliases must come
 // before the root alias so '@codexo/exojs/renderer-sdk' resolves before '@codexo/exojs'.
 // These map the PUBLIC cross-package specifiers to source for in-repo tests.
@@ -88,6 +90,10 @@ const browserSetupFiles = ['./test/rendering/browser/_setup-dev-global.ts'];
 // a probe shader instead of the shipped one still declares its own `vi.mock`,
 // which takes precedence over these.
 const renderingBrowserSetupFiles = [...browserSetupFiles, './test/rendering/browser/_glslMocks.ts'];
+
+// The parity runner executes in the browser and cannot write files, so it hands
+// its evidence rows to these node-side commands.
+const parityCommands = { writeParityEvidence, resetParityEvidence };
 
 export default defineConfig({
   test: {
@@ -280,9 +286,10 @@ export default defineConfig({
           name: 'browser-webgpu',
           globals: true,
           setupFiles: renderingBrowserSetupFiles,
-          include: ['test/rendering/browser/webgpu-*.test.ts'],
+          include: ['test/rendering/browser/webgpu-*.test.ts', 'test/rendering/parity/**/*.test.ts'],
           browser: {
             enabled: true,
+            commands: parityCommands,
             headless: !webgpuCiHeaded,
             provider: playwright({
               launchOptions: {
