@@ -6,6 +6,7 @@ import { packAffineMat4 } from '#rendering/affinePacking';
 import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import type { Sprite } from '#rendering/sprite/Sprite';
 import { spriteVertexWgsl } from '#rendering/sprite/spriteMaterialSources';
+import { DataTexture } from '#rendering/texture/DataTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
@@ -553,7 +554,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       (!(texture instanceof Texture) && !(texture instanceof RenderTexture)) ||
       texture.width === 0 ||
       texture.height === 0 ||
-      (texture instanceof Texture && texture.source === null)
+      (texture instanceof Texture && !(texture instanceof DataTexture) && texture.source === null)
     ) {
       return;
     }
