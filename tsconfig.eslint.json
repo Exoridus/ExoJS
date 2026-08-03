@@ -1,7 +1,18 @@
 {
+  // Backs ESLint's type-aware linting of test/**/*.ts (eslint.config.ts's
+  // `project: ['./tsconfig.eslint.json']`). Folds in the vitest-specific
+  // relaxations/globals that used to live in a separate tsconfig.test.json —
+  // that file had the identical `extends`/`include` as this one and was
+  // itself wired into no tsc invocation, ESLint block, or vitest option
+  // (grep the repo), so keeping both was pure duplication.
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "noEmit": true
+    "noEmit": true,
+    "allowJs": true,
+    "verbatimModuleSyntax": false,
+    "isolatedModules": false,
+    "ignoreDeprecations": "6.0",
+    "types": ["vitest/globals", "node", "jsdom", "@webgpu/types", "css-font-loading-module"]
   },
   "include": ["src/**/*", "test/**/*", "eslint.config.ts", "rollup.config.ts", "scripts/**/*"]
 }

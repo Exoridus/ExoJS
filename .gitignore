@@ -41,7 +41,6 @@ docs/
 !.gitkeep
 !.prettierignore
 !.prettierrc
-!.size-limit.ts
 
 # Allowlist tracked dot-directories. The directory itself plus all
 # non-dotfile contents (workflow YAMLs, husky hooks, etc.). Dotfiles

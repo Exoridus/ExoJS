@@ -4,7 +4,7 @@
 //
 // Regenerate (see site/public/brand/README.md for the full recipe):
 //   for f in <masters>/*.svg; do
-//     npx svgo --multipass --config svgo.config.mjs -i "$f" -o "site/public/brand/$(basename "$f")"
+//     npx svgo --multipass --config site/public/brand/svgo.config.js -i "$f" -o "site/public/brand/$(basename "$f")"
 //   done
 // Favicons are rasterised from site/public/brand/mark-e-dot-dark.svg via
 // ImageMagick (a 1024 master -> 512/192/180/96 PNGs + a 48/32/16 .ico).
