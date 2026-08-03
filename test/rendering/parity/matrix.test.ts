@@ -20,6 +20,7 @@ import { nineSliceScenes } from './scenes/nineSlice';
 import { repeatingSpriteScenes } from './scenes/repeatingSprite';
 import { spriteScenes } from './scenes/sprite';
 import { spriteCanvasScenes } from './scenes/spriteCanvas';
+import { textScenes } from './scenes/text';
 import { transformScenes } from './scenes/transform';
 import type { Property, Scene } from './types';
 
@@ -33,6 +34,7 @@ const scenes: readonly Scene[] = [
   ...graphicsScenes,
   ...colourScenes,
   ...clippingScenes,
+  ...textScenes,
 ];
 
 const properties: readonly Property[] = [crossBackendParity, determinism, rendersSomething];
