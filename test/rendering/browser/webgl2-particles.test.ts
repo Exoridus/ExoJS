@@ -30,7 +30,6 @@ import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
 
 const shaderSources = vi.hoisted(() => ({
-
   // Verbatim copy of packages/exojs-particles/src/renderers/glsl/particle.vert
   particleVert: `#version 300 es
 precision lowp float;

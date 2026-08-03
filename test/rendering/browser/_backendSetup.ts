@@ -89,7 +89,12 @@ export const renderWebGl2Once = (backend: WebGl2Backend, root: RenderNode, clear
 };
 
 /** Returns false when the run was skipped because the device was lost. */
-export const renderWebGpuOnce = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, root: RenderNode, clear: Color = Color.black): Promise<boolean> => {
+export const renderWebGpuOnce = async (
+  ctx: { skip: (reason: string) => void },
+  backend: WebGpuBackend,
+  root: RenderNode,
+  clear: Color = Color.black,
+): Promise<boolean> => {
   const device = getBackendDevice(backend);
 
   device.pushErrorScope('validation');
