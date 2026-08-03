@@ -3,9 +3,19 @@ import { expect } from 'vitest';
 export type RgbaTuple = readonly [number, number, number, number];
 
 /**
- * Default per-channel slack for sampled comparisons. Set from the delta
- * distribution measured across the migrated suite rather than chosen by feel;
- * see {@link recordedDeltas}.
+ * Default per-channel slack for sampled comparisons.
+ *
+ * Anchored on the slack the suite already asked for, not chosen by feel: of the
+ * 71 per-call tolerances the browser specs declared before they shared this
+ * module, 8 was the single most common (22 calls), with 40 calls at 8 or below
+ * and 31 above — 12 (17), 16 (10) and 18 (4).
+ *
+ * That makes it the right starting point but not the finished answer. Calls
+ * that sat above 8 are the ones this default can turn red, and each is a
+ * finding to explain rather than a reason to raise the constant. Every
+ * comparison records its actual per-channel delta ({@link recordedDeltas}), so
+ * once enough specs run through here the value can be re-derived from what the
+ * backends really produce.
  */
 export const PIXEL_TOLERANCE = 8;
 
