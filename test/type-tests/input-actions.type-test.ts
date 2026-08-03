@@ -6,12 +6,12 @@
 // must carry at least one source, and an `ActionMap` must expose the actions
 // it was built from as own members with their concrete types preserved.
 //
-// `pnpm typecheck:type-tests` compiles this file under all three lanes:
-// `tsconfig.type-tests.json` (the example project's settings),
-// `tsconfig.type-tests-strict.json` (the engine's own profile —
-// `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noUnusedLocals`)
-// and `tsconfig.type-tests-loose.json` (`strictNullChecks: false`). Every
-// assertion below must hold identically in all three.
+// `pnpm typecheck:type-tests` compiles this file under `tsconfig.type-tests.json`
+// (the example project's settings), both at its default strictness and again
+// with `--strictNullChecks false` on the command line. It is NOT part of
+// `tsconfig.type-tests-strict.json`'s include list (that lane is scoped to
+// the catalog-input/-leaf overloads only) — every assertion below must hold
+// under both lanes it does run in.
 
 import { ActionMap, AxisAction, ButtonAction, GamepadAxis, GamepadButton, Keyboard, PointerButton, VectorAction } from '@codexo/exojs';
 

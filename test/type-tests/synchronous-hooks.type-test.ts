@@ -8,8 +8,9 @@
 // must stay asynchronous; the bottom half pins that down so the prohibition
 // can never be widened onto them by accident.
 //
-// Compiled by `tsconfig.type-tests.json` and `tsconfig.type-tests-loose.json`
-// (`strictNullChecks: false`) via `pnpm typecheck:type-tests`.
+// Compiled by `tsconfig.type-tests.json` via `pnpm typecheck:type-tests`,
+// once at its default strictness and once with `--strictNullChecks false`
+// passed on the command line (see the script in package.json).
 
 import { type RenderingContext, Scene, type Synchronous, type System, type Time } from '@codexo/exojs';
 
