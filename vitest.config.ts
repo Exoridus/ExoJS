@@ -2,6 +2,7 @@ import { fileURLToPath } from 'node:url';
 
 import { createJsdomTestProject, shaderStubPlugin, srcConditions, workletTransformPlugin } from '@codexo/exojs-config/vitest';
 import { playwright } from '@vitest/browser-playwright';
+import { webdriverio } from '@vitest/browser-webdriverio';
 import { defineConfig } from 'vitest/config';
 
 import { resetParityEvidence, writeParityEvidence } from './test/rendering/parity/evidenceSink';
@@ -358,6 +359,32 @@ export default defineConfig({
             headless: false,
             provider: playwright(),
             instances: [{ browser: 'webkit' }],
+          },
+        },
+      },
+
+      // ── browser-parity-safari — matrix rows from Safari itself ───────────
+      // macOS only, and the reason it exists: Playwright's WebKit build has no
+      // WebGPU, so its `unavailable` rows describe the test tool rather than
+      // the browser. safaridriver drives the real Safari, which does ship
+      // WebGPU — the rows land under the same `webkit` key and replace the
+      // Playwright ones, since Safari is the measurement that speaks for users.
+      //
+      // Prerequisites on the Mac, once: `safaridriver --enable`, plus
+      // Develop ▸ Allow Remote Automation in Safari's menu.
+      {
+        ...browserBase,
+        test: {
+          name: 'browser-parity-safari',
+          globals: true,
+          setupFiles: renderingBrowserSetupFiles,
+          include: ['test/rendering/parity/**/*.test.ts'],
+          browser: {
+            enabled: true,
+            commands: parityCommands,
+            headless: false,
+            provider: webdriverio(),
+            instances: [{ browser: 'safari' }],
           },
         },
       },
