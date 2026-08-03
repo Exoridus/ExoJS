@@ -21,3 +21,21 @@ export const maxChannelDelta = (a: ArrayLike<number>, b: ArrayLike<number>): num
 
   return worst;
 };
+
+/**
+ * Pixels differing from an opaque black clear.
+ *
+ * Guards the blind spot the comparison properties share: a scene that draws
+ * nothing produces two identical, perfectly deterministic empty frames and
+ * passes every other check. Counting drawn pixels is what separates "the
+ * backends agree" from "the backends agreed about nothing".
+ */
+export const drawnPixelCount = (frame: ArrayLike<number>): number => {
+  let drawn = 0;
+
+  for (let i = 0; i < frame.length; i += 4) {
+    if (frame[i] !== 0 || frame[i + 1] !== 0 || frame[i + 2] !== 0) drawn++;
+  }
+
+  return drawn;
+};
