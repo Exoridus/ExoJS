@@ -18,8 +18,9 @@ import { Texture } from '#rendering/texture/Texture';
 import { View } from '#rendering/View';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
+import { readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
-import { expectPixelNear, type RgbaTuple } from './_pixels';
+import { expectPixelNear } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
 
 const canvasWidth = 400;
@@ -46,31 +47,6 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
   await backend.initialize();
 
   return backend;
-};
-
-// Read the presented WebGPU canvas back through a 2D canvas. drawImage accepts a
-// WebGPU-configured canvas as an image source, giving CPU-side pixel access
-// without touching the backend's managed GPU textures.
-const readCanvas = (backend: WebGpuBackend): ((x: number, y: number) => RgbaTuple) => {
-  const source = backend.context.canvas as HTMLCanvasElement;
-  const readback = document.createElement('canvas');
-
-  readback.width = canvasWidth;
-  readback.height = canvasHeight;
-
-  const ctx = readback.getContext('2d');
-
-  if (!ctx) {
-    throw new Error('2D context is required for canvas readback.');
-  }
-
-  ctx.drawImage(source, 0, 0);
-
-  return (x: number, y: number): RgbaTuple => {
-    const { data } = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1);
-
-    return [data[0], data[1], data[2], data[3]];
-  };
 };
 
 // On the software (swiftshader) adapter the WebGPU device can drop mid-test;
@@ -148,7 +124,7 @@ describe('WebGPU split-screen viewport', () => {
 
       expect(validationError).toBeNull();
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasWidth);
 
       expectPixelNear(readPixel(50, canvasHeight / 2), [255, 0, 0, 255]);
       expectPixelNear(readPixel(250, canvasHeight / 2), [0, 255, 0, 255]);
@@ -207,7 +183,7 @@ describe('WebGPU split-screen viewport', () => {
 
       expect(validationError).toBeNull();
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasWidth);
 
       expectPixelNear(readPixel(250, canvasHeight / 2), [0, 0, 255, 255]);
       expectPixelNear(readPixel(50, canvasHeight / 2), [255, 255, 0, 255]);
@@ -262,7 +238,7 @@ describe('WebGPU split-screen viewport', () => {
 
       expect(validationError).toBeNull();
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasWidth);
 
       expectPixelNear(readPixel(50, canvasHeight / 2), [255, 255, 255, 255]);
       expectPixelNear(readPixel(250, canvasHeight / 2), [255, 255, 255, 255]);
@@ -319,7 +295,7 @@ describe('WebGPU split-screen viewport', () => {
 
       expect(validationError).toBeNull();
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasWidth);
 
       // readPixel takes top-left y: the top-left viewport must paint the TOP quarter
       // red and the bottom viewport the BOTTOM quarter green (GPU's origin

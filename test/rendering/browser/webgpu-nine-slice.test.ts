@@ -27,6 +27,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { ScaleModes } from '#rendering/types';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
+import { readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
@@ -58,25 +59,6 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
   await backend.initialize();
 
   return backend;
-};
-
-// Read the presented WebGPU canvas back through a 2D canvas.
-const readCanvas = (backend: WebGpuBackend): ((x: number, y: number) => RgbaTuple) => {
-  const source = backend.context.canvas as HTMLCanvasElement;
-  const readback = document.createElement('canvas');
-
-  readback.width = canvasSize;
-  readback.height = canvasSize;
-
-  const ctx = readback.getContext('2d')!;
-
-  ctx.drawImage(source, 0, 0);
-
-  return (x: number, y: number): RgbaTuple => {
-    const { data } = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1);
-
-    return [data[0], data[1], data[2], data[3]];
-  };
 };
 
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
@@ -200,7 +182,7 @@ describe('WebGPU NineSliceSprite', () => {
         return;
       }
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // Corner centers
       expectPixelNear(readPixel(14, 14), colors.tl);
@@ -256,7 +238,7 @@ describe('WebGPU NineSliceSprite', () => {
         return;
       }
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // Corner centers — each corner's footprint matches its own border size.
       expectPixelNear(readPixel(4, 8), colors.tl); // 8x16
@@ -305,7 +287,7 @@ describe('WebGPU NineSliceSprite', () => {
         return;
       }
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // Center source colour is white; tinted red, it should render pure red.
       expectPixelNear(readPixel(32, 32), [255, 0, 0, 255]);

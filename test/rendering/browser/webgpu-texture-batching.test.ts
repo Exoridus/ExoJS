@@ -24,6 +24,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 import { baseSpriteBatchTextureSlots, maxSpriteBatchTextureSlots, resolveSpriteBatchTextureSlots } from '#rendering/webgpu/WebGpuSpriteRenderer';
 
+import { readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
@@ -104,24 +105,6 @@ const renderRoot = (backend: WebGpuBackend, root: Container): void => {
   backend.flush();
 };
 
-const readCanvas = (backend: WebGpuBackend): ((x: number, y: number) => RgbaTuple) => {
-  const source = backend.context.canvas as HTMLCanvasElement;
-  const readback = document.createElement('canvas');
-
-  readback.width = canvasSize;
-  readback.height = canvasSize;
-
-  const ctx = readback.getContext('2d')!;
-
-  ctx.drawImage(source, 0, 0);
-
-  return (x: number, y: number): RgbaTuple => {
-    const { data } = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1);
-
-    return [data[0], data[1], data[2], data[3]];
-  };
-};
-
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 /** Render `body`, skipping the test on a software-adapter device loss. */
@@ -187,7 +170,7 @@ describe('WebGPU sprite batcher texture-slot capacity (real device)', () => {
       // Pixel probes prove the upper slots sample the RIGHT texture: cell 8
       // is the first slot past the legacy 8-slot layout, cell slots-1 is the
       // last slot of the generated layout.
-      const readFull = readCanvas(backend);
+      const readFull = readWebGpuPixels(backend, canvasSize);
       const probe = (read: (x: number, y: number) => RgbaTuple, index: number): void => {
         expectPixelNear(
           read((index % gridColumns) * gridCell + gridCell / 2, Math.floor(index / gridColumns) * gridCell + gridCell / 2),
@@ -207,7 +190,7 @@ describe('WebGPU sprite batcher texture-slot capacity (real device)', () => {
 
       expect(backend.stats.drawCalls).toBe(2);
 
-      const readOverflow = readCanvas(backend);
+      const readOverflow = readWebGpuPixels(backend, canvasSize);
 
       probe(readOverflow, 0);
       probe(readOverflow, slots - 1);

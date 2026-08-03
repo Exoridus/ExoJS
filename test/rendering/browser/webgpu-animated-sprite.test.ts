@@ -25,8 +25,9 @@ import { AnimatedSprite } from '#rendering/sprite/AnimatedSprite';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
+import { readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
-import { expectPixelNear, type RgbaTuple } from './_pixels';
+import { expectPixelNear } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
 
 // ---------------------------------------------------------------------------
@@ -57,25 +58,6 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
   await backend.initialize();
 
   return backend;
-};
-
-// Read the presented WebGPU canvas back through a 2D canvas.
-const readCanvas = (backend: WebGpuBackend): ((x: number, y: number) => RgbaTuple) => {
-  const source = backend.context.canvas as HTMLCanvasElement;
-  const readback = document.createElement('canvas');
-
-  readback.width = canvasSize;
-  readback.height = canvasSize;
-
-  const ctx = readback.getContext('2d')!;
-
-  ctx.drawImage(source, 0, 0);
-
-  return (x: number, y: number): RgbaTuple => {
-    const { data } = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1);
-
-    return [data[0], data[1], data[2], data[3]];
-  };
 };
 
 /**
@@ -152,7 +134,7 @@ describe('WebGPU AnimatedSprite — frame-region UV swap', () => {
         return;
       }
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(16, 16), [255, 0, 0, 255]);
       expectPixelNear(readPixel(40, 40), [0, 0, 0, 255]);
@@ -181,7 +163,7 @@ describe('WebGPU AnimatedSprite — frame-region UV swap', () => {
         return;
       }
 
-      let readPixel = readCanvas(backend);
+      let readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(16, 16), [255, 0, 0, 255]);
 
@@ -193,7 +175,7 @@ describe('WebGPU AnimatedSprite — frame-region UV swap', () => {
         return;
       }
 
-      readPixel = readCanvas(backend);
+      readPixel = readWebGpuPixels(backend, canvasSize);
 
       // Same screen position now samples cell 1 (blue) — proves the UV
       // sub-rect swap, not just a re-render of the same frame.
@@ -230,7 +212,7 @@ describe('WebGPU AnimatedSprite — frame-region UV swap', () => {
         return;
       }
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(16, 16), [255, 0, 0, 255]);
     } finally {

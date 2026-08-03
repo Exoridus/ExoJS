@@ -30,6 +30,7 @@ import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
+import { readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
@@ -102,24 +103,6 @@ const createMutableTexture = (color: string, size = 8): MutableTexture => {
       ctx.fillRect(0, 0, size, size);
       texture.updateSource();
     },
-  };
-};
-
-const readCanvas = (backend: WebGpuBackend): ((x: number, y: number) => RgbaTuple) => {
-  const source = backend.context.canvas as HTMLCanvasElement;
-  const readback = document.createElement('canvas');
-
-  readback.width = canvasSize;
-  readback.height = canvasSize;
-
-  const ctx = readback.getContext('2d')!;
-
-  ctx.drawImage(source, 0, 0);
-
-  return (x: number, y: number): RgbaTuple => {
-    const { data } = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1);
-
-    return [data[0], data[1], data[2], data[3]];
   };
 };
 
@@ -282,7 +265,7 @@ describe('WebGPU single-submit frame', () => {
       // every batch reads the last batch's bytes would still submit once, but
       // these cells would paint the wrong colour/position — so the probes are
       // what actually guard the merge. Cell i centre = (col*10+5, row*10+5).
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
       const probeCell = (index: number): void => {
         expectPixelNear(readPixel((index % 6) * 10 + 5, Math.floor(index / 6) * 10 + 5), hexToRgba(palette36[index]!));
       };
@@ -341,7 +324,7 @@ describe('WebGPU single-submit frame', () => {
       // that collapsed this to one submit would be a correctness bug.
       expect(submits).toBeGreaterThan(1);
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(16, 16), [0, 255, 0, 255]);
     } finally {
@@ -385,7 +368,7 @@ describe('WebGPU single-submit frame', () => {
       // the clipped content pass): it cannot collapse into a single submit.
       expect(submits).toBeGreaterThan(1);
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // Inside the triangle (x + y << 48): red survives.
       expectPixelNear(readPixel(6, 6), [255, 0, 0, 255]);
@@ -455,7 +438,7 @@ describe('WebGPU single-submit frame', () => {
         return;
       }
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // First plan's corner sprite survived (its batch was not dropped):
       expectPixelNear(readPixel(4, 4), hexToRgba(palette36[0]!));
@@ -508,7 +491,7 @@ describe('WebGPU single-submit frame', () => {
         return;
       }
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // planOne's corner sprite was wiped by the mid-frame clear → black.
       expectPixelNear(readPixel(4, 4), [0, 0, 0, 255]);
@@ -568,7 +551,7 @@ describe('WebGPU single-submit frame', () => {
         return;
       }
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // Earlier draw (first render, open pass) keeps the OLD (red) content.
       expectPixelNear(readPixel(4, 4), [255, 0, 0, 255]);

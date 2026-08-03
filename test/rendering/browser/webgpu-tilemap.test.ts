@@ -18,6 +18,7 @@ import { Color } from '#core/Color';
 import type { RenderNode } from '#rendering/RenderNode';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
+import { readWebGpuPixels } from './_backendSetup';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
 import { createQuadrantTexture, createSolidTexture, makeTileset, singleTileMap, wireTilemapRenderers, wireViaTiledExtension } from './_tilemapScene';
 import { getBackendDevice } from './webgpu-test-helpers';
@@ -42,24 +43,6 @@ const setupBackend = async (wire: (backend: WebGpuBackend) => void = wireTilemap
   await backend.initialize();
 
   return backend;
-};
-
-const readCanvas = (backend: WebGpuBackend): ((x: number, y: number) => RgbaTuple) => {
-  const source = backend.context.canvas as HTMLCanvasElement;
-  const readback = document.createElement('canvas');
-
-  readback.width = canvasSize;
-  readback.height = canvasSize;
-
-  const ctx = readback.getContext('2d')!;
-
-  ctx.drawImage(source, 0, 0);
-
-  return (x: number, y: number): RgbaTuple => {
-    const { data } = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1);
-
-    return [data[0], data[1], data[2], data[3]];
-  };
 };
 
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
@@ -108,7 +91,7 @@ describe('WebGPU tilemap — single tile', () => {
         return;
       }
 
-      const read = readCanvas(backend);
+      const read = readWebGpuPixels(backend, canvasSize);
       expectPixelNear(read(24, 24), [255, 0, 0, 255]);
       expectPixelNear(read(4, 4), [0, 0, 0, 255]);
     } finally {
@@ -140,7 +123,7 @@ describe('WebGPU tilemap — multiple tilesets', () => {
         return;
       }
 
-      const read = readCanvas(backend);
+      const read = readWebGpuPixels(backend, canvasSize);
       expectPixelNear(read(8, 8), [255, 0, 0, 255]);
       expectPixelNear(read(24, 8), [0, 0, 255, 255]);
     } finally {
@@ -169,7 +152,7 @@ describe('WebGPU tilemap — tile orientation', () => {
         return null;
       }
 
-      const read = readCanvas(backend);
+      const read = readWebGpuPixels(backend, canvasSize);
       const at = (cx: number, cy: number): RgbaTuple => read(cx ? 28 : 20, cy ? 28 : 20);
       const result = [
         [at(0, 0), at(0, 1)],
@@ -252,7 +235,7 @@ describe('WebGPU tilemap — chunk culling', () => {
       }
 
       expect(backend.stats.drawCalls).toBeGreaterThan(0);
-      expectPixelNear(readCanvas(backend)(8, 8), [255, 0, 0, 255]);
+      expectPixelNear(readWebGpuPixels(backend, canvasSize)(8, 8), [255, 0, 0, 255]);
     } finally {
       node.destroy();
       texture.destroy();
@@ -281,7 +264,7 @@ describe('WebGPU tilemap — layer opacity', () => {
         return;
       }
 
-      const pixel = readCanvas(backend)(24, 24);
+      const pixel = readWebGpuPixels(backend, canvasSize)(24, 24);
       expect(pixel[0]).toBeGreaterThan(80);
       expect(pixel[0]).toBeLessThan(176);
     } finally {
@@ -308,7 +291,7 @@ describe('WebGPU tilemap — one-extension Tiled wiring', () => {
         return;
       }
 
-      expectPixelNear(readCanvas(backend)(24, 24), [0, 255, 0, 255]);
+      expectPixelNear(readWebGpuPixels(backend, canvasSize)(24, 24), [0, 255, 0, 255]);
     } finally {
       node.destroy();
       texture.destroy();

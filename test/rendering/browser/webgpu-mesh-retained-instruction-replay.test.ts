@@ -35,6 +35,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 import { WebGpuMeshRenderer } from '#rendering/webgpu/WebGpuMeshRenderer';
 
+import { readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
@@ -112,28 +113,6 @@ const createQuadGeometry = (): Geometry => {
     stride,
     indices: new Uint16Array([0, 1, 2, 0, 2, 3]),
   });
-};
-
-const readCanvas = (backend: WebGpuBackend): ((x: number, y: number) => RgbaTuple) => {
-  const source = backend.context.canvas as HTMLCanvasElement;
-  const readback = document.createElement('canvas');
-
-  readback.width = canvasSize;
-  readback.height = canvasSize;
-
-  const ctx = readback.getContext('2d');
-
-  if (!ctx) {
-    throw new Error('2D context is required for canvas readback.');
-  }
-
-  ctx.drawImage(source, 0, 0);
-
-  return (x: number, y: number): RgbaTuple => {
-    const { data } = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1);
-
-    return [data[0], data[1], data[2], data[3]];
-  };
 };
 
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
@@ -246,7 +225,7 @@ describe('WebGPU renderer matrix: Mesh retained instruction replay cells', () =>
         [16, 48, '#00ff00'], // greenA (batch 2)
         [32, 48, '#00ff00'], // greenB (batch 2)
       ];
-      let readPixel = readCanvas(backend);
+      let readPixel = readWebGpuPixels(backend, canvasSize);
       const slowPixels = probes.map(([x, y]) => readPixel(x, y));
 
       for (let i = 0; i < probes.length; i++) {
@@ -258,7 +237,7 @@ describe('WebGPU renderer matrix: Mesh retained instruction replay cells', () =>
         return;
       }
 
-      readPixel = readCanvas(backend);
+      readPixel = readWebGpuPixels(backend, canvasSize);
 
       for (let i = 0; i < probes.length; i++) {
         expectPixelNear(readPixel(probes[i]![0], probes[i]![1]), slowPixels[i]!, 0);
@@ -283,7 +262,7 @@ describe('WebGPU renderer matrix: Mesh retained instruction replay cells', () =>
         }
       }
 
-      let readPixel = readCanvas(backend);
+      let readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(16, 32), [255, 0, 0, 255]);
 
@@ -295,7 +274,7 @@ describe('WebGPU renderer matrix: Mesh retained instruction replay cells', () =>
         return;
       }
 
-      readPixel = readCanvas(backend);
+      readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(40, 8), [0, 0, 255, 255]); // outside sprite 32..48
       expectPixelNear(readPixel(16, 32), [255, 0, 0, 255]); // redB shifted to 8..24
@@ -331,7 +310,7 @@ describe('WebGPU renderer matrix: Mesh retained instruction replay cells', () =>
       expect(fragmentOf(scene.group).instructions!.instructions[0]).toBe(recordedBatch);
       expect(fragmentOf(scene.group).instructions!.hasRecording).toBe(true);
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(32, 32), [255, 0, 0, 255]); // redA now (24,24)-(40,40)
       expectPixelNear(readPixel(32, 48), [0, 255, 0, 255]); // greenA now (24,40)-(40,56)
@@ -368,7 +347,7 @@ describe('WebGPU renderer matrix: Mesh retained instruction replay cells', () =>
       expect(fragmentOf(scene.group).instructions!.instructions[0]).toBe(recordedBatch); // patched, not re-recorded
       expect(fragmentOf(scene.group).instructions!.hasRecording).toBe(true);
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(16, 32), [0, 0, 0, 255]); // redA's old spot cleared
       expectPixelNear(readPixel(32, 32), [255, 0, 0, 255]); // redB (same batch) untouched
@@ -400,14 +379,14 @@ describe('WebGPU renderer matrix: Mesh retained instruction replay cells', () =>
         return;
       } // F2 record
 
-      const record = readCanvas(backend);
+      const record = readWebGpuPixels(backend, canvasSize);
       const recordRed = record(16, 32);
 
       if (!(await renderScene(ctx, backend, scene.root))) {
         return;
       } // F3 broken replay
 
-      const replay = readCanvas(backend);
+      const replay = readWebGpuPixels(backend, canvasSize);
 
       // redA's probe must no longer read the recorded red: the broken rebase
       // moved / dropped its instance.

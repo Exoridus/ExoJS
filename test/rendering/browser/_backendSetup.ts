@@ -148,6 +148,31 @@ export const readWebGl2Frame = (backend: WebGl2Backend, size: number): Uint8Arra
   return out;
 };
 
+/**
+ * Snapshots the presented WebGPU canvas once and returns a sampler over it.
+ *
+ * The snapshot is taken eagerly, so the returned function reflects the frame
+ * as it stood at the call — render again and take a new sampler.
+ */
+export const readWebGpuPixels = (backend: WebGpuBackend, size: number): ((x: number, y: number) => RgbaTuple) => {
+  const readback = document.createElement('canvas');
+
+  readback.width = size;
+  readback.height = size;
+
+  const rctx = readback.getContext('2d');
+
+  if (rctx === null) throw new Error('A 2D context is required for WebGPU readback.');
+
+  rctx.drawImage(backend.context.canvas as HTMLCanvasElement, 0, 0);
+
+  return (x: number, y: number): RgbaTuple => {
+    const { data } = rctx.getImageData(Math.floor(x), Math.floor(y), 1, 1);
+
+    return [data[0]!, data[1]!, data[2]!, data[3]!];
+  };
+};
+
 /** Top-left-indexed RGBA. Routing through a 2D canvas also normalises the platform canvas format. */
 export const readWebGpuFrame = (backend: WebGpuBackend, size: number): Uint8ClampedArray => {
   const readback = document.createElement('canvas');

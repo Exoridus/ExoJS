@@ -30,8 +30,9 @@ import { Texture } from '#rendering/texture/Texture';
 import { ScaleModes, TextureFormat } from '#rendering/types';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
+import { readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
-import { expectPixelNear, type RgbaTuple } from './_pixels';
+import { expectPixelNear } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
 
 const canvasSize = 64;
@@ -62,31 +63,6 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
 // A full-canvas quad in pixel space with UVs spanning the whole texture.
 const fullQuadVertices = (): Float32Array => new Float32Array([0, 0, canvasSize, 0, canvasSize, canvasSize, 0, 0, canvasSize, canvasSize, 0, canvasSize]);
 const fullQuadUvs = (): Float32Array => new Float32Array([0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1]);
-
-// Read the presented WebGPU canvas back through a 2D canvas. drawImage accepts a
-// WebGPU-configured canvas as an image source, giving CPU-side pixel access
-// without touching the backend's managed GPU textures.
-const readCanvas = (backend: WebGpuBackend): ((x: number, y: number) => RgbaTuple) => {
-  const source = backend.context.canvas as HTMLCanvasElement;
-  const readback = document.createElement('canvas');
-
-  readback.width = canvasSize;
-  readback.height = canvasSize;
-
-  const ctx = readback.getContext('2d');
-
-  if (!ctx) {
-    throw new Error('2D context is required for canvas readback.');
-  }
-
-  ctx.drawImage(source, 0, 0);
-
-  return (x: number, y: number): RgbaTuple => {
-    const { data } = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1);
-
-    return [data[0], data[1], data[2], data[3]];
-  };
-};
 
 // On the software (swiftshader) adapter the WebGPU device can drop mid-test;
 // treat that as an unavailable-adapter skip rather than a failure.
@@ -142,7 +118,7 @@ describe('WebGPU mesh tint and texture sampling', () => {
         return;
       }
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       levels.forEach((level, i) => {
         const x = Math.floor(((i + 0.5) * canvasSize) / width);
@@ -173,7 +149,7 @@ describe('WebGPU mesh tint and texture sampling', () => {
         return;
       }
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(16, 16), [255, 0, 0, 255]); // top-left
       expectPixelNear(readPixel(48, 16), [0, 255, 0, 255]); // top-right
@@ -210,7 +186,7 @@ describe('WebGPU mesh tint and texture sampling', () => {
         return;
       }
 
-      expectPixelNear(readCanvas(backend)(32, 32), [96, 96, 96, 255]);
+      expectPixelNear(readWebGpuPixels(backend, canvasSize)(32, 32), [96, 96, 96, 255]);
     } finally {
       mesh.destroy();
       texture.destroy();
@@ -236,7 +212,7 @@ describe('WebGPU mesh tint and texture sampling', () => {
         return;
       }
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // Endpoints resolve near the pure stops; the middle is the blend (magenta).
       expectPixelNear(readPixel(2, 32), [255, 0, 0, 255], 20); // left ≈ red
@@ -270,7 +246,7 @@ describe('WebGPU mesh tint and texture sampling', () => {
         return;
       }
 
-      expectPixelNear(readCanvas(backend)(32, 32), [96, 160, 224, 255]);
+      expectPixelNear(readWebGpuPixels(backend, canvasSize)(32, 32), [96, 160, 224, 255]);
     } finally {
       mesh.destroy();
       texture.destroy();
@@ -300,7 +276,7 @@ describe('WebGPU mesh tint and texture sampling', () => {
         return;
       }
 
-      expectPixelNear(readCanvas(backend)(32, 32), [255, 0, 0, 255]); // first draw: red
+      expectPixelNear(readWebGpuPixels(backend, canvasSize)(32, 32), [255, 0, 0, 255]); // first draw: red
 
       // Mutate the texel and flush the dirty region; the next draw must show it.
       texture.buffer.set([0, 0, 255, 255]); // blue
@@ -310,7 +286,7 @@ describe('WebGPU mesh tint and texture sampling', () => {
         return;
       }
 
-      expectPixelNear(readCanvas(backend)(32, 32), [0, 0, 255, 255]); // second draw: blue
+      expectPixelNear(readWebGpuPixels(backend, canvasSize)(32, 32), [0, 0, 255, 255]); // second draw: blue
     } finally {
       mesh.destroy();
       texture.destroy();

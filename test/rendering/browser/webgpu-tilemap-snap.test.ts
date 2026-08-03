@@ -22,7 +22,8 @@ import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { RenderNode } from '#rendering/RenderNode';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
-import { expectPixelNear, type RgbaTuple } from './_pixels';
+import { readWebGpuPixels } from './_backendSetup';
+import { expectPixelNear } from './_pixels';
 import { createSolidTexture, makeTileset, wireTilemapRenderers } from './_tilemapScene';
 import { getBackendDevice } from './webgpu-test-helpers';
 
@@ -46,25 +47,6 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
   await backend.initialize();
 
   return backend;
-};
-
-// Read the presented WebGPU canvas back through a 2D canvas.
-const readCanvas = (backend: WebGpuBackend): ((x: number, y: number) => RgbaTuple) => {
-  const source = backend.context.canvas as HTMLCanvasElement;
-  const readback = document.createElement('canvas');
-
-  readback.width = canvasSize;
-  readback.height = canvasSize;
-
-  const ctx = readback.getContext('2d')!;
-
-  ctx.drawImage(source, 0, 0);
-
-  return (x: number, y: number): RgbaTuple => {
-    const { data } = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1);
-
-    return [data[0], data[1], data[2], data[3]];
-  };
 };
 
 // On the software (swiftshader) adapter the WebGPU device can be dropped
@@ -156,7 +138,7 @@ describe('WebGPU tilemap pixel snapping — chunk seam', () => {
         return;
       }
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // The chunk seam is between tile x=1 and x=2, near screen x=32.
       // Scan a horizontal strip covering both chunks; every pixel must carry the
@@ -254,7 +236,7 @@ describe('WebGPU tilemap pixel snapping — chunk seam', () => {
         return;
       }
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // TileChunkNode chunk origins are integer multiples of tile pitch relative
       // to the snapped layer origin, so both modes produce no seam.
@@ -285,7 +267,7 @@ describe('WebGPU tilemap pixel snapping — chunk seam', () => {
         return;
       }
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(8, 8), [255, 0, 0, 255]); // chunk 0
       expectPixelNear(readPixel(32, 8), [255, 0, 0, 255]); // seam column

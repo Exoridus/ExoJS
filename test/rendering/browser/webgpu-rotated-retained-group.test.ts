@@ -33,6 +33,7 @@ import { BmFont } from '#rendering/text/BmFont';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
+import { readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
@@ -133,28 +134,6 @@ const coloredQuad = (x0: number, y0: number, x1: number, y1: number, rgba: RgbaT
   });
 };
 
-const readCanvas = (backend: WebGpuBackend): ((x: number, y: number) => RgbaTuple) => {
-  const source = backend.context.canvas as HTMLCanvasElement;
-  const readback = document.createElement('canvas');
-
-  readback.width = canvasSize;
-  readback.height = canvasSize;
-
-  const ctx = readback.getContext('2d');
-
-  if (!ctx) {
-    throw new Error('2D context is required for canvas readback.');
-  }
-
-  ctx.drawImage(source, 0, 0);
-
-  return (x: number, y: number): RgbaTuple => {
-    const { data } = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1);
-
-    return [data[0], data[1], data[2], data[3]];
-  };
-};
-
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 // Render a scene through the real plan path inside a validation error scope.
@@ -212,7 +191,7 @@ describe('WebGPU renderer matrix: rotated RetainedContainer cells', () => {
         return;
       }
 
-      let readPixel = readCanvas(backend);
+      let readPixel = readWebGpuPixels(backend, canvasSize);
 
       // Local (0..16)² → world x∈(32,48), y∈(16,32).
       expectPixelNear(readPixel(40, 24), [255, 0, 0, 255]);
@@ -227,7 +206,7 @@ describe('WebGPU renderer matrix: rotated RetainedContainer cells', () => {
         return;
       }
 
-      readPixel = readCanvas(backend);
+      readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(24, 40), [255, 0, 0, 255]);
       expectPixelNear(readPixel(40, 24), [0, 0, 0, 255]);
@@ -255,7 +234,7 @@ describe('WebGPU renderer matrix: rotated RetainedContainer cells', () => {
         return;
       }
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(40, 24), [0, 255, 0, 255]); // rotated position
       expectPixelNear(readPixel(24, 40), [0, 0, 0, 255]); // transposed-artifact region
@@ -290,7 +269,7 @@ describe('WebGPU renderer matrix: rotated RetainedContainer cells', () => {
       // mat3x3 path under test.
       expect(backend.stats.drawCalls).toBe(1);
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(40, 24), [255, 0, 0, 255]); // meshA rotated center
       expectPixelNear(readPixel(8, 24), [255, 0, 0, 255]); // meshB rotated center
@@ -315,7 +294,7 @@ describe('WebGPU renderer matrix: rotated RetainedContainer cells', () => {
         return;
       }
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // Glyph local (0..32)² → world x∈(32,64), y∈(0,32).
       expectPixelNear(readPixel(48, 16), [255, 0, 0, 255]);

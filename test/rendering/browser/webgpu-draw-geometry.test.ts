@@ -22,6 +22,7 @@ import { RenderingContext } from '#rendering/RenderingContext';
 import { View } from '#rendering/View';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
+import { readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
@@ -92,28 +93,6 @@ const coloredQuad = (x0: number, y0: number, x1: number, y1: number, rgba: RgbaT
 // whole surface, top-left origin.
 const screenView = (): View => new View(canvasSize / 2, canvasSize / 2, canvasSize, canvasSize);
 
-const readCanvas = (backend: WebGpuBackend): ((x: number, y: number) => RgbaTuple) => {
-  const source = backend.context.canvas as HTMLCanvasElement;
-  const readback = document.createElement('canvas');
-
-  readback.width = canvasSize;
-  readback.height = canvasSize;
-
-  const ctx = readback.getContext('2d');
-
-  if (!ctx) {
-    throw new Error('2D context is required for canvas readback.');
-  }
-
-  ctx.drawImage(source, 0, 0);
-
-  return (x: number, y: number): RgbaTuple => {
-    const { data } = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1);
-
-    return [data[0], data[1], data[2], data[3]];
-  };
-};
-
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 interface DrawCall {
@@ -172,7 +151,7 @@ describe('WebGPU RenderingContext.drawGeometry', () => {
         return;
       }
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(32, 32), [255, 0, 0, 255]); // inside the quad
       expectPixelNear(readPixel(4, 4), [0, 0, 0, 255]); // outside → cleared black
@@ -194,7 +173,7 @@ describe('WebGPU RenderingContext.drawGeometry', () => {
         return;
       }
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(48, 48), [0, 255, 0, 255]); // inside the moved quad
       expectPixelNear(readPixel(12, 12), [0, 0, 0, 255]); // original location now empty
@@ -216,7 +195,7 @@ describe('WebGPU RenderingContext.drawGeometry', () => {
         return;
       }
 
-      expectPixelNear(readCanvas(backend)(32, 32), [96, 160, 224, 255]);
+      expectPixelNear(readWebGpuPixels(backend, canvasSize)(32, 32), [96, 160, 224, 255]);
     } finally {
       geometry.destroy();
       context.destroy();
@@ -261,7 +240,7 @@ describe('WebGPU RenderingContext.drawGeometry', () => {
       // All three instances are emitted as a single instanced draw call.
       expect(backend.stats.drawCalls).toBe(1);
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(8, 8), [255, 0, 0, 255]); // instance 0 → red
       expectPixelNear(readPixel(40, 8), [0, 255, 0, 255]); // instance 1 → green

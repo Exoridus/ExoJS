@@ -29,6 +29,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { TextureRegion } from '#rendering/texture/TextureRegion';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
+import { readWebGpuPixels } from './_backendSetup';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
 import { wireTilemapRenderers } from './_tilemapScene';
 import { getBackendDevice } from './webgpu-test-helpers';
@@ -71,28 +72,6 @@ const createSolidTexture = (color: string, size = 16): Texture => {
   context.fillRect(0, 0, size, size);
 
   return new Texture(source);
-};
-
-const readCanvas = (backend: WebGpuBackend): ((x: number, y: number) => RgbaTuple) => {
-  const source = backend.context.canvas as HTMLCanvasElement;
-  const readback = document.createElement('canvas');
-
-  readback.width = canvasSize;
-  readback.height = canvasSize;
-
-  const ctx = readback.getContext('2d');
-
-  if (!ctx) {
-    throw new Error('2D context is required for canvas readback.');
-  }
-
-  ctx.drawImage(source, 0, 0);
-
-  return (x: number, y: number): RgbaTuple => {
-    const { data } = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1);
-
-    return [data[0], data[1], data[2], data[3]];
-  };
 };
 
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
@@ -225,7 +204,7 @@ describe('WebGPU renderer matrix: TileChunkNode retained instruction replay cell
         [16, 32, [255, 0, 0, 255]], // red tile (batch 1)
         [32, 48, [0, 255, 0, 255]], // green tile (batch 2)
       ];
-      let readPixel = readCanvas(backend);
+      let readPixel = readWebGpuPixels(backend, canvasSize);
       const slowPixels = probes.map(([x, y]) => readPixel(x, y));
 
       for (let i = 0; i < probes.length; i++) {
@@ -236,7 +215,7 @@ describe('WebGPU renderer matrix: TileChunkNode retained instruction replay cell
         return; // F3: instruction replay
       }
 
-      readPixel = readCanvas(backend);
+      readPixel = readWebGpuPixels(backend, canvasSize);
 
       for (let i = 0; i < probes.length; i++) {
         expectPixelNear(readPixel(probes[i]![0], probes[i]![1]), slowPixels[i]!, 0);
@@ -260,7 +239,7 @@ describe('WebGPU renderer matrix: TileChunkNode retained instruction replay cell
         }
       }
 
-      let readPixel = readCanvas(backend);
+      let readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(16, 32), [255, 0, 0, 255]);
 
@@ -270,7 +249,7 @@ describe('WebGPU renderer matrix: TileChunkNode retained instruction replay cell
         return;
       }
 
-      readPixel = readCanvas(backend);
+      readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(40, 8), [0, 0, 255, 255]); // outside tile 32..48
       expectPixelNear(readPixel(4, 32), [255, 0, 0, 255]); // red now 0..8 visible
@@ -293,7 +272,7 @@ describe('WebGPU renderer matrix: TileChunkNode retained instruction replay cell
         }
       }
 
-      let readPixel = readCanvas(backend);
+      let readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(16, 32), [255, 0, 0, 255]);
 
@@ -303,7 +282,7 @@ describe('WebGPU renderer matrix: TileChunkNode retained instruction replay cell
         return;
       }
 
-      readPixel = readCanvas(backend);
+      readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(40, 40), [255, 0, 0, 255]); // red 32..48 x 32..48
       expectPixelNear(readPixel(56, 56), [0, 255, 0, 255]); // green 48..64 x 48..64
@@ -326,7 +305,7 @@ describe('WebGPU renderer matrix: TileChunkNode retained instruction replay cell
         }
       }
 
-      let readPixel = readCanvas(backend);
+      let readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(16, 32), [255, 0, 0, 255]);
 
@@ -339,7 +318,7 @@ describe('WebGPU renderer matrix: TileChunkNode retained instruction replay cell
         return;
       }
 
-      readPixel = readCanvas(backend);
+      readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(16, 32), [0, 0, 0, 255]); // cleared: background, not stale red
       expectPixelNear(readPixel(32, 48), [0, 255, 0, 255]); // untouched sibling still correct
@@ -361,7 +340,7 @@ describe('WebGPU renderer matrix: TileChunkNode retained instruction replay cell
       }
 
       expect(replaySpy).toHaveBeenCalled();
-      readPixel = readCanvas(backend);
+      readPixel = readWebGpuPixels(backend, canvasSize);
       expectPixelNear(readPixel(16, 32), [0, 0, 0, 255]);
     } finally {
       scene.destroy();

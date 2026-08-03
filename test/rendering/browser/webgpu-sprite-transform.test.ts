@@ -31,8 +31,9 @@ import { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
+import { readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
-import { expectPixelNear, type RgbaTuple } from './_pixels';
+import { expectPixelNear } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
 
 const canvasSize = 64;
@@ -76,31 +77,6 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
   await backend.initialize();
 
   return backend;
-};
-
-// Read the presented WebGPU canvas back through a 2D canvas. drawImage accepts a
-// WebGPU-configured canvas as an image source, giving CPU-side pixel access
-// without touching the backend's managed GPU textures.
-const readCanvas = (backend: WebGpuBackend): ((x: number, y: number) => RgbaTuple) => {
-  const source = backend.context.canvas as HTMLCanvasElement;
-  const readback = document.createElement('canvas');
-
-  readback.width = canvasSize;
-  readback.height = canvasSize;
-
-  const ctx = readback.getContext('2d');
-
-  if (!ctx) {
-    throw new Error('2D context is required for canvas readback.');
-  }
-
-  ctx.drawImage(source, 0, 0);
-
-  return (x: number, y: number): RgbaTuple => {
-    const { data } = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1);
-
-    return [data[0], data[1], data[2], data[3]];
-  };
 };
 
 // On the software (swiftshader) adapter used in CI the WebGPU device can be
@@ -155,7 +131,7 @@ describe('WebGPU sprite transform storage', () => {
         return;
       }
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(24, 24), [255, 0, 0, 255]);
       // Outside the translated quad on both sides stays the black clear.
@@ -186,7 +162,7 @@ describe('WebGPU sprite transform storage', () => {
         return;
       }
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(12, 12), [255, 0, 0, 255]);
       expectPixelNear(readPixel(24, 24), [255, 0, 0, 255]);
@@ -220,7 +196,7 @@ describe('WebGPU sprite transform storage', () => {
 
       expect(backend.stats.drawCalls).toBe(1);
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // Each instance resolves its own transform row, so all three land at their
       // distinct positions instead of collapsing onto a single row.
@@ -276,7 +252,7 @@ describe('WebGPU sprite transform storage', () => {
       // Sprites with different blend modes must NOT coalesce.
       expect(backend.stats.drawCalls).toBeGreaterThanOrEqual(2);
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // Normal sprites (top row): red at (8, 8) and blue at (24, 8).
       expectPixelNear(readPixel(8, 8), [255, 0, 0, 255]);
@@ -319,7 +295,7 @@ describe('WebGPU sprite transform storage', () => {
 
       expect(backend.stats.drawCalls).toBe(1);
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(10, 10), [255, 0, 0, 255]);
       expectPixelNear(readPixel(42, 42), [255, 0, 0, 255]);

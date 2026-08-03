@@ -21,8 +21,9 @@ import { Graphics } from '#rendering/primitives/Graphics';
 import type { RenderNode } from '#rendering/RenderNode';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
+import { readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
-import { expectPixelNear, type RgbaTuple } from './_pixels';
+import { expectPixelNear } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
 
 const canvasSize = 64;
@@ -86,30 +87,6 @@ const renderAndValidate = async (ctx: { skip: (reason: string) => void }, backen
   return true;
 };
 
-// Read the presented WebGPU canvas back through a 2D canvas. drawImage accepts a
-// WebGPU-configured canvas as an image source, matching other WebGPU pixel tests.
-const readCanvas = (backend: WebGpuBackend): ((x: number, y: number) => RgbaTuple) => {
-  const source = backend.context.canvas as HTMLCanvasElement;
-  const readback = document.createElement('canvas');
-
-  readback.width = canvasSize;
-  readback.height = canvasSize;
-
-  const ctx = readback.getContext('2d');
-
-  if (!ctx) {
-    throw new Error('2D context is required for canvas readback.');
-  }
-
-  ctx.drawImage(source, 0, 0);
-
-  return (x: number, y: number): RgbaTuple => {
-    const { data } = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1);
-
-    return [data[0], data[1], data[2], data[3]];
-  };
-};
-
 describe('WebGPU Graphics solid fill', () => {
   test('solid-color rectangle fill renders the fill color inside and the clear color outside', async ctx => {
     const backend = await setupBackend();
@@ -123,7 +100,7 @@ describe('WebGPU Graphics solid fill', () => {
         return;
       }
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // Inside the rectangle: solid fill color (Color.green is (0, 128, 0)).
       expectPixelNear(readPixel(32, 32), [0, 128, 0, 255]);
@@ -149,7 +126,7 @@ describe('WebGPU Graphics solid fill', () => {
         return;
       }
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // Center of the circle: solid fill color.
       expectPixelNear(readPixel(32, 32), [255, 0, 0, 255]);
@@ -175,7 +152,7 @@ describe('WebGPU Graphics solid fill', () => {
         return;
       }
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // Untouched region before the translated rectangle stays clear.
       expectPixelNear(readPixel(4, 4), [0, 0, 0, 255]);

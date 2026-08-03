@@ -37,8 +37,9 @@ import { BmFont } from '#rendering/text/BmFont';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
+import { readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
-import { expectPixelNear, type RgbaTuple } from './_pixels';
+import { expectPixelNear } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
 
 const canvasSize = 64;
@@ -190,31 +191,6 @@ const setupBackend = async (logicalSize = canvasSize): Promise<WebGpuBackend> =>
   return backend;
 };
 
-// Read the presented WebGPU canvas back through a 2D canvas. drawImage accepts a
-// WebGPU-configured canvas as an image source, giving CPU-side pixel access
-// without touching the backend's managed GPU textures.
-const readCanvas = (backend: WebGpuBackend): ((x: number, y: number) => RgbaTuple) => {
-  const source = backend.context.canvas as HTMLCanvasElement;
-  const readback = document.createElement('canvas');
-
-  readback.width = canvasSize;
-  readback.height = canvasSize;
-
-  const ctx = readback.getContext('2d');
-
-  if (!ctx) {
-    throw new Error('2D context is required for canvas readback.');
-  }
-
-  ctx.drawImage(source, 0, 0);
-
-  return (x: number, y: number): RgbaTuple => {
-    const { data } = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1);
-
-    return [data[0], data[1], data[2], data[3]];
-  };
-};
-
 // On the software (swiftshader) adapter used in CI the WebGPU device can be
 // dropped mid-test ("Instance dropped in popErrorScope"). Treat that as a
 // device-lost skip rather than a failure.
@@ -265,7 +241,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
 
       await renderClipped(ctx, backend, root);
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // Inside the triangle (x + y << 48): red survives.
       expectPixelNear(readPixel(6, 6), [255, 0, 0, 255]);
@@ -302,7 +278,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
 
       await renderClipped(ctx, backend, root);
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // Intersection (top-left quadrant): visible.
       expectPixelNear(readPixel(12, 12), [255, 0, 0, 255]);
@@ -339,7 +315,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
 
       await renderClipped(ctx, backend, root);
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // Top-left: inside both.
       expectPixelNear(readPixel(12, 12), [255, 0, 0, 255]);
@@ -379,7 +355,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
 
       await renderClipped(ctx, backend, root);
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(8, 12), [255, 0, 0, 255]);
       expectPixelNear(readPixel(48, 12), [0, 255, 0, 255]);
@@ -409,7 +385,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
 
       await renderClipped(ctx, backend, root);
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(16, 16), [255, 0, 0, 255]);
       expectPixelNear(readPixel(44, 44), [0, 0, 0, 255]);
@@ -461,7 +437,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
 
       await renderClipped(ctx, backend, root);
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(24, 24), [255, 0, 0, 255]);
       expectPixelNear(readPixel(8, 8), [0, 0, 0, 255]);
@@ -486,7 +462,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
 
       await renderClipped(ctx, backend, root);
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // Inside the triangle (x + y << 48): the red mesh survives.
       expectPixelNear(readPixel(6, 6), [255, 0, 0, 255]);
@@ -515,7 +491,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
 
       await renderClipped(ctx, backend, root);
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // Inside the triangle: the filled rectangle survives.
       expectPixelNear(readPixel(6, 6), [255, 0, 0, 255]);
@@ -544,7 +520,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
 
       await renderClipped(ctx, backend, root);
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // Top-left: inside both.
       expectPixelNear(readPixel(12, 12), [255, 0, 0, 255]);
@@ -578,7 +554,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
 
       await renderClipped(ctx, backend, root);
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // Inside the triangle (x + y << 48): the red custom-material mesh survives.
       expectPixelNear(readPixel(6, 6), [255, 0, 0, 255]);
@@ -613,7 +589,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
 
       await renderClipped(ctx, backend, root);
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // Top-left: inside both.
       expectPixelNear(readPixel(12, 12), [255, 0, 0, 255]);
@@ -653,7 +629,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
 
       await renderClipped(ctx, backend, root);
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // Intersection (top-left quadrant): visible.
       expectPixelNear(readPixel(12, 12), [255, 0, 0, 255]);
@@ -692,7 +668,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
 
       await renderClipped(ctx, backend, root);
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // Inside the triangle (x + y << 48): the red custom-material sprite survives.
       expectPixelNear(readPixel(6, 6), [255, 0, 0, 255]);
@@ -727,7 +703,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
 
       await renderClipped(ctx, backend, root);
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // A physical pixel (px, py) maps to logical (px / 2). Triangle inside:
       // logical x + y < 32 ⇒ physical px + py < 64.
@@ -756,7 +732,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
 
       await renderClipped(ctx, backend, root);
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // Inside the triangle (x + y << 48): the red glyph survives.
       expectPixelNear(readPixel(6, 6), [255, 0, 0, 255]);
@@ -805,7 +781,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
 
       await renderClipped(ctx, backend, root);
 
-      const readPixel = readCanvas(backend);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // Top-left: inside the clip and the mask is opaque → red survives.
       expectPixelNear(readPixel(12, 12), [255, 0, 0, 255]);
