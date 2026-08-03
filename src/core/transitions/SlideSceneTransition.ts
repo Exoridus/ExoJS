@@ -48,8 +48,8 @@ interface SlidePhaseState {
 }
 
 /**
- * Directional slide transition — covers menu/inventory/page-style navigation
- * (definition spec §8). Three modes:
+ * Directional slide transition — covers menu/inventory/page-style navigation.
+ * Three modes:
  * - `'push'` (default): the outgoing scene exits toward `direction` while the
  *   incoming scene enters from the opposite edge. Phase-split at the commit
  *   boundary (not a full `SceneTransition`), so there is a brief single-frame

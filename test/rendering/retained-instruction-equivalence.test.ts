@@ -23,7 +23,7 @@ import { RetainedContainer } from '#rendering/RetainedContainer';
 import { BlendModes } from '#rendering/types';
 
 // ---------------------------------------------------------------------------
-// Task 11 (S3-D10): the instruction-replay tier must reproduce the EXACT
+// The instruction-replay tier must reproduce the EXACT
 // batch payloads the slow path's flush sequence produces — same batch count,
 // same order, per batch the same blend mode, instance count, instance BYTES
 // (after rebasing node indices group-local) and the same transform rows.
@@ -33,7 +33,7 @@ import { BlendModes } from '#rendering/types';
 // 6-word instance (bounds, packed tint, node index), batches split on blend
 // change, group boundaries are flush boundaries, captures stage byte copies
 // owned by the innermost bundle, and capture end rebases node indices and
-// copies the referenced transform rows — exactly the S3-D4 model the real
+// copies the referenced transform rows — exactly the model the real
 // backends implement (their true bytes are covered by the backend suites and
 // the browser pixel cells; THIS suite pins that the collect switch, player,
 // and optimizer feed both tiers identical data in identical order).
@@ -125,7 +125,7 @@ const createByteBackend = (): ByteBackendHarness => {
       return;
     }
 
-    // Bytes are stored once, owned by the INNERMOST capture's bundle (S3-D6);
+    // Bytes are stored once, owned by the INNERMOST capture's bundle;
     // one shared instruction is appended to every active set.
     const owner = captures[captures.length - 1]!;
     const payload: ModelPayload = { bundle: owner.bundle, blend: batch.blend, instanceCount: batch.instanceCount, bytes: batch.bytes.slice() };
@@ -274,7 +274,7 @@ const createByteBackend = (): ByteBackendHarness => {
 
       log.push({ type: 'endCapture' });
 
-      // Finalize (S3-D4 model): rebase node indices group-local, copy the
+      // Finalize: rebase node indices group-local, copy the
       // referenced transform rows into the group-owned store, then stamp the
       // instructions with the final generation (official plan-layer seam).
       let min = Number.POSITIVE_INFINITY;
@@ -414,7 +414,7 @@ const fragmentOf = (group: RetainedContainer): RetainedGroupFragment => (group a
 
 // ---------------------------------------------------------------------------
 
-describe('S3-D10 equivalence: instruction replay reproduces the slow-path batch payloads byte for byte', () => {
+describe('instruction-replay equivalence: instruction replay reproduces the slow-path batch payloads byte for byte', () => {
   const buildScene = (): { root: Container; group: RetainedContainer; a: ByteLeaf; mid: Container } => {
     const root = new Container();
     const outside = new ByteLeaf('x'); // shifts the group's frame-local node indices
@@ -600,8 +600,8 @@ describe('S3-D10 equivalence: instruction replay reproduces the slow-path batch 
     // Ladder to the fully-spliced state (see the collect-switch suite):
     // inner records first while outer thrashes, then outer records with the
     // inner batch verbatim.
-    // Slice 4b: a move on the direct child would be row-patched (outer stays
-    // clean), breaking the thrash cadence — content-dirty the outer instead.
+    // A move on the direct child would be row-patched (outer stays clean),
+    // breaking the thrash cadence — content-dirty the outer instead.
     dynamic.invalidateContent();
     playFrame(root, backend); // inner records
     dynamic.invalidateContent();
@@ -627,7 +627,7 @@ describe('S3-D10 equivalence: instruction replay reproduces the slow-path batch 
     const fast = replayedPayloads(log);
 
     expect(fast).toHaveLength(2);
-    expect(fast[1]!.bundle).not.toBe(fast[0]!.bundle); // b's bytes live in the INNER bundle (S3-D6)
+    expect(fast[1]!.bundle).not.toBe(fast[0]!.bundle); // b's bytes live in the INNER bundle
 
     // d's replayed bytes equal its last slow flush; b's equal its F1 flush.
     expect(fast[0]!.blend).toBe(slowD[0]!.blend);

@@ -1,6 +1,6 @@
 // BitCrusher AudioWorkletProcessor — lo-fi bit-depth + sample-rate reduction.
 //
-// This is the Phase-1 proof-of-concept for the `.worklet.ts` → `?worklet`
+// This worklet is built through the `.worklet.ts` → `?worklet`
 // build plugin (see `@codexo/exojs-config/worklet-plugin`): real, typed
 // TypeScript instead of a template-string constant. It typechecks against the
 // AudioWorkletGlobalScope (see `worklet-globals.d.ts` + `../../tsconfig.worklets.json`),

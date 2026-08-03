@@ -1,10 +1,10 @@
 /**
  * WebGPU renderer-matrix browser tests — NineSlice retained instruction-set
- * replay (Track B Slice 3).
+ * replay.
  *
  * The nine-slice counterpart of `webgpu-retained-instruction-replay.test.ts`.
  * A nine-slice node expands to MANY quad-instances that all share one
- * transform-storage row, so the group-local node-index rebase (S3-D4) and the
+ * transform-storage row, so the group-local node-index rebase and the
  * per-batch byte offset are load-bearing: a live sprite OUTSIDE (and before)
  * the retained group keeps the group's shared rows starting at a non-zero
  * frame-global index, and the group holds two DISTINCT-texture nine-slices
@@ -251,7 +251,7 @@ describe('WebGPU renderer matrix: NineSlice retained instruction replay cells', 
       expectPixelNear(readPixel(16, 32), [255, 0, 0, 255]);
 
       // Pan the camera 16px right: replayed content must appear 16px further
-      // left — projection is resolved live at replay (S3-D1).
+      // left — projection is resolved live at replay.
       backend.view.setCenter(backend.view.center.x + 16, backend.view.center.y);
 
       if (!(await renderScene(ctx, backend, scene.root))) {
@@ -286,7 +286,7 @@ describe('WebGPU renderer matrix: NineSlice retained instruction replay cells', 
       expectPixelNear(readPixel(16, 32), [255, 0, 0, 255]);
 
       // The recorded batch instruction must survive the move untouched: a
-      // group move only changes the live-composed group matrix (S3-D6).
+      // group move only changes the live-composed group matrix.
       const recordedBatch = fragmentOf(scene.group).instructions!.instructions[0];
 
       scene.group.setPosition(32, 32);

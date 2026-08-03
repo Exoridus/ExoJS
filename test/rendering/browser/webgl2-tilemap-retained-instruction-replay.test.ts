@@ -1,6 +1,6 @@
 /**
- * WebGL2 renderer-matrix browser tests — TileChunkNode retained instruction-set
- * replay (Track B).
+ * WebGL2 renderer-matrix browser tests — TileChunkNode retained
+ * instruction-set replay.
  *
  * A retained group holding TileMapNode(s) whose playback was recorded replays
  * through `_replayRetainedBatch` from group-owned resources (persistent

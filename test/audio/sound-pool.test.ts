@@ -5,7 +5,7 @@
  *  - _stopAllVoices() stops all active voices (replace mode)
  *  - FIFO eviction (FirstInFirstOut strategy)
  *  - LRU eviction (LeastRecentlyUsed strategy — closest to natural end)
- *  - LowestPriority degenerates to FIFO within a single Sound (V1)
+ *  - LowestPriority degenerates to FIFO within a single Sound
  *  - Voices are removed from pool when they end naturally
  */
 

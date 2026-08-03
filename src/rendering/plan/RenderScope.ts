@@ -41,7 +41,7 @@ export interface EffectDescriptor {
  * @internal
  *
  * `seq`/`zIndex`/`command` are mutable so the {@link RenderPlanBuilder} can
- * recycle a pooled entry across frames (Slice 2b). `kind` stays `readonly` —
+ * recycle a pooled entry across frames. `kind` stays `readonly` —
  * a pooled entry never changes its discriminant.
  */
 export interface DrawScopeEntry {
@@ -78,19 +78,19 @@ export interface GroupScope {
   preserveDrawOrder: boolean;
   /**
    * The transform-group boundary node whose world matrix scopes this group's
-   * draws (Track B Slice 2), or `null` for a plain scope. Read live by the
+   * draws, or `null` for a plain scope. Read live by the
    * plan player at playback time — never captured — so a group move between
    * collect and play (or across multi-render() bases) is always honored.
    */
   transformNode: RenderNode | null;
   /**
-   * Valid instruction set spliced into this scope (Track B Slice 3, S3-D2):
-   * the scope's entries are EMPTY and the plan player replays the recorded
-   * batches instead of walking entries. `null` on every other scope.
+   * Valid instruction set spliced into this scope: the scope's entries are
+   * EMPTY and the plan player replays the recorded batches instead of
+   * walking entries. `null` on every other scope.
    */
   retainedInstructions: RetainedInstructionSet | null;
   /**
-   * Armed record target (Slice 3): the plan player records this scope's
+   * Armed record target: the plan player records this scope's
    * playback (flush-level batches + nested-group markers) into the set.
    * `null` unless the collect switch armed recording for this frame.
    */

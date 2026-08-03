@@ -76,7 +76,7 @@ const buildSnappedScene = (count: number, mode: PixelSnapMode): { root: Containe
 };
 
 /**
- * The Slice-3 fast-patch scene: one live sprite OUTSIDE (and before) the group
+ * The fast-patch scene: one live sprite OUTSIDE (and before) the group
  * so the group's shared transform rows never start at index 0, plus three
  * direct children inside the group at known group-local positions.
  */

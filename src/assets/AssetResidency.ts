@@ -81,9 +81,9 @@ export interface AssetInspection {
 
 /**
  * Owns claim/refcount tracking, in-flight fetch dedup, the resident-resource
- * store, deferred-handle / value-ref healing (asset-system v2 §7), and the
+ * store, deferred-handle / value-ref healing, and the
  * background-loading queue for a `Loader` instance. Extracted from
- * `Loader` (Loader split, Slice 3) — every method here is a direct,
+ * `Loader` — every method here is a direct,
  * behavior-preserving relocation except {@link _getAliasesForIdentity} and
  * {@link _getHandleKey}, two small new read accessors `Loader`'s kept
  * branching methods (`unload`/`release`) need now that the fields they used
@@ -107,7 +107,7 @@ export class AssetResidency {
   private readonly _identityKeyToAliases = new Map<string, Set<string>>();
   private readonly _inFlightByIdentity = new Map<string, Promise<unknown>>();
 
-  // ── Seamless deferred handles (asset-system v2) ───────────────────────────
+  // ── Seamless deferred handles ──────────────────────────────────────────────
   private readonly _deferred = new Map<string, { readonly handles: WeakHandleSet; readonly options: unknown }>();
   private readonly _deferredFinalization = new FinalizationRegistry<string>((key: string): void => {
     const entry = this._deferred.get(key);
@@ -118,10 +118,10 @@ export class AssetResidency {
     }
   });
 
-  // Value-asset refs (asset-system v2 §4.6)
+  // Value-asset refs
   private readonly _refs = new Map<string, { readonly refs: Set<AssetRef<unknown>>; readonly options: unknown }>();
 
-  // ── Refcount / claims (asset-system v2 §4.7) ──────────────────────────────
+  // ── Refcount / claims ───────────────────────────────────────────────────────
   private readonly _claims = new Map<string, { scopes: Set<symbol>; type: AssetConstructor; source: string }>();
   private readonly _evicted = new Set<string>();
   private readonly _handleKeys = new WeakMap<object, string>();
@@ -314,12 +314,12 @@ export class AssetResidency {
    * live consumer handle for the key (drops payload + re-arms each to 'loading'),
    * remove the stored resource, and leave the handles registered in `_deferred`
    * so the next claim heals them all in place. Also drops a not-yet-started
-   * background-queue entry. Seamless payloads only this slice — value-ref
-   * eviction is an accepted gap (§6 follow-up).
+   * background-queue entry. Seamless payloads only — value-ref
+   * eviction is an accepted gap.
    *
    * Only a payload that has already converged into `_resources` is dropped here.
    * A fetch still in flight (nothing stored yet) is left to the running fetch,
-   * which fills then frees on arrival (§4.7) — evicting mid-flight would race it.
+   * which fills then frees on arrival — evicting mid-flight would race it.
    */
   private _evictKey(key: string, type: AssetConstructor, source: string): void {
     const adapter = this._typeRegistry.getSeamlessAdapter(type);
@@ -328,7 +328,7 @@ export class AssetResidency {
     if (adapter !== undefined && stored !== undefined) {
       const entry = this._deferred.get(key);
       // Re-arm every live consumer handle in place: the representative AND any
-      // co-handle adopted from the stored donor (audit A5), so a later claim
+      // co-handle adopted from the stored donor, so a later claim
       // heals them all — not just the canonical one. The stored donor is itself
       // a member (registered at store time); guard the fallback for the (defensive)
       // case where no entry exists.
@@ -439,7 +439,7 @@ export class AssetResidency {
         }
       } else if (!existingRef.refs.has(handle)) {
         // A distinct ref for a key already in flight (or already stored): join
-        // the key's ref set so the single fetch fills it too (§7 multi-handle
+        // the key's ref set so the single fetch fills it too (multi-handle
         // fill). If the value already converged, fill immediately; otherwise a
         // conflicting FETCH option (source-keyed decode can't differ) warns.
         existingRef.refs.add(handle);
@@ -528,7 +528,7 @@ export class AssetResidency {
       // can resolve its key.
       //
       // Enter the co-handle into the key's (persistent) deferred set so a LATER
-      // evict+heal of this key re-arms and re-fills it too (audit A5). The stored
+      // evict+heal of this key re-arms and re-fills it too. The stored
       // donor was itself registered here at store time, so the entry already
       // exists (its representative stays canonical); the co-handle only ever
       // joins, never displaces it.
@@ -539,8 +539,8 @@ export class AssetResidency {
       this._addDeferredHandle(key, entry, handle);
     } else if (deferredEntry !== undefined && stored === undefined && !deferredEntry.handles.has(handle)) {
       // Another handle already holds this key and nothing is stored yet: join
-      // the key's handle set so `_storeResource` fills THIS handle too (§7
-      // multi-handle fill). The key's fetch may be in flight or may have ended
+      // the key's handle set so `_storeResource` fills THIS handle too
+      // (multi-handle fill). The key's fetch may be in flight or may have ended
       // in failure — the retry below covers the latter. A conflicting FETCH
       // option (source-keyed decode can't differ) warns; differing per-handle
       // sampler options are fine (each handle carries its own).
@@ -1096,7 +1096,7 @@ export class AssetResidency {
    * handle / value-ref waiting on the key (multi-handle fill), respects
    * "free on arrival" for a key unloaded mid-fetch, and registers the
    * canonical reverse (resource → key) lookup. Called from `AssetDecoder`
-   * (Slice 2) via the `storeResource` callback `Loader`'s constructor wires
+   * via the `storeResource` callback `Loader`'s constructor wires
    * to this method, and internally from {@link _loadSingleAsset}'s
    * already-in-flight-by-identity branch.
    * @internal
@@ -1145,7 +1145,7 @@ export class AssetResidency {
       let representative: object | undefined;
 
       // Fill EVERY in-flight handle for the key from the single decoded donor
-      // (§7 multi-handle fill). The first handle is the representative — it
+      // (multi-handle fill). The first handle is the representative — it
       // becomes the canonical `_resources` entry, mirroring the old
       // single-handle contract (which object is canonical for eviction).
       for (const handle of deferredEntry.handles) {
@@ -1175,7 +1175,7 @@ export class AssetResidency {
       }
 
       // The entry is NOT dropped here: it persists as the key's live-handle
-      // registry so a co-handle adopt (audit A5) joins it and a refcount-0
+      // registry so a co-handle adopt joins it and a refcount-0
       // eviction re-arms every consumer. The representative stays canonical.
       if (representative !== undefined && representative !== resource) {
         resource = representative;
@@ -1185,7 +1185,7 @@ export class AssetResidency {
 
     // Value-asset refs fill from whatever producer stores the value; the raw
     // value stays the stored resource (load() keeps resolving it). Fill every
-    // in-flight ref for the key (§7 multi-handle fill).
+    // in-flight ref for the key (multi-handle fill).
     const refEntry = this._refs.get(key);
 
     if (refEntry !== undefined) {
@@ -1210,17 +1210,17 @@ export class AssetResidency {
     }
 
     // Register the stored seamless resource as its key's representative so a
-    // later eviction re-arms it and a co-handle adopt (audit A5) joins the same
+    // later eviction re-arms it and a co-handle adopt joins the same
     // set. A resource that already came from a deferred handle is a member
     // already; a plain `load()` donor (no prior get()) is added here. Held
-    // weakly, so a fully-released source does not pin its evicted payload (A4).
+    // weakly, so a fully-released source does not pin its evicted payload.
     if (typeof resource === 'object' && resource !== null && this._typeRegistry.hasSeamlessAdapter(type) && this._deferred.get(key) === undefined) {
       this._createDeferredEntry(key, resource);
     }
 
     this._signals.onLoaded.dispatch(type, alias, resource);
 
-    // §4.7 free-on-arrival: a deferred handle whose every claimer released
+    // Free-on-arrival: a deferred handle whose every claimer released
     // during the in-flight fetch has now converged into `_resources` at
     // refcount 0. `.loaded` was already settled by the fill above, so an
     // awaiter holding that promise still resolves (the asset WAS complete);

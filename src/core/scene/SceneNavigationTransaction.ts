@@ -18,8 +18,8 @@ export interface OutgoingDisposition {
 
 /**
  * @internal Collaborator owned by `SceneDirector`, holding the atomic
- * commit-boundary logic (definition §3.5, steps 5 and 8) shared by
- * `change()` and `restore()` — and the exact seam a later slice's
+ * commit-boundary logic shared by
+ * `change()` and `restore()` — and the exact seam the
  * transition-session runner calls through at its own commit point, so this
  * logic exists in exactly one place rather than duplicated per call site.
  * Holds no state of its own beyond the `_retained` map and the two Director
@@ -31,7 +31,7 @@ export interface OutgoingDisposition {
  * `dispatchStopScene` → `beginOutgoingTeardown` — rather than one call,
  * so the caller can interleave incoming-scope activation and
  * `onChangeScene`/`onStartScene` dispatch BETWEEN deciding the outgoing
- * scope's fate and actually starting its teardown (spec: the outgoing
+ * scope's fate and actually starting its teardown (the outgoing
  * scope must be marked/suspended before the incoming scope activates, but
  * `Scene.unload()` must not start running until after `onStopScene` has
  * fired for it, which itself must fire after the incoming scope is live).
@@ -45,7 +45,7 @@ export class SceneNavigationTransaction {
   ) {}
 
   /**
-   * Decide the outgoing scope's fate (§3.5 step 5) WITHOUT starting its
+   * Decide the outgoing scope's fate WITHOUT starting its
    * teardown: suspend and retain it under `outgoing.target` when
    * `suspendCurrent` is set (dispatching `onStateChange` for the edge
    * immediately — suspension has no `unload()`/`onStopScene` to sequence

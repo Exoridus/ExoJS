@@ -264,7 +264,7 @@ interface RendererConnection {
 /** Instanced renderer for {@link RepeatingSprite} using WebGL2. Handles both shader and geometry paths internally. */
 export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<RepeatingSprite> implements WebGl2RetainedBatchReplayer {
   /**
-   * Retained-batch capability opt-in (Track B Slice 3, S3-D5.1). Only the
+   * Retained-batch capability opt-in. Only the
    * GEOMETRY path (TextureRegion source) is recorded: its 32-byte instance
    * layout matches the sprite/NineSlice batch shape (node index at word 7 of
    * the 8-word instance), so it records and replays exactly like the sprite
@@ -368,7 +368,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
 
     const backend = this.getBackend();
 
-    // Retained recording (Track B Slice 3): only the geometry path is
+    // Retained recording: only the geometry path is
     // replayable. A shader-path draw inside an active capture cannot be replayed
     // from group-owned resources, so poison the window — the group falls back to
     // entry replay (correct, never stale) rather than replaying an incomplete or
@@ -613,7 +613,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     backend.stats.batches++;
     backend.stats.drawCalls++;
 
-    // Retained recording (Track B Slice 3): while a capture window is open,
+    // Retained recording: while a capture window is open,
     // hand the exact packed geometry-path words of this flush to the backend —
     // byte-identical to what just drew. A single base texture binds to unit 0,
     // so the recorded slot list is one entry. Shader-path batches are never
@@ -633,7 +633,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     this._geoQuadCount = 0;
   }
 
-  // ── Retained-batch record/replay (Track B Slice 3) ───────────────────────
+  // ── Retained-batch record/replay ──────────────────────────────────────────
   // Only geometry-path batches reach here (see _supportsRetainedBatches). Their
   // 32-byte layout puts the node index at word 7 of the 8-word instance — the
   // same position the sprite renderer uses — so scan/rebase mirror it exactly.
@@ -657,7 +657,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     }
   }
 
-  /** @internal See {@link WebGl2RetainedBatchReplayer._rebaseRetainedNodeIndices} (S3-D4: group-local indices). */
+  /** @internal See {@link WebGl2RetainedBatchReplayer._rebaseRetainedNodeIndices} (rebases to group-local indices). */
   public _rebaseRetainedNodeIndices(payload: WebGl2RetainedBatchPayload, base: number): void {
     const words = payload.bundle.instanceWords;
     const start = payload.byteOffset / Uint32Array.BYTES_PER_ELEMENT;
@@ -724,7 +724,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     backend.bindTexture(payload.textures[0]!, 0);
 
     // The group-owned transform texture replaces the shared frame buffer on the
-    // SAME unit/sampler — zero GLSL changes (S3-D4). The next live flush
+    // SAME unit/sampler — zero GLSL changes. The next live flush
     // re-binds the shared texture via bindTransformBufferTexture.
     backend.bindTexture(transformTexture, transformTextureUnit);
 

@@ -536,7 +536,7 @@ describe('Application', () => {
     const sceneTeardownError = new Error('scene teardown failed');
     const sceneDirector = {
       _clearScene: vi.fn().mockRejectedValue(sceneTeardownError),
-      // _stopFrameLoop() (Slice 7 Group B, spec §3.7) always aborts any
+      // _stopFrameLoop() always aborts any
       // in-flight navigation before scene teardown runs — false here means
       // "nothing was in flight," matching this test's own setup, so stop()
       // falls through to the _clearScene() path under test.

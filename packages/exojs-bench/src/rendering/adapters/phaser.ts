@@ -10,7 +10,7 @@ import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
  * (`adapters/exojs.ts`, `adapters/pixi.ts`) and mutates the identical leaf set
  * selected by the shared `selectMutationIndices`, exposing the result through
  * {@link EngineAdapter.mutationSignature} so the harness's cross-arm determinism
- * check (review B3) asserts every arm did the same work. The scene structure
+ * check asserts every arm did the same work. The scene structure
  * (nested-container spine, round-robin leaf distribution, per-bucket texture
  * cycling, overdraw stacking, top-left anchoring) is a faithful transcription of
  * the other arms so the comparison rests on the same neutral archetypes.
@@ -178,7 +178,7 @@ export const createPhaserAdapter = (): EngineAdapter => {
       // and its default `GameObject.willRender` checks only visibility/alpha
       // flags — never a bounds/intersection test — so this arm does no
       // off-screen culling by construction, matching `cullingEnabled: false` on
-      // every archetype (review C4 / #326 cull symmetry).
+      // every archetype for cull symmetry.
       const sceneRoot = new Phaser.GameObjects.Container(scene, 0, 0);
       const spine: Phaser.GameObjects.Container[] = [sceneRoot];
 
@@ -197,7 +197,7 @@ export const createPhaserAdapter = (): EngineAdapter => {
 
       // Shared, canonical mutation selection — the SAME helper every arm routes
       // through, so all arms select the byte-for-byte identical index set and the
-      // harness's cross-arm determinism assertion holds (review B3).
+      // harness's cross-arm determinism assertion holds.
       const selectedIndices = selectMutationIndices(nodeCount, spec.mutationFraction, seed);
       const selectedSet = new Set(selectedIndices);
       const leaves: MutableLeaf[] = [];

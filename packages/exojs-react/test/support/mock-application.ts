@@ -105,7 +105,7 @@ export class MockApplication {
   public readonly scenes: MockSceneDirector = {
     currentScene: null,
     // The real SceneDirector.change() takes a constructor and constructs a
-    // fresh instance internally (definition §11.4) — mirror that here so
+    // fresh instance internally — mirror that here so
     // `scenes.currentScene` is an instance, matching what the real API
     // exposes, while `change.mock.calls` still records the raw constructor
     // argument tests assert against.

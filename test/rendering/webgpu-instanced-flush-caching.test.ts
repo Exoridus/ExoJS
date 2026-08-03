@@ -1,5 +1,5 @@
 /**
- * WebGPU nine-slice / repeating-sprite flush hot-path caching (issue #277, F5b).
+ * WebGPU nine-slice / repeating-sprite flush hot-path caching.
  *
  * Both instanced renderers used to create a fresh single-texture bind group and
  * rewrite the 128-byte projection/group uniform on EVERY batch flush — per-frame

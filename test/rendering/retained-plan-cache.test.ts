@@ -73,7 +73,7 @@ describe('RetainedPlanCache', () => {
 
     expect(cache.isClean(6, 3, 2, 7, fakeBackendA)).toBe(false); // content changed
     expect(cache.isClean(5, 4, 2, 7, fakeBackendA)).toBe(false); // structure changed
-    expect(cache.isClean(5, 3, 9, 7, fakeBackendA)).toBe(false); // transform changed (Slice 4b)
+    expect(cache.isClean(5, 3, 9, 7, fakeBackendA)).toBe(false); // transform changed
     expect(cache.isClean(5, 3, 2, 8, fakeBackendA)).toBe(false); // view moved
     expect(cache.isClean(5, 3, 2, 7, fakeBackendB)).toBe(false); // backend swapped
 
@@ -106,7 +106,7 @@ describe('RetainedPlanCache', () => {
     drawable.destroy();
   });
 
-  test('recapture rewrites pooled slot records in place (Slice 3, F11a: zero slot allocations)', () => {
+  test('recapture rewrites pooled slot records in place (zero slot allocations)', () => {
     const cache = new RetainedPlanCache();
     const drawable = new Drawable();
 

@@ -193,8 +193,8 @@ describe('SceneNode parent-chain composition', () => {
     const beforeX = beforeMove.x;
     const beforeY = beforeMove.y;
 
-    // Mutate parent — after the Slice 1 cascade fix, the child's own
-    // GlobalTransform flag is never touched eagerly; the next
+    // Mutate parent — the child's own GlobalTransform flag is never touched
+    // eagerly; the next
     // getGlobalTransform() on child must detect staleness lazily via the
     // parent-version compare and recombine.
     parent.setPosition(100, 200);

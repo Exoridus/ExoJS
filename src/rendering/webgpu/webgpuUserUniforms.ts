@@ -12,9 +12,9 @@ import type { WebGpuBackend } from './WebGpuBackend';
  *
  * The two renderers pack an identical `@group(2)` layout — one UBO at binding 0
  * followed by texture/sampler pairs — so the packing, change-detection, and
- * bind-group caching live here to keep them byte-for-byte consistent (B-10).
+ * bind-group caching live here to keep them byte-for-byte consistent.
  *
- * The core contract fixed by B-10: the per-material UBO scratch and its GPU
+ * The core contract: the per-material UBO scratch and its GPU
  * bind group are reused across frames and re-uploaded/rebuilt only when the
  * material's uniform VALUES (or bound texture views) actually change — a static
  * custom-material scene then issues zero uniform writes and zero bind-group

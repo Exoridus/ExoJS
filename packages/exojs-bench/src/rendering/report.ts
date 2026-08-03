@@ -140,15 +140,15 @@ const toMarkdown = (data: ReportData): string => {
     lines.push('');
   }
 
-  // Methodology disclosure (review C4): the benchmark used to leave
-  // per-archetype culling on while every archetype kept its sprites
-  // on-screen, so the cull check never removed a node — pure asymmetric
-  // overhead, since ExoJS's `cullable` drives a real per-node bounds check in
-  // the render walk while Pixi's `cullable` is inert unless `CullerPlugin` is
-  // registered (it is not, in `adapters/pixi.ts`). Culling is now disabled on
-  // every archetype (`cullingEnabled: false` in `archetypes.ts`) so both arms
-  // do identical visible-set work; this line makes that explicit in every
-  // generated report rather than leaving it to source-comment archaeology.
+  // Methodology disclosure: leaving per-archetype culling on while every
+  // archetype keeps its sprites on-screen would mean the cull check never
+  // removes a node — pure asymmetric overhead, since ExoJS's `cullable` drives
+  // a real per-node bounds check in the render walk while Pixi's `cullable` is
+  // inert unless `CullerPlugin` is registered (it is not, in `adapters/pixi.ts`).
+  // Culling is disabled on every archetype (`cullingEnabled: false` in
+  // `archetypes.ts`) so both arms do identical visible-set work; this line
+  // makes that explicit in every generated report rather than leaving it to
+  // source-comment archaeology.
   lines.push(
     '## Methodology',
     '',

@@ -64,7 +64,7 @@ export function showDevErrorOverlay(canvas: HTMLCanvasElement, message: string, 
       host.append(banner);
     } else {
       // No parent to anchor to: fall back to body + fixed positioning so the
-      // banner is still visible (acceptable v1 behavior per the spec).
+      // banner is still visible.
       banner.style.position = 'fixed';
       document.body.append(banner);
     }

@@ -1,6 +1,6 @@
 /**
  * Collect-path phase profile — CPU baseline for the immediate-mode draw-plan
- * build/optimize/play pipeline (Track B, static-subtree-skip prep).
+ * build/optimize/play pipeline (static-subtree-skip prep).
  *
  * MEASUREMENT ONLY (Tier B/C, informational — never a CI gate). Run via:
  *
@@ -627,7 +627,7 @@ const printReport = (report: ScenarioReport): void => {
 };
 
 /**
- * Noise floor for the static-vs-mixed build-phase delta (review S2). Below
+ * Noise floor for the static-vs-mixed build-phase delta. Below
  * this magnitude a delta is not distinguishable from run-to-run measurement
  * noise on this CPU-stub harness (single-process `performance.now()` samples,
  * no median-of-runs). This was previously only a per-line `[<30% -- flag as
@@ -640,12 +640,12 @@ const NOISE_FLOOR_PCT = 30;
 
 const run = (): void => {
   console.log('=============================================================');
-  console.log('ExoJS collect-path phase profile — CPU-STUB BACKEND, NO GPU (review S1/S3)');
+  console.log('ExoJS collect-path phase profile — CPU-STUB BACKEND, NO GPU');
   console.log('MEASUREMENT ONLY: never a CI gate. This stub is NOT comparable to');
   console.log('the real WebGL2/WebGPU backend, NOR to the other CPU-stub benches');
   console.log('under test/bench/*.bench.ts — this one additionally wires a real');
   console.log('TransformBuffer.write() via a bench-authored `_prepareRenderGroupUpload`');
-  console.log('hook the other stubs omit (review S1), so its numbers are internally');
+  console.log('hook the other stubs omit, so its numbers are internally');
   console.log('consistent (exojs-vs-exojs across versions) but not cross-bench.');
   console.log('Never cite an absolute ms figure from this file as "engine perf".');
   console.log('=============================================================');

@@ -1,17 +1,17 @@
 /**
  * WebGPU renderer-matrix browser tests — RetainedContainer pixel cells
- * (Track B Slice 2, spec §8/§10(d) correctness gate).
+ * (correctness gate for real rendered output).
  *
  * Mirrors webgl2-retained-container.test.ts 1:1 on the WebGPU harness: real
  * inline WGSL (no mocks), `renderScene`'s validation-scope helper, and a
  * device-loss skip via `ctx.skip` exactly as the other opt-in WebGPU browser
  * specs do. Seven cells asserting real rendered output for the retained-group
- * feature shipped across tasks 3-8: camera motion over a retained fragment, a
- * group move via the group matrix, a child mutation inside the group, a
- * tint/alpha change inside the group, bitmap text lifted by the group
- * uniform, an effect-bearing direct child (cacheAsBitmap) that escapes the
- * group convention, and a depth-2 effect node whose branch escapes the group
- * (F13/R3 sub-branch escape) while keeping pixel-correct output.
+ * feature: camera motion over a retained fragment, a group move via the group
+ * matrix, a child mutation inside the group, a tint/alpha change inside the
+ * group, bitmap text lifted by the group uniform, an effect-bearing direct
+ * child (cacheAsBitmap) that escapes the group convention, and a depth-2
+ * effect node whose branch escapes the group (sub-branch escape) while
+ * keeping pixel-correct output.
  *
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
  * against Mesa lavapipe); `renderScene` only skips when the software adapter
@@ -336,7 +336,7 @@ describe('WebGPU renderer matrix: RetainedContainer cells', () => {
       expectPixelNear(readPixel(38, 38), [255, 0, 0, 255]);
 
       // Move the group by (16, 0): text bakes group-relative vertices, so the
-      // u_group uniform must lift them (spec §7 text exception) — the glyph
+      // u_group uniform must lift them (text exception) — the glyph
       // now covers (24,8)-(56,40).
       group.setPosition(16, 0);
 
@@ -452,7 +452,7 @@ describe('WebGPU renderer matrix: RetainedContainer cells', () => {
     }
   });
 
-  test('cell 8 — pixelSnapMode is group-aware: a snapped sprite inside a fractional group renders through the composed path (R2)', async ctx => {
+  test('cell 8 — pixelSnapMode is group-aware: a snapped sprite inside a fractional group renders through the composed path', async ctx => {
     const backend = await setupBackend();
     const texture = createSolidTexture('#ff0000', 16);
     const root = new Container();
@@ -503,16 +503,16 @@ describe('WebGPU renderer matrix: RetainedContainer cells', () => {
     }
   });
 
-  // Slice 4c: once the recording is ARMED (needs a clean record frame + a
-  // replay frame first), a direct child move no longer drops the recording and
-  // re-records — it patches that one transform row in place via a single
+  // Once the recording is ARMED (needs a clean record frame + a replay frame
+  // first), a direct child move no longer drops the recording and re-records
+  // — it patches that one transform row in place via a single
   // queue.writeBuffer sub-range. Cell 3 above moves the child before the
   // recording exists (2 frames), so it records the moved position and never
   // exercises the patch; this cell arms first, then moves. The node test
   // (webgpu-retained-record-replay.test.ts) pins the O(k) write pattern against
   // a mock device; here we prove the sub-range write renders correctly on a
   // real adapter AND that the recording is kept (not re-recorded).
-  test('cell 9 — a child move AFTER the recording is armed patches the row in place, real GPU (Slice 4c)', async ctx => {
+  test('cell 9 — a child move AFTER the recording is armed patches the row in place, real GPU', async ctx => {
     const backend = await setupBackend();
     const texture = createSolidTexture('#ff0000', 16);
     const root = new Container();

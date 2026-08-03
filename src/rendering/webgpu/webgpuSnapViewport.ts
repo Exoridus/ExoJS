@@ -5,7 +5,7 @@ import type { WebGpuBackend } from './WebGpuBackend';
  * height`) into `out` at float `offset`. The core WGSL vertex stages read these
  * four floats (as their projection UBO's `viewport: vec4<f32>`) to project a
  * drawable's clip-space origin into device pixels for render-only position
- * snapping (spec D3-D5). Shared by every ProjectionUniforms-style renderer so
+ * snapping. Shared by every ProjectionUniforms-style renderer so
  * the staged rect matches {@link WebGpuBackend._snapViewport} in exactly one
  * place.
  *

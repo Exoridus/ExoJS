@@ -216,7 +216,7 @@ export class Texture {
     return this._loadState.value;
   }
 
-  /** Load lifecycle: `'idle' | 'loading' | 'ready' | 'failed'` (asset-system v2 §6). */
+  /** Load lifecycle: `'idle' | 'loading' | 'ready' | 'failed'`. */
   public get state(): LoadStateValue {
     return this._loadState.value;
   }

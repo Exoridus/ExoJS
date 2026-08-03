@@ -1,6 +1,5 @@
 /**
- * WebGL2 renderer-matrix browser tests — retained instruction-set replay
- * (Track B Slice 3, Tasks 6-8, gate per S3-D10).
+ * WebGL2 renderer-matrix browser tests — retained instruction-set replay.
  *
  * Pixel cells for the flush-level batch cache: a retained group whose
  * playback was recorded replays through `_replayRetainedBatch` from
@@ -12,7 +11,7 @@
  * move on the replay path (no recapture — spy-asserted), child-mutation
  * fallback + recapture, tint change, texture swap.
  *
- * Scaffolded from webgl2-retained-container.test.ts (Slice 2 cells).
+ * Scaffolded from webgl2-retained-container.test.ts.
  *
  * Run via:  pnpm test:browser:webgl
  */
@@ -195,7 +194,7 @@ const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
   return [buf[0], buf[1], buf[2], buf[3]];
 };
 
-/** Full-framebuffer snapshot for byte-identical tier comparisons (S3-D10). */
+/** Full-framebuffer snapshot for byte-identical tier comparisons. */
 const readCanvas = (backend: WebGl2Backend): Uint8Array => {
   const buf = new Uint8Array(canvasSize * canvasSize * 4);
   const gl = backend.context;
@@ -228,8 +227,8 @@ const createSolidTexture = (color: string, width = 16, height = 16): Texture => 
 /**
  * Standard cell scene: one live sprite OUTSIDE (and before) the retained
  * group, so the group's shared transform rows never start at row 0 — the
- * group-local node-index rebase (S3-D4) is load-bearing in every pixel
- * assertion, and the replay path interleaves with a live batch every frame.
+ * group-local node-index rebase is load-bearing in every pixel assertion,
+ * and the replay path interleaves with a live batch every frame.
  *
  * Layout (canvas 64x64): blue outside sprite at (48,0)-(64,16); group at
  * (8,24) with a red sprite at group-local (0,0) -> world (8,24)-(24,40) and
@@ -392,8 +391,8 @@ describe('WebGL2 renderer matrix: retained instruction-set replay cells', () => 
       const beginSpy = vi.spyOn(backend, '_beginRetainedCapture');
       const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
 
-      // Slice 4b: a pure transform move on a direct child stays content-clean,
-      // so the group keeps its recording and patches just this child's row in
+      // A pure transform move on a direct child stays content-clean, so the
+      // group keeps its recording and patches just this child's row in
       // place. The pixel readback is the stale-render guard on a real GPU.
       scene.redSprite.setPosition(32, 0); // world (40,24)-(56,40)
       render(backend, scene.root);
@@ -496,8 +495,8 @@ describe('WebGL2 renderer matrix: retained instruction-set replay cells', () => 
 
     // Dedicated scene: the group sprite samples a canvas texture through a
     // PINNED 16x16 frame, so a source resize changes only the UV
-    // normalization — the instance words the recorder baked (S3-D5.3 class:
-    // view-independent DATA that silently went stale). A resize bumps only
+    // normalization — the instance words the recorder baked are
+    // view-independent DATA that would silently go stale. A resize bumps only
     // the texture version, never a node revision, so the fragment stays
     // clean and ONLY the backend's collect-time validation can catch it.
     const src = document.createElement('canvas');

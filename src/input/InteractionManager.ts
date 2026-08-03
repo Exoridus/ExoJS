@@ -483,7 +483,7 @@ export class InteractionManager implements InteractionHooks {
    * Gated by the active scope's {@link SceneState} (only `Active` dispatches
    * — pause does not gate interaction; `Preparing`/`Suspended`/`Destroying`/
    * `Destroyed`/no-scene do not dispatch) and by the director's transition
-   * gate (definition §13.6) — gated frames discard the pending queue rather
+   * gate — gated frames discard the pending queue rather
    * than deferring it, so a pointer-down queued before a transition never
    * replays once it clears.
    */
@@ -1920,7 +1920,7 @@ export class InteractionManager implements InteractionHooks {
   }
 
   /**
-   * S2-D1-style one-shot dev diagnostic (belt-and-braces telemetry): an
+   * One-shot dev diagnostic (belt-and-braces telemetry): an
    * interactive node under an engaged transform-group boundary works — the
    * manager maps pointers through the group's world matrix — but its public
    * `getBounds()`/`position` remain GROUP-LOCAL, which regularly surprises

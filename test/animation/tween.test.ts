@@ -444,7 +444,7 @@ describe('Tween', () => {
     });
   });
 
-  describe('restart after complete or stop (M1)', () => {
+  describe('restart after complete or stop', () => {
     test('managed tween driven to completion a second time after start() re-call', () => {
       // After complete(), the tween is evicted from the manager.
       // start() must re-register it so the manager drives the next run.

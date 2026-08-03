@@ -151,7 +151,7 @@ describe('Loader.release() scope safety', () => {
   });
 });
 
-describe('internal hard-reset claim consistency (A3)', () => {
+describe('internal hard-reset claim consistency', () => {
   beforeEach(() => {
     vi.stubGlobal(
       'createImageBitmap',

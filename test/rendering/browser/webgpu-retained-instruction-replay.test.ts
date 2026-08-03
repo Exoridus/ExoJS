@@ -1,6 +1,5 @@
 /**
- * WebGPU renderer-matrix browser tests — retained instruction-set replay
- * (Track B Slice 3, Tasks 9/10 pixel gate).
+ * WebGPU renderer-matrix browser tests — retained instruction-set replay.
  *
  * Drives the real backend through the retained fallback ladder — F1 dirty
  * collect, F2 clean entry replay + record, F3+ instruction replay — and
@@ -8,7 +7,7 @@
  *
  * 1. multi-batch replay (9 textures → 2 recorded batches) is pixel-identical
  *    to the record frame,
- * 2. B-06: a cached frame with 3 retained groups submits exactly ONCE while
+ * 2. a cached frame with 3 retained groups submits exactly ONCE while
  *    every group still draws (before the fix each group boundary ended the
  *    pass, fragmenting the single-submit frame into >= N submits),
  * 3. camera pan over the cached path: projection is a live read,
@@ -251,7 +250,7 @@ describe('WebGPU renderer matrix: retained instruction replay cells', () => {
     }
   });
 
-  test('cell 2 — B-06: three cached retained groups submit the frame exactly once, all groups drawn', async ctx => {
+  test('cell 2 — three cached retained groups submit the frame exactly once, all groups drawn', async ctx => {
     const backend = await setupBackend();
     const colors = ['#ff0000', '#00ff00', '#0000ff'];
     const textures = colors.map(color => createSolidTexture(color, 8));
@@ -327,7 +326,7 @@ describe('WebGPU renderer matrix: retained instruction replay cells', () => {
       expectPixelNear(readPixel(16, 16), [255, 0, 0, 255]);
 
       // Pan the camera 16px right: the replayed sprite must appear 16px
-      // further left — projection is resolved live at replay (S3-D1).
+      // further left — projection is resolved live at replay.
       backend.view.setCenter(backend.view.center.x + 16, backend.view.center.y);
 
       if (!(await renderScene(ctx, backend, root))) {
@@ -367,7 +366,7 @@ describe('WebGPU renderer matrix: retained instruction replay cells', () => {
       expectPixelNear(readPixel(8, 8), [0, 255, 0, 255]);
 
       // The recorded batch instruction must survive the move untouched: a
-      // group move only changes the live-composed group matrix (S3-D6).
+      // group move only changes the live-composed group matrix.
       const recordedBatch = fragmentOf(group).instructions!.instructions[0];
 
       group.setPosition(32, 32);

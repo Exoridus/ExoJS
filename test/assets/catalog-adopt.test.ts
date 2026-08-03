@@ -181,7 +181,7 @@ describe('Loader._adopt', () => {
     warnSpy.mockRestore();
   });
 
-  test('duplicate source, two handles with DIFFERENT samplerOptions: one fetch, independent per-handle samplers (Q2)', async () => {
+  test('duplicate source, two handles with DIFFERENT samplerOptions: one fetch, independent per-handle samplers', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
 

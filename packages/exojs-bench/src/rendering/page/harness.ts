@@ -64,14 +64,14 @@ const SEED = 0xc0ffee;
 /**
  * A timed frame slower than this is a candidate abort — a runaway node count,
  * not a datapoint. Warmup-frame count is per-cell (see `spec.warmupFrames`,
- * {@link warmupFramesFor}); it scales up with node count (review B7).
+ * {@link warmupFramesFor}); it scales up with node count.
  */
 const FRAME_BUDGET_MS = 200;
 /**
- * Number of trailing timed samples the abort check looks at (review B9).
+ * Number of trailing timed samples the abort check looks at.
  * Aborting on a SINGLE slow frame lets one GC pause or OS scheduling blip
  * mistake an otherwise-valid cell for a runaway one — the exact failure that
- * produced the `13.4x` WebGPU headline from an `n=1` aborted cell (review C2:
+ * produced the `13.4x` WebGPU headline from an `n=1` aborted cell (
  * `results.md:98`, median==p95 because only one frame ever ran). Requiring the
  * MEDIAN of the last `ABORT_WINDOW` frames to exceed the budget means a lone
  * spike cannot trip the abort — only a sustained slowdown can — and guarantees
@@ -81,7 +81,7 @@ const FRAME_BUDGET_MS = 200;
 const ABORT_WINDOW = 3;
 /**
  * Wall-clock cap on the synchronous warmup phase (ms). Warmup runs
- * `spec.warmupFrames` — scaled UP with node count (review B7) — to settle
+ * `spec.warmupFrames` — scaled UP with node count — to settle
  * shader-compile / texture-upload / JIT before timing, but that frame COUNT
  * assumes cheap frames. A pathological cell (a weak arm under 25k full-viewport
  * overdraw renders multi-second frames) turned a 25-frame warmup into a 10+
@@ -100,12 +100,12 @@ const WARMUP_BUDGET_MS = 10_000;
 /**
  * Single-frame hard-abort threshold for the timed loop (10× `FRAME_BUDGET_MS`).
  * `shouldAbort`'s median-of-last-`ABORT_WINDOW` rule deliberately never aborts on
- * ONE slow frame (review B9: a lone GC/scheduler spike must not fake a runaway).
+ * ONE slow frame (a lone GC/scheduler spike must not fake a runaway).
  * But a frame at 10× the budget is not a spike — no realistic blip turns a
  * sub-200ms cell into a 2s frame — it is a catastrophically slow cell that WILL
  * abort regardless. Aborting after the first such frame, rather than waiting for
  * three, cuts a weak arm's heaviest cells from minutes to seconds with the SAME
- * `exceeded` verdict; the B9 median rule still governs every borderline case.
+ * `exceeded` verdict; the median rule still governs every borderline case.
  */
 const HARD_FRAME_BUDGET_MS = FRAME_BUDGET_MS * 10;
 
@@ -308,7 +308,7 @@ const createWebGl2GpuTimer = (gl: WebGL2RenderingContext): GpuFrameTimer => {
  * PRESENT cadence, not GPU work: with a canvas swapchain the browser paces rAF to
  * the refresh interval, so every small cell pins to the vsync quantum (e.g. 6.9ms
  * at 144Hz) regardless of how little the GPU actually did. That column is
- * therefore vsync cadence dressed up as GPU time (review B1).
+ * therefore vsync cadence dressed up as GPU time.
  *
  * Instead, each frame this timer records the wall-clock interval from just AFTER
  * the frame's command buffer was submitted (endFrame runs right after
@@ -363,7 +363,7 @@ const createWebGpuGpuTimer = (device: GPUDevice): GpuFrameTimer => {
  * the adapter. WebGL2 uses a hardware `EXT_disjoint_timer_query_webgl2` timer when
  * present; WebGPU has no externally-wireable hardware timestamp, so it uses the
  * submit-to-done wall clock (see {@link createWebGpuGpuTimer}) — a de-vsynced
- * measure of GPU work that replaces the old vsync-bound rAF delta (review B1).
+ * measure of GPU work that replaces the old vsync-bound rAF delta.
  */
 const attachProbes = (adapter: EngineAdapter, spec: CellSpec, canvas: HTMLCanvasElement): { probe: StructuralProbe; gpuTimer: GpuFrameTimer; structuralNote: string | null } => {
   if (spec.backend === 'webgpu') {
@@ -426,7 +426,7 @@ const attachProbes = (adapter: EngineAdapter, spec: CellSpec, canvas: HTMLCanvas
  * per-frame CPU time, full-frame wall-clock and draw-call structure.
  *
  * Frame time prefers a real GPU timer: the WebGL2 hardware query, or the WebGPU
- * submit-to-done wall clock (de-vsynced GPU work; review B1). Only when no GPU
+ * submit-to-done wall clock (de-vsynced GPU work). Only when no GPU
  * timer resolved samples does it fall back to the rAF delta, reported with
  * {@link NO_GPU_TIMER_NOTE} — a GPU number is never fabricated. The CPU timer
  * still brackets exactly `mutate` + `renderFrame` (the primary metric); the GPU
@@ -448,7 +448,7 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
   try {
     adapter.buildScene(archetype, spec.nodeCount, SEED);
 
-    // B3 — cross-arm mutation determinism. The comparison across arms is valid
+    // Cross-arm mutation determinism. The comparison across arms is valid
     // only if every arm wobbles the IDENTICAL leaf set for a given (archetype,
     // nodeCount, seed). Rather than compare arms pairwise (fragile), assert each
     // arm against the CANONICAL selection derived from the neutral archetype spec
@@ -533,7 +533,7 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
             return;
           }
 
-          // B9 — abort on a sustained slowdown, not a single spike (see
+          // Abort on a sustained slowdown, not a single spike (see
           // `shouldAbort`'s doc comment for the full rationale).
           if (shouldAbort(timer.samples, FRAME_BUDGET_MS, ABORT_WINDOW)) {
             exceeded = true;
@@ -558,7 +558,7 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
 
     const measuredFrames = timer.samples.length;
 
-    // B4 — structural-probe self-check. The probe monkeypatches the live graphics
+    // Structural-probe self-check. The probe monkeypatches the live graphics
     // context AFTER engine init (the device/context does not exist earlier), so an
     // engine that cached its draw/bind method references at init would bypass the
     // wrappers and silently report zero — an undercount masquerading as truth.

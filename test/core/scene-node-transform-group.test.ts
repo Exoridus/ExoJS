@@ -115,7 +115,7 @@ describe('own-transform dirty seam (_markOwnTransformDirty)', () => {
     node.destroy();
   });
 
-  test('the default seam (Slice 4b): setPosition is transform-dirty and bounds-cascading, NOT content-dirty', () => {
+  test('the default seam: setPosition is transform-dirty and bounds-cascading, NOT content-dirty', () => {
     const parent = new Container();
     const node = new Drawable();
 

@@ -1,6 +1,5 @@
 /**
- * WebGL2 renderer-matrix browser tests — Text retained instruction-set replay
- * (Track B extension, Task 2).
+ * WebGL2 renderer-matrix browser tests — Text retained instruction-set replay.
  *
  * The WebGL2 counterpart of `webgpu-text-retained-instruction-replay.test.ts`.
  * Text is the retained renderer that opts OUT of the shared `TransformBuffer`

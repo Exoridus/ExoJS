@@ -105,7 +105,7 @@ export function Scenes({ active, transition, children }: ScenesProps): ReactElem
   useEffect(() => {
     if (SceneClass === null) {
       // No matching <Scene name={active}> declaration. No public API switches
-      // the director back to scene-less mid-lifetime (definition §10.1) — the
+      // the director back to scene-less mid-lifetime — the
       // last-active scene keeps running underneath; only the React-rendered
       // HUD overlay is cleared. This is a caller mismatch (an `active` name
       // with no matching <Scene>), not a supported "show nothing" path.

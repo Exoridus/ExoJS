@@ -10,7 +10,7 @@ import { QuadGeometry } from '#rendering/geometry/QuadGeometry';
 // Exposes the protected authoring hooks through public wrappers — the
 // idiomatic way to unit-test a PhasedSceneTransition subclass's own
 // enter()/exit()/getPhaseRequirements() in isolation, without re-driving
-// PhasedSceneTransition's own session machinery (already covered by Slice 6's
+// PhasedSceneTransition's own session machinery (already covered by its own
 // test suite).
 class TestableFadeSceneTransition extends FadeSceneTransition {
   private readonly _testState = this._createPhaseStateForSession();

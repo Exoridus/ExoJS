@@ -4,7 +4,7 @@ import type { RenderStats } from './RenderStats';
 import type { DataTextureFormat } from './texture/DataTexture';
 
 /**
- * Per-backend GPU resource accountant (Slice 2g — Resource-Accounting).
+ * Per-backend GPU resource accountant.
  *
  * The GPU exposes no way to query VRAM usage (neither WebGL2 nor WebGPU report
  * it — a deliberate security boundary), so the engine keeps its own running

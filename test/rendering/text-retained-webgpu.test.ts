@@ -1,5 +1,5 @@
 /**
- * WebGPU Text retained-batch record/replay (Track B extension, Task 1).
+ * WebGPU Text retained-batch record/replay.
  *
  * Text is the first retained renderer that opts OUT of the shared
  * `TransformBuffer` (`_consumesSharedTransform === false`) — its per-vertex

@@ -1,7 +1,6 @@
 /**
  * WebGL2 rotated-mesh browser tests — instanced vs. single-draw parity,
- * mirroring webgpu-rotated-mesh.test.ts 1:1 (review finding F3/B-01
- * cross-backend gate).
+ * mirroring webgpu-rotated-mesh.test.ts 1:1 (cross-backend gate).
  *
  * The WebGPU instanced-mesh path used to apply the per-node affine
  * transposed; WebGL2 is the ground truth. Both files assert the SAME

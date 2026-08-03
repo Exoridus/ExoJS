@@ -63,7 +63,7 @@ interface TrackedScope extends InteractionScope {
  * While the owning scope is not `Active` (`Preparing`, `Ready`, or
  * `Suspended`), `observe()`/`scope()` track their registration locally but
  * never reach `app.interaction` — including a call made while already
- * `Suspended` (definition §4.2). {@link SceneInteraction.resume} attaches
+ * `Suspended`. {@link SceneInteraction.resume} attaches
  * everything not yet attached, in tracking order, on the next transition
  * into `Active` (fresh activation or retention restore alike).
  */
@@ -142,8 +142,8 @@ export class SceneInteraction implements Destroyable {
    * currently-attached scope off the manager's stack, without discarding
    * local tracking — so {@link SceneInteraction.resume} can reattach exactly
    * the same set in the same order. A retained scene must not keep
-   * receiving pointer dispatch alongside whichever scope is now active
-   * (definition §4.2). A no-op for anything created while already dormant
+   * receiving pointer dispatch alongside whichever scope is now active.
+   * A no-op for anything created while already dormant
    * (never reached `app.interaction` in the first place). Idempotent.
    * @internal
    */

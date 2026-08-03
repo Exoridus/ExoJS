@@ -1,5 +1,5 @@
 /**
- * WebGPU retained instruction-set record/replay (Track B Slice 3, Tasks 9/10).
+ * WebGPU retained instruction-set record/replay.
  *
  * Drives the REAL WebGpuBackend + sprite renderer + plan pipeline against a
  * mock device that counts queue submits, captures writeBuffer payloads by
@@ -7,7 +7,7 @@
  *
  * - the fallback ladder end-to-end on the real backend: dirty collect →
  *   clean entry-replay frame records → next clean frame replays O(batches),
- * - B-06: a cached frame with N retained groups submits exactly ONCE (the
+ * - a cached frame with N retained groups submits exactly ONCE (the
  *   uncached path splits at every distinct group matrix, i.e. >= N),
  * - replay reuses only group-owned resources: zero instance-arena and zero
  *   shared transform-storage uploads on cached frames,
@@ -17,7 +17,7 @@
  *   static frames, and rewritten exactly once per camera/group-matrix change,
  * - grow-only bundle reuse: a same-size recapture keeps the generation, a
  *   growing recapture bumps it (stale outer references fail validation),
- * - texture-view identity validation (S3-D3): a texture resize drops the
+ * - texture-view identity validation: a texture resize drops the
  *   recording, the same frame falls back to entry replay AND re-records, the
  *   next frame replays again,
  * - the poison veto: a capture window that saw unrecordable work never
@@ -286,7 +286,7 @@ const buildGroupScene = (texture: Texture, groupCount: number): { root: Containe
   return { root, groups };
 };
 
-describe('WebGPU retained record/replay: fallback ladder + B-06 submit collapse', () => {
+describe('WebGPU retained record/replay: fallback ladder + submit collapse', () => {
   test('N cached groups replay in one submit; the uncached path splits at every distinct group matrix', async () => {
     const environment = createMockWebGpuEnvironment();
 
@@ -302,7 +302,7 @@ describe('WebGPU retained record/replay: fallback ladder + B-06 submit collapse'
       expect(fragmentOf(groups[0]!).instructions).toBeNull();
 
       // F2: clean entry replay + record. The uncached path pays one pass
-      // split per distinct group matrix — this is the pre-B-06 cost.
+      // split per distinct group matrix — this is the uncached cost.
       const submitsBeforeRecord = environment.submitCount();
 
       renderFrame(backend, root);
@@ -317,7 +317,7 @@ describe('WebGPU retained record/replay: fallback ladder + B-06 submit collapse'
       expect(countLabel(environment.writes(), retainedTransformLabel)).toBe(3);
 
       // F3: cached path — all three groups replay into ONE open pass, ONE
-      // submit (B-06 fixed), with the recorded instance counts.
+      // submit, with the recorded instance counts.
       const submitsBeforeReplay = environment.submitCount();
       const writesBeforeReplay = environment.writes().length;
       const drawsBeforeReplay = environment.draws().length;
@@ -466,7 +466,7 @@ describe('WebGPU retained record/replay: fallback ladder + B-06 submit collapse'
     }
   });
 
-  test('a child move patches ONE transform row in place (O(k)) — no re-record, no generation bump (Slice 4c, WebGL2 parity)', async () => {
+  test('a child move patches ONE transform row in place (O(k)) — no re-record, no generation bump (WebGL2 parity)', async () => {
     const environment = createMockWebGpuEnvironment();
 
     try {
@@ -554,7 +554,7 @@ describe('WebGPU retained record/replay: fallback ladder + B-06 submit collapse'
 
       renderFrame(backend, root); // F3: replay
 
-      // Child move: as of Slice 4c this fast-patches the row in place rather
+      // Child move: this fast-patches the row in place rather
       // than recapturing — either way the bundle is reused and its generation
       // stays put (a patch never bumps it, a same-size recapture reuses buffers).
       mover.setPosition(4, 4);
@@ -596,7 +596,7 @@ describe('WebGPU retained record/replay: fallback ladder + B-06 submit collapse'
     }
   });
 
-  test('texture resize (fresh managed view) fails validation, falls back cleanly and re-records the same frame (S3-D3)', async () => {
+  test('texture resize (fresh managed view) fails validation, falls back cleanly and re-records the same frame', async () => {
     const environment = createMockWebGpuEnvironment();
 
     try {
@@ -801,7 +801,7 @@ describe('WebGpuRetainedGroupBundle: resource lifecycle', () => {
     expect(bundle.generation).toBe(generation + 1);
   });
 
-  test('transformRowBase defaults to 0 before any capture is finalized (Slice 4c)', () => {
+  test('transformRowBase defaults to 0 before any capture is finalized', () => {
     const stats = createRenderStats();
     const accountant = new GpuResourceAccountant(stats);
     const bundle = new WebGpuRetainedGroupBundle(accountant, () => {});
@@ -809,7 +809,7 @@ describe('WebGpuRetainedGroupBundle: resource lifecycle', () => {
     expect(bundle.transformRowBase).toBe(0);
   });
 
-  test('patch writes one 32-byte slot at localRow*32 and does NOT bump the generation (Slice 4c)', () => {
+  test('patch writes one 32-byte slot at localRow*32 and does NOT bump the generation', () => {
     const stats = createRenderStats();
     const accountant = new GpuResourceAccountant(stats);
     const bundle = new WebGpuRetainedGroupBundle(accountant, () => {});
@@ -839,7 +839,7 @@ describe('WebGpuRetainedGroupBundle: resource lifecycle', () => {
     expect(bundle.generation).toBe(generation);
   });
 
-  test('patch ignores out-of-range rows and no-ops before a range is recorded (Slice 4c)', () => {
+  test('patch ignores out-of-range rows and no-ops before a range is recorded', () => {
     const stats = createRenderStats();
     const accountant = new GpuResourceAccountant(stats);
     const bundle = new WebGpuRetainedGroupBundle(accountant, () => {});
@@ -861,7 +861,7 @@ describe('WebGpuRetainedGroupBundle: resource lifecycle', () => {
     expect(writes.slice(mark)).toHaveLength(0);
   });
 
-  test('device loss clears the patch range so a stale patch cannot write a dead buffer (Slice 4c)', () => {
+  test('device loss clears the patch range so a stale patch cannot write a dead buffer', () => {
     const stats = createRenderStats();
     const accountant = new GpuResourceAccountant(stats);
     const bundle = new WebGpuRetainedGroupBundle(accountant, () => {});

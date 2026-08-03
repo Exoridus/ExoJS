@@ -86,8 +86,7 @@ export default defineConfig({
       provider: 'istanbul',
       reporter: ['lcov', 'clover', 'text-summary'],
       // Core plus every extension package with a vitest project in
-      // `test:coverage` — all packages have suites now (aseprite/ldtk since
-      // PR #222, react since PR #200), so they all count.
+      // `test:coverage` — all packages have suites, so they all count.
       include: [
         'src/**/*.ts',
         'packages/exojs-particles/src/**/*.ts',

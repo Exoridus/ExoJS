@@ -56,8 +56,7 @@ type BindingKind = 'onStart' | 'onActive' | 'onStop' | 'onTrigger';
  * input clock, it only tracks what it created so it can unbind on teardown.
  * Every factory accepts a `when` option (default `'active'`) controlling
  * which {@link SceneState}s the binding may dispatch in; a trigger only
- * fires when both its press and release edges occurred in an allowed state
- * (definition §13.2).
+ * fires when both its press and release edges occurred in an allowed state.
  */
 export class SceneInputs implements Destroyable {
   private readonly _bindings = new Set<InputBinding>();
@@ -154,7 +153,7 @@ export class SceneInputs implements Destroyable {
    * Fire `callback` once a press-then-release completes within the
    * threshold window — a "tap" or "click" gesture. Both the press and
    * release edges must have occurred in a `when`-allowed state for the
-   * trigger to fire (definition §13.2): pressing while allowed, then the
+   * trigger to fire: pressing while allowed, then the
    * scene pausing before release, does not trigger.
    */
   public onTrigger(channel: InputChannel | readonly InputChannel[], callback: (value: number) => void, options?: SceneInputBindingOptions): InputBinding {
@@ -251,8 +250,8 @@ export class SceneInputs implements Destroyable {
 
     binding.onStop.add((value: number) => {
       // Both the press edge (primed) and the release edge (allowedNow(),
-      // checked live) must be allowed for the trigger to fire (definition
-      // §13.2) — checked live here since a same-frame disallow-then-release
+      // checked live) must be allowed for the trigger to fire
+      // — checked live here since a same-frame disallow-then-release
       // with no intervening onActive tick would otherwise be missed.
       //
       // `primed` is intentionally NOT reset here: the real InputBinding

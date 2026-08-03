@@ -220,7 +220,7 @@ export class Loader {
     return { type, source: input, ctor };
   }
 
-  // ── Refcount / claims (asset-system v2 §4.7) ──────────────────────────────
+  // ── Refcount / claims ───────────────────────────────────────────────────────
   /** App-lifetime claim scope for direct `app.loader.get/load(…)` calls. @internal */
   private readonly _rootClaimer = Symbol('app-loader');
 
@@ -652,7 +652,7 @@ export class Loader {
   public get<M extends Record<string, CatalogEntry>>(catalog: Assets<M>): InferAssetsProperties<M>;
 
   /**
-   * Seamless/value access from an `Asset.type(...)` descriptor (asset-system v2 §4.2) —
+   * Seamless/value access from an `Asset.type(...)` descriptor —
    * the replacement for the removed `get(Type, dynamicSource)` form. Builds and
    * adopts the descriptor's handle-hybrid leaf: a resource type yields its
    * heal-in-place handle, a value type a stable {@link AssetRef}. A type with

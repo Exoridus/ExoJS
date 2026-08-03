@@ -1,6 +1,6 @@
 {
   "title": "SceneTransitionPhaseContext",
-  "description": "Per-frame context handed to PhasedSceneTransition.enter/ PhasedSceneTransition.exit. Spec §3.9.",
+  "description": "Per-frame context handed to PhasedSceneTransition.enter/ PhasedSceneTransition.exit.",
   "symbol": "SceneTransitionPhaseContext",
   "kind": "interface",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Per-frame context handed to PhasedSceneTransition.enter/ PhasedSceneTransition.exit. Spec §3.9."
+        "Per-frame context handed to PhasedSceneTransition.enter/ PhasedSceneTransition.exit."
       ],
       "importLine": "import { SceneTransitionPhaseContext } from '@codexo/exojs'",
       "sourceLink": null

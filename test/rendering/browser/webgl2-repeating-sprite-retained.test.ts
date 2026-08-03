@@ -1,7 +1,7 @@
 /**
- * WebGL2 renderer-matrix browser tests — RepeatingSprite retained instruction-
- * set replay (Track B Slice 3 follow-up: extending the flush-level batch
- * cache to RepeatingSprite).
+ * WebGL2 renderer-matrix browser tests — RepeatingSprite retained
+ * instruction-set replay (extending the flush-level batch cache to
+ * RepeatingSprite).
  *
  * Only the GEOMETRY path (TextureRegion source) is recordable — its 32-byte
  * instance layout matches the sprite/NineSlice batch shape exactly (node
@@ -379,8 +379,8 @@ describe('WebGL2 renderer matrix: RepeatingSprite retained instruction-set repla
 
     try {
       // Render many frames, including a scroll mutation — the shader path
-      // never records/replays a batch (S3-D5.1: _supportsRetainedBatches only
-      // covers the geometry path here), so the group must stay correct via
+      // never records/replays a batch (_supportsRetainedBatches only covers
+      // the geometry path here), so the group must stay correct via
       // the (poisoned, permanently-entry-replay) live path the whole time.
       for (let i = 0; i < 4; i++) {
         render(backend, root);

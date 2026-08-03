@@ -2,8 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 /**
- * Domain-agnostic report-writing primitives (review #325: the report skeleton
- * was rendering-coupled and living under `rendering/`).
+ * Domain-agnostic report-writing primitives.
  *
  * Both domains emit the same three artifacts — a full-fidelity `results.json`, a
  * machine-parseable `results.csv`, and a human-readable `results.md` — and share

@@ -1,9 +1,9 @@
 /**
- * WebGPU sprite batcher texture-slot capacity (issue #274, F9b follow-up).
+ * WebGPU sprite batcher texture-slot capacity.
  *
  * The WebGPU sprite renderer used to hard-code an 8-texture bind-group layout,
  * so scenes with more than 8 unique textures split into one flush per 8
- * sprites — while the WebGL2 batcher had already been lifted to 16 slots (F9).
+ * sprites — while the WebGL2 batcher had already been lifted to 16 slots.
  *
  * WGSL `binding_array` is not core WebGPU, so the lift is capability-gated on
  * DEVICE LIMITS instead: the WGSL source and bind-group layout are generated

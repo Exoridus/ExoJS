@@ -85,7 +85,7 @@ export default defineConfig([
       'no-new-func': 'error',
       'no-new-wrappers': 'error',
       'no-promise-executor-return': 'error',
-      // Scene.init() must be synchronous (definition spec §5.3): TypeScript's
+      // Scene.init() must be synchronous: TypeScript's
       // void-returning override bivariance lets an `async init()` override
       // compile even though it silently breaks activation timing. Catch the
       // authoring mistake at lint time rather than only at runtime.
@@ -334,7 +334,7 @@ export default defineConfig([
       'no-new-func': 'error',
       'no-new-wrappers': 'error',
       'no-promise-executor-return': 'error',
-      // Scene.init() must be synchronous (definition spec §5.3) — see the
+      // Scene.init() must be synchronous — see the
       // matching rule in the engine-source block above for the full rationale.
       'no-restricted-syntax': [
         'error',
@@ -895,10 +895,8 @@ export default defineConfig([
     },
   },
 
-  // Relocated verbatim from Loader.ts (Loader split, Slice 3): claim/refcount
-  // tracking, multi-handle fill, and options-equivalence branching are
-  // inherently branchy state machines that predate the split and were already
-  // exempted from `complexity` there — same code, same justification.
+  // Claim/refcount tracking, multi-handle fill, and options-equivalence
+  // branching are inherently branchy state machines.
   {
     files: ['src/assets/AssetResidency.ts'],
     rules: {
@@ -951,7 +949,7 @@ export default defineConfig([
       '@typescript-eslint/only-throw-error': 'off',
       '@typescript-eslint/require-await': 'off',
       // Cohesive GL backend surface; grew just past the line limit with the
-      // instanced-draw support added in #151. Splitting would scatter tightly
+      // instanced-draw support. Splitting would scatter tightly
       // coupled GL state. Known deviation, candidate for a later extraction.
       'max-lines': 'off',
     },
@@ -1116,8 +1114,7 @@ export default defineConfig([
     },
   },
 
-  // The bit-crusher worklet source (Phase 1 proof-of-concept for the
-  // `.worklet.ts` → `?worklet` build plugin) runs inside AudioWorkletGlobalScope
+  // The bit-crusher worklet source runs inside AudioWorkletGlobalScope
   // — no DOM, no module imports at runtime — and typechecks separately against
   // packages/exojs-audio-fx/tsconfig.worklets.json (see worklet-globals.d.ts),
   // not the package's main (DOM-lib) program covered by `projectService`

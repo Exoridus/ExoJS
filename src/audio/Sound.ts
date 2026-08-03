@@ -14,7 +14,7 @@ import { seedVoiceFromPlayOptions } from './spatial-options';
  * Eviction strategy used when the pool is full and a new play is requested.
  *
  * At the per-Sound level all pooled instances share the same priority, so
- * `LowestPriority` degenerates to `FirstInFirstOut` in V1. The enum is
+ * `LowestPriority` degenerates to `FirstInFirstOut`. The enum is
  * forward-compatible with a future global voice manager that culls across
  * multiple Sound instances.
  */
@@ -26,7 +26,7 @@ export enum SoundPoolStrategy {
   /**
    * Evict the source with the lowest priority.
    * Within a single Sound all instances share the same priority, so this
-   * degenerates to FirstInFirstOut in V1.
+   * degenerates to FirstInFirstOut.
    */
   LowestPriority = 'priority',
 }
@@ -151,7 +151,7 @@ export class Sound implements Playable {
     return this._loadState.value;
   }
 
-  /** Load lifecycle: `'idle' | 'loading' | 'ready' | 'failed'` (asset-system v2 §6). */
+  /** Load lifecycle: `'idle' | 'loading' | 'ready' | 'failed'`. */
   public get state(): LoadStateValue {
     return this._loadState.value;
   }
@@ -528,7 +528,7 @@ export class Sound implements Playable {
       }
       case SoundPoolStrategy.LowestPriority:
       // All pooled instances of this Sound share the same priority,
-      // so LowestPriority degenerates to FIFO within a single Sound (V1).
+      // so LowestPriority degenerates to FIFO within a single Sound.
       // falls through
       case SoundPoolStrategy.FirstInFirstOut:
       default:

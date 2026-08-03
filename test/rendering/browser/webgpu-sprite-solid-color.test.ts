@@ -4,8 +4,8 @@
  * The simplest possible matrix case: a single opaque {@link Sprite} over a
  * solid-color {@link Texture}, asserting pixel colour inside the sprite's
  * bounds, outside its bounds, and after a tint is applied. Establishes the
- * paired webgl2/webgpu pixel-assertion pattern for the drawable-matrix
- * follow-up work (see `.workspace/specs/v0.16-render-matrix/00-plan.md`).
+ * paired webgl2/webgpu pixel-assertion pattern for the drawable-matrix test
+ * suite.
  *
  * All WebGPU renderers use inline WGSL — no shader file mocks are needed.
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs

@@ -1,6 +1,5 @@
 /**
- * WebGPU group matrix — projection UBO extension browser test (Track B Slice 2,
- * S2-D2, plan D-P1).
+ * WebGPU group matrix — projection UBO extension browser test.
  *
  * The group matrix joins the existing group(0) projection uniform data instead
  * of a dynamic-offset binding: `WebGpuBackend._setRenderGroupTransform` sets a

@@ -54,9 +54,9 @@ export class Sprite extends Drawable {
   private readonly _normals: [Vector, Vector, Vector, Vector] = [new Vector(), new Vector(), new Vector(), new Vector()];
   // World-transform version the cached vertices/normals were last built at.
   // The Vertices/Normals flags cover local changes (texture frame, own
-  // transform); this version compare additionally catches an ancestor moving,
-  // which — after the Slice 1 lazy-cascade fix — no longer eagerly flags this
-  // sprite. Mirrors SceneNode.getBounds()'s _boundsBuiltAtVersion.
+  // transform); this version compare additionally catches an ancestor moving
+  // without eagerly flagging this sprite (lazy cascade). Mirrors
+  // SceneNode.getBounds()'s _boundsBuiltAtVersion.
   private _verticesBuiltAtVersion = -1;
   private _normalsBuiltAtVersion = -1;
 
@@ -115,7 +115,7 @@ export class Sprite extends Drawable {
   public set width(value: number) {
     // A not-yet-loaded texture has a 0-wide frame; dividing by it would poison
     // scale with NaN (and, being NaN, never recover). Keep the current scale
-    // until real dimensions arrive — the load self-heal (#309) resets the frame.
+    // until real dimensions arrive — the load self-heal resets the frame.
     if (this._textureFrame.width !== 0) {
       this.scale.x = value / this._textureFrame.width;
     }
@@ -236,7 +236,7 @@ export class Sprite extends Drawable {
   /**
    * A deferred texture handle starts 0×0 until its payload loads, so the frame
    * reset above snapped to a 0×0 frame. Re-reset once it becomes ready so the
-   * sprite picks up the real dimensions (#309). Guarded against a texture swap
+   * sprite picks up the real dimensions. Guarded against a texture swap
    * or destroy between now and the resolution, and against RenderTextures /
    * already-ready textures (no `loaded` promise to wait on).
    */

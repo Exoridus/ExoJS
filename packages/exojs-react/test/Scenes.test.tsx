@@ -100,7 +100,7 @@ describe('<Scenes> / <Scene> / useActiveScene', () => {
 
     view.rerender(<Tree app={app} active="does-not-exist" />);
 
-    // definition §10.1: no public API clears the director mid-lifetime — the
+    // No public API clears the director mid-lifetime — the
     // last-active scene keeps running underneath; only the React-rendered
     // overlay is cleared.
     await waitFor(() => expect(view.queryByTestId('hud')).toBeNull());

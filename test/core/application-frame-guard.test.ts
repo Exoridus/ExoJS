@@ -332,7 +332,7 @@ describe('Application frame guard', () => {
       expect(app.status).toBe(ApplicationStatus.Running);
     });
 
-    test('does NOT log an async render error a second time — the backend already logged it at source (#306)', () => {
+    test('does NOT log an async render error a second time — the backend already logged it at source', () => {
       const handler = (app.backend.onRenderError.add as unknown as MockInstance).mock.calls[0]![0] as (error: Error) => void;
       const errorSpy = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
 

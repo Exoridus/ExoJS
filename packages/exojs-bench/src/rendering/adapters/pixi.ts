@@ -7,12 +7,12 @@ import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
  * Pixi.js v8 arm of the rendering benchmark — the direct renderer comparison and
  * the only other 2D library that ships WebGPU.
  *
- * This is now a COMMITTED, official arm (pinned exact `pixi.js` devDependency),
- * not the old gitignored local-only reference. It builds the byte-for-byte same
+ * This is a COMMITTED, official arm (pinned exact `pixi.js` devDependency). It
+ * builds the byte-for-byte same
  * scene the ExoJS arm builds (`adapters/exojs.ts`) and mutates the identical leaf
  * set selected by the shared `selectMutationIndices`, exposing the result through
  * {@link EngineAdapter.mutationSignature} so the harness's cross-arm determinism
- * check (review B3) asserts the two arms did the same work. The scene structure
+ * check asserts the two arms did the same work. The scene structure
  * (spine depth, round-robin leaf distribution, per-bucket texture cycling,
  * overdraw stacking, cullable flags) is a faithful transcription of the ExoJS
  * adapter so the arms are comparable on the same neutral archetypes.
@@ -151,8 +151,8 @@ export const createPixiAdapter = (): EngineAdapter => {
       // propagation identically for a fair per-node cost.
       const sceneRoot = new Container();
 
-      // `spec.cullingEnabled` is `false` for every archetype (review C4
-      // fairness fix, see `archetypes.ts`): setting `.cullable` here is a
+      // `spec.cullingEnabled` is `false` for every archetype (see
+      // `archetypes.ts` for the fairness rationale): setting `.cullable` here is a
       // no-op anyway because this arm never registers `CullerPlugin` (nor
       // calls `Culler.shared.cull(...)`) — the flag is inert data on Pixi
       // unless one of those is wired up. Kept in sync with the ExoJS arm's
@@ -178,7 +178,7 @@ export const createPixiAdapter = (): EngineAdapter => {
 
       // Shared, canonical mutation selection — the SAME helper the ExoJS arm
       // routes through, so both arms select the byte-for-byte identical index set
-      // and the harness's cross-arm determinism assertion holds (review B3).
+      // and the harness's cross-arm determinism assertion holds.
       const selectedIndices = selectMutationIndices(nodeCount, spec.mutationFraction, seed);
       const selectedSet = new Set(selectedIndices);
       const leaves: MutableLeaf[] = [];

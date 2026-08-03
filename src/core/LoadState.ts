@@ -1,6 +1,6 @@
 /**
  * Load lifecycle of a seamless asset handle. Directly constructed assets are
- * `'ready'`; a catalog leaf awaiting adoption is `'idle'` (asset-system v2 §7).
+ * `'ready'`; a catalog leaf awaiting adoption is `'idle'`.
  */
 export type LoadStateValue = 'idle' | 'loading' | 'ready' | 'failed';
 
@@ -69,7 +69,7 @@ export class LoadState<Owner> {
 
   /**
    * Enter `'idle'` — a catalog leaf/ref that exists but has not been adopted by
-   * a loader (asset-system v2 §7), as opposed to `'ready'` (a manually
+   * a loader, as opposed to `'ready'` (a manually
    * constructed, immediately usable resource). {@link loaded} on an idle handle
    * stays pending; {@link begin} on adoption preserves that pending promise.
    */

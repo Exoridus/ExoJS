@@ -2,7 +2,7 @@ import type { LoadStateValue } from '#core/LoadState';
 
 /**
  * Uniform, read-only load-status contract surfaced by every asset handle and
- * ref (asset-system v2 §6). A public projection of the handle's internal
+ * ref. A public projection of the handle's internal
  * `LoadState`: `Texture`, `Sound`, and {@link AssetRef} each expose `state`,
  * `ready`, and `error` directly (plus their own `loaded` promise), so they
  * structurally satisfy this interface. No separate status object is created.

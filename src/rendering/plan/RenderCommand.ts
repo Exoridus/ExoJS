@@ -186,7 +186,7 @@ export const makeMaterialKey = (drawable: Drawable, backend: RenderBackend | nul
 /**
  * In-place variant of {@link makeMaterialKey}: derives the same material key but
  * writes it into `target` instead of allocating a fresh object. Used by the
- * per-drawable material-key cache (Slice 2b) so a cache miss reuses the held key
+ * per-drawable material-key cache so a cache miss reuses the held key
  * rather than producing per-frame garbage. Returns `target` for chaining.
  *
  * @internal
@@ -210,7 +210,7 @@ export const writeMaterialKeyInto = (target: MaterialKey, drawable: Drawable, ba
 
 /**
  * Copy all fields of `source` into `target` (both {@link MaterialKey}s) without
- * allocating. Used by the pooled retained-snapshot records (Slice 3, F11a) so
+ * allocating. Used by the pooled retained-snapshot records so
  * a recapture rewrites the held key object instead of spreading a fresh one.
  * Returns `target` for chaining.
  *

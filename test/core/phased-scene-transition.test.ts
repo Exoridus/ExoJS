@@ -152,8 +152,8 @@ describe('PhasedSceneTransition — single-instance session driving', () => {
     expect(session.done).toBe(false);
 
     // environment.committed flipped true synchronously inside this fake's commit() call, but the
-    // session only observes it on the *next* update() — matching spec §3.5.2 (the switch is never
-    // processed reentrantly from inside the callback that requested it).
+    // session only observes it on the *next* update() — the switch is never processed reentrantly
+    // from inside the callback that requested it.
     session.update(new Time(0));
     session.render(fakeRenderingContext, fakeFrame);
     expect(phase.calls.at(-1)).toMatchObject({ phase: 'enter', progress: 0, presence: 0 });

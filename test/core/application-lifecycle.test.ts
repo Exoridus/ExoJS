@@ -1119,10 +1119,10 @@ describe('Application lifecycle / getters / sizing', () => {
   });
 
   // -------------------------------------------------------------------------
-  // _stopFrameLoop() -> scenes._abortInFlightNavigation() wiring (Slice 7 Group B)
+  // _stopFrameLoop() -> scenes._abortInFlightNavigation() wiring
   // -------------------------------------------------------------------------
 
-  describe('_stopFrameLoop() -> scenes._abortInFlightNavigation() wiring (Slice 7 Group B)', () => {
+  describe('_stopFrameLoop() -> scenes._abortInFlightNavigation() wiring', () => {
     test('stop() calls scenes._abortInFlightNavigation() before its own _clearScene() call', async () => {
       const { Application, ApplicationStatus, sceneDirector } = await loadHarness();
       const app = new Application({ backend: { type: 'webgl2' } });

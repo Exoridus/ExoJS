@@ -1,6 +1,6 @@
 {
   "title": "CrossFadeSceneTransition",
-  "description": "Continuous blend between the outgoing scene (frozen as a snapshot at session start) and the incoming scene (rendered live to a pooled texture), with no \"exit half\"/\"enter half\" seam — `placement: 'scene'`, `outgoingFrame: 'snapshot'`, `currentFrame: 'texture'`. A full `SceneTransition`, not phase-split (definition spec §3.9.2, §8).",
+  "description": "Continuous blend between the outgoing scene (frozen as a snapshot at session start) and the incoming scene (rendered live to a pooled texture), with no \"exit half\"/\"enter half\" seam — `placement: 'scene'`, `outgoingFrame: 'snapshot'`, `currentFrame: 'texture'`. A full `SceneTransition`, not phase-split.",
   "symbol": "CrossFadeSceneTransition",
   "kind": "class",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Continuous blend between the outgoing scene (frozen as a snapshot at session start) and the incoming scene (rendered live to a pooled texture), with no \"exit half\"/\"enter half\" seam — `placement: 'scene'`, `outgoingFrame: 'snapshot'`, `currentFrame: 'texture'`. A full `SceneTransition`, not phase-split (definition spec §3.9.2, §8)."
+        "Continuous blend between the outgoing scene (frozen as a snapshot at session start) and the incoming scene (rendered live to a pooled texture), with no \"exit half\"/\"enter half\" seam — `placement: 'scene'`, `outgoingFrame: 'snapshot'`, `currentFrame: 'texture'`. A full `SceneTransition`, not phase-split."
       ],
       "importLine": "import { CrossFadeSceneTransition } from '@codexo/exojs'",
       "sourceLink": null

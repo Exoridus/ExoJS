@@ -398,7 +398,7 @@ export abstract class RenderNode extends SceneNode {
       // A node destroy()ed but left attached to the tree (the documented
       // footgun) has released its pooled transform/bounds; collecting it would
       // read freed state and re-pin it. Skip it — the diagnostic is emitted
-      // once by the nearest RetainedContainer (P3f); the plain path degrades
+      // once by the nearest RetainedContainer; the plain path degrades
       // silently to "renders nothing", which is the correct result.
       return;
     }
@@ -516,9 +516,9 @@ export abstract class RenderNode extends SceneNode {
 
   protected override _escapesTransformGroup(): boolean {
     // Barrier-effect nodes escape on their own (their effect machinery
-    // composites in world space, plan D-P4); additionally the parent boundary
+    // composites in world space); additionally the parent boundary
     // may push this node out when its SUBTREE contains a deep barrier — the
-    // sub-branch escape (F13/R3). Callers only reach this when the parent is
+    // sub-branch escape. Callers only reach this when the parent is
     // a transform-group boundary, so the parent query stays off hot paths.
     return this._renderPlanHasBarrierEffects() || this.parent?._childEscapesTransformGroup(this) === true;
   }

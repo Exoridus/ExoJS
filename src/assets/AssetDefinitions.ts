@@ -58,7 +58,7 @@ export interface AssetDefinitions {
 
 export type AnyAssetConfig = {
   [K in keyof AssetDefinitions]: { type: K } & AssetDefinitions[K]['config'] &
-    // `parse` is a value-type-only, SYNCHRONOUS post-load transform (delta §4/§5):
+    // `parse` is a value-type-only, SYNCHRONOUS post-load transform:
     // it maps the decoded raw value and may not return a Promise (async parse is a
     // follow-up — it would need the fill/store flow to await).
     (K extends ValueAssetKind ? { parse?: (raw: AssetDefinitions[K]['resource']) => unknown } : object);
@@ -127,8 +127,8 @@ export type InferAssetResource<I extends AssetInput> =
 
 /**
  * Type-level twin of the runtime `extensionKindRegistry`: file suffix → asset
- * type, for bare-string path inference in `Assets.from()`/`get()`/`load()`
- * (asset-system v2 §5). Restricted to LEAF-CAPABLE types, exactly mirroring the
+ * type, for bare-string path inference in `Assets.from()`/`get()`/`load()`.
+ * Restricted to LEAF-CAPABLE types, exactly mirroring the
  * runtime `registerExtensionKind` calls made by `defineAsset`. This is the
  * single declaration-merging surface for bare-path suffix inference:
  * ```ts

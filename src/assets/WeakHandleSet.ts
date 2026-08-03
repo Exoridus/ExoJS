@@ -3,11 +3,11 @@
  *
  * The {@link Loader} tracks the live consumer handles for one asset key — the
  * representative plus every co-handle adopted for the same source — so that a
- * refcount-0 eviction can re-arm them all and a later claim heals them in place
- * (asset-system v2 §7). Holding them strongly would keep evicted `Texture` /
+ * refcount-0 eviction can re-arm them all and a later claim heals them in place.
+ * Holding them strongly would keep evicted `Texture` /
  * `Sound` objects alive for the loader's lifetime, so a streaming open world
  * that claims/releases thousands of sources would grow the deferred bookkeeping
- * unbounded (audit A4). Storing them weakly lets the GC reclaim a handle once
+ * unbounded. Storing them weakly lets the GC reclaim a handle once
  * the game drops its last reference; a companion `FinalizationRegistry` in the
  * loader then prunes the emptied entry.
  *

@@ -25,7 +25,7 @@ const mockFetchImage = (): void => {
   );
 };
 
-describe('Loader.load internal record fallback (A1)', () => {
+describe('Loader.load internal record fallback', () => {
   beforeEach(() => {
     vi.stubGlobal(
       'createImageBitmap',

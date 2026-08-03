@@ -1,6 +1,6 @@
 /**
- * Cross-backend pixel-parity for retained Text (Track B extension, Task 2
- * Step 11): the SAME text content, transform, and retained-group setup, driven
+ * Cross-backend pixel-parity for retained Text: the SAME text content,
+ * transform, and retained-group setup, driven
  * through the retained instruction-replay tier on BOTH `WebGl2Backend` and
  * `WebGpuBackend`, must produce matching pixels within the project's tolerance.
  *

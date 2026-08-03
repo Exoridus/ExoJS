@@ -1,6 +1,5 @@
 /**
- * WebGL2 renderer-matrix browser tests — Mesh retained instruction-set replay
- * (Track B Slice 3, mesh opt-in).
+ * WebGL2 renderer-matrix browser tests — Mesh retained instruction-set replay.
  *
  * The mesh counterpart of `webgl2-nine-slice-retained-instruction-replay.test.ts`.
  * Mesh's recordable draw is structurally different from the self-contained
@@ -14,7 +13,7 @@
  *
  * A live sprite OUTSIDE (and before) the group keeps the group's shared
  * transform rows starting at a non-zero frame-global index, so the group-local
- * node-index rebase (S3-D4) is load-bearing in every assertion — the final cell
+ * node-index rebase is load-bearing in every assertion — the final cell
  * neuters the rebase hook and proves the frame then diverges.
  *
  * The group holds two same-geometry mesh runs with DISTINCT textures (2 red +
@@ -200,7 +199,7 @@ const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
   return [buf[0], buf[1], buf[2], buf[3]];
 };
 
-/** Full-framebuffer snapshot for byte-identical tier comparisons (S3-D10). */
+/** Full-framebuffer snapshot for byte-identical tier comparisons. */
 const readCanvas = (backend: WebGl2Backend): Uint8Array => {
   const buf = new Uint8Array(canvasSize * canvasSize * 4);
   const gl = backend.context;
@@ -265,7 +264,7 @@ const createQuadGeometry = (): Geometry => {
 /**
  * Standard cell scene: one live sprite OUTSIDE (and before) the retained group
  * so the group's shared transform rows never start at row 0 — the group-local
- * node-index rebase (S3-D4) is load-bearing in every pixel assertion.
+ * node-index rebase is load-bearing in every pixel assertion.
  *
  * The group holds 4 meshes sharing ONE quad geometry: two red (one instanced
  * batch of 2) then two green (a second instanced batch of 2). Two batches
@@ -442,8 +441,8 @@ describe('WebGL2 renderer matrix: Mesh retained instruction-set replay cells', (
       const beginSpy = vi.spyOn(backend, '_beginRetainedCapture');
       const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
 
-      // Slice 4b: a pure transform move on a direct child stays content-clean,
-      // so the group keeps its recording and patches just this child's shared
+      // A pure transform move on a direct child stays content-clean, so the
+      // group keeps its recording and patches just this child's shared
       // transform row in place. redA and redB share ONE batch but reference
       // DISTINCT rows, so only redA moves — the per-instance row rebase and the
       // in-place patch are both load-bearing here.

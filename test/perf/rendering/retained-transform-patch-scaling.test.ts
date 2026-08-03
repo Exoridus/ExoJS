@@ -1,6 +1,6 @@
 /**
- * Slice-4d acceptance: the incremental transform-row patch is O(k moved rows),
- * not O(n group size).
+ * The incremental transform-row patch is O(k moved rows), not O(n group
+ * size).
  *
  * The dynamic-heavy motivation (design §1) measured exojs at ~117 ms vs Pixi's
  * ~9 ms under 7.5 % churn, because the engine rebuilt collect -> pack ->
@@ -76,7 +76,7 @@ const warmToSplice = (harness: WebGl2Harness, root: Container): void => {
   measureFrame(harness, root); // F3 splice
 };
 
-describe('Slice 4d: transform-row patch is O(k moved), independent of group size', () => {
+describe('transform-row patch is O(k moved), independent of group size', () => {
   it('moving k=4 sprites uploads only the k touched rows and ZERO instance bytes — the same cost at n=16 and n=256', () => {
     const measurePatchCost = (n: number, k: number): { transformRows: number; instanceBytes: number; reRecorded: boolean } => {
       let result!: { transformRows: number; instanceBytes: number; reRecorded: boolean };

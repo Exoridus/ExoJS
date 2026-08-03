@@ -13,8 +13,8 @@
  * invisible for axis-aligned transforms (scale + translate) but diverges for
  * every rotated or skewed node — instanced vs. single-draw within WebGPU AND
  * WebGPU vs. WebGL2. These tests push a rotation+skew matrix through each
- * packing and require the canonical result (review finding F3/B-01: the
- * WebGPU instanced-mesh path applied the per-node affine transposed).
+ * packing and require the canonical result — the WebGPU instanced-mesh path
+ * used to apply the per-node affine transposed.
  */
 
 import { Color } from '#core/Color';

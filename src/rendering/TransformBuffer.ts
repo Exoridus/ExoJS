@@ -5,7 +5,7 @@ import { PixelSnapMode } from '#rendering/pixelSnap';
 /**
  * Floats per transform row (2 rgba32f texels): the single source of truth for
  * the layout shared by {@link TransformBuffer}, the retained group transform
- * store, and the Slice-4b in-place row patch. Tint lives in a separate,
+ * store, and the in-place row patch. Tint lives in a separate,
  * natively-8-bit-per-channel row (see {@link TRANSFORM_TINT_BYTES_PER_ROW} /
  * {@link packTintRow}) — GPU texture/buffer uploads round up to whole
  * texels/vec4s regardless of how few of a slot's floats are "real" data, so a
@@ -41,13 +41,13 @@ const hashUintScratch = new Uint32Array(hashFloatScratch.buffer);
 /**
  * Write one transform row into `target` at `offset` in the canonical layout
  * (a,b,c,d, tx,ty, snapMode,0). The single packer shared by
- * {@link TransformBuffer.write} and the Slice-4b row patch, so the frame buffer
+ * {@link TransformBuffer.write} and the in-place row patch, so the frame buffer
  * and a patched retained row stay bit-identical by construction — a layout change
  * lands in exactly one place.
  *
  * `snapMode` rides in the row's spare slot (`m1.z`): both backends now upload
  * the RAW world transform and snap the drawable's device-pixel origin in the
- * vertex stage, gated on this flag (spec D3-D5).
+ * vertex stage, gated on this flag.
  * @internal
  */
 export const packTransformRow = (target: Float32Array, offset: number, transform: Matrix, snapMode: PixelSnapMode = PixelSnapMode.None): void => {

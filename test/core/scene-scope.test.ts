@@ -61,7 +61,7 @@ describe('SceneScope', () => {
       expect(events).toEqual(['load:facilities-available', 'init:facilities-available']);
     });
 
-    test('runs load() then init() in order (definition §5.1), ends in Ready — no facility attachment or Scene signal yet', async () => {
+    test('runs load() then init() in order, ends in Ready — no facility attachment or Scene signal yet', async () => {
       const app = createAppStub();
       const events: string[] = [];
 
@@ -88,7 +88,7 @@ describe('SceneScope', () => {
       expect(events).toEqual(['load:start', 'load:end', 'init']);
       expect(scope.state).toBe(SceneState.Ready);
       // Roots/onActivate are deferred to activate() — the Ready checkpoint
-      // itself produces no application-wide effect (definition §4.1/§4.2).
+      // itself produces no application-wide effect.
       expect(app.interaction.attachRoot).not.toHaveBeenCalled();
     });
 
@@ -136,7 +136,7 @@ describe('SceneScope', () => {
       expect(update).toHaveBeenCalledTimes(1);
     });
 
-    test('activate() attaches the scene root to interaction dispatch (deferred from prepare(), definition §4.1)', async () => {
+    test('activate() attaches the scene root to interaction dispatch (deferred from prepare())', async () => {
       const app = createAppStub();
       const scene = new Scene();
       const scope = new SceneScope(app, scene);
@@ -219,7 +219,7 @@ describe('SceneScope', () => {
     });
   });
 
-  describe('failed-activation cleanup (definition §16)', () => {
+  describe('failed-activation cleanup', () => {
     test('destroys engine-managed registrations, releases loader claims, calls scene.destroy(), but never unload()', async () => {
       const app = createAppStub();
       const unload = vi.fn();
@@ -293,7 +293,7 @@ describe('SceneScope', () => {
     });
   });
 
-  describe('permanent teardown (definition §17)', () => {
+  describe('permanent teardown', () => {
     const activate = async (app: Application, scene: Scene): Promise<SceneScope<void>> => {
       const scope = new SceneScope(app, scene);
 
@@ -413,7 +413,7 @@ describe('SceneScope', () => {
     });
   });
 
-  describe('retention (definition §14)', () => {
+  describe('retention', () => {
     const activate = async (app: Application, scene: Scene): Promise<SceneScope<void>> => {
       const scope = new SceneScope(app, scene);
 

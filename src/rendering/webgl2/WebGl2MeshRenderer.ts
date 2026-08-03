@@ -67,7 +67,7 @@ interface StaticGeometryCacheEntry {
 
 export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements WebGl2RetainedBatchReplayer {
   /**
-   * Retained-batch opt-in (Track B Slice 3, S3-D5.1): the default-path static
+   * Retained-batch opt-in: the default-path static
    * instanced draw ({@link _drawStaticBatch}) is a flush-level batch the group
    * recorder can capture and replay. Custom-material and dynamic-geometry
    * meshes never take that path — they poison any open capture instead (see
@@ -357,7 +357,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
   private _drawDynamicInstancedSingle(draw: PendingMeshDraw, backend: WebGl2Backend, connection: MeshRendererConnection): void {
     // A dynamic-geometry (non-static) mesh cannot be recorded — its geometry
     // is not the shared, persistent buffer a retained batch references. The
-    // recordability predicate (S3-D5) admits it (material === null, snap none),
+    // recordability predicate admits it (material === null, snap none),
     // so poison any open capture: the group's set never validates and it stays
     // on the correct entry-replay tier. Belt-and-braces, mirroring the sprite
     // renderer's custom-material poison.
@@ -440,7 +440,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     backend.stats.batches++;
     backend.stats.drawCalls++;
 
-    // Retained recording (Track B Slice 3, mesh opt-in): while a capture window
+    // Retained recording (mesh opt-in): while a capture window
     // is open, hand this flush's per-instance node-index stream and a reference
     // to the SHARED, persistent geometry to the backend. The geometry
     // (vertex+index buffers) is NOT copied into the group bundle — only the
@@ -551,7 +551,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     shader.sync();
   }
 
-  // ── Retained-batch record/replay (Track B Slice 3, mesh opt-in) ──────────
+  // ── Retained-batch record/replay (mesh opt-in) ────────────────────────────
   // Mesh's recordable draw is an INDEXED instanced draw: shared per-Geometry
   // vertex+index buffers (referenced via `payload.geometry`, never copied into
   // the group bundle) plus a group-owned per-instance node-index stream (one
@@ -578,7 +578,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     }
   }
 
-  /** @internal See {@link WebGl2RetainedBatchReplayer._rebaseRetainedNodeIndices} (S3-D4: group-local indices). */
+  /** @internal See {@link WebGl2RetainedBatchReplayer._rebaseRetainedNodeIndices} (rebases to group-local indices). */
   public _rebaseRetainedNodeIndices(payload: WebGl2RetainedBatchPayload, base: number): void {
     const words = payload.bundle.instanceWords;
     const start = payload.byteOffset / Uint32Array.BYTES_PER_ELEMENT;

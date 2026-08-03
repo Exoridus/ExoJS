@@ -1,9 +1,8 @@
 /**
- * Slice 7 capstone: a real FadeSceneTransition (Group A, Task 1) drives the
- * very first Application.start() call end-to-end, proving the
- * _frameLoopActive startup-sequencing fix (Group B) actually lets a
- * frame-driven transition session progress before _status flips to Running —
- * the exact deadlock scenario spec §3.7 describes.
+ * A real FadeSceneTransition drives the very first Application.start() call
+ * end-to-end, proving the _frameLoopActive startup-sequencing fix actually
+ * lets a frame-driven transition session progress before _status flips to
+ * Running — the exact deadlock scenario that fix prevents.
  */
 import { Application, ApplicationStatus } from '#core/Application';
 import { Scene } from '#core/Scene';
@@ -47,7 +46,7 @@ vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
   }),
 }));
 
-describe('Application.start() with a real FadeSceneTransition (Slice 7 capstone)', () => {
+describe('Application.start() with a real FadeSceneTransition', () => {
   test('the very first start() call, transitioned, resolves once the fade completes and the scene is active', async () => {
     class TitleScene extends Scene {}
 

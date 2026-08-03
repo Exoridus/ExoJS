@@ -53,7 +53,7 @@ class CrossFadeSession implements SceneTransitionSession {
 
   public render(context: RenderingContext, frame: SceneTransitionFrame): void {
     if (!this._environment.committed) {
-      // Still the outgoing scene either way (§3.7a) — draw it once, plainly.
+      // Still the outgoing scene either way — draw it once, plainly.
       if (frame.current !== null) {
         this._drawFull(context, this._currentSprite, frame.current, 1);
       }
@@ -74,7 +74,7 @@ class CrossFadeSession implements SceneTransitionSession {
   }
 
   public destroy(): void {
-    // No owned resources — pooled textures are Director-owned (spec §3.4).
+    // No owned resources — pooled textures are Director-owned.
   }
 
   /** Draw `texture` full-frame (no offset — a crossfade only blends opacity) via `sprite` at `alpha`. */
@@ -93,7 +93,7 @@ class CrossFadeSession implements SceneTransitionSession {
  * session start) and the incoming scene (rendered live to a pooled texture),
  * with no "exit half"/"enter half" seam — `placement: 'scene'`,
  * `outgoingFrame: 'snapshot'`, `currentFrame: 'texture'`. A full
- * `SceneTransition`, not phase-split (definition spec §3.9.2, §8).
+ * `SceneTransition`, not phase-split.
  * @stable
  */
 export class CrossFadeSceneTransition extends SceneTransition {

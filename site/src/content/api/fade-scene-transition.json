@@ -1,6 +1,6 @@
 {
   "title": "FadeSceneTransition",
-  "description": "Fade to a color, switch scenes, fade back in. `placement: 'screen'`, `currentFrame: 'direct'`, `outgoingFrame: 'none'` — the live surface renders straight to the screen with no extra texture pass; `render()` only draws the overlay on top. The universal default transition (definition spec §8).",
+  "description": "Fade to a color, switch scenes, fade back in. `placement: 'screen'`, `currentFrame: 'direct'`, `outgoingFrame: 'none'` — the live surface renders straight to the screen with no extra texture pass; `render()` only draws the overlay on top. The universal default transition.",
   "symbol": "FadeSceneTransition",
   "kind": "class",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Fade to a color, switch scenes, fade back in. `placement: 'screen'`, `currentFrame: 'direct'`, `outgoingFrame: 'none'` — the live surface renders straight to the screen with no extra texture pass; `render()` only draws the overlay on top. The universal default transition (definition spec §8)."
+        "Fade to a color, switch scenes, fade back in. `placement: 'screen'`, `currentFrame: 'direct'`, `outgoingFrame: 'none'` — the live surface renders straight to the screen with no extra texture pass; `render()` only draws the overlay on top. The universal default transition."
       ],
       "importLine": "import { FadeSceneTransition } from '@codexo/exojs'",
       "sourceLink": null
@@ -493,7 +493,7 @@
             }
           ],
           "returnType": "SceneTransitionPhaseRequirements",
-          "description": "Director entry point — mirrors SceneTransition.beginSession/ createSession() (spec §3.1a): the Director (and, for { enter, exit } composition, a sibling PhasedSceneTransition instance's own session driver) calls this directly on a phase instance it doesn't own the hierarchy of, which the protected PhasedSceneTransition.getPhaseRequirements authoring hook cannot support on its own. Authors implement getPhaseRequirements(); nothing else calls it directly."
+          "description": "Director entry point — mirrors SceneTransition.beginSession/ createSession(): the Director (and, for { enter, exit } composition, a sibling PhasedSceneTransition instance's own session driver) calls this directly on a phase instance it doesn't own the hierarchy of, which the protected PhasedSceneTransition.getPhaseRequirements authoring hook cannot support on its own. Authors implement getPhaseRequirements(); nothing else calls it directly."
         },
         {
           "name": "runPhase",

@@ -36,7 +36,7 @@ describe('timedFramesFor', () => {
 });
 
 describe('warmupFramesFor', () => {
-  test('scales the warmup-frame count UP as node count grows (review B7)', () => {
+  test('scales the warmup-frame count UP as node count grows', () => {
     expect(warmupFramesFor(1_000)).toBe(10);
     expect(warmupFramesFor(5_000)).toBe(10);
     expect(warmupFramesFor(25_000)).toBe(25);
@@ -101,7 +101,7 @@ describe('buildMatrix', () => {
     expect(big.timedFrames).toBe(timedFramesFor(100_000));
   });
 
-  test('assigns each cell the warmup-frame count for its node count (review B7)', () => {
+  test('assigns each cell the warmup-frame count for its node count', () => {
     const adapter = fakeAdapter('exojs', 'current', ['webgl2']);
     const cells = buildMatrix([adapter], ['webgl2']);
     const big = cells.find(c => c.nodeCount === 100_000)!;

@@ -15,7 +15,7 @@ const GPU_BOUND_COUNTS = [1_000, 5_000, 25_000] as const;
  * at 25k: a 100k measurement there would be dominated by overdraw and state
  * changes and would say nothing about node scaling.
  */
-// Fairness (review C4): `cullingEnabled` is `false` on every archetype below.
+// Fairness: `cullingEnabled` is `false` on every archetype below.
 // Every archetype keeps its sprites fully on-screen (`GRID_MARGIN` in the
 // adapters), so a viewport cull check never actually removes a node here —
 // it can only ever be a no-op. Left on, it was pure asymmetric overhead: the
@@ -87,7 +87,7 @@ export const timedFramesFor = (nodeCount: number): number => {
 /**
  * Warmup-frame count for a given node count. Scales UP as node count grows —
  * the inverse of {@link timedFramesFor}, which scales DOWN so wall-clock stays
- * bounded. Review B7: at the largest node counts the timed window is
+ * bounded. At the largest node counts the timed window is
  * necessarily short (30 frames at 100k), so any warmup shortfall (residual
  * shader-compile/texture-upload/JIT settling bleeding into the first timed
  * frames) eats a much larger fraction of that short window's confidence than

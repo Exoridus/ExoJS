@@ -62,7 +62,7 @@ const shaders: readonly ShaderEntry[] = [
   // binding declarations + both entry-point sets in one module.
   { name: 'WebGpuRepeatingSpriteRenderer (combined)', source: commonWgsl + shaderPathEntries + geoPathEntries },
   // The sprite shader is generated per slot tier from the device limits
-  // (issue #274); every tier that can ever ship is compiled here.
+  // Every tier that can ever ship is compiled here.
   ...spriteBatchTextureSlotTiers.map(tier => ({ name: `WebGpuSpriteRenderer (${tier} texture slots)`, source: buildSpriteShaderSource(tier) })),
   { name: 'WebGpuStencilClipper', source: stencilWriteShaderSource },
   { name: 'WebGpuTextRenderer', source: textShaderSource },

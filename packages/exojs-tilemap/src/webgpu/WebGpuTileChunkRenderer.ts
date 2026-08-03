@@ -136,7 +136,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
  */
 export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNode> implements WebGpuRetainedBatchReplayer {
   /**
-   * Retained-batch capability opt-in (Track B): a tile chunk's per-flush
+   * Retained-batch capability opt-in: a tile chunk's per-flush
    * instanced batches (fixed 32-byte layout, tile word at word 7) record and
    * replay from group-owned resources. Pixel-snapped draws are excluded by
    * the collect-time recordability predicate (and belt-and-braces poisoning
@@ -378,8 +378,8 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
 
     // ProjectionUniforms layout: mat4x4 projection + mat4x4 group + vec4 snap
     // viewport, packed via the shared canonical (non-transposed) column order
-    // (same layout as the sprite/nine-slice renderers' group UBO, S3-D4/S3-D7
-    // parity). The write is skipped when the UBO already holds this exact
+    // (same layout as the sprite/nine-slice renderers' group UBO). The write
+    // is skipped when the UBO already holds this exact
     // (view, updateId, group-id, snap-rect) state.
     const view = backend.view;
     const viewportChanged = packSnapViewport(backend, this._projectionData, 32);
@@ -504,7 +504,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     return group;
   }
 
-  // ── Retained-batch record/replay (Track B) ────────────────────────────────
+  // ── Retained-batch record/replay ──────────────────────────────────────────
   // The bundle/stage stores raw instance bytes; this renderer owns the
   // 32-byte (8-word) layout (tile word at word 7: transform row in bits
   // 0..28, diagonal flip in bit 29), so the layout-aware finalize steps

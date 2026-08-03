@@ -69,7 +69,7 @@ function mockTextAndJsonResponse(): void {
   ) as typeof fetch;
 }
 
-describe('compound extension matching (#14)', () => {
+describe('compound extension matching', () => {
   test('type-level: basename-only, longest-suffix-first', () => {
     // Simple suffix still resolves.
     expectTypeOf<KindByPath<'sprites/ship.png'>>().toEqualTypeOf<'texture'>();

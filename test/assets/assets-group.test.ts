@@ -36,7 +36,7 @@ describe('Assets.group', () => {
     expect(group.boss).toEqual({ type: 'texture', source: 'b.png', mimeType: 'image/png' });
   });
 
-  it('rejects an entry that carries its own "type" instead of silently overriding the group type (A2)', () => {
+  it('rejects an entry that carries its own "type" instead of silently overriding the group type', () => {
     expect(() =>
       Assets.group('texture', {
         // A kind-carrying entry contradicts the same-kind contract — previously
@@ -46,7 +46,7 @@ describe('Assets.group', () => {
     ).toThrow(/type/);
   });
 
-  it('rejects a nested group spread into another group (A2)', () => {
+  it('rejects a nested group spread into another group', () => {
     expect(() =>
       Assets.group('texture', {
         // A nested group produces { kind, source, ... } values — reject them with

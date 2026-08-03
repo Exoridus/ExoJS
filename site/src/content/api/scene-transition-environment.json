@@ -55,7 +55,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Request the scene switch. May be called synchronously from createSession(), update(), or render(). Exactly once per session — a second call is a dev-mode lifecycle error (SceneTransitionLifecycleError, reason 'commit-reentrant') and a production no-op. Never swaps the active scene reentrantly from inside the caller's own callback — the Director processes the actual switch only after the current callback has fully returned control (§3.5.2)."
+          "description": "Request the scene switch. May be called synchronously from createSession(), update(), or render(). Exactly once per session — a second call is a dev-mode lifecycle error (SceneTransitionLifecycleError, reason 'commit-reentrant') and a production no-op. Never swaps the active scene reentrantly from inside the caller's own callback — the Director processes the actual switch only after the current callback has fully returned control."
         }
       ],
       "paragraphs": [],

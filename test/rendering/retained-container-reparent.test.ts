@@ -12,11 +12,10 @@ import { createRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { RetainedContainer } from '#rendering/RetainedContainer';
 
-// Coverage for the "reparent across boundaries" hole called out in the expert
-// review (2026-07-11, 01-rendering-core.md §4): the transform space-flip was
-// only exercised via the barrier toggle, never via addChild/removeChild. These
-// tests move nodes IN, OUT, and BETWEEN RetainedContainer boundaries and assert
-// transforms, versions, and retained-state invalidation — including the F13/R3
+// Coverage for the "reparent across boundaries" hole: the transform space-flip
+// was only exercised via the barrier toggle, never via addChild/removeChild.
+// These tests move nodes IN, OUT, and BETWEEN RetainedContainer boundaries and
+// assert transforms, versions, and retained-state invalidation — including the
 // escaped-branch lifecycle (a deep-barrier branch reparented out/in/between).
 
 class LeafDrawable extends Drawable {
@@ -301,7 +300,7 @@ describe('RetainedContainer reparenting: retained fragment invalidation', () => 
   });
 });
 
-describe('RetainedContainer reparenting: escaped deep-barrier branch (F13/R3)', () => {
+describe('RetainedContainer reparenting: escaped deep-barrier branch', () => {
   const makeDeepBarrierBranch = (): { branch: Container; deep: LeafDrawable } => {
     const branch = new Container();
     const deep = new LeafDrawable('deep');

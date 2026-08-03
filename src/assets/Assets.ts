@@ -157,8 +157,8 @@ export function _readProvenance(catalog: AnyAssets): AssetsProvenance | undefine
 
 /**
  * Normalize a single catalog entry to a plain `{ type, source, ...opts }`
- * config. A bare path string is resolved to its asset type by file suffix
- * (asset-system v2 §5); an unregistered/ambiguous suffix throws a guiding
+ * config. A bare path string is resolved to its asset type by file suffix;
+ * an unregistered/ambiguous suffix throws a guiding
  * error pointing at `Asset.type(...)`, compound suffixes, or extension registration. An
  * already-constructed `Asset` contributes its `_config`; a plain config passes
  * through unchanged.
@@ -379,7 +379,7 @@ type AssetsFacade = AssetsConstructorFn & {
    * Build a typed catalog. Each field may be a bare path string (type inferred
    * from its suffix), an `Asset.type(...)` descriptor, or an explicit config. Bare
    * strings only resolve for leaf-capable types; ambiguous/unregistered
-   * suffixes need `Asset.type(...)`. (asset-system v2 §4.1, §5)
+   * suffixes need `Asset.type(...)`.
    *
    * @remarks The `const` type parameter preserves each field's string LITERAL
    * (e.g. `'ship.png'`) so the file suffix can be classified. Without it, under
@@ -410,7 +410,7 @@ type AssetsFacade = AssetsConstructorFn & {
   /**
    * Build a single meta-stamped leaf (a usable placeholder resource or an
    * `AssetRef`) from ONE descriptor — the explicit single-asset alternative to
-   * wrapping it in a one-field {@link from} catalog (asset-system v2 §5). Accepts
+   * wrapping it in a one-field {@link from} catalog. Accepts
    * the same descriptor set as a catalog field: a bare path, an `Asset.type(...)`
    * descriptor, or an explicit `{ type, source, ...opts }` config. The leaf
    * starts `'idle'` until a loader adopts it.
@@ -426,15 +426,15 @@ type AssetsFacade = AssetsConstructorFn & {
 
   /**
    * Build a record of same-`type` configs to SPREAD into {@link from}, applying
-   * `shared` options to every entry (asset-system v2 §6). A per-entry object
+   * `shared` options to every entry. A per-entry object
    * overrides the shared options; a bare-string entry takes just the shared
    * options. Entries do not repeat the `type`.
    *
    * @remarks `group()` is a SAME-KIND helper: every entry is stamped with the
    * `type` passed here. An entry may therefore NOT carry its own `type` — the
    * type forbids it (`type?: never`) and the runtime rejects it with a guiding
-   * error (A2). This closes the former silent-override hole where `{ type,
-   * ...shared, ...entry }` let an `entry.type` win. To COMBINE different types,
+   * error, rather than letting `{ type, ...shared, ...entry }` silently allow
+   * an `entry.type` to win. To COMBINE different types,
    * spread each group into {@link from} (as the example shows) — do not nest one
    * group's output inside another group's entries (nesting produces type-carrying
    * values and is rejected).
@@ -579,7 +579,7 @@ type AssetsFacade = AssetsConstructorFn & {
   for (const [key, entry] of Object.entries(entries)) {
     // `group()` is a same-type helper: an entry may not carry its own `type`.
     // Reject it instead of letting `{ type, ...base, ...entry }` silently
-    // override the group type (A2). This also rejects a nested group's output
+    // override the group type. This also rejects a nested group's output
     // (whose values are type-carrying configs) — combine groups by spreading
     // each into `Assets.from(...)`, not by nesting.
     if (typeof entry !== 'string' && Object.hasOwn(entry, 'type')) {

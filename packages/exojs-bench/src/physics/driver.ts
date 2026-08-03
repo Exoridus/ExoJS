@@ -14,7 +14,7 @@ const NATIVE_PHYSICS_PACKAGE = '@codexo/exojs-physics';
  * measured at its OWN engine defaults for solver iterations, contact model and
  * sleeping — those differences are the legitimate quantity the native-vs-adapter
  * comparison surfaces, so they are stated per arm rather than silently smoothed
- * (spec §4 fairness). Only the disclosures for arms actually present in a run are
+ * over. Only the disclosures for arms actually present in a run are
  * stamped into that run's provenance caveats.
  */
 const ARM_DISCLOSURES: Readonly<Record<string, string>> = {
@@ -95,7 +95,7 @@ const runCell = (adapter: PhysicsAdapter, spec: PhysicsCellSpec): PhysicsCellRes
 
   adapter.setup(archetype, spec.bodyCount, seed);
 
-  // Cross-arm determinism guard (review B3/B5): the perturbed-body set the arm
+  // Cross-arm determinism guard: the perturbed-body set the arm
   // selected must match the canonical shared selection for this cell. With one
   // arm today this is a self-check; it is what a future matter/rapier arm is
   // asserted against so a divergent RNG path fails loudly instead of silently

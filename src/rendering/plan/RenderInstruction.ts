@@ -18,7 +18,7 @@ import type { GroupScope } from './RenderScope';
  * Batch units (maximal runs of consecutive instructions in a {@link GroupScope}
  * sharing GPU pipeline/bind state) are not materialized: the plan player walks
  * each instruction's {@link DrawCommand.groupIndex} adjacency directly over
- * `scope.entries` (Slice 2c), and the upload-boundary hooks receive an entries
+ * `scope.entries`, and the upload-boundary hooks receive an entries
  * range rather than a collected group array — keeping playback allocation-free.
  *
  * @internal

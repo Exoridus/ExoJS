@@ -1,6 +1,6 @@
 /**
  * WebGPU rotated-mesh browser tests — instanced vs. single-draw parity
- * (review finding F3/B-01 pixel regression gate).
+ * (pixel regression gate).
  *
  * The WebGPU instanced-mesh path used to apply the per-node affine
  * TRANSPOSED (a·x + c·y instead of a·x + b·y). Axis-aligned transforms are

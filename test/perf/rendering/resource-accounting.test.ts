@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Slice 2g — GPU resource accounting (VRAM / upload / download).
+// GPU resource accounting (VRAM / upload / download).
 //
 // Drives the real WebGl2Backend against the Node fake-context recording harness
 // and asserts the new RenderStats fields:

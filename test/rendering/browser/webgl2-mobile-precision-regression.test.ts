@@ -1,5 +1,5 @@
 /**
- * WebGL2 mobile-GLES precision regression guard for the F4 highp fix.
+ * WebGL2 mobile-GLES precision regression guard for the highp fix.
  *
  * The vertex stages that do position/UV math (`sprite.vert`, `mesh.vert`,
  * `particle.vert`, `text.vert`, the compositor stages, and the inlined
@@ -7,8 +7,7 @@
  * mobile GPUs (Mali/PowerVR) honour a reduced qualifier as genuine IEEE-754
  * half-float (5 exponent + 10 mantissa bits): near ±40k the ULP is 32 world
  * units, so a `mediump`/`lowp` position stage snaps or drops a sprite once
- * world coordinates get large. That is the F4 bug, fixed in PR #272 (commit
- * `bce6182a`).
+ * world coordinates get large — the bug this regression guard prevents.
  *
  * IMPORTANT — what actually reproduces here, and what does NOT:
  *
@@ -255,7 +254,7 @@ const rawRendererString = (gl: WebGL2RenderingContext): string => {
 // Firefox's own GL do not, and report 127/127/23 fp32.
 const isFp16ReportingBackend = (renderer: string): boolean => /swiftshader|angle.*opengl/i.test(renderer);
 
-// The position/UV vertex stages the F4 fix promoted to highp. Standalone `.vert`
+// The position/UV vertex stages this fix promoted to highp. Standalone `.vert`
 // files only (each is entirely a vertex stage, so a whole-file precision scan is
 // unambiguous). Loaded via `?raw` to read the real shipped source, bypassing the
 // `.vert` stub plugin.
@@ -355,7 +354,7 @@ describe('WebGL2 mobile precision — Layer 1: environment reports reduced preci
 // Layer 2 — shipped position/UV vertex stages must stay highp (regression teeth)
 // ---------------------------------------------------------------------------
 
-describe('WebGL2 mobile precision — Layer 2: vertex position math stays highp (F4)', () => {
+describe('WebGL2 mobile precision — Layer 2: vertex position math stays highp', () => {
   for (const [name, load] of Object.entries(positionVertStages)) {
     test(`${name} declares highp float and no reduced float precision`, async () => {
       const src = (await load()).default;
@@ -363,7 +362,7 @@ describe('WebGL2 mobile precision — Layer 2: vertex position math stays highp 
       expect(src.length).toBeGreaterThan(0);
       // It reached us as real source, not the stub-plugin's empty string.
       expect(src).toContain('void main');
-      // The F4 contract: position/UV math computed in fp32.
+      // The contract: position/UV math computed in fp32.
       expect(src).toMatch(/precision\s+highp\s+float\s*;/);
       expect(src).not.toMatch(/precision\s+(mediump|lowp)\s+float\s*;/);
     });
@@ -389,7 +388,7 @@ describe('WebGL2 mobile precision — Layer 2: vertex position math stays highp 
 // Layer 3 — real shipped sprite.vert renders a far-flung sprite correctly
 // ---------------------------------------------------------------------------
 
-describe('WebGL2 mobile precision — Layer 3: large-world-coordinate render (F4)', () => {
+describe('WebGL2 mobile precision — Layer 3: large-world-coordinate render', () => {
   test('a sprite at a large world coordinate renders exactly where highp places it', async () => {
     const backend = await createBackend();
     const texture = createSolidTexture('#ff0000');

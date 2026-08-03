@@ -22,8 +22,8 @@ export interface AssetDecoderOptions {
  * Turns "a type + a path, or a `bindAsset` handler" into a decoded resource:
  * URL resolution, cache-strategy dispatch, `bindAsset` handler invocation
  * (including the {@link AssetLoaderContext} handlers receive), and the
- * container byte-injection path. Extracted from `Loader` (Loader split,
- * Slice 2) — every method here is a direct, behavior-preserving relocation.
+ * container byte-injection path. Extracted from `Loader` — every method here
+ * is a direct, behavior-preserving relocation.
  *
  * Deliberately does not know about claims, deferred handles, or the
  * resident-resource map: every method that resolves a resource hands it to

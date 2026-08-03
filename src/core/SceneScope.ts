@@ -85,9 +85,9 @@ export class SceneScope<Data = unknown> {
   }
 
   /**
-   * Run `load()` then `init()` (definition §5.1 steps 5–7). Leaves the scope
+   * Run `load()` then `init()`. Leaves the scope
    * in `Ready` on success — a cold checkpoint that produces no
-   * application-wide effect yet (definition §4.1/§4.2). The caller commits
+   * application-wide effect yet. The caller commits
    * the switch and calls {@link SceneScope.activate} once the previous scene
    * has been disposed. Throws the original `load()`/`init()` error, or a
    * lifecycle error when `init()` returns a thenable — in every build, not
@@ -113,11 +113,11 @@ export class SceneScope<Data = unknown> {
   }
 
   /**
-   * Commit this scope as the active scene: `Ready` → `Active` (definition
-   * §2.1's fresh-activation ordering). Called by the director once the
+   * Commit this scope as the active scene: `Ready` → `Active`, following the
+   * fresh-activation ordering. Called by the director once the
    * switch boundary is crossed. Attaches the scene's automatic root/UI to
    * interaction dispatch and flushes every facility registration buffered
-   * while dormant (definition §4.1/§4.2) before dispatching
+   * while dormant before dispatching
    * {@link Scene.onActivate}, then reports the state change last.
    */
   public activate(): void {
@@ -195,7 +195,7 @@ export class SceneScope<Data = unknown> {
    * Suspend this scope for retention: `Active` → `Suspended`. The `paused`
    * flag is left untouched, so a paused scene restores paused and an
    * unpaused one restores unpaused. Suspends every facility except the
-   * loader — claims are never suspended (definition §14.2), so background
+   * loader — claims are never suspended, so background
    * asset loading continues. Also detaches the scene's own automatic root
    * and (if materialized) UI from interaction dispatch, so a retained scene
    * stops receiving pointer events alongside whichever scope is now active —
@@ -233,7 +233,7 @@ export class SceneScope<Data = unknown> {
   /**
    * Restore this scope from retention: `Suspended` → `Active`, preserving
    * whichever `paused` flag it had before {@link SceneScope.suspend}.
-   * `load()`/`init()` do not run again (definition §14.3). Also reattaches
+   * `load()`/`init()` do not run again. Also reattaches
    * the scene's own automatic root and (if materialized) UI to interaction
    * dispatch, undoing the detachment {@link SceneScope.suspend} performed.
    * Same error-guarding contract as {@link SceneScope.suspend}. Returns
@@ -267,7 +267,7 @@ export class SceneScope<Data = unknown> {
 
   /**
    * Forward one fixed step to the scene and its systems, gated to `Active`
-   * and unpaused (§3 state table — `fixedUpdate` never runs while paused,
+   * and unpaused (`fixedUpdate` never runs while paused,
    * unlike {@link SceneScope.draw}). Throws in every build if
    * `Scene.fixedUpdate` returns a thenable — the hook must be synchronous.
    */
@@ -363,7 +363,7 @@ export class SceneScope<Data = unknown> {
   }
 
   /**
-   * Failed-activation cleanup (definition §16): destroys every
+   * Failed-activation cleanup: destroys every
    * engine-managed registration this scope created, releases loader claims,
    * and invokes `scene.destroy()` — but never `scene.unload()`, since the
    * scene never completed activation. Never throws; cleanup failures are
@@ -397,7 +397,7 @@ export class SceneScope<Data = unknown> {
   }
 
   /**
-   * Permanent teardown (definition §17), in normative order: disable input +
+   * Permanent teardown, in normative order: disable input +
    * interaction, `unload()` (guarded), destroy systems, tweens + audio,
    * inputs + interaction, detach the automatic root/UI observations,
    * `scene.destroy()` + engine-owned internals teardown, then release loader

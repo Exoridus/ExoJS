@@ -534,7 +534,7 @@ describe('loadLdtkMap — atlas too small for any tile', () => {
   });
 });
 
-describe('loadLdtkMap — relative-source URL resolution (#316)', () => {
+describe('loadLdtkMap — relative-source URL resolution', () => {
   // resolveLdtkUrl now mirrors the Tiled adapter: a tileset relPath resolves
   // against a RELATIVE .ldtk source without throwing, collapsing ../ / ./ and
   // staying relative in the result.

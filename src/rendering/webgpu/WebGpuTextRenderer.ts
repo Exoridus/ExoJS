@@ -77,7 +77,7 @@ interface BatchDraw {
 
 /**
  * Opaque, renderer-private snapshot carried on {@link WebGpuRetainedBatchPayload.rendererData}
- * for one recorded Text/BitmapText batch (Track B retained-batch record/replay).
+ * for one recorded Text/BitmapText batch.
  * Text opts out of the shared `TransformBuffer` (`_consumesSharedTransform ===
  * false`), so the generic bundle machinery has nothing to persist for it — this
  * is the renderer's own carrier from record time (`flush()`) through to replay
@@ -95,7 +95,7 @@ interface TextRetainedRendererData {
 }
 
 /**
- * Per-bundle Text replay state (Track B retained-batch opt-in), parked on
+ * Per-bundle Text replay state (retained-batch opt-in), parked on
  * {@link WebGpuRetainedGroupBundle.rendererReplayState} so it shares the
  * bundle's grow-only / explicitly-freed lifecycle — mirrors Mesh's
  * `MeshRetainedReplayState`. Holds Text's OWN persistent per-node data buffer
@@ -354,7 +354,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
   public readonly _consumesSharedTransform = false;
 
   /**
-   * Retained-batch opt-in (Track B extension): a flush whose glyph quads all
+   * Retained-batch opt-in: a flush whose glyph quads all
    * share one (shaderType, atlasTexture) — the overwhelmingly common case, one
    * font/atlas per flush — is a recordable batch. A flush that mixes multiple
    * distinct (shaderType, atlasTexture) combinations, or a second Text flush
@@ -365,7 +365,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
   public readonly _supportsRetainedBatches = true;
 
   // Retained-batch record-time scratch: which capture windows this renderer
-  // has already recorded a batch into (S3-D6 nesting-safe — a fresh
+  // has already recorded a batch into (nesting-safe — a fresh
   // WebGpuRetainedCaptureFrame instance per capture-open call means a stale
   // entry can never alias a later, unrelated capture).
   private readonly _recordedCaptureFrames = new WeakSet<WebGpuRetainedCaptureFrame>();
@@ -815,8 +815,8 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     arr[base + 0] = m[0]!;
     arr[base + 1] = m[1]!;
     // Texel 0's spare `.z` carries the snap-mode flag the vertex stage reads to
-    // decide whether to snap the glyph origin to the device-pixel grid (spec D2:
-    // this turns Text position snapping from a silent no-op into a real feature).
+    // decide whether to snap the glyph origin to the device-pixel grid —
+    // this turns Text position snapping from a silent no-op into a real feature.
     arr[base + 2] = node.pixelSnapMode;
     arr[base + 3] = m[6]!;
     arr[base + 4] = m[3]!;
@@ -1057,7 +1057,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     this._nodeCount = 0;
   }
 
-  // ── Retained-batch record/replay (Track B extension) ─────────────────────
+  // ── Retained-batch record/replay ──────────────────────────────────────────
   // Text's per-vertex "node index" addresses its OWN dense, per-flush node
   // buffer (packed above), never a row in the shared `TransformBuffer` — so,
   // unlike every other retained renderer, its instance bytes carry no index

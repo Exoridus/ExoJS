@@ -137,7 +137,7 @@ interface NineSliceRendererConnection {
 /** Instanced renderer for {@link NineSliceSprite} using WebGL2. */
 export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSliceSprite> implements WebGl2RetainedBatchReplayer {
   /**
-   * Retained-batch capability opt-in (Track B Slice 3, S3-D5.1): a nine-slice
+   * Retained-batch capability opt-in: a nine-slice
    * group's per-flush instanced batches (fixed 32-byte layout, node index at
    * word 7 — the same seam as the sprite renderer) can be recorded into a
    * group's instruction set and replayed from group-owned resources.
@@ -318,7 +318,7 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
     backend.stats.batches++;
     backend.stats.drawCalls++;
 
-    // Retained recording (Slice 3): while a capture window is open, hand the
+    // Retained recording: while a capture window is open, hand the
     // exact packed instance words of this flush to the backend — byte-identical
     // to what just drew, no duplicated packing logic. The nine-slice batch
     // always binds a single base texture (slot 0); a pixel-snapped draw already
@@ -343,7 +343,7 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
    * Stage `u_projection` (live view) and `u_group` (live composed group matrix)
    * on the shader, guarded by the cached view/group stamps. Shared by the live
    * flush path and retained-batch replay — replay resolves exactly the same
-   * live state a slow-path flush would (S3-D1).
+   * live state a slow-path flush would.
    */
   private _stageViewUniforms(backend: WebGl2Backend): void {
     const view = backend.view;
@@ -365,7 +365,7 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
     backend._stageViewportUniform(this._shader);
   }
 
-  // ── Retained-batch record/replay (Track B Slice 3) ───────────────────────
+  // ── Retained-batch record/replay ──────────────────────────────────────────
   // The bundle stores raw instance bytes; this renderer owns the 32-byte
   // layout (node index at word 7), so the layout-aware finalize steps
   // (node-index scan/rebase, VAO attribute wiring) and the replay dispatch
@@ -392,7 +392,7 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
     }
   }
 
-  /** @internal See {@link WebGl2RetainedBatchReplayer._rebaseRetainedNodeIndices} (S3-D4: group-local indices). */
+  /** @internal See {@link WebGl2RetainedBatchReplayer._rebaseRetainedNodeIndices} (rebases to group-local indices). */
   public _rebaseRetainedNodeIndices(payload: WebGl2RetainedBatchPayload, base: number): void {
     const words = payload.bundle.instanceWords;
     const start = payload.byteOffset / Uint32Array.BYTES_PER_ELEMENT;
@@ -471,7 +471,7 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
     this._shader.getUniform('u_texture').setValue(this._baseTextureUnitScratch);
 
     // The group-owned transform store replaces the shared frame buffer on the
-    // SAME unit/sampler — zero GLSL changes (S3-D4). The next live flush
+    // SAME unit/sampler — zero GLSL changes. The next live flush
     // re-binds the shared texture through bindTransformBufferTexture.
     backend.bindTexture(transformTexture, transformTextureUnit);
     this._shader.getUniform('u_transforms').setValue(this._transformUnitScratch);

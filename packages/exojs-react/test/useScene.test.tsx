@@ -65,7 +65,7 @@ describe('useScene', () => {
 
     view.unmount();
 
-    // definition §10.1: navigation always targets a registered constructor —
+    // Navigation always targets a registered constructor —
     // there is no public "clear to scene-less" call. Application.destroy()
     // (owned by ExoCanvas) is the actual teardown path for a still-active scene.
     expect(app.scenes.change).not.toHaveBeenCalled();

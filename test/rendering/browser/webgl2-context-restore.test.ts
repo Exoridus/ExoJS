@@ -1,5 +1,5 @@
 /**
- * WebGL2 real context lose/restore browser test (B-09).
+ * WebGL2 real context lose/restore browser test.
  *
  * Drives a genuine GL context-loss cycle through the `WEBGL_lose_context`
  * extension — `loseContext()` fires `webglcontextlost`, `restoreContext()`
@@ -241,7 +241,7 @@ const loseAndRestoreContext = async (backend: WebGl2Backend): Promise<void> => {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('WebGL2 real context lose/restore (B-09)', () => {
+describe('WebGL2 real context lose/restore', () => {
   test('a sprite renders identically after a real lose/restore cycle', async () => {
     const backend = await createBackend();
     const texture = createSolidTexture('#ff0000', 16, 16);

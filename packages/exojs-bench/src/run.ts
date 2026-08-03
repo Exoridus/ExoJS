@@ -69,7 +69,7 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
     filter.nodeCount = nodeCount;
   }
 
-  // `--frames` (review B7 / S5's "thin sampling" ask): overrides EVERY cell's
+  // `--frames` overrides EVERY cell's
   // timed-frame count regardless of node count, so a smoke/spot-check run can
   // finish in seconds without editing `timedFramesFor` in source. This is
   // strictly a convenience knob for fast iteration — like `timedFramesOverride`

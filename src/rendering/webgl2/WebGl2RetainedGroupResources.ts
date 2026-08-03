@@ -15,7 +15,7 @@ const initialInstanceWordCapacity = 256;
 const initialTransformRowCapacity = 16;
 
 /**
- * Mutable node-index range scratch used at capture end (S3-D4): the backend
+ * Mutable node-index range scratch used at capture end: the backend
  * scans every recorded batch for the smallest/largest shared-transform row it
  * references, then rebases all instance node indices to `min` so the cached
  * bytes address the group-owned transform store at rows `0..max-min`.
@@ -28,7 +28,7 @@ export interface WebGl2RetainedNodeIndexRange {
 
 /**
  * Record-time state of one texture slot, parallel to a payload's `textures`
- * list (S3-D3 collect-time validation — the WebGPU view-identity guard's
+ * list (collect-time validation — the WebGPU view-identity guard's
  * WebGL2 counterpart). The recorded per-instance UV words are normalized
  * against the texture size with the flipY swap baked in
  * (`WebGl2SpriteRenderer._packInstance`), and a resize bumps only the texture
@@ -45,7 +45,7 @@ export interface WebGl2RecordedTextureState {
 
 /**
  * Reference to the renderer-owned, persistent, SHARED geometry an indexed
- * retained batch draws (Track B Slice 3 mesh opt-in). The vertex + index
+ * retained batch draws (mesh opt-in). The vertex + index
  * buffers live in the recording renderer's own long-lived cache (the mesh
  * renderer's `_staticGeometryCache`, uploaded once per `Geometry`, shared
  * across frames/groups); the group bundle stores only the thin per-instance
@@ -76,7 +76,7 @@ export interface WebGl2RetainedRendererReplayState {
 }
 
 /**
- * Backend-side replay descriptor for one recorded sprite flush (S3-D1). This
+ * Backend-side replay descriptor for one recorded sprite flush. This
  * is the opaque `payload` carried by a plan-level `RetainedBatchInstruction`:
  * everything the owning renderer needs to re-issue the batch from group-owned
  * resources with all STATE (pipeline/blend, projection/group uniforms,
@@ -142,8 +142,8 @@ export interface WebGl2RetainedBatchReplayer {
 }
 
 /**
- * Group-owned WebGL2 GPU resources for one retained instruction set (Track B
- * Slice 3, S3-D3/S3-D4): the persistent instance buffer holding the recorded
+ * Group-owned WebGL2 GPU resources for one retained instruction set: the
+ * persistent instance buffer holding the recorded
  * batch bytes, the group's own rgba32f transform DataTexture (3 texels per
  * row, same layout as the shared frame-scoped `TransformBuffer` texture so
  * the sprite shader is reused unchanged), and one small VAO per recorded
@@ -154,7 +154,7 @@ export interface WebGl2RetainedBatchReplayer {
  * every capture rewrite, on device restore, and on growth (subsumed by the
  * rewrite bump) — a plan-level instruction whose recorded generation no
  * longer matches is rejected at collect time and degrades to entry replay
- * (S3-D3 belt-and-braces).
+ * (belt-and-braces).
  *
  * GPU memory is booked with the backend's {@link GpuResourceAccountant}: the
  * instance buffer books through {@link WebGl2RenderBuffer}'s own accounting,
@@ -236,8 +236,8 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
 
   /**
    * The shared-buffer row the stored rows were rebased from (`range.min` at
-   * capture end, S3-D4). A group-local row is `sharedNodeIndex - base`, so the
-   * Slice-4b fast patch maps a moved node's captured node index back to the
+   * capture end). A group-local row is `sharedNodeIndex - base`, so the
+   * fast patch maps a moved node's captured node index back to the
    * group-owned store without re-recording.
    */
   public get transformRowBase(): number {
@@ -248,7 +248,7 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
    * Start rewriting the bundle for a fresh capture. Bumps the generation —
    * the contents recorded by any previous capture are about to be replaced,
    * so instructions referencing them (including an OUTER group's set holding
-   * this bundle's batches verbatim, S3-D6) must stop validating.
+   * this bundle's batches verbatim) must stop validating.
    */
   public _beginCapture(): void {
     this._generation++;
@@ -320,7 +320,7 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
   }
 
   /**
-   * Slice 4b fast patch: overwrite one group-local transform row in place with
+   * Fast patch: overwrite one group-local transform row in place with
    * `floats` (8 = 2 rgba32f texels, the {@link TransformBuffer} row layout)
    * and mark ONLY that row's sub-range for upload. Deliberately does NOT bump
    * the generation — the recorded instance bytes reference this row by index
@@ -339,7 +339,7 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
   }
 
   /**
-   * Slice-4b CPU-side vertex re-bake patch, for a renderer that bakes world
+   * CPU-side vertex re-bake patch, for a renderer that bakes world
    * positions into its instance bytes rather than reading a shared-transform
    * row live (Text on WebGL2, the confirmed ANGLE/D3D11 vertex-texel-fetch
    * workaround). Overwrite `floats.length` words at `wordOffset` in the

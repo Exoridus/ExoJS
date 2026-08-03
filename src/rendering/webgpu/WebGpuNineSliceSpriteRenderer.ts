@@ -150,7 +150,7 @@ const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
 /** Instanced renderer for {@link NineSliceSprite} using WebGPU. */
 export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSliceSprite> implements WebGpuRetainedBatchReplayer {
   /**
-   * Retained-batch capability flag (Track B Slice 3, S3-D5.1): a nine-slice
+   * Retained-batch capability flag: a nine-slice
    * group's per-flush instanced batches (fixed 32-byte layout, node index at
    * word 7 — the same seam as the sprite renderer) record and replay from
    * group-owned resources. Pixel-snapped draws are excluded by the collect-time
@@ -201,7 +201,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
   private _currentBlendMode: BlendModes | null = null;
   private _currentTexture: Texture | RenderTexture | null = null;
 
-  // ── Retained-batch replay state (Track B Slice 3, S3-D7) ─────────────────
+  // ── Retained-batch replay state ───────────────────────────────────────────
   // The open pass replayed retained batches were last recorded into — feeds
   // the "does the open pass already hold draws?" checks alongside the arena.
   private _lastReplayPass: WebGpuActiveRenderPass | null = null;
@@ -492,7 +492,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
       backend._passCoordinator.acquirePass();
     }
 
-    // Retained capture (Track B Slice 3): while a capture window is active,
+    // Retained capture: while a capture window is active,
     // additionally stage this batch's exact packed bytes into the group-owned
     // bundle — the recorded data IS the drawn data, byte-identical by
     // construction. Recorded regardless of the live visibility decision above
@@ -541,7 +541,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
     return this._transformBindGroup;
   }
 
-  // ── Retained-batch record/replay (Track B Slice 3) ───────────────────────
+  // ── Retained-batch record/replay ──────────────────────────────────────────
   // The bundle/stage stores raw instance bytes; this renderer owns the 32-byte
   // (8-word) layout (node index at word 7), so the layout-aware finalize steps
   // (node-index scan/rebase) and the replay dispatch live here — mirroring
@@ -566,7 +566,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
     }
   }
 
-  /** @internal See {@link WebGpuRetainedBatchReplayer._rebaseRetainedNodeIndices} (S3-D4: group-local indices). */
+  /** @internal See {@link WebGpuRetainedBatchReplayer._rebaseRetainedNodeIndices} (rebases to group-local indices). */
   public _rebaseRetainedNodeIndices(bytes: Uint8Array, base: number): void {
     const words = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / Uint32Array.BYTES_PER_ELEMENT);
 
@@ -577,8 +577,8 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
   }
 
   /**
-   * Replay one recorded batch from its group-owned bundle into the OPEN pass
-   * (Track B Slice 3, S3-D7). Reuses only recorded DATA (instance bytes,
+   * Replay one recorded batch from its group-owned bundle into the OPEN pass.
+   * Reuses only recorded DATA (instance bytes,
    * transform rows, texture, blend mode); every piece of STATE is resolved
    * live — pipeline via the `_getPipeline` cache, the group(1) texture bind
    * group via the live texture-set cache (resolving re-syncs dirty content),
@@ -587,7 +587,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
    * same-frame double-replay hazard (one group under two views while the open
    * pass already holds this bundle's draws) ends the pass first. The shared
    * per-flush projection UBO is never touched, so group boundaries on the
-   * cached path do not fragment the single-submit frame (B-06).
+   * cached path do not fragment the single-submit frame.
    * @internal
    */
   public _replayRetainedBatch(payload: WebGpuRetainedBatchPayload): void {
@@ -617,7 +617,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
     const passHasDraws =
       activePass !== null && ((this._instanceArena.cursor > 0 && this._instanceArena.tracksPass(activePass)) || this._lastReplayPass === activePass);
 
-    // Same-frame texture mutation guard (S3-D7): resolving the bindings below
+    // Same-frame texture mutation guard: resolving the bindings below
     // re-uploads mutated content on the queue timeline BEFORE the deferred
     // submit, which would retroactively change draws already recorded into the
     // open pass. End (submit) the pass first so they keep the pre-mutation

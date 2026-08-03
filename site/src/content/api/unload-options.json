@@ -84,7 +84,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Only materializes for an active-scope match — a retained or preloaded match has nothing visible on screen to transition, and always runs the direct (non-transitioned) teardown path regardless of this option. A SceneTransitionSelection — unlike change()/restore(), unload() never consults a target's registry-level default transition (spec §3.10); this option is the only source of a transition here."
+          "description": "Only materializes for an active-scope match — a retained or preloaded match has nothing visible on screen to transition, and always runs the direct (non-transitioned) teardown path regardless of this option. A SceneTransitionSelection — unlike change()/restore(), unload() never consults a target's registry-level default transition; this option is the only source of a transition here."
         }
       ],
       "paragraphs": [],

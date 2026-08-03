@@ -54,15 +54,14 @@ export interface SceneTransitionEnvironment {
    * reason `'commit-reentrant'`) and a production no-op. Never swaps the
    * active scene reentrantly from inside the caller's own callback — the
    * Director processes the actual switch only after the current callback
-   * has fully returned control (§3.5.2).
+   * has fully returned control.
    */
   commit(): void;
 }
 
 /**
  * Per-frame render inputs handed to {@link SceneTransitionSession.render}.
- * See `SceneTransitionFrame field semantics` in the design spec (§3.7a) for
- * the exact non-null conditions of each field.
+ * See each field below for the exact non-null conditions it holds under.
  */
 export interface SceneTransitionFrame {
   /** Non-null only when `outgoingFrame: 'snapshot'` was requested and an outgoing scene existed. The same texture for the entire session — never reallocated mid-session. Borrowed — do not retain or destroy it. */
@@ -82,11 +81,11 @@ export interface SceneTransitionFrame {
 export interface SceneTransitionSession {
   /** Advance time-based progress. Called once per frame. */
   update(delta: Time): void;
-  /** Draw this session's own visual output — not the scene itself, see the render-surface boundary (§3.6). */
+  /** Draw this session's own visual output — not the scene itself; it does not share the render-surface the scene draws to. */
   render(context: RenderingContext, frame: SceneTransitionFrame): void;
   /** `true` once this session has fully finished. Must never be `true` before {@link SceneTransitionEnvironment.committed} is also `true` — see {@link SceneTransitionLifecycleError}. */
   readonly done: boolean;
-  /** Which render layer this session's output composites against, read live every frame — see §3.6. May change mid-session (composed sessions, Slice 6). */
+  /** Which render layer this session's output composites against, read live every frame. May change mid-session for composed sessions. */
   readonly placement: 'scene' | 'screen';
   /** Called exactly once, regardless of exit path (normal completion, pre-commit abort, post-commit failure, or the Director being destroyed mid-session). No further `update()`/`render()` calls follow. */
   destroy(): void;

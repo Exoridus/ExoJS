@@ -19,7 +19,7 @@ import type { Time } from './Time';
  * — kept as a distinct type because a phase declares its *own* requirements,
  * which the Director then merges with the other phase's via
  * {@link mergeSceneTransitionRequirements} to produce the session-wide
- * {@link SceneTransitionRequirements} (spec §3.9.1).
+ * {@link SceneTransitionRequirements}.
  */
 export interface SceneTransitionPhaseRequirements {
   readonly outgoingFrame: 'none' | 'snapshot';
@@ -32,10 +32,10 @@ const currentFrameRank = { none: 0, direct: 1, texture: 2 } as const;
 /**
  * Join two phases' {@link SceneTransitionPhaseRequirements} into one
  * session-wide {@link SceneTransitionRequirements} — the stronger
- * requirement wins on each axis independently (spec §3.9.1). This is the
+ * requirement wins on each axis independently. This is the
  * entire "direct → texture identity-composite promotion" rule: once this
  * merge picks `texture`, the existing per-frame live-surface-to-texture
- * render (spec §3.4) already populates `frame.current` for *any*
+ * render already populates `frame.current` for *any*
  * `texture`-requesting session — a promoted phase that itself only
  * declared `direct` never needs to know it was promoted.
  */
@@ -52,13 +52,13 @@ export interface PhasedSceneTransitionOptions {
   readonly duration?: number;
   /** Applied to both phases' `progress` to produce `easedProgress`. Default {@link Ease.linear}. */
   readonly easing?: EasingFunction;
-  /** Which render layer this transition's output composites against (spec §3.6). Default `'screen'`. */
+  /** Which render layer this transition's output composites against. Default `'screen'`. */
   readonly placement?: 'scene' | 'screen';
 }
 
 /**
  * Per-frame context handed to {@link PhasedSceneTransition.enter}/
- * {@link PhasedSceneTransition.exit}. Spec §3.9.
+ * {@link PhasedSceneTransition.exit}.
  */
 export interface SceneTransitionPhaseContext {
   readonly phase: 'enter' | 'exit';
@@ -79,7 +79,7 @@ export interface SceneTransitionPhaseContext {
 
 /**
  * Single-class `enter()`/`exit()` authoring layer over the full
- * {@link SceneTransition} contract (spec §3.9) — covers the common case
+ * {@link SceneTransition} contract — covers the common case
  * (fade, slide, wipe, a custom flash) with no need to hand-manage timing,
  * easing, or session lifecycle. Subclasses implement
  * {@link PhasedSceneTransition.getPhaseRequirements} and override
@@ -111,7 +111,7 @@ export abstract class PhasedSceneTransition<PhaseState = void> extends SceneTran
 
   /**
    * Director entry point — mirrors {@link SceneTransition.beginSession}/
-   * `createSession()` (spec §3.1a): the Director (and, for `{ enter, exit }`
+   * `createSession()`: the Director (and, for `{ enter, exit }`
    * composition, a sibling `PhasedSceneTransition` instance's own session
    * driver) calls this directly on a phase instance it doesn't own the
    * hierarchy of, which the `protected` {@link PhasedSceneTransition.getPhaseRequirements}
@@ -186,12 +186,12 @@ type PhasedTransitionPhaseState = 'exit' | 'holding' | 'enter' | 'done';
 /**
  * Drives one {@link SceneTransitionSession} for a `{ enter, exit }` pair —
  * `exitPhase` and `enterPhase` may be the *same* instance (the common,
- * single-`PhasedSceneTransition` case — spec §3.9) or two independently
- * authored instances (composition — spec §3.9.1, {@link composePhasedSceneTransition}).
+ * single-`PhasedSceneTransition` case) or two independently
+ * authored instances (composition — {@link composePhasedSceneTransition}).
  * Exit runs 0→1, then `environment.commit()` is requested exactly once and
  * the session holds at the exit end-state until `environment.committed`
  * is observed true on a later `update()` call (never reentrantly within
- * the same call that requested it — spec §3.5.2), then enter runs 0→1 to
+ * the same call that requested it), then enter runs 0→1 to
  * `done`.
  * @internal
  */
@@ -271,7 +271,7 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
     const activePhase = phase === 'enter' ? this._enterPhase : this._exitPhase;
     const activePhaseState = phase === 'enter' ? this._enterPhaseState : this._exitPhaseState;
 
-    // Direct -> texture identity-composite promotion (spec §3.9.1): when the
+    // Direct -> texture identity-composite promotion: when the
     // SESSION-WIDE requirements were promoted to `currentFrame: 'texture'` by
     // the OTHER phase, but this phase itself only declared `direct` (or
     // `none`), the live surface was redirected into `frame.current` for the
@@ -300,7 +300,7 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
   }
 
   public destroy(): void {
-    // No resources of its own — pooled textures/input gate are Director-owned (spec §3.4/§3.7b).
+    // No resources of its own — pooled textures/input gate are Director-owned.
   }
 }
 
@@ -308,10 +308,10 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
  * Compose two independently-authored {@link PhasedSceneTransition}
  * instances into one {@link SceneTransition}: `exit`'s `exit()` phase runs
  * first, then `enter`'s `enter()` phase, sharing one session and one
- * atomic commit (spec §3.9.2 contrasts this with Excalibur's independently-
+ * atomic commit (this contrasts with Excalibur's independently-
  * animated `in`/`out` entities — this is *not* that). Session-wide
  * requirements are resolved by the Director-facing `getRequirementsForPhase()`
- * wrapper on each instance, then merged (spec §3.9.1) — never via the
+ * wrapper on each instance, then merged — never via the
  * `protected` `getPhaseRequirements()` hook directly.
  */
 export function composePhasedSceneTransition(exit: PhasedSceneTransition, enter: PhasedSceneTransition): SceneTransition {
@@ -343,7 +343,7 @@ class ComposedPhasedSceneTransition extends SceneTransition {
  * `{ outgoingFrame: 'none', currentFrame: 'none' }` (the weakest possible
  * on both axes, so it never wins {@link mergeSceneTransitionRequirements}),
  * `enter()`/`exit()` left as the inherited no-ops. Fills whichever side of
- * a `{ enter, exit }` selection (spec §3.10) is omitted — the union type
+ * a `{ enter, exit }` selection is omitted — the union type
  * requires at least one of `{ enter, exit }`, never both, so the other
  * side needs a real (if inert) instance to compose against.
  */

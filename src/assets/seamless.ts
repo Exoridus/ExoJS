@@ -4,7 +4,7 @@ import { logger } from '#core/logging';
 import type { SamplerOptions } from '#rendering/texture/Sampler';
 import { Texture } from '#rendering/texture/Texture';
 
-/** Pre-sizing options for deferred texture handles (spec §4.1 — the layout-jump fix). */
+/** Pre-sizing options for deferred texture handles — reserves placeholder dimensions to avoid a layout jump when the payload arrives. */
 export interface PreSizeOptions {
   /** Width to reserve on the placeholder until the payload arrives. */
   width?: number;

@@ -1,6 +1,6 @@
 /**
- * Real Application + real SceneDirector integration tests for the v0.17
- * Slice C start() overloads (scene-less / constructor-based). Only the
+ * Real Application + real SceneDirector integration tests for the
+ * start() overloads (scene-less / constructor-based). Only the
  * WebGL2/WebGPU backends are mocked (kept out of jsdom) — SceneDirector,
  * the scene registry, and scene activation all run for real.
  */

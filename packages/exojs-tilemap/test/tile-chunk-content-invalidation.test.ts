@@ -9,7 +9,7 @@ import { TileSet } from '../src/TileSet';
 import { TILE_TRANSFORM_IDENTITY } from '../src/types';
 
 /**
- * Track B retained-batch record/replay for `TileChunkNode` relies on the
+ * Retained-batch record/replay for `TileChunkNode` relies on the
  * engine's content-revision contract: `RetainedContainer` skips walking (and
  * re-collecting) a content-CLEAN subtree entirely, splicing the previously
  * captured/recorded draw range instead. `TileChunkNode.pages` caches geometry

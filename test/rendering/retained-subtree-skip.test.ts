@@ -395,7 +395,7 @@ describe('static-subtree skip: invalidation gates', () => {
   });
 });
 
-describe('zero-slot containers pay no retained-cache overhead (S2-D4)', () => {
+describe('zero-slot containers pay no retained-cache overhead', () => {
   test('a container tree without any direct drawable children never calls _commitCapture()', () => {
     const backend = createTestBackend();
     const captureSpy = vi.spyOn(RetainedPlanCache.prototype, '_commitCapture');
