@@ -1,0 +1,223 @@
+---
+/**
+ * ParityMatrix — what the conformance suite has actually measured, per browser.
+ *
+ * Rows come from the hand-kept feature list, not from the measurements, so a
+ * feature nobody has written a scene for shows up as "not verified" instead of
+ * vanishing. That is the whole point: a table built only from what was measured
+ * can never report what was missed.
+ *
+ * Each cell carries both backends, because a browser can support a feature on
+ * one and not the other — the single most useful thing this table can tell you.
+ *
+ * Usage in MDX:
+ *   import ParityMatrix from '../../../components/ParityMatrix.astro';
+ *   <ParityMatrix />
+ */
+
+import evidence from '../../../test/rendering/parity/evidence.json';
+import { RENDER_FEATURES } from '../../../test/rendering/parity/features';
+
+type Backend = 'webgl2' | 'webgpu';
+type Support = 'supported' | 'divergent' | 'unavailable' | 'unknown';
+
+interface Row {
+  readonly feature: string;
+  readonly browser: string;
+  readonly backend: Backend;
+  readonly support: Support;
+  readonly measuredAt?: string;
+  readonly commit?: string;
+}
+
+const rows = evidence as readonly Row[];
+
+/** Browser column order: the ones we measure first, then anything else alphabetically. */
+const PREFERRED = ['chromium', 'firefox', 'webkit'];
+const browsers = [...new Set(rows.map(row => row.browser))].sort((a, b) => {
+  const ia = PREFERRED.indexOf(a);
+  const ib = PREFERRED.indexOf(b);
+
+  return (ia === -1 ? PREFERRED.length : ia) - (ib === -1 ? PREFERRED.length : ib) || a.localeCompare(b);
+});
+
+const LABELS: Record<string, string> = { chromium: 'Chromium', firefox: 'Firefox', webkit: 'Safari / WebKit', edge: 'Edge' };
+
+/**
+ * One cell's verdict for a single backend.
+ *
+ * `divergent` wins over everything: a single disagreeing scene is the headline,
+ * not an average. `unavailable` outranks `supported` only when nothing was
+ * supported, so a browser that supports half a feature still reads as partial.
+ */
+const verdictFor = (feature: string, browser: string, backend: Backend): 'ok' | 'differs' | 'missing' | 'untested' => {
+  const cell = rows.filter(row => row.feature === feature && row.browser === browser && row.backend === backend);
+
+  if (cell.length === 0) return 'untested';
+  if (cell.some(row => row.support === 'divergent')) return 'differs';
+  if (cell.some(row => row.support === 'supported')) return 'ok';
+  if (cell.every(row => row.support === 'unavailable')) return 'missing';
+
+  return 'untested';
+};
+
+const MARK = { ok: '✔', differs: '✕', missing: '–', untested: '?' } as const;
+const TITLE = {
+  ok: 'verified — every scene agreed',
+  differs: 'a scene disagreed between backends',
+  missing: 'this browser has no such backend',
+  untested: 'no measurement on record',
+} as const;
+
+const stamps = rows.filter(row => row.measuredAt !== undefined);
+const lastMeasured = stamps.length > 0 ? stamps.map(row => row.measuredAt!).sort().at(-1) : undefined;
+const measuredFeatures = new Set(rows.map(row => row.feature));
+const coverage = `${RENDER_FEATURES.filter(feature => measuredFeatures.has(feature.name)).length} of ${RENDER_FEATURES.length}`;
+---
+
+<figure class="parity">
+  <table>
+    <caption>
+      Verified rendering behaviour by browser — <strong>{coverage}</strong> features measured{lastMeasured ? `, last on ${lastMeasured}` : ''}.
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Feature</th>
+        {browsers.map(browser => <th scope="col">{LABELS[browser] ?? browser}</th>)}
+      </tr>
+    </thead>
+    <tbody>
+      {
+        RENDER_FEATURES.map(feature => (
+          <tr class={measuredFeatures.has(feature.name) ? undefined : 'untested-row'}>
+            <th scope="row">
+              {feature.name}
+              <span class="summary">{feature.summary}</span>
+            </th>
+            {browsers.map(browser => (
+              <td>
+                {(['webgl2', 'webgpu'] as const).map(backend => {
+                  const verdict = verdictFor(feature.name, browser, backend);
+
+                  return (
+                    <span class:list={['cell', verdict]} title={`${backend === 'webgl2' ? 'WebGL2' : 'WebGPU'}: ${TITLE[verdict]}`}>
+                      <span class="backend">{backend === 'webgl2' ? 'GL' : 'GPU'}</span>
+                      <span class="mark">{MARK[verdict]}</span>
+                    </span>
+                  );
+                })}
+              </td>
+            ))}
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+
+  <figcaption>
+    <span><span class="mark ok">✔</span> verified</span>
+    <span><span class="mark differs">✕</span> backends differ</span>
+    <span><span class="mark missing">–</span> backend absent in this browser</span>
+    <span><span class="mark untested">?</span> not measured</span>
+  </figcaption>
+</figure>
+
+<style>
+  .parity {
+    margin: 2rem 0;
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+
+  caption {
+    caption-side: top;
+    text-align: left;
+    padding-bottom: 0.75rem;
+    color: var(--color-text-muted, #888);
+    font-size: 0.85rem;
+  }
+
+  th,
+  td {
+    border-bottom: 1px solid var(--color-border, #2a2a2a);
+    padding: 0.55rem 0.75rem;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  thead th {
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  tbody th {
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .summary {
+    display: block;
+    font-weight: 400;
+    font-size: 0.78rem;
+    color: var(--color-text-muted, #888);
+    white-space: normal;
+    max-width: 22ch;
+  }
+
+  .untested-row tbody th,
+  .untested-row {
+    opacity: 0.62;
+  }
+
+  .cell {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.3rem;
+    margin-right: 0.85rem;
+    white-space: nowrap;
+  }
+
+  .backend {
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted, #888);
+  }
+
+  .mark {
+    font-weight: 700;
+  }
+
+  .cell.ok .mark,
+  .mark.ok {
+    color: var(--color-success, #3fb950);
+  }
+
+  .cell.differs .mark,
+  .mark.differs {
+    color: var(--color-danger, #f85149);
+  }
+
+  .cell.missing .mark,
+  .mark.missing {
+    color: var(--color-text-muted, #888);
+  }
+
+  .cell.untested .mark,
+  .mark.untested {
+    color: var(--color-warning, #d29922);
+  }
+
+  figcaption {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.1rem;
+    padding-top: 0.75rem;
+    font-size: 0.82rem;
+    color: var(--color-text-muted, #888);
+  }
+</style>
