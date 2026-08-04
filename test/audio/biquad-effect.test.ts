@@ -1,3 +1,5 @@
+import type { MockInstance } from 'vitest';
+
 import { getAudioContext, onAudioContextReady } from '#audio/audio-context';
 import { BiquadEffect } from '#audio/BiquadEffect';
 

@@ -1,11 +1,12 @@
-﻿/**
+﻿import type { MockInstance } from 'vitest';
+
+/**
  * WebGl2ShaderFilter unit tests.
  *
  * These tests use a minimal WebGL2 mock (no real GPU) to verify the
  * WebGl2ShaderFilter's apply() flow, uniform marshalling, WebGPU guard, and
  * lifecycle methods without requiring a real WebGL2RenderingContext.
  */
-
 import type { ShaderFilterUniformValue, WebGl2ShaderFilterOptions } from '#rendering/filters/WebGl2ShaderFilter';
 import { WebGl2ShaderFilter } from '#rendering/filters/WebGl2ShaderFilter';
 import type { RenderBackend } from '#rendering/RenderBackend';

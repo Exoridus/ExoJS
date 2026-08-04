@@ -1,3 +1,5 @@
+import type { MockInstance } from 'vitest';
+
 import { WebGpuInstanceArena } from '#rendering/webgpu/WebGpuInstanceArena';
 import type { WebGpuActiveRenderPass } from '#rendering/webgpu/WebGpuPassCoordinator';
 

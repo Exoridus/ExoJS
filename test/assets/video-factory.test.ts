@@ -1,3 +1,5 @@
+import type { MockInstance } from 'vitest';
+
 import { VideoFactory } from '#assets/factories/VideoFactory';
 import type { Texture } from '#rendering/texture/Texture';
 import { Video } from '#rendering/video/Video';

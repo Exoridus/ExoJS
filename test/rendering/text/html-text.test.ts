@@ -1,3 +1,5 @@
+import type { MockInstance } from 'vitest';
+
 /**
  * HTMLText unit tests.
  *
@@ -17,7 +19,6 @@
  *    globally to ignore their input).
  * All mocks are installed in `beforeAll` and restored in `afterAll`/`afterEach`.
  */
-
 import { logger } from '#core/logging';
 import { HTMLText } from '#rendering/text/HTMLText';
 import type { Texture } from '#rendering/texture/Texture';

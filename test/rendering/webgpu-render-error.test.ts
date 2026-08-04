@@ -1,3 +1,5 @@
+import type { MockInstance } from 'vitest';
+
 /**
  * Render-fail surface (S3 diagnostics, minimal slice) — contracts 6, 7 and 10:
  *
@@ -9,7 +11,6 @@
  * 10. Signal teardown: backend.destroy() destroys onRenderError without
  *     throwing.
  */
-
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Signal } from '#core/Signal';

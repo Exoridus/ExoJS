@@ -1,3 +1,4 @@
+import type { MockInstance } from 'vitest';
 /**
  * Tests for Application.onFrame signal (added in 0.6.17).
  */

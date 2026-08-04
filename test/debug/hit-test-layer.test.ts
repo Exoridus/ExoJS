@@ -1,7 +1,8 @@
-﻿/**
+﻿import type { MockInstance } from 'vitest';
+
+/**
  * HitTestLayer tests (0.7.5).
  */
-
 import { Signal } from '#core/Signal';
 import { HitTestLayer } from '#debug/HitTestLayer';
 import { Graphics } from '#rendering/primitives/Graphics';

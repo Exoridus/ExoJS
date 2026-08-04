@@ -1,4 +1,6 @@
-﻿import { Perf } from '#core/Perf';
+﻿import type { MockInstance } from 'vitest';
+
+import { Perf } from '#core/Perf';
 
 // jsdom does not implement the User Timing API (mark/measure/clearMarks/
 // clearMeasures). Tests therefore inject a minimal mock on `performance`

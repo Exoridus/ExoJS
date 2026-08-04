@@ -1,5 +1,6 @@
-﻿/// <reference types="@webgpu/types" />
+﻿import type { MockInstance } from 'vitest';
 
+/// <reference types="@webgpu/types" />
 /**
  * WebGpuShaderFilter unit tests.
  *
@@ -7,7 +8,6 @@
  * to verify the WebGpuShaderFilter's construction, apply() pipeline/bind-group
  * setup, uniform marshalling, WebGL2 guard, and lifecycle methods.
  */
-
 import type { WebGpuShaderFilterOptions } from '#rendering/filters/WebGpuShaderFilter';
 import { WebGpuShaderFilter } from '#rendering/filters/WebGpuShaderFilter';
 import type { RenderBackend } from '#rendering/RenderBackend';

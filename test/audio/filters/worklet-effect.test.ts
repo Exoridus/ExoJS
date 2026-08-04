@@ -1,4 +1,6 @@
-﻿import { getAudioContext, onAudioContextReady } from '#audio/audio-context';
+﻿import type { MockInstance } from 'vitest';
+
+import { getAudioContext, onAudioContextReady } from '#audio/audio-context';
 import { WorkletEffect } from '#audio/WorkletEffect';
 
 // ---------------------------------------------------------------------------

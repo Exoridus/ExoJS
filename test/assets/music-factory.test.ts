@@ -1,3 +1,5 @@
+import type { MockInstance } from 'vitest';
+
 import { MusicFactory } from '#assets/factories/MusicFactory';
 import { AudioStream } from '#audio/AudioStream';
 

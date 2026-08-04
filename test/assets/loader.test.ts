@@ -1,4 +1,6 @@
-﻿import { Asset } from '#assets/Asset';
+﻿import type { MockInstance } from 'vitest';
+
+import { Asset } from '#assets/Asset';
 import { encodeContainer } from '#assets/AssetContainer';
 import { AssetRef } from '#assets/AssetRef';
 import { Assets } from '#assets/Assets';
