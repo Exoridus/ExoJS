@@ -1,3 +1,5 @@
+import type { MockInstance } from 'vitest';
+
 /**
  * DSP-level acoustic contract for the GranularProcessor worklet, focused on the
  * optional normalizeGain behaviour.
@@ -10,7 +12,6 @@
  * Math.random is stubbed with a deterministic PRNG so the grain scheduling is
  * reproducible across runs.
  */
-
 import { granularWorkletSource } from '../../src/worklets/granular.worklet';
 
 const SAMPLE_RATE = 48000;

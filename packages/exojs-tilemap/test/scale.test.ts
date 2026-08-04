@@ -110,7 +110,7 @@ describe('scale / storage', () => {
   it('storage uses Uint32Array internally, not exposed publicly', () => {
     const chunk = new TileChunk(0, 0, 32, 32);
     // The private _tiles is not accessible from outside
-    expect((chunk as Record<string, unknown>).tiles).toBeUndefined();
+    expect((chunk as unknown as Record<string, unknown>).tiles).toBeUndefined();
     expect(chunk.cloneTiles()).toBeInstanceOf(Uint32Array);
     expect(chunk.cloneTiles().length).toBe(1024);
   });

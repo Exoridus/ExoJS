@@ -1,4 +1,5 @@
 import { getAudioContext } from '@codexo/exojs';
+import type { MockInstance } from 'vitest';
 
 import { BitCrusherEffect } from '../../src/effects/BitCrusherEffect';
 

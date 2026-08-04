@@ -1,5 +1,6 @@
 ﻿import { getAudioContext } from '@codexo/exojs';
 import { AudioBus } from '@codexo/exojs';
+import type { MockInstance } from 'vitest';
 
 import { DuckingEffect } from '../../src/effects/DuckingEffect';
 

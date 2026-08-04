@@ -23,13 +23,6 @@ interface BandCoef {
   a2: number;
   centerHz: number;
 }
-interface BiquadState {
-  x1: number;
-  x2: number;
-  y1: number;
-  y2: number;
-}
-
 interface VocoderProcessorLike {
   process(
     inputs: Float32Array[][],
@@ -42,7 +35,7 @@ interface VocoderProcessorLike {
 
 type VocoderProcessorConstructor = new (options: { processorOptions?: Record<string, number> }) => VocoderProcessorLike;
 
-function buildProcessorClass(numBands: number): VocoderProcessorConstructor {
+function buildProcessorClass(): VocoderProcessorConstructor {
   let klass: VocoderProcessorConstructor | null = null;
 
   const savedSampleRate = (globalThis as Record<string, unknown>)['sampleRate'];
@@ -149,7 +142,7 @@ describe('VocoderProcessor DSP', () => {
   let Processor: VocoderProcessorConstructor;
 
   beforeAll(() => {
-    Processor = buildProcessorClass(NUM_BANDS);
+    Processor = buildProcessorClass();
   });
 
   // ── 1. Silence without modulator ──────────────────────────────────────────

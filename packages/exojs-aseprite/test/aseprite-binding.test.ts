@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
-import { Asset, type AssetLoaderContext, Texture } from '@codexo/exojs';
+import { Asset, type AssetLoaderContext, type Loader, Texture } from '@codexo/exojs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { asepriteBinding,AsepriteFormatError } from '../src/asepriteBinding';
@@ -18,18 +18,24 @@ function loadFixture(name: string): unknown {
 
 // ── Context factory ────────────────────────────────────────────────────────────
 
+function fakeLoader(): Loader {
+  return { load: vi.fn() } as unknown as Loader;
+}
+
 function makeContext(fixtures: Record<string, unknown>) {
   const loaderLoad = vi.fn();
+
+  const fetchJson = vi.fn(async (source: string): Promise<unknown> => {
+    if (Object.hasOwn(fixtures, source)) return fixtures[source];
+    throw new Error(`aseprite-binding.test: no fixture for "${source}"`);
+  });
 
   const context: AssetLoaderContext = {
     loader: { load: loaderLoad } as unknown as AssetLoaderContext['loader'],
     identityKey: 'test',
     fetchText: vi.fn(),
     fetchArrayBuffer: vi.fn(),
-    fetchJson: vi.fn(async (source: string): Promise<unknown> => {
-      if (Object.hasOwn(fixtures, source)) return fixtures[source];
-      throw new Error(`aseprite-binding.test: no fixture for "${source}"`);
-    }),
+    fetchJson: fetchJson as AssetLoaderContext['fetchJson'],
   };
 
   loaderLoad.mockImplementation(async (token: unknown): Promise<unknown> => {
@@ -61,11 +67,11 @@ describe('asepriteBinding descriptor', () => {
   });
 
   it('create() returns a handler with a load function', () => {
-    expect(typeof asepriteBinding.create().load).toBe('function');
+    expect(typeof asepriteBinding.create(fakeLoader()).load).toBe('function');
   });
 
   it('create() handler has no custom getIdentityKey (default source identity)', () => {
-    expect(asepriteBinding.create().getIdentityKey).toBeUndefined();
+    expect(asepriteBinding.create(fakeLoader()).getIdentityKey).toBeUndefined();
   });
 });
 
@@ -80,7 +86,7 @@ describe('asepriteBinding.load — array fixture', () => {
 
   it('returns a fully-parsed AsepriteSheet', async () => {
     const { context } = makeContext(fixtures);
-    const handler = asepriteBinding.create();
+    const handler = asepriteBinding.create(context.loader);
     const sheet = await handler.load({ source: 'sprites/hero.json' }, context);
     expect(sheet).toBeInstanceOf(AsepriteSheet);
     expect(sheet.spritesheet.frames.size).toBe(3);
@@ -89,7 +95,7 @@ describe('asepriteBinding.load — array fixture', () => {
 
   it('resolves the packed image URL relative to the JSON source and sub-loads it as a Texture', async () => {
     const { context, loaderLoad } = makeContext(fixtures);
-    const handler = asepriteBinding.create();
+    const handler = asepriteBinding.create(context.loader);
     await handler.load({ source: 'sprites/hero.json' }, context);
     expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', 'sprites/hero.png'));
   });
@@ -98,28 +104,28 @@ describe('asepriteBinding.load — array fixture', () => {
     const doc = loadFixture('hero.array.json') as { meta: { image: string } };
     doc.meta.image = 'https://cdn.example.com/hero.png';
     const { context, loaderLoad } = makeContext({ 'sprites/hero.json': doc });
-    const handler = asepriteBinding.create();
+    const handler = asepriteBinding.create(context.loader);
     await handler.load({ source: 'sprites/hero.json' }, context);
     expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', 'https://cdn.example.com/hero.png'));
   });
 
   it('loads the hash-form fixture identically', async () => {
     const { context } = makeContext({ 'sprites/hero.json': loadFixture('hero.hash.json') });
-    const handler = asepriteBinding.create();
+    const handler = asepriteBinding.create(context.loader);
     const sheet = await handler.load({ source: 'sprites/hero.json' }, context);
     expect(sheet.spritesheet.frames.size).toBe(3);
   });
 
   it('resolves a relative image ref against an absolute (scheme-qualified) source URL', async () => {
     const { context, loaderLoad } = makeContext({ 'https://cdn.example.com/sprites/hero.json': loadFixture('hero.array.json') });
-    const handler = asepriteBinding.create();
+    const handler = asepriteBinding.create(context.loader);
     await handler.load({ source: 'https://cdn.example.com/sprites/hero.json' }, context);
     expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', 'https://cdn.example.com/sprites/hero.png'));
   });
 
   it('resolves a relative image ref against a root-relative source, preserving the leading slash', async () => {
     const { context, loaderLoad } = makeContext({ '/assets/sprites/hero.json': loadFixture('hero.array.json') });
-    const handler = asepriteBinding.create();
+    const handler = asepriteBinding.create(context.loader);
     await handler.load({ source: '/assets/sprites/hero.json' }, context);
     expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', '/assets/sprites/hero.png'));
   });
@@ -130,7 +136,7 @@ describe('asepriteBinding.load — array fixture', () => {
 describe('asepriteBinding.load — AsepriteFormatError on malformed input', () => {
   async function loadRaw(raw: unknown): Promise<AsepriteSheet> {
     const { context } = makeContext({ 'doc.json': raw });
-    return asepriteBinding.create().load({ source: 'doc.json' }, context);
+    return asepriteBinding.create(context.loader).load({ source: 'doc.json' }, context);
   }
 
   it('rejects a non-object root', async () => {
@@ -174,7 +180,7 @@ describe('asepriteBinding.load — AsepriteFormatError on malformed input', () =
 
   it('does not attempt to load a texture when validation fails', async () => {
     const { context, loaderLoad } = makeContext({ 'doc.json': { frames: 5, meta: { image: 'x.png' } } });
-    await expect(asepriteBinding.create().load({ source: 'doc.json' }, context)).rejects.toThrow(AsepriteFormatError);
+    await expect(asepriteBinding.create(context.loader).load({ source: 'doc.json' }, context)).rejects.toThrow(AsepriteFormatError);
     expect(loaderLoad).not.toHaveBeenCalled();
   });
 });

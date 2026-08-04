@@ -19,11 +19,14 @@ import { describe, expectTypeOf, it } from 'vitest';
 
 const EntityType = { Spawn: 'spawn', Trigger: 'trigger', Pickup: 'pickup' } as const;
 
-interface LevelObjects {
+// A type alias, not an interface: only aliases get the implicit index
+// signature that satisfies the `ObjectSchema` (`Record<string, …>`) constraint.
+// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+type LevelObjects = {
   [EntityType.Spawn]: { team: 'red' | 'blue' };
   [EntityType.Trigger]: { event: string; once?: boolean };
   [EntityType.Pickup]: { item: 'coin' | 'gem'; amount: number };
-}
+};
 
 describe('ObjectKind value object', () => {
   it('is a frozen string map whose members are the wire-format literals', () => {
@@ -32,9 +35,9 @@ describe('ObjectKind value object', () => {
     expectTypeOf(ObjectKind.Tile).toEqualTypeOf<'tile'>();
   });
 
-  it('ObjectKind type is the union of the six geometry literals', () => {
+  it('ObjectKind type is the union of the seven object literals', () => {
     expectTypeOf<ObjectKind>().toEqualTypeOf<
-      'rectangle' | 'ellipse' | 'polygon' | 'polyline' | 'point' | 'tile'
+      'rectangle' | 'ellipse' | 'polygon' | 'polyline' | 'point' | 'tile' | 'text'
     >();
   });
 

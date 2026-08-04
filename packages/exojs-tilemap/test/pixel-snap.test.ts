@@ -3,12 +3,24 @@ import { TextureRegion } from '@codexo/exojs';
 import { type Texture } from '@codexo/exojs';
 import { describe, expect, it, vi } from 'vitest';
 
+import { type ImageLayerNode } from '../src/ImageLayerNode';
 import { TileLayer } from '../src/TileLayer';
 import { TileLayerNode } from '../src/TileLayerNode';
 import { TileMap } from '../src/TileMap';
 import { TileMapNode } from '../src/TileMapNode';
 import { TileMapView } from '../src/TileMapView';
 import { TileSet } from '../src/TileSet';
+
+/**
+ * Narrow a band's layer-node union to the tile-layer case: these fixtures build
+ * tile layers only, so an image-layer node means the fixture drifted.
+ */
+function asTileLayerNode(node: ImageLayerNode | TileLayerNode): TileLayerNode {
+  if (!(node instanceof TileLayerNode)) {
+    throw new Error('expected a TileLayerNode');
+  }
+  return node;
+}
 import { TILE_TRANSFORM_IDENTITY } from '../src/types';
 
 // ── helpers (conventions shared with nodes.test.ts / view.test.ts) ─────
@@ -56,8 +68,8 @@ function makeBoundaryLayer(tileset: TileSet, opts: BoundaryLayerOpts = {}): Tile
     tileWidth: 32,
     tileHeight: 32,
     tilesets: [tileset],
-    offsetX: opts.offsetX,
-    offsetY: opts.offsetY,
+    ...(opts.offsetX === undefined ? {} : { offsetX: opts.offsetX }),
+    ...(opts.offsetY === undefined ? {} : { offsetY: opts.offsetY }),
   });
   const ref = { tileset, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY };
 
@@ -118,7 +130,7 @@ describe('pixelSnapMode defaults', () => {
     expect(node.layerNodes).toHaveLength(2);
     for (const layerNode of node.layerNodes) {
       expect(layerNode.pixelSnapMode).toBe(PixelSnapMode.None);
-      expect(chunkModes(layerNode)).toEqual([PixelSnapMode.None, PixelSnapMode.None]);
+      expect(chunkModes(asTileLayerNode(layerNode))).toEqual([PixelSnapMode.None, PixelSnapMode.None]);
     }
   });
 
@@ -130,7 +142,7 @@ describe('pixelSnapMode defaults', () => {
     expect(view.layers).toHaveLength(2);
     for (const layerNode of view.layers) {
       expect(layerNode.pixelSnapMode).toBe(PixelSnapMode.None);
-      expect(chunkModes(layerNode)).toEqual([PixelSnapMode.None, PixelSnapMode.None]);
+      expect(chunkModes(asTileLayerNode(layerNode))).toEqual([PixelSnapMode.None, PixelSnapMode.None]);
     }
   });
 });
@@ -246,7 +258,7 @@ describe('TileMapNode.pixelSnapMode', () => {
       expect(node.pixelSnapMode).toBe(mode);
       for (const layerNode of node.layerNodes) {
         expect(layerNode.pixelSnapMode).toBe(mode);
-        expect(chunkModes(layerNode)).toEqual([mode, mode]);
+        expect(chunkModes(asTileLayerNode(layerNode))).toEqual([mode, mode]);
       }
     }
   });
@@ -263,7 +275,7 @@ describe('TileMapNode.pixelSnapMode', () => {
     expect(node.pixelSnapMode).toBe(PixelSnapMode.Position);
     for (const layerNode of node.layerNodes) {
       expect(layerNode.pixelSnapMode).toBe(PixelSnapMode.Position);
-      expect(chunkModes(layerNode)).toEqual([PixelSnapMode.Position, PixelSnapMode.Position]);
+      expect(chunkModes(asTileLayerNode(layerNode))).toEqual([PixelSnapMode.Position, PixelSnapMode.Position]);
     }
   });
 
@@ -306,7 +318,7 @@ describe('TileMapNode.pixelSnapMode', () => {
     expect(node.layerNodes).toHaveLength(3);
     for (const layerNode of node.layerNodes) {
       expect(layerNode.pixelSnapMode).toBe(PixelSnapMode.Geometry);
-      expect(chunkModes(layerNode)).toEqual([PixelSnapMode.Geometry, PixelSnapMode.Geometry]);
+      expect(chunkModes(asTileLayerNode(layerNode))).toEqual([PixelSnapMode.Geometry, PixelSnapMode.Geometry]);
     }
   });
 });
@@ -327,12 +339,12 @@ describe('TileMapView.pixelSnapMode', () => {
     expect(view.layers).toHaveLength(2);
     for (const layerNode of view.layers) {
       expect(layerNode.pixelSnapMode).toBe(PixelSnapMode.Geometry);
-      expect(chunkModes(layerNode)).toEqual([PixelSnapMode.Geometry, PixelSnapMode.Geometry]);
+      expect(chunkModes(asTileLayerNode(layerNode))).toEqual([PixelSnapMode.Geometry, PixelSnapMode.Geometry]);
     }
 
     view.pixelSnapMode = PixelSnapMode.Position;
     for (const layerNode of view.layers) {
-      expect(chunkModes(layerNode)).toEqual([PixelSnapMode.Position, PixelSnapMode.Position]);
+      expect(chunkModes(asTileLayerNode(layerNode))).toEqual([PixelSnapMode.Position, PixelSnapMode.Position]);
     }
   });
 
@@ -348,7 +360,7 @@ describe('TileMapView.pixelSnapMode', () => {
     expect(view.pixelSnapMode).toBe(PixelSnapMode.Geometry);
     for (const layerNode of view.layers) {
       expect(layerNode.pixelSnapMode).toBe(PixelSnapMode.Geometry);
-      expect(chunkModes(layerNode)).toEqual([PixelSnapMode.Geometry, PixelSnapMode.Geometry]);
+      expect(chunkModes(asTileLayerNode(layerNode))).toEqual([PixelSnapMode.Geometry, PixelSnapMode.Geometry]);
     }
   });
 

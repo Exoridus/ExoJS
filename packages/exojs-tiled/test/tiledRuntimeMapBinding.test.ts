@@ -2,12 +2,16 @@ import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
 import { Asset } from '@codexo/exojs';
-import { type AssetLoaderContext,Texture } from '@codexo/exojs';
+import { type AssetLoaderContext, type Loader,Texture } from '@codexo/exojs';
 import { TileMap } from '@codexo/exojs-tilemap';
 import { beforeEach, describe, expect, it,vi } from 'vitest';
 
 import { loadTiledMap } from '../src/loadTiledMap';
 import { tiledRuntimeMapBinding } from '../src/tiledRuntimeMapBinding';
+
+function fakeLoader(): Loader {
+  return { load: vi.fn() } as unknown as Loader;
+}
 
 // ── Fixture loading ──────────────────────────────────────────────────────────
 
@@ -30,15 +34,17 @@ function loadFixture(name: string): unknown {
 function makeContext(fixtures: Record<string, unknown>) {
   const loaderLoad = vi.fn();
 
+  const fetchJson = vi.fn(async (source: string): Promise<unknown> => {
+      if (Object.hasOwn(fixtures, source)) return fixtures[source];
+      throw new Error(`tiledRuntimeMapBinding.test: no fixture for "${source}"`);
+    });
+
   const context: AssetLoaderContext = {
     loader: { load: loaderLoad } as unknown as AssetLoaderContext['loader'],
     identityKey: 'test',
     fetchText: vi.fn(),
     fetchArrayBuffer: vi.fn(),
-    fetchJson: vi.fn(async (source: string): Promise<unknown> => {
-      if (Object.hasOwn(fixtures, source)) return fixtures[source];
-      throw new Error(`tiledRuntimeMapBinding.test: no fixture for "${source}"`);
-    }),
+    fetchJson: fetchJson as AssetLoaderContext['fetchJson'],
   };
 
   // Configure loaderLoad after context is defined so the closure captures it.
@@ -73,22 +79,22 @@ describe('tiledRuntimeMapBinding descriptor', () => {
   });
 
   it('claims the .tmj file extension', () => {
-    expect((tiledRuntimeMapBinding as { extensions?: string[] }).extensions).toEqual(['tmj']);
+    expect((tiledRuntimeMapBinding as { extensions?: readonly string[] }).extensions).toEqual(['tmj']);
   });
 
   it('create() returns an object with a load function', () => {
-    expect(typeof tiledRuntimeMapBinding.create().load).toBe('function');
+    expect(typeof tiledRuntimeMapBinding.create(fakeLoader()).load).toBe('function');
   });
 
   it('create() returns an object with a getIdentityKey function', () => {
-    expect(typeof tiledRuntimeMapBinding.create().getIdentityKey).toBe('function');
+    expect(typeof tiledRuntimeMapBinding.create(fakeLoader()).getIdentityKey).toBe('function');
   });
 });
 
 // ── getIdentityKey tests ─────────────────────────────────────────────────────
 
 describe('tiledRuntimeMapBinding.getIdentityKey', () => {
-  const handler = tiledRuntimeMapBinding.create();
+  const handler = tiledRuntimeMapBinding.create(fakeLoader());
 
   it('includes source and format in the key', () => {
     const key = handler.getIdentityKey!({ source: 'world.tmj' });
@@ -115,13 +121,13 @@ describe('tiledRuntimeMapBinding.load — minimal map', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
   it('returns a TileMap instance', async () => {
-    const handler = tiledRuntimeMapBinding.create();
+    const handler = tiledRuntimeMapBinding.create(context.loader);
     const result = await handler.load({ source: 'minimal.tmj' }, context);
     expect(result).toBeInstanceOf(TileMap);
   });
 
   it('preserves map dimensions', async () => {
-    const handler = tiledRuntimeMapBinding.create();
+    const handler = tiledRuntimeMapBinding.create(context.loader);
     const result = await handler.load({ source: 'minimal.tmj' }, context);
     expect(result.width).toBe(4);
     expect(result.height).toBe(4);
@@ -130,7 +136,7 @@ describe('tiledRuntimeMapBinding.load — minimal map', () => {
   });
 
   it('delegates to ctx.loader.load(Asset.type(tiledMap, source)) internally', async () => {
-    const handler = tiledRuntimeMapBinding.create();
+    const handler = tiledRuntimeMapBinding.create(context.loader);
     await handler.load({ source: 'minimal.tmj' }, context);
     expect(context.loader.load).toHaveBeenCalledWith(Asset.type('tiledMap', 'minimal.tmj'));
   });
@@ -144,13 +150,13 @@ describe('tiledRuntimeMapBinding.load — with atlas tileset image', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
   it('returns a TileMap instance', async () => {
-    const handler = tiledRuntimeMapBinding.create();
+    const handler = tiledRuntimeMapBinding.create(context.loader);
     const result = await handler.load({ source: 'with-tileset-image.tmj' }, context);
     expect(result).toBeInstanceOf(TileMap);
   });
 
   it('the runtime TileMap has a TileSet with the loaded texture', async () => {
-    const handler = tiledRuntimeMapBinding.create();
+    const handler = tiledRuntimeMapBinding.create(context.loader);
     const result = await handler.load({ source: 'with-tileset-image.tmj' }, context);
     expect(result.tilesets).toHaveLength(1);
     // Texture is loaded transitively via the TiledMap sub-load
@@ -170,13 +176,13 @@ describe('tiledRuntimeMapBinding.load — external tileset (.tsj)', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
   it('returns a TileMap instance', async () => {
-    const handler = tiledRuntimeMapBinding.create();
+    const handler = tiledRuntimeMapBinding.create(context.loader);
     const result = await handler.load({ source: 'external-tileset.tmj' }, context);
     expect(result).toBeInstanceOf(TileMap);
   });
 
   it('loads the external tileset texture', async () => {
-    const handler = tiledRuntimeMapBinding.create();
+    const handler = tiledRuntimeMapBinding.create(context.loader);
     await handler.load({ source: 'external-tileset.tmj' }, context);
     expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', 'external-tileset.png'));
   });
@@ -190,7 +196,7 @@ describe('tiledRuntimeMapBinding.load — options passthrough', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
   it('passes options to the TiledMap sub-load', async () => {
-    const handler = tiledRuntimeMapBinding.create();
+    const handler = tiledRuntimeMapBinding.create(context.loader);
     const opts = { format: 'tiled' as const };
     await handler.load({ source: 'world.tmj', options: opts }, context);
     expect(loaderLoad).toHaveBeenCalledWith(Asset.type('tiledMap', 'world.tmj', opts));

@@ -51,7 +51,7 @@ const addBox = (
     new PhysicsBody({
       type: 'dynamic',
       position: { x, y },
-      fixedRotation: options.fixedRotation,
+      ...(options.fixedRotation === undefined ? {} : { fixedRotation: options.fixedRotation }),
       colliders: [{ shape: new BoxShape(width, height), density: options.density ?? 1, friction: options.friction ?? 0.5, restitution: options.restitution ?? 0 }],
     }),
   );

@@ -67,22 +67,10 @@ function makeImpulse(): Float32Array {
   return buf;
 }
 
-// ── Hat burst and soft-swell shapes ───────────────────────────────────────────
+// ── Soft-swell shape ─────────────────────────────────────────────────────────
 
-const HAT_DURATION_SEC = 0.003; // 3 ms — shorter than click for hi-hat ticks
 const SWELL_DURATION_SEC = 0.3; // 300 ms slow-attack swell
 const SWELL_ATTACK_SEC = 0.08; // 80 ms linear ramp-up (no sharp transient at t=0)
-
-/** Very short (~3 ms) percussive burst for simulated hi-hat ticks. */
-function makeHatBurst(rand: () => number): Float32Array {
-  const len = Math.round(HAT_DURATION_SEC * SAMPLE_RATE);
-  const buf = new Float32Array(len);
-  const decayConst = 80; // faster 1/e decay (~1.7 ms)
-  for (let i = 0; i < len; i++) {
-    buf[i] = (rand() * 2 - 1) * Math.exp(-i / decayConst);
-  }
-  return buf;
-}
 
 // ── Spectral drum synth (spectrally-realistic kit shapes) ──────────────────────
 //

@@ -42,15 +42,17 @@ function makeContext(fixtures: Record<string, unknown>) {
     async (_token: unknown, _url: string): Promise<Texture> => fakeTexture(),
   );
 
+  const fetchJson = vi.fn(async (source: string): Promise<unknown> => {
+    if (Object.hasOwn(fixtures, source)) return fixtures[source];
+    throw new Error(`load-ldtk-map.test: no fixture registered for source "${source}"`);
+  });
+
   const context: AssetLoaderContext = {
     loader: { load: loaderLoad } as unknown as AssetLoaderContext['loader'],
     identityKey: 'test',
     fetchText: vi.fn(),
     fetchArrayBuffer: vi.fn(),
-    fetchJson: vi.fn(async (source: string): Promise<unknown> => {
-      if (Object.hasOwn(fixtures, source)) return fixtures[source];
-      throw new Error(`load-ldtk-map.test: no fixture registered for source "${source}"`);
-    }),
+    fetchJson: fetchJson as AssetLoaderContext['fetchJson'],
   };
 
   return { context, loaderLoad };

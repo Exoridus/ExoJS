@@ -14,6 +14,17 @@ import { TileMapView } from '../src/TileMapView';
 import { TileSet } from '../src/TileSet';
 import { TILE_TRANSFORM_IDENTITY } from '../src/types';
 
+/**
+ * Narrow a band's layer-node union to the tile-layer case: these fixtures build
+ * tile layers only, so an image-layer node means the fixture drifted.
+ */
+function asTileLayerNode(node: ImageLayerNode | TileLayerNode): TileLayerNode {
+  if (!(node instanceof TileLayerNode)) {
+    throw new Error('expected a TileLayerNode');
+  }
+  return node;
+}
+
 // ── helpers (conventions shared with nodes.test.ts) ────────────────────
 
 function fakeTexture(width = 512, height = 512): Texture {
@@ -58,10 +69,10 @@ function makeLayer(tileset: TileSet, opts: LayerOpts = {}): TileLayer {
     tileWidth: 32,
     tileHeight: 32,
     tilesets: [tileset],
-    visible: opts.visible,
-    opacity: opts.opacity,
-    offsetX: opts.offsetX,
-    offsetY: opts.offsetY,
+    ...(opts.visible === undefined ? {} : { visible: opts.visible }),
+    ...(opts.opacity === undefined ? {} : { opacity: opts.opacity }),
+    ...(opts.offsetX === undefined ? {} : { offsetX: opts.offsetX }),
+    ...(opts.offsetY === undefined ? {} : { offsetY: opts.offsetY }),
   });
   return layer;
 }
@@ -76,6 +87,11 @@ function makeImageLayer(opts: Partial<ImageLayerOptions> = {}): ImageLayer {
 }
 
 function fillLayer(layer: TileLayer, tileset: TileSet): TileLayer {
+  // Only finite layers can be filled exhaustively; an infinite one would make
+  // the sweep silently do nothing.
+  if (layer.width === undefined || layer.height === undefined) {
+    throw new Error('fillLayer needs a finite layer');
+  }
   for (let ty = 0; ty < layer.height; ty++) {
     for (let tx = 0; tx < layer.width; tx++) {
       layer.setTileAt(tx, ty, { tileset, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
@@ -464,7 +480,7 @@ describe('TileMapView ownership & destruction', () => {
     // The sibling band and the actors are untouched.
     expect(worldRoot.children).toContain(roofBand);
     expect(roofBand.layerNodes).toHaveLength(1);
-    expect(roofBand.layerNodes[0].chunkNodes).toHaveLength(1);
+    expect(asTileLayerNode(roofBand.layerNodes[0]!).chunkNodes).toHaveLength(1);
     expect(actors.parent).toBe(worldRoot);
 
     // The map, its layers, and textures survive.
@@ -483,7 +499,7 @@ describe('TileMapView ownership & destruction', () => {
     expect(worldRoot.children).toContain(groundBand);
     expect(worldRoot.children).toContain(roofBand);
     expect(groundBand.layerNodes).toHaveLength(2);
-    expect(groundBand.layerNodes[0].chunkNodes).toHaveLength(1);
+    expect(asTileLayerNode(groundBand.layerNodes[0]!).chunkNodes).toHaveLength(1);
     expect(roofBand.layerNodes).toHaveLength(1);
   });
 
@@ -704,7 +720,7 @@ describe('TileMapView across multiple maps', () => {
     expect(b.view.destroyed).toBe(false);
     expect(b.band.parent).toBe(b.worldRoot);
     expect(b.band.layerNodes).toHaveLength(1);
-    expect(b.band.layerNodes[0].chunkNodes).toHaveLength(1);
+    expect(asTileLayerNode(b.band.layerNodes[0]!).chunkNodes).toHaveLength(1);
     expect(b.map.destroyed).toBe(false);
   });
 
@@ -1318,12 +1334,12 @@ describe('TileMapBand internal membership operations', () => {
     // Only nodeB's id is present in the document index map; nodeA falls back to 0
     // (covers the fallback for the comparator's first operand, the defined
     // value for its second).
-    expect(() => band._reorder(new Map([[2, 5]]))).not.toThrow();
+    expect(() => band._reorder(new Map([[nodeB.layer, 5]]))).not.toThrow();
     expect(band.layerNodes).toHaveLength(2);
 
     // Swap which id is present, so the opposite operand hits the fallback and
     // the previously-fallback operand now resolves a defined value.
-    expect(() => band._reorder(new Map([[1, 3]]))).not.toThrow();
+    expect(() => band._reorder(new Map([[nodeA.layer, 3]]))).not.toThrow();
     expect(band.layerNodes).toHaveLength(2);
   });
 
@@ -1336,7 +1352,7 @@ describe('TileMapBand internal membership operations', () => {
 
     otherContainer.addChild(nodeA); // reparent away, but membership is kept
 
-    expect(() => band._reorder(new Map([[1, 0], [2, 1]]))).not.toThrow();
+    expect(() => band._reorder(new Map([[nodeA.layer, 0], [nodeB.layer, 1]]))).not.toThrow();
     expect(band.layerNodes).toEqual([nodeA, nodeB]); // membership unaffected
     expect(nodeA.parent).toBe(otherContainer); // not re-adopted by the band
     expect(band.children).toContain(nodeB);
@@ -1405,11 +1421,11 @@ describe('TileMapView type contracts', () => {
     expectTypeOf<TileMapView['band']>().returns.toEqualTypeOf<TileMapBand>();
     expectTypeOf<TileMapView['layers']>().toEqualTypeOf<readonly TileLayerNode[]>();
     expectTypeOf<TileMapView['bands']>().toEqualTypeOf<readonly TileMapBand[]>();
-    expectTypeOf<TileMapBand['layerNodes']>().toEqualTypeOf<readonly TileLayerNode[]>();
+    expectTypeOf<TileMapBand['layerNodes']>().toEqualTypeOf<readonly (TileLayerNode | ImageLayerNode)[]>();
   });
 
   it('createView returns TileMapView and its options are optional', () => {
     expectTypeOf<TileMap['createView']>().returns.toEqualTypeOf<TileMapView>();
-    expectTypeOf<Parameters<TileMap['createView']>>().toEqualTypeOf<[options?: TileMapViewOptions]>();
+    expectTypeOf<Parameters<TileMap['createView']>>().toEqualTypeOf<[options?: TileMapViewOptions | undefined]>();
   });
 });

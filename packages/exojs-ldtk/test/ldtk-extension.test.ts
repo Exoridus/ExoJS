@@ -1,4 +1,4 @@
-import type { AssetLoaderContext } from '@codexo/exojs';
+import type { AssetLoaderContext, Loader } from '@codexo/exojs';
 import { ExtensionRegistry } from '@codexo/exojs/extensions';
 import { tilemapExtension } from '@codexo/exojs-tilemap';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -31,6 +31,10 @@ describe('@codexo/exojs-ldtk extension descriptor', () => {
   });
 });
 
+function fakeLoader(): Loader {
+  return { load: vi.fn() } as unknown as Loader;
+}
+
 describe('@codexo/exojs-ldtk asset binding — ldtkMapBinding', () => {
   it('targets the LdtkMap constructor', () => {
     expect(ldtkMapBinding.ctor).toBe(LdtkMap);
@@ -45,7 +49,7 @@ describe('@codexo/exojs-ldtk asset binding — ldtkMapBinding', () => {
   });
 
   it('create() returns a handler with a load function', () => {
-    const handler = ldtkMapBinding.create();
+    const handler = ldtkMapBinding.create(fakeLoader());
     expect(typeof handler.load).toBe('function');
   });
 
@@ -68,18 +72,19 @@ describe('@codexo/exojs-ldtk asset binding — ldtkMapBinding', () => {
       ],
     };
     const source = 'https://example.com/world.ldtk';
+    const fetchJson = vi.fn(async (requested: string) => {
+      expect(requested).toBe(source);
+      return fixture;
+    });
     const context: AssetLoaderContext = {
       loader: { load: vi.fn() } as unknown as AssetLoaderContext['loader'],
       identityKey: 'test',
       fetchText: vi.fn(),
       fetchArrayBuffer: vi.fn(),
-      fetchJson: vi.fn(async (requested: string) => {
-        expect(requested).toBe(source);
-        return fixture;
-      }),
+      fetchJson: fetchJson as AssetLoaderContext['fetchJson'],
     };
 
-    const handler = ldtkMapBinding.create();
+    const handler = ldtkMapBinding.create(context.loader);
     const result = await handler.load({ source }, context);
 
     expect(result).toBeInstanceOf(LdtkMap);

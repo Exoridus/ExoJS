@@ -47,7 +47,7 @@ describe('@codexo/exojs-tilemap root', () => {
   it('the renderer binding throws for an unsupported backend type', () => {
     const create = tilemapExtension.renderers![0]!.create;
 
-    expect(() => create(fakeBackend('unsupported' as RenderBackendType))).toThrow(/Unsupported render backend/);
+    expect(() => create(fakeBackend('unsupported' as unknown as RenderBackendType))).toThrow(/Unsupported render backend/);
   });
 });
 

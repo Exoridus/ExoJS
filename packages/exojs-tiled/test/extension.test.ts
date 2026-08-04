@@ -1,6 +1,7 @@
+import type { Loader } from '@codexo/exojs';
 import { ExtensionRegistry } from '@codexo/exojs/extensions';
 import { TileMap,tilemapExtension } from '@codexo/exojs-tilemap';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { buildSnapshot } from '../../../src/extensions/snapshot';
 import { resetExtensionRegistryForTesting } from '../../../src/extensions/testing';
@@ -8,6 +9,10 @@ import { tiledExtension } from '../src/tiledExtension';
 import { TiledMap } from '../src/TiledMap';
 import { tiledMapBinding } from '../src/tiledMapBinding';
 import { tiledRuntimeMapBinding } from '../src/tiledRuntimeMapBinding';
+
+function fakeLoader(): Loader {
+  return { load: vi.fn() } as unknown as Loader;
+}
 
 describe('@codexo/exojs-tiled extension descriptor', () => {
   it('has correct id', () => {
@@ -42,7 +47,7 @@ describe('@codexo/exojs-tiled extension descriptor', () => {
   });
 
   it('runtime binding claims the .tmj file extension', () => {
-    expect((tiledRuntimeMapBinding as { extensions?: string[] }).extensions).toEqual(['tmj']);
+    expect((tiledRuntimeMapBinding as { extensions?: readonly string[] }).extensions).toEqual(['tmj']);
   });
 
   // ── tiledMapBinding (advanced/source)
@@ -80,18 +85,18 @@ describe('@codexo/exojs-tiled extension descriptor', () => {
 
 describe('@codexo/exojs-tiled asset handler — tiledMapBinding', () => {
   it('create() returns an object with a load function', () => {
-    const handler = tiledMapBinding.create();
+    const handler = tiledMapBinding.create(fakeLoader());
     expect(typeof handler.load).toBe('function');
   });
 
   it('create() returns an object with a getIdentityKey function', () => {
-    const handler = tiledMapBinding.create();
+    const handler = tiledMapBinding.create(fakeLoader());
     expect(typeof handler.getIdentityKey).toBe('function');
   });
 });
 
 describe('tiledMapBinding.getIdentityKey', () => {
-  const handler = tiledMapBinding.create();
+  const handler = tiledMapBinding.create(fakeLoader());
 
   it('includes source and format in the key', () => {
     expect(handler.getIdentityKey!({ source: 'world.tmj' })).toBe('world.tmj|tiled');
@@ -100,8 +105,8 @@ describe('tiledMapBinding.getIdentityKey', () => {
 
 describe('tiledRuntimeMapBinding and tiledMapBinding identity keys', () => {
   it('produce the same key string for the same source (Loader namespaces them by type)', () => {
-    const runtimeHandler = tiledRuntimeMapBinding.create();
-    const sourceHandler  = tiledMapBinding.create();
+    const runtimeHandler = tiledRuntimeMapBinding.create(fakeLoader());
+    const sourceHandler  = tiledMapBinding.create(fakeLoader());
     // Both use the same discriminator; the Loader prepends distinct type IDs so
     // their cache keys are different even though this string matches.
     const req = { source: 'world.tmj' };

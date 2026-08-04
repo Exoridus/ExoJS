@@ -2,13 +2,13 @@
 import { Collider, type ColliderOptions } from '../src/Collider';
 import { PhysicsBody } from '../src/PhysicsBody';
 import { type PhysicsWorld } from '../src/PhysicsWorld';
-import type { Shape } from '../src/shapes/Shape';
+import type { AnyShape } from '../src/shapes/AnyShape';
 import type { BodyType, VectorLike } from '../src/types';
 
 /** Create a body with one collider at `position`/`angle`, returning the collider. */
 export const colliderAt = (
   world: PhysicsWorld,
-  shape: Shape,
+  shape: AnyShape,
   position: VectorLike,
   angle = 0,
   type: BodyType = 'static',

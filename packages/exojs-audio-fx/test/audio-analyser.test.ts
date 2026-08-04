@@ -662,6 +662,7 @@ describe('AudioAnalyser', () => {
       let capturedCallback: (() => void) | undefined;
       vi.spyOn(bus, 'onceSetup').mockImplementation(cb => {
         capturedCallback = cb;
+        return () => {};
       });
 
       const a = new AudioAnalyser();

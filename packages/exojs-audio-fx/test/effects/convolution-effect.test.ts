@@ -80,7 +80,8 @@ describe('ConvolutionEffect', () => {
     };
 
     it('inputNode and outputNode are different nodes', () => {
-      const ctx = getAudioContext();
+      // Called for its side effect only (see the note at the top of this block).
+      getAudioContext();
       const effect = new ConvolutionEffect();
       expect(effect.inputNode).not.toBe(effect.outputNode);
       effect.destroy();
@@ -381,7 +382,7 @@ describe('ConvolutionEffect', () => {
     it('setImpulse resamples an impulse response recorded at another rate', async () => {
       const ctx = getAudioContext();
       const { convolver, gainSpy, convolverSpy } = wireConvolver(ctx);
-      convolver.context = { sampleRate: 48000 } as BaseAudioContext;
+      convolver.context = { sampleRate: 48000 } as AudioContext;
 
       const ab = ctx.createBuffer(1, 44100, 44100);
       const effect = new ConvolutionEffect();
