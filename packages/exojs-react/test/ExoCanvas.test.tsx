@@ -1,8 +1,9 @@
+import type { Application } from '@codexo/exojs';
 import { render } from '@testing-library/react';
 import { type ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ExoCanvas } from '../src/ExoCanvas';
+import { ExoCanvas, type ExoCanvasProps } from '../src/ExoCanvas';
 import { useExoApp } from '../src/useExoApp';
 import { MockApplication } from './support/mock-application';
 
@@ -19,7 +20,7 @@ vi.mock('@codexo/exojs', async importActual => {
 function Hud(): ReactElement {
   const app = useExoApp();
 
-  return <div data-testid="hud">{app === MockApplication.instances[0] ? 'has-app' : 'wrong-app'}</div>;
+  return <div data-testid="hud">{app === (MockApplication.instances[0] as unknown as Application) ? 'has-app' : 'wrong-app'}</div>;
 }
 
 beforeEach(() => {
@@ -57,7 +58,14 @@ describe('<ExoCanvas>', () => {
 
   it('forwards canvasProps to the inner canvas and keeps the default block display', () => {
     const { container } = render(
-      <ExoCanvas canvasProps={{ className: 'pixelated', 'data-role': 'surface', style: { imageRendering: 'pixelated' } }} />,
+      // `canvasProps` is typed as React's CanvasHTMLAttributes, which carries no
+      // index signature for `data-*` keys, so the literal needs a cast to prove
+      // the runtime forwarding this test asserts.
+      <ExoCanvas
+        canvasProps={
+          { className: 'pixelated', 'data-role': 'surface', style: { imageRendering: 'pixelated' } } as NonNullable<ExoCanvasProps['canvasProps']>
+        }
+      />,
     );
 
     const canvas = container.querySelector('canvas')!;

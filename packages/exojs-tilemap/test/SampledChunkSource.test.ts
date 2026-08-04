@@ -2,11 +2,24 @@ import { TextureRegion, View } from '@codexo/exojs';
 import { type Texture } from '@codexo/exojs';
 import { describe, expect, it, vi } from 'vitest';
 
+import type { ChunkPayload } from '../src/ChunkSource';
 import { ChunkStreamer } from '../src/ChunkStreamer';
 import { createSampledChunkSource } from '../src/SampledChunkSource';
 import { TileLayer } from '../src/TileLayer';
 import { TileSet } from '../src/TileSet';
 import { TILE_TRANSFORM_IDENTITY, unpackTile } from '../src/types';
+
+/**
+ * `createSampledChunkSource` resolves synchronously, but `ChunkSource.getChunk`
+ * is declared as possibly async and possibly empty — narrow it here so the
+ * assertions below read the payload directly.
+ */
+function syncChunk(payload: ChunkPayload | null | Promise<ChunkPayload | null>): ChunkPayload {
+  if (payload === null || payload instanceof Promise) {
+    throw new Error('SampledChunkSource.test: expected a synchronous, non-null chunk payload');
+  }
+  return payload;
+}
 
 function fakeTexture(): Texture {
   return {
@@ -46,13 +59,13 @@ describe('createSampledChunkSource', () => {
       mapValueToTile: () => ({ tileset, localTileId: 3, transform: TILE_TRANSFORM_IDENTITY }),
     });
 
-    const payload = source.getChunk(0, 0);
+    const payload = syncChunk(source.getChunk(0, 0));
 
     expect(payload).not.toBeNull();
-    expect(payload!.width).toBe(2);
-    expect(payload!.height).toBe(2);
+    expect(payload.width).toBe(2);
+    expect(payload.height).toBe(2);
     for (let i = 0; i < 4; i++) {
-      expect(unpackTile(payload!.tiles[i])).toEqual({
+      expect(unpackTile(payload.tiles[i])).toEqual({
         tilesetIndex: 0,
         localTileId: 3,
         transform: TILE_TRANSFORM_IDENTITY,
@@ -80,7 +93,7 @@ describe('createSampledChunkSource', () => {
       mapValueToTile: value => (value === 1 ? { tileset, localTileId: 5, transform: TILE_TRANSFORM_IDENTITY } : null),
     });
 
-    const payload = source.getChunk(0, 0)!;
+    const payload = syncChunk(source.getChunk(0, 0));
     expect(unpackTile(payload.tiles[0])).toEqual({ tilesetIndex: 0, localTileId: 5, transform: TILE_TRANSFORM_IDENTITY });
     expect(payload.tiles[1]).toBe(0);
     expect(payload.tiles[2]).toBe(0);
@@ -158,7 +171,7 @@ describe('createSampledChunkSource', () => {
       mapValueToTile: () => ({ tileset, localTileId: 7, transform: TILE_TRANSFORM_IDENTITY }),
     });
 
-    const payload = source.getChunk(1, 0)!;
+    const payload = syncChunk(source.getChunk(1, 0));
     expect(payload).not.toBeNull();
     expect(payload.width).toBe(4);
     expect(payload.height).toBe(4);

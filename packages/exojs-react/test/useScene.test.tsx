@@ -24,8 +24,11 @@ function SceneProbe({ sceneClass, deps }: { sceneClass: new () => ExoScene; deps
   return <span data-testid="scene">{scene?.constructor.name ?? 'loading'}</span>;
 }
 
-function provide(app: Application, children: ReactNode): ReactElement {
-  return <ExoContext.Provider value={app}>{children}</ExoContext.Provider>;
+// `app` is a MockApplication: the `@codexo/exojs` module is vi.mock'ed above, so
+// `new Application()` constructs the mock. The context still types its value as
+// the engine class, hence the cast on the way in.
+function provide(app: MockApplication, children: ReactNode): ReactElement {
+  return <ExoContext.Provider value={app as unknown as Application}>{children}</ExoContext.Provider>;
 }
 
 const makeApp = (): MockApplication => new Application() as unknown as MockApplication;

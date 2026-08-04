@@ -3,6 +3,7 @@
 import { Color, Rectangle, Texture, Time } from '@codexo/exojs';
 import type { RenderPlanBuilder } from '@codexo/exojs/renderer-sdk';
 import { WebGpuBackend } from '@codexo/exojs/renderer-sdk';
+import type { MockInstance } from 'vitest';
 
 import { ColorGradient } from '../src/distributions/ColorGradient';
 import { Constant } from '../src/distributions/Constant';

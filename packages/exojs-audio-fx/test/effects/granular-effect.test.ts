@@ -1,4 +1,5 @@
 ﻿import { getAudioContext } from '@codexo/exojs';
+import type { MockInstance } from 'vitest';
 
 import { GranularEffect } from '../../src/effects/GranularEffect';
 

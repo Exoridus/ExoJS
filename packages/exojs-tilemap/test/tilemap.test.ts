@@ -335,7 +335,7 @@ describe('TileChunk', () => {
   it('backing array is NOT exposed publicly', () => {
     const chunk = new TileChunk(0, 0, 2, 2);
     // The `tiles` property does not exist on the public interface
-    expect((chunk as Record<string, unknown>).tiles).toBeUndefined();
+    expect((chunk as unknown as Record<string, unknown>).tiles).toBeUndefined();
   });
 
   it('source data is defensively copied', () => {
@@ -2093,7 +2093,7 @@ describe('immutability', () => {
 
     const chunk = layer.getChunk(0, 0)!;
     // The public ReadonlyTileChunk interface has no 'tiles' property
-    const chunkAsAny = chunk as Record<string, unknown>;
+    const chunkAsAny = chunk as unknown as Record<string, unknown>;
     // Verify that 'tiles' is undefined (private member)
     expect(chunkAsAny.tiles).toBeUndefined();
     // Verify that _setRawAt is still there (internal, but not public API intent)

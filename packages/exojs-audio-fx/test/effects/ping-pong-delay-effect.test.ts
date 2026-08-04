@@ -144,7 +144,8 @@ describe('PingPongDelayEffect', () => {
     };
 
     it('inputNode and outputNode are different nodes', () => {
-      const ctx = getAudioContext();
+      // Called for its side effect only (see the note at the top of this block).
+      getAudioContext();
       const effect = new PingPongDelayEffect();
       expect(effect.inputNode).not.toBe(effect.outputNode);
       effect.destroy();

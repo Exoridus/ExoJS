@@ -11,7 +11,7 @@ export interface CacheStore {
   /**
    * Loads a previously saved value, or `null` if the entry does not exist.
    */
-  load(storageName: string, key: string): Promise<unknown | null>;
+  load(storageName: string, key: string): Promise<unknown>;
 
   /**
    * Persists `data` under the given namespace and key.

@@ -15,7 +15,8 @@
     "./typescript/base.json": "./typescript/base.json",
     "./typescript/library.json": "./typescript/library.json",
     "./typescript/extension.json": "./typescript/extension.json",
-    "./typescript/test.json": "./typescript/test.json"
+    "./typescript/test.json": "./typescript/test.json",
+    "./typescript/package-test.json": "./typescript/package-test.json"
   },
   "dependencies": {
     "@codecov/rollup-plugin": "^2.0.1",

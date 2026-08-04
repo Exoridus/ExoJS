@@ -211,11 +211,14 @@ describe('ObjectLayer query() value-matching for structured TilePropertyValue ki
   });
 });
 
-interface LevelObjects {
+// A type alias, not an interface: only aliases get the implicit index
+// signature that satisfies the `ObjectSchema` (`Record<string, …>`) constraint.
+// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+type LevelObjects = {
   spawn: { team: 'red' | 'blue' };
   trigger: { event: string; once?: boolean };
   pickup: { item: 'coin' | 'gem'; amount: number };
-}
+};
 
 describe('ObjectLayer typed accessors (byType / byKind / where)', () => {
   const layer = new ObjectLayer<LevelObjects>({
@@ -288,7 +291,7 @@ describe('ObjectLayer typed accessors (byType / byKind / where)', () => {
 
 describe('TileMap object layers', () => {
   const makeMap = (objectLayers?: ObjectLayer[]): TileMap =>
-    new TileMap({ width: 4, height: 4, tileWidth: 16, tileHeight: 16, objectLayers });
+    new TileMap({ width: 4, height: 4, tileWidth: 16, tileHeight: 16, ...(objectLayers === undefined ? {} : { objectLayers }) });
 
   it('stores object layers from the constructor and addObjectLayer, by name', () => {
     const spawns = new ObjectLayer({ id: 1, name: 'spawns' });

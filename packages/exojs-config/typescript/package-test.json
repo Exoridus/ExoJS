@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "_comment": "Loosened profile for type-checking a package's own `test/**`. Combined with the package-local `tsconfig.json` through an `extends` array, so the package keeps its `paths`, `customConditions` and lib/target while the test program relaxes what test code legitimately does differently from engine code. `noUncheckedIndexedAccess` is off: fixture arrays and captured mock-call tuples are indexed positionally everywhere, and re-proving each index would bury the findings this program exists to surface (wrong argument counts, missing mock members, stale APIs). `strict`, `strictNullChecks` and `noImplicitAny` stay ON — those are exactly what catches a half-wrong mock. Emit options are cleared because this program never emits.",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "allowJs": true,
+    "verbatimModuleSyntax": false,
+    "isolatedModules": false,
+    "noUncheckedIndexedAccess": false,
+    "types": ["node", "vitest/globals", "@webgpu/types"]
+  }
+}

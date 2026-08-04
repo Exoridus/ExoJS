@@ -7,14 +7,14 @@ import { BmFont } from '#rendering/text/BmFont';
 // ── Parser helpers ────────────────────────────────────────────────────────────
 
 function intVal(line: string, key: string): number {
-  const match = line.match(new RegExp(`\\b${key}=(-?\\d+)`));
+  const match = new RegExp(`\\b${key}=(-?\\d+)`).exec(line);
   return match?.[1] !== undefined ? parseInt(match[1], 10) : 0;
 }
 
 function strVal(line: string, key: string): string {
-  const match = line.match(new RegExp(`\\b${key}="([^"]*)"`));
+  const match = new RegExp(`\\b${key}="([^"]*)"`).exec(line);
   if (match?.[1] !== undefined) return match[1];
-  const bare = line.match(new RegExp(`\\b${key}=(\\S+)`));
+  const bare = new RegExp(`\\b${key}=(\\S+)`).exec(line);
   return bare?.[1] ?? '';
 }
 

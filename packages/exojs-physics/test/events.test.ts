@@ -34,7 +34,7 @@ describe('contact events', () => {
   it('produces frozen, immutable event snapshots with an A→B normal', () => {
     const world = new PhysicsWorld();
     colliderAt(world, new BoxShape(10, 10), { x: 0, y: 0 });
-    const body = world.add(new PhysicsBody({ type: 'kinematic', position: { x: 8, y: 0 }, colliders: [{ shape: new BoxShape(10, 10) }] }));
+    world.add(new PhysicsBody({ type: 'kinematic', position: { x: 8, y: 0 }, colliders: [{ shape: new BoxShape(10, 10) }] }));
 
     let event: CollisionEvent | null = null;
     world.onCollisionStart.add(e => {
@@ -133,7 +133,7 @@ describe('contact events', () => {
   it('does not fire events for filtered-out pairs', () => {
     const world = new PhysicsWorld();
     colliderAt(world, new BoxShape(10, 10), { x: 0, y: 0 }, 0, 'static', { filter: { category: 0x0001, mask: 0x0001 } });
-    const other = world.add(
+    world.add(
       new PhysicsBody({ type: 'kinematic', position: { x: 5, y: 0 }, colliders: [{ shape: new BoxShape(10, 10), filter: { category: 0x0002, mask: 0x0002 } }] }),
     );
 

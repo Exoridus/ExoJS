@@ -55,15 +55,20 @@ function makeLayer(tileset: TileSet, opts: LayerOpts = {}): TileLayer {
     tileWidth: 32,
     tileHeight: 32,
     tilesets: [tileset],
-    visible: opts.visible,
-    opacity: opts.opacity,
-    offsetX: opts.offsetX,
-    offsetY: opts.offsetY,
+    ...(opts.visible === undefined ? {} : { visible: opts.visible }),
+    ...(opts.opacity === undefined ? {} : { opacity: opts.opacity }),
+    ...(opts.offsetX === undefined ? {} : { offsetX: opts.offsetX }),
+    ...(opts.offsetY === undefined ? {} : { offsetY: opts.offsetY }),
   });
   return layer;
 }
 
 function fillLayer(layer: TileLayer, tileset: TileSet): TileLayer {
+  // Only finite layers can be filled exhaustively; an infinite one would make
+  // the sweep silently do nothing.
+  if (layer.width === undefined || layer.height === undefined) {
+    throw new Error('fillLayer needs a finite layer');
+  }
   for (let ty = 0; ty < layer.height; ty++) {
     for (let tx = 0; tx < layer.width; tx++) {
       layer.setTileAt(tx, ty, { tileset, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });

@@ -24,15 +24,17 @@ function loadFixture(name: string): unknown {
 function makeContext(fixtures: Record<string, unknown>) {
   const loaderLoad = vi.fn(async (_token: unknown, _url: string): Promise<Texture> => new Texture());
 
+  const fetchJson = vi.fn(async (source: string): Promise<unknown> => {
+      if (Object.hasOwn(fixtures, source)) return fixtures[source];
+      throw new Error(`loadTiledMap.test: no fixture registered for source "${source}"`);
+    });
+
   const context: AssetLoaderContext = {
     loader: { load: loaderLoad } as unknown as AssetLoaderContext['loader'],
     identityKey: 'test',
     fetchText: vi.fn(),
     fetchArrayBuffer: vi.fn(),
-    fetchJson: vi.fn(async (source: string): Promise<unknown> => {
-      if (Object.hasOwn(fixtures, source)) return fixtures[source];
-      throw new Error(`loadTiledMap.test: no fixture registered for source "${source}"`);
-    }),
+    fetchJson: fetchJson as AssetLoaderContext['fetchJson'],
   };
 
   return { context, loaderLoad };

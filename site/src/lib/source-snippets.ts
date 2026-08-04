@@ -90,7 +90,7 @@ export function extractSnippetRegion(filePath: string, region: string): string {
 
     // Validate: no duplicate region names.
     const openCount = lines.filter(l => {
-        const m = l.match(REGION_OPEN_RE);
+        const m = REGION_OPEN_RE.exec(l);
         return m !== null && m[1].trim() === region;
     }).length;
 
@@ -107,14 +107,14 @@ export function extractSnippetRegion(filePath: string, region: string): string {
     let found = false;
 
     for (const line of lines) {
-        const openMatch = line.match(REGION_OPEN_RE);
+        const openMatch = REGION_OPEN_RE.exec(line);
         if (openMatch?.[1].trim() === region) {
             inside = true;
             found = true;
             continue;
         }
 
-        const closeMatch = line.match(REGION_CLOSE_RE);
+        const closeMatch = REGION_CLOSE_RE.exec(line);
         if (closeMatch?.[1].trim() === region) {
             inside = false;
             continue;
@@ -147,7 +147,7 @@ export function extractSnippetRegion(filePath: string, region: string): string {
 
     // Dedent: find the minimum leading whitespace across all non-empty lines.
     const minIndent = nonEmpty.reduce((min, line) => {
-        const indent = line.match(/^(\s*)/)?.[1].length ?? 0;
+        const indent = (/^(\s*)/.exec(line))?.[1].length ?? 0;
         return Math.min(min, indent);
     }, Infinity);
 

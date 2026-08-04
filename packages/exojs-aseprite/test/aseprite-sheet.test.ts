@@ -361,7 +361,9 @@ describe('AsepriteSheet.parse — repeat', () => {
         format: 'RGBA8888',
         size: { w: 32, h: 16 },
         scale: '1',
-        frameTags: [{ name: 'clip', from: 0, to: 1, direction: 'forward', repeat }],
+        frameTags: [
+          { name: 'clip', from: 0, to: 1, direction: 'forward', ...(repeat === undefined ? {} : { repeat }) },
+        ],
       },
     };
   }

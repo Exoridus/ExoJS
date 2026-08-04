@@ -1,4 +1,5 @@
 ﻿import { getAudioContext } from '@codexo/exojs';
+import type { MockInstance } from 'vitest';
 
 import { PitchShiftEffect } from '../../src/effects/PitchShiftEffect';
 

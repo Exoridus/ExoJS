@@ -297,7 +297,7 @@ function extractAttributes(gl: WebGL2RenderingContext, program: WebGLProgram, sh
 function extractUniforms(gl: WebGL2RenderingContext, program: WebGLProgram, shader: Shader, managedUniforms: ManagedUniform[]): void {
   const activeCount = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
   const activeIndices = new Uint8Array(activeCount).map((_, index) => index);
-  const blocks = gl.getActiveUniforms(program, activeIndices, gl.UNIFORM_BLOCK_INDEX);
+  const blocks = gl.getActiveUniforms(program, activeIndices, gl.UNIFORM_BLOCK_INDEX) as number[];
   const indices = activeIndices.filter(index => blocks[index] === -1);
 
   for (const index of indices) {

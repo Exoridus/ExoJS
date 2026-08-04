@@ -115,7 +115,6 @@ describe('TiledTileset.lastGid', () => {
 });
 
 describe('TiledTileset.getTile', () => {
-  const tileData = { id: 2, type: 'water', animation: undefined, objectgroup: undefined, image: undefined, imagewidth: undefined, imageheight: undefined };
   const ts = new TiledTileset({ ...BASE_DATA, tiles: [{ id: 0 }, { id: 2 }] }, 1);
 
   it('returns the tile with matching local id', () => {

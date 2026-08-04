@@ -26,10 +26,13 @@ function ActiveProbe(): ReactElement {
   return <span data-testid="active">{scene?.constructor.name ?? 'none'}</span>;
 }
 
-function Tree({ app, active, transition }: { app: Application; active: string; transition?: SceneTransitionSelection }): ReactElement {
+// `app` is a MockApplication: the `@codexo/exojs` module is vi.mock'ed above, so
+// `new Application()` constructs the mock. The context still types its value as
+// the engine class, hence the cast on the way in.
+function Tree({ app, active, transition }: { app: MockApplication; active: string; transition?: SceneTransitionSelection }): ReactElement {
   return (
-    <ExoContext.Provider value={app}>
-      <Scenes active={active} transition={transition}>
+    <ExoContext.Provider value={app as unknown as Application}>
+      <Scenes active={active} {...(transition === undefined ? {} : { transition })}>
         <Scene name="title" component={TitleScene}>
           <span data-testid="hud">title-hud</span>
           <ActiveProbe />
@@ -188,7 +191,7 @@ describe('<Scenes> / <Scene> / useActiveScene', () => {
   it('ignores non-<Scene> children when collecting the scene registry', async () => {
     const app = makeApp();
     const { findByTestId } = render(
-      <ExoContext.Provider value={app}>
+      <ExoContext.Provider value={app as unknown as Application}>
         <Scenes active="title">
           <Scene name="title" component={TitleScene}>
             <span data-testid="hud">title-hud</span>

@@ -33,15 +33,17 @@ const TEXTURE_SIZES: Record<string, { w: number; h: number }> = {
 function makeContext(fixtures: Record<string, unknown>) {
   const loaderLoad = vi.fn();
 
+  const fetchJson = vi.fn(async (source: string): Promise<unknown> => {
+      if (Object.hasOwn(fixtures, source)) return fixtures[source];
+      throw new Error(`toTileMap.test: no fixture for "${source}"`);
+    });
+
   const context: AssetLoaderContext = {
     loader: { load: loaderLoad } as unknown as AssetLoaderContext['loader'],
     identityKey: 'test',
     fetchText: vi.fn(),
     fetchArrayBuffer: vi.fn(),
-    fetchJson: vi.fn(async (source: string): Promise<unknown> => {
-      if (Object.hasOwn(fixtures, source)) return fixtures[source];
-      throw new Error(`toTileMap.test: no fixture for "${source}"`);
-    }),
+    fetchJson: fetchJson as AssetLoaderContext['fetchJson'],
   };
 
   loaderLoad.mockImplementation(async (token: unknown): Promise<unknown> => {
@@ -287,6 +289,11 @@ describe('runtime binding vs source.toTileMap() equivalence', () => {
 
   function sampleTiles(layer: TileLayer): unknown[] {
     const out: unknown[] = [];
+    // Finite layers always carry both dimensions; an infinite layer would make
+    // the sweep below meaningless, so fail loudly instead of sampling nothing.
+    if (layer.width === undefined || layer.height === undefined) {
+      throw new Error('toTileMap.test: sampleTiles needs a finite layer');
+    }
     for (let y = 0; y < layer.height; y++) {
       for (let x = 0; x < layer.width; x++) {
         const t = layer.getTileAt(x, y);
@@ -297,7 +304,7 @@ describe('runtime binding vs source.toTileMap() equivalence', () => {
   }
 
   it('produces semantically equivalent runtime maps via both load paths', async () => {
-    const direct = await tiledRuntimeMapBinding.create().load({ source: 'orthogonal-rich.tmj' }, context);
+    const direct = await tiledRuntimeMapBinding.create(context.loader).load({ source: 'orthogonal-rich.tmj' }, context);
     const source = await loadTiledMap('orthogonal-rich.tmj', context);
     const converted = source.toTileMap();
 

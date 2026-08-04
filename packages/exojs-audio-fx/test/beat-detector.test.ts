@@ -1,6 +1,7 @@
 ﻿import type { Voice } from '@codexo/exojs';
 import { getAudioContext, isAudioContextReady } from '@codexo/exojs';
 import { AudioBus } from '@codexo/exojs';
+import type { MockInstance } from 'vitest';
 
 import { BeatDetector } from '../src/BeatDetector';
 
@@ -1044,6 +1045,7 @@ describe('BeatDetector', () => {
       let capturedCallback: (() => void) | undefined;
       vi.spyOn(bus, 'onceSetup').mockImplementation(cb => {
         capturedCallback = cb;
+        return () => {};
       });
 
       const d = new BeatDetector();
