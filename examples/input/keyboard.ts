@@ -1,4 +1,4 @@
-import { Application, Color, Graphics, Keyboard, type RenderingContext, Scene, type Time } from '@codexo/exojs';
+import { Application, Color, Graphics, type InputBinding, Keyboard, type RenderingContext, Scene, type Time } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 
@@ -7,21 +7,19 @@ import { mountControls } from '@examples/runtime';
 //
 //   - on-event: `inputs.onStart` / `onStop` fire once on the press / release
 //     transition. Great for discrete actions (here: a recentre tap on Escape).
-//   - per-frame polling: the binding returned by `inputs.onActive` samples the
-//     channel buffer every frame, so reading `binding.active` inside update()
-//     gives the live held-state — no callback bookkeeping required.
+//   - per-frame polling: `inputs.onActive` called without a callback just
+//     returns the binding, which samples the channel buffer every frame — so
+//     reading `binding.active` inside update() gives the live held-state.
 //
 // Both WASD and the arrow keys drive the same square via a single binding per
 // direction (each binding watches two channels at once).
 class KeyboardScene extends Scene {
     private square!: Graphics;
     private position = { x: 400, y: 300 };
-    // The structural shape of an InputBinding's pollable state (the class itself
-    // is internal to the engine, but `active` / `value` are its public surface).
-    private up!: { readonly active: boolean; readonly value: number };
-    private down!: { readonly active: boolean; readonly value: number };
-    private left!: { readonly active: boolean; readonly value: number };
-    private right!: { readonly active: boolean; readonly value: number };
+    private up!: InputBinding;
+    private down!: InputBinding;
+    private left!: InputBinding;
+    private right!: InputBinding;
     private hud!: ReturnType<typeof mountControls>;
 
     override init(): void {
@@ -34,10 +32,10 @@ class KeyboardScene extends Scene {
         // Per-frame polling source: one binding per direction, each listening to
         // both the WASD key and the matching arrow key. We keep the references
         // and read their live state in update() rather than mutating flags.
-        this.up = this.inputs.onActive([Keyboard.W, Keyboard.Up], () => {});
-        this.down = this.inputs.onActive([Keyboard.S, Keyboard.Down], () => {});
-        this.left = this.inputs.onActive([Keyboard.A, Keyboard.Left], () => {});
-        this.right = this.inputs.onActive([Keyboard.D, Keyboard.Right], () => {});
+        this.up = this.inputs.onActive([Keyboard.W, Keyboard.Up]);
+        this.down = this.inputs.onActive([Keyboard.S, Keyboard.Down]);
+        this.left = this.inputs.onActive([Keyboard.A, Keyboard.Left]);
+        this.right = this.inputs.onActive([Keyboard.D, Keyboard.Right]);
 
         // On-event source: a discrete tap that snaps the square back to centre.
         this.inputs.onStart(Keyboard.Escape, () => {

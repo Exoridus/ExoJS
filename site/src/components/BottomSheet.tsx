@@ -1,8 +1,8 @@
-import { type ReactNode,useEffect, useId, useRef, useState } from 'react';
+import { type ReactNode,useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
 import styles from './BottomSheet.module.scss';
-import { css } from './react-utils';
+import { css, useClientValue } from './react-utils';
 
 const FOCUSABLE_SELECTOR = [
     'a[href]',
@@ -16,6 +16,8 @@ const FOCUSABLE_SELECTOR = [
 let scrollLockCount = 0;
 let previousBodyOverflow = '';
 
+const inBrowser = (): boolean => true;
+
 export interface BottomSheetProps {
     children: ReactNode;
     open: boolean;
@@ -28,8 +30,7 @@ export function BottomSheet({ children, open, title, opener, onOpenChange }: Bot
     const titleId = useId();
     const sheetRef = useRef<HTMLElement | null>(null);
     // Portal target only exists in the browser; render nothing during SSR.
-    const [mounted, setMounted] = useState(false);
-    useEffect(() => setMounted(true), []);
+    const mounted = useClientValue(inBrowser, false);
 
     useEffect(() => {
         if (!open) return;

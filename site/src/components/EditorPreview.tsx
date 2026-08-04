@@ -1,6 +1,6 @@
 import {
-    forwardRef,
     type KeyboardEvent as ReactKeyboardEvent,
+    type Ref,
     type RefObject,
     type SyntheticEvent,
     useEffect,
@@ -47,16 +47,14 @@ export interface EditorPreviewHandle {
 
 export interface EditorPreviewProps {
     exampleMeta: Example | null;
+    ref?: Ref<EditorPreviewHandle>;
     selectedVersionId: string;
     sourceCode: string | null;
     onCanvasSize?(event: CanvasSizeEvent): void;
     onPreviewErrors?(errors: PreviewErrorEntry[]): void;
 }
 
-export const EditorPreview = forwardRef<EditorPreviewHandle, EditorPreviewProps>(function EditorPreview(
-    { exampleMeta, onCanvasSize, onPreviewErrors, selectedVersionId, sourceCode },
-    ref,
-) {
+export function EditorPreview({ exampleMeta, onCanvasSize, onPreviewErrors, ref, selectedVersionId, sourceCode }: EditorPreviewProps): JSX.Element {
     const [updateId, setUpdateId] = useState(0);
     const rootRef = useRef<HTMLDivElement | null>(null);
     const iframeRef = useRef<HTMLIFrameElement | null>(null);
@@ -67,13 +65,19 @@ export const EditorPreview = forwardRef<EditorPreviewHandle, EditorPreviewProps>
     const canvasAttributeObserverRef = useRef<MutationObserver | null>(null);
     const currentCanvasRef = useRef({ width: 0, height: 0, zoom: 1 });
 
-    sourceRef.current = sourceCode;
-    exampleRef.current = exampleMeta;
-    versionRef.current = selectedVersionId;
+    // Latest-value refs for the callbacks below — the iframe load handler and
+    // the imperative handle must see current props without re-subscribing when
+    // they change. Written from an effect rather than during render: a
+    // render-phase write is unsafe once a render can be discarded.
+    useEffect(() => {
+        sourceRef.current = sourceCode;
+        exampleRef.current = exampleMeta;
+        versionRef.current = selectedVersionId;
+    });
 
     useEffect(() => {
         // Bump the iframe cache-buster to force a reload when the source changes.
-        // eslint-disable-next-line @eslint-react/set-state-in-effect -- reload preview on source change
+        // eslint-disable-next-line @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect -- reload preview on source change
         setUpdateId(value => value + 1);
         disconnectCanvasObservers(canvasMutationObserverRef, canvasAttributeObserverRef);
         currentCanvasRef.current = { width: 0, height: 0, zoom: 1 };
@@ -230,7 +234,7 @@ export const EditorPreview = forwardRef<EditorPreviewHandle, EditorPreviewProps>
             />
         </div>
     );
-});
+}
 
 // Scale the canvas to fill the available preview-panel width rather than
 // sitting at native size with empty gutters. The iframe itself is a fixed

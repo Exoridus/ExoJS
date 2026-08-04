@@ -130,9 +130,9 @@ export class InputBinding {
   private readonly _watermark: number;
   /**
    * Values of this binding's resolved channels at the exact construction
-   * boundary, in the same order as {@link channels}. Supplied by
-   * {@link InputManager.createBinding}; direct/internal callers may omit it
-   * and retain the legacy watermark reconstruction fallback.
+   * boundary, in the same order as {@link channels}. Supplied by the
+   * {@link InputManager} when it creates a binding; direct/internal callers
+   * may omit it and retain the legacy watermark reconstruction fallback.
    */
   private readonly _constructionBaseline: Float32Array | null;
   /** `false` until the first `update()` call — see `update`'s doc comment. */

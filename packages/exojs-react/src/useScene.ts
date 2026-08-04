@@ -52,13 +52,10 @@ export function useScene<T extends Scene>(SceneClass: new () => T, deps: Depende
 
     const apply = async (): Promise<void> => {
       try {
-        if (app.status === ApplicationStatus.Stopped) {
-          // First activation — initialize the backend and start the frame loop.
-          await app.start(target);
-        } else {
-          // Engine already running — switch scenes without restarting.
-          await app.scenes.change(target);
-        }
+        // Stopped: first activation, which initializes the backend and starts
+        // the frame loop. Otherwise the engine is already running and this is a
+        // scene switch without a restart.
+        await (app.status === ApplicationStatus.Stopped ? app.start(target) : app.scenes.change(target));
 
         if (!cancelled) {
           setScene(app.scenes.currentScene as T);
@@ -83,7 +80,9 @@ export function useScene<T extends Scene>(SceneClass: new () => T, deps: Depende
     };
     // SceneClass is intentionally excluded from deps: a new class reference
     // (e.g. inline arrow class) on every render would recreate the scene
-    // each frame. Pass an explicit deps array to react to changes.
+    // each frame. Pass an explicit deps array to react to changes — which is
+    // also why the spread is here and why the lint rule can't verify this list.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [app, ...deps]);
 
   return scene;

@@ -4,7 +4,7 @@ import MonacoReactEditor, { loader, type OnMount } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import TsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
-import { type ChangeEvent, forwardRef, type RefObject, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { type ChangeEvent, type Ref, type RefObject, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 
 import { buildPublicUrl } from '../lib/url-builder';
 import { CURRENT_VERSION_ID } from '../lib/versions';
@@ -49,6 +49,7 @@ export interface EditorCodeProps {
     exampleTitle: string;
     language: 'javascript' | 'typescript';
     readOnly?: boolean;
+    ref?: Ref<EditorCodeHandle>;
     selectedVersionId: string;
     sourceCode: string | null;
     sourcePath: string | null;
@@ -102,23 +103,21 @@ let assetCompletionProviderRegistered = false;
 
 loader.config({ monaco });
 
-export const EditorCode = forwardRef<EditorCodeHandle, EditorCodeProps>(function EditorCode(
-    {
-        canReset,
-        exampleTitle,
-        language,
-        onCursorChange,
-        onDiagnostic,
-        onDirty,
-        onResetCode,
-        onUpdateCode,
-        readOnly = false,
-        selectedVersionId,
-        sourceCode,
-        sourcePath,
-    },
+export function EditorCode({
+    canReset,
+    exampleTitle,
+    language,
+    onCursorChange,
+    onDiagnostic,
+    onDirty,
+    onResetCode,
+    onUpdateCode,
+    readOnly = false,
     ref,
-) {
+    selectedVersionId,
+    sourceCode,
+    sourcePath,
+}: EditorCodeProps): JSX.Element {
     const [editorValue, setEditorValue] = useState(sourceCode ?? '');
     const [showMenu, setShowMenu] = useState(false);
     const [autoRefresh, setAutoRefresh] = useState(false);
@@ -132,8 +131,13 @@ export const EditorCode = forwardRef<EditorCodeHandle, EditorCodeProps>(function
     const sourceCodeRef = useRef(sourceCode);
     const selectedVersionRef = useRef(selectedVersionId);
 
-    sourceCodeRef.current = sourceCode;
-    selectedVersionRef.current = selectedVersionId;
+    // Latest-value refs, written after commit rather than during render so a
+    // discarded render can't leave them pointing at props that were never
+    // shown. Declared ahead of the effects below, which read them.
+    useEffect(() => {
+        sourceCodeRef.current = sourceCode;
+        selectedVersionRef.current = selectedVersionId;
+    });
 
     useEffect(() => {
         autoRefreshRef.current = autoRefresh;
@@ -142,7 +146,7 @@ export const EditorCode = forwardRef<EditorCodeHandle, EditorCodeProps>(function
     useEffect(() => {
         // Reset the editor buffer when the selected example (sourcePath) or its loaded
         // source changes — a prop-change reset, not render-derived state.
-        // eslint-disable-next-line @eslint-react/set-state-in-effect
+        // eslint-disable-next-line @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect
         setEditorValue(sourceCode ?? '');
         onDirty(false);
     }, [onDirty, sourceCode, sourcePath]);
@@ -205,7 +209,9 @@ export const EditorCode = forwardRef<EditorCodeHandle, EditorCodeProps>(function
     // capture the initial (never-read-only) triggerRefresh forever; read this
     // ref instead so they always see the current readOnly-guarded version.
     const triggerRefreshRef = useRef(triggerRefresh);
-    triggerRefreshRef.current = triggerRefresh;
+    useEffect(() => {
+        triggerRefreshRef.current = triggerRefresh;
+    });
 
     useImperativeHandle(
         ref,
@@ -398,7 +404,7 @@ export const EditorCode = forwardRef<EditorCodeHandle, EditorCodeProps>(function
             </div>
         </section>
     );
-});
+}
 
 function getModelUrl(sourcePath: string | null, language: 'javascript' | 'typescript'): string {
     const defaultExt = language === 'typescript' ? '.ts' : '.js';

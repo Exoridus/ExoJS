@@ -1,7 +1,7 @@
-import { type KeyboardEvent as ReactKeyboardEvent, useEffect, useRef, useState } from 'react';
+import { type KeyboardEvent as ReactKeyboardEvent, type ReactNode, useEffect, useRef, useState } from 'react';
 
 import styles from './GlobalSearch.module.scss';
-import { css } from './react-utils';
+import { css, useClientValue } from './react-utils';
 
 // Pagefind is generated into dist/pagefind/ by the build (`pagefind --site
 // dist` runs after `astro build`), so the module only exists on a built site.
@@ -56,54 +56,117 @@ interface SearchHit {
 
 type SearchStatus = 'idle' | 'searching' | 'done' | 'unavailable';
 
+// A settled search, tagged with the query it was computed for. Keeping the
+// query alongside the results is what lets `status` and `hits` be derived
+// during render instead of reset from inside the effect.
+interface SearchResult {
+    query: string;
+    hits: ReadonlyArray<SearchHit>;
+    status: 'done' | 'unavailable';
+}
+
 const MAX_HITS = 12;
 const DEBOUNCE_MS = 140;
 
-const useGlobalSearch = (baseUrl: string): { query: string; setQuery: (value: string) => void; hits: Array<SearchHit>; status: SearchStatus } => {
+const NO_HITS: ReadonlyArray<SearchHit> = [];
+const NO_RESULT: SearchResult = { query: '', hits: NO_HITS, status: 'done' };
+
+const useGlobalSearch = (
+    baseUrl: string,
+): { query: string; setQuery: (value: string) => void; hits: ReadonlyArray<SearchHit>; status: SearchStatus } => {
     const [query, setQuery] = useState('');
-    const [hits, setHits] = useState<Array<SearchHit>>([]);
-    const [status, setStatus] = useState<SearchStatus>('idle');
-    const requestId = useRef(0);
+    const [result, setResult] = useState<SearchResult>(NO_RESULT);
+    const requestIdRef = useRef(0);
+    const trimmed = query.trim();
 
     useEffect(() => {
-        const trimmed = query.trim();
         if (!trimmed) {
-            requestId.current += 1;
-            setHits([]);
-            setStatus('idle');
+            // Invalidate any in-flight search; the derived status below already
+            // reads 'idle' for an empty query, so there is nothing to reset.
+            requestIdRef.current += 1;
             return;
         }
 
-        const id = ++requestId.current;
-        setStatus('searching');
+        const id = ++requestIdRef.current;
         const timer = window.setTimeout(() => {
             void (async () => {
                 const pagefind = await loadPagefind(baseUrl);
-                if (id !== requestId.current) return;
+                if (id !== requestIdRef.current) return;
                 if (!pagefind) {
-                    setHits([]);
-                    setStatus('unavailable');
+                    setResult({ query: trimmed, hits: NO_HITS, status: 'unavailable' });
                     return;
                 }
                 const response = await pagefind.search(trimmed);
-                if (id !== requestId.current) return;
-                const data = await Promise.all(response.results.slice(0, MAX_HITS).map(result => result.data()));
-                if (id !== requestId.current) return;
-                setHits(
-                    data.map(entry => ({
+                if (id !== requestIdRef.current) return;
+                const data = await Promise.all(response.results.slice(0, MAX_HITS).map(entry => entry.data()));
+                if (id !== requestIdRef.current) return;
+                setResult({
+                    query: trimmed,
+                    hits: data.map(entry => ({
                         href: toHref(baseUrl, entry.url),
                         title: entry.meta.title ?? entry.url,
                         excerpt: entry.excerpt,
                         group: groupForUrl(entry.url),
                     })),
-                );
-                setStatus('done');
+                    status: 'done',
+                });
             })();
         }, DEBOUNCE_MS);
         return () => window.clearTimeout(timer);
-    }, [query, baseUrl]);
+    }, [trimmed, baseUrl]);
 
-    return { query, setQuery, hits, status };
+    // Everything the UI needs falls out of comparing the live query to the one
+    // the last settled result was computed for — no state writes in the effect.
+    const settled = result.query === trimmed;
+    let status: SearchStatus = 'idle';
+    if (trimmed) status = settled ? result.status : 'searching';
+
+    return { query, setQuery, hits: settled ? result.hits : NO_HITS, status };
+};
+
+const NAMED_ENTITIES: Record<string, string> = {
+    amp: '&',
+    apos: "'",
+    gt: '>',
+    lt: '<',
+    nbsp: ' ',
+    quot: '"',
+};
+
+const ENTITY_PATTERN = /&(#\d+|#[Xx][\dA-Fa-f]+|[A-Za-z]+);/g;
+const MARK_PATTERN = /<mark>([\S\s]*?)<\/mark>/g;
+
+const decodeEntities = (text: string): string =>
+    text.replace(ENTITY_PATTERN, (entity, body: string) => {
+        if (body.startsWith('#')) {
+            const hex = body[1] === 'x' || body[1] === 'X';
+            const code = Number.parseInt(hex ? body.slice(2) : body.slice(1), hex ? 16 : 10);
+            if (!Number.isInteger(code) || code < 0 || code > 0x10_ff_ff) return entity;
+            return String.fromCodePoint(code);
+        }
+        return NAMED_ENTITIES[body] ?? entity;
+    });
+
+/**
+ * Pagefind excerpts are HTML: matches are wrapped in `<mark>` and the
+ * surrounding text is entity-escaped. Rather than trusting that escaping with
+ * `dangerouslySetInnerHTML`, split on the mark tags and hand the pieces to
+ * React as text — anything Pagefind failed to escape renders literally instead
+ * of becoming markup.
+ */
+const renderExcerpt = (excerpt: string): ReactNode[] => {
+    const nodes: ReactNode[] = [];
+    let cursor = 0;
+
+    for (const match of excerpt.matchAll(MARK_PATTERN)) {
+        const start = match.index ?? 0;
+        if (start > cursor) nodes.push(decodeEntities(excerpt.slice(cursor, start)));
+        nodes.push(<mark key={start}>{decodeEntities(match[1] ?? '')}</mark>);
+        cursor = start + match[0].length;
+    }
+
+    if (cursor < excerpt.length) nodes.push(decodeEntities(excerpt.slice(cursor)));
+    return nodes;
 };
 
 export interface GlobalSearchPanelProps {
@@ -114,11 +177,16 @@ export interface GlobalSearchPanelProps {
 export function GlobalSearchPanel({ baseUrl, onNavigate }: GlobalSearchPanelProps): JSX.Element {
     const { query, setQuery, hits, status } = useGlobalSearch(baseUrl);
     const [activeIndex, setActiveIndex] = useState(0);
+    const [indexedHits, setIndexedHits] = useState(hits);
     const listRef = useRef<HTMLUListElement>(null);
 
-    useEffect(() => {
+    // Reset the highlight when a new result set arrives. Adjusting state during
+    // render (rather than in an effect) is React's documented pattern for this:
+    // the re-render happens before the browser sees the stale index.
+    if (indexedHits !== hits) {
+        setIndexedHits(hits);
         setActiveIndex(0);
-    }, [hits]);
+    }
 
     const moveActive = (delta: number): void => {
         if (hits.length === 0) return;
@@ -186,8 +254,7 @@ export function GlobalSearchPanel({ baseUrl, onNavigate }: GlobalSearchPanelProp
                                     <span className={css(styles, 'hit-title')}>{hit.title}</span>
                                     <span className={css(styles, 'hit-group')}>{hit.group}</span>
                                 </span>
-                                {/* Pagefind excerpts highlight matches with <mark>. */}
-                                <span className={css(styles, 'hit-excerpt')} dangerouslySetInnerHTML={{ __html: hit.excerpt }} />
+                                <span className={css(styles, 'hit-excerpt')}>{renderExcerpt(hit.excerpt)}</span>
                             </a>
                         </li>
                     ))}
@@ -201,13 +268,15 @@ export interface GlobalSearchProps {
     baseUrl: string;
 }
 
+const getIsMac = (): boolean => /Mac|iP(ad|hone|od)/.test(window.navigator.platform);
+
 export function GlobalSearch({ baseUrl }: GlobalSearchProps): JSX.Element {
     const [open, setOpen] = useState(false);
-    const [isMac, setIsMac] = useState(false);
+    // The platform never changes after load — a read, not state.
+    const isMac = useClientValue(getIsMac, false);
     const dialogRef = useRef<HTMLDialogElement>(null);
 
     useEffect(() => {
-        setIsMac(/Mac|iP(hone|ad|od)/.test(window.navigator.platform));
         const onKey = (event: KeyboardEvent): void => {
             if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
                 event.preventDefault();
