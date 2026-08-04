@@ -134,18 +134,55 @@ export class SceneInputs implements Destroyable {
    * threshold), gated by `options.when` (default `'active'`) and the
    * director's transition gate. Unbound automatically when the owning scene
    * ends permanently.
+   *
+   * @param channel - Channel, or channels, to watch.
+   * @param callback - Receives the channel value. Optional, as in {@link SceneInputs.onActive}.
+   * @param options - Binding options, including the `when` policy.
+   * @returns The binding, so it can be polled or unbound.
    */
-  public onStart(channel: InputChannel | readonly InputChannel[], callback: (value: number) => void, options?: SceneInputBindingOptions): InputBinding {
+  public onStart(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: SceneInputBindingOptions): InputBinding {
     return this._bind('onStart', channel, callback, options);
   }
 
-  /** Fire `callback` every frame the channel stays held above the threshold, same `when`/edge-rule gating as {@link SceneInputs.onStart}. */
-  public onActive(channel: InputChannel | readonly InputChannel[], callback: (value: number) => void, options?: SceneInputBindingOptions): InputBinding {
+  /**
+   * Fire `callback` every frame the channel stays held above the threshold,
+   * same `when`/edge-rule gating as {@link SceneInputs.onStart}.
+   *
+   * The callback is optional: with none, this just creates and tracks the
+   * binding, which is the idiomatic way to poll an input per frame — read
+   * {@link InputBinding.active} / {@link InputBinding.value} in your own
+   * `update()` instead of tracking held-state in a callback.
+   *
+   * Note that polling reads the raw binding state, which the `when` policy
+   * does not gate — only callback dispatch is gated. A scene that polls while
+   * paused must check its own state.
+   *
+   * @param channel - Channel, or channels, to watch.
+   * @param callback - Receives the channel value, once per frame while active.
+   * @param options - Binding options, including the `when` policy.
+   * @returns The binding, so it can be polled or unbound.
+   *
+   * @example
+   * ```ts
+   * const right = this.inputs.onActive([Keyboard.D, Keyboard.Right]);
+   * // later, in update():
+   * if (right.active) this.x += speed * delta;
+   * ```
+   */
+  public onActive(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: SceneInputBindingOptions): InputBinding {
     return this._bind('onActive', channel, callback, options);
   }
 
-  /** Fire `callback` on the channel's release edge, same `when`/edge-rule gating as {@link SceneInputs.onStart}. */
-  public onStop(channel: InputChannel | readonly InputChannel[], callback: (value: number) => void, options?: SceneInputBindingOptions): InputBinding {
+  /**
+   * Fire `callback` on the channel's release edge, same `when`/edge-rule
+   * gating as {@link SceneInputs.onStart}.
+   *
+   * @param channel - Channel, or channels, to watch.
+   * @param callback - Receives the channel value. Optional, as in {@link SceneInputs.onActive}.
+   * @param options - Binding options, including the `when` policy.
+   * @returns The binding, so it can be polled or unbound.
+   */
+  public onStop(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: SceneInputBindingOptions): InputBinding {
     return this._bind('onStop', channel, callback, options);
   }
 
@@ -155,8 +192,13 @@ export class SceneInputs implements Destroyable {
    * release edges must have occurred in a `when`-allowed state for the
    * trigger to fire: pressing while allowed, then the
    * scene pausing before release, does not trigger.
+   *
+   * @param channel - Channel, or channels, to watch.
+   * @param callback - Receives the channel value. Optional, as in {@link SceneInputs.onActive}.
+   * @param options - Binding options, including the `when` policy.
+   * @returns The binding, so it can be polled or unbound.
    */
-  public onTrigger(channel: InputChannel | readonly InputChannel[], callback: (value: number) => void, options?: SceneInputBindingOptions): InputBinding {
+  public onTrigger(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: SceneInputBindingOptions): InputBinding {
     return this._bind('onTrigger', channel, callback, options);
   }
 
@@ -206,7 +248,7 @@ export class SceneInputs implements Destroyable {
   private _bind(
     kind: BindingKind,
     channel: InputChannel | readonly InputChannel[],
-    callback: (value: number) => void,
+    callback: ((value: number) => void) | undefined,
     options?: SceneInputBindingOptions,
   ): InputBinding {
     const when = options?.when ?? SceneAvailability.Active;
@@ -230,7 +272,7 @@ export class SceneInputs implements Destroyable {
         primed = allowedNow();
 
         if (kind === 'onStart' && primed) {
-          callback(value);
+          callback?.(value);
         }
       },
       forwarded,
@@ -244,7 +286,7 @@ export class SceneInputs implements Destroyable {
       }
 
       if (kind === 'onActive' && primed) {
-        callback(value);
+        callback?.(value);
       }
     });
 
@@ -264,13 +306,13 @@ export class SceneInputs implements Destroyable {
       // InputBinding cannot dispatch onActive/onStop/onTrigger again without
       // a fresh onStart first).
       if (kind === 'onStop' && primed && allowedNow()) {
-        callback(value);
+        callback?.(value);
       }
     });
 
     binding.onTrigger.add((value: number) => {
       if (kind === 'onTrigger' && primed && allowedNow()) {
-        callback(value);
+        callback?.(value);
       }
     });
 

@@ -328,7 +328,7 @@
         },
         {
           "name": "onActive",
-          "signature": "onActive(channel: InputChannel | readonly InputChannel[], callback: (value: number) => void, options?: InputBindingOptions): InputBinding",
+          "signature": "onActive(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: InputBindingOptions): InputBinding",
           "signatureTokens": [
             {
               "text": "onActive",
@@ -379,6 +379,10 @@
               "kind": "param"
             },
             {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
               "text": ": ",
               "kind": "punctuation"
             },
@@ -448,7 +452,7 @@
             {
               "name": "callback",
               "type": "(value: number) => void",
-              "optional": false
+              "optional": true
             },
             {
               "name": "options",
@@ -457,11 +461,11 @@
             }
           ],
           "returnType": "InputBinding",
-          "description": "Register a callback fired every frame while any of channels is active."
+          "description": "Register a callback fired every frame while any of channels is active. The callback is optional: with none, this just creates a binding, which is the idiomatic way to poll an input per frame — read InputBinding.active / InputBinding.value in your own update() instead of tracking held-state in a callback."
         },
         {
           "name": "onStart",
-          "signature": "onStart(channel: InputChannel | readonly InputChannel[], callback: (value: number) => void, options?: InputBindingOptions): InputBinding",
+          "signature": "onStart(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: InputBindingOptions): InputBinding",
           "signatureTokens": [
             {
               "text": "onStart",
@@ -512,6 +516,10 @@
               "kind": "param"
             },
             {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
               "text": ": ",
               "kind": "punctuation"
             },
@@ -581,7 +589,7 @@
             {
               "name": "callback",
               "type": "(value: number) => void",
-              "optional": false
+              "optional": true
             },
             {
               "name": "options",
@@ -594,7 +602,7 @@
         },
         {
           "name": "onStop",
-          "signature": "onStop(channel: InputChannel | readonly InputChannel[], callback: (value: number) => void, options?: InputBindingOptions): InputBinding",
+          "signature": "onStop(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: InputBindingOptions): InputBinding",
           "signatureTokens": [
             {
               "text": "onStop",
@@ -645,6 +653,10 @@
               "kind": "param"
             },
             {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
               "text": ": ",
               "kind": "punctuation"
             },
@@ -714,7 +726,7 @@
             {
               "name": "callback",
               "type": "(value: number) => void",
-              "optional": false
+              "optional": true
             },
             {
               "name": "options",
@@ -727,7 +739,7 @@
         },
         {
           "name": "onTrigger",
-          "signature": "onTrigger(channel: InputChannel | readonly InputChannel[], callback: (value: number) => void, options?: InputBindingOptions): InputBinding",
+          "signature": "onTrigger(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: InputBindingOptions): InputBinding",
           "signatureTokens": [
             {
               "text": "onTrigger",
@@ -778,6 +790,10 @@
               "kind": "param"
             },
             {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
               "text": ": ",
               "kind": "punctuation"
             },
@@ -847,7 +863,7 @@
             {
               "name": "callback",
               "type": "(value: number) => void",
-              "optional": false
+              "optional": true
             },
             {
               "name": "options",

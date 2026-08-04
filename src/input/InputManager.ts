@@ -505,34 +505,72 @@ export class InputManager {
   /**
    * Register a callback fired once when any of `channels` becomes active.
    * Manual lifecycle — call `.unbind()` on the returned binding to detach.
+   *
+   * @param channel - Channel, or channels, to watch.
+   * @param callback - Receives the channel value. Omit to only create the
+   *   binding and poll {@link InputBinding.active} / {@link InputBinding.value}
+   *   yourself — see {@link onActive}.
+   * @param options - Binding options.
+   * @returns The binding, so it can be polled or unbound.
    */
-  public onStart(channel: InputChannel | readonly InputChannel[], callback: (value: number) => void, options?: InputBindingOptions): InputBinding {
+  public onStart(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: InputBindingOptions): InputBinding {
     const binding = this.createBinding(channel, options);
-    binding.onStart.add(callback);
+    if (callback) binding.onStart.add(callback);
     return binding;
   }
 
-  /** Register a callback fired every frame while any of `channels` is active. */
-  public onActive(channel: InputChannel | readonly InputChannel[], callback: (value: number) => void, options?: InputBindingOptions): InputBinding {
+  /**
+   * Register a callback fired every frame while any of `channels` is active.
+   *
+   * The callback is optional: with none, this just creates a binding, which is
+   * the idiomatic way to poll an input per frame — read
+   * {@link InputBinding.active} / {@link InputBinding.value} in your own
+   * `update()` instead of tracking held-state in a callback.
+   *
+   * @param channel - Channel, or channels, to watch.
+   * @param callback - Receives the channel value, once per frame while active.
+   * @param options - Binding options.
+   * @returns The binding, so it can be polled or unbound.
+   *
+   * @example
+   * ```ts
+   * const right = this.inputs.onActive([Keyboard.D, Keyboard.Right]);
+   * // later, in update():
+   * if (right.active) this.x += speed * delta;
+   * ```
+   */
+  public onActive(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: InputBindingOptions): InputBinding {
     const binding = this.createBinding(channel, options);
-    binding.onActive.add(callback);
+    if (callback) binding.onActive.add(callback);
     return binding;
   }
 
-  /** Register a callback fired once when all of `channels` become inactive. */
-  public onStop(channel: InputChannel | readonly InputChannel[], callback: (value: number) => void, options?: InputBindingOptions): InputBinding {
+  /**
+   * Register a callback fired once when all of `channels` become inactive.
+   *
+   * @param channel - Channel, or channels, to watch.
+   * @param callback - Receives the channel value. Optional, as in {@link onActive}.
+   * @param options - Binding options.
+   * @returns The binding, so it can be polled or unbound.
+   */
+  public onStop(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: InputBindingOptions): InputBinding {
     const binding = this.createBinding(channel, options);
-    binding.onStop.add(callback);
+    if (callback) binding.onStop.add(callback);
     return binding;
   }
 
   /**
    * Register a callback fired when the input is released within
    * {@link InputBindingOptions.threshold} ms of activation (a "tap").
+   *
+   * @param channel - Channel, or channels, to watch.
+   * @param callback - Receives the channel value. Optional, as in {@link onActive}.
+   * @param options - Binding options.
+   * @returns The binding, so it can be polled or unbound.
    */
-  public onTrigger(channel: InputChannel | readonly InputChannel[], callback: (value: number) => void, options?: InputBindingOptions): InputBinding {
+  public onTrigger(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: InputBindingOptions): InputBinding {
     const binding = this.createBinding(channel, options);
-    binding.onTrigger.add(callback);
+    if (callback) binding.onTrigger.add(callback);
     return binding;
   }
 
