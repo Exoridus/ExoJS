@@ -35,7 +35,6 @@ const loadOnFrameHarness = async (): Promise<OnFrameTestHarness> => {
     onRenderError: { add: vi.fn(), destroy: vi.fn() },
     onDeviceLost: { add: vi.fn(), destroy: vi.fn() },
     onDeviceRestored: { add: vi.fn(), destroy: vi.fn() },
-    onRenderError: { add: vi.fn(), destroy: vi.fn() },
   };
   const sceneDirector = {
     update: vi.fn(),

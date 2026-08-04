@@ -68,7 +68,7 @@ pnpm build && pnpm test && pnpm pack
 Root scripts orchestrate the repository:
 
 ```bash
-pnpm typecheck    pnpm lint:strict   pnpm test        pnpm build
+pnpm typecheck    pnpm lint:all      pnpm test        pnpm build
 pnpm format:check pnpm verify:exports pnpm verify:package-policy
 pnpm verify:lockstep  pnpm typecheck:examples  pnpm typecheck:guides
 pnpm site:build   pnpm test:examples:smoke

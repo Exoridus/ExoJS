@@ -24,6 +24,18 @@ export default defineConfig([
   ...tseslint.configs.recommendedTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,
 
+  // Correctness rules typescript-eslint switches off because "the compiler
+  // already reports them". That reasoning only holds where a tsconfig actually
+  // covers the file: `tsconfig.json` is `src/**` only, and `test/**`,
+  // `scripts/**` and `*.config.ts` are in no typecheck project at all — so a
+  // duplicate object key there is reported by nobody. Re-enabled repo-wide;
+  // over `src/**` it is merely redundant with TS1117.
+  {
+    rules: {
+      'no-dupe-keys': 'error',
+    },
+  },
+
   // Engine source
   {
     files: ['src/**/*.ts'],
