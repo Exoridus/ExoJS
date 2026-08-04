@@ -68,17 +68,43 @@ function expandFrameIndices(tag: AsepriteFrameTag): number[] {
  * ping-pong sequences that means repeated (bounced) frames are weighted twice.
  * Falls back to `12` fps when all durations are zero or the sequence is empty.
  */
-function avgFps(frameArray: AsepriteFrameData[], indices: number[]): number {
-  const durations = indices.filter(i => i >= 0 && i < frameArray.length).map(i => frameArray[i]!.duration);
-
-  if (durations.length === 0) {
+function avgFps(frames: TaggedFrame[]): number {
+  if (frames.length === 0) {
     return 12;
   }
 
-  const totalMs = durations.reduce((sum, d) => sum + d, 0);
-  const avgMs = totalMs / durations.length;
+  const totalMs = frames.reduce((sum, { frameData }) => sum + frameData.duration, 0);
+  const avgMs = totalMs / frames.length;
 
   return avgMs > 0 ? 1000 / avgMs : 12;
+}
+
+/**
+ * A frame a tag actually resolved to, paired with the index it came from.
+ * Resolving index and data together is what keeps every per-frame array below
+ * (durations, offsets, spritesheet lookups) aligned without re-indexing.
+ */
+interface TaggedFrame {
+  index: number;
+  frameData: AsepriteFrameData;
+}
+
+/**
+ * Resolves a tag's frame indices against the frame array, dropping any that
+ * fall outside it — Aseprite exports can reference frames a later edit removed.
+ */
+function resolveTaggedFrames(frameArray: AsepriteFrameData[], indices: number[]): TaggedFrame[] {
+  const resolved: TaggedFrame[] = [];
+
+  for (const index of indices) {
+    const frameData = frameArray[index];
+
+    if (frameData !== undefined) {
+      resolved.push({ index, frameData });
+    }
+  }
+
+  return resolved;
 }
 
 /**
@@ -167,8 +193,7 @@ export class AsepriteSheet {
     // Build SpritesheetData: frame names are zero-based index strings.
     const spritesheetFrames: Record<string, { frame: { x: number; y: number; w: number; h: number } }> = {};
 
-    for (let i = 0; i < frameArray.length; i++) {
-      const frameData = frameArray[i]!;
+    for (const [i, frameData] of frameArray.entries()) {
       spritesheetFrames[String(i)] = { frame: frameData.frame };
     }
 
@@ -179,11 +204,11 @@ export class AsepriteSheet {
     const frameTags = data.meta.frameTags ?? [];
 
     for (const tag of frameTags) {
-      // Out-of-range indices are silently skipped; `validIndices` parallels
+      // Out-of-range indices are silently skipped; `taggedFrames` parallels
       // `frames` exactly, so it's the basis for every other per-frame array
       // (durations, offsets) built below.
-      const validIndices = expandFrameIndices(tag).filter(i => i >= 0 && i < frameArray.length);
-      const frames = validIndices.map(i => spritesheet.getFrame(String(i)));
+      const taggedFrames = resolveTaggedFrames(frameArray, expandFrameIndices(tag));
+      const frames = taggedFrames.map(({ index }) => spritesheet.getFrame(String(index)));
 
       if (frames.length === 0) {
         continue;
@@ -193,27 +218,23 @@ export class AsepriteSheet {
       // directly onto the engine's `repeat` count. Absent means the tag
       // loops indefinitely, the engine's `-1` sentinel.
       const repeat = tag.repeat !== undefined ? Number(tag.repeat) : -1;
-      const fps = avgFps(frameArray, validIndices);
+      const fps = avgFps(taggedFrames);
 
       // Per-frame hold duration (Aseprite "duration"), so uneven hold-frames
       // (e.g. a lingering idle frame) survive into playback instead of being
       // flattened to the tag's average fps. A non-positive duration (same
       // degenerate case `avgFps` guards against) falls back to the average.
       const avgDurationFallback = 1000 / fps;
-      const frameDurations = validIndices.map(i => {
-        const duration = frameArray[i]!.duration;
-
-        return duration > 0 ? duration : avgDurationFallback;
-      });
+      const frameDurations = taggedFrames.map(({ frameData }) => (frameData.duration > 0 ? frameData.duration : avgDurationFallback));
 
       // Per-frame trim offset (Aseprite "spriteSourceSize"), so frames trimmed
       // by different amounts stay anchored to the same point in the untrimmed
       // canvas instead of jittering frame to frame. Omitted entirely when no
       // frame in the tag is trimmed, to avoid noise on untrimmed sheets.
-      const anyTrimmed = validIndices.some(i => frameArray[i]!.trimmed);
+      const anyTrimmed = taggedFrames.some(({ frameData }) => frameData.trimmed);
       const frameOffsets = anyTrimmed
-        ? validIndices.map(i => {
-            const { x, y } = frameArray[i]!.spriteSourceSize;
+        ? taggedFrames.map(({ frameData }) => {
+            const { x, y } = frameData.spriteSourceSize;
 
             return { x, y };
           })

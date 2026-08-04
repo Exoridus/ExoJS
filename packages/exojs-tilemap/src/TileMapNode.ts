@@ -135,8 +135,12 @@ export class TileMapNode extends Container {
   public override getLocalBounds(): Rectangle {
     const bounds = super.getLocalBounds();
 
-    if (this._map.bounded) {
-      bounds.set(0, 0, this._map.pixelWidth!, this._map.pixelHeight!);
+    // Reading the pixel extents directly (rather than gating on `bounded`)
+    // is what narrows them to numbers — `bounded` is a plain boolean getter.
+    const { pixelHeight, pixelWidth } = this._map;
+
+    if (pixelWidth !== undefined && pixelHeight !== undefined) {
+      bounds.set(0, 0, pixelWidth, pixelHeight);
     } else if (this._layerNodes.length > 0) {
       aggregateChildLocalBounds(this._layerNodes, bounds);
     }

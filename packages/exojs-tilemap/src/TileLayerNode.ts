@@ -73,10 +73,12 @@ export class TileLayerNode extends Container {
   private readonly _onStructuralChange = (event: ChunkStructuralEvent): void => {
     const existingIndex = this._chunkNodes.findIndex(n => n.chunkX === event.cx && n.chunkY === event.cy);
 
-    if (existingIndex !== -1) {
-      const [existing] = this._chunkNodes.splice(existingIndex, 1);
-      this.removeChild(existing!);
-      existing!.destroy();
+    const existing = this._chunkNodes[existingIndex];
+
+    if (existing) {
+      this._chunkNodes.splice(existingIndex, 1);
+      this.removeChild(existing);
+      existing.destroy();
     }
 
     if (event.chunk === null || event.chunk.empty) {
@@ -176,8 +178,12 @@ export class TileLayerNode extends Container {
   public override getLocalBounds(): Rectangle {
     const bounds = super.getLocalBounds();
 
-    if (this._layer.bounded) {
-      bounds.set(0, 0, this._layer.pixelWidth!, this._layer.pixelHeight!);
+    // Reading the pixel extents directly (rather than gating on `bounded`)
+    // is what narrows them to numbers — `bounded` is a plain boolean getter.
+    const { pixelHeight, pixelWidth } = this._layer;
+
+    if (pixelWidth !== undefined && pixelHeight !== undefined) {
+      bounds.set(0, 0, pixelWidth, pixelHeight);
     } else if (this._chunkNodes.length > 0) {
       aggregateChildLocalBounds(this._chunkNodes, bounds);
     }

@@ -257,10 +257,18 @@ export class TileMap {
     }
 
     // Ids are unique across kinds here (the cross-kind check above threw
-    // otherwise), so resolving each id to an instance is unambiguous.
-    return documentOrder.map(id =>
-      this._layerById.get(id) ?? this._imageLayers.find(layer => layer.id === id)!,
-    );
+    // otherwise), so resolving each id to an instance is unambiguous. The
+    // count check above does not guarantee the ids themselves match, so an
+    // unresolvable one is reported rather than left as a hole in the list.
+    return documentOrder.map(id => {
+      const layer = this._layerById.get(id) ?? this._imageLayers.find(imageLayer => imageLayer.id === id);
+
+      if (!layer) {
+        throw new Error(`documentOrder references layer id ${id}, but map "${this.name}" has no tile or image layer with that id.`);
+      }
+
+      return layer;
+    });
   }
 
   // ── Tilesets ──────────────────────────────────────────────────────────

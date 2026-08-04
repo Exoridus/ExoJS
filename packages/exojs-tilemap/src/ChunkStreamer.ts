@@ -148,8 +148,7 @@ export class ChunkStreamer {
     toLoad.sort((a, b) => this._rangeDistance(a.cx, a.cy, core) - this._rangeDistance(b.cx, b.cy, core));
 
     const budget = Math.min(this._maxChunkLoadsPerFrame, toLoad.length);
-    for (let i = 0; i < budget; i++) {
-      const { cx, cy } = toLoad[i]!;
+    for (const { cx, cy } of toLoad.slice(0, budget)) {
       this._request(cx, cy);
     }
   }
