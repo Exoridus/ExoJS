@@ -94,7 +94,7 @@ describe('compound extension matching', () => {
 
     registerExtensionKind('mock.json', 'json'); // compound suffix → the json value kind (bound via coreAssetBindings)
     global.fetch = vi.fn(async (url: string | URL | Request): Promise<Response> => {
-      seen.push(String(url));
+      seen.push(url instanceof Request ? url.url : String(url));
       return {
         ok: true,
         status: 200,

@@ -1403,9 +1403,26 @@ export default defineConfig([
       'simple-import-sort/imports': 'error',
       'simple-import-sort/exports': 'error',
       'unused-imports/no-unused-imports': 'error',
-      // Test files intentionally use jest mocks/spies and dynamic fixtures.
-      // Keep structural linting, but disable noisy type-aware false positives.
-      '@typescript-eslint/no-floating-promises': 'off',
+      // A promise dropped in a test is the failure mode this whole tree exists
+      // to prevent: the assertions after it run before the work does, so the
+      // test passes without proving anything. Measured across `test/**` it
+      // costs exactly one report, so it is on.
+      '@typescript-eslint/no-floating-promises': 'error',
+      // Equally quiet (two reports) and equally load-bearing: a value that
+      // stringifies to `[object Object]` makes the assertion compare noise.
+      '@typescript-eslint/no-base-to-string': 'error',
+      // The rules below stay off, but not for the reason that stood here
+      // before: it cited ts-jest, which this repo has not used since the
+      // Vitest migration. The real reason is the shape of test code and the
+      // measured cost of each rule across `test/**`:
+      //   no-unsafe-call 293, no-unsafe-member-access 279,
+      //   no-unsafe-assignment 241, no-unsafe-argument 89, no-unsafe-return 12
+      //     — the price of shape-only mocks; the type gate (`pnpm
+      //       typecheck:test`) is what actually holds these files honest.
+      //   require-await 395 — an `async` test body with no `await` is normal.
+      //   unbound-method 236 — `expect(obj.method)` reads the method by design.
+      // Revisit any of them by flipping it on and re-measuring, not by
+      // reasoning about it.
       '@typescript-eslint/no-misused-promises': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
@@ -1417,14 +1434,15 @@ export default defineConfig([
       '@typescript-eslint/no-require-imports': 'off',
       '@typescript-eslint/no-unused-vars': 'off',
       '@typescript-eslint/class-literal-property-style': 'off',
-      '@typescript-eslint/no-base-to-string': 'off',
       '@typescript-eslint/no-empty-function': 'off',
       '@typescript-eslint/no-redundant-type-constituents': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/require-await': 'off',
-      // Test mocks intentionally use `as unknown as <RealType>` to satisfy
-      // jest's strict generic signatures with shape-only fakes. Auto-removing
-      // these casts breaks ts-jest type compilation.
+      // 235 reports, and autofixing them would be actively unsafe: ESLint types
+      // `test/**` through tsconfig.eslint.json while the gate gates it through
+      // tsconfig.test.json, and the two enable different options. A cast this
+      // rule calls unnecessary under one program can be load-bearing under the
+      // other, so `--fix` here can turn `pnpm typecheck:test` red.
       '@typescript-eslint/no-unnecessary-type-assertion': 'off',
       // Tests deliberately use bracket notation (`obj['_member']`) as a
       // project-wide friend-class convention to spy on protected/private
