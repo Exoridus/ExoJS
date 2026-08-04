@@ -1,4 +1,4 @@
-import { forwardRef, lazy, type Ref, Suspense, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { type FunctionComponent, lazy, type Ref, Suspense, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 
 import { loadExampleSource } from '../lib/example-store';
 import { getExampleAvailability } from '../lib/runtime-support';
@@ -12,11 +12,9 @@ import { LoadingSpinner } from './LoadingSpinner';
 import { PreviewToolbar } from './PreviewToolbar';
 import { css, cx } from './react-utils';
 
-const ServerEditorCodeFallback = forwardRef<EditorCodeHandle, EditorCodeProps>(function ServerEditorCodeFallback() {
-    return null;
-});
+const ServerEditorCodeFallback: FunctionComponent<EditorCodeProps> = () => null;
 
-const EditorCode = lazy(async () => {
+const EditorCode = lazy<FunctionComponent<EditorCodeProps>>(async () => {
     if (typeof window === 'undefined') return { default: ServerEditorCodeFallback };
     const mod = await import('./EditorCode');
     return { default: mod.EditorCode };
@@ -34,6 +32,7 @@ const LAYOUT_STORAGE_KEY = 'exo-playground-layout';
 export interface EditorProps {
     activeExample: Example | null;
     catalogLoadError: string | null;
+    ref?: Ref<EditorHandle>;
     selectedVersionId: string;
     showSidebarToggle: boolean;
     sidebarOpen: boolean;
@@ -41,10 +40,16 @@ export interface EditorProps {
     onToggleSidebar(): void;
 }
 
-export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
-    { activeExample, catalogLoadError, selectedVersionId, showSidebarToggle, sidebarOpen, sidebarToggleRef, onToggleSidebar },
+export function Editor({
+    activeExample,
+    catalogLoadError,
     ref,
-) {
+    selectedVersionId,
+    showSidebarToggle,
+    sidebarOpen,
+    sidebarToggleRef,
+    onToggleSidebar,
+}: EditorProps): JSX.Element {
     const [sourceCode, setSourceCode] = useState<string | null>(null);
     const [originalSourceCode, setOriginalSourceCode] = useState<string | null>(null);
     const [executionCode, setExecutionCode] = useState<string | null>(null);
@@ -148,7 +153,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         const stored = window.localStorage.getItem(LAYOUT_STORAGE_KEY);
         // Applying a stored preference is the canonical "sync with external
         // store on mount" effect.
-        // eslint-disable-next-line @eslint-react/set-state-in-effect
+        // eslint-disable-next-line @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect
         if (stored === 'split' || stored === 'stacked') setLayout(stored);
     }, []);
 
@@ -326,7 +331,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
             </section>
         </section>
     );
-});
+}
 
 function getDisplayPath(example: Example | null): string | null {
     if (!example) return null;
