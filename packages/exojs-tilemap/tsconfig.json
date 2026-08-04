@@ -6,7 +6,11 @@
       "@codexo/exojs": ["../../src/index.ts"],
       "@codexo/exojs/extensions": ["../../src/extensions/index.ts"],
       "@codexo/exojs/renderer-sdk": ["../../src/renderer-sdk.ts"],
-      "@codexo/exojs/debug": ["../../src/debug/index.ts"]
+      "@codexo/exojs/debug": ["../../src/debug/index.ts"],
+      // The type-contract tests import this package through its PUBLIC
+      // specifier, so the contracts cover what consumers see. Without this
+      // mapping that resolves to `dist/`, which only exists after a build.
+      "@codexo/exojs-tilemap": ["./src/index.ts"]
     }
   },
   "include": ["src/**/*", "src/typings.d.ts", "../../src/typings.d.ts"],
