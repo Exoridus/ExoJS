@@ -45,7 +45,6 @@ function toStoreList(cache: CacheStore | readonly CacheStore[]): readonly CacheS
  * Any abstract or concrete constructor that can be used as an asset type token
  * with {@link Loader.load} and related methods.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Loadable = abstract new (...args: any[]) => unknown;
 
 /**

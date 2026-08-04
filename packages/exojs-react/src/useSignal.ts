@@ -32,8 +32,9 @@ export function useSignal<Args extends unknown[], T>(signal: Signal<Args> | null
     (onStoreChange: () => void): (() => void) => {
       if (!signal) {
         // No signal to subscribe to (e.g. before an Application exists) — nothing to unsubscribe either.
-        // eslint-disable-next-line @typescript-eslint/no-empty-function -- intentional no-op unsubscribe
-        return () => {};
+        return () => {
+          // Nothing was subscribed, so there is nothing to unsubscribe.
+        };
       }
 
       signal.add(onStoreChange);

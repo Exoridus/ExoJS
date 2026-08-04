@@ -6,7 +6,6 @@ import type { AssetFactory } from './AssetFactory';
  * Any abstract or concrete constructor whose instances are the asset type
  * produced by a factory (e.g. `typeof Texture`, `typeof Sound`).
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AssetConstructor<T = unknown> = abstract new (...args: any[]) => T;
 
 /** Climbs one step up the prototype chain, returning the parent constructor. */

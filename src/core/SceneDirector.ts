@@ -145,7 +145,6 @@ class DirectorTransitionEnvironment implements SceneTransitionEnvironment {
  * and {@link SceneDirector._renderTransition}, composited above or below the
  * app draw systems depending on the session's `placement`.
  */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- empty registry is a valid default
 export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   private readonly _app: Application;
   private readonly _registry: SceneRegistryIndex;

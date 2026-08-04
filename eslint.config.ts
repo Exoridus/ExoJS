@@ -206,6 +206,18 @@ export default defineConfig([
           allow: ['private-constructors', 'protected-constructors', 'decoratedFunctions', 'overrideMethods'],
         },
       ],
+      // Two deliberate uses of `{}` run through the engine: an empty interface
+      // as the declaration-merging point consumers augment (FontRegistry,
+      // SceneRegistry), and `= {}` as the empty-registry default of a generic
+      // that is already fenced in by its `extends` constraint. Both were
+      // carrying inline disables saying so.
+      '@typescript-eslint/no-empty-object-type': ['error', { allowInterfaces: 'always', allowObjectTypes: 'always' }],
+      // `abstract new (...args: any[]) => T` is the only way to write "any
+      // constructor producing T": with `unknown[]`, parameter contravariance
+      // makes the type reject every constructor that declares real parameters,
+      // so `typeof Texture` would no longer match. Four type aliases carried an
+      // inline disable for exactly this; the rule ships an option for it.
+      '@typescript-eslint/no-explicit-any': ['error', { ignoreRestArgs: true }],
       '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/no-meaningless-void-operator': 'error',
       '@typescript-eslint/no-misused-promises': [
@@ -286,6 +298,49 @@ export default defineConfig([
         {
           selector: 'typeLike',
           format: ['StrictPascalCase'],
+          leadingUnderscore: 'forbid',
+          trailingUnderscore: 'forbid',
+        },
+        // Acronyms are the one place the Strict* formats get in the way: they
+        // reject consecutive capitals, so `UIRoot`, `HTMLText` and `_peekUI`
+        // each carried an inline disable repeating the same sentence. These
+        // two entries carry a `filter`, which outranks the generic selectors
+        // above, and relax only the capitalisation — a name without one of
+        // these acronyms stays strict.
+        {
+          selector: 'typeLike',
+          filter: { regex: '(HTML|UI|JSON)', match: true },
+          format: ['PascalCase'],
+          leadingUnderscore: 'forbid',
+          trailingUnderscore: 'forbid',
+        },
+        {
+          selector: ['variableLike', 'memberLike'],
+          filter: { regex: '(HTML|UI|JSON|DPad)', match: true },
+          format: ['camelCase', 'PascalCase'],
+          leadingUnderscore: 'allow',
+          trailingUnderscore: 'forbid',
+        },
+        // Same acronym exception, repeated for the `variable` + `const`
+        // selector above: that one is more specific than the grouped
+        // `variableLike` entry, so it would otherwise win and reject
+        // `GamepadButton.DPadUp`.
+        {
+          selector: 'variable',
+          modifiers: ['const'],
+          filter: { regex: '(HTML|UI|JSON|DPad)', match: true },
+          format: ['camelCase', 'PascalCase', 'UPPER_CASE'],
+          leadingUnderscore: 'allow',
+          trailingUnderscore: 'forbid',
+        },
+        // A type property spelled in SCREAMING_CASE is a verbatim mirror of a
+        // constant some external API hands us under that exact name (WebGL
+        // extension constants, for one). Renaming it would break the lookup,
+        // so the shape declaration has to keep the foreign spelling.
+        {
+          selector: 'typeProperty',
+          filter: { regex: '^[A-Z][A-Z0-9_]*$', match: true },
+          format: ['UPPER_CASE'],
           leadingUnderscore: 'forbid',
           trailingUnderscore: 'forbid',
         },
@@ -449,6 +504,18 @@ export default defineConfig([
           allow: ['private-constructors', 'protected-constructors', 'decoratedFunctions', 'overrideMethods'],
         },
       ],
+      // Two deliberate uses of `{}` run through the engine: an empty interface
+      // as the declaration-merging point consumers augment (FontRegistry,
+      // SceneRegistry), and `= {}` as the empty-registry default of a generic
+      // that is already fenced in by its `extends` constraint. Both were
+      // carrying inline disables saying so.
+      '@typescript-eslint/no-empty-object-type': ['error', { allowInterfaces: 'always', allowObjectTypes: 'always' }],
+      // `abstract new (...args: any[]) => T` is the only way to write "any
+      // constructor producing T": with `unknown[]`, parameter contravariance
+      // makes the type reject every constructor that declares real parameters,
+      // so `typeof Texture` would no longer match. Four type aliases carried an
+      // inline disable for exactly this; the rule ships an option for it.
+      '@typescript-eslint/no-explicit-any': ['error', { ignoreRestArgs: true }],
       '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/no-meaningless-void-operator': 'error',
       '@typescript-eslint/no-misused-promises': [
@@ -528,6 +595,49 @@ export default defineConfig([
         {
           selector: 'typeLike',
           format: ['StrictPascalCase'],
+          leadingUnderscore: 'forbid',
+          trailingUnderscore: 'forbid',
+        },
+        // Acronyms are the one place the Strict* formats get in the way: they
+        // reject consecutive capitals, so `UIRoot`, `HTMLText` and `_peekUI`
+        // each carried an inline disable repeating the same sentence. These
+        // two entries carry a `filter`, which outranks the generic selectors
+        // above, and relax only the capitalisation — a name without one of
+        // these acronyms stays strict.
+        {
+          selector: 'typeLike',
+          filter: { regex: '(HTML|UI|JSON)', match: true },
+          format: ['PascalCase'],
+          leadingUnderscore: 'forbid',
+          trailingUnderscore: 'forbid',
+        },
+        {
+          selector: ['variableLike', 'memberLike'],
+          filter: { regex: '(HTML|UI|JSON|DPad)', match: true },
+          format: ['camelCase', 'PascalCase'],
+          leadingUnderscore: 'allow',
+          trailingUnderscore: 'forbid',
+        },
+        // Same acronym exception, repeated for the `variable` + `const`
+        // selector above: that one is more specific than the grouped
+        // `variableLike` entry, so it would otherwise win and reject
+        // `GamepadButton.DPadUp`.
+        {
+          selector: 'variable',
+          modifiers: ['const'],
+          filter: { regex: '(HTML|UI|JSON|DPad)', match: true },
+          format: ['camelCase', 'PascalCase', 'UPPER_CASE'],
+          leadingUnderscore: 'allow',
+          trailingUnderscore: 'forbid',
+        },
+        // A type property spelled in SCREAMING_CASE is a verbatim mirror of a
+        // constant some external API hands us under that exact name (WebGL
+        // extension constants, for one). Renaming it would break the lookup,
+        // so the shape declaration has to keep the foreign spelling.
+        {
+          selector: 'typeProperty',
+          filter: { regex: '^[A-Z][A-Z0-9_]*$', match: true },
+          format: ['UPPER_CASE'],
           leadingUnderscore: 'forbid',
           trailingUnderscore: 'forbid',
         },
@@ -736,6 +846,18 @@ export default defineConfig([
       '@typescript-eslint/array-type': 'off',
       '@typescript-eslint/consistent-indexed-object-style': 'off',
       '@typescript-eslint/consistent-type-definitions': 'off',
+      // Two deliberate uses of `{}` run through the engine: an empty interface
+      // as the declaration-merging point consumers augment (FontRegistry,
+      // SceneRegistry), and `= {}` as the empty-registry default of a generic
+      // that is already fenced in by its `extends` constraint. Both were
+      // carrying inline disables saying so.
+      '@typescript-eslint/no-empty-object-type': ['error', { allowInterfaces: 'always', allowObjectTypes: 'always' }],
+      // `abstract new (...args: any[]) => T` is the only way to write "any
+      // constructor producing T": with `unknown[]`, parameter contravariance
+      // makes the type reject every constructor that declares real parameters,
+      // so `typeof Texture` would no longer match. Four type aliases carried an
+      // inline disable for exactly this; the rule ships an option for it.
+      '@typescript-eslint/no-explicit-any': ['error', { ignoreRestArgs: true }],
       '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/no-misused-promises': [
         'error',
@@ -1177,6 +1299,82 @@ export default defineConfig([
     files: ['packages/exojs-physics/src/**/*.ts'],
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
+    },
+  },
+
+  // `Map.forEach` is the allocation-free way to walk a Map: `for…of` builds a
+  // fresh iterator on every step, which these two per-frame paths cannot
+  // afford. Deleting the current entry mid-`forEach` is well-defined and both
+  // files rely on it. Scoped to the two files that actually run per frame
+  // rather than the whole package, so the rule keeps working everywhere else.
+  {
+    files: ['packages/exojs-physics/src/ContactGraph.ts', 'packages/exojs-physics/src/broadphase/AabbTreeBroadPhase.ts'],
+    rules: {
+      'unicorn/no-array-for-each': 'off',
+    },
+  },
+
+  // An AudioWorklet processor ships to the audio thread as one template
+  // literal, so its body cannot be split across imports the way `max-lines`
+  // assumes. The limit measures something these files cannot act on.
+  {
+    files: ['packages/exojs-audio-fx/src/worklets/*.worklet.ts'],
+    rules: {
+      'max-lines': 'off',
+    },
+  },
+
+  // LDtk marks its runtime-computed fields with a `__` prefix (`__identifier`,
+  // `__type`, …). These types mirror an external file format verbatim, so the
+  // prefix is data, not a naming choice we get to make.
+  {
+    files: ['packages/exojs-ldtk/src/**/*.ts'],
+    rules: {
+      '@typescript-eslint/naming-convention': [
+        'error',
+        {
+          selector: ['typeProperty', 'objectLiteralProperty'],
+          format: null,
+          leadingUnderscore: 'allowDouble',
+        },
+      ],
+    },
+  },
+
+  // React passes component and class references as PascalCase parameters
+  // (`SceneClass`), which is the ecosystem's spelling for "this argument is a
+  // constructor", not a naming slip.
+  {
+    files: ['packages/exojs-react/src/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/naming-convention': [
+        'error',
+        {
+          selector: 'parameter',
+          format: ['strictCamelCase', 'StrictPascalCase'],
+          leadingUnderscore: 'allow',
+        },
+      ],
+    },
+  },
+
+  // The input channel constants (`Pointer.X`, `GamepadButton.South`, …) are
+  // exposed as namespaces on purpose: it is the public spelling of the whole
+  // input API, and these three files are the only namespaces in the engine.
+  {
+    files: ['src/input/Pointer.ts', 'src/input/GamepadAxis.ts', 'src/input/GamepadButton.ts'],
+    rules: {
+      '@typescript-eslint/no-namespace': 'off',
+    },
+  },
+
+  // The one sanctioned console sink. Every routed DEV log and the one-time
+  // startup banner leave the engine through this file, so `no-console` is the
+  // wrong rule here rather than a violation to silence line by line.
+  {
+    files: ['src/core/logging.ts'],
+    rules: {
+      'no-console': 'off',
     },
   },
 

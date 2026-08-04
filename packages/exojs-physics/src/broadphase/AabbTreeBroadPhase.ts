@@ -96,12 +96,10 @@ export class AabbTreeBroadPhase implements BroadPhase, SpatialIndex {
   public computePairs(colliders: readonly Collider[], out: CandidatePair[]): CandidatePair[] {
     this.sync(colliders);
 
-    // eslint-disable-next-line unicorn/no-array-for-each -- allocation-free forEach over the Map (see ContactGraph's resetSeen/_removeIfUnseen for the same idiom); deleting the current entry during forEach is safe.
     this._pairs.forEach(this._dropIfStale);
 
     out.length = 0;
     this._collectTarget = out;
-    // eslint-disable-next-line unicorn/no-array-for-each -- allocation-free forEach over the Map, same idiom as above.
     this._pairs.forEach(this._collectPair);
     sortInPlace(out, byPairId);
 

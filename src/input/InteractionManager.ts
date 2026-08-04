@@ -607,7 +607,6 @@ export class InteractionManager implements InteractionHooks {
    * call its trap would only engage on the next unrelated focus change.
    * @internal
    */
-  // eslint-disable-next-line @typescript-eslint/naming-convention -- UI is an acronym (cf. HTMLText)
   public attachUIRoot(root: Container): void {
     root._setStage(this._uiStage);
     this._focus._enforceActiveScopeTrap();
@@ -620,7 +619,6 @@ export class InteractionManager implements InteractionHooks {
    * here — UI nodes were never registered through that path.
    * @internal
    */
-  // eslint-disable-next-line @typescript-eslint/naming-convention -- UI is an acronym (cf. HTMLText)
   public detachUIRoot(root: Container): void {
     this._removeScopesInSubtree(root);
     this._focus._notifyNodeRemoved(root);
@@ -1449,7 +1447,6 @@ export class InteractionManager implements InteractionHooks {
   }
 
   /** Whether `node` lives inside the active scene's UI layer. */
-  // eslint-disable-next-line @typescript-eslint/naming-convention -- UI is an acronym (cf. HTMLText)
   private _isUINode(node: RenderNode): boolean {
     const uiRoot = this._app.scenes.currentScene?._peekUI() ?? null;
 

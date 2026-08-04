@@ -121,7 +121,6 @@ export function createConsoleSink(): LogSink {
     if (entry.severity >= LogSeverity.Error) method = 'error';
     else if (entry.severity >= LogSeverity.Warning) method = 'warn';
 
-    /* eslint-disable no-console -- the single sanctioned console sink that default DEV logging routes through. */
     if (entry.error) {
       console[method](prefix, consolePrefixStyle, entry.message, entry.error);
     } else if (entry.data) {
@@ -129,7 +128,6 @@ export function createConsoleSink(): LogSink {
     } else {
       console[method](prefix, consolePrefixStyle, entry.message);
     }
-    /* eslint-enable no-console */
   };
 }
 
@@ -155,7 +153,6 @@ export function hello(info?: { backend?: string }): void {
 
   const suffix = info?.backend !== undefined ? ` (${info.backend})` : '';
 
-  /* eslint-disable-next-line no-console -- one-time DEV startup banner, not a routed log entry. */
   console.log(`%cExoJS v${__VERSION__}${suffix}`, consolePrefixStyle);
 }
 

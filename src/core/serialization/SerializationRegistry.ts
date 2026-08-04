@@ -7,7 +7,6 @@ import type { NodeSerializer } from './NodeSerializer';
  * Any abstract or concrete {@link SceneNode} constructor usable as a
  * serialization key.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type SceneNodeConstructor<T extends SceneNode = SceneNode> = abstract new (...args: any[]) => T;
 
 /**

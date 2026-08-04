@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */ // worklet body is a single template-literal string that cannot be import-split
 export const beatDetectorWorkletSource = `
 // ---- Hann window + FFT (radix-2 Cooley-Tukey) ----
 function applyHannWindow(real, imag) {

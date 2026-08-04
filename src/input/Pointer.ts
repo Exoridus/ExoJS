@@ -584,7 +584,6 @@ export class Pointer {
  * pointer). For multi-touch access use `Pointer.Slot{N}Active /
  * Slot{N}X / Slot{N}Y`.
  */
-// eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace Pointer {
   // --- Primary-pointer convenience aliases (slot 0) ---
   export const Active = pointerCh(0);

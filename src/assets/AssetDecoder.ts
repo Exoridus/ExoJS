@@ -115,8 +115,9 @@ export class AssetDecoder {
       storageName,
       process,
       create: data => Promise.resolve(data as T),
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
-      destroy() {},
+      destroy() {
+        // Nothing to release: this strategy hands back the decoded value as-is.
+      },
     };
     return this._cacheStrategy.resolve(
       { storageName, key: source, url, requestOptions: this._fetchOptions, factory, options: undefined },

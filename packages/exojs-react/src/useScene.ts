@@ -36,7 +36,6 @@ import { useExoApp } from './useExoApp';
  * }
  * ```
  */
-// eslint-disable-next-line @typescript-eslint/naming-convention
 export function useScene<T extends Scene>(SceneClass: new () => T, deps: DependencyList = []): T | null {
   const app = useExoApp();
   const [scene, setScene] = useState<T | null>(null);

@@ -16,7 +16,6 @@ import type { RenderingContext } from '#rendering/RenderingContext';
  * Add widgets with `scene.ui.addChild(...)`. The {@link UIRoot.onResize} signal
  * fires whenever the screen size changes, so anchored widgets can re-layout.
  */
-// eslint-disable-next-line @typescript-eslint/naming-convention -- UI is an acronym (cf. HTMLText)
 export class UIRoot extends Container {
   /** Fires with `(width, height)` whenever the screen size changes. */
   public readonly onResize = new Signal<[width: number, height: number]>();

@@ -67,7 +67,6 @@ export class ContactGraph {
     this.sensorExit.length = 0;
     this.solidContacts.length = 0;
 
-    // eslint-disable-next-line unicorn/no-array-for-each -- forEach is the allocation-free path; for…of over a Map allocates an iterator every step.
     this._records.forEach(resetSeen);
 
     for (const pair of pairs) {
@@ -113,7 +112,7 @@ export class ContactGraph {
     // + thisArg is the allocation-free iteration (for…of allocates an entry tuple
     // per record each step); the thisArg binds `this`, so unbound-method is a
     // false positive here.
-    // eslint-disable-next-line unicorn/no-array-for-each, @typescript-eslint/unbound-method
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- the thisArg above binds it
     this._records.forEach(this._removeIfUnseen, this);
 
     sortInPlace(this.collisionStart, byColliderPair);
