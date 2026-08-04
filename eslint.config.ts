@@ -24,15 +24,54 @@ export default defineConfig([
   ...tseslint.configs.recommendedTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,
 
-  // Correctness rules typescript-eslint switches off because "the compiler
-  // already reports them". That reasoning only holds where a tsconfig actually
-  // covers the file: `tsconfig.json` is `src/**` only, and `test/**`,
-  // `scripts/**` and `*.config.ts` are in no typecheck project at all — so a
-  // duplicate object key there is reported by nobody. Re-enabled repo-wide;
-  // over `src/**` it is merely redundant with TS1117.
+  // typescript-eslint's `eslint-recommended` turns off ~20 core correctness
+  // rules on the grounds that the compiler already reports them. That holds
+  // only where a tsconfig actually covers the file, and most of this repo is
+  // not covered: `tsconfig.json` is `src/**` only, each package tsconfig has
+  // `exclude: ["test"]`, and `test/**`, `scripts/**`, `*.config.ts` and
+  // `site/src/**` are in no typecheck gate at all. A `const` reassignment in
+  // four of those five places passes every check today.
+  //
+  // Re-enabled repo-wide rather than per-directory: the delegation is only
+  // ever safe when it tracks tsconfig coverage exactly, and keeping a second
+  // list in sync with that coverage is what failed in the first place. Over
+  // `src/**` these are simply redundant with the compiler — they are all
+  // syntactic, so the cost is nil.
+  //
+  // Four are deliberately left off — each is blind to the TS type space in a
+  // way that produces false positives on correct code here:
+  //
+  // - `no-undef` misfires on type-only names and ambient globals in TS
+  //   (typescript-eslint recommends against enabling it at all).
+  // - `no-redeclare`, including the TS variant, cannot tell an `interface X` /
+  //   `const X` facade pair from a real redeclaration, and this repo uses that
+  //   pattern deliberately (Asset, Assets, ActionMap).
+  // - `constructor-super` does not recognise `extends (Base as unknown as new
+  //   () => T)` as a constructor, which is how the audio-fx tests build mock
+  //   subclasses.
+  // - `no-new-symbol` is deprecated in favour of `no-new-native-nonconstructor`.
+  //
+  // The compiler reports all four as TS2304/TS2451/TS2377 in the places it
+  // does cover, which is where they would have mattered most.
+  //
+  // `no-dupe-class-members` is taken in its TS variant, which knows overload
+  // signatures are not duplicates.
   {
     rules: {
+      'getter-return': 'error',
+      'no-class-assign': 'error',
+      'no-const-assign': 'error',
+      'no-dupe-args': 'error',
       'no-dupe-keys': 'error',
+      'no-func-assign': 'error',
+      'no-import-assign': 'error',
+      'no-new-native-nonconstructor': 'error',
+      'no-obj-calls': 'error',
+      'no-setter-return': 'error',
+      'no-this-before-super': 'error',
+      'no-unreachable': 'error',
+      'no-unsafe-negation': 'error',
+      '@typescript-eslint/no-dupe-class-members': 'error',
     },
   },
 
