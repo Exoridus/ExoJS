@@ -58,7 +58,7 @@ export class IndexedDbStore implements CacheStore {
     );
   }
 
-  public async load(storageName: string, key: string): Promise<unknown | null> {
+  public async load(storageName: string, key: string): Promise<unknown> {
     return this._db.load(storageName, key);
   }
 

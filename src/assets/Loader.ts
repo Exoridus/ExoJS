@@ -28,6 +28,15 @@ import { LoadingQueue } from './LoadingQueue';
 import type { SeamlessAdapter } from './seamless';
 import { BinaryAsset, CsvAsset, Json, SubtitleAsset, TextAsset, WasmAsset, XmlAsset } from './tokens';
 
+/** Normalize the single-or-many `cache` option into the list the decoder takes. */
+function toStoreList(cache: CacheStore | readonly CacheStore[]): readonly CacheStore[] {
+  // `Array.isArray` widens a `readonly T[]` to `any[]`, so narrow explicitly.
+  if (Array.isArray(cache)) {
+    return cache as readonly CacheStore[];
+  }
+  return [cache as CacheStore];
+}
+
 // ---------------------------------------------------------------------------
 // Public types
 // ---------------------------------------------------------------------------
@@ -257,7 +266,8 @@ export class Loader {
   public readonly onLoadError = new Signal<[key: string, error: Error]>();
 
   public constructor(options: LoaderOptions = {}) {
-    const stores = options.cache ? (Array.isArray(options.cache) ? options.cache : [options.cache]) : [];
+    const cache = options.cache;
+    const stores = cache === undefined ? [] : toStoreList(cache);
     const cacheStrategy = options.cacheStrategy ?? new CacheFirstStrategy();
 
     this._decoder = new AssetDecoder(this, this._typeRegistry, {

@@ -213,7 +213,9 @@ export class Video extends Sprite {
     }
 
     if (this.paused) {
-      this._videoElement.play();
+      // `play()` rejects when an autoplay policy blocks the start; the element
+      // simply stays paused, which callers observe through `paused`.
+      void this._videoElement.play();
       this.onStart.dispatch();
     }
 

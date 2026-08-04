@@ -131,7 +131,7 @@ export class Color implements Cloneable {
    * for the full RGBA32 packed form.
    */
   public toString(prefixed = true): string {
-    return `${prefixed ? '#' : ''}${((1 << 24) | (this._r << 16) | (this._g << 8) | this._b).toString(16).substr(1)}`;
+    return `${prefixed ? '#' : ''}${((1 << 24) | (this._r << 16) | (this._g << 8) | this._b).toString(16).slice(1)}`;
   }
 
   /**

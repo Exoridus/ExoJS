@@ -123,7 +123,7 @@ export default defineConfig([
       complexity: ['error', 20],
       curly: 'error',
       'default-case-last': 'error',
-      eqeqeq: ['error', 'always'],
+      eqeqeq: ['error', 'always', { null: 'ignore' }],
       'guard-for-in': 'error',
       'max-lines': ['warn', { max: 999, skipBlankLines: true, skipComments: true }],
       'no-bitwise': 'off',
@@ -241,7 +241,7 @@ export default defineConfig([
       '@typescript-eslint/prefer-optional-chain': 'warn',
       '@typescript-eslint/prefer-readonly': 'off',
       '@typescript-eslint/prefer-reduce-type-parameter': 'error',
-      '@typescript-eslint/prefer-regexp-exec': 'off',
+      '@typescript-eslint/prefer-regexp-exec': 'error',
       '@typescript-eslint/require-await': 'warn',
       '@typescript-eslint/restrict-template-expressions': [
         'error',
@@ -372,7 +372,7 @@ export default defineConfig([
       complexity: ['error', 20],
       curly: 'error',
       'default-case-last': 'error',
-      eqeqeq: ['error', 'always'],
+      eqeqeq: ['error', 'always', { null: 'ignore' }],
       'guard-for-in': 'error',
       'max-lines': ['warn', { max: 999, skipBlankLines: true, skipComments: true }],
       'no-bitwise': 'off',
@@ -483,7 +483,7 @@ export default defineConfig([
       '@typescript-eslint/prefer-optional-chain': 'warn',
       '@typescript-eslint/prefer-readonly': 'off',
       '@typescript-eslint/prefer-reduce-type-parameter': 'error',
-      '@typescript-eslint/prefer-regexp-exec': 'off',
+      '@typescript-eslint/prefer-regexp-exec': 'error',
       '@typescript-eslint/require-await': 'warn',
       '@typescript-eslint/restrict-template-expressions': [
         'error',
@@ -752,7 +752,7 @@ export default defineConfig([
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unsafe-return': 'off',
       '@typescript-eslint/no-unused-vars': 'off',
-      '@typescript-eslint/prefer-regexp-exec': 'off',
+      '@typescript-eslint/prefer-regexp-exec': 'error',
       '@typescript-eslint/prefer-nullish-coalescing': 'warn',
       '@typescript-eslint/prefer-optional-chain': 'warn',
       '@typescript-eslint/restrict-template-expressions': [
@@ -783,7 +783,7 @@ export default defineConfig([
       'react-hooks/set-state-in-effect': 'warn',
 
       curly: 'error',
-      eqeqeq: ['error', 'always'],
+      eqeqeq: ['error', 'always', { null: 'ignore' }],
       // Allow console.error/console.warn for intentional diagnostics (e.g. the
       // fetch/parse error logging in request-manager.ts); only console.log/debug warn.
       'no-console': ['warn', { allow: ['warn', 'error'] }],
@@ -830,7 +830,7 @@ export default defineConfig([
   // WebGPU renderer lifecycle invariants: these classes rely on explicit init
   // phases; forcing removal of `!` would add significant guard noise.
   {
-    files: ['src/rendering/webgpu/WebGpuMeshRenderer.ts', 'src/rendering/webgpu/WebGpuMaskCompositor.ts', 'src/rendering/webgpu/WebGpuParticleRenderer.ts'],
+    files: ['src/rendering/webgpu/WebGpuMeshRenderer.ts', 'src/rendering/webgpu/WebGpuMaskCompositor.ts'],
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
     },
@@ -853,12 +853,11 @@ export default defineConfig([
     },
   },
 
-  // Audio graph integration frequently passes bound methods and keeps
-  // defensive runtime checks against browser API variance.
+  // Audio graph integration keeps defensive runtime checks against browser
+  // API variance.
   {
     files: ['src/audio/**/*.ts'],
     rules: {
-      '@typescript-eslint/unbound-method': 'off',
       '@typescript-eslint/no-unnecessary-condition': 'off',
       '@typescript-eslint/strict-boolean-expressions': 'off',
       '@typescript-eslint/class-literal-property-style': 'off',
@@ -877,8 +876,6 @@ export default defineConfig([
       '@typescript-eslint/no-unnecessary-condition': 'off',
       '@typescript-eslint/strict-boolean-expressions': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
-      '@typescript-eslint/no-unsafe-member-access': 'off',
-      '@typescript-eslint/no-unsafe-call': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',
     },
   },
@@ -893,8 +890,6 @@ export default defineConfig([
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/prefer-nullish-coalescing': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
-      '@typescript-eslint/no-unsafe-member-access': 'off',
-      '@typescript-eslint/no-unsafe-call': 'off',
       '@typescript-eslint/no-unsafe-enum-comparison': 'off',
       '@typescript-eslint/switch-exhaustiveness-check': 'off',
       complexity: 'off',
@@ -915,19 +910,7 @@ export default defineConfig([
       '@typescript-eslint/class-literal-property-style': 'off',
       '@typescript-eslint/no-empty-function': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',
-      '@typescript-eslint/no-deprecated': 'off',
       '@typescript-eslint/prefer-optional-chain': 'off',
-      eqeqeq: 'off',
-    },
-  },
-
-  {
-    files: ['src/particles/**/*.ts'],
-    rules: {
-      '@typescript-eslint/no-non-null-assertion': 'off',
-      '@typescript-eslint/strict-boolean-expressions': 'off',
-      '@typescript-eslint/no-empty-function': 'off',
-      '@typescript-eslint/unified-signatures': 'off',
     },
   },
 
@@ -937,9 +920,7 @@ export default defineConfig([
   {
     files: ['src/assets/Loader.ts'],
     rules: {
-      'no-nested-ternary': 'off',
       'max-lines': 'off',
-      '@typescript-eslint/unified-signatures': 'off',
       '@typescript-eslint/strict-boolean-expressions': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
       complexity: 'off',
@@ -970,7 +951,6 @@ export default defineConfig([
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
-      '@typescript-eslint/no-redundant-type-constituents': 'off',
       '@typescript-eslint/require-await': 'off',
       '@typescript-eslint/strict-boolean-expressions': 'off',
       complexity: 'off',
@@ -979,7 +959,7 @@ export default defineConfig([
 
   // Intentional runtime plumbing / optional lifecycle guards.
   {
-    files: ['src/core/Scene.ts', 'src/rendering/utils.ts', 'src/assets/AssetManifest.ts'],
+    files: ['src/core/Scene.ts', 'src/rendering/utils.ts'],
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
     },
@@ -988,7 +968,6 @@ export default defineConfig([
   {
     files: ['src/rendering/video/Video.ts', 'src/rendering/filters/WebGpuShaderFilter.ts'],
     rules: {
-      '@typescript-eslint/no-floating-promises': 'off',
       '@typescript-eslint/no-unused-vars': 'off',
       'unused-imports/no-unused-vars': 'off',
     },
@@ -997,7 +976,6 @@ export default defineConfig([
   {
     files: ['src/rendering/webgl2/WebGl2Backend.ts'],
     rules: {
-      '@typescript-eslint/only-throw-error': 'off',
       '@typescript-eslint/require-await': 'off',
       // Cohesive GL backend surface; grew just past the line limit with the
       // instanced-draw support. Splitting would scatter tightly
@@ -1014,13 +992,6 @@ export default defineConfig([
       // Splitting would scatter that state across files for no readability
       // gain. Known deviation, candidate for a later extraction.
       'max-lines': 'off',
-    },
-  },
-
-  {
-    files: ['src/assets/CacheStore.ts'],
-    rules: {
-      '@typescript-eslint/no-redundant-type-constituents': 'off',
     },
   },
 
@@ -1320,11 +1291,11 @@ export default defineConfig([
   // given a real tsconfig program, since these files intentionally sit
   // outside any typed program.
   {
-    files: ['*.config.ts', 'rollup.config.ts', 'jest.config.ts', 'eslint.config.ts', 'scripts/**/*.ts', 'scripts/**/*.mjs'],
+    files: ['*.config.ts', 'rollup.config.ts', 'eslint.config.ts', 'scripts/**/*.ts', 'scripts/**/*.mjs'],
     ...tseslint.configs.disableTypeChecked,
   },
   {
-    files: ['*.config.ts', 'rollup.config.ts', 'jest.config.ts', 'eslint.config.ts', 'scripts/**/*.ts', 'scripts/**/*.mjs'],
+    files: ['*.config.ts', 'rollup.config.ts', 'eslint.config.ts', 'scripts/**/*.ts', 'scripts/**/*.mjs'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
@@ -1440,7 +1411,7 @@ export default defineConfig([
         },
       ],
       curly: 'error',
-      eqeqeq: ['error', 'always'],
+      eqeqeq: ['error', 'always', { null: 'ignore' }],
       'no-console': 'error',
       // The sync-init() rule (see the engine-source block) is deliberately NOT
       // enabled here yet: most of the catalog still uses the pre-v0.17
