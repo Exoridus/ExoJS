@@ -1,3 +1,5 @@
+import type { MockInstance } from 'vitest';
+
 import { Scene } from '#core/Scene';
 
 // SceneDirector is fully mocked in this file's harness (see

@@ -1,9 +1,10 @@
-﻿/**
+﻿import type { MockInstance } from 'vitest';
+
+/**
  * Tests for Application.update() loop timing fixes:
  *   - pauseOnHidden resume delta-spike fix (_frameClock.restart in hidden path)
  *   - internal MAX_DELTA_MS clamp applied to simulation delta
  */
-
 import { Application, ApplicationStatus } from '#core/Application';
 import { Time } from '#core/Time';
 

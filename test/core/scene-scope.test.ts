@@ -1,3 +1,5 @@
+import type { MockInstance } from 'vitest';
+
 import type { Application } from '#core/Application';
 import { Scene } from '#core/Scene';
 import { SceneScope } from '#core/SceneScope';

@@ -1,3 +1,5 @@
+import type { MockInstance } from 'vitest';
+
 /**
  * Application.start() startup-sequencing: _frameLoopActive decouples the
  * per-frame loop's gate from `_status`, so a frame-driven transition session

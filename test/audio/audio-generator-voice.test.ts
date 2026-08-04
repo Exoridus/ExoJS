@@ -1,3 +1,5 @@
+import type { MockInstance } from 'vitest';
+
 import { getAudioContext } from '#audio/audio-context';
 import { AudioGenerator } from '#audio/AudioGenerator';
 import type { AudioGeneratorVoice } from '#audio/AudioGeneratorVoice';

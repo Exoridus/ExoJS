@@ -1,4 +1,6 @@
-﻿import { getAudioContext } from '#audio/audio-context';
+﻿import type { MockInstance } from 'vitest';
+
+import { getAudioContext } from '#audio/audio-context';
 import { AudioListener } from '#audio/AudioListener';
 import { Signal } from '#core/Signal';
 import { Drawable } from '#rendering/Drawable';

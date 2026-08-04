@@ -1,3 +1,5 @@
+import type { MockInstance } from 'vitest';
+
 import { Drawable } from '#rendering/Drawable';
 import { type DrawCommand, type MaterialKey, RenderEntryKind } from '#rendering/plan/RenderCommand';
 import { TRANSFORM_FLOATS_PER_ROW } from '#rendering/TransformBuffer';

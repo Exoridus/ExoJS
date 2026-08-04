@@ -1,4 +1,6 @@
-﻿import type { Application, RenderingApplicationOptions } from '#core/Application';
+﻿import type { MockInstance } from 'vitest';
+
+import type { Application, RenderingApplicationOptions } from '#core/Application';
 import { Color } from '#core/Color';
 import { materializeRendererBindings } from '#extensions/materialize';
 import { Rectangle } from '#math/Rectangle';

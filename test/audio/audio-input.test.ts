@@ -1,3 +1,5 @@
+import type { MockInstance } from 'vitest';
+
 import { getAudioContext } from '#audio/audio-context';
 import { AudioInput } from '#audio/AudioInput';
 import { AudioManager } from '#audio/AudioManager';

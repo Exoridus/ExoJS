@@ -1,9 +1,10 @@
+import type { MockInstance } from 'vitest';
+
 /**
  * Real Application integration tests for the app-system extension bindings.
  * Only the WebGL2 backend is mocked (kept out of jsdom) — input, interaction,
  * focus, audio, tweens, and the app SystemRegistry all run for real.
  */
-
 import { Application } from '#core/Application';
 import type { System } from '#core/System';
 import type { ApplicationSystemBinding, Extension } from '#extensions/Extension';

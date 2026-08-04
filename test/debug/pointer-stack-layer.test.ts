@@ -1,7 +1,8 @@
-﻿/**
+﻿import type { MockInstance } from 'vitest';
+
+/**
  * PointerStackLayer tests (0.7.5).
  */
-
 import { Signal } from '#core/Signal';
 import { PointerStackLayer } from '#debug/PointerStackLayer';
 import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';

@@ -1,3 +1,5 @@
+import type { MockInstance } from 'vitest';
+
 import { TextureFactory } from '#assets/factories/TextureFactory';
 import { Texture } from '#rendering/texture/Texture';
 

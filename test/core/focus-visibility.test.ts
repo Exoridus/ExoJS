@@ -1,3 +1,5 @@
+import type { MockInstance } from 'vitest';
+
 import { Signal } from '#core/Signal';
 
 // ---------------------------------------------------------------------------

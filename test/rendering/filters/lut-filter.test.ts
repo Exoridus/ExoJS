@@ -1,3 +1,5 @@
+import type { MockInstance } from 'vitest';
+
 /**
  * LutFilter unit tests.
  *
@@ -16,7 +18,6 @@
  * a fuller local mock for the duration of the suite and restores the
  * original afterwards.
  */
-
 import { LutFilter } from '#rendering/filters/LutFilter';
 import { WebGl2ShaderFilter } from '#rendering/filters/WebGl2ShaderFilter';
 import { WebGpuShaderFilter } from '#rendering/filters/WebGpuShaderFilter';

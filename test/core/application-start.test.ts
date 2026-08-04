@@ -1,10 +1,11 @@
+import type { MockInstance } from 'vitest';
+
 /**
  * Real Application + real SceneDirector integration tests for the
  * start() overloads (scene-less / constructor-based). Only the
  * WebGL2/WebGPU backends are mocked (kept out of jsdom) — SceneDirector,
  * the scene registry, and scene activation all run for real.
  */
-
 import { Application } from '#core/Application';
 import { Scene } from '#core/Scene';
 

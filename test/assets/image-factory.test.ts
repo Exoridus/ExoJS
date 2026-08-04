@@ -1,3 +1,5 @@
+import type { MockInstance } from 'vitest';
+
 import { ImageFactory } from '#assets/factories/ImageFactory';
 
 // PNG magic bytes — enough for determineMimeType()'s pattern match without a

@@ -1,3 +1,5 @@
+import type { MockInstance } from 'vitest';
+
 /**
  * Render-fail surface (S3 diagnostics, minimal slice) — contracts 3, 4 and 5:
  *
@@ -7,7 +9,6 @@
  *     Stopped, last banner call has fatal: true.
  *  5. A successful frame resets the consecutive counter.
  */
-
 import { Application, ApplicationStatus } from '#core/Application';
 import { logger } from '#core/logging';
 import { Time } from '#core/Time';

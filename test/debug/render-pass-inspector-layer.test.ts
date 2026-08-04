@@ -1,4 +1,6 @@
-﻿import { Signal } from '#core/Signal';
+﻿import type { MockInstance } from 'vitest';
+
+import { Signal } from '#core/Signal';
 import { RenderPassInspectorLayer } from '#debug/RenderPassInspectorLayer';
 import type { RenderingContext } from '#rendering/RenderingContext';
 import { RenderPass } from '#rendering/RenderPass';

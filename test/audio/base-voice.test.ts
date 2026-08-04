@@ -1,3 +1,5 @@
+import type { MockInstance } from 'vitest';
+
 /**
  * Focused unit tests for BaseVoice — the shared control surface (volume,
  * fade, stop, effects chain, bus routing, spatialization) mixed into every

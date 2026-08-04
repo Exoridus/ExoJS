@@ -1,3 +1,4 @@
+import type { NineSliceModes } from '#rendering/sprite/nineSlice';
 import { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 import type { Texture } from '#rendering/texture/Texture';
 import { TextureRegion } from '#rendering/texture/TextureRegion';

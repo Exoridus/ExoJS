@@ -1,3 +1,5 @@
+import type { MockInstance } from 'vitest';
+
 import { SvgFactory } from '#assets/factories/SvgFactory';
 
 // ---------------------------------------------------------------------------

@@ -1,4 +1,6 @@
-﻿import { registerAudioWorkletProcessor } from '#audio/worklet/registerWorklet';
+﻿import type { MockInstance } from 'vitest';
+
+import { registerAudioWorkletProcessor } from '#audio/worklet/registerWorklet';
 
 // ---------------------------------------------------------------------------
 // Helpers

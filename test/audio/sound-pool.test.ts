@@ -1,3 +1,5 @@
+import type { MockInstance } from 'vitest';
+
 /**
  * Tests for Sound pool behaviour:
  *  - Default poolSize = 8, poolStrategy = FirstInFirstOut, priority = 0
@@ -8,7 +10,6 @@
  *  - LowestPriority degenerates to FIFO within a single Sound
  *  - Voices are removed from pool when they end naturally
  */
-
 import { getAudioContext } from '#audio/audio-context';
 import { AudioManager } from '#audio/AudioManager';
 import { Sound, SoundPoolStrategy } from '#audio/Sound';

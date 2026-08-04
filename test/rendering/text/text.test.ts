@@ -1,4 +1,6 @@
-﻿/**
+﻿import type { MockInstance } from 'vitest';
+
+/**
  * Tests for Text.
  *
  * Text uses GlyphAtlasPool internally. A mock pool is injected via
@@ -8,7 +10,6 @@
  * Text now extends Drawable (via AbstractText) rather than Container.
  * It stores geometry internally as TextPageQuads instead of Mesh children.
  */
-
 import { Drawable } from '#rendering/Drawable';
 import type { GlyphAtlas } from '#rendering/text/GlyphAtlas';
 import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';

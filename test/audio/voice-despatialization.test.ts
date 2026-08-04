@@ -1,3 +1,5 @@
+import type { MockInstance } from 'vitest';
+
 /**
  * Regression coverage for real de-spatialization: clearing `position`/
  * `follow` once nothing spatial remains must actually tear down the

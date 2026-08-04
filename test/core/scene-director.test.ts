@@ -1,3 +1,5 @@
+import type { MockInstance } from 'vitest';
+
 import type { Tween } from '#animation/Tween';
 import { TweenManager } from '#animation/TweenManager';
 import { TweenState } from '#animation/types';

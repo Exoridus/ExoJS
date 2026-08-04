@@ -1,10 +1,11 @@
+import type { MockInstance } from 'vitest';
+
 /**
  * Unit tests for the shared spatial position-smoothing layer
  * (`src/audio/spatial-smoothing.ts`) that fixes AU4 zipper noise: epsilon-skip
  * for stationary emitters, teleport-snap on large jumps, and `setTargetAtTime`
  * ramping for ordinary movement.
  */
-
 import {
   createSpatialSmoothingSettings,
   createVelocitySample,

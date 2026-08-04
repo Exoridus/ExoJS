@@ -1,3 +1,5 @@
+import type { MockInstance } from 'vitest';
+
 /**
  * Coverage-focused tests for the parts of Application.ts not exercised by the
  * other test/core/application*.test.ts files: the simple getter cluster,
@@ -9,7 +11,6 @@
  * onDeviceLost/Restored → onBackendLost/onBackendRestored relay, and
  * capture() delegation.
  */
-
 import { Color } from '#core/Color';
 import { Scene } from '#core/Scene';
 
