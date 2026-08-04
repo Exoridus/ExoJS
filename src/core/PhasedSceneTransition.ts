@@ -204,10 +204,8 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
   private readonly _enterPhaseState: unknown;
 
   public constructor(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- exit and enter may be different PhasedSceneTransition<PhaseState> instantiations (composition); the session itself is untyped over PhaseState, matching its @internal status.
-    private readonly _exitPhase: PhasedSceneTransition<any>,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- same as above: a different PhaseState instantiation than the exit phase.
-    private readonly _enterPhase: PhasedSceneTransition<any>,
+    private readonly _exitPhase: PhasedSceneTransition<unknown>,
+    private readonly _enterPhase: PhasedSceneTransition<unknown>,
     private readonly _environment: SceneTransitionEnvironment,
   ) {
     this._exitPhaseState = this._exitPhase._createPhaseStateForSession();
