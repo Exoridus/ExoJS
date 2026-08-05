@@ -636,6 +636,17 @@ jobs:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: pnpm --filter "@codexo/exojs-particles" --filter "@codexo/exojs-tilemap" --filter "@codexo/exojs-tiled" --filter "@codexo/exojs-physics" --filter "@codexo/exojs-audio-fx" --filter "@codexo/exojs-aseprite" --filter "@codexo/exojs-ldtk" --filter "@codexo/exojs-react" build
 
+      # The dist-dependent half of production-stripping.test.ts asserts that the
+      # artefacts we actually ship carry no unresolved __DEV__/__VERSION__/
+      # __REVISION__ and that buildInfo matches the manifest. The unit lane never
+      # builds, so those checks self-skipped on every run; this is the only lane
+      # where `dist/` exists. EXOJS_REQUIRE_PRODUCTION_BUILD turns a missing
+      # build into a failure so the step cannot go quiet again.
+      - name: Verify production stripping against the built dist
+        env:
+          EXOJS_REQUIRE_PRODUCTION_BUILD: '1'
+        run: pnpm test:production-stripping
+
       - name: Upload dist artifact
         uses: actions/upload-artifact@v4
         with:
