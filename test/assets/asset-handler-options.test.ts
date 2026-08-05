@@ -22,8 +22,15 @@ import { materializeAssetBindings } from '#extensions/materialize';
 // Minimal test asset types
 // ---------------------------------------------------------------------------
 
-class ExampleAsset {}
-class OtherAsset {}
+// Distinct members on purpose. As empty classes these two were structurally
+// identical, so TypeScript accepted either wherever the other was expected and
+// the `@ts-expect-error` assertions below could never fire.
+class ExampleAsset {
+  readonly kind = 'example';
+}
+class OtherAsset {
+  readonly kind = 'other';
+}
 
 interface ExampleLoadOptions {
   readonly format?: 'example' | 'alt';
@@ -144,9 +151,11 @@ describe('AssetBinding type contracts', () => {
     const _binding = {
       ctor: ExampleAsset,
 
+      // @ts-expect-error — OtherAsset is not assignable to ExampleAsset. The
+      // mismatch surfaces on `create` (the whole factory is the wrong shape),
+      // not on the inner `load`, so the directive has to sit here.
       create() {
         return {
-          // @ts-expect-error — OtherAsset is not assignable to ExampleAsset
           async load(_request: AssetLoadRequest<ExampleLoadOptions>): Promise<OtherAsset> {
             return new OtherAsset();
           },

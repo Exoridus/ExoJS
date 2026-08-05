@@ -1,0 +1,7 @@
+{
+  "note": "Per-file budget of skipped tests, measured in the CI unit lane. Skipping more than the budget fails `pnpm test:skips`, and so does any skip in a file with no budget — a conditional test must be a reviewed entry, not a quiet default. Skipping fewer only prints a note, because the count depends on the environment (a local `dist/` unskips the production-stripping checks). Run `pnpm test:skips:update-baseline` to record a change.",
+  "files": {
+    "test/build-defines/production-stripping.test.ts": 12,
+    "test/perf/rendering/sweep.test.ts": 1
+  }
+}

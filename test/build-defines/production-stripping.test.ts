@@ -9,7 +9,9 @@
  *   - invariant (the always-on contract check) surviving into production
  *
  * The dist-dependent checks are skipped when `dist/` has not been built in
- * production mode (run `pnpm build` first). Below that, a self-contained
+ * production mode (run `pnpm build` first) — unless
+ * `EXOJS_REQUIRE_PRODUCTION_BUILD=1` demands them, which is how the build lane
+ * runs them. Below that, a self-contained
  * pipeline test runs the SAME mechanism the real prod build uses
  * (`@rollup/plugin-replace` + `terser` with the repo's `pure_funcs`) against a
  * small representative snippet, so the assert/assertDefined-stripped vs.
@@ -42,6 +44,15 @@ const requiredDistFiles = [
 ] as const;
 
 const hasProductionBuild = requiredDistFiles.every(f => existsSync(resolve(rootDir, f)));
+
+/**
+ * Set in the CI lane that builds `dist/` before running this file. It turns a
+ * missing build from a silent skip into a failure: without it these checks were
+ * skipped on every CI run — the only place where they were ever meant to be the
+ * gate — and passed locally only when a (possibly stale) `dist/` happened to
+ * exist. Contributors without a build still skip, which is the intent.
+ */
+const mustHaveProductionBuild = process.env['EXOJS_REQUIRE_PRODUCTION_BUILD'] === '1';
 
 const read = (rel: string): string => {
   const p = resolve(rootDir, rel);
@@ -203,7 +214,7 @@ describe('invariant always-on contract (source-level, no build required)', () =>
   });
 });
 
-describe.runIf(hasProductionBuild)('production build stripping', () => {
+describe.runIf(hasProductionBuild || mustHaveProductionBuild)('production build stripping', () => {
   const expectedVersion = resolveVersion(rootDir);
 
   it('has no bare __DEV__ reference in the dev helper (replaced with false)', () => {

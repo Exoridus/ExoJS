@@ -231,6 +231,13 @@ jobs:
       - name: Test (with coverage)
         run: pnpm test:coverage --reporter=default --reporter=junit --outputFile.junit=./test-results/unit.junit.xml
 
+      # A skipped test is neither a pass nor a failure, so it vanishes from the
+      # summary. This reads the report the step above just wrote and fails on any
+      # skip without a recorded budget — the shape every silent-skip defect here
+      # has had so far.
+      - name: Check skipped tests against the budget
+        run: pnpm test:skips:check
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v6.0.2
         with:
@@ -635,6 +642,17 @@ jobs:
           # Per-package bundle-analysis uploads (see exojs-config/rollup).
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: pnpm --filter "@codexo/exojs-particles" --filter "@codexo/exojs-tilemap" --filter "@codexo/exojs-tiled" --filter "@codexo/exojs-physics" --filter "@codexo/exojs-audio-fx" --filter "@codexo/exojs-aseprite" --filter "@codexo/exojs-ldtk" --filter "@codexo/exojs-react" build
+
+      # The dist-dependent half of production-stripping.test.ts asserts that the
+      # artefacts we actually ship carry no unresolved __DEV__/__VERSION__/
+      # __REVISION__ and that buildInfo matches the manifest. The unit lane never
+      # builds, so those checks self-skipped on every run; this is the only lane
+      # where `dist/` exists. EXOJS_REQUIRE_PRODUCTION_BUILD turns a missing
+      # build into a failure so the step cannot go quiet again.
+      - name: Verify production stripping against the built dist
+        env:
+          EXOJS_REQUIRE_PRODUCTION_BUILD: '1'
+        run: pnpm test:production-stripping
 
       - name: Upload dist artifact
         uses: actions/upload-artifact@v4
