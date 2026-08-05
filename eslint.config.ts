@@ -949,32 +949,6 @@ export default defineConfig([
   // for tightening once the underlying code is refactored.
   // ---------------------------------------------------------------------------
 
-  // WebGPU renderer lifecycle invariants: these classes rely on explicit init
-  // phases; forcing removal of `!` would add significant guard noise.
-  {
-    files: ['src/rendering/webgpu/WebGpuMeshRenderer.ts', 'src/rendering/webgpu/WebGpuMaskCompositor.ts'],
-    rules: {
-      '@typescript-eslint/no-non-null-assertion': 'off',
-    },
-  },
-
-  // Runtime capability/back-end probes intentionally keep defensive checks for
-  // browser/API variance, even when static types look stricter.
-  {
-    files: [
-      'src/core/capabilities.ts',
-      'src/rendering/webgl2/AbstractWebGl2Renderer.ts',
-      'src/rendering/webgl2/WebGl2Backend.ts',
-      'src/rendering/webgl2/WebGl2RenderBuffer.ts',
-      'src/rendering/webgpu/AbstractWebGpuRenderer.ts',
-      'src/rendering/webgpu/WebGpuBackend.ts',
-    ],
-    rules: {
-      '@typescript-eslint/no-unnecessary-condition': 'off',
-      '@typescript-eslint/strict-boolean-expressions': 'off',
-    },
-  },
-
   // Audio graph integration keeps defensive runtime checks against browser
   // API variance.
   {
@@ -984,26 +958,14 @@ export default defineConfig([
       '@typescript-eslint/strict-boolean-expressions': 'off',
       '@typescript-eslint/class-literal-property-style': 'off',
       '@typescript-eslint/prefer-nullish-coalescing': 'off',
-      '@typescript-eslint/no-floating-promises': 'off',
-      '@typescript-eslint/no-non-null-assertion': 'off',
-      complexity: 'off',
-    },
-  },
-
-  // Legacy WebGL2 backend/shader stack relies on dynamic browser APIs and
-  // typed-array plumbing that would otherwise create excessive false positives.
-  {
-    files: ['src/rendering/webgl2/**/*.ts'],
-    rules: {
-      '@typescript-eslint/no-unnecessary-condition': 'off',
-      '@typescript-eslint/strict-boolean-expressions': 'off',
-      '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',
     },
   },
 
   // Rendering hot paths rely on lifecycle invariants and a broad browser API
-  // surface; keep strict coverage elsewhere while reducing noise here.
+  // surface; keep strict coverage elsewhere while reducing noise here. Covers
+  // the whole subtree, WebGL2 and WebGPU alike — the backends, capability
+  // probes and renderer lifecycles all sit under it.
   {
     files: ['src/rendering/**/*.ts'],
     rules: {
@@ -1012,7 +974,6 @@ export default defineConfig([
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/prefer-nullish-coalescing': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
-      '@typescript-eslint/no-unsafe-enum-comparison': 'off',
       '@typescript-eslint/switch-exhaustiveness-check': 'off',
       complexity: 'off',
     },
@@ -1036,19 +997,6 @@ export default defineConfig([
     },
   },
 
-  // Complex generic overload, internal queue logic, and cohesive single-file
-  // scope are intentional here. Splitting would degrade readability and release
-  // safety.
-  {
-    files: ['src/assets/Loader.ts'],
-    rules: {
-      'max-lines': 'off',
-      '@typescript-eslint/strict-boolean-expressions': 'off',
-      '@typescript-eslint/no-unsafe-assignment': 'off',
-      complexity: 'off',
-    },
-  },
-
   // Claim/refcount tracking, multi-handle fill, and options-equivalence
   // branching are inherently branchy state machines.
   {
@@ -1059,31 +1007,14 @@ export default defineConfig([
     },
   },
 
-  {
-    files: ['src/assets/factories/SubtitleFactory.ts'],
-    rules: {
-      '@typescript-eslint/no-unnecessary-condition': 'off',
-    },
-  },
-
   // Asset internals using browser/IDB APIs with weak runtime typings.
   {
-    files: ['src/assets/IndexedDbDatabase.ts', 'src/assets/IndexedDbStore.ts', 'src/assets/factories/**/*.ts'],
+    files: ['src/assets/IndexedDbDatabase.ts', 'src/assets/factories/**/*.ts'],
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
-      '@typescript-eslint/no-unsafe-assignment': 'off',
-      '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/require-await': 'off',
       '@typescript-eslint/strict-boolean-expressions': 'off',
       complexity: 'off',
-    },
-  },
-
-  // Intentional runtime plumbing / optional lifecycle guards.
-  {
-    files: ['src/core/Scene.ts', 'src/rendering/utils.ts'],
-    rules: {
-      '@typescript-eslint/no-non-null-assertion': 'off',
     },
   },
 
@@ -1103,6 +1034,9 @@ export default defineConfig([
       // instanced-draw support. Splitting would scatter tightly
       // coupled GL state. Known deviation, candidate for a later extraction.
       'max-lines': 'off',
+      // Context-loss and shader-compile diagnostics go straight to the console:
+      // by the time this backend reports, the routed logger may itself be gone.
+      'no-console': 'off',
     },
   },
 
@@ -1160,24 +1094,12 @@ export default defineConfig([
     },
   },
 
-  {
-    files: ['src/core/Application.ts', 'src/core/SceneDirector.ts', 'src/animation/Tween.ts', 'src/rendering/webgl2/WebGl2Backend.ts'],
-    rules: {
-      'no-console': 'off',
-    },
-  },
-
   // Extension renderer / GPU hot paths — same relaxed policy as core rendering.
   {
     files: ['packages/exojs-tilemap/src/webgl2/**/*.ts', 'packages/exojs-tilemap/src/webgpu/**/*.ts'],
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/no-unnecessary-condition': 'off',
-      '@typescript-eslint/strict-boolean-expressions': 'off',
-      '@typescript-eslint/no-unsafe-assignment': 'off',
-      '@typescript-eslint/no-unsafe-argument': 'off',
-      '@typescript-eslint/no-unsafe-member-access': 'off',
-      '@typescript-eslint/prefer-nullish-coalescing': 'off',
       complexity: 'off',
     },
   },
@@ -1206,7 +1128,6 @@ export default defineConfig([
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/no-unnecessary-condition': 'off',
-      '@typescript-eslint/strict-boolean-expressions': 'off',
     },
   },
 
@@ -1241,18 +1162,13 @@ export default defineConfig([
   },
 
   // Extracted audio-effects/DSP package — same defensive audio regime as the
-  // core audio graph it was split from (bound methods, browser API variance).
-  // TODO: replace the BeatDetector relaxation by tightening its worklet payload
-  // types and normalizing input at the message boundary.
+  // core audio graph it was split from (browser API variance, DSP hot paths).
   {
     files: ['packages/exojs-audio-fx/src/**/*.ts'],
     rules: {
-      '@typescript-eslint/unbound-method': 'off',
       '@typescript-eslint/no-unnecessary-condition': 'off',
       '@typescript-eslint/strict-boolean-expressions': 'off',
       '@typescript-eslint/class-literal-property-style': 'off',
-      '@typescript-eslint/prefer-nullish-coalescing': 'off',
-      '@typescript-eslint/no-floating-promises': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',
       complexity: 'off',
     },
