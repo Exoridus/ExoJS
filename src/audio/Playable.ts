@@ -15,11 +15,17 @@ import type { AudioManager } from './AudioManager';
  * Voices.
  *
  * Concrete voices mix in the capability interfaces ({@link Seekable},
- * {@link Pausable}, {@link Loopable}, {@link RatePitched}, {@link Spatializable})
- * for whatever their backing Web Audio node actually supports — narrow with a
- * capability check (`'seek' in voice`) before using one.
+ * {@link Pausable}, {@link Loopable}, {@link RatePitched}) for whatever their
+ * backing Web Audio node actually supports — narrow with a capability check
+ * (`'seek' in voice`) before using one.
+ *
+ * {@link Spatializable} is not one of those: every voice carries it. The
+ * panner is inserted lazily, so a voice that is never positioned costs
+ * nothing, and {@link PlayOptions} already accepts the full spatial set at
+ * play time — a returned voice must be able to keep steering what the play
+ * call was allowed to start.
  */
-export interface Voice {
+export interface Voice extends Spatializable {
   /**
    * Stop playback and release this voice's resources. Pass `fadeMs` to ramp
    * the volume to zero over that many milliseconds before stopping; omit (or
@@ -143,7 +149,9 @@ export interface Spatializable {
    * active, velocity is auto-derived each frame from the tracked node's
    * position delta instead.
    */
-  velocity: Vector | { x: number; y: number } | null;
+  get velocity(): Vector | null;
+  /** Accepts any `{ x, y }` point — implementations copy the values. */
+  set velocity(value: Vector | { x: number; y: number } | null);
 }
 
 /**

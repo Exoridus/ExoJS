@@ -1,12 +1,14 @@
 import { getAudioContext } from '#audio/audio-context';
 import type { AudioBus } from '#audio/AudioBus';
 import type { AudioEffect } from '#audio/AudioEffect';
-import type { Pausable, Playable, PlayOptions, Voice } from '#audio/Playable';
+import type { DistanceModel, Pausable, Playable, PlayOptions, Spatializable, Voice } from '#audio/Playable';
 import type { Application } from '#core/Application';
 import { SceneAvailability } from '#core/SceneAvailability';
+import type { SceneNode } from '#core/SceneNode';
 import { SceneState } from '#core/SceneState';
 import { Signal } from '#core/Signal';
 import type { Destroyable } from '#core/types';
+import { Vector } from '#math/Vector';
 
 const isPausable = (voice: Voice): voice is Voice & Pausable => 'pause' in voice && 'resume' in voice;
 
@@ -33,16 +35,54 @@ export interface SceneAudioTrackOptions {
 }
 
 /**
+ * The scalar {@link Spatializable} fields {@link PendingVoice} buffers before
+ * flush. `position`/`velocity` are held separately — they own a {@link Vector}
+ * that has to be released — and `follow` is a call, not a value.
+ */
+interface BufferedSpatialWrites {
+  distanceModel?: DistanceModel;
+  refDistance?: number;
+  maxDistance?: number;
+  rolloffFactor?: number;
+  panningModel?: PanningModelType | null;
+  orientation?: number;
+  coneInnerAngle?: number;
+  coneOuterAngle?: number;
+  coneOuterGain?: number;
+}
+
+/**
+ * Copy `value` into `target`, allocating or releasing the {@link Vector} as
+ * needed. Mirrors how `BaseVoice` stores its own spatial points: the caller's
+ * object is never retained.
+ */
+function copyPoint(target: Vector | null, value: Vector | { x: number; y: number } | null): Vector | null {
+  if (value === null) {
+    target?.destroy();
+
+    return null;
+  }
+
+  if (target === null) {
+    return new Vector(value.x, value.y);
+  }
+
+  target.set(value.x, value.y);
+
+  return target;
+}
+
+/**
  * Stand-in {@link Voice} returned by {@link SceneAudio.play} while the owning
- * scope is still `Preparing`. Buffers `volume`/`bus`/effect
- * writes and replays them onto the real voice once {@link PendingVoice._flush}
- * runs at activation; `stop()` before flush cancels playback entirely — the
- * real voice is never created. Narrower than a real `Voice`: capability
- * mixins (`Pausable`, `Seekable`, …) are unavailable until flush, and reading
- * `bus` before flush returns `undefined` (despite the type) unless an
- * explicit `options.bus` override was given — the manager's default bus
- * isn't resolvable until the real voice exists. A documented limitation of
- * Preparing-phase playback, not a general `Voice` capability.
+ * scope is still `Preparing`. Buffers `volume`/`bus`/effect and
+ * {@link Spatializable} writes and replays them onto the real voice once
+ * {@link PendingVoice._flush} runs at activation; `stop()` before flush
+ * cancels playback entirely — the real voice is never created. Narrower than a
+ * real `Voice`: capability mixins (`Pausable`, `Seekable`, …) are unavailable
+ * until flush, and reading `bus` before flush returns `undefined` (despite the
+ * type) unless an explicit `options.bus` override was given — the manager's
+ * default bus isn't resolvable until the real voice exists. A documented
+ * limitation of Preparing-phase playback, not a general `Voice` capability.
  * @internal
  */
 class PendingVoice implements Voice {
@@ -52,6 +92,12 @@ class PendingVoice implements Voice {
   private _bus: AudioBus | undefined;
   private readonly _pendingEffects: AudioEffect[] = [];
   private readonly _dummyOutput: AudioNode;
+  private readonly _spatial: BufferedSpatialWrites = {};
+  private _followTarget: SceneNode | null | undefined;
+  private _position: Vector | null = null;
+  private _positionWritten = false;
+  private _velocity: Vector | null = null;
+  private _velocityWritten = false;
   public readonly onEnd = new Signal();
   /** The `when` policy this voice was created with — carried across to the real `Voice` at flush. */
   public readonly when: SceneAvailability;
@@ -117,6 +163,7 @@ class PendingVoice implements Voice {
 
     if (!this._cancelled) {
       this._cancelled = true;
+      this._releasePoints();
       this.onEnd.dispatch();
     }
   }
@@ -145,6 +192,153 @@ class PendingVoice implements Voice {
     return this;
   }
 
+  // Spatializable — buffered like volume/bus above. Only what the caller
+  // actually wrote is replayed at flush: the real voice is created from the
+  // same PlayOptions, so blindly writing defaults would undo the spatial
+  // values the play call already carried.
+
+  public get position(): Vector | null {
+    return this._real?.position ?? this._position;
+  }
+
+  public set position(value: Vector | { x: number; y: number } | null) {
+    this._positionWritten = true;
+    this._position = copyPoint(this._position, value);
+
+    if (this._real) {
+      this._real.position = value;
+    }
+  }
+
+  public follow(node: SceneNode | null): void {
+    this._followTarget = node;
+
+    if (this._real) {
+      this._real.follow(node);
+    }
+  }
+
+  public get distanceModel(): DistanceModel {
+    return this._real?.distanceModel ?? this._spatial.distanceModel ?? 'linear';
+  }
+
+  public set distanceModel(value: DistanceModel) {
+    this._spatial.distanceModel = value;
+
+    if (this._real) {
+      this._real.distanceModel = value;
+    }
+  }
+
+  public get refDistance(): number {
+    return this._real?.refDistance ?? this._spatial.refDistance ?? 50;
+  }
+
+  public set refDistance(value: number) {
+    this._spatial.refDistance = value;
+
+    if (this._real) {
+      this._real.refDistance = value;
+    }
+  }
+
+  public get maxDistance(): number {
+    return this._real?.maxDistance ?? this._spatial.maxDistance ?? 1000;
+  }
+
+  public set maxDistance(value: number) {
+    this._spatial.maxDistance = value;
+
+    if (this._real) {
+      this._real.maxDistance = value;
+    }
+  }
+
+  public get rolloffFactor(): number {
+    return this._real?.rolloffFactor ?? this._spatial.rolloffFactor ?? 1;
+  }
+
+  public set rolloffFactor(value: number) {
+    this._spatial.rolloffFactor = value;
+
+    if (this._real) {
+      this._real.rolloffFactor = value;
+    }
+  }
+
+  public get panningModel(): PanningModelType | null {
+    return this._real?.panningModel ?? this._spatial.panningModel ?? null;
+  }
+
+  public set panningModel(value: PanningModelType | null) {
+    this._spatial.panningModel = value;
+
+    if (this._real) {
+      this._real.panningModel = value;
+    }
+  }
+
+  public get orientation(): number {
+    return this._real?.orientation ?? this._spatial.orientation ?? 0;
+  }
+
+  public set orientation(value: number) {
+    this._spatial.orientation = value;
+
+    if (this._real) {
+      this._real.orientation = value;
+    }
+  }
+
+  public get coneInnerAngle(): number {
+    return this._real?.coneInnerAngle ?? this._spatial.coneInnerAngle ?? 360;
+  }
+
+  public set coneInnerAngle(value: number) {
+    this._spatial.coneInnerAngle = value;
+
+    if (this._real) {
+      this._real.coneInnerAngle = value;
+    }
+  }
+
+  public get coneOuterAngle(): number {
+    return this._real?.coneOuterAngle ?? this._spatial.coneOuterAngle ?? 360;
+  }
+
+  public set coneOuterAngle(value: number) {
+    this._spatial.coneOuterAngle = value;
+
+    if (this._real) {
+      this._real.coneOuterAngle = value;
+    }
+  }
+
+  public get coneOuterGain(): number {
+    return this._real?.coneOuterGain ?? this._spatial.coneOuterGain ?? 0;
+  }
+
+  public set coneOuterGain(value: number) {
+    this._spatial.coneOuterGain = value;
+
+    if (this._real) {
+      this._real.coneOuterGain = value;
+    }
+  }
+
+  public get velocity(): Vector | null {
+    return this._real?.velocity ?? this._velocity;
+  }
+
+  public set velocity(value: Vector | { x: number; y: number } | null) {
+    this._velocityWritten = true;
+    this._velocity = copyPoint(this._velocity, value);
+
+    if (this._real) {
+      this._real.velocity = value;
+    }
+  }
+
   /**
    * Start real playback. No-op if already flushed or cancelled via
    * {@link PendingVoice.stop}. Returns the newly created real {@link Voice}
@@ -171,11 +365,80 @@ class PendingVoice implements Voice {
     }
 
     this._pendingEffects.length = 0;
+    this._replaySpatial(real);
     real.onEnd.add((): void => {
       this.onEnd.dispatch();
     });
 
     return real;
+  }
+
+  /**
+   * Replay the buffered spatial writes onto the real voice. Only fields the
+   * caller actually wrote are applied: `_createReal()` builds the voice from
+   * the same `PlayOptions`, so writing the defaults here would overwrite the
+   * spatial values the play call already carried.
+   */
+  private _replaySpatial(real: Voice): void {
+    if (this._positionWritten) {
+      real.position = this._position;
+    }
+
+    if (this._velocityWritten) {
+      real.velocity = this._velocity;
+    }
+
+    if (this._followTarget !== undefined) {
+      real.follow(this._followTarget);
+    }
+
+    const spatial = this._spatial;
+
+    if (spatial.distanceModel !== undefined) {
+      real.distanceModel = spatial.distanceModel;
+    }
+
+    if (spatial.refDistance !== undefined) {
+      real.refDistance = spatial.refDistance;
+    }
+
+    if (spatial.maxDistance !== undefined) {
+      real.maxDistance = spatial.maxDistance;
+    }
+
+    if (spatial.rolloffFactor !== undefined) {
+      real.rolloffFactor = spatial.rolloffFactor;
+    }
+
+    if (spatial.panningModel !== undefined) {
+      real.panningModel = spatial.panningModel;
+    }
+
+    if (spatial.orientation !== undefined) {
+      real.orientation = spatial.orientation;
+    }
+
+    if (spatial.coneInnerAngle !== undefined) {
+      real.coneInnerAngle = spatial.coneInnerAngle;
+    }
+
+    if (spatial.coneOuterAngle !== undefined) {
+      real.coneOuterAngle = spatial.coneOuterAngle;
+    }
+
+    if (spatial.coneOuterGain !== undefined) {
+      real.coneOuterGain = spatial.coneOuterGain;
+    }
+
+    this._releasePoints();
+  }
+
+  /** Hand the buffered {@link Vector}s back to the pool. */
+  private _releasePoints(): void {
+    this._position?.destroy();
+    this._position = null;
+    this._velocity?.destroy();
+    this._velocity = null;
   }
 }
 

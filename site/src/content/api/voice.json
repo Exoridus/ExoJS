@@ -1,16 +1,16 @@
 {
   "title": "Voice",
-  "description": "A live playback instance in the audio graph with a control surface. A Voice is created by playing a Playable via AudioManager.play (and, later, by opening an `AudioInput`). Each `play()` returns an independent Voice, so overlapping concurrent playback of the same asset is just multiple Voices. Concrete voices mix in the capability interfaces (Seekable, Pausable, Loopable, RatePitched, Spatializable) for whatever their backing Web Audio node actually supports — narrow with a capability check (`'seek' in voice`) before using one.",
+  "description": "A live playback instance in the audio graph with a control surface. A Voice is created by playing a Playable via AudioManager.play (and, later, by opening an `AudioInput`). Each `play()` returns an independent Voice, so overlapping concurrent playback of the same asset is just multiple Voices. Concrete voices mix in the capability interfaces (Seekable, Pausable, Loopable, RatePitched) for whatever their backing Web Audio node actually supports — narrow with a capability check (`'seek' in voice`) before using one. Spatializable is not one of those: every voice carries it. The panner is inserted lazily, so a voice that is never positioned costs nothing, and PlayOptions already accepts the full spatial set at play time — a returned voice must be able to keep steering what the play call was allowed to start.",
   "symbol": "Voice",
   "kind": "interface",
   "subsystem": "audio",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 9,
+  "memberCount": 21,
   "counts": {
     "constructors": 0,
-    "methods": 4,
-    "properties": 5,
+    "methods": 5,
+    "properties": 16,
     "events": 0
   },
   "sections": [
@@ -21,7 +21,8 @@
       "paragraphs": [
         "A live playback instance in the audio graph with a control surface.",
         "A Voice is created by playing a Playable via AudioManager.play (and, later, by opening an `AudioInput`). Each `play()` returns an independent Voice, so overlapping concurrent playback of the same asset is just multiple Voices.",
-        "Concrete voices mix in the capability interfaces (Seekable, Pausable, Loopable, RatePitched, Spatializable) for whatever their backing Web Audio node actually supports — narrow with a capability check (`'seek' in voice`) before using one."
+        "Concrete voices mix in the capability interfaces (Seekable, Pausable, Loopable, RatePitched) for whatever their backing Web Audio node actually supports — narrow with a capability check (`'seek' in voice`) before using one.",
+        "Spatializable is not one of those: every voice carries it. The panner is inserted lazily, so a voice that is never positioned costs nothing, and PlayOptions already accepts the full spatial set at play time — a returned voice must be able to keep steering what the play call was allowed to start."
       ],
       "importLine": "import { Voice } from '@codexo/exojs'",
       "sourceLink": null
@@ -144,6 +145,61 @@
           ],
           "returnType": "void",
           "description": "Ramp the volume to to (clamped to [0, 1]) over ms milliseconds without stopping. Use Voice.stop with a fade argument to fade out and stop."
+        },
+        {
+          "name": "follow",
+          "signature": "follow(node: SceneNode | null): void",
+          "signatureTokens": [
+            {
+              "text": "follow",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "node",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneNode",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "node",
+              "type": "SceneNode | null",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Track a SceneNode: the voice reads the node's global translation each frame. Pass null to stop following and fall back to Spatializable.position."
         },
         {
           "name": "removeEffect",
@@ -274,6 +330,90 @@
           "description": "The AudioBus this voice routes into. Reassign to reroute live."
         },
         {
+          "name": "coneInnerAngle",
+          "signature": "coneInnerAngle: number",
+          "signatureTokens": [
+            {
+              "text": "coneInnerAngle",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Full-gain cone half-angle in degrees. Default 360 (omnidirectional — no cone)."
+        },
+        {
+          "name": "coneOuterAngle",
+          "signature": "coneOuterAngle: number",
+          "signatureTokens": [
+            {
+              "text": "coneOuterAngle",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Falloff-to-coneOuterGain cone half-angle in degrees. Default 360."
+        },
+        {
+          "name": "coneOuterGain",
+          "signature": "coneOuterGain: number",
+          "signatureTokens": [
+            {
+              "text": "coneOuterGain",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Gain applied outside coneOuterAngle. Default 0."
+        },
+        {
+          "name": "distanceModel",
+          "signature": "distanceModel: DistanceModel",
+          "signatureTokens": [
+            {
+              "text": "distanceModel",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DistanceModel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Distance-attenuation model. Default 'linear'."
+        },
+        {
           "name": "ended",
           "signature": "ended: boolean",
           "signatureTokens": [
@@ -293,6 +433,27 @@
           "params": [],
           "returnType": null,
           "description": "true once playback has ended naturally or been stopped."
+        },
+        {
+          "name": "maxDistance",
+          "signature": "maxDistance: number",
+          "signatureTokens": [
+            {
+              "text": "maxDistance",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "For the 'linear' model: distance at which volume reaches zero. Default 1000."
         },
         {
           "name": "onEnd",
@@ -316,6 +477,27 @@
           "description": "Fires once when this voice ends (natural end or Voice.stop)."
         },
         {
+          "name": "orientation",
+          "signature": "orientation: number",
+          "signatureTokens": [
+            {
+              "text": "orientation",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Facing direction for cone attenuation, in degrees — same convention as SceneNode.rotation (0° = local +X / \"east\", clockwise-positive on a Y-down screen). Has no audible effect unless coneInnerAngle/ coneOuterAngle are narrowed below 360°. Default 0."
+        },
+        {
           "name": "output",
           "signature": "output: AudioNode",
           "signatureTokens": [
@@ -337,6 +519,77 @@
           "description": "The voice's output node — the last node before the AudioBus. Use it as a parallel tap for an analyser, or (later) as the insertion point for per-voice effects."
         },
         {
+          "name": "panningModel",
+          "signature": "panningModel: PanningModelType | null",
+          "signatureTokens": [
+            {
+              "text": "panningModel",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PanningModelType",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Per-voice panning model override. null (default) inherits the app-wide default from app.audio.spatial.panningModel."
+        },
+        {
+          "name": "refDistance",
+          "signature": "refDistance: number",
+          "signatureTokens": [
+            {
+              "text": "refDistance",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Distance below which volume is at full strength. Default 50."
+        },
+        {
+          "name": "rolloffFactor",
+          "signature": "rolloffFactor: number",
+          "signatureTokens": [
+            {
+              "text": "rolloffFactor",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Falloff rate. Higher = steeper attenuation. Default 1."
+        },
+        {
           "name": "volume",
           "signature": "volume: number",
           "signatureTokens": [
@@ -356,6 +609,64 @@
           "params": [],
           "returnType": null,
           "description": "Playback volume in the range [0, 1]. Bus volume (0..2) can amplify beyond this."
+        },
+        {
+          "name": "position",
+          "signature": "position: Vector | null",
+          "signatureTokens": [
+            {
+              "text": "position",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "World-space position of the source, or null when not spatialized."
+        },
+        {
+          "name": "velocity",
+          "signature": "velocity: Vector | null",
+          "signatureTokens": [
+            {
+              "text": "velocity",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "World-space velocity of the source (world units/second), or null. Feeds the Doppler calculation (app.audio.spatial.dopplerFactor) — has no other effect. Explicit; when null and follow(node) is active, velocity is auto-derived each frame from the tracked node's position delta instead."
         }
       ],
       "paragraphs": [],
