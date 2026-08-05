@@ -372,12 +372,21 @@ export default defineConfig({
       //
       // Prerequisites on the Mac, once: `safaridriver --enable`, plus
       // Develop ▸ Allow Remote Automation in Safari's menu.
+      //
+      // Uses `realShaderPlugin` instead of `browserBase.plugins` (which carries
+      // `shaderStubPlugin`) and skips `_glslMocks.ts`: that setup file
+      // un-stubs GLSL via `vi.mock`, but `@vitest/browser-webdriverio` has no
+      // CDP-equivalent hook for Vitest's module-mock interception, so the mock
+      // silently no-ops and every shader compiles from an empty string. Serving
+      // real GLSL straight from the transform sidesteps the gap instead of
+      // depending on a mock that cannot fire under plain WebDriver.
       {
         ...browserBase,
+        plugins: [realShaderPlugin, workletTransformPlugin],
         test: {
           name: 'browser-parity-safari',
           globals: true,
-          setupFiles: renderingBrowserSetupFiles,
+          setupFiles: browserSetupFiles,
           include: ['test/rendering/parity/**/*.test.ts'],
           browser: {
             enabled: true,
