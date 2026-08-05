@@ -2170,30 +2170,38 @@ export class WebGpuBackend implements RenderBackend {
       } else if (!(texture instanceof RenderTexture)) {
         const source = texture.source!;
 
+        // `copyExternalImageToTexture` from a <canvas> silently uploads nothing
+        // on Safari's WebGPU — the destination texture stays at its cleared
+        // contents and no validation error surfaces to catch it. `getImageData`
+        // + `writeTexture` reads the same unpremultiplied bytes `rgba8unorm`
+        // (this backend's managed texture format) expects, so it produces an
+        // identical upload on browsers where the external-image path already
+        // works — but it forces a GPU→CPU→GPU round trip that
+        // `copyExternalImageToTexture` normally avoids, so it only runs while
+        // `_canvasExternalImageCopySupported` isn't confirmed `true` (unknown,
+        // still probing, or confirmed broken). See
+        // `_probeCanvasExternalImageCopy`.
+        //
+        // The fallback needs a 2D context, and `getContext('2d')` returns null
+        // on a canvas already bound to another context type — a WebGL minimap,
+        // a `bitmaprenderer` target. `TextureSource` accepts those, and
+        // `copyExternalImageToTexture` handles them, so they take the direct
+        // path rather than failing the upload. On Safari that leaves them
+        // subject to the very bug worked around here, but no fallback exists:
+        // their pixels are not readable from the CPU side.
         if (source instanceof HTMLCanvasElement && this._canvasExternalImageCopySupported !== true) {
-          // `copyExternalImageToTexture` from a 2D <canvas> silently uploads
-          // nothing on Safari's WebGPU — the destination texture stays at its
-          // cleared contents and no validation error surfaces to catch it.
-          // `getImageData` + `writeTexture` reads the same unpremultiplied
-          // bytes `rgba8unorm` (this backend's managed texture format)
-          // expects, so it produces an identical upload on browsers where the
-          // external-image path already works — but it forces a GPU→CPU→GPU
-          // round trip that `copyExternalImageToTexture` normally avoids, so
-          // it only runs while `_canvasExternalImageCopySupported` isn't
-          // confirmed `true` (unknown, still probing, or confirmed broken).
-          // See `_probeCanvasExternalImageCopy`.
           if (!this._canvasExternalImageCopyProbeStarted) {
             this._canvasExternalImageCopyProbeStarted = true;
             void this._probeCanvasExternalImageCopy().then(supported => {
               this._canvasExternalImageCopySupported = supported;
             });
           }
+        }
 
-          const ctx = source.getContext('2d');
+        const canvasReadbackContext = source instanceof HTMLCanvasElement && this._canvasExternalImageCopySupported !== true ? source.getContext('2d') : null;
 
-          if (ctx === null) throw new Error('A 2D context is required to upload a canvas-sourced texture.');
-
-          const { data } = ctx.getImageData(0, 0, texture.width, texture.height);
+        if (canvasReadbackContext !== null) {
+          const { data } = canvasReadbackContext.getImageData(0, 0, texture.width, texture.height);
 
           this.device.queue.writeTexture(
             { texture: state.texture },
