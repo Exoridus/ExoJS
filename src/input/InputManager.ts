@@ -474,10 +474,10 @@ export class InputManager {
    * @internal
    */
   public _snapshotActionChannels(): Float32Array {
-    // `.slice()` (not a spread) deliberately — a spread of a typed array
-    // yields a plain `number[]`, not a `Float32Array`.
-    // eslint-disable-next-line unicorn/prefer-spread
-    return this.channels.slice();
+    // Constructing from the source copies it and states the result type in the
+    // code. A spread would yield a plain `number[]`, which is why the rule's
+    // suggestion does not apply to a typed array.
+    return new Float32Array(this.channels);
   }
 
   /**

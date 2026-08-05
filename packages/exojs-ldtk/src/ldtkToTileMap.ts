@@ -437,7 +437,6 @@ function convertFieldInstances(fields: readonly LdtkFieldInstance[]): TileProper
  */
 function isLdtkArrayField(
   field: LdtkFieldInstance,
-  // eslint-disable-next-line @typescript-eslint/naming-convention -- LDtk uses __ prefix for runtime fields
 ): field is Extract<LdtkFieldInstance, { readonly __type: `Array<${string}>` }> {
   return field.__type.startsWith('Array<');
 }

@@ -123,7 +123,7 @@ export type NavigableSceneConstructor<Registry> = keyof Registry extends never
   ? AnySceneConstructor
   : { [K in keyof Registry]: Registry[K] extends { scene: infer C } ? C : Registry[K] }[keyof Registry];
 
-/* eslint-disable @typescript-eslint/no-explicit-any -- ApplicationLike/ApplicationOf must accept `Application<any>` and an abstract constructor's erased argument list. */
+/* eslint-disable @typescript-eslint/no-explicit-any -- `Application<any>` in type-argument position: `unknown` is not assignable to a concretely-typed Application, so the wildcard is what makes ApplicationLike accept every instantiation. */
 /**
  * Anything that resolves to a concrete {@link Application} instance type: the
  * instance itself, its constructor, or `typeof` an already-typed instance.

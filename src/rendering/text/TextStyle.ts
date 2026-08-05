@@ -36,7 +36,6 @@ export type FontWeight = 'normal' | 'bold' | '100' | '200' | '300' | '400' | '50
  * }
  * ```
  */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface FontRegistry {}
 
 /**

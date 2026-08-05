@@ -41,7 +41,6 @@ export class Prefab {
    * Build a prefab from a previously serialized descriptor — e.g. one produced
    * by {@link toJSON} and persisted to disk or fetched over the network.
    */
-  // eslint-disable-next-line @typescript-eslint/naming-convention -- mirrors the standard `toJSON` JSON convention
   public static fromJSON(descriptor: SerializedNode): Prefab {
     return new Prefab(descriptor);
   }
@@ -57,7 +56,6 @@ export class Prefab {
   }
 
   /** The underlying JSON descriptor (JSON-serialisable). Treat as read-only. The standard `JSON.stringify(prefab)` hook. */
-  // eslint-disable-next-line @typescript-eslint/naming-convention -- `toJSON` is the standard JSON.stringify hook name
   public toJSON(): SerializedNode {
     return this._descriptor;
   }

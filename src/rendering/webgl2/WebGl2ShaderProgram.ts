@@ -20,7 +20,6 @@ interface ManagedUniform {
 interface ParallelCompileExtension {
   // Naming-convention exception: this is a verbatim WebGL extension constant
   // exposed by the driver under its spec-defined uppercase name.
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   readonly COMPLETION_STATUS_KHR: number;
 }
 

@@ -133,7 +133,7 @@ export class Button extends Widget {
 
     // `channel` is a generic numeric input channel (KeyEvent.channel is `number`),
     // intentionally compared against the Keyboard enum constants — see KeyEvent docs.
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- widening casts are redundant here, so the suppression is the only honest option
     if (this.enabled && (channel === Keyboard.Enter || channel === Keyboard.Space)) {
       event.preventDefault();
       this.onClick.dispatch(this);

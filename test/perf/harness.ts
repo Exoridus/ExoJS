@@ -95,7 +95,11 @@ const DEFAULT_COLUMNS: ColumnDef[] = [
 
 const getCellValue = (result: BenchmarkResult, key: string): string => {
   if (key in result) {
-    return String(result[key as keyof BenchmarkResult] ?? '');
+    // `extra` is a record, not a cell — its columns are resolved below by name.
+    // Stringifying it here would print `[object Object]` into the table.
+    const value = key === 'extra' ? undefined : result[key as Exclude<keyof BenchmarkResult, 'extra'>];
+
+    return String(value ?? '');
   }
 
   // Peek into extra fields

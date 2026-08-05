@@ -114,7 +114,6 @@ export class GamepadButton {
 
 const button = (offset: number): GamepadButtonChannel => (ChannelOffset.Gamepads + offset) as GamepadButtonChannel;
 
-/* eslint-disable @typescript-eslint/no-namespace, @typescript-eslint/naming-convention */
 /**
  * Channel-identifier constants — same convention as `Pointer.X` /
  * `Keyboard.Space`. The first 32 slots of each gamepad sub-buffer are
@@ -165,4 +164,3 @@ export namespace GamepadButton {
   export const Paddle4 = button(23);
   // Offsets 24..31 reserved for future named buttons / custom mapping use.
 }
-/* eslint-enable @typescript-eslint/no-namespace, @typescript-eslint/naming-convention */

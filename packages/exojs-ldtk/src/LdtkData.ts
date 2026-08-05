@@ -8,7 +8,6 @@
  * @see https://ldtk.io/json/
  */
 
-/* eslint-disable @typescript-eslint/naming-convention -- LDtk uses __ prefix for runtime fields */
 
 import type { TilePropertyPoint, TilePropertyTileRef } from '@codexo/exojs-tilemap';
 

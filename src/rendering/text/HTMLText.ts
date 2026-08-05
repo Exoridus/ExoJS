@@ -12,7 +12,6 @@ const fontMime: Record<FontFormat, string> = {
   otf: 'font/otf',
 };
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
 export interface HTMLTextOptions {
   /** CSS injected inside a &lt;style&gt; tag within the SVG foreignObject. */
   css?: string;
@@ -58,7 +57,6 @@ export interface HTMLTextOptions {
  * ```
  * @stable
  */
-// eslint-disable-next-line @typescript-eslint/naming-convention
 export class HTMLText extends Container {
   private _html: string;
   private _css: string;

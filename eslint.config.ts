@@ -206,6 +206,18 @@ export default defineConfig([
           allow: ['private-constructors', 'protected-constructors', 'decoratedFunctions', 'overrideMethods'],
         },
       ],
+      // Two deliberate uses of `{}` run through the engine: an empty interface
+      // as the declaration-merging point consumers augment (FontRegistry,
+      // SceneRegistry), and `= {}` as the empty-registry default of a generic
+      // that is already fenced in by its `extends` constraint. Both were
+      // carrying inline disables saying so.
+      '@typescript-eslint/no-empty-object-type': ['error', { allowInterfaces: 'always', allowObjectTypes: 'always' }],
+      // `abstract new (...args: any[]) => T` is the only way to write "any
+      // constructor producing T": with `unknown[]`, parameter contravariance
+      // makes the type reject every constructor that declares real parameters,
+      // so `typeof Texture` would no longer match. Four type aliases carried an
+      // inline disable for exactly this; the rule ships an option for it.
+      '@typescript-eslint/no-explicit-any': ['error', { ignoreRestArgs: true }],
       '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/no-meaningless-void-operator': 'error',
       '@typescript-eslint/no-misused-promises': [
@@ -286,6 +298,49 @@ export default defineConfig([
         {
           selector: 'typeLike',
           format: ['StrictPascalCase'],
+          leadingUnderscore: 'forbid',
+          trailingUnderscore: 'forbid',
+        },
+        // Acronyms are the one place the Strict* formats get in the way: they
+        // reject consecutive capitals, so `UIRoot`, `HTMLText` and `_peekUI`
+        // each carried an inline disable repeating the same sentence. These
+        // two entries carry a `filter`, which outranks the generic selectors
+        // above, and relax only the capitalisation — a name without one of
+        // these acronyms stays strict.
+        {
+          selector: 'typeLike',
+          filter: { regex: '(HTML|UI|JSON)', match: true },
+          format: ['PascalCase'],
+          leadingUnderscore: 'forbid',
+          trailingUnderscore: 'forbid',
+        },
+        {
+          selector: ['variableLike', 'memberLike'],
+          filter: { regex: '(HTML|UI|JSON|DPad)', match: true },
+          format: ['camelCase', 'PascalCase'],
+          leadingUnderscore: 'allow',
+          trailingUnderscore: 'forbid',
+        },
+        // Same acronym exception, repeated for the `variable` + `const`
+        // selector above: that one is more specific than the grouped
+        // `variableLike` entry, so it would otherwise win and reject
+        // `GamepadButton.DPadUp`.
+        {
+          selector: 'variable',
+          modifiers: ['const'],
+          filter: { regex: '(HTML|UI|JSON|DPad)', match: true },
+          format: ['camelCase', 'PascalCase', 'UPPER_CASE'],
+          leadingUnderscore: 'allow',
+          trailingUnderscore: 'forbid',
+        },
+        // A type property spelled in SCREAMING_CASE is a verbatim mirror of a
+        // constant some external API hands us under that exact name (WebGL
+        // extension constants, for one). Renaming it would break the lookup,
+        // so the shape declaration has to keep the foreign spelling.
+        {
+          selector: 'typeProperty',
+          filter: { regex: '^[A-Z][A-Z0-9_]*$', match: true },
+          format: ['UPPER_CASE'],
           leadingUnderscore: 'forbid',
           trailingUnderscore: 'forbid',
         },
@@ -449,6 +504,18 @@ export default defineConfig([
           allow: ['private-constructors', 'protected-constructors', 'decoratedFunctions', 'overrideMethods'],
         },
       ],
+      // Two deliberate uses of `{}` run through the engine: an empty interface
+      // as the declaration-merging point consumers augment (FontRegistry,
+      // SceneRegistry), and `= {}` as the empty-registry default of a generic
+      // that is already fenced in by its `extends` constraint. Both were
+      // carrying inline disables saying so.
+      '@typescript-eslint/no-empty-object-type': ['error', { allowInterfaces: 'always', allowObjectTypes: 'always' }],
+      // `abstract new (...args: any[]) => T` is the only way to write "any
+      // constructor producing T": with `unknown[]`, parameter contravariance
+      // makes the type reject every constructor that declares real parameters,
+      // so `typeof Texture` would no longer match. Four type aliases carried an
+      // inline disable for exactly this; the rule ships an option for it.
+      '@typescript-eslint/no-explicit-any': ['error', { ignoreRestArgs: true }],
       '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/no-meaningless-void-operator': 'error',
       '@typescript-eslint/no-misused-promises': [
@@ -528,6 +595,49 @@ export default defineConfig([
         {
           selector: 'typeLike',
           format: ['StrictPascalCase'],
+          leadingUnderscore: 'forbid',
+          trailingUnderscore: 'forbid',
+        },
+        // Acronyms are the one place the Strict* formats get in the way: they
+        // reject consecutive capitals, so `UIRoot`, `HTMLText` and `_peekUI`
+        // each carried an inline disable repeating the same sentence. These
+        // two entries carry a `filter`, which outranks the generic selectors
+        // above, and relax only the capitalisation — a name without one of
+        // these acronyms stays strict.
+        {
+          selector: 'typeLike',
+          filter: { regex: '(HTML|UI|JSON)', match: true },
+          format: ['PascalCase'],
+          leadingUnderscore: 'forbid',
+          trailingUnderscore: 'forbid',
+        },
+        {
+          selector: ['variableLike', 'memberLike'],
+          filter: { regex: '(HTML|UI|JSON|DPad)', match: true },
+          format: ['camelCase', 'PascalCase'],
+          leadingUnderscore: 'allow',
+          trailingUnderscore: 'forbid',
+        },
+        // Same acronym exception, repeated for the `variable` + `const`
+        // selector above: that one is more specific than the grouped
+        // `variableLike` entry, so it would otherwise win and reject
+        // `GamepadButton.DPadUp`.
+        {
+          selector: 'variable',
+          modifiers: ['const'],
+          filter: { regex: '(HTML|UI|JSON|DPad)', match: true },
+          format: ['camelCase', 'PascalCase', 'UPPER_CASE'],
+          leadingUnderscore: 'allow',
+          trailingUnderscore: 'forbid',
+        },
+        // A type property spelled in SCREAMING_CASE is a verbatim mirror of a
+        // constant some external API hands us under that exact name (WebGL
+        // extension constants, for one). Renaming it would break the lookup,
+        // so the shape declaration has to keep the foreign spelling.
+        {
+          selector: 'typeProperty',
+          filter: { regex: '^[A-Z][A-Z0-9_]*$', match: true },
+          format: ['UPPER_CASE'],
           leadingUnderscore: 'forbid',
           trailingUnderscore: 'forbid',
         },
@@ -736,6 +846,18 @@ export default defineConfig([
       '@typescript-eslint/array-type': 'off',
       '@typescript-eslint/consistent-indexed-object-style': 'off',
       '@typescript-eslint/consistent-type-definitions': 'off',
+      // Two deliberate uses of `{}` run through the engine: an empty interface
+      // as the declaration-merging point consumers augment (FontRegistry,
+      // SceneRegistry), and `= {}` as the empty-registry default of a generic
+      // that is already fenced in by its `extends` constraint. Both were
+      // carrying inline disables saying so.
+      '@typescript-eslint/no-empty-object-type': ['error', { allowInterfaces: 'always', allowObjectTypes: 'always' }],
+      // `abstract new (...args: any[]) => T` is the only way to write "any
+      // constructor producing T": with `unknown[]`, parameter contravariance
+      // makes the type reject every constructor that declares real parameters,
+      // so `typeof Texture` would no longer match. Four type aliases carried an
+      // inline disable for exactly this; the rule ships an option for it.
+      '@typescript-eslint/no-explicit-any': ['error', { ignoreRestArgs: true }],
       '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/no-misused-promises': [
         'error',
@@ -827,32 +949,6 @@ export default defineConfig([
   // for tightening once the underlying code is refactored.
   // ---------------------------------------------------------------------------
 
-  // WebGPU renderer lifecycle invariants: these classes rely on explicit init
-  // phases; forcing removal of `!` would add significant guard noise.
-  {
-    files: ['src/rendering/webgpu/WebGpuMeshRenderer.ts', 'src/rendering/webgpu/WebGpuMaskCompositor.ts'],
-    rules: {
-      '@typescript-eslint/no-non-null-assertion': 'off',
-    },
-  },
-
-  // Runtime capability/back-end probes intentionally keep defensive checks for
-  // browser/API variance, even when static types look stricter.
-  {
-    files: [
-      'src/core/capabilities.ts',
-      'src/rendering/webgl2/AbstractWebGl2Renderer.ts',
-      'src/rendering/webgl2/WebGl2Backend.ts',
-      'src/rendering/webgl2/WebGl2RenderBuffer.ts',
-      'src/rendering/webgpu/AbstractWebGpuRenderer.ts',
-      'src/rendering/webgpu/WebGpuBackend.ts',
-    ],
-    rules: {
-      '@typescript-eslint/no-unnecessary-condition': 'off',
-      '@typescript-eslint/strict-boolean-expressions': 'off',
-    },
-  },
-
   // Audio graph integration keeps defensive runtime checks against browser
   // API variance.
   {
@@ -862,26 +958,14 @@ export default defineConfig([
       '@typescript-eslint/strict-boolean-expressions': 'off',
       '@typescript-eslint/class-literal-property-style': 'off',
       '@typescript-eslint/prefer-nullish-coalescing': 'off',
-      '@typescript-eslint/no-floating-promises': 'off',
-      '@typescript-eslint/no-non-null-assertion': 'off',
-      complexity: 'off',
-    },
-  },
-
-  // Legacy WebGL2 backend/shader stack relies on dynamic browser APIs and
-  // typed-array plumbing that would otherwise create excessive false positives.
-  {
-    files: ['src/rendering/webgl2/**/*.ts'],
-    rules: {
-      '@typescript-eslint/no-unnecessary-condition': 'off',
-      '@typescript-eslint/strict-boolean-expressions': 'off',
-      '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',
     },
   },
 
   // Rendering hot paths rely on lifecycle invariants and a broad browser API
-  // surface; keep strict coverage elsewhere while reducing noise here.
+  // surface; keep strict coverage elsewhere while reducing noise here. Covers
+  // the whole subtree, WebGL2 and WebGPU alike — the backends, capability
+  // probes and renderer lifecycles all sit under it.
   {
     files: ['src/rendering/**/*.ts'],
     rules: {
@@ -890,7 +974,6 @@ export default defineConfig([
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/prefer-nullish-coalescing': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
-      '@typescript-eslint/no-unsafe-enum-comparison': 'off',
       '@typescript-eslint/switch-exhaustiveness-check': 'off',
       complexity: 'off',
     },
@@ -914,19 +997,6 @@ export default defineConfig([
     },
   },
 
-  // Complex generic overload, internal queue logic, and cohesive single-file
-  // scope are intentional here. Splitting would degrade readability and release
-  // safety.
-  {
-    files: ['src/assets/Loader.ts'],
-    rules: {
-      'max-lines': 'off',
-      '@typescript-eslint/strict-boolean-expressions': 'off',
-      '@typescript-eslint/no-unsafe-assignment': 'off',
-      complexity: 'off',
-    },
-  },
-
   // Claim/refcount tracking, multi-handle fill, and options-equivalence
   // branching are inherently branchy state machines.
   {
@@ -937,31 +1007,14 @@ export default defineConfig([
     },
   },
 
-  {
-    files: ['src/assets/factories/SubtitleFactory.ts'],
-    rules: {
-      '@typescript-eslint/no-unnecessary-condition': 'off',
-    },
-  },
-
   // Asset internals using browser/IDB APIs with weak runtime typings.
   {
-    files: ['src/assets/IndexedDbDatabase.ts', 'src/assets/IndexedDbStore.ts', 'src/assets/factories/**/*.ts'],
+    files: ['src/assets/IndexedDbDatabase.ts', 'src/assets/factories/**/*.ts'],
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
-      '@typescript-eslint/no-unsafe-assignment': 'off',
-      '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/require-await': 'off',
       '@typescript-eslint/strict-boolean-expressions': 'off',
       complexity: 'off',
-    },
-  },
-
-  // Intentional runtime plumbing / optional lifecycle guards.
-  {
-    files: ['src/core/Scene.ts', 'src/rendering/utils.ts'],
-    rules: {
-      '@typescript-eslint/no-non-null-assertion': 'off',
     },
   },
 
@@ -981,6 +1034,9 @@ export default defineConfig([
       // instanced-draw support. Splitting would scatter tightly
       // coupled GL state. Known deviation, candidate for a later extraction.
       'max-lines': 'off',
+      // Context-loss and shader-compile diagnostics go straight to the console:
+      // by the time this backend reports, the routed logger may itself be gone.
+      'no-console': 'off',
     },
   },
 
@@ -1038,24 +1094,12 @@ export default defineConfig([
     },
   },
 
-  {
-    files: ['src/core/Application.ts', 'src/core/SceneDirector.ts', 'src/animation/Tween.ts', 'src/rendering/webgl2/WebGl2Backend.ts'],
-    rules: {
-      'no-console': 'off',
-    },
-  },
-
   // Extension renderer / GPU hot paths — same relaxed policy as core rendering.
   {
     files: ['packages/exojs-tilemap/src/webgl2/**/*.ts', 'packages/exojs-tilemap/src/webgpu/**/*.ts'],
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/no-unnecessary-condition': 'off',
-      '@typescript-eslint/strict-boolean-expressions': 'off',
-      '@typescript-eslint/no-unsafe-assignment': 'off',
-      '@typescript-eslint/no-unsafe-argument': 'off',
-      '@typescript-eslint/no-unsafe-member-access': 'off',
-      '@typescript-eslint/prefer-nullish-coalescing': 'off',
       complexity: 'off',
     },
   },
@@ -1084,7 +1128,6 @@ export default defineConfig([
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/no-unnecessary-condition': 'off',
-      '@typescript-eslint/strict-boolean-expressions': 'off',
     },
   },
 
@@ -1119,18 +1162,13 @@ export default defineConfig([
   },
 
   // Extracted audio-effects/DSP package — same defensive audio regime as the
-  // core audio graph it was split from (bound methods, browser API variance).
-  // TODO: replace the BeatDetector relaxation by tightening its worklet payload
-  // types and normalizing input at the message boundary.
+  // core audio graph it was split from (browser API variance, DSP hot paths).
   {
     files: ['packages/exojs-audio-fx/src/**/*.ts'],
     rules: {
-      '@typescript-eslint/unbound-method': 'off',
       '@typescript-eslint/no-unnecessary-condition': 'off',
       '@typescript-eslint/strict-boolean-expressions': 'off',
       '@typescript-eslint/class-literal-property-style': 'off',
-      '@typescript-eslint/prefer-nullish-coalescing': 'off',
-      '@typescript-eslint/no-floating-promises': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',
       complexity: 'off',
     },
@@ -1180,6 +1218,82 @@ export default defineConfig([
     },
   },
 
+  // `Map.forEach` is the allocation-free way to walk a Map: `for…of` builds a
+  // fresh iterator on every step, which these two per-frame paths cannot
+  // afford. Deleting the current entry mid-`forEach` is well-defined and both
+  // files rely on it. Scoped to the two files that actually run per frame
+  // rather than the whole package, so the rule keeps working everywhere else.
+  {
+    files: ['packages/exojs-physics/src/ContactGraph.ts', 'packages/exojs-physics/src/broadphase/AabbTreeBroadPhase.ts'],
+    rules: {
+      'unicorn/no-array-for-each': 'off',
+    },
+  },
+
+  // An AudioWorklet processor ships to the audio thread as one template
+  // literal, so its body cannot be split across imports the way `max-lines`
+  // assumes. The limit measures something these files cannot act on.
+  {
+    files: ['packages/exojs-audio-fx/src/worklets/*.worklet.ts'],
+    rules: {
+      'max-lines': 'off',
+    },
+  },
+
+  // LDtk marks its runtime-computed fields with a `__` prefix (`__identifier`,
+  // `__type`, …). These types mirror an external file format verbatim, so the
+  // prefix is data, not a naming choice we get to make.
+  {
+    files: ['packages/exojs-ldtk/src/**/*.ts'],
+    rules: {
+      '@typescript-eslint/naming-convention': [
+        'error',
+        {
+          selector: ['typeProperty', 'objectLiteralProperty'],
+          format: null,
+          leadingUnderscore: 'allowDouble',
+        },
+      ],
+    },
+  },
+
+  // React passes component and class references as PascalCase parameters
+  // (`SceneClass`), which is the ecosystem's spelling for "this argument is a
+  // constructor", not a naming slip.
+  {
+    files: ['packages/exojs-react/src/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/naming-convention': [
+        'error',
+        {
+          selector: 'parameter',
+          format: ['strictCamelCase', 'StrictPascalCase'],
+          leadingUnderscore: 'allow',
+        },
+      ],
+    },
+  },
+
+  // The input channel constants (`Pointer.X`, `GamepadButton.South`, …) are
+  // exposed as namespaces on purpose: it is the public spelling of the whole
+  // input API, and these three files are the only namespaces in the engine.
+  {
+    files: ['src/input/Pointer.ts', 'src/input/GamepadAxis.ts', 'src/input/GamepadButton.ts'],
+    rules: {
+      '@typescript-eslint/no-namespace': 'off',
+    },
+  },
+
+  // The one sanctioned console sink. Every routed DEV log and the one-time
+  // startup banner leave the engine through this file, so `no-console` is the
+  // wrong rule here rather than a violation to silence line by line.
+  {
+    files: ['src/core/logging.ts'],
+    rules: {
+      'no-console': 'off',
+    },
+  },
+
   // Tests (Jest)
   {
     files: ['test/**/*.ts'],
@@ -1205,9 +1319,26 @@ export default defineConfig([
       'simple-import-sort/imports': 'error',
       'simple-import-sort/exports': 'error',
       'unused-imports/no-unused-imports': 'error',
-      // Test files intentionally use jest mocks/spies and dynamic fixtures.
-      // Keep structural linting, but disable noisy type-aware false positives.
-      '@typescript-eslint/no-floating-promises': 'off',
+      // A promise dropped in a test is the failure mode this whole tree exists
+      // to prevent: the assertions after it run before the work does, so the
+      // test passes without proving anything. Measured across `test/**` it
+      // costs exactly one report, so it is on.
+      '@typescript-eslint/no-floating-promises': 'error',
+      // Equally quiet (two reports) and equally load-bearing: a value that
+      // stringifies to `[object Object]` makes the assertion compare noise.
+      '@typescript-eslint/no-base-to-string': 'error',
+      // The rules below stay off, but not for the reason that stood here
+      // before: it cited ts-jest, which this repo has not used since the
+      // Vitest migration. The real reason is the shape of test code and the
+      // measured cost of each rule across `test/**`:
+      //   no-unsafe-call 293, no-unsafe-member-access 279,
+      //   no-unsafe-assignment 241, no-unsafe-argument 89, no-unsafe-return 12
+      //     — the price of shape-only mocks; the type gate (`pnpm
+      //       typecheck:test`) is what actually holds these files honest.
+      //   require-await 395 — an `async` test body with no `await` is normal.
+      //   unbound-method 236 — `expect(obj.method)` reads the method by design.
+      // Revisit any of them by flipping it on and re-measuring, not by
+      // reasoning about it.
       '@typescript-eslint/no-misused-promises': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
@@ -1219,14 +1350,15 @@ export default defineConfig([
       '@typescript-eslint/no-require-imports': 'off',
       '@typescript-eslint/no-unused-vars': 'off',
       '@typescript-eslint/class-literal-property-style': 'off',
-      '@typescript-eslint/no-base-to-string': 'off',
       '@typescript-eslint/no-empty-function': 'off',
       '@typescript-eslint/no-redundant-type-constituents': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/require-await': 'off',
-      // Test mocks intentionally use `as unknown as <RealType>` to satisfy
-      // jest's strict generic signatures with shape-only fakes. Auto-removing
-      // these casts breaks ts-jest type compilation.
+      // 235 reports, and autofixing them would be actively unsafe: ESLint types
+      // `test/**` through tsconfig.eslint.json while the gate gates it through
+      // tsconfig.test.json, and the two enable different options. A cast this
+      // rule calls unnecessary under one program can be load-bearing under the
+      // other, so `--fix` here can turn `pnpm typecheck:test` red.
       '@typescript-eslint/no-unnecessary-type-assertion': 'off',
       // Tests deliberately use bracket notation (`obj['_member']`) as a
       // project-wide friend-class convention to spy on protected/private

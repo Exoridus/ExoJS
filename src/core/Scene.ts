@@ -265,7 +265,6 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
   }
 
   /** @internal — the UI layer if materialized, else `null` (no lazy allocation). */
-  // eslint-disable-next-line @typescript-eslint/naming-convention -- UI is an acronym (cf. HTMLText)
   public _peekUI(): UIRoot | null {
     return this._ui;
   }

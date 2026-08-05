@@ -170,7 +170,6 @@ export class Tooltip {
    * Walk up the target's parent chain to find the nearest {@link UIRoot}.
    * Returns `null` when the target is not attached to a UI layer.
    */
-  // eslint-disable-next-line @typescript-eslint/naming-convention -- UI is an acronym (cf. HTMLText)
   private _findUIRoot(): UIRoot | null {
     let current = this._target.parent;
 

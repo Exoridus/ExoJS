@@ -94,7 +94,7 @@ describe('SceneNavigationTransaction', () => {
       expect(reportError).toHaveBeenCalledWith(failure);
     });
 
-    test('does not start teardown until beginOutgoingTeardown is called', () => {
+    test('does not start teardown until beginOutgoingTeardown is called', async () => {
       const onStopScene = new Signal<[Scene]>();
       const onStateChange = new Signal<[SceneState, SceneState, Scene]>();
       const reportError = vi.fn();
@@ -106,7 +106,7 @@ describe('SceneNavigationTransaction', () => {
       expect(scope.destroy).not.toHaveBeenCalled();
 
       transaction.dispatchStopScene(pendingStopScene);
-      transaction.beginOutgoingTeardown(pendingStopScene);
+      await transaction.beginOutgoingTeardown(pendingStopScene);
 
       expect(scope.destroy).toHaveBeenCalledTimes(1);
     });

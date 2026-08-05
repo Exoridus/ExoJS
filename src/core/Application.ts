@@ -138,7 +138,6 @@ export interface InputApplicationOptions {
   allowTextSelection?: boolean;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- empty registry is a valid default
 export interface ApplicationOptions<Registry extends SceneRegistryShape<Registry> = {}> {
   clearColor?: Color;
   backend?: BackendConfig;
@@ -325,7 +324,6 @@ const defaultInputSettings: Required<InputApplicationOptions> = {
  * scene update + render). Useful for games; leave off for tools and
  * background-active simulations.
  */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- empty registry is a valid default
 export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   public readonly options: ApplicationOptions<Registry>;
   public readonly canvas: HTMLCanvasElement;
