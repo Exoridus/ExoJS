@@ -40,11 +40,18 @@ function keyOf(loader: Loader, source: string): string {
   return (loader as unknown as { _typeRegistry: { _key(t: unknown, s: string): string } })._typeRegistry._key(Texture, source);
 }
 
-/** Real major GC + macrotask hops so reclaimed WeakRefs settle. Needs `--expose-gc`. */
-const gc = (globalThis as { gc?: () => void }).gc;
+/**
+ * Real major GC + macrotask hops so reclaimed WeakRefs settle. `--expose-gc` comes
+ * from the shared vitest project factory, so an absent `gc` is a config regression
+ * to surface rather than a reason to skip.
+ */
 async function forceGc(): Promise<void> {
+  const gc = (globalThis as { gc?: () => void }).gc;
+
+  if (!gc) throw new Error('globalThis.gc is unavailable — the test project must pass --expose-gc to the fork pool');
+
   for (let i = 0; i < 10; i++) {
-    gc?.();
+    gc();
     await new Promise(resolve => setTimeout(resolve, 0));
   }
 }
@@ -100,9 +107,9 @@ describe('deferred handle bookkeeping (audit A4 / A5)', () => {
 
   // GC-dependent proof that the A4 leak is actually closed: once the game drops
   // its last reference to an evicted handle, the deferred entry (and its evicted
-  // marker) is reclaimed rather than accumulating forever. Runs only under
-  // `--expose-gc`; the structural test above is the deterministic CI guard.
-  test.runIf(typeof gc === 'function')('A4: a fully-released evicted handle is pruned from _deferred by the GC', async () => {
+  // marker) is reclaimed rather than accumulating forever. The structural test
+  // above covers the wiring; only this one proves the reclamation happens.
+  test('A4: a fully-released evicted handle is pruned from _deferred by the GC', async () => {
     const loader = createCoreLoader();
     const key = keyOf(loader, 'orphan.png');
 

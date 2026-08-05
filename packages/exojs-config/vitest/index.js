@@ -36,6 +36,13 @@ export const workletTransformPlugin = createWorkletPlugin();
 
 /**
  * A jsdom unit/integration test project. Used for Core and each extension.
+ *
+ * `execArgv` passes `--expose-gc` to the worker so specs that assert weak-retention
+ * behaviour (`WeakRef`/`FinalizationRegistry` reclamation) can force a real major
+ * GC instead of self-skipping on a missing `globalThis.gc`. The flag only exposes
+ * the function; it does not otherwise change how V8 collects. Note this is a
+ * top-level test option in Vitest 4 — under `poolOptions.forks` it is silently
+ * ignored.
  * @param {{ name: string, include: string[], exclude?: string[], setupFiles?: string[], alias?: unknown }} opts
  */
 export function createJsdomTestProject(opts) {
@@ -53,6 +60,7 @@ export function createJsdomTestProject(opts) {
       include,
       ...(exclude ? { exclude } : {}),
       testTimeout: 15_000,
+      execArgv: ['--expose-gc'],
     },
   };
 }

@@ -1,10 +1,17 @@
 import { WeakHandleSet } from '#assets/WeakHandleSet';
 
-/** Real major GC + a macrotask hop so reclaimed WeakRefs settle. Needs `--expose-gc`. */
-const gc = (globalThis as { gc?: () => void }).gc;
+/**
+ * Real major GC + a macrotask hop so reclaimed WeakRefs settle. `--expose-gc` comes
+ * from the shared vitest project factory, so an absent `gc` is a config regression
+ * to surface rather than a reason to skip.
+ */
 async function forceGc(): Promise<void> {
+  const gc = (globalThis as { gc?: () => void }).gc;
+
+  if (!gc) throw new Error('globalThis.gc is unavailable — the test project must pass --expose-gc to the fork pool');
+
   for (let i = 0; i < 10; i++) {
-    gc?.();
+    gc();
     await new Promise(resolve => setTimeout(resolve, 0));
   }
 }
@@ -68,9 +75,9 @@ describe('WeakHandleSet', () => {
   });
 
   // GC-dependent: proves the whole point of the class — a dropped handle is
-  // reclaimable and prune() compacts it out. Runs only under `--expose-gc`
-  // (`NODE_OPTIONS=--expose-gc`); the deterministic tests above are the CI guard.
-  test.runIf(typeof gc === 'function')('prune() drops the slot of a GC-reclaimed handle', async () => {
+  // reclaimable and prune() compacts it out. The deterministic tests above cover
+  // the bookkeeping; only these two prove the weakness is real.
+  test('prune() drops the slot of a GC-reclaimed handle', async () => {
     const survivor = { id: 'survivor' };
     const set = new WeakHandleSet(survivor);
     set.add({ id: 'ephemeral' }); // no strong reference kept — GC-eligible
@@ -81,7 +88,7 @@ describe('WeakHandleSet', () => {
     expect([...set]).toEqual([survivor]);
   });
 
-  test.runIf(typeof gc === 'function')('becomes empty once the last handle is reclaimed', async () => {
+  test('becomes empty once the last handle is reclaimed', async () => {
     const set = new WeakHandleSet({ id: 'only' }); // no strong reference kept
 
     await forceGc();
