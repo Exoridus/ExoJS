@@ -462,9 +462,22 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps firefox
 
-      - name: Browser tests (Firefox WebGL2, headless)
+      - name: Install xvfb
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+
+      # Firefox disables WebGL outright in headless mode — no preference changes
+      # that, it is a browser-level limitation (playwright#1032, #21783, still
+      # current). A window is the only configuration where a context exists, so
+      # this runs headed against the virtual display xvfb supplies, the same
+      # recipe as the Chromium WebGPU lane above. LIBGL_ALWAYS_SOFTWARE points
+      # Mesa at llvmpipe so there is something to rasterise on.
+      - name: Browser tests (Firefox WebGL2, headed via xvfb)
         continue-on-error: true
-        run: pnpm test:browser:webgl:firefox
+        env:
+          EXOJS_FIREFOX_CI_HEADED: '1'
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          GALLIUM_DRIVER: llvmpipe
+        run: xvfb-run -a pnpm test:browser:webgl:firefox
 
       - name: Browser tests (Firefox WebGPU, headed)
         continue-on-error: true
