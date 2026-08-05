@@ -75,7 +75,7 @@ export interface SpatialVoice {
  *
  * @internal
  */
-export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
+export abstract class BaseVoice implements Voice, SpatialVoice {
   protected readonly _audioContext: AudioContext;
   protected readonly _output: GainNode;
   protected readonly _manager: AudioManager;

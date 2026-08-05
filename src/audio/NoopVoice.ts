@@ -1,9 +1,11 @@
+import type { SceneNode } from '#core/SceneNode';
 import { Signal } from '#core/Signal';
+import type { Vector } from '#math/Vector';
 
 import { getAudioContext } from './audio-context';
 import type { AudioBus } from './AudioBus';
 import type { AudioEffect } from './AudioEffect';
-import type { Voice } from './Playable';
+import type { DistanceModel, Voice } from './Playable';
 
 /**
  * An already-ended {@link Voice} returned for degenerate play calls — a seek
@@ -60,5 +62,102 @@ export class NoopVoice implements Voice {
 
   public removeEffect(_effect: AudioEffect): this {
     return this;
+  }
+
+  // Spatializable — inert like the rest of this class. A voice that has
+  // already ended has nowhere to place a panner, but the getters still answer
+  // with the documented defaults so a caller that positions a voice without
+  // checking `ended` reads back something coherent.
+
+  public get position(): Vector | null {
+    return null;
+  }
+
+  public set position(_value: Vector | { x: number; y: number } | null) {
+    // inert — the voice already ended
+  }
+
+  public follow(_node: SceneNode | null): void {
+    // inert — the voice already ended
+  }
+
+  public get distanceModel(): DistanceModel {
+    return 'linear';
+  }
+
+  public set distanceModel(_value: DistanceModel) {
+    // inert — the voice already ended
+  }
+
+  public get refDistance(): number {
+    return 50;
+  }
+
+  public set refDistance(_value: number) {
+    // inert — the voice already ended
+  }
+
+  public get maxDistance(): number {
+    return 1000;
+  }
+
+  public set maxDistance(_value: number) {
+    // inert — the voice already ended
+  }
+
+  public get rolloffFactor(): number {
+    return 1;
+  }
+
+  public set rolloffFactor(_value: number) {
+    // inert — the voice already ended
+  }
+
+  public get panningModel(): PanningModelType | null {
+    return null;
+  }
+
+  public set panningModel(_value: PanningModelType | null) {
+    // inert — the voice already ended
+  }
+
+  public get orientation(): number {
+    return 0;
+  }
+
+  public set orientation(_value: number) {
+    // inert — the voice already ended
+  }
+
+  public get coneInnerAngle(): number {
+    return 360;
+  }
+
+  public set coneInnerAngle(_value: number) {
+    // inert — the voice already ended
+  }
+
+  public get coneOuterAngle(): number {
+    return 360;
+  }
+
+  public set coneOuterAngle(_value: number) {
+    // inert — the voice already ended
+  }
+
+  public get coneOuterGain(): number {
+    return 0;
+  }
+
+  public set coneOuterGain(_value: number) {
+    // inert — the voice already ended
+  }
+
+  public get velocity(): Vector | null {
+    return null;
+  }
+
+  public set velocity(_value: Vector | { x: number; y: number } | null) {
+    // inert — the voice already ended
   }
 }
