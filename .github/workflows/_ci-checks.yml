@@ -231,6 +231,13 @@ jobs:
       - name: Test (with coverage)
         run: pnpm test:coverage --reporter=default --reporter=junit --outputFile.junit=./test-results/unit.junit.xml
 
+      # A skipped test is neither a pass nor a failure, so it vanishes from the
+      # summary. This reads the report the step above just wrote and fails on any
+      # skip without a recorded budget — the shape every silent-skip defect here
+      # has had so far.
+      - name: Check skipped tests against the budget
+        run: pnpm test:skips:check
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v6.0.2
         with:
