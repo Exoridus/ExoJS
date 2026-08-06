@@ -67,7 +67,9 @@ const realShaderPlugin = {
 
 // Per-project browser headedness:
 //  - WebGL2 Chromium: new headless. EXOJS_BROWSER_HEADED=1 only for local headed debug.
-//  - WebGL2 Firefox:  headless.
+//  - WebGL2 Firefox:  headless locally (Windows/macOS need no X server and give a
+//    context either way); headed under xvfb in CI via EXOJS_FIREFOX_CI_HEADED=1,
+//    because Firefox on Linux disables WebGL entirely in headless mode.
 //  - WebGPU Chromium: headless by default (safe for local dev with no display server).
 //    CI opts into headed mode via EXOJS_WEBGPU_CI_HEADED=1 — Mesa lavapipe needs a
 //    real display to report a real Vulkan adapter instead of falling back to
@@ -78,6 +80,7 @@ const realShaderPlugin = {
 const headed = process.env['EXOJS_BROWSER_HEADED'] === '1';
 const webgl2Headless = !headed;
 const webgpuCiHeaded = process.env['EXOJS_WEBGPU_CI_HEADED'] === '1';
+const firefoxCiHeaded = process.env['EXOJS_FIREFOX_CI_HEADED'] === '1';
 
 // Setup run in every browser project to install the `__DEV__` global (see the
 // browserBase note) before any engine module evaluates.
@@ -255,6 +258,22 @@ export default defineConfig({
       },
 
       // ── browser-webgl-firefox — WebGL2 via Firefox headless ──────────────
+      // On Linux this lane failed every file on `getContext('webgl2') === null`
+      // — "This browser or hardware does not support WebGL" — while
+      // `continue-on-error` kept the check green. The cause is not configuration
+      // but Firefox itself: it disables WebGL in headless mode, and no
+      // preference overrides that (playwright#1032, #21783 — still current). A
+      // window is the only configuration with a context, so CI runs this headed
+      // against xvfb's virtual display, the same recipe the Chromium WebGPU lane
+      // uses. Locally it stays headless: Windows and macOS need no X server and
+      // hand out a context either way, which is exactly why the CI gap went
+      // unnoticed for so long.
+      //
+      // The prefs are belt-and-braces for the runner: `webgl.force-enabled`
+      // overrides the driver blocklist that rejects unknown CI hardware, and
+      // `gfx.webrender.software` selects the software backend — the counterpart
+      // to Chromium's `--use-angle=swiftshader`. (`webgl.out-of-process: false`
+      // was tried and rejected: it kills the browser connection mid-run.)
       {
         ...browserBase,
         test: {
@@ -262,7 +281,20 @@ export default defineConfig({
           globals: true,
           setupFiles: renderingBrowserSetupFiles,
           include: ['test/rendering/browser/webgl2-*.test.ts'],
-          browser: { enabled: true, headless: true, provider: playwright(), instances: [{ browser: 'firefox' }] },
+          browser: {
+            enabled: true,
+            headless: !firefoxCiHeaded,
+            provider: playwright({
+              launchOptions: {
+                firefoxUserPrefs: {
+                  'webgl.force-enabled': true,
+                  'webgl.disabled': false,
+                  'gfx.webrender.software': true,
+                },
+              },
+            }),
+            instances: [{ browser: 'firefox' }],
+          },
         },
       },
 
