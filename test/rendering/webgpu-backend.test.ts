@@ -22,6 +22,20 @@ import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { particlesExtension, ParticleSystem } from '../../packages/exojs-particles/src/index';
 
+/**
+ * The 2D-context stub `test/setup-env.vitest.ts` installs globally. Tests that
+ * swap in a richer context for glyph rasterisation restore this one afterwards,
+ * so it has to carry `getImageData` too — the backend reads canvas-sourced
+ * textures back through it, and a stub without it fails every later test in the
+ * file with a TypeError rather than an assertion.
+ */
+const defaultContext2dStub = (): unknown => ({
+  fillStyle: '',
+  fillRect: () => undefined,
+  drawImage: () => undefined,
+  getImageData: (_x: number, _y: number, width: number, height: number) => ({ data: new Uint8ClampedArray(width * height * 4), width, height }),
+});
+
 interface MockWebGpuEnvironment {
   readonly canvas: HTMLCanvasElement;
   readonly context: GPUCanvasContext;
@@ -41,6 +55,7 @@ interface MockWebGpuEnvironment {
   };
   readonly queue: {
     writeBuffer: MockInstance;
+    writeTexture: MockInstance;
     submit: MockInstance;
     copyExternalImageToTexture: MockInstance;
   };
@@ -709,7 +724,12 @@ describe('WebGpuBackend', () => {
       manager.destroy();
 
       expect(environment.pass.drawIndexed).toHaveBeenCalledWith(6, 1, 0, 0, 0);
-      expect(environment.queue.copyExternalImageToTexture).toHaveBeenCalledTimes(1);
+      // Canvas-sourced textures upload through `writeTexture`, not
+      // `copyExternalImageToTexture`: the backend routes them via `getImageData`
+      // until its one-off probe confirms the direct copy actually writes pixels,
+      // and that probe needs a real device, so it never resolves under these
+      // mocks. Every canvas-upload assertion in this file counts the same call.
+      expect(environment.queue.writeTexture).toHaveBeenCalledTimes(1);
       expect(environment.textures.length).toBeGreaterThan(0);
       expect(environment.textures.every(gpuTexture => gpuTexture.destroy.mock.calls.length > 0)).toBe(true);
     } finally {
@@ -796,7 +816,7 @@ describe('WebGpuBackend', () => {
 
       expect(environment.pass.drawIndexed).toHaveBeenCalledTimes(1);
       expect(environment.pass.drawIndexed).toHaveBeenCalledWith(6, 2, 0, 0, 0);
-      expect(environment.queue.copyExternalImageToTexture).toHaveBeenCalledTimes(1);
+      expect(environment.queue.writeTexture).toHaveBeenCalledTimes(1);
     } finally {
       environment.restore();
     }
@@ -838,7 +858,7 @@ describe('WebGpuBackend', () => {
 
       expect(environment.pass.drawIndexed).toHaveBeenCalledTimes(1);
       expect(environment.pass.drawIndexed).toHaveBeenCalledWith(6, 2, 0, 0, 0);
-      expect(environment.queue.copyExternalImageToTexture).toHaveBeenCalledTimes(2);
+      expect(environment.queue.writeTexture).toHaveBeenCalledTimes(2);
     } finally {
       environment.restore();
     }
@@ -1237,7 +1257,7 @@ describe('WebGpuBackend', () => {
     } finally {
       Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
         configurable: true,
-        value: () => ({ fillStyle: '', fillRect: () => undefined, drawImage: () => undefined }),
+        value: defaultContext2dStub,
       });
       environment.restore();
     }
@@ -1299,7 +1319,7 @@ describe('WebGpuBackend', () => {
     } finally {
       Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
         configurable: true,
-        value: () => ({ fillStyle: '', fillRect: () => undefined, drawImage: () => undefined }),
+        value: defaultContext2dStub,
       });
       environment.restore();
     }
@@ -1363,7 +1383,7 @@ describe('WebGpuBackend', () => {
     } finally {
       Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
         configurable: true,
-        value: () => ({ fillStyle: '', fillRect: () => undefined, drawImage: () => undefined }),
+        value: defaultContext2dStub,
       });
       environment.restore();
     }
@@ -1393,7 +1413,7 @@ describe('WebGpuBackend', () => {
       video.destroy();
       manager.destroy();
 
-      expect(environment.queue.copyExternalImageToTexture).not.toHaveBeenCalled();
+      expect(environment.queue.writeTexture).not.toHaveBeenCalled();
       expect(environment.pass.drawIndexed).not.toHaveBeenCalled();
     } finally {
       environment.restore();
@@ -1549,7 +1569,7 @@ describe('WebGpuBackend', () => {
       manager.destroy();
 
       expect(environment.pass.drawIndexed).toHaveBeenCalledWith(6, 1, 0, 0, 0);
-      expect(environment.queue.copyExternalImageToTexture).toHaveBeenCalledTimes(1);
+      expect(environment.queue.writeTexture).toHaveBeenCalledTimes(1);
       expect(environment.queue.submit).toHaveBeenCalled();
     } finally {
       environment.restore();

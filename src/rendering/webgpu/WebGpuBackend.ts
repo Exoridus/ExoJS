@@ -2029,6 +2029,12 @@ export class WebGpuBackend implements RenderBackend {
    * future Safari that fixes it, with no version sniffing.
    */
   private async _probeCanvasExternalImageCopy(): Promise<boolean> {
+    // Held outside the try so the finally can release them whatever happens:
+    // the readback maps asynchronously, and a device lost (or destroyed) in
+    // that window rejects mid-probe, which would otherwise strand both.
+    let probeTexture: GPUTexture | null = null;
+    let readback: GPUBuffer | null = null;
+
     try {
       const canvas = document.createElement('canvas');
 
@@ -2042,7 +2048,7 @@ export class WebGpuBackend implements RenderBackend {
       ctx.fillStyle = '#ff0000';
       ctx.fillRect(0, 0, 2, 2);
 
-      const probeTexture = this.device.createTexture({
+      probeTexture = this.device.createTexture({
         label: 'backend:probe:canvas-external-image-copy',
         size: { width: 2, height: 2 },
         format: managedTextureFormat,
@@ -2059,7 +2065,8 @@ export class WebGpuBackend implements RenderBackend {
       // `copyTextureToBuffer` requires `bytesPerRow` aligned to 256 bytes,
       // unlike `writeTexture` (see the managed-texture upload above).
       const bytesPerRow = 256;
-      const readback = this.device.createBuffer({
+
+      readback = this.device.createBuffer({
         label: 'backend:probe:canvas-external-image-copy-readback',
         size: bytesPerRow * 2,
         usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
@@ -2075,14 +2082,15 @@ export class WebGpuBackend implements RenderBackend {
       const pixel = new Uint8Array(readback.getMappedRange().slice(0, 4));
 
       readback.unmap();
-      readback.destroy();
-      probeTexture.destroy();
 
       return pixel[0] === 255 && pixel[1] === 0 && pixel[2] === 0 && pixel[3] === 255;
     } catch {
       // An unexpected failure here says nothing about the real browser
       // behaviour — stay on the always-correct fallback rather than guess.
       return false;
+    } finally {
+      readback?.destroy();
+      probeTexture?.destroy();
     }
   }
 

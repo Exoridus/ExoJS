@@ -78,6 +78,27 @@ export const supportsTouchEvents: boolean = canUseWindow() && 'ontouchstart' in 
 export const supportsPointerEvents: boolean = typeof PointerEvent !== 'undefined';
 
 /**
+ * Whether a user-agent string identifies a browser running on WebKit: Safari,
+ * and every iOS browser regardless of brand — Chrome, Firefox and Edge on iOS
+ * are all WebKit underneath and inherit its rendering defects, so they belong
+ * on the same side of this test as Safari does.
+ *
+ * Blink and Gecko carry `AppleWebKit` in their UA for historical reasons, so
+ * that token alone decides nothing. `Chrome`/`Chromium`/`Edg/` mark real Blink
+ * (their iOS builds say `CriOS`/`EdgiOS` instead and are correctly left in).
+ * Requiring `Safari/` additionally excludes non-browser consumers of the same
+ * string — jsdom, for one, reports `AppleWebKit` with no `Safari/` token.
+ *
+ * A UA test rather than a capability probe, used only where a defect has no
+ * feature to detect — see `Application.canUseWebGpu`, which keeps WebKit off a
+ * WebGPU implementation that renders incorrectly without reporting an error.
+ *
+ * @param userAgent - The UA string to classify.
+ */
+export const isWebKitUserAgent = (userAgent: string): boolean =>
+  userAgent.includes('AppleWebKit') && userAgent.includes('Safari/') && !['Chrome', 'Chromium', 'Edg/'].some(token => userAgent.includes(token));
+
+/**
  * Lazy-cached probe for the third `EventListenerOptions` argument to
  * `addEventListener` (passive/capture object). Older browsers ignore the
  * object and treat it as the boolean `useCapture`. Probed once on first call.

@@ -42,6 +42,17 @@ const mockContext2d = {
   fillStyle: '',
   fillRect: () => undefined,
   drawImage: () => undefined,
+  // The WebGPU backend reads canvas-sourced textures back through
+  // `getImageData` (see its Safari canvas-upload workaround), so a stub without
+  // it turns every such upload into a TypeError rather than a test failure that
+  // says what is missing. Transparent black of the requested size is enough:
+  // these suites assert upload calls and batching, never pixel values.
+  getImageData: (_x: number, _y: number, width: number, height: number) => ({
+    data: new Uint8ClampedArray(Math.max(width, 0) * Math.max(height, 0) * 4),
+    width,
+    height,
+    colorSpace: 'srgb' as PredefinedColorSpace,
+  }),
 };
 
 // Guarded on `HTMLCanvasElement` so the file is inert under the `node`
