@@ -415,19 +415,21 @@ jobs:
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
 
-  # Optional, non-blocking lane. The Ubuntu CI runner does not give headless
-  # Firefox a usable WebGL2 context, and Firefox WebGPU adapter availability
-  # varies by runner/display setup. Both Firefox lanes are experimental and
-  # kept out of the required gate: a failure here never blocks a merge.
-  # Real Firefox coverage runs locally via
-  # `pnpm test:browser:webgl:firefox` / `pnpm test:browser:webgpu:firefox`.
+  # The WebGL2 half of this lane is a required gate: running headed under xvfb
+  # gives Firefox a real WebGL2 context, and it has been at 262/262 since. It is
+  # the only lane covering a second engine, so a regression there should block.
+  #
+  # The WebGPU half stays non-blocking at the step level. Firefox exposes a
+  # WebGPU adapter only in a genuinely headed session — `requestAdapter()`
+  # returns null under xvfb regardless of `dom.webgpu.enabled` /
+  # `gfx.webgpu.force-enabled` — so those rows come from local runs via
+  # `pnpm test:browser:webgpu:firefox`.
   browser-tests-firefox:
-    name: Browser Tests (Firefox, experimental)
+    name: Browser Tests (Firefox)
     needs: [changes]
     if: ${{ needs.changes.outputs.engine == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -472,13 +474,15 @@ jobs:
       # recipe as the Chromium WebGPU lane above. LIBGL_ALWAYS_SOFTWARE points
       # Mesa at llvmpipe so there is something to rasterise on.
       - name: Browser tests (Firefox WebGL2, headed via xvfb)
-        continue-on-error: true
         env:
           EXOJS_FIREFOX_CI_HEADED: '1'
           LIBGL_ALWAYS_SOFTWARE: '1'
           GALLIUM_DRIVER: llvmpipe
         run: xvfb-run -a pnpm test:browser:webgl:firefox
 
+      # Non-blocking on purpose: no WebGPU adapter without a real display (see
+      # the job comment). Kept in the lane so the log records what a headless
+      # runner actually reports, rather than the absence being invisible.
       - name: Browser tests (Firefox WebGPU, headed)
         continue-on-error: true
         run: pnpm test:browser:webgpu:firefox
@@ -865,6 +869,7 @@ jobs:
         unit-tests,
         browser-tests,
         browser-tests-webgpu-chromium,
+        browser-tests-firefox,
         browser-tests-audio,
         browser-tests-tilemap-worker,
         build,
@@ -887,6 +892,7 @@ jobs:
           UNIT_TESTS_RESULT: ${{ needs['unit-tests'].result }}
           BROWSER_TESTS_RESULT: ${{ needs['browser-tests'].result }}
           BROWSER_WEBGPU_RESULT: ${{ needs['browser-tests-webgpu-chromium'].result }}
+          BROWSER_FIREFOX_RESULT: ${{ needs['browser-tests-firefox'].result }}
           BROWSER_AUDIO_RESULT: ${{ needs['browser-tests-audio'].result }}
           BROWSER_TILEMAP_WORKER_RESULT: ${{ needs['browser-tests-tilemap-worker'].result }}
           BUILD_RESULT: ${{ needs.build.result }}
@@ -901,6 +907,7 @@ jobs:
           echo "unit-tests: $UNIT_TESTS_RESULT"
           echo "browser-tests: $BROWSER_TESTS_RESULT"
           echo "browser-tests-webgpu-chromium: $BROWSER_WEBGPU_RESULT"
+          echo "browser-tests-firefox: $BROWSER_FIREFOX_RESULT"
           echo "browser-tests-audio: $BROWSER_AUDIO_RESULT"
           echo "browser-tests-tilemap-worker: $BROWSER_TILEMAP_WORKER_RESULT"
           echo "build: $BUILD_RESULT"
@@ -928,6 +935,7 @@ jobs:
             "unit-tests=$UNIT_TESTS_RESULT" \
             "browser-tests=$BROWSER_TESTS_RESULT" \
             "browser-tests-webgpu-chromium=$BROWSER_WEBGPU_RESULT" \
+            "browser-tests-firefox=$BROWSER_FIREFOX_RESULT" \
             "browser-tests-audio=$BROWSER_AUDIO_RESULT" \
             "browser-tests-tilemap-worker=$BROWSER_TILEMAP_WORKER_RESULT" \
             "build=$BUILD_RESULT" \
@@ -956,6 +964,7 @@ jobs:
               "unit-tests=$UNIT_TESTS_RESULT" \
               "browser-tests=$BROWSER_TESTS_RESULT" \
               "browser-tests-webgpu-chromium=$BROWSER_WEBGPU_RESULT" \
+              "browser-tests-firefox=$BROWSER_FIREFOX_RESULT" \
               "build=$BUILD_RESULT" \
               "package-verify=$PACKAGE_VERIFY_RESULT"; do
               name="${entry%%=*}"
