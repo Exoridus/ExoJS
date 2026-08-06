@@ -49,7 +49,7 @@ import type { System } from './System';
 import { SystemOrder } from './SystemOrder';
 import { SystemRegistry } from './SystemRegistry';
 import { Time } from './Time';
-import { canvasSourceToDataUrl } from './utils';
+import { canvasSourceToDataUrl, isWebKitUserAgent } from './utils';
 
 export enum ApplicationStatus {
   Loading = 1,
@@ -1500,10 +1500,23 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     }
   }
 
+  /**
+   * Whether `backend: 'auto'` should pick WebGPU. Presence of `navigator.gpu`
+   * is necessary but not sufficient: WebKit ships a WebGPU implementation that
+   * renders this engine incorrectly — SDF text draws as an empty frame, and
+   * repeated runs of the parity matrix fail a different set of scenes each
+   * time, which points at the driver rather than at engine code. Neither has a
+   * feature flag to test, and both produce a broken picture with no error, so
+   * `auto` keeps WebKit on WebGL2, where the same scenes render correctly.
+   *
+   * This is not a permanent verdict. `backend: 'webgpu'` still selects it
+   * explicitly for anyone testing WebKit's implementation, and the check should
+   * go once the parity matrix comes back clean there.
+   */
   private canUseWebGpu(): boolean {
     const gpuNavigator = navigator as Navigator & Partial<{ gpu: GPU }>;
 
-    return !!gpuNavigator.gpu;
+    return !!gpuNavigator.gpu && !isWebKitUserAgent(navigator.userAgent);
   }
 
   private _applyCanvasSize(width: number, height: number): void {

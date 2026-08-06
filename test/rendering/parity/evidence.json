@@ -8,9 +8,9 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "blend/additive-overlap",
@@ -22,9 +22,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1791/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "blend/additive-overlap",
@@ -35,9 +35,9 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "graphics/overlapping-fills",
@@ -48,9 +48,9 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "graphics/overlapping-fills",
@@ -62,9 +62,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1792/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "graphics/overlapping-fills",
@@ -75,9 +75,9 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "graphics/solid-rectangle",
@@ -88,9 +88,9 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "graphics/solid-rectangle",
@@ -102,9 +102,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1024/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "graphics/solid-rectangle",
@@ -115,9 +115,9 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mask/triangle-clip",
@@ -128,9 +128,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mask/triangle-clip",
@@ -142,9 +142,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "119/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mask/triangle-clip",
@@ -155,9 +155,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mesh/mirrored-uvs",
@@ -168,9 +168,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mesh/mirrored-uvs",
@@ -182,9 +182,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1023/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mesh/mirrored-uvs",
@@ -195,9 +195,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mesh/textured-quad",
@@ -208,9 +208,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mesh/textured-quad",
@@ -222,9 +222,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1023/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mesh/textured-quad",
@@ -235,9 +235,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "nine-slice/stretched",
@@ -248,9 +248,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "nine-slice/stretched",
@@ -262,9 +262,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "2303/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "nine-slice/stretched",
@@ -275,9 +275,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "nine-slice/unstretched",
@@ -288,9 +288,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "nine-slice/unstretched",
@@ -302,9 +302,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1023/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "nine-slice/unstretched",
@@ -315,9 +315,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "particles/static-quad",
@@ -328,9 +328,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "particles/static-quad",
@@ -342,9 +342,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "255/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "particles/static-quad",
@@ -355,9 +355,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "repeating/tiled",
@@ -366,11 +366,12 @@
     "browser": "chromium",
     "backend": "webgl2",
     "support": "supported",
-    "evidence": "traced",
-    "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "evidence": "tolerant",
+    "delta": 1,
+    "note": "backends agree within 1 of one channel step",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "repeating/tiled",
@@ -382,9 +383,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1020/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "repeating/tiled",
@@ -395,9 +396,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/canvas-texture",
@@ -408,9 +409,9 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/canvas-texture",
@@ -422,9 +423,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "256/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/canvas-texture",
@@ -435,9 +436,9 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/origin",
@@ -448,9 +449,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/origin",
@@ -462,9 +463,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1023/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/origin",
@@ -475,9 +476,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/translated",
@@ -488,9 +489,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/translated",
@@ -502,9 +503,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1023/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/translated",
@@ -515,9 +516,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "text/sdf-glyphs",
@@ -528,9 +529,9 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "text/sdf-glyphs",
@@ -541,10 +542,10 @@
     "support": "supported",
     "evidence": "sampled",
     "delta": null,
-    "note": "397/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "note": "377/4096 pixels drawn",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "text/sdf-glyphs",
@@ -555,9 +556,9 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "tilemap/two-by-two",
@@ -568,9 +569,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "tilemap/two-by-two",
@@ -582,9 +583,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1020/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "tilemap/two-by-two",
@@ -595,9 +596,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "tint/half-intensity",
@@ -608,9 +609,9 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "tint/half-intensity",
@@ -621,10 +622,10 @@
     "support": "supported",
     "evidence": "sampled",
     "delta": null,
-    "note": "1020/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "note": "1023/4096 pixels drawn",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "tint/half-intensity",
@@ -635,9 +636,9 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/flipped-x",
@@ -648,9 +649,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/flipped-x",
@@ -662,9 +663,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "255/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/flipped-x",
@@ -675,9 +676,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/nested-parent-offset",
@@ -688,9 +689,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/nested-parent-offset",
@@ -702,9 +703,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "255/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/nested-parent-offset",
@@ -715,9 +716,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/rotated-quarter-turn",
@@ -728,9 +729,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/rotated-quarter-turn",
@@ -742,9 +743,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "255/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/rotated-quarter-turn",
@@ -755,9 +756,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/scaled-2x",
@@ -768,9 +769,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/scaled-2x",
@@ -782,9 +783,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1020/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/scaled-2x",
@@ -795,9 +796,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "blend/additive-overlap",
@@ -808,9 +809,9 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "blend/additive-overlap",
@@ -822,9 +823,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1791/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "blend/additive-overlap",
@@ -835,9 +836,9 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "graphics/overlapping-fills",
@@ -848,9 +849,9 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "graphics/overlapping-fills",
@@ -862,9 +863,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1792/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "graphics/overlapping-fills",
@@ -875,9 +876,9 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "graphics/solid-rectangle",
@@ -888,9 +889,9 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "graphics/solid-rectangle",
@@ -902,9 +903,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1024/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "graphics/solid-rectangle",
@@ -915,9 +916,9 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mask/triangle-clip",
@@ -928,9 +929,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mask/triangle-clip",
@@ -942,9 +943,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "119/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mask/triangle-clip",
@@ -955,9 +956,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mesh/mirrored-uvs",
@@ -968,9 +969,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mesh/mirrored-uvs",
@@ -982,9 +983,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1023/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mesh/mirrored-uvs",
@@ -995,9 +996,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mesh/textured-quad",
@@ -1008,9 +1009,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mesh/textured-quad",
@@ -1022,9 +1023,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1023/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mesh/textured-quad",
@@ -1035,9 +1036,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "nine-slice/stretched",
@@ -1048,9 +1049,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "nine-slice/stretched",
@@ -1062,9 +1063,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "2303/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "nine-slice/stretched",
@@ -1075,9 +1076,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "nine-slice/unstretched",
@@ -1088,9 +1089,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "nine-slice/unstretched",
@@ -1102,9 +1103,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1023/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "nine-slice/unstretched",
@@ -1115,9 +1116,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "particles/static-quad",
@@ -1128,9 +1129,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "particles/static-quad",
@@ -1142,9 +1143,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "255/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "particles/static-quad",
@@ -1155,9 +1156,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "repeating/tiled",
@@ -1166,11 +1167,12 @@
     "browser": "chromium",
     "backend": "webgpu",
     "support": "supported",
-    "evidence": "traced",
-    "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "evidence": "tolerant",
+    "delta": 1,
+    "note": "backends agree within 1 of one channel step",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "repeating/tiled",
@@ -1181,10 +1183,10 @@
     "support": "supported",
     "evidence": "sampled",
     "delta": null,
-    "note": "1020/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "note": "1024/4096 pixels drawn",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "repeating/tiled",
@@ -1195,9 +1197,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/canvas-texture",
@@ -1208,9 +1210,9 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/canvas-texture",
@@ -1222,9 +1224,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "256/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/canvas-texture",
@@ -1235,9 +1237,9 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/origin",
@@ -1248,9 +1250,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/origin",
@@ -1262,9 +1264,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1023/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/origin",
@@ -1275,9 +1277,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/translated",
@@ -1288,9 +1290,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/translated",
@@ -1302,9 +1304,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1023/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/translated",
@@ -1315,9 +1317,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "text/sdf-glyphs",
@@ -1328,9 +1330,9 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "text/sdf-glyphs",
@@ -1341,10 +1343,10 @@
     "support": "supported",
     "evidence": "sampled",
     "delta": null,
-    "note": "397/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "note": "377/4096 pixels drawn",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "text/sdf-glyphs",
@@ -1355,9 +1357,9 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "tilemap/two-by-two",
@@ -1368,9 +1370,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "tilemap/two-by-two",
@@ -1382,9 +1384,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1020/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "tilemap/two-by-two",
@@ -1395,9 +1397,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "tint/half-intensity",
@@ -1408,9 +1410,9 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "tint/half-intensity",
@@ -1421,10 +1423,10 @@
     "support": "supported",
     "evidence": "sampled",
     "delta": null,
-    "note": "1020/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "note": "1023/4096 pixels drawn",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "tint/half-intensity",
@@ -1435,9 +1437,9 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/flipped-x",
@@ -1448,9 +1450,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/flipped-x",
@@ -1462,9 +1464,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "255/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/flipped-x",
@@ -1475,9 +1477,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/nested-parent-offset",
@@ -1488,9 +1490,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/nested-parent-offset",
@@ -1502,9 +1504,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "255/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/nested-parent-offset",
@@ -1515,9 +1517,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/rotated-quarter-turn",
@@ -1528,9 +1530,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/rotated-quarter-turn",
@@ -1542,9 +1544,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "255/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/rotated-quarter-turn",
@@ -1555,9 +1557,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/scaled-2x",
@@ -1568,9 +1570,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/scaled-2x",
@@ -1582,9 +1584,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1020/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/scaled-2x",
@@ -1595,9 +1597,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "blend/additive-overlap",
@@ -3205,13 +3207,12 @@
     "feature": "BlendMode",
     "browser": "webkit",
     "backend": "webgl2",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "frame-equal",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "blend/additive-overlap",
@@ -3223,9 +3224,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1791/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "blend/additive-overlap",
@@ -3236,9 +3237,9 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "graphics/overlapping-fills",
@@ -3246,13 +3247,12 @@
     "feature": "Graphics",
     "browser": "webkit",
     "backend": "webgl2",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "frame-equal",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "graphics/overlapping-fills",
@@ -3264,9 +3264,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1792/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "graphics/overlapping-fills",
@@ -3277,9 +3277,9 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "graphics/solid-rectangle",
@@ -3287,13 +3287,12 @@
     "feature": "Graphics",
     "browser": "webkit",
     "backend": "webgl2",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "frame-equal",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "graphics/solid-rectangle",
@@ -3305,9 +3304,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1024/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "graphics/solid-rectangle",
@@ -3318,9 +3317,9 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mask/triangle-clip",
@@ -3328,13 +3327,12 @@
     "feature": "Mask",
     "browser": "webkit",
     "backend": "webgl2",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mask/triangle-clip",
@@ -3346,9 +3344,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "119/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mask/triangle-clip",
@@ -3359,9 +3357,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mesh/mirrored-uvs",
@@ -3369,13 +3367,12 @@
     "feature": "Mesh",
     "browser": "webkit",
     "backend": "webgl2",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mesh/mirrored-uvs",
@@ -3387,9 +3384,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1023/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mesh/mirrored-uvs",
@@ -3400,9 +3397,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mesh/textured-quad",
@@ -3410,13 +3407,12 @@
     "feature": "Mesh",
     "browser": "webkit",
     "backend": "webgl2",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mesh/textured-quad",
@@ -3428,9 +3424,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1023/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mesh/textured-quad",
@@ -3441,9 +3437,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "nine-slice/stretched",
@@ -3451,13 +3447,12 @@
     "feature": "NineSlice",
     "browser": "webkit",
     "backend": "webgl2",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "nine-slice/stretched",
@@ -3469,9 +3464,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "2303/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "nine-slice/stretched",
@@ -3482,9 +3477,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "nine-slice/unstretched",
@@ -3492,13 +3487,12 @@
     "feature": "NineSlice",
     "browser": "webkit",
     "backend": "webgl2",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "nine-slice/unstretched",
@@ -3510,9 +3504,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1023/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "nine-slice/unstretched",
@@ -3523,9 +3517,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "particles/static-quad",
@@ -3533,13 +3527,13 @@
     "feature": "Particles",
     "browser": "webkit",
     "backend": "webgl2",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "divergent",
+    "evidence": "traced",
+    "delta": 15,
+    "note": "backends differ by 15 on at least one channel",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "particles/static-quad",
@@ -3551,9 +3545,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "255/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "particles/static-quad",
@@ -3564,9 +3558,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "repeating/tiled",
@@ -3574,13 +3568,13 @@
     "feature": "RepeatingSprite",
     "browser": "webkit",
     "backend": "webgl2",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "tolerant",
+    "delta": 1,
+    "note": "backends agree within 1 of one channel step",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "repeating/tiled",
@@ -3592,9 +3586,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1020/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "repeating/tiled",
@@ -3605,9 +3599,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/canvas-texture",
@@ -3615,13 +3609,12 @@
     "feature": "Sprite",
     "browser": "webkit",
     "backend": "webgl2",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "frame-equal",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/canvas-texture",
@@ -3633,9 +3626,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "256/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/canvas-texture",
@@ -3646,9 +3639,9 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/origin",
@@ -3656,13 +3649,12 @@
     "feature": "Sprite",
     "browser": "webkit",
     "backend": "webgl2",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/origin",
@@ -3674,9 +3666,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1023/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/origin",
@@ -3687,9 +3679,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/translated",
@@ -3697,13 +3689,12 @@
     "feature": "Sprite",
     "browser": "webkit",
     "backend": "webgl2",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/translated",
@@ -3715,9 +3706,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1023/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/translated",
@@ -3728,9 +3719,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "text/sdf-glyphs",
@@ -3738,13 +3729,12 @@
     "feature": "Text",
     "browser": "webkit",
     "backend": "webgl2",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "frame-equal",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "text/sdf-glyphs",
@@ -3755,10 +3745,10 @@
     "support": "supported",
     "evidence": "sampled",
     "delta": null,
-    "note": "307/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "note": "390/4096 pixels drawn",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "text/sdf-glyphs",
@@ -3769,9 +3759,9 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "tilemap/two-by-two",
@@ -3779,13 +3769,13 @@
     "feature": "Tilemap",
     "browser": "webkit",
     "backend": "webgl2",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "divergent",
+    "evidence": "traced",
+    "delta": 15,
+    "note": "backends differ by 15 on at least one channel",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "tilemap/two-by-two",
@@ -3797,9 +3787,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1020/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "tilemap/two-by-two",
@@ -3810,9 +3800,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "tint/half-intensity",
@@ -3820,13 +3810,12 @@
     "feature": "Tint",
     "browser": "webkit",
     "backend": "webgl2",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "frame-equal",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "tint/half-intensity",
@@ -3837,10 +3826,10 @@
     "support": "supported",
     "evidence": "sampled",
     "delta": null,
-    "note": "1020/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "note": "1023/4096 pixels drawn",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "tint/half-intensity",
@@ -3851,9 +3840,9 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/flipped-x",
@@ -3861,13 +3850,12 @@
     "feature": "Transform",
     "browser": "webkit",
     "backend": "webgl2",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/flipped-x",
@@ -3879,9 +3867,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "255/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/flipped-x",
@@ -3892,9 +3880,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/nested-parent-offset",
@@ -3902,13 +3890,12 @@
     "feature": "Transform",
     "browser": "webkit",
     "backend": "webgl2",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/nested-parent-offset",
@@ -3920,9 +3907,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "255/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/nested-parent-offset",
@@ -3933,9 +3920,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/rotated-quarter-turn",
@@ -3943,13 +3930,12 @@
     "feature": "Transform",
     "browser": "webkit",
     "backend": "webgl2",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/rotated-quarter-turn",
@@ -3961,9 +3947,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "255/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/rotated-quarter-turn",
@@ -3974,9 +3960,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/scaled-2x",
@@ -3984,13 +3970,13 @@
     "feature": "Transform",
     "browser": "webkit",
     "backend": "webgl2",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "divergent",
+    "evidence": "traced",
+    "delta": 15,
+    "note": "backends differ by 15 on at least one channel",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/scaled-2x",
@@ -4002,9 +3988,9 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1020/4096 pixels drawn",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/scaled-2x",
@@ -4015,9 +4001,9 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "blend/additive-overlap",
@@ -4025,13 +4011,12 @@
     "feature": "BlendMode",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "frame-equal",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "blend/additive-overlap",
@@ -4039,13 +4024,13 @@
     "feature": "BlendMode",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
+    "support": "supported",
+    "evidence": "sampled",
     "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "note": "1791/4096 pixels drawn",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "blend/additive-overlap",
@@ -4053,13 +4038,12 @@
     "feature": "BlendMode",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "frame-equal",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "graphics/overlapping-fills",
@@ -4067,13 +4051,12 @@
     "feature": "Graphics",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "frame-equal",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "graphics/overlapping-fills",
@@ -4081,13 +4064,13 @@
     "feature": "Graphics",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
+    "support": "supported",
+    "evidence": "sampled",
     "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "note": "1792/4096 pixels drawn",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "graphics/overlapping-fills",
@@ -4095,13 +4078,13 @@
     "feature": "Graphics",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "divergent",
+    "evidence": "frame-equal",
+    "delta": 255,
+    "note": "frame 2 differs from frame 1 by 255",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "graphics/solid-rectangle",
@@ -4109,13 +4092,12 @@
     "feature": "Graphics",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "frame-equal",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "graphics/solid-rectangle",
@@ -4123,13 +4105,13 @@
     "feature": "Graphics",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
+    "support": "divergent",
+    "evidence": "sampled",
     "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "note": "scene rendered an empty frame",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "graphics/solid-rectangle",
@@ -4137,13 +4119,13 @@
     "feature": "Graphics",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "divergent",
+    "evidence": "frame-equal",
+    "delta": 128,
+    "note": "frame 2 differs from frame 1 by 128",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mask/triangle-clip",
@@ -4151,13 +4133,12 @@
     "feature": "Mask",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mask/triangle-clip",
@@ -4165,13 +4146,13 @@
     "feature": "Mask",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
+    "support": "supported",
+    "evidence": "sampled",
     "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "note": "119/4096 pixels drawn",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mask/triangle-clip",
@@ -4179,13 +4160,12 @@
     "feature": "Mask",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mesh/mirrored-uvs",
@@ -4193,13 +4173,12 @@
     "feature": "Mesh",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mesh/mirrored-uvs",
@@ -4207,13 +4186,13 @@
     "feature": "Mesh",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
+    "support": "supported",
+    "evidence": "sampled",
     "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "note": "1023/4096 pixels drawn",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mesh/mirrored-uvs",
@@ -4221,13 +4200,13 @@
     "feature": "Mesh",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "divergent",
+    "evidence": "traced",
+    "delta": 31,
+    "note": "frame 2 differs from frame 1 by 31",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mesh/textured-quad",
@@ -4235,13 +4214,12 @@
     "feature": "Mesh",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mesh/textured-quad",
@@ -4249,13 +4227,13 @@
     "feature": "Mesh",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
+    "support": "divergent",
+    "evidence": "sampled",
     "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "note": "scene rendered an empty frame",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "mesh/textured-quad",
@@ -4263,13 +4241,12 @@
     "feature": "Mesh",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "nine-slice/stretched",
@@ -4277,13 +4254,12 @@
     "feature": "NineSlice",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "nine-slice/stretched",
@@ -4291,13 +4267,13 @@
     "feature": "NineSlice",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
+    "support": "supported",
+    "evidence": "sampled",
     "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "note": "2303/4096 pixels drawn",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "nine-slice/stretched",
@@ -4305,13 +4281,12 @@
     "feature": "NineSlice",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "nine-slice/unstretched",
@@ -4319,13 +4294,12 @@
     "feature": "NineSlice",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "nine-slice/unstretched",
@@ -4333,13 +4307,13 @@
     "feature": "NineSlice",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
+    "support": "supported",
+    "evidence": "sampled",
     "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "note": "1023/4096 pixels drawn",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "nine-slice/unstretched",
@@ -4347,13 +4321,13 @@
     "feature": "NineSlice",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "divergent",
+    "evidence": "traced",
+    "delta": 31,
+    "note": "frame 2 differs from frame 1 by 31",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "particles/static-quad",
@@ -4361,13 +4335,13 @@
     "feature": "Particles",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "divergent",
+    "evidence": "traced",
+    "delta": 15,
+    "note": "backends differ by 15 on at least one channel",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "particles/static-quad",
@@ -4375,13 +4349,13 @@
     "feature": "Particles",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
+    "support": "supported",
+    "evidence": "sampled",
     "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "note": "255/4096 pixels drawn",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "particles/static-quad",
@@ -4389,13 +4363,13 @@
     "feature": "Particles",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "divergent",
+    "evidence": "traced",
+    "delta": 15,
+    "note": "frame 2 differs from frame 1 by 15",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "repeating/tiled",
@@ -4403,13 +4377,13 @@
     "feature": "RepeatingSprite",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "tolerant",
+    "delta": 1,
+    "note": "backends agree within 1 of one channel step",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "repeating/tiled",
@@ -4417,13 +4391,13 @@
     "feature": "RepeatingSprite",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
+    "support": "divergent",
+    "evidence": "sampled",
     "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "note": "scene rendered an empty frame",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "repeating/tiled",
@@ -4431,13 +4405,12 @@
     "feature": "RepeatingSprite",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/canvas-texture",
@@ -4445,13 +4418,12 @@
     "feature": "Sprite",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "frame-equal",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/canvas-texture",
@@ -4459,13 +4431,13 @@
     "feature": "Sprite",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
+    "support": "supported",
+    "evidence": "sampled",
     "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "note": "256/4096 pixels drawn",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/canvas-texture",
@@ -4473,13 +4445,12 @@
     "feature": "Sprite",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "frame-equal",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/origin",
@@ -4487,13 +4458,12 @@
     "feature": "Sprite",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/origin",
@@ -4501,13 +4471,13 @@
     "feature": "Sprite",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
+    "support": "supported",
+    "evidence": "sampled",
     "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "note": "1023/4096 pixels drawn",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/origin",
@@ -4515,13 +4485,12 @@
     "feature": "Sprite",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/translated",
@@ -4529,13 +4498,12 @@
     "feature": "Sprite",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/translated",
@@ -4543,13 +4511,13 @@
     "feature": "Sprite",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
+    "support": "supported",
+    "evidence": "sampled",
     "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "note": "1023/4096 pixels drawn",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "sprite/translated",
@@ -4557,13 +4525,13 @@
     "feature": "Sprite",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "divergent",
+    "evidence": "traced",
+    "delta": 31,
+    "note": "frame 2 differs from frame 1 by 31",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "text/sdf-glyphs",
@@ -4571,13 +4539,12 @@
     "feature": "Text",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "frame-equal",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "text/sdf-glyphs",
@@ -4585,13 +4552,13 @@
     "feature": "Text",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
+    "support": "supported",
+    "evidence": "sampled",
     "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "note": "390/4096 pixels drawn",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "text/sdf-glyphs",
@@ -4599,13 +4566,12 @@
     "feature": "Text",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "frame-equal",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "tilemap/two-by-two",
@@ -4613,13 +4579,13 @@
     "feature": "Tilemap",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "divergent",
+    "evidence": "traced",
+    "delta": 15,
+    "note": "backends differ by 15 on at least one channel",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "tilemap/two-by-two",
@@ -4627,13 +4593,13 @@
     "feature": "Tilemap",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
+    "support": "supported",
+    "evidence": "sampled",
     "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "note": "1020/4096 pixels drawn",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "tilemap/two-by-two",
@@ -4641,13 +4607,12 @@
     "feature": "Tilemap",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "tint/half-intensity",
@@ -4655,13 +4620,12 @@
     "feature": "Tint",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "frame-equal",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "tint/half-intensity",
@@ -4669,13 +4633,13 @@
     "feature": "Tint",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
+    "support": "supported",
+    "evidence": "sampled",
     "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "note": "1023/4096 pixels drawn",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "tint/half-intensity",
@@ -4683,13 +4647,12 @@
     "feature": "Tint",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "frame-equal",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/flipped-x",
@@ -4697,13 +4660,12 @@
     "feature": "Transform",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/flipped-x",
@@ -4711,13 +4673,13 @@
     "feature": "Transform",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
+    "support": "supported",
+    "evidence": "sampled",
     "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "note": "255/4096 pixels drawn",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/flipped-x",
@@ -4725,13 +4687,12 @@
     "feature": "Transform",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/nested-parent-offset",
@@ -4739,13 +4700,12 @@
     "feature": "Transform",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/nested-parent-offset",
@@ -4753,13 +4713,13 @@
     "feature": "Transform",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
+    "support": "supported",
+    "evidence": "sampled",
     "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "note": "255/4096 pixels drawn",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/nested-parent-offset",
@@ -4767,13 +4727,12 @@
     "feature": "Transform",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/rotated-quarter-turn",
@@ -4781,13 +4740,12 @@
     "feature": "Transform",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/rotated-quarter-turn",
@@ -4795,13 +4753,13 @@
     "feature": "Transform",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
+    "support": "supported",
+    "evidence": "sampled",
     "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "note": "255/4096 pixels drawn",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/rotated-quarter-turn",
@@ -4809,13 +4767,12 @@
     "feature": "Transform",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/scaled-2x",
@@ -4823,13 +4780,13 @@
     "feature": "Transform",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "divergent",
+    "evidence": "traced",
+    "delta": 15,
+    "note": "backends differ by 15 on at least one channel",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/scaled-2x",
@@ -4837,13 +4794,13 @@
     "feature": "Transform",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
+    "support": "supported",
+    "evidence": "sampled",
     "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "note": "1020/4096 pixels drawn",
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   },
   {
     "scene": "transform/scaled-2x",
@@ -4851,12 +4808,11 @@
     "feature": "Transform",
     "browser": "webkit",
     "backend": "webgpu",
-    "support": "unavailable",
-    "evidence": "none",
-    "delta": null,
-    "note": "no WebGPU adapter in this browser",
-    "measuredAt": "2026-08-03",
-    "commit": "eeda88de",
-    "platform": "win32"
+    "support": "supported",
+    "evidence": "traced",
+    "delta": 0,
+    "measuredAt": "2026-08-05",
+    "commit": "daddd77d",
+    "platform": "darwin"
   }
 ]

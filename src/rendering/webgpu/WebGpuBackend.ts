@@ -183,6 +183,12 @@ export class WebGpuBackend implements RenderBackend {
   private _context: GPUCanvasContext | null = null;
   private _device: GPUDevice | null = null;
   private _format: GPUTextureFormat | null = null;
+  // `copyExternalImageToTexture` from a <canvas> source: `null` while unknown
+  // (never probed yet), `true`/`false` once the one-off probe below resolves.
+  // See `_probeCanvasExternalImageCopy` for why this is measured instead of
+  // assumed.
+  private _canvasExternalImageCopySupported: boolean | null = null;
+  private _canvasExternalImageCopyProbeStarted = false;
   private _initializePromise: Promise<this> | null = null;
   private _renderTarget: RenderTarget;
   // Reused scratch for the device-pixel snap viewport rect (see _snapViewport).
@@ -2006,6 +2012,88 @@ export class WebGpuBackend implements RenderBackend {
     return state;
   }
 
+  /**
+   * Whether `copyExternalImageToTexture` actually writes pixels when its
+   * source is a 2D `<canvas>`. Safari's WebGPU accepts the call and reports
+   * no validation error, but the destination texture is left at its cleared
+   * contents — a correctness bug with no capability or feature flag to read
+   * it off, so this uploads a known pixel and reads it back for real.
+   *
+   * Runs once per backend instance, kicked off lazily on the first canvas-
+   * sourced texture upload rather than during `initialize()` — an app that
+   * never uses one (no `Graphics`, no gradients, no `HTMLText`) shouldn't pay
+   * for it. Until it resolves, uploads fall back to the always-correct
+   * `getImageData` path; this promotes them to the cheaper direct copy only
+   * once actually confirmed, and stays on the fallback forever on a browser
+   * where the probe reports `false` — including transparently picking up a
+   * future Safari that fixes it, with no version sniffing.
+   */
+  private async _probeCanvasExternalImageCopy(): Promise<boolean> {
+    // Held outside the try so the finally can release them whatever happens:
+    // the readback maps asynchronously, and a device lost (or destroyed) in
+    // that window rejects mid-probe, which would otherwise strand both.
+    let probeTexture: GPUTexture | null = null;
+    let readback: GPUBuffer | null = null;
+
+    try {
+      const canvas = document.createElement('canvas');
+
+      canvas.width = 2;
+      canvas.height = 2;
+
+      const ctx = canvas.getContext('2d');
+
+      if (ctx === null) return false;
+
+      ctx.fillStyle = '#ff0000';
+      ctx.fillRect(0, 0, 2, 2);
+
+      probeTexture = this.device.createTexture({
+        label: 'backend:probe:canvas-external-image-copy',
+        size: { width: 2, height: 2 },
+        format: managedTextureFormat,
+        // `copyExternalImageToTexture` requires RENDER_ATTACHMENT on its
+        // destination, not just COPY_DST — the managed-texture path above
+        // gets this for free through `_getTextureUsage`'s mipmap usage
+        // (mipmapping defaults on), but this standalone probe texture has to
+        // ask for it explicitly.
+        usage: GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT,
+      });
+
+      this.device.queue.copyExternalImageToTexture({ source: canvas, flipY: false }, { texture: probeTexture }, { width: 2, height: 2 });
+
+      // `copyTextureToBuffer` requires `bytesPerRow` aligned to 256 bytes,
+      // unlike `writeTexture` (see the managed-texture upload above).
+      const bytesPerRow = 256;
+
+      readback = this.device.createBuffer({
+        label: 'backend:probe:canvas-external-image-copy-readback',
+        size: bytesPerRow * 2,
+        usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+      });
+
+      const encoder = this.device.createCommandEncoder({ label: 'backend:probe:canvas-external-image-copy-encoder' });
+
+      encoder.copyTextureToBuffer({ texture: probeTexture }, { buffer: readback, bytesPerRow, rowsPerImage: 2 }, { width: 2, height: 2 });
+      this.device.queue.submit([encoder.finish()]);
+
+      await readback.mapAsync(GPUMapMode.READ);
+
+      const pixel = new Uint8Array(readback.getMappedRange().slice(0, 4));
+
+      readback.unmap();
+
+      return pixel[0] === 255 && pixel[1] === 0 && pixel[2] === 0 && pixel[3] === 255;
+    } catch {
+      // An unexpected failure here says nothing about the real browser
+      // behaviour — stay on the always-correct fallback rather than guess.
+      return false;
+    } finally {
+      readback?.destroy();
+      probeTexture?.destroy();
+    }
+  }
+
   private _syncTexture(texture: Texture | RenderTexture): ManagedWebGpuTextureState {
     if (!(texture instanceof RenderTexture) && !(texture instanceof DataTexture) && (texture.source === null || texture.width === 0 || texture.height === 0)) {
       throw new Error('WebGPU sprite rendering requires a texture with a valid source and non-zero dimensions.');
@@ -2090,19 +2178,61 @@ export class WebGpuBackend implements RenderBackend {
       } else if (!(texture instanceof RenderTexture)) {
         const source = texture.source!;
 
-        this.device.queue.copyExternalImageToTexture(
-          {
-            source,
-            flipY: false,
-          },
-          {
-            texture: state.texture,
-          },
-          {
-            width: texture.width,
-            height: texture.height,
-          },
-        );
+        // `copyExternalImageToTexture` from a <canvas> silently uploads nothing
+        // on Safari's WebGPU — the destination texture stays at its cleared
+        // contents and no validation error surfaces to catch it. `getImageData`
+        // + `writeTexture` reads the same unpremultiplied bytes `rgba8unorm`
+        // (this backend's managed texture format) expects, so it produces an
+        // identical upload on browsers where the external-image path already
+        // works — but it forces a GPU→CPU→GPU round trip that
+        // `copyExternalImageToTexture` normally avoids, so it only runs while
+        // `_canvasExternalImageCopySupported` isn't confirmed `true` (unknown,
+        // still probing, or confirmed broken). See
+        // `_probeCanvasExternalImageCopy`.
+        //
+        // The fallback needs a 2D context, and `getContext('2d')` returns null
+        // on a canvas already bound to another context type — a WebGL minimap,
+        // a `bitmaprenderer` target. `TextureSource` accepts those, and
+        // `copyExternalImageToTexture` handles them, so they take the direct
+        // path rather than failing the upload. On Safari that leaves them
+        // subject to the very bug worked around here, but no fallback exists:
+        // their pixels are not readable from the CPU side.
+        if (source instanceof HTMLCanvasElement && this._canvasExternalImageCopySupported !== true) {
+          if (!this._canvasExternalImageCopyProbeStarted) {
+            this._canvasExternalImageCopyProbeStarted = true;
+            void this._probeCanvasExternalImageCopy().then(supported => {
+              this._canvasExternalImageCopySupported = supported;
+            });
+          }
+        }
+
+        const canvasReadbackContext = source instanceof HTMLCanvasElement && this._canvasExternalImageCopySupported !== true ? source.getContext('2d') : null;
+
+        if (canvasReadbackContext !== null) {
+          const { data } = canvasReadbackContext.getImageData(0, 0, texture.width, texture.height);
+
+          this.device.queue.writeTexture(
+            { texture: state.texture },
+            data,
+            { bytesPerRow: texture.width * MANAGED_TEXTURE_BYTES_PER_PIXEL, rowsPerImage: texture.height },
+            { width: texture.width, height: texture.height },
+          );
+        } else {
+          this.device.queue.copyExternalImageToTexture(
+            {
+              source,
+              flipY: false,
+            },
+            {
+              texture: state.texture,
+            },
+            {
+              width: texture.width,
+              height: texture.height,
+            },
+          );
+        }
+
         this._accountant.recordTextureUpload(texture.width * texture.height * MANAGED_TEXTURE_BYTES_PER_PIXEL);
 
         if (state.mipLevelCount > 1) {
