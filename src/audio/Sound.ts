@@ -351,7 +351,7 @@ export class Sound implements Playable {
    * Pool limits are enforced: if the pool is full the configured eviction
    * strategy picks a victim to stop before the new voice starts.
    */
-  public _createVoice(manager: AudioManager, options: PlayOptions): Voice {
+  public _createVoice(manager: AudioManager, options: SoundPlayOptions): Voice {
     const bus = options.bus ?? manager.sound;
     const notLoaded = this._notLoadedVoice(bus);
 
@@ -377,7 +377,7 @@ export class Sound implements Playable {
    * Create a voice for a named sprite clip.
    * @internal Used by managers that want sprite-level playback.
    */
-  public _createSpriteVoice(manager: AudioManager, name: string, options: PlayOptions = {}): Voice {
+  public _createSpriteVoice(manager: AudioManager, name: string, options: SoundPlayOptions = {}): Voice {
     const clip = this._sprites.get(name);
 
     if (!clip) {
@@ -436,7 +436,7 @@ export class Sound implements Playable {
    * pool limit, builds the {@link SoundVoice}, seeds spatialization from the
    * play-time options, and tracks the voice for eviction.
    */
-  private _buildVoice(manager: AudioManager, options: PlayOptions, offset: number, window: SoundVoiceWindow): Voice {
+  private _buildVoice(manager: AudioManager, options: SoundPlayOptions, offset: number, window: SoundVoiceWindow): Voice {
     // @internal invariant: the buffer is non-null here. Both `_createVoice` and
     // `_createSpriteVoice` route through `_notLoadedVoice` before reaching this
     // method, so a null buffer can no longer arrive through any real caller.
@@ -452,15 +452,22 @@ export class Sound implements Playable {
     const volume = clamp(options.muted ? 0 : (options.volume ?? (this.muted ? 0 : this.volume)), 0, 1);
     const bus = options.bus ?? manager.sound;
 
-    // Pool eviction: stop the victim voice if we're at capacity.
-    this._pruneEndedVoices();
+    if (options.replace === true) {
+      // Singleton-replace mode: every other active voice of this sound is
+      // stopped so the new one plays alone, bypassing pool eviction policy
+      // entirely (there is nothing left in the pool to evict against).
+      this._stopAllVoices();
+    } else {
+      // Pool eviction: stop the victim voice if we're at capacity.
+      this._pruneEndedVoices();
 
-    if (this._activeVoices.length >= this._poolSize) {
-      const victimIndex = this._pickEvictionVictim();
-      const victim = this._activeVoices[victimIndex];
-      if (victim) {
-        this._activeVoices.splice(victimIndex, 1);
-        victim.voice.stop();
+      if (this._activeVoices.length >= this._poolSize) {
+        const victimIndex = this._pickEvictionVictim();
+        const victim = this._activeVoices[victimIndex];
+        if (victim) {
+          this._activeVoices.splice(victimIndex, 1);
+          victim.voice.stop();
+        }
       }
     }
 
