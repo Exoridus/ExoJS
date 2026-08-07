@@ -35,9 +35,14 @@ export function measureText(text: string, style: TextLayoutStyle, provider: Glyp
  * options.
  *
  * Handles `\n` line breaks, left/center/right/justify alignment, `letterSpacing`,
- * `leading`, `breakWords`, `whiteSpace` preprocessing, and optional kerning
- * (if the provider implements `getKerning`). RTL and ligature shaping are out
- * of scope; Unicode/diacritics are delegated to the browser's canvas engine.
+ * `leading`, `breakWords`, `whiteSpace` preprocessing, `maxHeight` overflow
+ * (`clip` / `ellipsis`), right-to-left flow, and optional kerning (if the
+ * provider implements `getKerning`).
+ *
+ * `direction: 'rtl'` reverses each line visually once wrapping is done, so
+ * uniformly right-to-left text reads correctly. Full bidi, Arabic contextual
+ * shaping, and ligature shaping are out of scope; Unicode/diacritics are
+ * delegated to the browser's canvas engine.
  *
  * Returns an empty array for empty text.
  */
@@ -48,6 +53,9 @@ export function layoutText(text: string, style: TextLayoutStyle, layout: LayoutO
   const computedLineHeight = fontSize * lineHeight + leading;
   const letterSpacing = layout.letterSpacing ?? 0;
   const maxWidth = layout.maxWidth;
+  const maxHeight = layout.maxHeight;
+  const overflow = layout.overflow ?? 'visible';
+  const rtl = layout.direction === 'rtl';
   const breakWords = layout.breakWords ?? false;
   const whiteSpace = layout.whiteSpace ?? 'pre-line';
 
@@ -66,13 +74,32 @@ export function layoutText(text: string, style: TextLayoutStyle, layout: LayoutO
     }
   }
 
+  // ── Vertical overflow ─────────────────────────────────────────────────────
+  // Only whole line boxes count as fitting: a line whose baseline row would
+  // extend past maxHeight is dropped rather than rendered half-cut.
+  if (maxHeight !== undefined && overflow !== 'visible' && computedLineHeight > 0) {
+    const maxLines = Math.max(0, Math.floor(maxHeight / computedLineHeight));
+
+    if (allLines.length > maxLines) {
+      allLines.length = maxLines;
+
+      if (overflow === 'ellipsis' && maxLines > 0) {
+        // In-bounds: maxLines > 0 and allLines.length === maxLines.
+        allLines[maxLines - 1] = _ellipsize(allLines[maxLines - 1]!, fontSize, provider, maxWidth, letterSpacing);
+      }
+    }
+  }
+
   // Pass 1: gather glyph info per line, track widths and word counts.
   const linePlacements: LinePlacement[] = [];
   let maxLineWidth = 0;
 
   for (let lineIndex = 0; lineIndex < allLines.length; lineIndex++) {
     // In-bounds: lineIndex < allLines.length.
-    const line = allLines[lineIndex]!;
+    // RTL reorders each line visually before placement, so the cursor can keep
+    // advancing left-to-right and every downstream step (alignment, justify,
+    // quad building) stays direction-agnostic.
+    const line = rtl ? _reverseGraphemes(allLines[lineIndex]!) : allLines[lineIndex]!;
     const lineY = lineIndex * computedLineHeight;
     let cursorX = 0;
     let wordCount = 0;
@@ -228,6 +255,43 @@ export function buildTextPageQuads(placements: readonly GlyphPlacement[]): TextP
 }
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
+
+/** Character appended to the last visible line under `overflow: 'ellipsis'`. */
+const ELLIPSIS = '…';
+
+/**
+ * Reverse a line by code point, so astral characters survive the round trip.
+ * Combining marks and bidi runs are not reordered — see `layoutText`.
+ */
+function _reverseGraphemes(line: string): string {
+  return [...line].reverse().join('');
+}
+
+function _measureChars(chars: readonly string[], fontSize: number, provider: GlyphProvider, letterSpacing: number): number {
+  if (chars.length === 0) return 0;
+  let width = 0;
+  for (const char of chars) {
+    width += provider.getGlyph(char, fontSize).advance + letterSpacing;
+  }
+  // The gap after the final glyph is not part of the line's ink extent.
+  return width - letterSpacing;
+}
+
+/**
+ * Append an ellipsis to `line`, dropping trailing characters until the result
+ * fits `maxWidth`. Without a `maxWidth` there is nothing to fit against, so the
+ * ellipsis is simply appended.
+ */
+function _ellipsize(line: string, fontSize: number, provider: GlyphProvider, maxWidth: number | undefined, letterSpacing: number): string {
+  if (maxWidth === undefined) return line + ELLIPSIS;
+
+  const chars = [...line];
+  while (chars.length > 0 && _measureChars([...chars, ELLIPSIS], fontSize, provider, letterSpacing) > maxWidth) {
+    chars.pop();
+  }
+
+  return chars.join('') + ELLIPSIS;
+}
 
 function _applyWhiteSpace(text: string, mode: 'normal' | 'pre' | 'pre-line'): string {
   if (mode === 'pre') return text;
