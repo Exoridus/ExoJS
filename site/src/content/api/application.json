@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 52,
+  "memberCount": 51,
   "counts": {
     "constructors": 1,
     "methods": 10,
-    "properties": 33,
+    "properties": 32,
     "events": 8
   },
   "sections": [
@@ -1222,27 +1222,6 @@
           "params": [],
           "returnType": null,
           "description": ""
-        },
-        {
-          "name": "equipment",
-          "signature": "equipment: ExtensionSnapshot",
-          "signatureTokens": [
-            {
-              "text": "equipment",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "ExtensionSnapshot",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "What this application was equipped with — the extensions passed to the constructor, and the renderer, asset, serializer and system bindings materialised from them. Frozen and fixed at construction. Ask an application this rather than reconstructing it from which modules happen to be imported: two Applications in one process may legitimately hold different sets. Core bindings are not listed — they are present in every application and carry no selection decision worth reporting."
         },
         {
           "name": "fixedTimeStep",

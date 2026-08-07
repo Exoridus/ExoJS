@@ -52,10 +52,6 @@ Omitting `extensions`, or passing `[]`, gives you a core-only application.
 
 This is deliberately the only path. What an application can do is decided where it is constructed, not by which modules happened to get imported somewhere in the program — so two applications in one process can hold different sets. An editor beside its runtime preview, two canvases with different renderers, a test that must not see what a neighbouring test installed: all of those need the selection to be local, and a process-wide catalogue cannot give it.
 
-<Callout type="hint" title="Ask the application what it got">
-`app.equipment` returns the frozen snapshot that was materialised at construction — the descriptors plus the renderer, asset, serializer and system bindings flattened out of them. Read it instead of reconstructing the set from your import graph.
-</Callout>
-
 ### Snapshot semantics
 
 The selection is flattened once per `Application`, at construction, into an immutable **snapshot**:

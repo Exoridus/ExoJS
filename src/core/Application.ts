@@ -187,8 +187,7 @@ export interface ApplicationOptions<Registry extends SceneRegistryShape<Registry
    * const app = new Application({ extensions: [tilemapExtension] });
    * ```
    *
-   * Materialised once at construction; the resulting set is readable from
-   * {@link Application.equipment}.
+   * Materialised once at construction.
    */
   extensions?: readonly Extension[];
   /**
@@ -573,22 +572,6 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
     // Every core manager exists by this point, so app-system bindings can capture references to them.
     materializeApplicationSystems(this, this._snapshot.systems);
-  }
-
-  /**
-   * What this application was equipped with — the extensions passed to the
-   * constructor, and the renderer, asset, serializer and system bindings
-   * materialised from them.
-   *
-   * Frozen and fixed at construction. Ask an application this rather than
-   * reconstructing it from which modules happen to be imported: two
-   * Applications in one process may legitimately hold different sets.
-   *
-   * Core bindings are not listed — they are present in every application and
-   * carry no selection decision worth reporting.
-   */
-  public get equipment(): ExtensionSnapshot {
-    return this._snapshot;
   }
 
   public get status(): ApplicationStatus {
