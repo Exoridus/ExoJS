@@ -1,5 +1,6 @@
 import { clamp } from '#math/utils';
 
+import type { GamepadButtonChannel } from './GamepadButton';
 import { ChannelOffset } from './types';
 
 declare const gamepadAxisChannelBrand: unique symbol;
@@ -96,17 +97,22 @@ export interface GamepadAxisOptions {
  *
  * The static namespace exports (`GamepadAxis.LeftStickLeft`,
  * `.LeftStickX`, ...) carry the canonical channel offsets used to address
- * each axis.
+ * each axis. `channel` can also target a {@link GamepadButtonChannel} —
+ * some devices report an inherently analog, button-shaped control (a
+ * trigger) through the raw `axes[]` array rather than `buttons[]`; routing
+ * such an axis at the canonical trigger channel keeps app code that binds
+ * `GamepadButton.LeftTrigger`/`RightTrigger` portable across devices
+ * regardless of which raw array the hardware happens to report through.
  */
 export class GamepadAxis {
   public readonly index: number;
-  public readonly channel: GamepadAxisChannel;
+  public readonly channel: GamepadAxisChannel | GamepadButtonChannel;
   public readonly invert: boolean;
   public readonly normalize: boolean;
   public readonly threshold: number;
   public readonly bipolar: boolean;
 
-  public constructor(index: number, channel: GamepadAxisChannel, options: GamepadAxisOptions = {}) {
+  public constructor(index: number, channel: GamepadAxisChannel | GamepadButtonChannel, options: GamepadAxisOptions = {}) {
     this.index = index;
     this.channel = channel;
     this.invert = options.invert ?? false;

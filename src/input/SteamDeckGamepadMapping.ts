@@ -68,11 +68,18 @@ export class SteamDeckGamepadMapping extends GamepadMapping {
         new GamepadAxis(2, GamepadAxis.RightStickX, { bipolar: true }),
         new GamepadAxis(3, GamepadAxis.RightStickY, { bipolar: true }),
 
-        // Triggers as analog axes (Steam Deck reports them as a8/a9,
-        // not buttons). Browsers expose -1..+1; normalize to 0..1
-        // for the canonical trigger channels.
-        new GamepadAxis(8, GamepadAxis.AuxiliaryAxis0Positive, { normalize: true }),
-        new GamepadAxis(9, GamepadAxis.AuxiliaryAxis1Positive, { normalize: true }),
+        // Triggers as analog axes (Steam Deck reports them as a8/a9, not
+        // buttons 6/7 the way a W3C-standard-mapped device would — raw
+        // button index 8 is already claimed by RightShoulder above, so the
+        // pull amount can only arrive via axes[]). They still route to the
+        // SAME canonical GamepadButton.LeftTrigger/RightTrigger channels
+        // every other family's triggers use, so `new
+        // ButtonAction(GamepadButton.RightTrigger)` works uniformly
+        // regardless of which raw array a given controller reports
+        // through. Raw axes report -1..+1; normalize to 0..1 to match the
+        // other families' 0..1 trigger pull range.
+        new GamepadAxis(8, GamepadButton.RightTrigger, { normalize: true }),
+        new GamepadAxis(9, GamepadButton.LeftTrigger, { normalize: true }),
       ],
     );
   }

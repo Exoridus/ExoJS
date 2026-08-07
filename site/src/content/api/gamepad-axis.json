@@ -1,6 +1,6 @@
 {
   "title": "GamepadAxis",
-  "description": "Single mappable analog axis on a physical gamepad. Holds the raw browser `Gamepad.axes[]` index, the canonical channel the value is written to, and the transform pipeline applied each frame by transformValue. Direction-split axis channels (e.g. `LeftStickLeft`, `LeftStickRight`) live in the 0..1 range — set `invert: true` on the negative half so it reads positive when pushed in its direction. Aggregate channels (e.g. `LeftStickX`, `LeftStickY`) live in the full -1..1 range — set `bipolar: true` to preserve sign through the pipeline. The static namespace exports (`GamepadAxis.LeftStickLeft`, `.LeftStickX`, ...) carry the canonical channel offsets used to address each axis.",
+  "description": "Single mappable analog axis on a physical gamepad. Holds the raw browser `Gamepad.axes[]` index, the canonical channel the value is written to, and the transform pipeline applied each frame by transformValue. Direction-split axis channels (e.g. `LeftStickLeft`, `LeftStickRight`) live in the 0..1 range — set `invert: true` on the negative half so it reads positive when pushed in its direction. Aggregate channels (e.g. `LeftStickX`, `LeftStickY`) live in the full -1..1 range — set `bipolar: true` to preserve sign through the pipeline. The static namespace exports (`GamepadAxis.LeftStickLeft`, `.LeftStickX`, ...) carry the canonical channel offsets used to address each axis. `channel` can also target a GamepadButtonChannel — some devices report an inherently analog, button-shaped control (a trigger) through the raw `axes[]` array rather than `buttons[]`; routing such an axis at the canonical trigger channel keeps app code that binds `GamepadButton.LeftTrigger`/`RightTrigger` portable across devices regardless of which raw array the hardware happens to report through.",
   "symbol": "GamepadAxis",
   "kind": "class",
   "subsystem": "input",
@@ -22,7 +22,7 @@
         "Single mappable analog axis on a physical gamepad. Holds the raw browser `Gamepad.axes[]` index, the canonical channel the value is written to, and the transform pipeline applied each frame by transformValue.",
         "Direction-split axis channels (e.g. `LeftStickLeft`, `LeftStickRight`) live in the 0..1 range — set `invert: true` on the negative half so it reads positive when pushed in its direction.",
         "Aggregate channels (e.g. `LeftStickX`, `LeftStickY`) live in the full -1..1 range — set `bipolar: true` to preserve sign through the pipeline.",
-        "The static namespace exports (`GamepadAxis.LeftStickLeft`, `.LeftStickX`, ...) carry the canonical channel offsets used to address each axis."
+        "The static namespace exports (`GamepadAxis.LeftStickLeft`, `.LeftStickX`, ...) carry the canonical channel offsets used to address each axis. `channel` can also target a GamepadButtonChannel — some devices report an inherently analog, button-shaped control (a trigger) through the raw `axes[]` array rather than `buttons[]`; routing such an axis at the canonical trigger channel keeps app code that binds `GamepadButton.LeftTrigger`/`RightTrigger` portable across devices regardless of which raw array the hardware happens to report through."
       ],
       "importLine": "import { GamepadAxis } from '@codexo/exojs'",
       "sourceLink": null
@@ -33,7 +33,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(index: number, channel: GamepadAxisChannel, options: GamepadAxisOptions): GamepadAxis",
+          "signature": "new(index: number, channel: GamepadButtonChannel | GamepadAxisChannel, options: GamepadAxisOptions): GamepadAxis",
           "signatureTokens": [
             {
               "text": "new",
@@ -65,6 +65,14 @@
             },
             {
               "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButtonChannel",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
               "kind": "punctuation"
             },
             {
@@ -108,7 +116,7 @@
             },
             {
               "name": "channel",
-              "type": "GamepadAxisChannel",
+              "type": "GamepadButtonChannel | GamepadAxisChannel",
               "optional": false
             },
             {
@@ -208,7 +216,7 @@
         },
         {
           "name": "channel",
-          "signature": "channel: GamepadAxisChannel",
+          "signature": "channel: GamepadButtonChannel | GamepadAxisChannel",
           "signatureTokens": [
             {
               "text": "channel",
@@ -216,6 +224,14 @@
             },
             {
               "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButtonChannel",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
               "kind": "punctuation"
             },
             {

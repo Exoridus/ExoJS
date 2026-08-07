@@ -23,6 +23,28 @@ import { ChannelOffset, ChannelSize, maxPointers, pointerSlotSize, resolveGamepa
 
 const gamepadSlots = 4;
 
+// Approximate pixel-equivalents for `WheelEvent.deltaMode` units other than
+// `DOM_DELTA_PIXEL`. Firefox defaults to `DOM_DELTA_LINE` while most other
+// browsers default to `DOM_DELTA_PIXEL`, so without this conversion the
+// same physical scroll gesture reports wildly different raw magnitudes
+// depending on the browser. Values are round approximations (a typical line
+// height / viewport size) rather than device-exact figures — the Gamepad
+// API and DOM wheel spec don't expose a precise conversion factor.
+const wheelLineHeightPx = 16;
+const wheelPageSizePx = 800;
+
+/** Convert a raw `WheelEvent` delta component to an approximate pixel-equivalent, based on its `deltaMode`. */
+function normalizeWheelDelta(delta: number, deltaMode: number): number {
+  switch (deltaMode) {
+    case 1: // WheelEvent.DOM_DELTA_LINE
+      return delta * wheelLineHeightPx;
+    case 2: // WheelEvent.DOM_DELTA_PAGE
+      return delta * wheelPageSizePx;
+    default: // WheelEvent.DOM_DELTA_PIXEL
+      return delta;
+  }
+}
+
 /**
  * Strategy used by {@link InputManager} when assigning physical gamepads to
  * slot indices in {@link InputManager.gamepads}.
@@ -1059,7 +1081,13 @@ export class InputManager {
       return;
     }
 
-    this.wheelOffset.set(event.deltaX, event.deltaY);
+    // Fast/high-precision scrolling routinely fires several `wheel` events
+    // within one engine frame — accumulate them here (mirroring the
+    // journal's accumulate-then-flush-per-frame pattern for other input
+    // signals) rather than overwriting, or all but the last sub-frame event
+    // would be silently lost. `updateEvents` resets this to zero once the
+    // accumulated total has been dispatched for the frame.
+    this.wheelOffset.add(normalizeWheelDelta(event.deltaX, event.deltaMode), normalizeWheelDelta(event.deltaY, event.deltaMode));
     this.flags.push(InputManagerFlag.MouseWheel);
 
     stopEvent(event);
