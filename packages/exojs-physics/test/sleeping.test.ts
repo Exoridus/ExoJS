@@ -24,6 +24,10 @@ const advance = (world: PhysicsWorld, seconds: number): void => {
 const addFloor = (world: PhysicsWorld, topY: number): PhysicsBody =>
   world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: topY + 20 }, colliders: [{ shape: new BoxShape(1200, 40) }] }));
 
+/** A wide kinematic platform whose top surface sits at `topY`. */
+const addPlatform = (world: PhysicsWorld, topY: number): PhysicsBody =>
+  world.add(new PhysicsBody({ type: 'kinematic', position: { x: 0, y: topY + 20 }, colliders: [{ shape: new BoxShape(1200, 40) }] }));
+
 /** A 32×32 dynamic box centred at `(x, y)`. */
 const addBox = (world: PhysicsWorld, x: number, y: number): PhysicsBody =>
   world.add(new PhysicsBody({ type: 'dynamic', position: { x, y }, colliders: [{ shape: new BoxShape(32, 32), friction: 0.5 }] }));
@@ -126,6 +130,53 @@ describe('sleeping', () => {
     advance(world, 3); // well past the default timeToSleep
 
     expect(box.isSleeping).toBe(false);
+  });
+
+  it('destroying a kinematic platform wakes the sleeping body it supported', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
+    const platform = addPlatform(world, 300);
+    const box = addBox(world, 0, 300 - 16 - 2);
+
+    advance(world, 2);
+    expect(box.isSleeping).toBe(true);
+
+    const restingY = box.y;
+
+    // A kinematic body is never an island node, so nothing else can re-open the
+    // box's sleep decision once its only support disappears.
+    world.destroyBody(platform);
+    world.step(FRAME);
+
+    expect(box.isSleeping).toBe(false);
+
+    // And it actually resumes falling instead of hanging in mid-air.
+    advance(world, 0.5);
+    expect(box.y).toBeGreaterThan(restingY + 32);
+  });
+
+  it('destroying a dynamic body wakes the sleeping stack it supported', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
+    addFloor(world, 300);
+    const boxes = addStack(world, 3, 300);
+
+    advance(world, 3);
+
+    for (const box of boxes) {
+      expect(box.isSleeping).toBe(true);
+    }
+
+    const topRestingY = boxes[2]!.y;
+
+    // Pull the bottom box out: the middle box is the direct contact, the top box
+    // wakes transitively through the island it shares with the middle one.
+    world.destroyBody(boxes[0]!);
+    world.step(FRAME);
+
+    expect(boxes[1]!.isSleeping).toBe(false);
+    expect(boxes[2]!.isSleeping).toBe(false);
+
+    advance(world, 0.5);
+    expect(boxes[2]!.y).toBeGreaterThan(topRestingY + 16);
   });
 
   it('sleep transitions are deterministic across identical runs', () => {

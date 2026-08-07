@@ -466,7 +466,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Destroy a body and its colliders. Deferred when called inside a callback."
+          "description": "Destroy a body and its colliders. Every dynamic body touching it is woken, so anything that was resting on the destroyed body falls once its support is gone. Deferred when called inside a callback."
         },
         {
           "name": "destroyCollider",
@@ -513,7 +513,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Destroy a single collider, recomputing its body's mass. Deferred when called inside a callback."
+          "description": "Destroy a single collider, recomputing its body's mass. Wakes every dynamic body touching it, the same way destroyBody does. Deferred when called inside a callback."
         },
         {
           "name": "fixedUpdate",

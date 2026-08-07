@@ -344,12 +344,20 @@ export class PhysicsWorld implements BodyOwner {
     return body;
   }
 
-  /** Destroy a body and its colliders. Deferred when called inside a callback. */
+  /**
+   * Destroy a body and its colliders. Every dynamic body touching it is woken,
+   * so anything that was resting on the destroyed body falls once its support is
+   * gone. Deferred when called inside a callback.
+   */
   public destroyBody(body: PhysicsBody): void {
     this._defer(() => this._removeBody(body));
   }
 
-  /** Destroy a single collider, recomputing its body's mass. Deferred when called inside a callback. */
+  /**
+   * Destroy a single collider, recomputing its body's mass. Wakes every dynamic
+   * body touching it, the same way {@link destroyBody} does. Deferred when
+   * called inside a callback.
+   */
   public destroyCollider(collider: Collider): void {
     this._defer(() => this._removeCollider(collider));
   }
@@ -1001,8 +1009,43 @@ export class PhysicsWorld implements BodyOwner {
       this._colliders.splice(index, 1);
     }
 
+    this._wakeTouchingBodies(collider);
     this._backend.removeCollider(collider);
     collider._markDestroyed();
+  }
+
+  /**
+   * Wake every dynamic body still touching `collider` at the moment it leaves
+   * the world. A sleeping body's sleep timer is frozen, so the island pass alone
+   * can never re-open its sleep decision: losing the support it rested on just
+   * removes a contact, and the island (now smaller, or a lone body) still reports
+   * a long-expired timer and is put straight back to sleep — a stack whose floor,
+   * platform or bottom box is destroyed would hang in mid-air forever. Kinematic
+   * and static supports are the sharp edge, since they are island boundaries
+   * rather than nodes and so are invisible to wake propagation, but the same hole
+   * exists for a dynamic support. Waking the far side of each contact is enough:
+   * the woken body's reset timer propagates through the rest of its sleeping
+   * island on the next step, exactly like any other wake event.
+   */
+  private _wakeTouchingBodies(collider: Collider): void {
+    for (const contact of this._backend.contactGraph.solidContacts) {
+      let other: Collider;
+
+      if (contact.a === collider) {
+        other = contact.b;
+      } else if (contact.b === collider) {
+        other = contact.a;
+      } else {
+        continue;
+      }
+
+      // Only reached for a collider that is part of a live contact, so it is
+      // attached and `body` cannot throw — a free-standing collider (a body
+      // destroyed before it was ever stepped) has no contacts to match.
+      if (other.body.type === 'dynamic') {
+        other.body.wake();
+      }
+    }
   }
 
   private _assertAlive(): void {
