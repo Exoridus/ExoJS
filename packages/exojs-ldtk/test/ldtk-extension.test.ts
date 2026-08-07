@@ -1,10 +1,12 @@
+// Root entry: pulls in the module augmentation that types `loader.load` for
+// this package's asset type. Without it the augmentation is not in the program.
+import '../src/index';
+
 import type { AssetLoaderContext, Loader } from '@codexo/exojs';
-import { ExtensionRegistry } from '@codexo/exojs/extensions';
 import { tilemapExtension } from '@codexo/exojs-tilemap';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { buildSnapshot } from '../../../src/extensions/snapshot';
-import { resetExtensionRegistryForTesting } from '../../../src/extensions/testing';
 import { ldtkMapBinding } from '../src/ldtkBinding';
 import type { LdtkData } from '../src/LdtkData';
 import { ldtkExtension } from '../src/ldtkExtension';
@@ -116,38 +118,3 @@ describe('buildSnapshot([ldtkExtension])', () => {
   });
 });
 
-describe('@codexo/exojs-ldtk root entry (side-effect-free)', () => {
-  beforeEach(() => {
-    resetExtensionRegistryForTesting();
-  });
-
-  it('root import does NOT register ldtkExtension in ExtensionRegistry', async () => {
-    await import('../src/index');
-    expect(ExtensionRegistry.has('@codexo/exojs-ldtk')).toBe(false);
-  });
-});
-
-describe('@codexo/exojs-ldtk/register entry', () => {
-  beforeEach(() => {
-    resetExtensionRegistryForTesting();
-  });
-
-  it('registers ldtkExtension on import', async () => {
-    await import('../src/register');
-    expect(ExtensionRegistry.has('@codexo/exojs-ldtk')).toBe(true);
-  });
-});
-
-describe('export parity', () => {
-  it('root and register have the same named exports', async () => {
-    const root = await import('../src/index');
-    const register = await import('../src/register');
-    const rootKeys = Object.keys(root)
-      .filter(k => k !== 'default')
-      .sort();
-    const registerKeys = Object.keys(register)
-      .filter(k => k !== 'default')
-      .sort();
-    expect(rootKeys).toEqual(registerKeys);
-  });
-});

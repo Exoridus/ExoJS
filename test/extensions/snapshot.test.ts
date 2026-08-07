@@ -1,15 +1,9 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import type { Extension } from '#extensions/Extension';
-import { ExtensionRegistry, getGlobalSnapshotInternal } from '#extensions/ExtensionRegistry';
 import { buildSnapshot, EMPTY_SNAPSHOT } from '#extensions/snapshot';
-import { resetExtensionRegistryForTesting } from '#extensions/testing';
 
 describe('ExtensionSnapshot', () => {
-  beforeEach(() => {
-    resetExtensionRegistryForTesting();
-  });
-
   it('buildSnapshot([]) returns EMPTY_SNAPSHOT singleton', () => {
     const result = buildSnapshot([]);
     expect(result).toBe(EMPTY_SNAPSHOT);
@@ -20,24 +14,6 @@ describe('ExtensionSnapshot', () => {
     expect(EMPTY_SNAPSHOT.renderers).toHaveLength(0);
     expect(EMPTY_SNAPSHOT.assets).toHaveLength(0);
     expect(EMPTY_SNAPSHOT.systems).toHaveLength(0);
-  });
-
-  it('global snapshot returns same object on repeated calls (cache hit)', () => {
-    const ext: Extension = { id: 'test' };
-    ExtensionRegistry.register(ext);
-    const first = getGlobalSnapshotInternal();
-    const second = getGlobalSnapshotInternal();
-    expect(first).toBe(second);
-  });
-
-  it('global snapshot is invalidated after new registration', () => {
-    const extA: Extension = { id: 'a' };
-    ExtensionRegistry.register(extA);
-    const first = getGlobalSnapshotInternal();
-    const extB: Extension = { id: 'b' };
-    ExtensionRegistry.register(extB);
-    const second = getGlobalSnapshotInternal();
-    expect(first).not.toBe(second);
   });
 
   it('buildSnapshot flattens renderer bindings from multiple extensions', () => {
@@ -111,14 +87,5 @@ describe('ExtensionSnapshot', () => {
     expect(result.extensions).toHaveLength(0);
     expect(result.renderers).toHaveLength(0);
     expect(result.assets).toHaveLength(0);
-  });
-
-  it('multiple calls to global snapshot without new registrations return identical object', () => {
-    const ext: Extension = { id: 'stable' };
-    ExtensionRegistry.register(ext);
-    const snapshots = Array.from({ length: 5 }, () => getGlobalSnapshotInternal());
-    for (let i = 1; i < snapshots.length; i++) {
-      expect(snapshots[i]).toBe(snapshots[0]);
-    }
   });
 });

@@ -13,7 +13,7 @@ bodies, contacts, sensors, queries, joints, sleeping and continuous collision. I
 turns a static scene graph into one where boxes fall, stack, bounce and collide.
 
 <Callout type="info" title="Physics is a library, not a registered extension">
-There is no `/register` import and no `extensions: [...]` entry — you construct a `PhysicsWorld` yourself and step it. Gravity is in px/s² with **+Y pointing down**, so a positive `y` value is "down".
+There is no `extensions: [...]` entry — you construct a `PhysicsWorld` yourself and step it. Gravity is in px/s² with **+Y pointing down**, so a positive `y` value is "down".
 </Callout>
 
 > **Note:** physics ships as a separate package. Install `@codexo/exojs-physics`
@@ -27,7 +27,7 @@ There is no `/register` import and no `extensions: [...]` entry — you construc
 Unlike [Tiled](/ExoJS/en/guide/assets/tiled-maps/) or
 [Particles](/ExoJS/en/guide/effects/particles/), physics is **not** an
 `Application` extension. It contributes no renderer and no asset type, so there is
-**no `/register` entry and no `extensions: [...]` activation**. `@codexo/exojs` is a
+**no `extensions: [...]` activation**. `@codexo/exojs` is a
 peer dependency; you construct a [`PhysicsWorld`](/ExoJS/en/api/physics-world/)
 directly and step it yourself:
 

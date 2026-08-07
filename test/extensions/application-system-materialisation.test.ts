@@ -5,16 +5,13 @@ import type { System } from '#core/System';
 import { SystemRegistry } from '#core/SystemRegistry';
 import type { ApplicationSystemBinding } from '#extensions/Extension';
 import { materializeApplicationSystems } from '#extensions/materialize';
-import { resetExtensionRegistryForTesting } from '#extensions/testing';
 
 function createStubApp(): Application & { systems: SystemRegistry } {
   return { systems: new SystemRegistry() } as unknown as Application & { systems: SystemRegistry };
 }
 
 describe('materializeApplicationSystems', () => {
-  beforeEach(() => {
-    resetExtensionRegistryForTesting();
-  });
+  beforeEach(() => {});
 
   it('registers the system produced by a binding', () => {
     const app = createStubApp();

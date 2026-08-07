@@ -29,15 +29,6 @@ import { particlesExtension } from '@codexo/exojs-particles';
 const app = new Application({ extensions: [particlesExtension] });
 ```
 
-Or use the `/register` convenience import for global registration:
-
-```ts
-import '@codexo/exojs-particles/register';
-import { Application } from '@codexo/exojs';
-
-const app = new Application(); // picks up particlesExtension automatically
-```
-
 ## Construction
 
 A particle system needs a texture and a capacity:

@@ -430,7 +430,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Default immutable Tiled extension descriptor. Registers two asset bindings: - tiledRuntimeMapBinding — loader.load(Asset.type('tileMap', 'world.tmj')) → returns a format-independent runtime TileMap (common case). - tiledMapBinding — loader.load(Asset.type('tiledMap', 'world.tmj')) → returns the raw parsed TiledMap source model (advanced/diagnostic). Depends on tilemapExtension so that snapshot construction always materialises the generic tilemap runtime before the Tiled adapter. Use with ApplicationOptions.extensions or call import '@codexo/exojs-tiled/register' for global auto-registration."
+          "description": "Default immutable Tiled extension descriptor. Registers two asset bindings: - tiledRuntimeMapBinding — loader.load(Asset.type('tileMap', 'world.tmj')) → returns a format-independent runtime TileMap (common case). - tiledMapBinding — loader.load(Asset.type('tiledMap', 'world.tmj')) → returns the raw parsed TiledMap source model (advanced/diagnostic). Depends on tilemapExtension so that snapshot construction always materialises the generic tilemap runtime before the Tiled adapter. Pass it to the application that should have it via ApplicationOptions.extensions."
         },
         {
           "name": "tiledMapBinding",

@@ -24,18 +24,11 @@ Export your sprite from Aseprite as a JSON sheet (**File → Export Sprite Sheet
 Data* enabled). Either *Array* or *Hash* frame layout works, and tags become animation clips.
 
 Like all extensions, the core ships nothing Aseprite-specific — an `Application` only understands
-the `asepriteSheet` type once you activate the extension. There are two ways to do that.
+the `asepriteSheet` type once you activate the extension.
 
 ## Activation
 
-<Callout type="info" title="Register the extension before you construct the Application">
-With `/register`, the import must run before `new Application()` — it seeds the global registry the constructor reads. The explicit `extensions: [asepriteExtension]` form binds to that one app and works no matter the import order.
-</Callout>
-
-### Explicit (recommended)
-
-Pass `asepriteExtension` to `ApplicationOptions.extensions`. This is explicit, tree-shakeable, and
-order-independent — the extension is bound to exactly this `Application`:
+Pass `asepriteExtension` to `ApplicationOptions.extensions`. The extension is bound to exactly this `Application`:
 
 ```ts
 import { Application } from '@codexo/exojs';
@@ -44,24 +37,8 @@ import { asepriteExtension } from '@codexo/exojs-aseprite';
 const app = new Application({ extensions: [asepriteExtension] });
 ```
 
-The package root (`@codexo/exojs-aseprite`) is side-effect-free: importing it registers nothing
-globally. You decide which `Application` gets the extension.
-
-### `/register` convenience
-
-For an app that always wants Aseprite support, import the `/register` entry once at startup. It
-registers `asepriteExtension` in the global `ExtensionRegistry` and re-exports the same public API:
-
-```ts
-import '@codexo/exojs-aseprite/register';
-import { Application } from '@codexo/exojs';
-
-const app = new Application(); // picks up asepriteExtension automatically
-```
-
-The `/register` import must run **before** you construct the `Application` whose extensions are
-read from the global registry. The explicit `extensions: [...]` form works regardless of import
-order.
+The package root is side-effect-free: importing it changes nothing on its own. You decide which
+`Application` gets the extension, which is what lets two applications in one process differ.
 
 ### Core-only
 
