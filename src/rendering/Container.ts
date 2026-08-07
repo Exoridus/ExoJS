@@ -14,8 +14,8 @@ import { RenderNode } from './RenderNode';
  *
  * Bounds aggregate the local bounds + every visible child's bounds, so
  * `container.getBounds()` always returns the smallest axis-aligned rectangle
- * containing the subtree. Width/height accessors derive from the bounds
- * (× `scale`) and writing to them rescales `scale` to fit.
+ * containing the subtree. The size and edge accessors report that rectangle;
+ * writing to `width`/`height` rescales `scale` to fit.
  *
  * Adding a child re-parents it: the previous parent is detached
  * automatically. Removing a child cascades bounds invalidation up the
@@ -103,36 +103,79 @@ export class Container extends RenderNode {
     return this.children[Symbol.iterator]();
   }
 
+  /**
+   * Rendered width of the whole subtree, in the node's global-transform space.
+   *
+   * Unlike {@link Sprite.width} — which scales an unscaled texture frame — a
+   * container has no intrinsic local size, so this reads the aggregate bounds
+   * directly. Those are already scaled, so multiplying by `scale` again would
+   * count it twice. Writing rescales `scale.x` to make the subtree render at
+   * the requested width.
+   */
   public get width(): number {
-    return Math.abs(this.scale.x) * this.getBounds().width;
+    return this.getBounds().width;
   }
 
   public set width(value: number) {
-    this.scale.x = value / this.getBounds().width;
+    this._rescaleToFit('x', value, this.getBounds().width);
   }
 
+  /** Rendered height of the whole subtree — see {@link width}. */
   public get height(): number {
-    return Math.abs(this.scale.y) * this.getBounds().height;
+    return this.getBounds().height;
   }
 
   public set height(value: number) {
-    this.scale.y = value / this.getBounds().height;
+    this._rescaleToFit('y', value, this.getBounds().height);
   }
 
+  /**
+   * Rescale one axis so the subtree's rendered extent along it becomes
+   * `target`.
+   *
+   * `current` is a world-space measurement and therefore already linear in
+   * `scale[axis]`, so the new scale is the old one times the ratio. Dividing
+   * `target` by `current` instead — as if `current` were an unscaled local
+   * size — makes the assigned value relate quadratically to the rendered
+   * result. Going through the ratio also preserves a negative (mirrored)
+   * scale, which an absolute division would silently flip.
+   */
+  private _rescaleToFit(axis: 'x' | 'y', target: number, current: number): void {
+    // An empty container (or one collapsed to zero by a zero scale) has no
+    // extent to scale from; dividing by it would poison scale with NaN or
+    // Infinity, and being NaN it would never recover. Keep the current scale
+    // until the subtree has a real extent.
+    if (current !== 0) {
+      this.scale[axis] = (this.scale[axis] * target) / current;
+    }
+  }
+
+  /**
+   * Leftmost edge of the subtree in the node's global-transform space.
+   *
+   * These four edges are read straight off the aggregate bounds so they always
+   * span exactly {@link width}/{@link height} and agree with each other. They
+   * cannot be reconstructed from `position` and `origin`: `origin` is in local
+   * pixels and a container's own local bounds are empty, so the rendered
+   * extent comes entirely from the children.
+   */
   public get left(): number {
-    return this.x - this.width * this.origin.x;
+    return this.getBounds().left;
   }
 
+  /** Topmost edge of the subtree — see {@link left}. */
   public get top(): number {
-    return this.y - this.height * this.origin.y;
+    return this.getBounds().top;
   }
 
+  /** Rightmost edge of the subtree — see {@link left}. */
   public get right(): number {
-    return this.x + this.width - this.origin.x;
+    return this.getBounds().right;
   }
 
+  /** Bottommost edge of the subtree — see {@link left}. */
   public get bottom(): number {
-    return this.y + this.height - this.origin.y;
+    return this.getBounds().bottom;
   }
 
   /**

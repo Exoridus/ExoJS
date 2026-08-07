@@ -475,3 +475,148 @@ describe('Container paint-order cache', () => {
     expect(container.getChildIndex(c)).toBe(1);
   });
 });
+
+// A 100x100 local-space box, so the geometry accessors below have a nontrivial
+// extent to aggregate.
+class SizedDrawable extends Drawable {
+  public override updateBounds(): this {
+    this.getLocalBounds().set(0, 0, 100, 100);
+
+    return super.updateBounds();
+  }
+
+  public override render(_backend: RenderBackend): this {
+    return this;
+  }
+}
+
+describe('Container geometry accessors', () => {
+  test('width/height report the rendered world extent, not the extent times scale', () => {
+    const container = new Container();
+
+    container.addChild(new SizedDrawable());
+    container.setScale(2, 3);
+
+    // The subtree aggregate is already world-space: a 100x100 child under a
+    // 2x/3x container renders 200x300. Multiplying by scale a second time
+    // would report 400x900.
+    expect(container.width).toBe(200);
+    expect(container.height).toBe(300);
+    expect(container.width).toBe(container.getBounds().width);
+    expect(container.height).toBe(container.getBounds().height);
+
+    container.destroy();
+  });
+
+  test('assigning width/height relates linearly to the resulting rendered size', () => {
+    const container = new Container();
+
+    container.addChild(new SizedDrawable());
+
+    expect(container.width).toBe(100);
+
+    container.width = 200;
+
+    expect(container.width).toBe(200);
+    expect(container.getBounds().width).toBe(200);
+
+    // Doubling the CURRENT width must double the rendered size. Dividing the
+    // target by an already-scaled measurement instead squares the factor, so
+    // this second round trip is where the quadratic relationship shows up.
+    container.width = container.width * 2;
+
+    expect(container.width).toBe(400);
+    expect(container.getBounds().width).toBe(400);
+
+    container.height = 50;
+
+    expect(container.height).toBe(50);
+    expect(container.getBounds().height).toBe(50);
+
+    container.destroy();
+  });
+
+  test('assigning width preserves a mirrored scale sign', () => {
+    const container = new Container();
+
+    container.addChild(new SizedDrawable());
+    container.setScale(-1, 1);
+
+    expect(container.width).toBe(100);
+
+    container.width = 250;
+
+    expect(container.scale.x).toBe(-2.5);
+    expect(container.width).toBe(250);
+
+    container.destroy();
+  });
+
+  test('assigning width to an empty container is a no-op instead of poisoning scale with NaN', () => {
+    const container = new Container();
+
+    container.width = 200;
+    container.height = 200;
+
+    expect(container.scale.x).toBe(1);
+    expect(container.scale.y).toBe(1);
+
+    container.destroy();
+  });
+
+  test('left/top/right/bottom are the world bounds edges for a non-zero origin', () => {
+    const container = new Container();
+
+    container.addChild(new SizedDrawable());
+    // `origin` is in LOCAL pixels: the transform translates by
+    // `position - origin * scale`, so the subtree shifts to (-25,-40)-(75,60).
+    container.setOrigin(25, 40);
+
+    expect(container.left).toBe(-25);
+    expect(container.top).toBe(-40);
+    expect(container.right).toBe(75);
+    expect(container.bottom).toBe(60);
+
+    container.destroy();
+  });
+
+  test('left/top/right/bottom stay mutually consistent under origin, scale and position', () => {
+    const container = new Container();
+
+    container.addChild(new SizedDrawable());
+    container.setOrigin(25, 40);
+    container.setScale(2, 3);
+    container.setPosition(10, 20);
+
+    const bounds = container.getBounds();
+
+    expect(container.left).toBe(bounds.x);
+    expect(container.top).toBe(bounds.y);
+    expect(container.right).toBe(bounds.x + bounds.width);
+    expect(container.bottom).toBe(bounds.y + bounds.height);
+
+    // The edges must span exactly the reported size — the invariant the
+    // mismatched origin terms used to break.
+    expect(container.right - container.left).toBe(container.width);
+    expect(container.bottom - container.top).toBe(container.height);
+
+    container.destroy();
+  });
+
+  test('edges follow a child that moves the aggregate', () => {
+    const container = new Container();
+    const near = new SizedDrawable();
+    const far = new SizedDrawable();
+
+    far.setPosition(200, 200);
+    container.addChild(near, far);
+
+    expect(container.left).toBe(0);
+    expect(container.top).toBe(0);
+    expect(container.right).toBe(300);
+    expect(container.bottom).toBe(300);
+    expect(container.width).toBe(300);
+
+    container.destroy();
+  });
+});
