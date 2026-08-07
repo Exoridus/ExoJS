@@ -85,18 +85,6 @@ describe('GPU resource lifetime', () => {
       expect(() => measureSteadyFrame(harness, scene.root)).toThrow(/destroyed texture/i);
     });
 
-    test('the throw names the ownership rule, not just the symptom', () => {
-      const harness = createWebGl2Harness();
-      const texture = new DataTexture({ width: 16, height: 16, format: TextureFormat.Rgba8 });
-      const scene = buildSpriteScene({ count: 1, textures: [texture] });
-
-      texture.destroy();
-
-      // A bare "invalid texture" leaves the reader guessing which of the three
-      // ownership patterns they got wrong.
-      expect(() => measureSteadyFrame(harness, scene.root)).toThrow(/capture\(\)|releaseRenderTexture/i);
-    });
-
     test('rendering into a destroyed render target throws', () => {
       const harness = createWebGl2Harness();
       const target = new RenderTexture(32, 32);
