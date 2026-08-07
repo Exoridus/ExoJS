@@ -83,9 +83,10 @@ describe('JavaScript protocols', () => {
     expect(Symbol.iterator in container).toBe(true);
     expect(disposeKey in container).toBe(false);
 
-    // An ActionMap is deliberately NOT iterable: `map.actions` already exposes
-    // the same array in the same order, and an iterator yielding the `Action`
-    // union has no member a consumer could use without narrowing.
+    // An ActionMap is deliberately NOT iterable: an iterator yielding the
+    // `Action` union has no member a consumer could use without narrowing.
+    // The backing array is internal for exactly that reason — see
+    // `ActionMapBase._actions`. Actions are reached by name off the instance.
     expect(Symbol.iterator in map).toBe(false);
     expect(disposeKey in map).toBe(false);
   });

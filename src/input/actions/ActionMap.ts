@@ -103,8 +103,23 @@ function assertClaimable(action: Action, name: string, pending: ReadonlySet<Acti
  * ```
  */
 class ActionMapBase<T extends ActionRecord> {
-  /** The actions this map owns, in declaration order. */
-  public readonly actions: readonly Action[];
+  /**
+   * The actions this map owns, in declaration order — internal on purpose.
+   *
+   * The {@link Action} union has no public member common to all five variants:
+   * `ButtonAction`/`ChordAction` carry `value`/`active`/`pressed`/`released`,
+   * `AxisAction` a numeric `value`, `VectorAction` a `Vector` one, and
+   * `SequenceAction` neither — it reports `triggered`/`progress`. An array of
+   * that union is therefore unusable to a caller without narrowing every
+   * element, which is the same reason an `ActionMap` is not iterable. Exposing
+   * one and withholding the other would only be inconsistent.
+   *
+   * `_update`/`_reset` iterate it because those are internal and every variant
+   * implements them. If generic iteration ever becomes a goal — a remapping UI,
+   * an input-state serializer — it gets a designed public surface then, rather
+   * than this array reinstated as one.
+   */
+  private readonly _actions: readonly Action[];
 
   private _owner: ActionMapOwner | null = null;
   private readonly _ownership = new ActionOwnership();
@@ -113,7 +128,7 @@ class ActionMapBase<T extends ActionRecord> {
 
   public constructor(actions: T) {
     // Reads every enumerable getter on `actions` exactly once. Neither
-    // `this.actions` nor the instance assignment below may touch `actions`
+    // `this._actions` nor the instance assignment below may touch `actions`
     // again after this line — a getter that is not perfectly idempotent (or
     // that intentionally throws on a second read) would otherwise silently
     // observe a different value, or throw, purely as a side effect of how
@@ -140,7 +155,7 @@ class ActionMapBase<T extends ActionRecord> {
       claimedActions.add(action);
     }
 
-    this.actions = entries.map(([, action]) => action);
+    this._actions = entries.map(([, action]) => action);
     Object.assign(this, Object.fromEntries(entries));
   }
 
@@ -256,14 +271,14 @@ class ActionMapBase<T extends ActionRecord> {
       // its own very next _update call below, rather than trusting whatever
       // frame-to-frame state it carries from a previous, unrelated owner —
       // see ButtonLikeAction._reset's doc comment.
-      for (const action of this.actions) {
+      for (const action of this._actions) {
         action._reset();
       }
 
       const baselineSample = this._ownership.takeBaselineSample(sample);
 
       if (baselineSample !== null) {
-        for (const action of this.actions) {
+        for (const action of this._actions) {
           action._update(baselineSample);
         }
       }
@@ -271,14 +286,14 @@ class ActionMapBase<T extends ActionRecord> {
 
     const effectiveSample = resolution === 'baseline' ? this._ownership.filterBatches(sample) : sample;
 
-    for (const action of this.actions) {
+    for (const action of this._actions) {
       action._update(effectiveSample);
     }
   }
 
   /** Clear every action's state — used when an owner stops feeding the map. @internal */
   public _reset(): void {
-    for (const action of this.actions) {
+    for (const action of this._actions) {
       action._reset();
     }
 
@@ -314,7 +329,7 @@ class ActionMapBase<T extends ActionRecord> {
  * calls it.
  */
 const reservedActionMapNames: ReadonlySet<string> = new Set([
-  'actions',
+  '_actions',
   '_owner',
   '_ownership',
   '_availability',
