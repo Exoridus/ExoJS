@@ -61,10 +61,11 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
   public readonly _consumesSharedTransform = false;
 
   private readonly _shader: Shader;
-  private readonly _batchSize: number;
-  private readonly _instanceData: ArrayBuffer;
-  private readonly _instanceFloat32: Float32Array;
-  private readonly _instanceUint32: Uint32Array;
+  /** Particles the scratch buffer can currently hold. Grows, never shrinks. */
+  private _instanceCapacity: number;
+  private _instanceData: ArrayBuffer;
+  private _instanceFloat32: Float32Array;
+  private _instanceUint32: Uint32Array;
 
   private _instanceCount = 0;
   private _currentTexture: Texture | null = null;
@@ -80,9 +81,36 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
   public constructor(batchSize: number) {
     super();
 
-    this._batchSize = batchSize;
+    this._instanceCapacity = batchSize;
     this._shader = new Shader(vertexSource, fragmentSource);
     this._instanceData = new ArrayBuffer(batchSize * instanceStrideBytes);
+    this._instanceFloat32 = new Float32Array(this._instanceData);
+    this._instanceUint32 = new Uint32Array(this._instanceData);
+  }
+
+  /**
+   * Grow the per-instance scratch buffer to hold `particleCount` particles.
+   *
+   * Nothing about WebGL2 caps the instance count here — the buffer is a plain
+   * CPU-side allocation and the GL store is reallocated from it on the next
+   * upload. Growing instead of clamping is what keeps a system drawing the
+   * same number of particles on WebGL2 as it does on WebGPU. Growth is bounded
+   * by the system's own capacity, and doubling stops a system that ramps up to
+   * its peak from reallocating every frame.
+   */
+  private _ensureCapacity(particleCount: number): void {
+    if (particleCount <= this._instanceCapacity) {
+      return;
+    }
+
+    let capacity = this._instanceCapacity > 0 ? this._instanceCapacity : 1;
+
+    while (capacity < particleCount) {
+      capacity *= 2;
+    }
+
+    this._instanceCapacity = capacity;
+    this._instanceData = new ArrayBuffer(capacity * instanceStrideBytes);
     this._instanceFloat32 = new Float32Array(this._instanceData);
     this._instanceUint32 = new Uint32Array(this._instanceData);
   }
@@ -115,10 +143,15 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
     this._shader.getUniform('u_systemTransform').setValue(system.getGlobalTransform().toArray(false));
     this._shader.getUniform('u_localBounds').setValue(localBounds);
 
+    const limit = system.liveCount;
+
+    // Must precede the view reads below: growing swaps in fresh typed-array
+    // views over a new backing buffer.
+    this._ensureCapacity(limit);
+
     const f32 = this._instanceFloat32;
     const u32 = this._instanceUint32;
     const { posX, posY, scaleX, scaleY, rotations, color, textureIndex, alive } = system;
-    const limit = Math.min(system.liveCount, this._batchSize);
 
     // Pre-compute frame UVs from system.frames + texture; falls back
     // to the system.textureFrame when no atlas is declared.
