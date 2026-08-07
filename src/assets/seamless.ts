@@ -108,7 +108,11 @@ export const textureSeamlessAdapter: SeamlessAdapter<Texture> = {
 
   evict(handle: Texture): void {
     presizes.delete(handle);
-    handle.setSource(null); // frees the GPU upload via the version bump in updateSource()
+    // setSource(null) alone only bumps the version — a backend only notices
+    // on its next bind, which may never come for a handle nothing is
+    // currently drawing. releaseGpu() frees the backend's GPU texture now.
+    handle.setSource(null);
+    handle.releaseGpu();
     handle._loadState.begin();
   },
 

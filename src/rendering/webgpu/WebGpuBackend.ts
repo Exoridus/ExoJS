@@ -32,7 +32,7 @@ import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { DataTexture, type DataTextureFormat } from '#rendering/texture/DataTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
-import type { Texture } from '#rendering/texture/Texture';
+import { Texture } from '#rendering/texture/Texture';
 import type { BlendModes, ColorTextureFormat } from '#rendering/types';
 import { ScaleModes, TextureFormat, WrapModes } from '#rendering/types';
 import type { View } from '#rendering/View';
@@ -166,6 +166,7 @@ export class WebGpuBackend implements RenderBackend {
   private _recoveryBackoffMs = 100;
   private readonly _textureStates: Map<Texture | RenderTexture, ManagedWebGpuTextureState> = new Map<Texture | RenderTexture, ManagedWebGpuTextureState>();
   private readonly _textureDestroyHandlers: Map<Texture | RenderTexture, () => void> = new Map<Texture | RenderTexture, () => void>();
+  private readonly _textureReleaseHandlers: Map<Texture, () => void> = new Map<Texture, () => void>();
   private readonly _renderTargetDestroyHandlers: Map<RenderTarget, () => void> = new Map<RenderTarget, () => void>();
   private readonly _temporaryRenderTextures: RenderTexture[] = [];
   private readonly _clipBoundsStack: Rectangle[] = [];
@@ -1778,7 +1779,12 @@ export class WebGpuBackend implements RenderBackend {
       texture.removeDestroyListener(handler);
     }
 
+    for (const [texture, handler] of this._textureReleaseHandlers) {
+      texture.removeReleaseListener(handler);
+    }
+
     this._textureDestroyHandlers.clear();
+    this._textureReleaseHandlers.clear();
     this._textureStates.clear();
 
     // Recycled RenderTexture pool: drop entries — their backing GPUTexture
@@ -2009,6 +2015,16 @@ export class WebGpuBackend implements RenderBackend {
 
       texture.addDestroyListener(destroyHandler);
       this._textureDestroyHandlers.set(texture, destroyHandler);
+
+      if (texture instanceof Texture) {
+        const releaseHandler = (): void => {
+          this._evictTexture(texture, false);
+        };
+
+        texture.addReleaseListener(releaseHandler);
+        this._textureReleaseHandlers.set(texture, releaseHandler);
+      }
+
       this._textureStates.set(texture, state);
     }
 
@@ -2251,13 +2267,32 @@ export class WebGpuBackend implements RenderBackend {
     return state;
   }
 
-  private _evictTexture(texture: Texture | RenderTexture): void {
+  /**
+   * Free a texture's GPU-side state. `unsubscribeDestroy` is `false` only
+   * when called from a {@link Texture.releaseGpu} listener: the handle isn't
+   * actually destroyed there, so the destroy subscription must survive for a
+   * real, later `destroy()`. The release subscription is always dropped —
+   * `_getTextureState` re-subscribes it fresh if the handle is bound again.
+   */
+  private _evictTexture(texture: Texture | RenderTexture, unsubscribeDestroy = true): void {
     const state = this._textureStates.get(texture);
-    const destroyHandler = this._textureDestroyHandlers.get(texture);
 
-    if (destroyHandler) {
-      texture.removeDestroyListener(destroyHandler);
-      this._textureDestroyHandlers.delete(texture);
+    if (unsubscribeDestroy) {
+      const destroyHandler = this._textureDestroyHandlers.get(texture);
+
+      if (destroyHandler) {
+        texture.removeDestroyListener(destroyHandler);
+        this._textureDestroyHandlers.delete(texture);
+      }
+    }
+
+    if (texture instanceof Texture) {
+      const releaseHandler = this._textureReleaseHandlers.get(texture);
+
+      if (releaseHandler) {
+        texture.removeReleaseListener(releaseHandler);
+        this._textureReleaseHandlers.delete(texture);
+      }
     }
 
     if (state) {

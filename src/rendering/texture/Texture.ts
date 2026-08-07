@@ -90,6 +90,7 @@ export class Texture {
   private _size: Size = new Size(0, 0);
   private _isDestroyed = false;
   private readonly _destroyListeners: Set<() => void> = new Set<() => void>();
+  private readonly _releaseListeners: Set<() => void> = new Set<() => void>();
   /** @internal — load lifecycle, driven by the Loader's seamless pipeline. */
   public readonly _loadState = new LoadState<Texture>();
   private _scaleMode: ScaleModes;
@@ -266,6 +267,27 @@ export class Texture {
     return this;
   }
 
+  /**
+   * Register a callback fired when {@link releaseGpu} runs. Distinct from
+   * {@link addDestroyListener}: the handle stays alive and bindable
+   * afterwards, ready for a later {@link setSource} to re-upload — used by
+   * seamless asset eviction, which drops the payload but keeps the handle's
+   * identity so a later fill can heal every consumer in place.
+   * @internal
+   */
+  public addReleaseListener(listener: () => void): this {
+    this._releaseListeners.add(listener);
+
+    return this;
+  }
+
+  /** @internal */
+  public removeReleaseListener(listener: () => void): this {
+    this._releaseListeners.delete(listener);
+
+    return this;
+  }
+
   public setScaleMode(scaleMode: ScaleModes): this {
     if (this._scaleMode !== scaleMode) {
       this._scaleMode = scaleMode;
@@ -345,8 +367,26 @@ export class Texture {
     }
 
     this._destroyListeners.clear();
+    this._releaseListeners.clear();
     this._size.destroy();
     this._source = null;
+  }
+
+  /**
+   * Free this texture's GPU-side payload right now instead of waiting for a
+   * backend to notice on its next bind. `setSource(null)` alone only bumps
+   * {@link version} — a backend re-uploads (and so frees the old payload)
+   * only when it next binds this exact handle, which may never happen for a
+   * texture nothing is currently drawing. Call this immediately after
+   * dropping the source to reclaim the memory without depending on a future
+   * bind. The handle itself is unaffected: it stays bindable, and a later
+   * {@link setSource} re-uploads normally.
+   * @internal
+   */
+  public releaseGpu(): void {
+    for (const listener of [...this._releaseListeners]) {
+      listener();
+    }
   }
 
   private _touch(): void {
