@@ -98,7 +98,21 @@ export interface RenderBackend {
    */
   supportsColorFormat(format: ColorTextureFormat): boolean;
 
+  /**
+   * Borrow a temporary {@link RenderTexture} of exactly `width × height` from
+   * the backend's pool, allocating one if no pooled entry matches. Hand it back
+   * with {@link releaseRenderTexture} — destroying a borrowed texture instead
+   * corrupts the pool.
+   */
   acquireRenderTexture(width: number, height: number): RenderTexture;
+
+  /**
+   * Return a borrowed render texture for reuse. The pool is bounded in both
+   * entry count and total bytes, so a workflow whose intermediates resize every
+   * frame retires dead size classes instead of hoarding them: the least recently
+   * released entries are destroyed once either cap is exceeded. Never touch the
+   * texture again after releasing it.
+   */
   releaseRenderTexture(texture: RenderTexture): this;
 
   /**

@@ -28,6 +28,7 @@ import type { RenderError } from '#rendering/RenderError';
 import type { RenderStats } from '#rendering/RenderStats';
 import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
+import { RenderTexturePool } from '#rendering/RenderTexturePool';
 import type { Shader } from '#rendering/shader/Shader';
 import { DataTexture, type DataTextureFormat } from '#rendering/texture/DataTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -221,7 +222,7 @@ export class WebGl2Backend implements RenderBackend {
   private readonly _textureDestroyHandlers: Map<Texture | RenderTexture, () => void> = new Map<Texture | RenderTexture, () => void>();
   private readonly _textureReleaseHandlers: Map<Texture, () => void> = new Map<Texture, () => void>();
   private readonly _renderTargetDestroyHandlers: Map<RenderTarget, () => void> = new Map<RenderTarget, () => void>();
-  private readonly _temporaryRenderTextures: RenderTexture[] = [];
+  private readonly _renderTexturePool: RenderTexturePool = new RenderTexturePool();
   private readonly _clipBoundsStack: Rectangle[] = [];
   private readonly _clipPixelStack: PixelClipBoundsState[] = [];
   private readonly _clipPointA: Vector = new Vector();
@@ -857,27 +858,11 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   public acquireRenderTexture(width: number, height: number): RenderTexture {
-    for (let index = 0; index < this._temporaryRenderTextures.length; index++) {
-      // In-bounds: `index` ranges over `0..length-1`.
-      const texture = this._temporaryRenderTextures[index]!;
-
-      if (texture.width === width && texture.height === height) {
-        this._temporaryRenderTextures.splice(index, 1);
-
-        return texture;
-      }
-    }
-
-    return new RenderTexture(width, height);
+    return this._renderTexturePool.acquire(width, height);
   }
 
   public releaseRenderTexture(texture: RenderTexture): this {
-    if (this._temporaryRenderTextures.includes(texture)) {
-      return this;
-    }
-
-    texture.setView(null);
-    this._temporaryRenderTextures.push(texture);
+    this._renderTexturePool.release(texture);
 
     return this;
   }
@@ -1513,7 +1498,7 @@ export class WebGl2Backend implements RenderBackend {
     this.rendererRegistry.destroy();
     this._clearColor.destroy();
     this._destroyManagedResources();
-    this._destroyTemporaryRenderTextures();
+    this._renderTexturePool.destroy();
 
     for (const clipBounds of this._clipBoundsStack) {
       clipBounds.destroy();
@@ -1801,14 +1786,6 @@ export class WebGl2Backend implements RenderBackend {
     for (const texture of [...this._textureStates.keys()]) {
       this._evictTexture(texture, false);
     }
-  }
-
-  private _destroyTemporaryRenderTextures(): void {
-    for (const texture of this._temporaryRenderTextures) {
-      texture.destroy();
-    }
-
-    this._temporaryRenderTextures.length = 0;
   }
 
   private _getRenderTargetState(target: RenderTarget): ManagedRenderTargetState {

@@ -833,7 +833,7 @@
             }
           ],
           "returnType": "this",
-          "description": ""
+          "description": "Point this target at view, or back at its own default view when passed null. The view is caller-owned — neither this call nor destroy releases it."
         },
         {
           "name": "setWrapMode",

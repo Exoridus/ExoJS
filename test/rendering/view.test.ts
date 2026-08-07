@@ -182,3 +182,33 @@ describe('View — coordinate conversion', () => {
     expect(highDpr.y).toBeCloseTo(300, 2);
   });
 });
+
+describe('View.destroy', () => {
+  test('reports destroyed only after destroy has run', () => {
+    const view = new View(0, 0, 100, 100);
+
+    expect(view.destroyed).toBe(false);
+
+    view.destroy();
+
+    expect(view.destroyed).toBe(true);
+  });
+
+  test('is idempotent — a second call is a no-op and never re-releases owned state', () => {
+    const view = new View(0, 0, 100, 100);
+    const centerDestroy = vi.spyOn(view.center, 'destroy');
+    const sizeDestroy = vi.spyOn(view.size, 'destroy');
+    const viewportDestroy = vi.spyOn(view.viewport, 'destroy');
+
+    view.destroy();
+
+    expect(() => {
+      view.destroy();
+    }).not.toThrow();
+
+    expect(view.destroyed).toBe(true);
+    expect(centerDestroy).toHaveBeenCalledTimes(1);
+    expect(sizeDestroy).toHaveBeenCalledTimes(1);
+    expect(viewportDestroy).toHaveBeenCalledTimes(1);
+  });
+});

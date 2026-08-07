@@ -7,12 +7,14 @@ import { View } from './View';
 /**
  * Renderable destination — either the on-screen canvas (the `root`
  * target owned by the backend) or an offscreen texture (a
- * {@link RenderTexture}). Owns a {@link View} that controls the
+ * {@link RenderTexture}). Owns a default {@link View} that controls the
  * camera transform and viewport, and emits a destroy event so backends
  * can release backing GPU resources.
  *
  * Set `view` to swap cameras for this target; call `resize(w, h)` when
- * the underlying canvas / texture dimensions change.
+ * the underlying canvas / texture dimensions change. An assigned view is
+ * caller-owned: swapping it out or destroying the target leaves it alive,
+ * so destroy the views you create yourself.
  */
 export class RenderTarget {
   /**
@@ -113,6 +115,11 @@ export class RenderTarget {
     return this;
   }
 
+  /**
+   * Point this target at `view`, or back at its own default view when passed
+   * `null`. The view is caller-owned — neither this call nor {@link destroy}
+   * releases it.
+   */
   public setView(view: View | null): this {
     const nextView = view || this._defaultView;
 
@@ -176,10 +183,10 @@ export class RenderTarget {
 
     this._destroyListeners.clear();
 
-    if (this._view !== this._defaultView) {
-      this._view.destroy();
-    }
-
+    // Only the default view is ours. A view handed to `setView` stays
+    // caller-owned — the backend assigns the application's active camera to its
+    // root target on every `setView`, so releasing it here would take that
+    // camera down with the target.
     this._defaultView.destroy();
     this._viewport.destroy();
     this._size.destroy();
