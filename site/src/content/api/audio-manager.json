@@ -6,10 +6,10 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 20,
+  "memberCount": 21,
   "counts": {
     "constructors": 1,
-    "methods": 11,
+    "methods": 12,
     "properties": 7,
     "events": 1
   },
@@ -377,6 +377,78 @@
           ],
           "returnType": "InputVoice",
           "description": "Open a live AudioInput (microphone / WebRTC stream) and return an InputVoice. The input is analysis-only by default (not audible) — tap it with an analyser, route it to a bus to monitor, or record it."
+        },
+        {
+          "name": "play",
+          "signature": "play(source: Sound, options?: SoundPlayOptions): Voice",
+          "signatureTokens": [
+            {
+              "text": "play",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Sound",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SoundPlayOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Voice",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "Sound",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "SoundPlayOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "Voice",
+          "description": "Play a Playable asset and return a Voice handle. Each call creates an independent playback instance. Call play() again to start another concurrent voice. The returned Voice lets you control this specific instance (stop(), volume, fade(), capabilities)."
         },
         {
           "name": "play",

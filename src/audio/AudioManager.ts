@@ -8,6 +8,7 @@ import { AudioListener } from './AudioListener';
 import type { SpatialVoice } from './BaseVoice';
 import { InputVoice } from './InputVoice';
 import type { Playable, PlayOptions, Voice } from './Playable';
+import type { Sound, SoundPlayOptions } from './Sound';
 import { createSpatialSmoothingSettings, type SpatialSmoothingSettings } from './spatial-smoothing';
 
 /**
@@ -116,6 +117,8 @@ export class AudioManager {
    * @param options - Per-play overrides (bus, volume, loop, playbackRate, detune, time, muted).
    * @returns A {@link Voice} handle for the new instance.
    */
+  public play(source: Sound, options?: SoundPlayOptions): Voice;
+  public play(source: Playable, options?: PlayOptions): Voice;
   public play(source: Playable, options?: PlayOptions): Voice {
     return source._createVoice(this, options ?? {});
   }
