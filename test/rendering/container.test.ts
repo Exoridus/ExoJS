@@ -4,6 +4,7 @@ import type { InteractionHooks, Stage } from '#core/Stage';
 import { FocusController } from '#input/FocusController';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
+import { ColorFilter } from '#rendering/filters/ColorFilter';
 import { Graphics } from '#rendering/primitives/Graphics';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
@@ -618,5 +619,114 @@ describe('Container geometry accessors', () => {
     expect(container.width).toBe(300);
 
     container.destroy();
+  });
+});
+
+describe('Container.destroy() tears down the whole subtree', () => {
+  test('every descendant is destroyed, not merely detached', () => {
+    const root = new Container();
+    const branch = new Container();
+    const leaf = new DummyDrawable();
+    const sibling = new DummyDrawable();
+
+    branch.addChild(leaf);
+    root.addChild(branch, sibling);
+
+    const branchSpy = vi.spyOn(branch, 'destroy');
+    const leafSpy = vi.spyOn(leaf, 'destroy');
+    const siblingSpy = vi.spyOn(sibling, 'destroy');
+
+    root.destroy();
+
+    expect(branchSpy).toHaveBeenCalledTimes(1);
+    expect(leafSpy).toHaveBeenCalledTimes(1);
+    expect(siblingSpy).toHaveBeenCalledTimes(1);
+
+    expect(root.destroyed).toBe(true);
+    expect(branch.destroyed).toBe(true);
+    expect(leaf.destroyed).toBe(true);
+    expect(sibling.destroyed).toBe(true);
+  });
+
+  test('a grandchild-held disposable resource is released', () => {
+    const root = new Container();
+    const branch = new Container();
+    const leaf = new DummyDrawable();
+    const filter = new ColorFilter();
+    const filterSpy = vi.spyOn(filter, 'destroy');
+
+    leaf.filters = [filter];
+    branch.addChild(leaf);
+    root.addChild(branch);
+
+    root.destroy();
+
+    // RenderNode.destroy() releases a node's own filters, so this only fires
+    // if the grandchild was genuinely destroyed rather than just unlinked.
+    expect(filterSpy).toHaveBeenCalled();
+  });
+
+  test('descendants are detached as well as destroyed', () => {
+    const root = new Container();
+    const branch = new Container();
+    const leaf = new DummyDrawable();
+
+    branch.addChild(leaf);
+    root.addChild(branch);
+
+    root.destroy();
+
+    expect(root.children).toHaveLength(0);
+    expect(branch.parent).toBeNull();
+  });
+
+  test('an already-destroyed child is not destroyed a second time', () => {
+    const root = new Container();
+    const leaf = new DummyDrawable();
+
+    root.addChild(leaf);
+    leaf.destroy();
+
+    const leafSpy = vi.spyOn(leaf, 'destroy');
+
+    expect(() => root.destroy()).not.toThrow();
+    expect(leafSpy).not.toHaveBeenCalled();
+  });
+
+  test('destroying an already-destroyed container is a no-op', () => {
+    const root = new Container();
+    const leaf = new DummyDrawable();
+
+    root.addChild(leaf);
+    root.destroy();
+
+    const leafSpy = vi.spyOn(leaf, 'destroy');
+
+    expect(() => root.destroy()).not.toThrow();
+    expect(leafSpy).not.toHaveBeenCalled();
+  });
+
+  test('a deep chain is destroyed all the way down', () => {
+    const root = new Container();
+    const nodes: Container[] = [root];
+
+    for (let depth = 0; depth < 5; depth++) {
+      const next = new Container();
+
+      nodes[nodes.length - 1]!.addChild(next);
+      nodes.push(next);
+    }
+
+    const leaf = new DummyDrawable();
+
+    nodes[nodes.length - 1]!.addChild(leaf);
+
+    root.destroy();
+
+    for (const node of nodes) {
+      expect(node.destroyed).toBe(true);
+    }
+
+    expect(leaf.destroyed).toBe(true);
   });
 });

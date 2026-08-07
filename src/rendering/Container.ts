@@ -540,8 +540,38 @@ export class Container extends RenderNode {
     return this;
   }
 
+  /**
+   * Destroy this container and every node beneath it.
+   *
+   * Ownership is by containment: detaching a subtree only unlinks it, so the
+   * descendants' GPU-backed resources (cached bitmaps, filters, render
+   * textures) and signal listeners would outlive the tree that owned them and
+   * leak on every scene change.
+   */
   public override destroy(): void {
+    // Idempotent by contract, matching Texture.destroy(): re-entry would take
+    // already-released pooled state through a second teardown.
+    if (this.destroyed) {
+      return;
+    }
+
+    // Snapshot before detaching: removeChildren() empties the live array, and a
+    // child's own destroy() walks its subtree, so iterating the live list while
+    // it is being mutated would skip entries.
+    const children = [...this._childList];
+
+    // Detach first, so every child leaves the interaction/focus registries and
+    // drops its stage while it is still a valid node; only then tear it down.
     this.removeChildren();
+
+    for (const child of children) {
+      // A child the caller already destroyed stays destroyed — re-entering its
+      // teardown would double-release resources it no longer owns.
+      if (!child.destroyed) {
+        child.destroy();
+      }
+    }
+
     this._retainedPlan?.invalidate();
 
     super.destroy();

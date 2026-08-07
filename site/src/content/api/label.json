@@ -861,7 +861,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": ""
+          "description": "Destroy this container and every node beneath it. Ownership is by containment: detaching a subtree only unlinks it, so the descendants' GPU-backed resources (cached bitmaps, filters, render textures) and signal listeners would outlive the tree that owned them and leak on every scene change."
         },
         {
           "name": "focus",
