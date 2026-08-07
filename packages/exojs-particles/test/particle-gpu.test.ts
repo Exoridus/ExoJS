@@ -856,3 +856,82 @@ describe('UpdateModule.uploadTextures — missing map entry', () => {
     expect(() => module.uploadTextures({} as GPUDevice, new Map())).not.toThrow();
   });
 });
+
+describe('SpawnOnDeath into a GPU-mode target system', () => {
+  let restoreGlobals: () => void;
+
+  beforeEach(() => {
+    restoreGlobals = installGlobals();
+  });
+
+  afterEach(() => {
+    restoreGlobals();
+  });
+
+  /**
+   * Fill a GPU-mode system to capacity, then free one slot so the next spawn
+   * recycles that hole instead of extending the live range.
+   */
+  const makeGpuTargetWithHole = (capacity: number, hole: number): ParticleSystem => {
+    const env = makeMockDevice();
+    const target = new ParticleSystem(makeTexture(), { capacity, device: env.device });
+
+    target.addUpdateModule(new ApplyForce(0, 0));
+    target.update(tick(0));
+
+    for (let i = 0; i < capacity; i++) {
+      const slot = target.spawn();
+
+      target.lifetime[slot] = 10;
+    }
+
+    // Mirror what the GPU death path leaves behind: a dead slot below the
+    // live-range high-water mark.
+    target.alive[hole] = 0;
+    target.lifetime[hole] = -1;
+
+    return target;
+  };
+
+  test('recycled GPU slots receive the dying particle position', () => {
+    const target = makeGpuTargetWithHole(4, 1);
+    const parent = new ParticleSystem(makeTexture(), { capacity: 4 });
+
+    expect(target.gpuMode).toBe(true);
+
+    const parentSlot = parent.spawn();
+
+    parent.posX[parentSlot] = 100;
+    parent.posY[parentSlot] = 50;
+
+    const death = new SpawnOnDeath(target, new BurstSpawn({ schedule: [{ time: 0, count: 1 }], lifetime: new Constant(5) }));
+    const liveCountBefore = target.liveCount;
+
+    death.onDeath(parent, parentSlot);
+
+    // The spawn refilled the hole, so liveCount is unchanged — the signal the
+    // old count-diff heuristic relied on never fires here.
+    expect(target.liveCount).toBe(liveCountBefore);
+    expect(target.alive[1]).toBe(1);
+    expect(target.posX[1]).toBe(100);
+    expect(target.posY[1]).toBe(50);
+  });
+
+  test('CPU-mode targets still receive the dying particle position', () => {
+    const target = new ParticleSystem(makeTexture(), { capacity: 4 });
+    const parent = new ParticleSystem(makeTexture(), { capacity: 4 });
+
+    const parentSlot = parent.spawn();
+
+    parent.posX[parentSlot] = -20;
+    parent.posY[parentSlot] = 7;
+
+    const death = new SpawnOnDeath(target, new BurstSpawn({ schedule: [{ time: 0, count: 1 }], lifetime: new Constant(5) }));
+
+    death.onDeath(parent, parentSlot);
+
+    expect(target.liveCount).toBe(1);
+    expect(target.posX[0]).toBe(-20);
+    expect(target.posY[0]).toBe(7);
+  });
+});

@@ -35,19 +35,22 @@ export class SpawnOnDeath extends DeathModule {
     const x = parent.posX[slot] ?? 0;
     const y = parent.posY[slot] ?? 0;
 
-    // Snapshot the target's pre-spawn count so we can apply the
-    // position to whichever slots the spawner adds.
-    const before = target.liveCount;
+    // Which slots the spawner took cannot be derived from liveCount: a
+    // GPU-mode target recycles dead slots below its high-water mark, so the
+    // count can stay put while particles are added, and the reused slots are
+    // scattered rather than contiguous. Record the allocations instead.
+    const previous = target._beginSpawnRecording();
+    let spawned: readonly number[];
 
-    for (let n = 0; n < this.count; n++) {
-      this.spawner.apply(target, 0);
+    try {
+      for (let n = 0; n < this.count; n++) {
+        this.spawner.apply(target, 0);
+      }
+    } finally {
+      spawned = target._endSpawnRecording(previous);
     }
 
-    const added = target.liveCount - before;
-
-    for (let i = 0; i < added; i++) {
-      const dst = before + i;
-
+    for (const dst of spawned) {
       target.posX[dst] = (target.posX[dst] ?? 0) + x;
       target.posY[dst] = (target.posY[dst] ?? 0) + y;
     }
