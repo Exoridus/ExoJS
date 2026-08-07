@@ -138,6 +138,46 @@ describe('BitmapText', () => {
     expect(text.pageQuads[0]).not.toBe(first);
   });
 
+  test('mutating a style property in place triggers an immediate rebuild', () => {
+    // Line 0 ("A") is narrower than line 1 ("AB"), so right-alignment has to
+    // shift line 0's glyph to the right — a rebuild that skipped would leave
+    // it at x = 0.
+    const text = new BitmapText('A\nAB', makeFont());
+    const first = text.pageQuads[0];
+    const firstX = first.vertices[0];
+
+    text.style.align = 'right';
+
+    expect(text.pageQuads[0]).not.toBe(first);
+    expect(text.pageQuads[0].vertices[0]).toBeGreaterThan(firstX);
+  });
+
+  test('consecutive in-place style mutations each trigger a rebuild', () => {
+    // Guards the dirty-latch failure mode: a style that stays dirty after the
+    // first notification would silently swallow every later mutation.
+    const text = new BitmapText('AB', makeFont());
+
+    text.style.leading = 4;
+    const afterFirst = text.pageQuads[0];
+    text.style.leading = 8;
+
+    expect(text.pageQuads[0]).not.toBe(afterFirst);
+  });
+
+  test('replacing the style detaches the previous one from rebuilds', () => {
+    const text = new BitmapText('AB', makeFont());
+    const previous = text.style;
+    text.style = { align: 'left' };
+
+    const afterSwap = text.pageQuads[0];
+    previous.leading = 12;
+
+    expect(text.pageQuads[0]).toBe(afterSwap);
+
+    text.style.leading = 12;
+    expect(text.pageQuads[0]).not.toBe(afterSwap);
+  });
+
   test('layout setter (maxWidth) triggers rebuild', () => {
     const text = new BitmapText('AB', makeFont());
     const first = text.pageQuads[0];
