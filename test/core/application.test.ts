@@ -356,6 +356,34 @@ describe('Application', () => {
     }
   });
 
+  test('the WebGL2 fallback registers the rebuilt rendering context in place of the discarded one', async () => {
+    const restoreGpu = setNavigatorGpu({});
+    const webgpuInitialize = vi.fn().mockRejectedValue(new Error('webgpu failed'));
+    const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
+
+    try {
+      const { Application } = await loadApplicationHarness({ webgpuInitialize });
+      const app = new Application({
+        canvas: { element: document.createElement('canvas') },
+      });
+      const discardedRendering = app.rendering;
+      const registeredCount = app.systems.size;
+
+      await app.start(DummyScene);
+
+      // The registry holds the system objects handed to it at registration
+      // time, so swapping `app.rendering` alone would leave it ticking the
+      // destroyed context and never the live one.
+      expect(app.rendering).not.toBe(discardedRendering);
+      expect(app.systems.has(discardedRendering)).toBe(false);
+      expect(app.systems.has(app.rendering)).toBe(true);
+      expect(app.systems.size).toBe(registeredCount);
+    } finally {
+      restoreGpu();
+      rafSpy.mockRestore();
+    }
+  });
+
   test('explicit webgpu selection still fails instead of falling back', async () => {
     const restoreGpu = setNavigatorGpu({});
     const webgpuError = new Error('webgpu failed');
