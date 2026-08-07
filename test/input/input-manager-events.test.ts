@@ -478,7 +478,7 @@ describe('InputManager — mouse wheel', () => {
     canvas.dispatchEvent(new WheelEvent('wheel', { deltaX: 1, deltaY: -1, deltaMode: WheelEvent.DOM_DELTA_LINE }));
     canvas.dispatchEvent(new WheelEvent('wheel', { deltaX: 3, deltaY: 4, deltaMode: WheelEvent.DOM_DELTA_PIXEL }));
 
-    im.preUpdate();
+    im.preUpdate(0 as never);
 
     // Only one flush per frame, carrying the SUM of all three events, not
     // just the last one — and the line-mode event converted to its
