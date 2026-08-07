@@ -30,6 +30,7 @@ import { formatShaderError, RenderError, type RenderErrorCode } from '#rendering
 import type { RenderStats } from '#rendering/RenderStats';
 import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
+import { RenderTexturePool } from '#rendering/RenderTexturePool';
 import { DataTexture, type DataTextureFormat } from '#rendering/texture/DataTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
@@ -167,7 +168,7 @@ export class WebGpuBackend implements RenderBackend {
   private readonly _textureStates: Map<Texture | RenderTexture, ManagedWebGpuTextureState> = new Map<Texture | RenderTexture, ManagedWebGpuTextureState>();
   private readonly _textureDestroyHandlers: Map<Texture | RenderTexture, () => void> = new Map<Texture | RenderTexture, () => void>();
   private readonly _renderTargetDestroyHandlers: Map<RenderTarget, () => void> = new Map<RenderTarget, () => void>();
-  private readonly _temporaryRenderTextures: RenderTexture[] = [];
+  private readonly _renderTexturePool: RenderTexturePool = new RenderTexturePool();
   private readonly _clipBoundsStack: Rectangle[] = [];
   private readonly _clipPixelStack: PixelClipBoundsState[] = [];
   private readonly _clipPointA: Vector = new Vector();
@@ -750,27 +751,11 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   public acquireRenderTexture(width: number, height: number): RenderTexture {
-    for (let index = 0; index < this._temporaryRenderTextures.length; index++) {
-      // index is bounded by the array length via the for-loop guard.
-      const texture = this._temporaryRenderTextures[index]!;
-
-      if (texture.width === width && texture.height === height) {
-        this._temporaryRenderTextures.splice(index, 1);
-
-        return texture;
-      }
-    }
-
-    return new RenderTexture(width, height);
+    return this._renderTexturePool.acquire(width, height);
   }
 
   public releaseRenderTexture(texture: RenderTexture): this {
-    if (this._temporaryRenderTextures.includes(texture)) {
-      return this;
-    }
-
-    texture.setView(null);
-    this._temporaryRenderTextures.push(texture);
+    this._renderTexturePool.release(texture);
 
     return this;
   }
@@ -843,7 +828,7 @@ export class WebGpuBackend implements RenderBackend {
     this._setActiveRenderer(null);
     this.rendererRegistry.destroy();
     this._destroyManagedTextures();
-    this._destroyTemporaryRenderTextures();
+    this._renderTexturePool.destroy();
 
     for (const clipBounds of this._clipBoundsStack) {
       clipBounds.destroy();
@@ -1783,7 +1768,7 @@ export class WebGpuBackend implements RenderBackend {
 
     // Recycled RenderTexture pool: drop entries — their backing GPUTexture
     // is gone with the dead device.
-    this._temporaryRenderTextures.length = 0;
+    this._renderTexturePool.forget();
 
     // Disconnect renderers so they release pipelines / buffers / bind
     // groups tied to the dead device. They reconnect during _initialize().
@@ -1962,14 +1947,6 @@ export class WebGpuBackend implements RenderBackend {
     for (const texture of [...this._textureStates.keys()]) {
       this._evictTexture(texture);
     }
-  }
-
-  private _destroyTemporaryRenderTextures(): void {
-    for (const texture of this._temporaryRenderTextures) {
-      texture.destroy();
-    }
-
-    this._temporaryRenderTextures.length = 0;
   }
 
   private _getTextureState(texture: Texture | RenderTexture): ManagedWebGpuTextureState {
