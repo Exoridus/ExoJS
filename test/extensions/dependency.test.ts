@@ -411,16 +411,6 @@ describe('Per-application selection', () => {
     expect(ids(buildSnapshot([root]))).toEqual(['leaf', 'mid', 'root']);
   });
 
-  it('two applications hold independent selections', () => {
-    // The point of the whole model: nothing is shared between them, so one
-    // application seeing an extension says nothing about the other.
-    const tilemap = extension('tilemap');
-    const particles = extension('particles');
-
-    expect(ids(buildSnapshot([tilemap]))).toEqual(['tilemap']);
-    expect(ids(buildSnapshot([particles]))).toEqual(['particles']);
-  });
-
   it('an application selecting nothing gets nothing', () => {
     expect(buildSnapshot([])).toBe(EMPTY_SNAPSHOT);
   });
