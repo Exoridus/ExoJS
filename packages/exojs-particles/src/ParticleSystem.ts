@@ -176,6 +176,12 @@ export class ParticleSystem extends Drawable {
    * state — only dirty slots flow CPU → GPU.
    */
   private readonly _gpuDirtySlots = new Set<number>();
+  /**
+   * Slots handed out by `spawn()` while a recording window is open, or `null`
+   * when nothing is recording. Lets callers identify freshly spawned particles
+   * without diffing `liveCount`, which cannot see a recycled GPU slot.
+   */
+  private _spawnRecord: number[] | null = null;
 
   private _texture: Texture;
   private readonly _frames: Rectangle[] = [];
@@ -454,6 +460,46 @@ export class ParticleSystem extends Drawable {
     return this._spawnCpu();
   }
 
+  /**
+   * Begin recording the slots handed out by {@link spawn}.
+   *
+   * Callers that post-process freshly spawned particles cannot infer which
+   * slots those are from {@link liveCount}: in GPU mode a spawn may recycle a
+   * dead slot below the high-water mark, leaving the count unchanged, and the
+   * reused slots are scattered rather than contiguous. Pass the returned token
+   * back to {@link _endSpawnRecording}.
+   *
+   * @internal
+   */
+  public _beginSpawnRecording(): number[] | null {
+    const previous = this._spawnRecord;
+
+    this._spawnRecord = [];
+
+    return previous;
+  }
+
+  /**
+   * End the recording started by {@link _beginSpawnRecording} and return the
+   * slots allocated during it. Slots are also handed to an enclosing recording
+   * so a nested spawn stays visible to the outer window.
+   *
+   * @internal
+   */
+  public _endSpawnRecording(previous: number[] | null): readonly number[] {
+    const recorded = this._spawnRecord ?? [];
+
+    this._spawnRecord = previous;
+
+    if (previous !== null) {
+      for (const slot of recorded) {
+        previous.push(slot);
+      }
+    }
+
+    return recorded;
+  }
+
   /** Resets the system to zero live particles without destroying it. */
   public clearParticles(): this {
     this.liveCount = 0;
@@ -577,6 +623,7 @@ export class ParticleSystem extends Drawable {
 
     this.alive[slot] = 1;
     this.elapsed[slot] = 0;
+    this._spawnRecord?.push(slot);
 
     return slot;
   }
@@ -594,6 +641,7 @@ export class ParticleSystem extends Drawable {
         this._spawnHint = i + 1 === capacity ? 0 : i + 1;
         if (i >= this.liveCount) this.liveCount = i + 1;
         this._gpuDirtySlots.add(i);
+        this._spawnRecord?.push(i);
         return i;
       }
     }
@@ -605,6 +653,7 @@ export class ParticleSystem extends Drawable {
         this._spawnHint = i + 1;
         if (i >= this.liveCount) this.liveCount = i + 1;
         this._gpuDirtySlots.add(i);
+        this._spawnRecord?.push(i);
         return i;
       }
     }

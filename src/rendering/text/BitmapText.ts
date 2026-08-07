@@ -161,6 +161,19 @@ export class BitmapText extends AbstractText {
   private _textBounds: TextSize = { width: 0, height: 0 };
   private _adapter: BmFontAdapter;
 
+  /**
+   * Rebuilds on any style mutation. Bound once so it can be detached again
+   * when the style is replaced or the node is destroyed.
+   */
+  private readonly _onStyleChange = (): void => {
+    // TextStyle latches its dirty flag until something consumes it, and only
+    // dispatches onChange on the clean-to-dirty edge. Draining it here is what
+    // keeps the second and every later mutation notifying instead of just the
+    // first. BitmapText rebuilds eagerly, so there is no deferred hint to keep.
+    this._style.consumeDirty();
+    this._rebuild();
+  };
+
   public constructor(text: string, font: BmFont, options: BitmapTextOptions = {}) {
     super(text);
     this._font = font;
@@ -169,6 +182,7 @@ export class BitmapText extends AbstractText {
     this._style = new TextStyle(options);
     this._layout = options.layout ?? {};
     this._adapter = new BmFontAdapter(font.fontData, font.textures, this._fontScale);
+    this._attachStyle();
     this._rebuild();
   }
 
@@ -192,7 +206,9 @@ export class BitmapText extends AbstractText {
   }
 
   public set style(v: TextStyle | TextStyleOptions) {
+    this._style.onChange.remove(this._onStyleChange);
     this._style = v instanceof TextStyle ? v : new TextStyle(v);
+    this._attachStyle();
     this._rebuild();
   }
 
@@ -254,11 +270,20 @@ export class BitmapText extends AbstractText {
   }
 
   public override destroy(): void {
+    this._style.onChange.remove(this._onStyleChange);
     this._pageQuads = [];
     super.destroy();
   }
 
   // ── Private ──────────────────────────────────────────────────────────────
+
+  private _attachStyle(): void {
+    // A freshly constructed style starts dirty. The caller rebuilds right
+    // after attaching, so drain that initial flag — otherwise the style never
+    // reaches the clean state its next mutation needs in order to dispatch.
+    this._style.consumeDirty();
+    this._style.onChange.add(this._onStyleChange);
+  }
 
   private _rebuild(): void {
     this._pageQuads = [];

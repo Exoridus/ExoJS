@@ -387,6 +387,130 @@ describe('layoutText', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Vertical overflow — maxHeight + overflow
+// ---------------------------------------------------------------------------
+
+describe('layoutText vertical overflow', () => {
+  // fontSize 16 * lineHeight 1.2 = 19.2px per line, so maxHeight 40 fits two.
+  const twoLineMaxHeight = 40;
+
+  function overflowStyle(): TextStyle {
+    return new TextStyle({ fontSize: 16, lineHeight: 1.2, align: 'left' });
+  }
+
+  test('maxHeight without overflow keeps every line visible', () => {
+    const placements = layoutText('A\nB\nC', overflowStyle(), { maxHeight: twoLineMaxHeight }, makeAtlas());
+
+    expect(placements).toHaveLength(3);
+    expect(placements[2].y).toBeCloseTo(38.4);
+  });
+
+  test('overflow "clip" drops lines that do not fit maxHeight', () => {
+    const placements = layoutText('A\nB\nC', overflowStyle(), { maxHeight: twoLineMaxHeight, overflow: 'clip' }, makeAtlas());
+
+    expect(placements).toHaveLength(2);
+    expect(placements[0].y).toBe(0);
+    expect(placements[1].y).toBeCloseTo(19.2);
+  });
+
+  test('overflow "ellipsis" clips and appends an ellipsis to the last visible line', () => {
+    const placements = layoutText('A\nB\nC', overflowStyle(), { maxHeight: twoLineMaxHeight, overflow: 'ellipsis' }, makeAtlas());
+
+    // 'A' on line 0, then 'B' + the ellipsis glyph on line 1.
+    expect(placements).toHaveLength(3);
+    expect(placements[0].y).toBe(0);
+    expect(placements[1].y).toBeCloseTo(19.2);
+    expect(placements[2].y).toBeCloseTo(19.2);
+  });
+
+  test('overflow without maxHeight leaves the text untouched', () => {
+    const placements = layoutText('A\nB\nC', overflowStyle(), { overflow: 'clip' }, makeAtlas());
+
+    expect(placements).toHaveLength(3);
+  });
+
+  test('maxHeight smaller than a single line clips everything away', () => {
+    const placements = layoutText('A\nB', overflowStyle(), { maxHeight: 5, overflow: 'clip' }, makeAtlas());
+
+    expect(placements).toHaveLength(0);
+  });
+
+  test('overflow "ellipsis" drops trailing characters so the line still fits maxWidth', () => {
+    // advance 10, maxWidth 30 → three glyph slots. 'ABC' already fills them,
+    // so the ellipsis has to displace a character rather than overflow.
+    const placements = layoutText('ABC\nD', overflowStyle(), { maxWidth: 30, maxHeight: 19.2, overflow: 'ellipsis' }, makeAtlas());
+
+    expect(placements).toHaveLength(3);
+    for (const p of placements) expect(p.y).toBe(0);
+    expect(placements[2].x).toBe(20);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Text direction
+// ---------------------------------------------------------------------------
+
+describe('layoutText direction', () => {
+  /** Provider whose per-character advance doubles as an identity marker. */
+  function makeCharProvider(advances: Record<string, number>): GlyphProvider {
+    return {
+      getGlyph: (char: string, fontSize: number): GlyphInfo => {
+        const advance = advances[char] ?? 10;
+        return {
+          x: 0,
+          y: 0,
+          width: advance,
+          height: fontSize,
+          advance,
+          ascent: fontSize,
+          page: 0,
+          uvLeft: 0,
+          uvTop: 0,
+          uvRight: 1,
+          uvBottom: 1,
+        };
+      },
+    };
+  }
+
+  test('direction "ltr" places glyphs in logical order', () => {
+    const provider = makeCharProvider({ A: 10, B: 20 });
+    const style = new TextStyle({ fontSize: 16, align: 'left' });
+
+    const placements = layoutText('AB', style, { direction: 'ltr' }, provider);
+
+    expect(placements[0].width).toBe(10); // 'A' first
+    expect(placements[0].x).toBe(0);
+    expect(placements[1].width).toBe(20); // 'B' second
+    expect(placements[1].x).toBe(10);
+  });
+
+  test('direction "rtl" reverses the visual glyph order within a line', () => {
+    const provider = makeCharProvider({ A: 10, B: 20 });
+    const style = new TextStyle({ fontSize: 16, align: 'left' });
+
+    const placements = layoutText('AB', style, { direction: 'rtl' }, provider);
+
+    expect(placements[0].width).toBe(20); // 'B' now leads visually
+    expect(placements[0].x).toBe(0);
+    expect(placements[1].width).toBe(10); // 'A' trails
+    expect(placements[1].x).toBe(20);
+  });
+
+  test('direction "rtl" reverses each line independently', () => {
+    const provider = makeCharProvider({ A: 10, B: 20, C: 30, D: 40 });
+    const style = new TextStyle({ fontSize: 16, lineHeight: 1.2, align: 'left' });
+
+    const placements = layoutText('AB\nCD', style, { direction: 'rtl' }, provider);
+
+    expect(placements[0].width).toBe(20); // line 0 → 'B', 'A'
+    expect(placements[1].width).toBe(10);
+    expect(placements[2].width).toBe(40); // line 1 → 'D', 'C'
+    expect(placements[3].width).toBe(30);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // measureText()
 // ---------------------------------------------------------------------------
 
