@@ -24,14 +24,11 @@ Because each LDtk level becomes a generic `TileMap`, you render LDtk worlds with
 node used everywhere else in the engine — there is no LDtk-specific renderer.
 
 Like all extensions, the core ships nothing LDtk-specific — an `Application` only understands
-`.ldtk` files once you activate the extension. There are two ways to do that.
+`.ldtk` files once you activate the extension.
 
 ## Activation
 
-### Explicit (recommended)
-
-Pass `ldtkExtension` to `ApplicationOptions.extensions`. This is explicit, tree-shakeable, and
-order-independent — the extension is bound to exactly this `Application`:
+Pass `ldtkExtension` to `ApplicationOptions.extensions`. The extension is bound to exactly this `Application`:
 
 ```ts
 import { Application } from '@codexo/exojs';
@@ -43,22 +40,6 @@ const app = new Application({ extensions: [ldtkExtension] });
 `ldtkExtension` depends on `tilemapExtension`, so activating it enables **both** loading and tilemap
 rendering — the tile-chunk renderer bindings are materialised automatically. The package root
 (`@codexo/exojs-ldtk`) is side-effect-free: importing it registers nothing globally.
-
-### `/register` convenience
-
-For an app that always wants LDtk support, import the `/register` entry once at startup. It
-registers `ldtkExtension` (and its `tilemapExtension` dependency) in the global `ExtensionRegistry`
-and re-exports the same public API:
-
-```ts
-import '@codexo/exojs-ldtk/register';
-import { Application } from '@codexo/exojs';
-
-const app = new Application(); // picks up ldtkExtension automatically
-```
-
-The `/register` import must run **before** you construct the `Application` whose extensions are read
-from the global registry. The explicit `extensions: [...]` form works regardless of import order.
 
 ### Core-only
 
@@ -269,6 +250,6 @@ unload tileset textures (they may be shared) or remove any scene nodes — the a
   `data`; [`TileMap`](/ExoJS/en/api/tile-map/) and [`TileMapNode`](/ExoJS/en/api/tile-map-node/)
   document the runtime tilemap and its renderer.
 - **Sibling extension:** the [Tiled maps](/ExoJS/en/guide/assets/tiled-maps/) chapter covers the
-  same explicit-vs-`/register` activation for the other map-editor adapter.
+  same activation model for the other map-editor adapter.
 - **Loading model:** [Loading & resources](/ExoJS/en/guide/assets/loading-and-resources/) covers the
   asset pipeline the loader plugs into.

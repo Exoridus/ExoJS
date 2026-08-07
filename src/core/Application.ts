@@ -3,7 +3,6 @@ import { coreAssetBindings } from '#assets/coreAssetBindings';
 import { Loader, type LoaderOptions } from '#assets/Loader';
 import { AudioManager } from '#audio/AudioManager';
 import type { Extension } from '#extensions/Extension';
-import { getGlobalSnapshotInternal } from '#extensions/ExtensionRegistry';
 import { materializeApplicationSystems, materializeAssetBindings, materializeRendererBindings, materializeSerializerBindings } from '#extensions/materialize';
 import { buildSnapshot, type ExtensionSnapshot } from '#extensions/snapshot';
 import type { GamepadDefinition } from '#input/GamepadDefinitions';
@@ -172,12 +171,23 @@ export interface ApplicationOptions<Registry extends SceneRegistryShape<Registry
    */
   fixedTimeStep?: number;
   /**
-   * Extension selection.
-   * `undefined` → Core + globally registered extensions.
-   * `[]`         → Core only.
-   * `[a, b, …]` → Core + exactly these; global registry not consulted.
-   * Captured once at construction; later registrations do not affect
-   * already-constructed Applications.
+   * Extension selection — the only way an Application is equipped.
+   *
+   * `undefined` or `[]` → Core only. `[a, b, …]` → Core plus exactly these.
+   *
+   * There is no global registry to fall back on: what an application can do is
+   * decided here, at its construction, and nowhere else. That is what lets two
+   * Applications in one process hold different extension sets — an editor next
+   * to its runtime preview, two canvases with different renderers, a test that
+   * must not see what a neighbouring test installed.
+   *
+   * ```ts
+   * import { tilemapExtension } from '@codexo/exojs-tilemap';
+   *
+   * const app = new Application({ extensions: [tilemapExtension] });
+   * ```
+   *
+   * Materialised once at construction.
    */
   extensions?: readonly Extension[];
   /**
@@ -503,7 +513,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     };
 
     // Capture extension snapshot before constructing extension-sensitive subsystems.
-    this._snapshot = appSettings.extensions === undefined ? getGlobalSnapshotInternal() : buildSnapshot([...(appSettings.extensions ?? [])]);
+    this._snapshot = buildSnapshot([...(appSettings.extensions ?? [])]);
 
     this.loader = new Loader(this.options.loader);
 

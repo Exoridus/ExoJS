@@ -10,8 +10,8 @@ import { asepriteBinding } from './asepriteBinding';
  *   fetches the Aseprite JSON, resolves and loads the packed texture, and
  *   returns a fully-parsed {@link AsepriteSheet} with all frame-tag clips.
  *
- * Use with `ApplicationOptions.extensions` or call
- * `import '@codexo/exojs-aseprite/register'` for global auto-registration.
+ * Pass it to the application that should have it via
+ * `ApplicationOptions.extensions`.
  */
 export const asepriteExtension: Extension = Object.freeze({
   id: '@codexo/exojs-aseprite',

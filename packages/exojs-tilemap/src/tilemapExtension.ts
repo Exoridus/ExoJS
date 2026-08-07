@@ -49,8 +49,8 @@ function buildTileChunkRendererBinding(batchSize: number): RendererBinding {
  * (`extensions: [tilemapExtension]` plus a `TileMap` built via the runtime), or
  * receive it transitively through a format adapter's `dependencies`.
  *
- * Use with `ApplicationOptions.extensions` or call
- * `import '@codexo/exojs-tilemap/register'` for global auto-registration.
+ * Pass it to the application that should have it via
+ * `ApplicationOptions.extensions`.
  * @advanced
  */
 export const tilemapExtension: Extension = Object.freeze({

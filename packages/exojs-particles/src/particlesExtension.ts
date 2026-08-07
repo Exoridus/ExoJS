@@ -32,8 +32,8 @@ function buildParticlesRendererBinding(batchSize: number): RendererBinding {
 
 /**
  * Default immutable Particles extension descriptor.
- * Use with `ApplicationOptions.extensions` or call
- * `import '@codexo/exojs-particles/register'` for global auto-registration.
+ * Pass it to the application that should have it via
+ * `ApplicationOptions.extensions`.
  */
 export const particlesExtension: Extension = Object.freeze({
   id: '@codexo/exojs-particles',

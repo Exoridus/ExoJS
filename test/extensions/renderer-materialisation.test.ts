@@ -1,9 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { RendererBinding } from '#extensions/Extension';
-import { ExtensionRegistry } from '#extensions/ExtensionRegistry';
 import { materializeRendererBindings } from '#extensions/materialize';
-import { resetExtensionRegistryForTesting } from '#extensions/testing';
 import { Drawable } from '#rendering/Drawable';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
@@ -67,9 +65,7 @@ class CustomDrawableB extends Drawable {}
 class CustomDrawableC extends Drawable {}
 
 describe('materializeRendererBindings', () => {
-  beforeEach(() => {
-    resetExtensionRegistryForTesting();
-  });
+  beforeEach(() => {});
 
   it('registers renderer for one target', () => {
     const backend = createStubBackend();
@@ -211,28 +207,6 @@ describe('materializeRendererBindings', () => {
     // Add new binding — should invalidate cache
     backend.rendererRegistry.bindRenderer([CustomDrawableC], rendererC);
     expect(backend.rendererRegistry.resolve(new CustomDrawableC())).toBe(rendererC);
-  });
-
-  it('ExtensionRegistry.list/get/has are NOT called during draw', () => {
-    const backend = createStubBackend();
-    const renderer = createStubRenderer();
-    const binding: RendererBinding = { targets: [CustomDrawableA], create: () => renderer };
-    materializeRendererBindings(backend, [binding]);
-
-    const listSpy = vi.spyOn(ExtensionRegistry, 'list');
-    const getSpy = vi.spyOn(ExtensionRegistry, 'get');
-    const hasSpy = vi.spyOn(ExtensionRegistry, 'has');
-
-    backend.rendererRegistry.resolve(new CustomDrawableA());
-    backend.rendererRegistry.resolve(new CustomDrawableA());
-
-    expect(listSpy).not.toHaveBeenCalled();
-    expect(getSpy).not.toHaveBeenCalled();
-    expect(hasSpy).not.toHaveBeenCalled();
-
-    listSpy.mockRestore();
-    getSpy.mockRestore();
-    hasSpy.mockRestore();
   });
 });
 

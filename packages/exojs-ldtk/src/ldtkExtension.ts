@@ -15,8 +15,8 @@ import { ldtkMapBinding } from './ldtkBinding';
  * Depends on {@link tilemapExtension} so that snapshot construction always
  * materialises the generic tilemap runtime before the LDtk adapter.
  *
- * Use with `ApplicationOptions.extensions` or call
- * `import '@codexo/exojs-ldtk/register'` for global auto-registration.
+ * Pass it to the application that should have it via
+ * `ApplicationOptions.extensions`.
  */
 export const ldtkExtension: Extension = Object.freeze({
   id: '@codexo/exojs-ldtk',
