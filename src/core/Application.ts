@@ -935,6 +935,14 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // halts only after `maxConsecutiveFrameErrors` consecutive failures.
       try {
         const rawDeltaMs = this._frameClock.elapsedTime.milliseconds;
+
+        // Restart the moment the delta is read, not at the end of the frame:
+        // the clock has to span frame start to frame start. Restarting after
+        // the frame's own work would leave that work out of the next delta,
+        // so a frame that runs long would report the gap it caused as
+        // *shorter*, slowing the simulation exactly when it is already behind.
+        this._frameClock.restart();
+
         const clampedDeltaMs = Math.min(rawDeltaMs, maxDeltaMs);
         const frameDelta = Time.temp.set(clampedDeltaMs);
         const frameStart = performance.now();
@@ -1002,7 +1010,6 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         // this is what keeps the canvas alive through a throwing frame.
         if (this._frameLoopActive) {
           this._frameRequest = this.platform.requestFrame(this._updateHandler);
-          this._frameClock.restart();
           this._frameCount++;
         }
       }
