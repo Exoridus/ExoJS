@@ -7,6 +7,7 @@ import { Signal } from '#core/Signal';
 import { type Matrix } from '#math/Matrix';
 import type { Rectangle } from '#math/Rectangle';
 import { Vector } from '#math/Vector';
+import { assertLiveRenderTarget, assertLiveTexture } from '#rendering/assertLiveResource';
 import type { BackendRenderPass } from '#rendering/BackendRenderPass';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
@@ -561,6 +562,8 @@ export class WebGpuBackend implements RenderBackend {
 
   public setRenderTarget(target: RenderTarget | null): this {
     const nextRenderTarget = target ?? this._rootRenderTarget;
+
+    assertLiveRenderTarget(nextRenderTarget);
 
     if (this._renderTarget !== nextRenderTarget) {
       this._flushActiveRenderer();
@@ -2095,6 +2098,8 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   private _syncTexture(texture: Texture | RenderTexture): ManagedWebGpuTextureState {
+    assertLiveTexture(texture);
+
     if (!(texture instanceof RenderTexture) && !(texture instanceof DataTexture) && (texture.source === null || texture.width === 0 || texture.height === 0)) {
       throw new Error('WebGPU sprite rendering requires a texture with a valid source and non-zero dimensions.');
     }

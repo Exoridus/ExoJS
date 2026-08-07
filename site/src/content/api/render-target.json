@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 18,
+  "memberCount": 19,
   "counts": {
     "constructors": 1,
     "methods": 10,
-    "properties": 7,
+    "properties": 8,
     "events": 0
   },
   "sections": [
@@ -659,6 +659,27 @@
           "params": [],
           "returnType": null,
           "description": "Whether this target needs a stencil attachment for geometric stencil clipping (RenderNode.clip with a Geometry clipShape). Set by the WebGL2 backend when such a clip is rendered into an offscreen RenderTexture, so its framebuffer gets a depth/stencil renderbuffer; the WebGL2 on-screen root uses the default framebuffer's stencil (requested at context creation), so the flag only affects offscreen WebGL2 targets. The WebGPU backend does not consult this flag: it allocates a separate depth24plus-stencil8 attachment per clipped target (root included) on demand, sized to the colour attachment's physical pixels."
+        },
+        {
+          "name": "destroyed",
+          "signature": "destroyed: boolean",
+          "signatureTokens": [
+            {
+              "text": "destroyed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true once destroy has run. A destroyed target must not be rendered into — the backend throws rather than drawing into released GPU state."
         },
         {
           "name": "height",

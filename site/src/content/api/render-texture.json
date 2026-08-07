@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 34,
+  "memberCount": 35,
   "counts": {
     "constructors": 1,
     "methods": 16,
-    "properties": 17,
+    "properties": 18,
     "events": 0
   },
   "sections": [
@@ -990,6 +990,27 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "destroyed",
+          "signature": "destroyed: boolean",
+          "signatureTokens": [
+            {
+              "text": "destroyed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true once destroy has run. A destroyed target must not be rendered into — the backend throws rather than drawing into released GPU state."
         },
         {
           "name": "flipY",
