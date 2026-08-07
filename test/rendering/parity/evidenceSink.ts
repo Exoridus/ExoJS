@@ -78,6 +78,15 @@ export interface StampedEvidenceRow extends EvidenceRow {
    * about Safari.
    */
   readonly platform: string;
+  /**
+   * Release this row is published as part of, e.g. `0.16.0`.
+   *
+   * Written by `release:cut`, not by this sink — the runner executes before the
+   * release, when `package.json` still carries the previous version. Absent on
+   * rows measured since the last release, which is the honest reading: they are
+   * current data, but no release has claimed them yet.
+   */
+  readonly release?: string;
 }
 
 const OUTPUT = 'test/rendering/parity/evidence.json';

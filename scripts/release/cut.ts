@@ -8,6 +8,8 @@
  *   - Working tree is clean.
  *   - CHANGELOG.md has a `## [VERSION] - YYYY-MM-DD` section for the target version.
  *   - No git tag vVERSION already exists.
+ *   - Parity evidence for Chromium and Firefox was measured on the current HEAD
+ *     (the published matrix claims the release, so it must describe it).
  *
  * What it does:
  *   1. Bumps `version` in all six lockstep package.json files.
@@ -30,6 +32,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
+import { EVIDENCE_PATH, type EvidenceRow, GUARANTEED_BROWSERS, readEvidence, staleEvidenceReasons, stampRelease, writeEvidence } from './parity-evidence.ts';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -95,6 +98,33 @@ function assertTagAbsent(version: string): void {
   }
 }
 
+/**
+ * The published parity matrix must describe the commit being released — it is
+ * linked from the deployment and troubleshooting guides, and the release states
+ * it holds as of this version.
+ *
+ * Compared against HEAD as it stands right now, before this script creates its
+ * own bump commit, because that is the tree the measurement ran against.
+ *
+ * Deliberately not a CI browser lane: the run is bound to the moment the claim
+ * gets published, not to every push.
+ */
+function assertEvidenceFresh(rows: readonly EvidenceRow[]): void {
+  const head = execSync('git rev-parse --short HEAD', { encoding: 'utf8', cwd: repoRoot }).trim();
+  const stale = staleEvidenceReasons(rows, head);
+
+  if (stale.length > 0) {
+    die(
+      `Parity evidence is not current for HEAD (${head}):\n` +
+        stale.map(line => `  - ${line}`).join('\n') +
+        `\n\nThe matrix is published from ${EVIDENCE_PATH} and the release claims it holds as of this version.\n` +
+        `Re-measure, commit the result, then re-run release:cut:\n` +
+        `  pnpm test:parity\n` +
+        `  pnpm test:parity:firefox`,
+    );
+  }
+}
+
 // ── Bump ───────────────────────────────────────────────────────────────────
 
 function bumpPackages(version: string): boolean {
@@ -144,7 +174,15 @@ log('  checking pre-conditions…');
 assertCleanTree();
 assertChangelogSection(version);
 assertTagAbsent(version);
-log('  ✓ tree clean, changelog section present, tag absent');
+
+const evidence = readEvidence(repoRoot);
+
+assertEvidenceFresh(evidence);
+log(`  ✓ tree clean, changelog section present, tag absent, parity evidence current (${GUARANTEED_BROWSERS.join(' + ')})`);
+
+log('\n→ stamping the release onto the parity evidence…');
+writeEvidence(repoRoot, stampRelease(evidence, version));
+log(`  ✓ ${EVIDENCE_PATH} now claims ${version}`);
 
 log('\n→ bumping lockstep packages…');
 const bumped = bumpPackages(version);
@@ -160,11 +198,16 @@ if (bumped) {
 
   log('\n→ committing version bump…');
   const packageJsonPaths = LOCKSTEP_DIRS.map(({ dir }) => resolve(dir, 'package.json')).join(' ');
-  run(`git add ${packageJsonPaths}`);
+  run(`git add ${packageJsonPaths} ${EVIDENCE_PATH}`);
   run(`git commit -m "chore(release): bump to ${version}"`);
   log(`  ✓ committed`);
 } else {
-  log('  all packages already at target version — skipping commit');
+  // The evidence stamp above already dirtied the tree, so it still needs a
+  // commit of its own — otherwise the tag would point at a tree whose matrix
+  // does not name the release it is published under.
+  log('  all packages already at target version — committing the evidence stamp only');
+  run(`git add ${EVIDENCE_PATH}`);
+  run(`git commit -m "chore(release): claim parity for ${version}"`);
 }
 
 log(`\n→ creating annotated tag ${tag}…`);
