@@ -1,8 +1,9 @@
 ﻿import { SceneNode } from '#core/SceneNode';
 import { Matrix } from '#math/Matrix';
-import type { Rectangle } from '#math/Rectangle';
+import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
+import type { View } from '#rendering/View';
 
 // Regression suite for the SceneNode transform cache after the 0.5.0 inline
 // of `Transformable`. These tests assert behavior that was previously implicit
@@ -315,6 +316,58 @@ describe('SceneNode bounds after transform changes', () => {
     expect(bounds.y).toBe(0);
     expect(bounds.width).toBe(300);
     expect(bounds.height).toBe(300);
+
+    container.destroy();
+  });
+
+  test('toggling a child visible refreshes the cached ancestor bounds', () => {
+    const container = new Container();
+    const childA = new TestDrawable();
+    const childB = new TestDrawable();
+
+    childA.setPosition(0, 0);
+    childB.setPosition(200, 200);
+    container.addChild(childA, childB);
+
+    // Warm the cache: the aggregate spans (0,0)-(300,300) while both are visible.
+    expect(container.getBounds().width).toBe(300);
+
+    // Hiding a child shrinks the aggregate — Container.updateBounds() only folds
+    // in visible children — so the cached rect must be rebuilt, not replayed.
+    childB.visible = false;
+
+    expect(container.getBounds().width).toBe(100);
+    expect(container.getBounds().height).toBe(100);
+
+    // Re-showing must grow it back. A stale cache here culls the container away
+    // and the re-shown subtree silently stops rendering.
+    childB.visible = true;
+
+    expect(container.getBounds().width).toBe(300);
+    expect(container.getBounds().height).toBe(300);
+
+    container.destroy();
+  });
+
+  test('a re-shown subtree makes an out-of-view container test in-view again', () => {
+    const container = new Container();
+    const child = new TestDrawable();
+
+    child.setPosition(500, 0);
+    container.addChild(child);
+
+    const view = { getBounds: () => new Rectangle(400, 0, 300, 300) } as unknown as View;
+
+    expect(container.getBounds().width).toBe(600);
+    expect(container.inView(view)).toBe(true);
+
+    child.visible = false;
+
+    expect(container.inView(view)).toBe(false);
+
+    child.visible = true;
+
+    expect(container.inView(view)).toBe(true);
 
     container.destroy();
   });
