@@ -17,6 +17,7 @@
 // scene transition and never releasing it loses VRAM slowly enough that no
 // single-frame assertion would catch it.
 // ---------------------------------------------------------------------------
+import { textureSeamlessAdapter } from '#assets/seamless';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { DataTexture } from '#rendering/texture/DataTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -150,6 +151,47 @@ describe('GPU resource lifetime', () => {
       for (const texture of held) {
         texture.destroy();
       }
+    });
+  });
+
+  describe('seamless texture eviction frees GPU memory immediately', () => {
+    test('textureSeamlessAdapter.evict() drops gpuMemoryBytes without waiting for a rebind', () => {
+      const harness = createWebGl2Harness();
+      const texture = new DataTexture({ width: 32, height: 32, format: TextureFormat.Rgba8 });
+
+      measureSteadyFrame(harness, buildSpriteScene({ count: 1, textures: [texture] }).root);
+
+      const beforeEvict = harness.backend.stats.gpuMemoryBytes;
+
+      // Nothing renders this handle again afterwards — the point is that
+      // eviction must not depend on a future bind to notice the drop.
+      textureSeamlessAdapter.evict(texture);
+
+      expect(harness.backend.stats.gpuMemoryBytes).toBeLessThan(beforeEvict);
+    });
+
+    test('an evicted handle stays alive and reusable, unlike destroy()', () => {
+      const harness = createWebGl2Harness();
+      const texture = new DataTexture({ width: 16, height: 16, format: TextureFormat.Rgba8 });
+
+      measureSteadyFrame(harness, buildSpriteScene({ count: 1, textures: [texture] }).root);
+      textureSeamlessAdapter.evict(texture);
+
+      expect(texture.destroyed).toBe(false);
+      expect(() => measureSteadyFrame(harness, buildSpriteScene({ count: 1, textures: [texture] }).root)).not.toThrow();
+    });
+
+    test('a real destroy() after eviction still frees the destroy subscription exactly once', () => {
+      const harness = createWebGl2Harness();
+      const texture = new DataTexture({ width: 16, height: 16, format: TextureFormat.Rgba8 });
+
+      measureSteadyFrame(harness, buildSpriteScene({ count: 1, textures: [texture] }).root);
+      textureSeamlessAdapter.evict(texture);
+
+      // Eviction must not have dropped the destroy subscription — it exists
+      // precisely so a later real destroy() is still observed by the backend.
+      expect(() => texture.destroy()).not.toThrow();
+      expect(texture.destroyed).toBe(true);
     });
   });
 });
