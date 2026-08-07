@@ -4,6 +4,7 @@ import type { InteractionHooks, Stage } from '#core/Stage';
 import { FocusController } from '#input/FocusController';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
+import { ColorFilter } from '#rendering/filters/ColorFilter';
 import { Graphics } from '#rendering/primitives/Graphics';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
@@ -473,5 +474,259 @@ describe('Container paint-order cache', () => {
 
     expect(container.getChildIndex(b)).toBe(0);
     expect(container.getChildIndex(c)).toBe(1);
+  });
+});
+
+// A 100x100 local-space box, so the geometry accessors below have a nontrivial
+// extent to aggregate.
+class SizedDrawable extends Drawable {
+  public override updateBounds(): this {
+    this.getLocalBounds().set(0, 0, 100, 100);
+
+    return super.updateBounds();
+  }
+
+  public override render(_backend: RenderBackend): this {
+    return this;
+  }
+}
+
+describe('Container geometry accessors', () => {
+  test('width/height report the rendered world extent, not the extent times scale', () => {
+    const container = new Container();
+
+    container.addChild(new SizedDrawable());
+    container.setScale(2, 3);
+
+    // The subtree aggregate is already world-space: a 100x100 child under a
+    // 2x/3x container renders 200x300. Multiplying by scale a second time
+    // would report 400x900.
+    expect(container.width).toBe(200);
+    expect(container.height).toBe(300);
+    expect(container.width).toBe(container.getBounds().width);
+    expect(container.height).toBe(container.getBounds().height);
+
+    container.destroy();
+  });
+
+  test('assigning width/height relates linearly to the resulting rendered size', () => {
+    const container = new Container();
+
+    container.addChild(new SizedDrawable());
+
+    expect(container.width).toBe(100);
+
+    container.width = 200;
+
+    expect(container.width).toBe(200);
+    expect(container.getBounds().width).toBe(200);
+
+    // Doubling the CURRENT width must double the rendered size. Dividing the
+    // target by an already-scaled measurement instead squares the factor, so
+    // this second round trip is where the quadratic relationship shows up.
+    container.width = container.width * 2;
+
+    expect(container.width).toBe(400);
+    expect(container.getBounds().width).toBe(400);
+
+    container.height = 50;
+
+    expect(container.height).toBe(50);
+    expect(container.getBounds().height).toBe(50);
+
+    container.destroy();
+  });
+
+  test('assigning width preserves a mirrored scale sign', () => {
+    const container = new Container();
+
+    container.addChild(new SizedDrawable());
+    container.setScale(-1, 1);
+
+    expect(container.width).toBe(100);
+
+    container.width = 250;
+
+    expect(container.scale.x).toBe(-2.5);
+    expect(container.width).toBe(250);
+
+    container.destroy();
+  });
+
+  test('assigning width to an empty container is a no-op instead of poisoning scale with NaN', () => {
+    const container = new Container();
+
+    container.width = 200;
+    container.height = 200;
+
+    expect(container.scale.x).toBe(1);
+    expect(container.scale.y).toBe(1);
+
+    container.destroy();
+  });
+
+  test('left/top/right/bottom are the world bounds edges for a non-zero origin', () => {
+    const container = new Container();
+
+    container.addChild(new SizedDrawable());
+    // `origin` is in LOCAL pixels: the transform translates by
+    // `position - origin * scale`, so the subtree shifts to (-25,-40)-(75,60).
+    container.setOrigin(25, 40);
+
+    expect(container.left).toBe(-25);
+    expect(container.top).toBe(-40);
+    expect(container.right).toBe(75);
+    expect(container.bottom).toBe(60);
+
+    container.destroy();
+  });
+
+  test('left/top/right/bottom stay mutually consistent under origin, scale and position', () => {
+    const container = new Container();
+
+    container.addChild(new SizedDrawable());
+    container.setOrigin(25, 40);
+    container.setScale(2, 3);
+    container.setPosition(10, 20);
+
+    const bounds = container.getBounds();
+
+    expect(container.left).toBe(bounds.x);
+    expect(container.top).toBe(bounds.y);
+    expect(container.right).toBe(bounds.x + bounds.width);
+    expect(container.bottom).toBe(bounds.y + bounds.height);
+
+    // The edges must span exactly the reported size — the invariant the
+    // mismatched origin terms used to break.
+    expect(container.right - container.left).toBe(container.width);
+    expect(container.bottom - container.top).toBe(container.height);
+
+    container.destroy();
+  });
+
+  test('edges follow a child that moves the aggregate', () => {
+    const container = new Container();
+    const near = new SizedDrawable();
+    const far = new SizedDrawable();
+
+    far.setPosition(200, 200);
+    container.addChild(near, far);
+
+    expect(container.left).toBe(0);
+    expect(container.top).toBe(0);
+    expect(container.right).toBe(300);
+    expect(container.bottom).toBe(300);
+    expect(container.width).toBe(300);
+
+    container.destroy();
+  });
+});
+
+describe('Container.destroy() tears down the whole subtree', () => {
+  test('every descendant is destroyed, not merely detached', () => {
+    const root = new Container();
+    const branch = new Container();
+    const leaf = new DummyDrawable();
+    const sibling = new DummyDrawable();
+
+    branch.addChild(leaf);
+    root.addChild(branch, sibling);
+
+    const branchSpy = vi.spyOn(branch, 'destroy');
+    const leafSpy = vi.spyOn(leaf, 'destroy');
+    const siblingSpy = vi.spyOn(sibling, 'destroy');
+
+    root.destroy();
+
+    expect(branchSpy).toHaveBeenCalledTimes(1);
+    expect(leafSpy).toHaveBeenCalledTimes(1);
+    expect(siblingSpy).toHaveBeenCalledTimes(1);
+
+    expect(root.destroyed).toBe(true);
+    expect(branch.destroyed).toBe(true);
+    expect(leaf.destroyed).toBe(true);
+    expect(sibling.destroyed).toBe(true);
+  });
+
+  test('a grandchild-held disposable resource is released', () => {
+    const root = new Container();
+    const branch = new Container();
+    const leaf = new DummyDrawable();
+    const filter = new ColorFilter();
+    const filterSpy = vi.spyOn(filter, 'destroy');
+
+    leaf.filters = [filter];
+    branch.addChild(leaf);
+    root.addChild(branch);
+
+    root.destroy();
+
+    // RenderNode.destroy() releases a node's own filters, so this only fires
+    // if the grandchild was genuinely destroyed rather than just unlinked.
+    expect(filterSpy).toHaveBeenCalled();
+  });
+
+  test('descendants are detached as well as destroyed', () => {
+    const root = new Container();
+    const branch = new Container();
+    const leaf = new DummyDrawable();
+
+    branch.addChild(leaf);
+    root.addChild(branch);
+
+    root.destroy();
+
+    expect(root.children).toHaveLength(0);
+    expect(branch.parent).toBeNull();
+  });
+
+  test('an already-destroyed child is not destroyed a second time', () => {
+    const root = new Container();
+    const leaf = new DummyDrawable();
+
+    root.addChild(leaf);
+    leaf.destroy();
+
+    const leafSpy = vi.spyOn(leaf, 'destroy');
+
+    expect(() => root.destroy()).not.toThrow();
+    expect(leafSpy).not.toHaveBeenCalled();
+  });
+
+  test('destroying an already-destroyed container is a no-op', () => {
+    const root = new Container();
+    const leaf = new DummyDrawable();
+
+    root.addChild(leaf);
+    root.destroy();
+
+    const leafSpy = vi.spyOn(leaf, 'destroy');
+
+    expect(() => root.destroy()).not.toThrow();
+    expect(leafSpy).not.toHaveBeenCalled();
+  });
+
+  test('a deep chain is destroyed all the way down', () => {
+    const root = new Container();
+    const nodes: Container[] = [root];
+
+    for (let depth = 0; depth < 5; depth++) {
+      const next = new Container();
+
+      nodes[nodes.length - 1]!.addChild(next);
+      nodes.push(next);
+    }
+
+    const leaf = new DummyDrawable();
+
+    nodes[nodes.length - 1]!.addChild(leaf);
+
+    root.destroy();
+
+    for (const node of nodes) {
+      expect(node.destroyed).toBe(true);
+    }
+
+    expect(leaf.destroyed).toBe(true);
   });
 });

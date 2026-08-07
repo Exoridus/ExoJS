@@ -324,6 +324,12 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     if (this._visible !== visible) {
       this._visible = visible;
       this._markStructureDirty();
+      // A container folds in only its VISIBLE children, so flipping this bit
+      // changes every ancestor's aggregate extent. Without the bounds cascade
+      // the cached ancestor rect survives the change: a re-shown subtree keeps
+      // the shrunken rect, the container fails the viewport intersection, and
+      // the whole subtree stops rendering even though it is visible again.
+      this._invalidateBoundsFlags();
     }
   }
 
