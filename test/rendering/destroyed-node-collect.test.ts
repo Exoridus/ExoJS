@@ -177,8 +177,7 @@ const rootDir = resolve(import.meta.dirname!, '..', '..');
 
 const devToken = /(?<![a-zA-Z0-9_$])__DEV__(?![a-zA-Z0-9_$])/;
 
-const parseSource = (rel: string): ts.SourceFile =>
-  ts.createSourceFile(rel, readFileSync(resolve(rootDir, rel), 'utf8'), ts.ScriptTarget.ES2022, true);
+const parseSource = (rel: string): ts.SourceFile => ts.createSourceFile(rel, readFileSync(resolve(rootDir, rel), 'utf8'), ts.ScriptTarget.ES2022, true);
 
 /**
  * Whether `node` sits inside anything `__DEV__` can switch off — an
