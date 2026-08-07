@@ -396,6 +396,71 @@ describe('RenderingContext', () => {
     node.destroy();
     context.destroy();
   });
+
+  test('swapping the active view leaves the replaced view usable', () => {
+    const { backend } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const first = new View(0, 0, 100, 100);
+    const second = new View(0, 0, 100, 100);
+
+    context.view = first;
+    context.view = second;
+
+    expect(first.destroyed).toBe(false);
+    expect(context.view).toBe(second);
+
+    // A silently destroyed view stops reacting to mutations: its center no
+    // longer marks the transform stale, so the camera freezes without an error.
+    const updateId = first.updateId;
+
+    first.setCenter(25, 50);
+
+    expect(first.updateId).toBeGreaterThan(updateId);
+    expect(first.getBounds().left).toBe(-25);
+
+    first.destroy();
+    second.destroy();
+    context.destroy();
+  });
+
+  test('swapping away and back to a fresh view keeps the active view live', () => {
+    const { backend, setViewSpy } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const node = new Container();
+    const first = new View(0, 0, 100, 100);
+    const second = new View(0, 0, 100, 100);
+    const third = new View(10, 20, 100, 100);
+
+    context.view = first;
+    context.view = second;
+    context.view = third;
+    context.render(node);
+
+    expect(third.destroyed).toBe(false);
+    expect(setViewSpy).toHaveBeenLastCalledWith(third);
+    expect(backend.view).toBe(third);
+
+    first.destroy();
+    second.destroy();
+    third.destroy();
+    node.destroy();
+    context.destroy();
+  });
+
+  test('destroy releases the context-owned views but not a caller-assigned one', () => {
+    const { backend } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const custom = new View(0, 0, 100, 100);
+    const screenView = context.screenView;
+
+    context.view = custom;
+    context.destroy();
+
+    expect(custom.destroyed).toBe(false);
+    expect(screenView.destroyed).toBe(true);
+
+    custom.destroy();
+  });
 });
 
 // Standard interleaved mesh layout: position f32x2 @0, texcoord f32x2 @8,

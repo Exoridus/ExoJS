@@ -1,6 +1,6 @@
 {
   "title": "RenderTarget",
-  "description": "Renderable destination — either the on-screen canvas (the `root` target owned by the backend) or an offscreen texture (a RenderTexture). Owns a View that controls the camera transform and viewport, and emits a destroy event so backends can release backing GPU resources. Set `view` to swap cameras for this target; call `resize(w, h)` when the underlying canvas / texture dimensions change.",
+  "description": "Renderable destination — either the on-screen canvas (the `root` target owned by the backend) or an offscreen texture (a RenderTexture). Owns a default View that controls the camera transform and viewport, and emits a destroy event so backends can release backing GPU resources. Set `view` to swap cameras for this target; call `resize(w, h)` when the underlying canvas / texture dimensions change. An assigned view is caller-owned: swapping it out or destroying the target leaves it alive, so destroy the views you create yourself.",
   "symbol": "RenderTarget",
   "kind": "class",
   "subsystem": "rendering",
@@ -19,8 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Renderable destination — either the on-screen canvas (the `root` target owned by the backend) or an offscreen texture (a RenderTexture). Owns a View that controls the camera transform and viewport, and emits a destroy event so backends can release backing GPU resources.",
-        "Set `view` to swap cameras for this target; call `resize(w, h)` when the underlying canvas / texture dimensions change."
+        "Renderable destination — either the on-screen canvas (the `root` target owned by the backend) or an offscreen texture (a RenderTexture). Owns a default View that controls the camera transform and viewport, and emits a destroy event so backends can release backing GPU resources.",
+        "Set `view` to swap cameras for this target; call `resize(w, h)` when the underlying canvas / texture dimensions change. An assigned view is caller-owned: swapping it out or destroying the target leaves it alive, so destroy the views you create yourself."
       ],
       "importLine": "import { RenderTarget } from '@codexo/exojs'",
       "sourceLink": null
@@ -599,7 +599,7 @@
             }
           ],
           "returnType": "this",
-          "description": ""
+          "description": "Point this target at view, or back at its own default view when passed null. The view is caller-owned — neither this call nor destroy releases it."
         },
         {
           "name": "updateViewport",

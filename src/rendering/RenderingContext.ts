@@ -71,6 +71,8 @@ export interface DrawBatchOptions {
  */
 export class RenderingContext implements DrawContext {
   private readonly _backend: RenderBackend;
+  /** The camera this context creates for itself, and the only view it may release. */
+  private readonly _defaultView: View;
   private _view: View;
   private readonly _screenView: View;
   /** Lazily-created pooled drawable reused by every {@link drawGeometry} call. */
@@ -90,10 +92,11 @@ export class RenderingContext implements DrawContext {
     const viewCenterX = backend.view?.center?.x ?? viewWidth / 2;
     const viewCenterY = backend.view?.center?.y ?? viewHeight / 2;
 
-    this._view = View.from({
+    this._defaultView = View.from({
       center: { x: viewCenterX, y: viewCenterY },
       size: { width: viewWidth, height: viewHeight },
     });
+    this._view = this._defaultView;
     this._screenView = new View(viewCenterX, viewCenterY, viewWidth, viewHeight);
   }
 
@@ -101,19 +104,20 @@ export class RenderingContext implements DrawContext {
    * The active world {@link View} — the default for {@link render}. Defaults to
    * a view matching the initial backend view. Replace with a custom `View` for
    * follow, zoom, bounds, or split-screen viewport behavior.
+   *
+   * An assigned view is caller-owned, the same contract as {@link trackView}:
+   * assigning a replacement never destroys the outgoing one, so a view can be
+   * swapped out and back (per scene, per split-screen mode) and stays valid in
+   * between. Destroy the views you create once you are done with them; the
+   * context only releases the default camera it created for itself and
+   * {@link screenView}.
    */
   public get view(): View {
     return this._view;
   }
 
   public set view(view: View) {
-    const previousView = this._view;
-
     this._view = view;
-
-    if (previousView !== view) {
-      previousView.destroy();
-    }
   }
 
   /**
@@ -176,13 +180,14 @@ export class RenderingContext implements DrawContext {
   }
 
   /**
-   * Destroy the resources this context owns — the active {@link View} and the
-   * screen-space {@link View}. The {@link RenderBackend} is owned by the
+   * Destroy the resources this context owns — its own default camera and the
+   * screen-space {@link View}. A {@link View} assigned through {@link view} is
+   * caller-owned and left alone. The {@link RenderBackend} is owned by the
    * Application and destroyed separately.
    * @internal — invoked directly by {@link Application.destroy}.
    */
   public destroy(): void {
-    this._view.destroy();
+    this._defaultView.destroy();
     this._screenView.destroy();
     this._trackedViews.clear();
     this._renderedViews.clear();

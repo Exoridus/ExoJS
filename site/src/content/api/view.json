@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 38,
+  "memberCount": 39,
   "counts": {
     "constructors": 1,
     "methods": 29,
-    "properties": 8,
+    "properties": 9,
     "events": 0
   },
   "sections": [
@@ -233,7 +233,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": ""
+          "description": "Release the math objects this view owns. Idempotent — the same view can be reachable from more than one owner (a RenderTarget it was assigned to as well as the code that created it), so a second call must not take _center, _size, _viewport and the cached matrices through a second teardown."
         },
         {
           "name": "follow",
@@ -1806,6 +1806,27 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "destroyed",
+          "signature": "destroyed: boolean",
+          "signatureTokens": [
+            {
+              "text": "destroyed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true once destroy has run. A destroyed view keeps its last computed transform but no longer reacts to mutations — its center stops marking the transform stale — so it must not be put back into use."
         },
         {
           "name": "height",
