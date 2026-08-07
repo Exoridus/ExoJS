@@ -65,17 +65,33 @@ describe('Sound', () => {
     vi.restoreAllMocks();
   });
 
-  // manager.play({ replace: true }) stops prior instance before starting a new one.
-  test('manager.play(sound) with replace: true stops prior instance before starting a new one', () => {
+  // Default (and explicit replace: false): concurrent instances layer, nothing is stopped.
+  test('manager.play(sound, { replace: false }) called twice keeps both instances playing concurrently', () => {
     const factory = setupSourceFactorySpy();
     const manager = new AudioManager();
     const sound = new Sound(createAudioBufferStub());
 
-    manager.play(sound);
-    sound._stopAllVoices(); // simulate replace: stop old voices
-    manager.play(sound);
+    manager.play(sound, { replace: false });
+    manager.play(sound, { replace: false });
 
-    // Two sources created; first was stopped
+    expect(factory.sources.length).toBe(2);
+    expect(factory.sources[0].stop).not.toHaveBeenCalled();
+    expect(factory.sources[1].stop).not.toHaveBeenCalled();
+
+    factory.restore();
+    sound.destroy();
+  });
+
+  // manager.play(sound, { replace: true }) stops the prior instance before starting a new one.
+  test('manager.play(sound, { replace: true }) stops prior instance before starting a new one', () => {
+    const factory = setupSourceFactorySpy();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+
+    manager.play(sound, { replace: true });
+    manager.play(sound, { replace: true });
+
+    // Two sources created; the first was stopped when the second started.
     expect(factory.sources.length).toBe(2);
     expect(factory.sources[0].stop).toHaveBeenCalledTimes(1);
     expect(factory.sources[1].stop).toHaveBeenCalledTimes(0);

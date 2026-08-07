@@ -52,6 +52,10 @@ Chromium is measured on every CI run. Firefox and Safari need a machine with a d
 `pnpm test:parity` runs the matrix on Chromium, `test:parity:firefox` and `test:parity:safari` on the others. Each run rewrites only the rows for the browser it exercised.
 </Callout>
 
+<Callout type="broken" title="WebGPU isn't reliable on Safari yet">
+The Safari column above shows it — `auto` already keeps Safari on WebGL2 for this reason. Stick with WebGL2 there rather than pinning `backend: { type: 'webgpu' }` for production use.
+</Callout>
+
 ### Known differences
 
 Where differences exist, they are performance characteristics or rendering-path specifics, not API gaps:

@@ -129,6 +129,24 @@ describe('Scene', () => {
     expect(child.parent).toBeNull();
   });
 
+  test('_teardownInternals destroys the whole scene subtree, not just the root', () => {
+    const scene = new Scene();
+    const branch = new Container();
+    const leaf = new DummyDrawable();
+
+    branch.addChild(leaf);
+    scene.addChild(branch);
+
+    // Scene owns no separate child walk — it delegates to the root container's
+    // recursive destroy, so every node a scene held is released on teardown
+    // instead of leaking its resources across the scene change.
+    scene._teardownInternals();
+
+    expect(scene.root.destroyed).toBe(true);
+    expect(branch.destroyed).toBe(true);
+    expect(leaf.destroyed).toBe(true);
+  });
+
   // CONTRACT — do not weaken without an explicit identity decision.
   //
   // Scene.root is a structural ownership/traversal anchor. The

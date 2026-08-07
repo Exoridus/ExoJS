@@ -460,6 +460,34 @@ describe('InputManager — mouse wheel', () => {
 
     im.destroy();
   });
+
+  test('multiple wheel events within one frame accumulate instead of overwriting, normalized across deltaModes', () => {
+    const { im, canvas } = createInputManager();
+    const seen: Array<{ x: number; y: number }> = [];
+    const onWheel = vi.fn((vector: { x: number; y: number }) => {
+      seen.push({ x: vector.x, y: vector.y });
+    });
+
+    im.onMouseWheel.add(onWheel);
+    canvas.dispatchEvent(new FocusEvent('focus'));
+
+    // Three sub-frame events, as fast/high-precision scrolling routinely
+    // produces. Mixed deltaMode: DOM_DELTA_PIXEL passes through unchanged,
+    // DOM_DELTA_LINE is Firefox's default and reports in line units.
+    canvas.dispatchEvent(new WheelEvent('wheel', { deltaX: 5, deltaY: 2, deltaMode: WheelEvent.DOM_DELTA_PIXEL }));
+    canvas.dispatchEvent(new WheelEvent('wheel', { deltaX: 1, deltaY: -1, deltaMode: WheelEvent.DOM_DELTA_LINE }));
+    canvas.dispatchEvent(new WheelEvent('wheel', { deltaX: 3, deltaY: 4, deltaMode: WheelEvent.DOM_DELTA_PIXEL }));
+
+    im.preUpdate(0 as never);
+
+    // Only one flush per frame, carrying the SUM of all three events, not
+    // just the last one — and the line-mode event converted to its
+    // pixel-equivalent (16px/line) before being summed in.
+    expect(onWheel).toHaveBeenCalledTimes(1);
+    expect(seen).toEqual([{ x: 5 + 16 + 3, y: 2 - 16 + 4 }]);
+
+    im.destroy();
+  });
 });
 
 // ---------------------------------------------------------------------------

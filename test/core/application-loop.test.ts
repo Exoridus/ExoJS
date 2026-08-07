@@ -321,6 +321,92 @@ describe('Application.update() — loop timing', () => {
   });
 
   // -------------------------------------------------------------------------
+  // Frame delta measures the wall-clock gap between frames
+  // -------------------------------------------------------------------------
+
+  describe('frame delta spans the full gap between frames', () => {
+    /**
+     * Replace `_frameClock` with a clock driven by an explicit virtual
+     * timeline, so a frame's own processing cost can be injected at a chosen
+     * point without depending on real wall-clock timing. Returns a handle that
+     * advances the timeline.
+     */
+    function installVirtualFrameClock(target: Application): { advance: (ms: number) => void } {
+      let nowMs = 0;
+      let startedAtMs = 0;
+
+      const virtualClock = {
+        get elapsedTime(): Time {
+          return new Time(nowMs - startedAtMs);
+        },
+        restart(): void {
+          startedAtMs = nowMs;
+        },
+        start(): void {
+          startedAtMs = nowMs;
+        },
+        stop(): void {
+          /* the virtual timeline only moves when a test advances it */
+        },
+        destroy(): void {
+          /* nothing to release */
+        },
+      };
+
+      (target as unknown as Record<string, unknown>)['_frameClock'] = virtualClock;
+
+      return {
+        advance: (ms: number): void => {
+          nowMs += ms;
+        },
+      };
+    }
+
+    test('a frame that spends CPU time still reports the full frame-to-frame gap on the next frame', () => {
+      const timeline = installVirtualFrameClock(app);
+      const frameProcessingMs = 12;
+      const framePeriodMs = 16;
+      const observedDeltas: number[] = [];
+
+      vi.spyOn(app.tweens, 'preUpdate').mockImplementation((delta: Time) => {
+        observedDeltas.push(delta.milliseconds);
+      });
+
+      // Charge the frame's own processing cost to the timeline from inside the
+      // frame body, after the delta has been read — this is the cost that must
+      // not be subtracted from the next frame's delta.
+      app.onFrame.add(() => {
+        timeline.advance(frameProcessingMs);
+      });
+
+      app.update();
+
+      // The next frame callback lands one frame period after the previous one
+      // began, so the remaining wait is the period minus the work already done.
+      timeline.advance(framePeriodMs - frameProcessingMs);
+
+      app.update();
+
+      expect(observedDeltas).toHaveLength(2);
+      expect(observedDeltas[1]).toBe(framePeriodMs);
+    });
+
+    test('rawFrameDeltaMs reports elapsed wall time, not wall time minus the previous frame cost', () => {
+      const timeline = installVirtualFrameClock(app);
+
+      app.onFrame.add(() => {
+        timeline.advance(12);
+      });
+
+      app.update();
+      timeline.advance(4);
+      app.update();
+
+      expect(app.backend.stats.rawFrameDeltaMs).toBe(16);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // Regression — existing behavior unaffected
   // -------------------------------------------------------------------------
 

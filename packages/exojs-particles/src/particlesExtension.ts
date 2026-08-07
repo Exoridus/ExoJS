@@ -9,7 +9,14 @@ import { ParticleSystem } from './ParticleSystem';
 
 /** Options for {@link createParticlesExtension}. */
 export interface ParticlesExtensionOptions {
-  /** WebGL2 particle renderer batch size. Default: 8192. */
+  /**
+   * Particles the WebGL2 renderer's instance buffer is pre-sized for.
+   * Defaults to 8192.
+   *
+   * This is a starting allocation, not a limit: a system with more live
+   * particles grows the buffer instead of dropping the surplus, so raise it
+   * only to avoid the initial growth steps for a known-large system.
+   */
   readonly batchSize?: number;
 }
 

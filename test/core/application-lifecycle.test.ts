@@ -1277,5 +1277,44 @@ describe('Application lifecycle / getters / sizing', () => {
         rafSpy.mockRestore();
       }
     });
+
+    test('teardown after the fallback destroys the surviving rendering context exactly once', async () => {
+      const restoreGpu = setNavigatorGpu({});
+      const webgpuInitialize = vi.fn().mockRejectedValue(new Error('webgpu init failed'));
+      const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
+
+      try {
+        const { Application } = await loadHarness({ webgpuInitialize });
+        const { RenderingContext } = await import('#rendering/RenderingContext');
+        const destroyedContexts: unknown[] = [];
+
+        vi.spyOn(RenderingContext.prototype, 'destroy').mockImplementation(function (this: unknown) {
+          destroyedContexts.push(this);
+        });
+
+        const app = new Application({ canvas: { element: document.createElement('canvas') } });
+
+        await app.start();
+
+        const survivingRendering = app.rendering;
+
+        // Ignore the fallback's own teardown of the context it discarded.
+        destroyedContexts.length = 0;
+
+        app.destroy();
+
+        // destroy() halts the frame loop synchronously and finishes the rest
+        // of teardown on an async chain it awaits internally.
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        // The application unregisters its own core systems so that it, and
+        // not the registry, destroys them — a stale entry in that list would
+        // leave the live context to be destroyed from both sides.
+        expect(destroyedContexts.filter(context => context === survivingRendering)).toHaveLength(1);
+      } finally {
+        restoreGpu();
+        rafSpy.mockRestore();
+      }
+    });
   });
 });

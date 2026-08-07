@@ -1030,4 +1030,75 @@ describe('getCollisionSat', () => {
 
     expect(getCollisionSat(empty, square(0, 0, 10))).toBeNull();
   });
+
+  // The MTV direction must follow the same convention as the non-SAT
+  // responses (see getCollisionRectangleRectangle / getCollisionCircleCircle):
+  // projectionN points from shapeA toward shapeB. Deriving it from the raw
+  // edge normal instead makes mirrored placements collapse onto the same
+  // direction, which pushes one of the two pairs deeper instead of apart.
+
+  test('mirrored horizontal placements produce opposite MTV directions', () => {
+    const toTheRight = getCollisionSat(square(0, 0, 10), square(5, 0, 10));
+    const toTheLeft = getCollisionSat(square(0, 0, 10), square(-5, 0, 10));
+
+    expect(toTheRight).not.toBeNull();
+    expect(toTheLeft).not.toBeNull();
+
+    expect(toTheRight!.projectionN.x).toBeCloseTo(1);
+    expect(toTheRight!.projectionN.y).toBeCloseTo(0);
+    expect(toTheLeft!.projectionN.x).toBeCloseTo(-1);
+    expect(toTheLeft!.projectionN.y).toBeCloseTo(0);
+  });
+
+  test('mirrored vertical placements produce opposite MTV directions', () => {
+    const below = getCollisionSat(square(0, 0, 10), rect(0, 5, 10, 10));
+    const above = getCollisionSat(square(0, 0, 10), rect(0, -5, 10, 10));
+
+    expect(below).not.toBeNull();
+    expect(above).not.toBeNull();
+
+    expect(below!.projectionN.x).toBeCloseTo(0);
+    expect(below!.projectionN.y).toBeCloseTo(1);
+    expect(above!.projectionN.x).toBeCloseTo(0);
+    expect(above!.projectionN.y).toBeCloseTo(-1);
+  });
+
+  test('mirrored diagonal placements produce opposite MTV directions', () => {
+    // The diamond's normals are diagonal, so the winning axis here comes from
+    // the second shape rather than the axis-aligned square.
+    // Both diamonds sit mirrored through the square's centre (5, 5), each
+    // overlapping one of its diagonal corners.
+    const upperRight = getCollisionSat(square(0, 0, 10), diamond(14, -4, 10));
+    const lowerLeft = getCollisionSat(square(0, 0, 10), diamond(-4, 14, 10));
+
+    expect(upperRight).not.toBeNull();
+    expect(lowerLeft).not.toBeNull();
+
+    expect(upperRight!.projectionN.x).toBeCloseTo(-lowerLeft!.projectionN.x);
+    expect(upperRight!.projectionN.y).toBeCloseTo(-lowerLeft!.projectionN.y);
+    expect(upperRight!.projectionN.x).toBeGreaterThan(0);
+    expect(upperRight!.projectionN.y).toBeLessThan(0);
+  });
+
+  test('applying the MTV to shapeA separates both mirrored placements', () => {
+    // projectionN points from shapeA toward shapeB, so shapeA has to move
+    // along its negation to come apart.
+    for (const offset of [5, -5]) {
+      const shapeA = square(0, 0, 10);
+      const shapeB = square(offset, 0, 10);
+      const response = getCollisionSat(shapeA, shapeB);
+
+      expect(response).not.toBeNull();
+      expect(response!.overlap).toBeGreaterThan(0);
+
+      shapeA.x -= response!.projectionV.x;
+      shapeA.y -= response!.projectionV.y;
+
+      const resolved = getCollisionSat(shapeA, shapeB);
+
+      // Touching shapes still report a response, but with zero penetration.
+      expect(resolved?.overlap ?? 0).toBeLessThan(response!.overlap);
+      expect(resolved?.overlap ?? 0).toBeCloseTo(0);
+    }
+  });
 });

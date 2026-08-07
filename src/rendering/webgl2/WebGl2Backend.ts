@@ -28,10 +28,11 @@ import type { RenderError } from '#rendering/RenderError';
 import type { RenderStats } from '#rendering/RenderStats';
 import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
+import { RenderTexturePool } from '#rendering/RenderTexturePool';
 import type { Shader } from '#rendering/shader/Shader';
 import { DataTexture, type DataTextureFormat } from '#rendering/texture/DataTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
-import type { Texture } from '#rendering/texture/Texture';
+import { Texture } from '#rendering/texture/Texture';
 import { TransformBuffer } from '#rendering/TransformBuffer';
 import { BlendModes, type ColorTextureFormat, TextureFormat } from '#rendering/types';
 import type { View } from '#rendering/View';
@@ -148,6 +149,11 @@ interface DestroyListenable {
   removeDestroyListener(listener: () => void): unknown;
 }
 
+interface ReleaseListenable {
+  addReleaseListener(listener: () => void): unknown;
+  removeReleaseListener(listener: () => void): unknown;
+}
+
 // One open retained-capture window. Frames stack for nested
 // recording groups: a flushed batch's bytes are stored once in the
 // INNERMOST frame's bundle, while its instruction is appended to every open
@@ -214,8 +220,9 @@ export class WebGl2Backend implements RenderBackend {
   private readonly _textureStates: Map<Texture | RenderTexture, ManagedTextureState> = new Map<Texture | RenderTexture, ManagedTextureState>();
   private readonly _renderTargetStates: Map<RenderTarget, ManagedRenderTargetState> = new Map<RenderTarget, ManagedRenderTargetState>();
   private readonly _textureDestroyHandlers: Map<Texture | RenderTexture, () => void> = new Map<Texture | RenderTexture, () => void>();
+  private readonly _textureReleaseHandlers: Map<Texture, () => void> = new Map<Texture, () => void>();
   private readonly _renderTargetDestroyHandlers: Map<RenderTarget, () => void> = new Map<RenderTarget, () => void>();
-  private readonly _temporaryRenderTextures: RenderTexture[] = [];
+  private readonly _renderTexturePool: RenderTexturePool = new RenderTexturePool();
   private readonly _clipBoundsStack: Rectangle[] = [];
   private readonly _clipPixelStack: PixelClipBoundsState[] = [];
   private readonly _clipPointA: Vector = new Vector();
@@ -851,27 +858,11 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   public acquireRenderTexture(width: number, height: number): RenderTexture {
-    for (let index = 0; index < this._temporaryRenderTextures.length; index++) {
-      // In-bounds: `index` ranges over `0..length-1`.
-      const texture = this._temporaryRenderTextures[index]!;
-
-      if (texture.width === width && texture.height === height) {
-        this._temporaryRenderTextures.splice(index, 1);
-
-        return texture;
-      }
-    }
-
-    return new RenderTexture(width, height);
+    return this._renderTexturePool.acquire(width, height);
   }
 
   public releaseRenderTexture(texture: RenderTexture): this {
-    if (this._temporaryRenderTextures.includes(texture)) {
-      return this;
-    }
-
-    texture.setView(null);
-    this._temporaryRenderTextures.push(texture);
+    this._renderTexturePool.release(texture);
 
     return this;
   }
@@ -1507,7 +1498,7 @@ export class WebGl2Backend implements RenderBackend {
     this.rendererRegistry.destroy();
     this._clearColor.destroy();
     this._destroyManagedResources();
-    this._destroyTemporaryRenderTextures();
+    this._renderTexturePool.destroy();
 
     for (const clipBounds of this._clipBoundsStack) {
       clipBounds.destroy();
@@ -1797,14 +1788,6 @@ export class WebGl2Backend implements RenderBackend {
     }
   }
 
-  private _destroyTemporaryRenderTextures(): void {
-    for (const texture of this._temporaryRenderTextures) {
-      texture.destroy();
-    }
-
-    this._temporaryRenderTextures.length = 0;
-  }
-
   private _getRenderTargetState(target: RenderTarget): ManagedRenderTargetState {
     let state = this._renderTargetStates.get(target);
 
@@ -1836,6 +1819,12 @@ export class WebGl2Backend implements RenderBackend {
         this._evictTexture(texture, true);
       });
 
+      if (texture instanceof Texture) {
+        this._subscribeToRelease(texture, this._textureReleaseHandlers, () => {
+          this._evictTexture(texture, true, false);
+        });
+      }
+
       state = {
         handle: this._createTextureHandle(),
         version: -1,
@@ -1855,6 +1844,22 @@ export class WebGl2Backend implements RenderBackend {
     if (!handlers.has(descriptor)) {
       descriptor.addDestroyListener(handler);
       handlers.set(descriptor, handler);
+    }
+  }
+
+  private _subscribeToRelease<T extends ReleaseListenable>(descriptor: T, handlers: Map<T, () => void>, handler: () => void): void {
+    if (!handlers.has(descriptor)) {
+      descriptor.addReleaseListener(handler);
+      handlers.set(descriptor, handler);
+    }
+  }
+
+  private _unsubscribeFromRelease<T extends ReleaseListenable>(descriptor: T, handlers: Map<T, () => void>): void {
+    const handler = handlers.get(descriptor);
+
+    if (handler) {
+      descriptor.removeReleaseListener(handler);
+      handlers.delete(descriptor);
     }
   }
 
@@ -1905,10 +1910,23 @@ export class WebGl2Backend implements RenderBackend {
     }
   }
 
-  private _evictTexture(texture: Texture | RenderTexture, rebind: boolean): void {
+  /**
+   * Free a texture's GPU-side state. `unsubscribeDestroy` is `false` only
+   * when called from a {@link Texture.releaseGpu} listener: the handle isn't
+   * actually destroyed there, so the destroy subscription must survive for a
+   * real, later `destroy()`. The release subscription is always dropped —
+   * `_getTextureState` re-subscribes it fresh if the handle is bound again.
+   */
+  private _evictTexture(texture: Texture | RenderTexture, rebind: boolean, unsubscribeDestroy = true): void {
     const state = this._textureStates.get(texture);
 
-    this._unsubscribeFromDestroy(texture, this._textureDestroyHandlers);
+    if (unsubscribeDestroy) {
+      this._unsubscribeFromDestroy(texture, this._textureDestroyHandlers);
+    }
+
+    if (texture instanceof Texture) {
+      this._unsubscribeFromRelease(texture, this._textureReleaseHandlers);
+    }
 
     if (state) {
       if (this._texture === texture) {

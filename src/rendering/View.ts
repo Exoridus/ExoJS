@@ -98,6 +98,7 @@ export class View implements ObservableVectorOwner {
   private _shakeOffsetX = 0;
   private _shakeOffsetY = 0;
   private _updateId = 0;
+  private _isDestroyed = false;
 
   public constructor(centerX: number, centerY: number, width: number, height: number) {
     this._center = new ObservableVector(this, 0, centerX, centerY);
@@ -201,6 +202,15 @@ export class View implements ObservableVectorOwner {
 
   public get zoomLevel(): number {
     return this._zoomLevel;
+  }
+
+  /**
+   * `true` once {@link destroy} has run. A destroyed view keeps its last
+   * computed transform but no longer reacts to mutations — its center stops
+   * marking the transform stale — so it must not be put back into use.
+   */
+  public get destroyed(): boolean {
+    return this._isDestroyed;
   }
 
   public setCenter(x: number, y: number): this {
@@ -594,7 +604,19 @@ export class View implements ObservableVectorOwner {
     return this;
   }
 
+  /**
+   * Release the math objects this view owns. Idempotent — the same view can be
+   * reachable from more than one owner (a {@link RenderTarget} it was assigned
+   * to as well as the code that created it), so a second call must not take
+   * `_center`, `_size`, `_viewport` and the cached matrices through a second
+   * teardown.
+   */
   public destroy(): void {
+    if (this._isDestroyed) {
+      return;
+    }
+
+    this._isDestroyed = true;
     this.stopShake();
     this.clearFollow();
 

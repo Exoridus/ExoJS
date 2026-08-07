@@ -1,6 +1,6 @@
 {
   "title": "Container",
-  "description": "Scene-graph node that owns child RenderNodes. Renders its subtree in document order with local `zIndex` ordering resolved inside the internal render plan at playback time. Bounds aggregate the local bounds + every visible child's bounds, so `container.getBounds()` always returns the smallest axis-aligned rectangle containing the subtree. Width/height accessors derive from the bounds (× `scale`) and writing to them rescales `scale` to fit. Adding a child re-parents it: the previous parent is detached automatically. Removing a child cascades bounds invalidation up the ancestor chain so further-up containers also rebuild on next read. Subclassed by Sprite, Mesh, Graphics, Text, etc. — the base `Container` is a non-drawing grouping node.",
+  "description": "Scene-graph node that owns child RenderNodes. Renders its subtree in document order with local `zIndex` ordering resolved inside the internal render plan at playback time. Bounds aggregate the local bounds + every visible child's bounds, so `container.getBounds()` always returns the smallest axis-aligned rectangle containing the subtree. The size and edge accessors report that rectangle; writing to `width`/`height` rescales `scale` to fit. Adding a child re-parents it: the previous parent is detached automatically. Removing a child cascades bounds invalidation up the ancestor chain so further-up containers also rebuild on next read. Subclassed by Sprite, Mesh, Graphics, Text, etc. — the base `Container` is a non-drawing grouping node.",
   "symbol": "Container",
   "kind": "class",
   "subsystem": "rendering",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Scene-graph node that owns child RenderNodes. Renders its subtree in document order with local `zIndex` ordering resolved inside the internal render plan at playback time.",
-        "Bounds aggregate the local bounds + every visible child's bounds, so `container.getBounds()` always returns the smallest axis-aligned rectangle containing the subtree. Width/height accessors derive from the bounds (× `scale`) and writing to them rescales `scale` to fit.",
+        "Bounds aggregate the local bounds + every visible child's bounds, so `container.getBounds()` always returns the smallest axis-aligned rectangle containing the subtree. The size and edge accessors report that rectangle; writing to `width`/`height` rescales `scale` to fit.",
         "Adding a child re-parents it: the previous parent is detached automatically. Removing a child cascades bounds invalidation up the ancestor chain so further-up containers also rebuild on next read.",
         "Subclassed by Sprite, Mesh, Graphics, Text, etc. — the base `Container` is a non-drawing grouping node."
       ],
@@ -571,7 +571,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": ""
+          "description": "Destroy this container and every node beneath it. Ownership is by containment: detaching a subtree only unlinks it, so the descendants' GPU-backed resources (cached bitmaps, filters, render textures) and signal listeners would outlive the tree that owned them and leak on every scene change."
         },
         {
           "name": "focus",
@@ -2362,7 +2362,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Bottommost edge of the subtree — see left."
         },
         {
           "name": "cacheAsBitmap",
@@ -2599,7 +2599,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Rendered height of the whole subtree — see width."
         },
         {
           "name": "interactive",
@@ -2662,7 +2662,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Leftmost edge of the subtree in the node's global-transform space. These four edges are read straight off the aggregate bounds so they always span exactly width/height and agree with each other. They cannot be reconstructed from position and origin: origin is in local pixels and a container's own local bounds are empty, so the rendered extent comes entirely from the children."
         },
         {
           "name": "mask",
@@ -2796,7 +2796,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Rightmost edge of the subtree — see left."
         },
         {
           "name": "rotation",
@@ -2901,7 +2901,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Topmost edge of the subtree — see left."
         },
         {
           "name": "visible",
@@ -2943,7 +2943,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Rendered width of the whole subtree, in the node's global-transform space. Unlike Sprite.width — which scales an unscaled texture frame — a container has no intrinsic local size, so this reads the aggregate bounds directly. Those are already scaled, so multiplying by scale again would count it twice. Writing rescales scale.x to make the subtree render at the requested width."
         },
         {
           "name": "x",
