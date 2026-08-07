@@ -78,36 +78,37 @@ import { ParticleSystem, particlesExtension } from '@codexo/exojs-particles/regi
 ## Minimal working example
 
 ```ts
-import { Application, Scene } from '@codexo/exojs';
+import { Application, type RenderingContext, Scene } from '@codexo/exojs';
 import {
+    Constant,
     ParticleSystem,
     particlesExtension,
     RateSpawn,
-    Constant,
 } from '@codexo/exojs-particles';
 
 const app = new Application({ extensions: [particlesExtension] });
 document.body.append(app.canvas);
 
 class DemoScene extends Scene {
-    system!: ParticleSystem;
+    private system!: ParticleSystem;
 
-    override async load(loader) {
-        await loader.load('/particle.png');
-    }
+    override async load(): Promise<void> {
+        const texture = await this.loader.load('/particle.png');
 
-    override create(loader) {
-        this.system = new ParticleSystem(loader.get('/particle.png'), {
-            capacity: 1024,
-        });
+        this.system = new ParticleSystem(texture, { capacity: 1024 });
+        this.systems.add(this.system);
         this.system.addSpawnModule(
             new RateSpawn({ rate: new Constant(120), lifetime: new Constant(2) }),
         );
-        this.addChild(this.system);
+    }
+
+    override draw(context: RenderingContext): void {
+        context.backend.clear();
+        context.render(this.system);
     }
 }
 
-app.scenes.start(DemoScene);
+app.start(DemoScene);
 ```
 
 ## WebGL2 and WebGPU support
