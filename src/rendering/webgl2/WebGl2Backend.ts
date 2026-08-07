@@ -4,6 +4,7 @@ import { Signal } from '#core/Signal';
 import { Matrix } from '#math/Matrix';
 import type { Rectangle } from '#math/Rectangle';
 import { Vector } from '#math/Vector';
+import { assertLiveRenderTarget, assertLiveTexture } from '#rendering/assertLiveResource';
 import type { BackendRenderPass } from '#rendering/BackendRenderPass';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
@@ -636,6 +637,9 @@ export class WebGl2Backend implements RenderBackend {
 
   public setRenderTarget(target: RenderTarget | null): this {
     const renderTarget = target || this._rootRenderTarget;
+
+    assertLiveRenderTarget(renderTarget);
+
     const changed = this._renderTarget !== renderTarget;
 
     if (changed) {
@@ -2119,6 +2123,8 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   private _syncTexture(texture: Texture | RenderTexture): ManagedTextureState {
+    assertLiveTexture(texture);
+
     const gl = this._context;
     const state = this._getTextureState(texture);
     const version = texture instanceof RenderTexture ? texture.textureVersion : texture.version;

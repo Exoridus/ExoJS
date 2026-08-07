@@ -331,6 +331,15 @@ export class Texture {
   }
 
   public destroy(): void {
+    // Idempotent by contract. Without this guard a second call would take
+    // `_size` through a second `destroy()` and re-fire any listener registered
+    // after the first call, against GPU state that is already released.
+    if (this._isDestroyed) {
+      return;
+    }
+
+    this._isDestroyed = true;
+
     for (const listener of [...this._destroyListeners]) {
       listener();
     }
@@ -338,7 +347,6 @@ export class Texture {
     this._destroyListeners.clear();
     this._size.destroy();
     this._source = null;
-    this._isDestroyed = true;
   }
 
   private _touch(): void {

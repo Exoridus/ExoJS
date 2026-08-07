@@ -31,6 +31,7 @@ export class RenderTarget {
 
   private readonly _root: boolean;
   private readonly _destroyListeners: Set<() => void> = new Set<() => void>();
+  private _isDestroyed = false;
   private _version = 0;
   protected _size: Size;
   protected _viewport: Rectangle = new Rectangle();
@@ -82,6 +83,15 @@ export class RenderTarget {
 
   public get version(): number {
     return this._version;
+  }
+
+  /**
+   * `true` once {@link destroy} has run. A destroyed target must not be
+   * rendered into — the backend throws rather than drawing into released
+   * GPU state.
+   */
+  public get destroyed(): boolean {
+    return this._isDestroyed;
   }
 
   /**
@@ -150,6 +160,16 @@ export class RenderTarget {
   }
 
   public destroy(): void {
+    // Idempotent by contract. Without this guard a second call would run the
+    // whole teardown again — `_defaultView`, `_viewport` and `_size` would each
+    // take a second `destroy()`, and a listener re-registered after the first
+    // call would fire against already-released GPU state.
+    if (this._isDestroyed) {
+      return;
+    }
+
+    this._isDestroyed = true;
+
     for (const listener of [...this._destroyListeners]) {
       listener();
     }
