@@ -44,6 +44,8 @@ That claim is easy to make and hard to keep, so a conformance suite renders the 
 
 Read it as evidence, not as a support promise. A `?` means nobody has measured that combination yet; it is not a statement that the feature is broken, and it is deliberately visible rather than hidden. The scenes use a texture whose every texel encodes its own coordinates, so a matching frame proves the right texel landed in the right pixel — not merely that two images happened to look alike.
 
+The table names the release it is guaranteed as of. `release:cut` refuses to cut a version until the evidence for Chromium and Firefox was measured on the commit being released, then stamps that version onto the rows — so the guarantee is tied to a version rather than to whenever someone last ran the suite. Rows measured after a release carry no version until the next one claims them.
+
 Chromium is measured on every CI run. Firefox and Safari need a machine with a display and are measured by hand, which is why their rows carry an older date.
 
 <Callout type="hint" title="Reproduce it yourself">

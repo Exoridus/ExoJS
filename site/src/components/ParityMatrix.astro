@@ -28,6 +28,8 @@ interface Row {
   readonly support: Support;
   readonly measuredAt?: string;
   readonly commit?: string;
+  /** Release this row is published under, stamped by `release:cut`. */
+  readonly release?: string;
 }
 
 const rows = evidence as readonly Row[];
@@ -73,12 +75,30 @@ const stamps = rows.filter(row => row.measuredAt !== undefined);
 const lastMeasured = stamps.length > 0 ? stamps.map(row => row.measuredAt!).sort().at(-1) : undefined;
 const measuredFeatures = new Set(rows.map(row => row.feature));
 const coverage = `${RENDER_FEATURES.filter(feature => measuredFeatures.has(feature.name)).length} of ${RENDER_FEATURES.length}`;
+
+/**
+ * The release this table is published as part of, written onto the rows by
+ * `release:cut`. Absent means measured since the last release and not yet
+ * claimed by one — current data, but no version stands behind it, and saying so
+ * is more useful than implying a guarantee that was never cut.
+ */
+const claimed = [...new Set(rows.map(row => row.release).filter((release): release is string => release !== undefined))].sort();
+const claimedIn = claimed.at(-1);
 ---
 
 <figure class="parity">
   <table>
     <caption>
       Verified rendering behaviour by browser — <strong>{coverage}</strong> features measured{lastMeasured ? `, last on ${lastMeasured}` : ''}.
+      {
+        claimedIn ? (
+          <span class="claim">
+            Guaranteed as of <strong>v{claimedIn}</strong>.
+          </span>
+        ) : (
+          <span class="claim">Measured after the last release — not yet part of a version's guarantee.</span>
+        )
+      }
     </caption>
     <thead>
       <tr>
@@ -140,6 +160,11 @@ const coverage = `${RENDER_FEATURES.filter(feature => measuredFeatures.has(featu
     padding-bottom: 0.75rem;
     color: var(--color-text-muted, #888);
     font-size: 0.85rem;
+  }
+
+  .claim {
+    display: block;
+    margin-top: 0.25rem;
   }
 
   th,
