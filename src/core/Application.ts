@@ -384,8 +384,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   public readonly onError = new Signal<[error: Error]>();
   public pauseOnHidden = false;
 
-  /** The engine's own `preUpdate` systems, owned here rather than by the registry. */
-  private readonly _coreSystems: readonly System[];
+  /**
+   * The engine's own `preUpdate` systems, owned here rather than by the
+   * registry. Reassigned when the backend fallback rebuilds one of them, so
+   * that teardown unregisters the instances that are actually registered.
+   */
+  private _coreSystems: readonly System[];
 
   private readonly _updateHandler: () => void;
   private readonly _startupClock: Clock = new Clock();
@@ -1495,13 +1499,18 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this._backendType = 'webgl2';
       this._backend = this.createBackend(this._backendType, this._snapshot);
 
-      // Swap in a rendering context bound to the rebuilt backend. The internal
-      // prepare stage reads `this._rendering` fresh every frame, so no
-      // registry bookkeeping is needed here.
+      // Swap in a rendering context bound to the rebuilt backend. Everything
+      // holding the outgoing context has to be repointed, not just the field:
+      // the registry drives the systems it was handed at registration time,
+      // so leaving the old entry in place would tick a destroyed context every
+      // frame and never the live one.
       const previousRendering = this._rendering;
 
+      this.systems._removeCoreSystem(previousRendering);
       previousRendering.destroy();
       this._rendering = new RenderingContext(this._backend);
+      this.systems._addCoreSystem(this._rendering, { order: SystemOrder.CoreRendering });
+      this._coreSystems = this._coreSystems.map(system => (system === previousRendering ? this._rendering : system));
 
       await this._backend.initialize();
     }
