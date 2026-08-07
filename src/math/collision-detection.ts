@@ -765,6 +765,10 @@ const getCollisionEllipseEllipse = (ellipseA: Ellipse, ellipseB: Ellipse): Colli
  * Full SAT collision response for any two {@link Collidable} shapes. Tests all
  * edge normals from both shapes and computes the minimum-translation axis.
  * Returns `null` when they do not overlap.
+ *
+ * `projectionN` points from `shapeA` toward `shapeB` — the same orientation the
+ * shape-specific responses use — so moving `shapeB` by `projectionV`, or
+ * `shapeA` by its negation, pulls the pair apart.
  */
 const getCollisionSat = (shapeA: Collidable, shapeB: Collidable): CollisionResponse | null => {
   const normalsA = shapeA.getNormals();
@@ -776,6 +780,13 @@ const getCollisionSat = (shapeA: Collidable, shapeB: Collidable): CollisionRespo
   const projB = new Interval();
 
   let overlap = Infinity;
+  // Edge normals only describe an axis orientation, never a side: a shape hands
+  // out both `n` and `-n`, so the winning axis on its own cannot tell where
+  // shapeB sits and mirrored layouts collapse onto one direction — pushing one
+  // of the two pairs deeper instead of apart. Record whether the chosen axis has
+  // to be flipped to keep pointing from shapeA toward shapeB, deciding by
+  // projection midpoint (kept doubled as `min + max` to skip the halving).
+  let flipProjection = false;
   let shapeAinB = true;
   let shapeBinA = true;
   let containsA: boolean;
@@ -810,6 +821,7 @@ const getCollisionSat = (shapeA: Collidable, shapeB: Collidable): CollisionRespo
     if (distance < overlap) {
       overlap = distance;
       projection.copy(normal);
+      flipProjection = projA.min + projA.max > projB.min + projB.max;
     }
   }
 
@@ -841,7 +853,12 @@ const getCollisionSat = (shapeA: Collidable, shapeB: Collidable): CollisionRespo
     if (distance < overlap) {
       overlap = distance;
       projection.copy(normal);
+      flipProjection = projA.min + projA.max > projB.min + projB.max;
     }
+  }
+
+  if (flipProjection) {
+    projection.multiply(-1, -1);
   }
 
   const projectionV = projection.clone().multiply(overlap, overlap);
