@@ -137,6 +137,8 @@ Removing a child doesn't destroy it — you can keep the reference and re-add it
 `removeChild` only detaches — the node keeps its textures, listeners and children in memory, ready to re-add. When you're done with it for good, call `destroy()` too, or it lingers as a leak.
 </Callout>
 
+The reverse direction needs no bookkeeping: `destroy()` unlinks the node from its parent for you, so `child.destroy()` on its own leaves no dangling entry in the child list. A destroyed node is permanently spent, though — re-adding one throws rather than silently rendering nothing.
+
 ## Why this stays composable
 
 Because transforms cascade and children render in order, large scenes are built by nesting smaller scenes. A `Player` container groups body, weapon, hat, and effects. A `World` container groups player, enemies, and tiles. A `Game` scene groups world and HUD.

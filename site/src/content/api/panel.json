@@ -2987,7 +2987,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "true once destroy has run on this node. A destroyed node has released its pooled resources (transform/bounds), renders nothing, and must not be reused or re-attached. The render plan skips a destroyed node and — for a RetainedContainer — evicts it from any cached fragment so a child destroyed without removeChild cannot be replayed stale."
+          "description": "true once destroy has run on this node. A destroyed node has released its pooled resources (transform/bounds), has been unlinked from its parent, renders nothing, and must not be reused or re-attached. The render plan skips a destroyed node, so even one handed straight to a renderer as a detached root contributes nothing."
         },
         {
           "name": "enabled",

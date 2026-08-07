@@ -113,15 +113,11 @@ That is what makes the cost **O(batches)** rather than O(nodes) in the group. It
 On a real-GPU run (WebGL2 and WebGPU, both backends), a 100k-sprite retained `static-heavy` scene costs 0.215 ms (WebGL2) and 0.252 ms (WebGPU) per frame — the two backends within ~1.17× of each other, both near the CPU-timer floor. On `batch-breaking` (a scene deliberately designed to defeat sprite-batching with many distinct textures) at 25k retained nodes, WebGL2 costs 23.7 ms and WebGPU 4.6 ms — WebGPU is the faster backend on this workload. Both are the recorded-batch tier at work: cost tracks batch count, not node count.
 </Callout>
 
-## Lifecycle and the in-place-destroy footgun
+## Lifecycle
 
-Adding and removing children works exactly as on a plain container, and both correctly invalidate the fragment. Destroying is where the retained tier has a sharp edge.
+Adding, removing and destroying children all work exactly as on a plain container, and all three correctly invalidate the fragment.
 
-Because the fragment holds the whole previously-collected command range, it keeps references to the resources of every child — and [`destroy()`](/ExoJS/en/api/scene-node/) does **not** detach a node from its parent. So calling `child.destroy()` on a child that is still in the group leaves the child in the child list, does not bump the structure revision, and the fragment keeps replaying the freed resources until some _other_ change happens to invalidate it.
-
-<Callout type="pitfall" title="Remove before you destroy a child">
-`retained.removeChild(child)` first, then `child.destroy()`. Removal bumps the structure revision, which drops the fragment, so the next frame re-collects without the departed child. Destroying a child in place skips that step. Destroying the whole `RetainedContainer` is always safe — it tears down its subtree and releases the retained GPU bundle together.
-</Callout>
+The fragment holds the whole previously-collected command range, so it keeps references to the resources of every child until something drops it. That something is the structure revision: [`destroy()`](/ExoJS/en/api/scene-node/) unlinks the node from its parent as its first step, and that removal bumps the revision up to the group boundary. Whether you call `retained.removeChild(child)` first or destroy the child in place, the next frame re-collects without it — no stale replay of freed resources either way. Destroying the whole `RetainedContainer` tears down its subtree and releases the retained GPU bundle together.
 
 ## Effects on children: supported, with one depth rule
 

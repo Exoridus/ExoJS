@@ -307,10 +307,10 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
 
   /**
    * `true` once {@link destroy} has run on this node. A destroyed node has
-   * released its pooled resources (transform/bounds), renders nothing, and
-   * must not be reused or re-attached. The render plan skips a destroyed node
-   * and — for a {@link RetainedContainer} — evicts it from any cached fragment
-   * so a child destroyed without `removeChild` cannot be replayed stale.
+   * released its pooled resources (transform/bounds), has been unlinked from
+   * its parent, renders nothing, and must not be reused or re-attached. The
+   * render plan skips a destroyed node, so even one handed straight to a
+   * renderer as a detached root contributes nothing.
    */
   public get destroyed(): boolean {
     return this._isDestroyed;
@@ -839,8 +839,30 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     return view.getBounds().intersectsWith(bounds);
   }
 
+  /**
+   * Release this node's pooled state (transform, bounds, flags) and unlink it
+   * from its parent.
+   *
+   * The unlink comes first and is what makes a bare `destroy()` safe. A node
+   * left in its parent's child list bumps no revision, so every cache keyed on
+   * that revision — a {@link Container}'s retained draw slots, a
+   * `RetainedContainer`'s recorded GPU instruction set — would keep replaying
+   * the dead node's last captured frame. Removing it stamps the parent
+   * structure-dirty, which drops those captures, and runs the node's regular
+   * detach cleanup (bounds cascade, interaction/focus deregistration, stage
+   * clearing) while this node's own state is still intact.
+   *
+   * `Container.removeChild` is a no-op for a node it does not hold, so the
+   * already-correct `removeChild()`-then-`destroy()` order costs nothing more
+   * than the null check here.
+   *
+   * The destroyed flag is raised before the unlink so detach-time observers
+   * (e.g. focus, which suppresses `onBlur` on a destroyed node) see a node that
+   * is going away rather than one merely being reparented.
+   */
   public destroy(): void {
     this._isDestroyed = true;
+    this._parentNode?.removeChild(this as unknown as RenderNode);
     this._transform.destroy();
     this._position.destroy();
     this._scale.destroy();

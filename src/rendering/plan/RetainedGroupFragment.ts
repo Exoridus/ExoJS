@@ -382,25 +382,6 @@ export class RetainedGroupFragment {
   }
 
   /**
-   * @internal — dev-only P3f probe: `true` when any captured draw still
-   * references a destroyed {@link Drawable} (a child destroy()ed without
-   * `removeChild`, so no revision bump dropped the capture). Scans only the
-   * live prefix of the grow-only draw pool — the same O(draws) the replay
-   * already walks — so it adds no allocation and is stripped from production
-   * via the `__DEV__` guard at the call site.
-   */
-  public _devHasDestroyedDrawable(): boolean {
-    for (let index = 0; index < this._drawCursor; index++) {
-      // `?.`: released pool records (post-invalidate) hold no drawable.
-      if (this._drawPool[index]!.drawable?.destroyed) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  /**
    * Drop the grow-only draw pool's strong references to their drawables so an
    * evicted/destroyed drawable can be garbage-collected. The pooled
    * record objects survive and their `drawable` is rewritten in place on the

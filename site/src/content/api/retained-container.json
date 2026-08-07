@@ -647,7 +647,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Release the retained GPU instruction set and fragment cache, then destroy this container and its subtree. Beware the in-place-destroy footgun: SceneNode.destroy does not detach a node from its parent, and the retained fragment keeps the whole previously-collected command range — including a child's resources — until a structural change drops it. Destroying a child directly leaves the fragment replaying freed resources, because nothing invalidated it. Call Container.removeChild first (removal bumps the structure revision and drops the fragment), or destroy the whole group at once."
+          "description": "Release the retained GPU instruction set and fragment cache, then destroy this container and its subtree. A retained fragment keeps the whole previously-collected command range — including a child's resources — until a structural change drops it. Destroying a descendant on its own is safe regardless of call order: SceneNode.destroy unlinks the node from its parent, and that removal bumps the structure revision up to this boundary, which drops the fragment instead of replaying freed resources."
         },
         {
           "name": "focus",
@@ -2621,7 +2621,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "true once destroy has run on this node. A destroyed node has released its pooled resources (transform/bounds), renders nothing, and must not be reused or re-attached. The render plan skips a destroyed node and — for a RetainedContainer — evicts it from any cached fragment so a child destroyed without removeChild cannot be replayed stale."
+          "description": "true once destroy has run on this node. A destroyed node has released its pooled resources (transform/bounds), has been unlinked from its parent, renders nothing, and must not be reused or re-attached. The render plan skips a destroyed node, so even one handed straight to a renderer as a detached root contributes nothing."
         },
         {
           "name": "filters",

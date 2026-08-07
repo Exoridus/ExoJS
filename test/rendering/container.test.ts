@@ -730,3 +730,98 @@ describe('Container.destroy() tears down the whole subtree', () => {
     expect(leaf.destroyed).toBe(true);
   });
 });
+
+// A node that stays linked into its parent's child list after `destroy()` is
+// the root of a whole family of stale-state bugs: nothing bumps the parent's
+// structure revision, so every cache keyed on it (a container's retained draw
+// slots, a RetainedContainer's recorded instruction set) keeps replaying the
+// dead node. `destroy()` therefore unlinks first, which makes the misuse
+// self-correcting instead of silently wrong.
+describe('SceneNode.destroy() detaches the node from its parent', () => {
+  test('destroying a still-attached drawable clears its parent and drops it from the child list', () => {
+    const container = new Container();
+    const child = new DummyDrawable();
+    const sibling = new DummyDrawable();
+
+    container.addChild(child, sibling);
+
+    child.destroy();
+
+    expect(child.parent).toBeNull();
+    expect(container.children).toEqual([sibling]);
+    expect(sibling.destroyed).toBe(false);
+  });
+
+  test('destroying a still-attached container clears its parent and drops it from the child list', () => {
+    const root = new Container();
+    const branch = new Container();
+
+    branch.addChild(new DummyDrawable());
+    root.addChild(branch);
+
+    branch.destroy();
+
+    expect(branch.parent).toBeNull();
+    expect(root.children).toEqual([]);
+  });
+
+  test('the detach bumps the parent structure revision, so caches keyed on it are dropped', () => {
+    const container = new Container();
+    const child = new DummyDrawable();
+
+    container.addChild(child);
+
+    const before = container._structureRevision;
+
+    child.destroy();
+
+    expect(container._structureRevision).not.toBe(before);
+  });
+
+  test('detaching first keeps the removal side effects — the node leaves the interaction and focus registries', () => {
+    const container = new Container();
+    const child = new DummyDrawable();
+    const removed: RenderNode[] = [];
+    const focus = new FocusController({ input: { onKeyDown: { add() {}, remove() {} }, onKeyUp: { add() {}, remove() {} } } } as unknown as Application);
+    const interaction = {
+      _notifyNodeAdded() {},
+      _notifyNodeRemoved(node: RenderNode) {
+        removed.push(node);
+      },
+      _notifyInteractiveChanged() {},
+      _notifyBoundsInvalidated() {},
+      _notifyTransformGroupMoved() {},
+    } as unknown as InteractionHooks;
+    const stage = { interaction, focus } as unknown as Stage;
+
+    container._setStage(stage);
+    container.addChild(child);
+
+    child.destroy();
+
+    expect(removed).toContain(child);
+    expect(child._getStage()).toBeNull();
+  });
+
+  test('the already-correct removeChild()-then-destroy() order is unaffected', () => {
+    const container = new Container();
+    const child = new DummyDrawable();
+
+    container.addChild(child);
+    container.removeChild(child);
+
+    const revisionAfterRemoval = container._structureRevision;
+
+    expect(() => child.destroy()).not.toThrow();
+    expect(child.parent).toBeNull();
+    // Nothing left to unlink, so the second pass must not dirty the container.
+    expect(container._structureRevision).toBe(revisionAfterRemoval);
+  });
+
+  test('destroying an unparented node is a no-op for parent linkage', () => {
+    const orphan = new DummyDrawable();
+
+    expect(() => orphan.destroy()).not.toThrow();
+    expect(orphan.parent).toBeNull();
+  });
+});
