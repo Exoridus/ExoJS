@@ -470,7 +470,7 @@ describe('ActionMap', () => {
   });
 
   it.each([
-    'actions',
+    '_actions',
     'attached',
     'detach',
     '_owner',
@@ -489,6 +489,14 @@ describe('ActionMap', () => {
     '__defineGetter__',
   ])('rejects a reserved action name: "%s"', name => {
     expect(() => new ActionMap({ [name]: new ButtonAction(Keyboard.Space) })).toThrow(/reserved/i);
+  });
+
+  it('allows "actions" as an action name — the backing array is `_actions`', () => {
+    // Freed up when the array became internal. Nothing on the instance claims
+    // the bare name any more, so a control scheme may legitimately use it.
+    const map = new ActionMap({ actions: new ButtonAction(Keyboard.Space) });
+
+    expect(map.actions).toBeInstanceOf(ButtonAction);
   });
 
   it('rejects a `__proto__` action name (prototype-pollution vector via Object.assign)', () => {
@@ -522,7 +530,7 @@ describe('ActionMap', () => {
     // `crash` collides with a reserved name, so this whole construction
     // throws — `jump`, validated earlier in the same call, must NOT end up
     // permanently claimed by a map that was never actually built.
-    expect(() => new ActionMap({ jump, actions: crash })).toThrow(/reserved/i);
+    expect(() => new ActionMap({ jump, _actions: crash })).toThrow(/reserved/i);
 
     // `jump` must still be free to use in a real map.
     expect(() => new ActionMap({ jump })).not.toThrow();
