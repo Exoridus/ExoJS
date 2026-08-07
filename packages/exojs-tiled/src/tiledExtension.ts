@@ -16,8 +16,8 @@ import { tiledRuntimeMapBinding } from './tiledRuntimeMapBinding';
  * Depends on {@link tilemapExtension} so that snapshot construction always
  * materialises the generic tilemap runtime before the Tiled adapter.
  *
- * Use with `ApplicationOptions.extensions` or call
- * `import '@codexo/exojs-tiled/register'` for global auto-registration.
+ * Pass it to the application that should have it via
+ * `ApplicationOptions.extensions`.
  */
 export const tiledExtension: Extension = Object.freeze({
   id: '@codexo/exojs-tiled',

@@ -1,10 +1,12 @@
+// Root entry: pulls in the module augmentation that types `loader.load` for
+// this package's asset type. Without it the augmentation is not in the program.
+import '../src/index';
+
 import type { Loader } from '@codexo/exojs';
-import { ExtensionRegistry } from '@codexo/exojs/extensions';
 import { TileMap,tilemapExtension } from '@codexo/exojs-tilemap';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { buildSnapshot } from '../../../src/extensions/snapshot';
-import { resetExtensionRegistryForTesting } from '../../../src/extensions/testing';
 import { tiledExtension } from '../src/tiledExtension';
 import { TiledMap } from '../src/TiledMap';
 import { tiledMapBinding } from '../src/tiledMapBinding';
@@ -114,33 +116,3 @@ describe('tiledRuntimeMapBinding and tiledMapBinding identity keys', () => {
   });
 });
 
-describe('@codexo/exojs-tiled root entry (side-effect-free)', () => {
-  beforeEach(() => {
-    resetExtensionRegistryForTesting();
-  });
-
-  it('root import does NOT register tiledExtension in ExtensionRegistry', () => {
-    expect(ExtensionRegistry.has('@codexo/exojs-tiled')).toBe(false);
-  });
-});
-
-describe('@codexo/exojs-tiled/register entry', () => {
-  beforeEach(() => {
-    resetExtensionRegistryForTesting();
-  });
-
-  it('registers tiledExtension on import', async () => {
-    await import('../src/register');
-    expect(ExtensionRegistry.has('@codexo/exojs-tiled')).toBe(true);
-  });
-});
-
-describe('export parity', () => {
-  it('root and register have the same named exports', async () => {
-    const root = await import('../src/index');
-    const register = await import('../src/register');
-    const rootKeys = Object.keys(root).filter(k => k !== 'default').sort();
-    const registerKeys = Object.keys(register).filter(k => k !== 'default').sort();
-    expect(rootKeys).toEqual(registerKeys);
-  });
-});

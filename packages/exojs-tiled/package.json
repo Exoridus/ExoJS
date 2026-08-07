@@ -8,9 +8,7 @@
     "directory": "packages/exojs-tiled"
   },
   "type": "module",
-  "sideEffects": [
-    "./dist/esm/register.js"
-  ],
+  "sideEffects": false,
   "main": "./dist/esm/index.js",
   "module": "./dist/esm/index.js",
   "types": "./dist/esm/index.d.ts",
@@ -19,11 +17,6 @@
       "types": "./dist/esm/index.d.ts",
       "import": "./dist/esm/index.js",
       "default": "./dist/esm/index.js"
-    },
-    "./register": {
-      "types": "./dist/esm/register.d.ts",
-      "import": "./dist/esm/register.js",
-      "default": "./dist/esm/register.js"
     },
     "./package.json": "./package.json"
   },

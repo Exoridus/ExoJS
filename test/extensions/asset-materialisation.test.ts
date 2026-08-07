@@ -5,7 +5,6 @@ import type { AssetLoaderContext } from '#assets/Loader';
 import { Loader } from '#assets/Loader';
 import type { AssetBinding, AssetHandler, AssetLoadRequest } from '#extensions/Extension';
 import { materializeAssetBindings } from '#extensions/materialize';
-import { resetExtensionRegistryForTesting } from '#extensions/testing';
 
 // Minimal test asset types
 class TypeA {}
@@ -28,9 +27,7 @@ function createTestHandler(): AssetHandler {
 }
 
 describe('materializeAssetBindings', () => {
-  beforeEach(() => {
-    resetExtensionRegistryForTesting();
-  });
+  beforeEach(() => {});
 
   it('creates one handler per Loader per Binding', () => {
     const handler = createTestHandler();
@@ -242,36 +239,5 @@ describe('materializeAssetBindings', () => {
     loader.destroy();
 
     expect(handler.destroy).toHaveBeenCalledTimes(1);
-  });
-
-  it('ExtensionRegistry is NOT read during load', async () => {
-    const { ExtensionRegistry } = await import('#extensions/ExtensionRegistry');
-    const handler = createTestHandler();
-    const binding: AssetBinding = {
-      ctor: TypeA as never,
-      typeNames: ['testType'],
-      extensions: ['tstx'],
-      create: () => handler,
-    };
-    const loader = new Loader();
-    materializeAssetBindings(loader, [binding]);
-
-    const listSpy = vi.spyOn(ExtensionRegistry, 'list');
-    const getSpy = vi.spyOn(ExtensionRegistry, 'get');
-    const hasSpy = vi.spyOn(ExtensionRegistry, 'has');
-
-    // Load via the config (typeName) path
-    await loader.load(new Asset({ type: 'testType', source: 'test.tstx' })).catch(() => {
-      // ignore load error (no actual fetch)
-    });
-
-    expect(listSpy).not.toHaveBeenCalled();
-    expect(getSpy).not.toHaveBeenCalled();
-    expect(hasSpy).not.toHaveBeenCalled();
-
-    listSpy.mockRestore();
-    getSpy.mockRestore();
-    hasSpy.mockRestore();
-    loader.destroy();
   });
 });

@@ -161,9 +161,10 @@ export interface ApplicationSystemBinding {
 /**
  * An ExoJS extension: an immutable descriptor that contributes renderer bindings,
  * asset bindings, serializer bindings and/or app-level systems. Holds no Application,
- * backend, GPU, or loader instances. Register via {@link ExtensionRegistry.register}
- * (official packages do this as an import side effect), or pass explicitly via
- * {@link ApplicationOptions.extensions}.
+ * backend, GPU, or loader instances. Pass it to the application that should have
+ * it, via {@link ApplicationOptions.extensions} — that is the only way an
+ * extension takes effect, so what an application can do is readable at its
+ * construction rather than inferred from which modules were imported.
  * @advanced
  */
 export interface Extension {
