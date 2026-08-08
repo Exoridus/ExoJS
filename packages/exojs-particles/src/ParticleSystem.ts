@@ -193,6 +193,21 @@ export class ParticleSystem extends Drawable {
   public readonly color: Uint32Array; // packed 0xAABBGGRR
   public readonly elapsed: Float32Array; // seconds since spawn
   public readonly lifetime: Float32Array; // total seconds before expiry; -1 sentinel for dead in GPU mode
+
+  /**
+   * Per-slot atlas frame selector: an index into {@link frames}.
+   *
+   * **Anything that is not a valid explicit index shows frame 0.** The array is
+   * zero-initialised, so a particle whose index was never set already shows
+   * frame 0, and an index at or past the declared frame count falls back to the
+   * same frame rather than to the last one — one rule instead of two different
+   * behaviours depending on how the index went wrong. It holds identically on
+   * the CPU packer and in the compute pipeline, so a system looks the same on
+   * either backend.
+   *
+   * Ignored entirely when the system declares no frames: the whole texture is
+   * then the single frame.
+   */
   public readonly textureIndex: Uint16Array;
 
   /**
@@ -355,8 +370,8 @@ export class ParticleSystem extends Drawable {
 
   /**
    * Atlas frames declared on this system, or empty when the texture is
-   * used as a single frame. Each particle's `textureIndex[i]` selects
-   * an entry from this list; out-of-range indices are clamped to 0.
+   * used as a single frame. Each particle's {@link textureIndex} selects
+   * an entry from this list; anything out of range shows frame 0.
    */
   public get frames(): readonly Rectangle[] {
     return this._frames;

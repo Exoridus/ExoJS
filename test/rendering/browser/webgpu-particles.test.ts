@@ -28,13 +28,15 @@
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
+import { Time } from '#core/Time';
 import { materializeRendererBindings } from '#extensions/materialize';
 import { Container } from '#rendering/Container';
+import { Geometry } from '#rendering/geometry/Geometry';
 import type { RenderNode } from '#rendering/RenderNode';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
-import { particlesExtension, ParticleSystem, RibbonParticles } from '../../../packages/exojs-particles/src/index';
+import { ApplyForce, MeshParticles, particlesExtension, ParticleSystem, RibbonParticles } from '../../../packages/exojs-particles/src/index';
 import { readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
@@ -88,6 +90,43 @@ const createSolidTexture = (color: string, size = 16): Texture => {
 
   return new Texture(src);
 };
+
+/** A 16×16 texture, red in its left half and blue in its right half. */
+const createSplitTexture = (): Texture => {
+  const src = document.createElement('canvas');
+
+  src.width = 16;
+  src.height = 16;
+
+  const ctx = src.getContext('2d')!;
+
+  ctx.fillStyle = '#ff0000';
+  ctx.fillRect(0, 0, 8, 16);
+  ctx.fillStyle = '#0000ff';
+  ctx.fillRect(8, 0, 8, 16);
+
+  return new Texture(src);
+};
+
+/**
+ * A right triangle spanning ±16 system-local units with the right angle at its
+ * top-left corner, UVs running 0..1 across its bounding box. Non-indexed, so
+ * the instanced draw derives its vertex count from the mesh itself.
+ */
+const createTriangleMesh = (): Geometry =>
+  new Geometry({
+    attributes: [
+      { name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 },
+      { name: 'a_uv', size: 2, type: 'f32', normalized: false, offset: 8 },
+    ],
+    // prettier-ignore
+    vertexData: new Float32Array([
+      -16, -16, 0, 0,
+       16, -16, 1, 0,
+      -16,  16, 0, 1,
+    ]),
+    stride: 16,
+  });
 
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
@@ -253,6 +292,166 @@ describe('WebGPU ParticleSystem — ribbon', () => {
       expectPixelNear(readPixel(4, 4), [0, 0, 0, 255]);
     } finally {
       root.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+});
+
+describe('WebGPU ParticleSystem — mesh', () => {
+  test('a particle draws the supplied mesh, sampling its frame through the mesh UVs', async ctx => {
+    const backend = await setupBackend();
+
+    const texture = createSplitTexture();
+    const mesh = createTriangleMesh();
+    const root = new Container();
+    // The mesh mode bakes its own WGSL around the geometry, which only a real
+    // device ever compiles — a broken module draws nothing and fails the
+    // interior assertions below rather than passing silently in the node lanes.
+    const system = new ParticleSystem(texture, { capacity: 4, render: new MeshParticles({ geometry: mesh }) });
+
+    try {
+      const slot = system.spawn();
+
+      system.posX[slot] = 0;
+      system.posY[slot] = 0;
+      system.scaleX[slot] = 1;
+      system.scaleY[slot] = 1;
+      system.rotations[slot] = 0;
+      system.color[slot] = 0xffffffff; // opaque white — texture color passes through
+      system.lifetime[slot] = 1;
+
+      // At (32, 32) the triangle covers x 16..48, y 16..48 below the diagonal
+      // running from (48, 16) to (16, 48).
+      system.setPosition(32, 32);
+      root.addChild(system);
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      const readPixel = readWebGpuPixels(backend, canvasSize);
+
+      // Inside, left of the mesh's own UV midpoint: samples the texture's red half.
+      expectPixelNear(readPixel(24, 24), [255, 0, 0, 255]);
+      // Inside, right of it: samples the blue half. Both together prove the mesh
+      // UVs reach the sampler rather than the quad's corner UVs.
+      expectPixelNear(readPixel(38, 18), [0, 0, 255, 255]);
+      // Inside the mesh's bounding box but past its hypotenuse — the assertion a
+      // mesh drawn as a quad would fail.
+      expectPixelNear(readPixel(44, 44), [0, 0, 0, 255]);
+      // A safely mesh-free corner remains the clear color.
+      expectPixelNear(readPixel(4, 4), [0, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      mesh.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('the per-particle scale and rotation drive the mesh', async ctx => {
+    const backend = await setupBackend();
+
+    const texture = createSolidTexture('#ffffff');
+    const mesh = createTriangleMesh();
+    const root = new Container();
+    const system = new ParticleSystem(texture, { capacity: 4, render: new MeshParticles({ geometry: mesh }) });
+
+    try {
+      const slot = system.spawn();
+
+      system.posX[slot] = 0;
+      system.posY[slot] = 0;
+      system.scaleX[slot] = 0.5;
+      system.scaleY[slot] = 0.5;
+      // 180° puts the right angle at the bottom-right instead of the top-left.
+      system.rotations[slot] = 180;
+      system.color[slot] = new Color(0, 255, 0).toRgba();
+      system.lifetime[slot] = 1;
+
+      system.setPosition(32, 32);
+      root.addChild(system);
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      const readPixel = readWebGpuPixels(backend, canvasSize);
+
+      // Half scale: the mesh now spans ±8, so the far corner of the unscaled
+      // footprint is empty while the rotated interior is filled.
+      expectPixelNear(readPixel(38, 38), [0, 255, 0, 255]);
+      expectPixelNear(readPixel(26, 26), [0, 0, 0, 255]);
+      expectPixelNear(readPixel(20, 32), [0, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      mesh.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+});
+
+describe('WebGPU ParticleSystem — mesh on the GPU compute path', () => {
+  test('a mesh system runs its simulation on the GPU and draws from the compute output', async ctx => {
+    const backend = await setupBackend();
+
+    const texture = createSolidTexture('#ffffff');
+    const mesh = createTriangleMesh();
+    const root = new Container();
+    // Handing the system the backend's own device puts it on the GPU path at
+    // the first update, so the compute pipeline compiles for real and writes
+    // the instance buffer this draw binds directly. The mesh mode declares the
+    // layout that pipeline emits; if it did not, nothing would land here.
+    const system = new ParticleSystem(texture, {
+      capacity: 4,
+      device: getBackendDevice(backend),
+      render: new MeshParticles({ geometry: mesh }),
+    });
+
+    try {
+      system.addUpdateModule(new ApplyForce(0, 0));
+
+      const slot = system.spawn();
+
+      system.posX[slot] = 0;
+      system.posY[slot] = 0;
+      system.scaleX[slot] = 1;
+      system.scaleY[slot] = 1;
+      system.rotations[slot] = 0;
+      system.color[slot] = new Color(0, 255, 0).toRgba();
+      system.lifetime[slot] = 10;
+
+      system.setPosition(32, 32);
+      root.addChild(system);
+
+      // The system tears its GPU state down the first time it sees a backend
+      // it has not been collected against, so the first frame is always the
+      // CPU path. Render once to bind the backend, then update again — that
+      // second update is the one that compiles the compute pipeline.
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      system.update(Time.zero.clone().set(16));
+
+      expect(system.gpuMode).toBe(true);
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      const readPixel = readWebGpuPixels(backend, canvasSize);
+
+      // The same triangle the CPU path draws, this time expanded from an
+      // instance record the compute shader packed.
+      expectPixelNear(readPixel(24, 24), [0, 255, 0, 255]);
+      expectPixelNear(readPixel(44, 44), [0, 0, 0, 255]);
+      expectPixelNear(readPixel(4, 4), [0, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      mesh.destroy();
       texture.destroy();
       backend.destroy();
     }

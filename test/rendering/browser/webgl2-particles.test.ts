@@ -20,11 +20,12 @@ import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { materializeRendererBindings } from '#extensions/materialize';
 import { Container } from '#rendering/Container';
+import { Geometry } from '#rendering/geometry/Geometry';
 import type { RenderNode } from '#rendering/RenderNode';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
-import { particlesExtension, ParticleSystem, RibbonParticles } from '../../../packages/exojs-particles/src/index';
+import { MeshParticles, particlesExtension, ParticleSystem, RibbonParticles } from '../../../packages/exojs-particles/src/index';
 import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
@@ -101,6 +102,43 @@ const createSolidTexture = (color: string, width = 16, height = 16): Texture => 
 
   return new Texture(src);
 };
+
+/** A 16×16 texture, red in its left half and blue in its right half. */
+const createSplitTexture = (): Texture => {
+  const src = document.createElement('canvas');
+
+  src.width = 16;
+  src.height = 16;
+
+  const ctx = src.getContext('2d')!;
+
+  ctx.fillStyle = '#ff0000';
+  ctx.fillRect(0, 0, 8, 16);
+  ctx.fillStyle = '#0000ff';
+  ctx.fillRect(8, 0, 8, 16);
+
+  return new Texture(src);
+};
+
+/**
+ * A right triangle spanning ±16 system-local units with the right angle at its
+ * top-left corner, UVs running 0..1 across its bounding box. Non-indexed, so
+ * the instanced draw derives its vertex count from the mesh itself.
+ */
+const createTriangleMesh = (): Geometry =>
+  new Geometry({
+    attributes: [
+      { name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 },
+      { name: 'a_uv', size: 2, type: 'f32', normalized: false, offset: 8 },
+    ],
+    // prettier-ignore
+    vertexData: new Float32Array([
+      -16, -16, 0, 0,
+       16, -16, 1, 0,
+      -16,  16, 0, 1,
+    ]),
+    stride: 16,
+  });
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -317,6 +355,91 @@ describe('WebGL2 ParticleSystem — ribbon', () => {
       expectPixelNear(readWebGl2Pixel(backend, 47, 32), [0, 255, 0, 255]);
     } finally {
       root.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+});
+
+describe('WebGL2 ParticleSystem — mesh', () => {
+  test('a particle draws the supplied mesh, sampling its frame through the mesh UVs', async () => {
+    const backend = await createBackend();
+    const texture = createSplitTexture();
+    const mesh = createTriangleMesh();
+    const root = new Container();
+    // The mesh mode bakes its own shader pair around the geometry, which only a
+    // real backend ever compiles — a broken one draws nothing and fails the
+    // interior assertions below rather than passing silently in the node lanes.
+    const system = new ParticleSystem(texture, { capacity: 4, render: new MeshParticles({ geometry: mesh }) });
+
+    try {
+      const slot = system.spawn();
+
+      system.posX[slot] = 0;
+      system.posY[slot] = 0;
+      system.scaleX[slot] = 1;
+      system.scaleY[slot] = 1;
+      system.rotations[slot] = 0;
+      system.color[slot] = 0xffffffff; // opaque white — texture color passes through
+      system.lifetime[slot] = 1;
+
+      // At (32, 32) the triangle covers x 16..48, y 16..48 below the diagonal
+      // running from (48, 16) to (16, 48).
+      system.setPosition(32, 32);
+      root.addChild(system);
+
+      render(backend, root);
+
+      // Inside, left of the mesh's own UV midpoint: samples the texture's red half.
+      expectPixelNear(readWebGl2Pixel(backend, 24, 24), [255, 0, 0, 255]);
+      // Inside, right of it: samples the blue half. Both together prove the mesh
+      // UVs reach the sampler rather than the quad's corner UVs.
+      expectPixelNear(readWebGl2Pixel(backend, 38, 18), [0, 0, 255, 255]);
+      // Inside the mesh's bounding box but past its hypotenuse — the assertion a
+      // mesh drawn as a quad would fail.
+      expectPixelNear(readWebGl2Pixel(backend, 44, 44), [0, 0, 0, 255]);
+      // A safely mesh-free corner remains the clear color.
+      expectPixelNear(readWebGl2Pixel(backend, 4, 4), [0, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      mesh.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('the per-particle scale and rotation drive the mesh', async () => {
+    const backend = await createBackend();
+    const texture = createSolidTexture('#ffffff', 16, 16);
+    const mesh = createTriangleMesh();
+    const root = new Container();
+    const system = new ParticleSystem(texture, { capacity: 4, render: new MeshParticles({ geometry: mesh }) });
+
+    try {
+      const slot = system.spawn();
+
+      system.posX[slot] = 0;
+      system.posY[slot] = 0;
+      system.scaleX[slot] = 0.5;
+      system.scaleY[slot] = 0.5;
+      // 180° puts the right angle at the bottom-right instead of the top-left.
+      system.rotations[slot] = 180;
+      system.color[slot] = new Color(0, 255, 0).toRgba();
+      system.lifetime[slot] = 1;
+
+      system.setPosition(32, 32);
+      root.addChild(system);
+
+      render(backend, root);
+
+      // Half scale: the mesh now spans ±8, so the far corner of the unscaled
+      // footprint is empty while the rotated interior is filled.
+      expectPixelNear(readWebGl2Pixel(backend, 38, 38), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 26, 26), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 20, 32), [0, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      mesh.destroy();
       texture.destroy();
       backend.destroy();
     }

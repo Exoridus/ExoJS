@@ -5,11 +5,10 @@ import type { ParticleSystem } from '#ParticleSystem';
 
 import fragmentSource from '../renderers/glsl/particle.frag';
 import vertexSource from '../renderers/glsl/particle.vert';
+import { instanceAttributes, instanceStrideBytes, ParticleInstanceWriter } from './ParticleInstanceWriter';
 import { ParticleMaterial } from './ParticleMaterial';
 import { ParticleRenderMode } from './ParticleRenderMode';
 
-const instanceStrideBytes = 40;
-const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
 const quadVertexCount = 4;
 const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
 
@@ -101,26 +100,15 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
  * The default render mode: one textured, rotated, tinted quad per particle,
  * drawn as a single instanced triangle-list.
  *
- * Layout of the per-instance buffer {@link build} fills (40 bytes, 6
- * attributes):
+ * {@link build} fills the shared 40-byte per-instance layout described by
+ * {@link instanceAttributes}. UVs are baked per-particle so the system can
+ * carry an atlas of frames — `system.frames` declares the rectangles and each
+ * particle's `textureIndex` selects one, resolved to UVs once per particle per
+ * frame; no per-instance shader-side indexing needed.
  *
- * ```
- *   a_position   f32x2  (offset  0,  8 bytes)  particle position (system-local)
- *   a_scale      f32x2  (offset  8,  8 bytes)
- *   a_rotation   f32    (offset 16,  4 bytes)  degrees
- *   a_color      u8x4   (offset 20,  4 bytes)  RGBA tint, normalised
- *   a_uvMin      f32x2  (offset 24,  8 bytes)  pre-resolved frame uvMin
- *   a_uvMax      f32x2  (offset 32,  8 bytes)  pre-resolved frame uvMax
- * ```
- *
- * UVs are baked per-particle so the system can carry an atlas of frames —
- * `system.frames` declares the rectangles and each particle's `textureIndex`
- * selects one. {@link build} resolves frame-rectangle to UVs once per particle
- * per frame; no per-instance shader-side indexing needed.
- *
- * This is the only GPU-eligible mode: the system's compute pipeline emits
- * exactly this layout into its instance buffer, so a system running on the GPU
- * path can bind that buffer directly and skip {@link build} entirely.
+ * GPU-eligible: the system's compute pipeline emits exactly that layout into
+ * its instance buffer, so a system running on the GPU path can bind that buffer
+ * directly and skip {@link build} entirely.
  */
 export class QuadParticles extends ParticleRenderMode {
   public override readonly gpuEligible = true;
@@ -134,14 +122,7 @@ export class QuadParticles extends ParticleRenderMode {
    * addresses.
    */
   public readonly geometry = new Geometry({
-    attributes: [
-      { name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 },
-      { name: 'a_scale', size: 2, type: 'f32', normalized: false, offset: 8 },
-      { name: 'a_rotation', size: 1, type: 'f32', normalized: false, offset: 16 },
-      { name: 'a_color', size: 4, type: 'u8', normalized: true, offset: 20 },
-      { name: 'a_uvMin', size: 2, type: 'f32', normalized: false, offset: 24 },
-      { name: 'a_uvMax', size: 2, type: 'f32', normalized: false, offset: 32 },
-    ],
+    attributes: instanceAttributes,
     vertexData: new ArrayBuffer(quadVertexCount * instanceStrideBytes),
     stride: instanceStrideBytes,
     indices: quadIndices,
@@ -149,11 +130,11 @@ export class QuadParticles extends ParticleRenderMode {
     usage: 'stream',
   });
 
+  private readonly _writer = new ParticleInstanceWriter();
+
   private _material: ParticleMaterial | null = null;
   private _float32 = new Float32Array(this.data);
   private _uint32 = new Uint32Array(this.data);
-  private _uvMinsScratch = new Float32Array(2);
-  private _uvMaxsScratch = new Float32Array(2);
 
   /**
    * Built on first read rather than in the constructor: a system may be
@@ -172,50 +153,11 @@ export class QuadParticles extends ParticleRenderMode {
   }
 
   public build(system: ParticleSystem): void {
-    const limit = system.liveCount;
-
     // Must precede the view reads below: growing swaps in fresh typed-array
     // views over a new backing buffer.
-    this._ensureCapacity(limit * instanceStrideBytes);
+    this._ensureCapacity(system.liveCount * instanceStrideBytes);
 
-    const f32 = this._float32;
-    const u32 = this._uint32;
-    const { posX, posY, scaleX, scaleY, rotations, color, textureIndex, alive } = system;
-
-    // Pre-compute frame UVs from system.frames + texture; falls back
-    // to the system.textureFrame when no atlas is declared.
-    const { uvMins, uvMaxs } = this._computeFrameUvs(system);
-    const frameCount = uvMins.length / 2;
-    const fallbackFrame = 0;
-
-    let writeIndex = 0;
-
-    for (let i = 0; i < limit; i++) {
-      // Skip dead slots in GPU-mode systems where the live range can
-      // contain holes.
-      if (alive[i] === 0) {
-        continue;
-      }
-
-      const offset = writeIndex * wordsPerInstance;
-      const frame = textureIndex[i]! < frameCount ? textureIndex[i]! : fallbackFrame;
-      const uvBase = frame * 2;
-
-      f32[offset + 0] = posX[i]!;
-      f32[offset + 1] = posY[i]!;
-      f32[offset + 2] = scaleX[i]!;
-      f32[offset + 3] = scaleY[i]!;
-      f32[offset + 4] = rotations[i]!;
-      u32[offset + 5] = color[i]!;
-      f32[offset + 6] = uvMins[uvBase + 0]!;
-      f32[offset + 7] = uvMins[uvBase + 1]!;
-      f32[offset + 8] = uvMaxs[uvBase + 0]!;
-      f32[offset + 9] = uvMaxs[uvBase + 1]!;
-
-      writeIndex++;
-    }
-
-    this._setCount(writeIndex);
+    this._setCount(this._writer.write(system, this._float32, this._uint32));
   }
 
   public override destroy(): void {
@@ -227,61 +169,5 @@ export class QuadParticles extends ParticleRenderMode {
   protected override _onBufferGrown(data: ArrayBuffer): void {
     this._float32 = new Float32Array(data);
     this._uint32 = new Uint32Array(data);
-  }
-
-  /**
-   * Compute (uvMin, uvMax) pairs for every declared frame on the system.
-   * Pulled out of the hot pack loop so the arithmetic runs once per frame
-   * rather than once per particle. Falls back to a single entry from
-   * `system.textureFrame` when no atlas is declared.
-   */
-  private _computeFrameUvs(system: ParticleSystem): { uvMins: Float32Array; uvMaxs: Float32Array } {
-    const frames = system.frames;
-    const tex = system.texture;
-    const texW = tex.width;
-    const texH = tex.height;
-    const flipY = tex.flipY;
-
-    const count = frames.length === 0 ? 1 : frames.length;
-
-    // Re-allocate scratch when capacity grows.
-    if (this._uvMinsScratch.length < count * 2) {
-      this._uvMinsScratch = new Float32Array(count * 2);
-      this._uvMaxsScratch = new Float32Array(count * 2);
-    }
-
-    const mins = this._uvMinsScratch;
-    const maxs = this._uvMaxsScratch;
-
-    if (frames.length === 0) {
-      const f = system.textureFrame;
-      const minU = f.left / texW;
-      const maxU = f.right / texW;
-      const topV = f.top / texH;
-      const bottomV = f.bottom / texH;
-
-      mins[0] = minU;
-      mins[1] = flipY ? bottomV : topV;
-      maxs[0] = maxU;
-      maxs[1] = flipY ? topV : bottomV;
-
-      return { uvMins: mins, uvMaxs: maxs };
-    }
-
-    for (let i = 0; i < frames.length; i++) {
-      const f = frames[i]!;
-      const o = i * 2;
-      const minU = f.left / texW;
-      const maxU = f.right / texW;
-      const topV = f.top / texH;
-      const bottomV = f.bottom / texH;
-
-      mins[o + 0] = minU;
-      mins[o + 1] = flipY ? bottomV : topV;
-      maxs[o + 0] = maxU;
-      maxs[o + 1] = flipY ? topV : bottomV;
-    }
-
-    return { uvMins: mins, uvMaxs: maxs };
   }
 }
