@@ -1,8 +1,9 @@
+import { type Texture, TextureRegion } from '@codexo/exojs';
 import { BoxShape, CircleShape, PhysicsBody, PhysicsWorld, PolygonShape } from '@codexo/exojs-physics';
-import { ObjectKind, ObjectLayer, type TileMapObject } from '@codexo/exojs-tilemap';
+import { ObjectKind, ObjectLayer, TILE_TRANSFORM_IDENTITY, TileLayer, type TileMapObject, TileSet } from '@codexo/exojs-tilemap';
 import { describe, expect, it, vi } from 'vitest';
 
-import { buildCollidersFromObjectLayer } from '../../examples/shared/physics-tilemap';
+import { buildCollidersFromObjectLayer, buildCollidersFromTileLayer } from '../../examples/shared/physics-tilemap';
 
 // The example physics↔tilemap bridge recipe (examples/shared/physics-tilemap.ts)
 // is the only place that depends on BOTH @codexo/exojs-tilemap and
@@ -186,6 +187,167 @@ describe('buildCollidersFromObjectLayer', () => {
     // The box bottom should rest on the floor top (y ≈ 400): centre ≈ 380.
     expect(box.y).toBeGreaterThan(360);
     expect(box.y).toBeLessThan(400);
+    expect(Math.hypot(box.linearVelocityX, box.linearVelocityY)).toBeLessThan(5);
+  });
+});
+
+// ── Per-tile collision ────────────────────────────────────────────────────
+
+function fakeRegion(): TextureRegion {
+  const texture = {
+    destroyed: false,
+    destroy: () => {},
+    height: 512,
+    label: 'test',
+    uid: 0,
+    width: 512,
+  } as unknown as Texture;
+
+  return new TextureRegion(texture, { height: 512, width: 512, x: 0, y: 0 });
+}
+
+/** A tileset whose tile 0 carries `collision`, plus a 16px layer using it. */
+function tileLayerWith(collision: readonly TileMapObject[]): { layer: TileLayer; tileset: TileSet } {
+  const tileset = new TileSet({
+    name: 'ts',
+    texture: fakeRegion(),
+    tileWidth: 16,
+    tileHeight: 16,
+    tileCount: 16,
+    columns: 4,
+  });
+
+  tileset._setDefinitions([{ localTileId: 0, collision }]);
+
+  const layer = new TileLayer({
+    id: 1,
+    name: 'ground',
+    width: 16,
+    height: 16,
+    tileWidth: 16,
+    tileHeight: 16,
+    tilesets: [tileset],
+  });
+
+  return { layer, tileset };
+}
+
+function fill(layer: TileLayer, tileset: TileSet, fromTx: number, toTx: number, ty: number): void {
+  for (let tx = fromTx; tx <= toTx; tx++) {
+    layer.setTileAt(tx, ty, { tileset, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
+  }
+}
+
+describe('buildCollidersFromTileLayer', () => {
+  it('collapses a run of full-tile collision boxes into a single wide body', () => {
+    const world = new PhysicsWorld();
+    const { layer, tileset } = tileLayerWith([rectangle(1, 0, 0, 16, 16)]);
+
+    fill(layer, tileset, 0, 3, 5);
+
+    const built = buildCollidersFromTileLayer(world, layer);
+
+    // Four tiles, one merged body — the whole point of the merging pass.
+    expect(built).toHaveLength(1);
+    expect(built[0].source.kind).toBe('rect');
+
+    const { body } = built[0];
+
+    expect(body.type).toBe('static');
+    expect(body.colliders[0].shape).toBeInstanceOf(BoxShape);
+    expect(body.x).toBeCloseTo(32);
+    expect(body.y).toBeCloseTo(88);
+    expect(world.bodies).toContain(body);
+  });
+
+  it('builds one body per tile for non-rectangular per-tile geometry', () => {
+    const world = new PhysicsWorld();
+    const slope: TileMapObject = {
+      ...base,
+      kind: ObjectKind.Polygon,
+      id: 1,
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+      points: [
+        { x: 0, y: 16 },
+        { x: 16, y: 16 },
+        { x: 16, y: 0 },
+      ],
+    };
+    const { layer, tileset } = tileLayerWith([slope]);
+
+    fill(layer, tileset, 0, 2, 0);
+
+    const built = buildCollidersFromTileLayer(world, layer);
+
+    expect(built).toHaveLength(3);
+
+    for (const collider of built) {
+      expect(collider.source.kind).toBe('shape');
+      expect(collider.body.colliders[0].shape).toBeInstanceOf(PolygonShape);
+    }
+
+    expect(built.map(collider => collider.body.x)).toEqual([0, 16, 32]);
+  });
+
+  it('scopes the build to an explicit tile region', () => {
+    const world = new PhysicsWorld();
+    const { layer, tileset } = tileLayerWith([rectangle(1, 0, 0, 16, 16)]);
+
+    fill(layer, tileset, 0, 7, 0);
+
+    const built = buildCollidersFromTileLayer(world, layer, { region: { x: 2, y: 0, width: 2, height: 1 } });
+
+    expect(built).toHaveLength(1);
+    expect(built[0].body.x).toBeCloseTo(48);
+  });
+
+  it('forwards friction, restitution and filter onto every generated collider', () => {
+    const world = new PhysicsWorld();
+    const { layer, tileset } = tileLayerWith([rectangle(1, 0, 0, 16, 16)]);
+
+    fill(layer, tileset, 0, 1, 0);
+
+    const built = buildCollidersFromTileLayer(world, layer, {
+      friction: 0.9,
+      restitution: 0.3,
+      filter: { category: 0b10 },
+      merge: false,
+    });
+
+    expect(built).toHaveLength(2);
+
+    for (const { body } of built) {
+      expect(body.colliders[0].friction).toBeCloseTo(0.9);
+      expect(body.colliders[0].restitution).toBeCloseTo(0.3);
+      expect(body.colliders[0].filter.category).toBe(0b10);
+    }
+  });
+
+  it('produces a solid tile floor a dynamic body lands on (integration)', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
+    const { layer, tileset } = tileLayerWith([rectangle(1, 0, 0, 16, 16)]);
+
+    // A 16-tile floor whose top edge sits at y = 160 (tile row 10).
+    fill(layer, tileset, 0, 15, 10);
+    buildCollidersFromTileLayer(world, layer, { friction: 0.6 });
+
+    const box = world.add(
+      new PhysicsBody({
+        type: 'dynamic',
+        position: { x: 120, y: 40 },
+        colliders: [{ shape: new BoxShape(16, 16), density: 1 }],
+      }),
+    );
+
+    for (let frame = 0; frame < 180; frame++) {
+      world.step(1 / 60);
+    }
+
+    expect(box.y).toBeGreaterThan(140);
+    expect(box.y).toBeLessThan(160);
     expect(Math.hypot(box.linearVelocityX, box.linearVelocityY)).toBeLessThan(5);
   });
 });

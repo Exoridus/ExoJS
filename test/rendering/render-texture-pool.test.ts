@@ -114,6 +114,28 @@ describe('RenderTexturePool', () => {
 
     orphaned.destroy();
   });
+
+  test('destroy leaves the pool usable for further acquire/release', () => {
+    const pool = new RenderTexturePool();
+    const first = new RenderTexture(64, 64);
+
+    pool.release(first);
+    pool.destroy();
+
+    expect(pool.size).toBe(0);
+    expect(pool.bytes).toBe(0);
+
+    // Acquiring after destroy() must never hand back the destroyed entry.
+    const reacquired = pool.acquire(64, 64);
+
+    expect(reacquired).not.toBe(first);
+    expect(reacquired.destroyed).toBe(false);
+
+    pool.release(reacquired);
+
+    expect(pool.size).toBe(1);
+    expect(pool.acquire(64, 64)).toBe(reacquired);
+  });
 });
 
 describe('WebGl2Backend render texture pool', () => {
@@ -145,6 +167,29 @@ describe('WebGl2Backend render texture pool', () => {
 
     backend.destroy();
   });
+
+  test('trimRenderTexturePool() destroys pooled entries and leaves the pool usable', () => {
+    const backend = createFakeWebGl2Backend();
+    const pooled = backend.acquireRenderTexture(32, 32);
+
+    backend.releaseRenderTexture(pooled);
+    backend.trimRenderTexturePool();
+
+    expect(pooled.destroyed).toBe(true);
+
+    // The backend keeps working normally afterwards: a fresh acquire never
+    // returns the trimmed-out entry, and releasing repopulates the pool.
+    const reacquired = backend.acquireRenderTexture(32, 32);
+
+    expect(reacquired).not.toBe(pooled);
+    expect(reacquired.destroyed).toBe(false);
+
+    backend.releaseRenderTexture(reacquired);
+
+    expect(backend.acquireRenderTexture(32, 32)).toBe(reacquired);
+
+    backend.destroy();
+  });
 });
 
 describe('WebGpuBackend render texture pool', () => {
@@ -169,6 +214,27 @@ describe('WebGpuBackend render texture pool', () => {
 
     expect(reacquired.destroyed).toBe(false);
     expect(live).toContain(reacquired);
+
+    backend.destroy();
+  });
+
+  test('trimRenderTexturePool() destroys pooled entries and leaves the pool usable', async () => {
+    const backend = await createMockBackend(createMockWebGpuEnvironment());
+    const pooled = backend.acquireRenderTexture(32, 32);
+
+    backend.releaseRenderTexture(pooled);
+    backend.trimRenderTexturePool();
+
+    expect(pooled.destroyed).toBe(true);
+
+    const reacquired = backend.acquireRenderTexture(32, 32);
+
+    expect(reacquired).not.toBe(pooled);
+    expect(reacquired.destroyed).toBe(false);
+
+    backend.releaseRenderTexture(reacquired);
+
+    expect(backend.acquireRenderTexture(32, 32)).toBe(reacquired);
 
     backend.destroy();
   });

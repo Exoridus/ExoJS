@@ -116,6 +116,24 @@ export interface RenderBackend {
   releaseRenderTexture(texture: RenderTexture): this;
 
   /**
+   * Destroy every render texture currently sitting in the backend's reuse
+   * pool and empty it, freeing the VRAM they hold. The pool itself keeps
+   * working afterwards — {@link acquireRenderTexture} /
+   * {@link releaseRenderTexture} behave exactly as before, they just start
+   * from empty and re-allocate whatever intermediates are asked for next.
+   *
+   * This is a manual, opt-in operation, not something the engine calls on
+   * your behalf. It trades pooled VRAM for a burst of re-allocation the next
+   * time those sizes are needed, so call it at a point where you actually
+   * want that trade: a memory-pressure signal from the platform, a long idle
+   * pause, or tearing down a level whose filter/mask intermediates won't
+   * recur at the same sizes. Do not call it on every scene change — that
+   * would defeat the pool and reintroduce the allocation churn it exists to
+   * avoid.
+   */
+  trimRenderTexturePool(): this;
+
+  /**
    * Composite `content` onto the active render target with each output
    * pixel's alpha multiplied by the corresponding sample of
    * `mask.alpha`. The mask is stretched-fit over the target rectangle

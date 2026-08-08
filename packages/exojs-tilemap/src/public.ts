@@ -76,6 +76,17 @@ export {
 } from './types';
 // Per-tile animation driver (RPG-Maker-style): advances only animated cells.
 export { TileAnimator } from './TileAnimator';
+// Per-tile collision: layer-space geometry from TileDefinition.collision,
+// with whole-cell boxes greedily merged. Physics-agnostic — plain geometry.
+export type {
+  TileCollisionGeometry,
+  TileCollisionOptions,
+  TileCollisionRect,
+  TileCollisionShape,
+  TileCollisionShapeKind,
+  TileRegion,
+} from './tileCollision';
+export { buildTileCollisionGeometry } from './tileCollision';
 // Chunk streaming: loads/unloads TileLayer chunks from a View's position via a ChunkSource provider.
 export type { ChunkStreamerOptions } from './ChunkStreamer';
 export { ChunkStreamer } from './ChunkStreamer';
