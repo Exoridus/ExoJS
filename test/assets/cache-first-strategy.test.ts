@@ -133,7 +133,7 @@ describe('CacheFirstStrategy', () => {
   });
 
   describe('cache-write diagnostics', () => {
-    test('a degraded store.save is reported on onCacheError instead of vanishing', async () => {
+    test('a degraded store.save is reported to the request sink instead of vanishing', async () => {
       const saveError = Object.assign(new Error('The quota has been exceeded.'), { name: 'QuotaExceededError' });
       const store = makeStore({ save: vi.fn(async () => Promise.reject(saveError)) });
       const response = { ok: true, status: 200, statusText: 'OK' } as unknown as Response;
@@ -148,10 +148,9 @@ describe('CacheFirstStrategy', () => {
 
       const strategy = new CacheFirstStrategy();
       const reported: AssetCacheError[] = [];
+      const reportCacheError = (error: AssetCacheError): void => void reported.push(error);
 
-      strategy.onCacheError.add(error => reported.push(error));
-
-      await expect(strategy.resolve(makeRequest({ factory }), [store])).resolves.toBe('resource:processed');
+      await expect(strategy.resolve(makeRequest({ factory, reportCacheError }), [store])).resolves.toBe('resource:processed');
 
       expect(reported).toHaveLength(1);
       expect(reported[0]).toBeInstanceOf(AssetCacheError);
@@ -176,10 +175,9 @@ describe('CacheFirstStrategy', () => {
 
       const strategy = new CacheFirstStrategy();
       const reported: AssetCacheError[] = [];
+      const reportCacheError = (error: AssetCacheError): void => void reported.push(error);
 
-      strategy.onCacheError.add(error => reported.push(error));
-
-      await strategy.resolve(makeRequest({ factory }), [store]);
+      await strategy.resolve(makeRequest({ factory, reportCacheError }), [store]);
 
       expect(reported[0]).toBe(saveError);
     });
@@ -199,10 +197,9 @@ describe('CacheFirstStrategy', () => {
 
       const strategy = new CacheFirstStrategy();
       const reported: AssetCacheError[] = [];
+      const reportCacheError = (error: AssetCacheError): void => void reported.push(error);
 
-      strategy.onCacheError.add(error => reported.push(error));
-
-      await strategy.resolve(makeRequest({ factory }), [failing, healthy]);
+      await strategy.resolve(makeRequest({ factory, reportCacheError }), [failing, healthy]);
 
       expect(healthy.save).toHaveBeenCalledWith('test', 'alias', 'processed');
       expect(reported).toHaveLength(1);
@@ -231,13 +228,31 @@ describe('CacheFirstStrategy', () => {
 
       const strategy = new CacheFirstStrategy();
       const reported: AssetCacheError[] = [];
+      const reportCacheError = (error: AssetCacheError): void => void reported.push(error);
 
-      strategy.onCacheError.add(error => reported.push(error));
-
-      await expect(strategy.resolve(makeRequest({ factory }), [store])).resolves.toBe('resource:fresh-source');
+      await expect(strategy.resolve(makeRequest({ factory, reportCacheError }), [store])).resolves.toBe('resource:fresh-source');
 
       expect(reported.map(error => error.operation)).toContain('delete');
       expect(reported.find(error => error.operation === 'delete')!.cause).toBe(deleteError);
+    });
+
+    test('a request without a diagnostic sink still degrades instead of throwing', async () => {
+      const store = makeStore({ save: vi.fn(async () => Promise.reject(new Error('quota exceeded'))) });
+      const response = { ok: true, status: 200, statusText: 'OK' } as unknown as Response;
+      global.fetch = vi.fn(async () => response) as unknown as typeof fetch;
+
+      const factory = {
+        storageName: 'test',
+        process: vi.fn(async () => 'processed'),
+        create: vi.fn(async (source: unknown) => `resource:${String(source)}`),
+        destroy: vi.fn(),
+      };
+
+      const strategy = new CacheFirstStrategy();
+
+      // `reportCacheError` is optional — omitting it must not turn a degraded
+      // cache write into a failed load.
+      await expect(strategy.resolve(makeRequest({ factory }), [store])).resolves.toBe('resource:processed');
     });
 
     test('a failing store.load is reported and the next store is still consulted', async () => {
@@ -255,10 +270,9 @@ describe('CacheFirstStrategy', () => {
 
       const strategy = new CacheFirstStrategy();
       const reported: AssetCacheError[] = [];
+      const reportCacheError = (error: AssetCacheError): void => void reported.push(error);
 
-      strategy.onCacheError.add(error => reported.push(error));
-
-      await expect(strategy.resolve(makeRequest({ factory }), [failing, hitting])).resolves.toBe('resource:cached-source');
+      await expect(strategy.resolve(makeRequest({ factory, reportCacheError }), [failing, hitting])).resolves.toBe('resource:cached-source');
 
       expect(reported).toHaveLength(1);
       expect(reported[0]!.operation).toBe('load');

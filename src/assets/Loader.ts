@@ -286,6 +286,10 @@ export class Loader {
    *
    * Narrow on {@link AssetCacheError.operation} and read {@link Error.cause}
    * for the originating `DOMException` (`QuotaExceededError` and friends).
+   *
+   * Reports only failures caused by *this* loader's own requests, even when
+   * its {@link CacheStrategy} instance is shared with other loaders — the
+   * strategy is handed a per-request sink rather than subscribing to one.
    */
   public readonly onCacheError = new Signal<[error: AssetCacheError]>();
 
@@ -293,10 +297,6 @@ export class Loader {
     const cache = options.cache;
     const stores = cache === undefined ? [] : toStoreList(cache);
     const cacheStrategy = options.cacheStrategy ?? new CacheFirstStrategy();
-
-    // The default strategy is constructed here and never handed out, so
-    // forwarding is the only way its diagnostics can reach the application.
-    cacheStrategy.onCacheError?.add(error => this.onCacheError.dispatch(error));
 
     this._decoder = new AssetDecoder(this, this._typeRegistry, {
       basePath: options.basePath ?? '',

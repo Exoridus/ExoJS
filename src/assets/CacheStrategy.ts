@@ -1,5 +1,3 @@
-import type { Signal } from '#core/Signal';
-
 import type { AssetCacheError } from './AssetCacheError';
 import type { CacheStore } from './CacheStore';
 
@@ -27,6 +25,21 @@ export interface CacheRequest {
   readonly factory: CacheRequestFactory;
   /** Type-specific options forwarded to `factory.create`. */
   readonly options?: unknown;
+  /**
+   * Diagnostic sink for cache failures the strategy degrades instead of
+   * propagating (a full quota, an unreadable store). Supplied by the caller
+   * that issued this request — `Loader` passes one that feeds its own
+   * `onCacheError` — so a degraded write is reported to whoever asked for the
+   * asset and to nobody else.
+   *
+   * Request-scoped rather than a signal on the strategy: strategies are
+   * stateless policy objects and may legitimately be shared between several
+   * loaders, which a per-instance subscription would cross-wire (and keep
+   * alive past the subscriber's own teardown).
+   *
+   * Absent when the caller wants no diagnostics — never assume it is set.
+   */
+  readonly reportCacheError?: (error: AssetCacheError) => void;
 }
 
 /**
@@ -47,12 +60,4 @@ export interface CacheStrategy {
    * returns the fully constructed resource.
    */
   resolve(request: CacheRequest, stores: readonly CacheStore[]): Promise<unknown>;
-  /**
-   * Optional diagnostic channel for cache failures the strategy degraded
-   * instead of propagating (a full quota, an unreadable store). `Loader`
-   * forwards it to its own `onCacheError`, so implementing it is what makes a
-   * degraded write observable to the application. Strategies that never touch
-   * a store — {@link NetworkOnlyStrategy} — omit it.
-   */
-  readonly onCacheError?: Signal<[error: AssetCacheError]>;
 }

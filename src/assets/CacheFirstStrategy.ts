@@ -1,5 +1,3 @@
-import { Signal } from '#core/Signal';
-
 import { AssetCacheError, type AssetCacheOperation } from './AssetCacheError';
 import type { CacheStore } from './CacheStore';
 import type { CacheRequest, CacheStrategy } from './CacheStrategy';
@@ -16,24 +14,17 @@ import type { CacheRequest, CacheStrategy } from './CacheStrategy';
  *
  * A failing store never fails the load: read, eviction and write errors are
  * all degraded so that a broken or full cache can never prevent an asset from
- * being delivered. Every degraded error is reported on {@link onCacheError}
- * instead of vanishing, so quota exhaustion stays diagnosable.
+ * being delivered. Every degraded error is handed to
+ * {@link CacheRequest.reportCacheError} instead of vanishing, so quota
+ * exhaustion stays diagnosable — `Loader` routes that to its `onCacheError`.
+ *
+ * Stateless and free to share between loaders: diagnostics travel with the
+ * request, so nothing is retained per caller.
  *
  * Returns the fully constructed resource — callers do not need to call
  * `request.factory.create` again.
  */
 export class CacheFirstStrategy implements CacheStrategy {
-  /**
-   * Fires for every cache error this strategy degraded rather than propagated.
-   * Purely diagnostic — the load continues regardless, so a listener is the
-   * only way to notice that persistence silently stopped working (a full
-   * quota, a store that lost its connection, a non-cloneable value).
-   *
-   * `Loader` forwards this to its own `onCacheError`, so the default strategy
-   * is observable without constructing one by hand.
-   */
-  public readonly onCacheError = new Signal<[error: AssetCacheError]>();
-
   public async resolve(request: CacheRequest, stores: readonly CacheStore[]): Promise<unknown> {
     const { storageName, key, url, requestOptions, factory, options } = request;
 
@@ -43,7 +34,7 @@ export class CacheFirstStrategy implements CacheStrategy {
       try {
         cached = await store.load(storageName, key);
       } catch (error: unknown) {
-        this._report('load', storageName, key, 'Reading an asset from a cache store failed.', error);
+        report(request, 'load', 'Reading an asset from a cache store failed.', error);
 
         continue;
       }
@@ -58,7 +49,7 @@ export class CacheFirstStrategy implements CacheStrategy {
           try {
             await store.delete(storageName, key);
           } catch (error: unknown) {
-            this._report('delete', storageName, key, 'Evicting a corrupt cache entry failed.', error);
+            report(request, 'delete', 'Evicting a corrupt cache entry failed.', error);
           }
         }
       }
@@ -78,19 +69,26 @@ export class CacheFirstStrategy implements CacheStrategy {
         await store.save(storageName, key, source);
       } catch (error: unknown) {
         // Quota exceeded or non-cloneable value — continue without caching.
-        this._report('save', storageName, key, 'Writing an asset to a cache store failed.', error);
+        report(request, 'save', 'Writing an asset to a cache store failed.', error);
       }
     }
 
     return resource;
   }
+}
 
-  /**
-   * Dispatch a degraded cache failure. An {@link AssetCacheError} raised by the
-   * store itself already carries the precise operation/store/key/cause, so it
-   * is forwarded unchanged rather than re-wrapped into a shallower one.
-   */
-  private _report(operation: AssetCacheOperation, store: string, key: string, message: string, cause: unknown): void {
-    this.onCacheError.dispatch(cause instanceof AssetCacheError ? cause : new AssetCacheError({ operation, message, store, key, cause }));
+/**
+ * Hand a degraded cache failure to the request's diagnostic sink. An
+ * {@link AssetCacheError} raised by the store itself already carries the
+ * precise operation/store/key/cause, so it is forwarded unchanged rather than
+ * re-wrapped into a shallower one.
+ */
+function report(request: CacheRequest, operation: AssetCacheOperation, message: string, cause: unknown): void {
+  const { reportCacheError } = request;
+
+  if (reportCacheError === undefined) {
+    return;
   }
+
+  reportCacheError(cause instanceof AssetCacheError ? cause : new AssetCacheError({ operation, message, store: request.storageName, key: request.key, cause }));
 }
