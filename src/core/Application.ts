@@ -30,6 +30,7 @@ import { Clock } from './Clock';
 import { Color } from './Color';
 import { assert, invariant } from './dev';
 import { showDevErrorOverlay } from './devErrorOverlay';
+import { DisposalScope } from './DisposalScope';
 import { FixedTimestep } from './FixedTimestep';
 import { computeLetterboxLayout } from './letterbox';
 import { hello, logger } from './logging';
@@ -395,8 +396,10 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * The engine's own `preUpdate` systems, owned here rather than by the
    * registry. Reassigned when the backend fallback rebuilds one of them, so
    * that teardown unregisters the instances that are actually registered.
+   * Starts empty rather than unassigned so that a constructor rollback, which
+   * can run before the registrations happen, always finds a real list.
    */
-  private _coreSystems: readonly System[];
+  private _coreSystems: readonly System[] = [];
 
   private readonly _updateHandler: () => void;
   private readonly _startupClock: Clock = new Clock();
@@ -491,109 +494,211 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._sizingMode = canvasOptions.sizingMode ?? 'fixed';
     this._applySizingMode(this._sizingMode);
 
-    // Established before any subsystem, because input, interaction and the
-    // frame loop all read the host through it.
-    this._ownsPlatform = appSettings.platform === undefined;
-    this.platform = appSettings.platform ?? new BrowserPlatform(this.canvas);
-
-    this.options = {
-      clearColor: appSettings.clearColor ?? Color.cornflowerBlue,
-      backend: appSettings.backend ?? defaultBackendConfig,
-      canvas: {
-        element: this.canvas,
-        width: logicalWidth,
-        height: logicalHeight,
-        pixelRatio: this._pixelRatio,
-        tabIndex: this.canvas.tabIndex,
-        ...(canvasOptions.imageRendering !== undefined && { imageRendering: canvasOptions.imageRendering }),
-      },
-      loader: {
-        basePath: loaderOptions.basePath ?? '',
-        fetchOptions: loaderOptions.fetchOptions ?? { ...defaultLoaderFetchOptions },
-        ...(loaderOptions.cache !== undefined && { cache: loaderOptions.cache }),
-        ...(loaderOptions.cacheStrategy !== undefined && { cacheStrategy: loaderOptions.cacheStrategy }),
-        ...(loaderOptions.concurrency !== undefined && { concurrency: loaderOptions.concurrency }),
-      },
-      rendering: {
-        debug: renderingOptions.debug ?? defaultRenderingSettings.debug,
-        webglAttributes: renderingOptions.webglAttributes ?? defaultRenderingSettings.webglAttributes,
-        spriteRendererBatchSize: renderingOptions.spriteRendererBatchSize ?? defaultRenderingSettings.spriteRendererBatchSize,
-      },
-      input: {
-        gamepadDefinitions: inputOptions.gamepadDefinitions ?? [...defaultInputSettings.gamepadDefinitions],
-        gamepadSlotStrategy: inputOptions.gamepadSlotStrategy ?? defaultInputSettings.gamepadSlotStrategy,
-        pointerDistanceThreshold: inputOptions.pointerDistanceThreshold ?? defaultInputSettings.pointerDistanceThreshold,
-        dragThreshold: inputOptions.dragThreshold ?? defaultInputSettings.dragThreshold,
-        allowNativeContextMenu: inputOptions.allowNativeContextMenu ?? defaultInputSettings.allowNativeContextMenu,
-        allowTextSelection: inputOptions.allowTextSelection ?? defaultInputSettings.allowTextSelection,
-      },
-      hello: appSettings.hello ?? true,
-      platform: this.platform,
-      ...(appSettings.seed !== undefined && { seed: appSettings.seed }),
-      ...(appSettings.fixedTimeStep !== undefined && { fixedTimeStep: appSettings.fixedTimeStep }),
-    };
-
-    // Capture extension snapshot before constructing extension-sensitive subsystems.
-    this._snapshot = appSettings.extensions === undefined ? getGlobalSnapshotInternal() : buildSnapshot([...(appSettings.extensions ?? [])]);
-
-    this.loader = new Loader(this.options.loader);
+    // Ownership record for every subsystem built from here on. Construction is
+    // the one point in the lifecycle where a half-built Application can exist:
+    // if a later step throws, the caller never receives an instance and so can
+    // never call `destroy()`, which leaves everything built so far with no
+    // owner at all. Registration order is ownership order; the scope tears
+    // down in reverse.
+    //
+    // Deliberately constructor-local rather than a field: the WebGPU→WebGL2
+    // fallback in `initializeBackend()` destroys and replaces `_backend` and
+    // `_rendering` after construction, so a retained scope would hold two
+    // destroyed instances and miss the live ones. It records what construction
+    // built, which is exactly as long as it is needed.
+    const constructed = new DisposalScope();
 
     try {
+      // Established before any subsystem, because input, interaction and the
+      // frame loop all read the host through it.
+      this._ownsPlatform = appSettings.platform === undefined;
+      this.platform = appSettings.platform ?? new BrowserPlatform(this.canvas);
+
+      // Only an adapter created here is ours to release — an injected one stays
+      // the caller's on the failure path, exactly as in `destroy()`.
+      if (this._ownsPlatform) {
+        constructed.track(this.platform);
+      }
+
+      this.options = {
+        clearColor: appSettings.clearColor ?? Color.cornflowerBlue,
+        backend: appSettings.backend ?? defaultBackendConfig,
+        canvas: {
+          element: this.canvas,
+          width: logicalWidth,
+          height: logicalHeight,
+          pixelRatio: this._pixelRatio,
+          tabIndex: this.canvas.tabIndex,
+          ...(canvasOptions.imageRendering !== undefined && { imageRendering: canvasOptions.imageRendering }),
+        },
+        loader: {
+          basePath: loaderOptions.basePath ?? '',
+          fetchOptions: loaderOptions.fetchOptions ?? { ...defaultLoaderFetchOptions },
+          ...(loaderOptions.cache !== undefined && { cache: loaderOptions.cache }),
+          ...(loaderOptions.cacheStrategy !== undefined && { cacheStrategy: loaderOptions.cacheStrategy }),
+          ...(loaderOptions.concurrency !== undefined && { concurrency: loaderOptions.concurrency }),
+        },
+        rendering: {
+          debug: renderingOptions.debug ?? defaultRenderingSettings.debug,
+          webglAttributes: renderingOptions.webglAttributes ?? defaultRenderingSettings.webglAttributes,
+          spriteRendererBatchSize: renderingOptions.spriteRendererBatchSize ?? defaultRenderingSettings.spriteRendererBatchSize,
+        },
+        input: {
+          gamepadDefinitions: inputOptions.gamepadDefinitions ?? [...defaultInputSettings.gamepadDefinitions],
+          gamepadSlotStrategy: inputOptions.gamepadSlotStrategy ?? defaultInputSettings.gamepadSlotStrategy,
+          pointerDistanceThreshold: inputOptions.pointerDistanceThreshold ?? defaultInputSettings.pointerDistanceThreshold,
+          dragThreshold: inputOptions.dragThreshold ?? defaultInputSettings.dragThreshold,
+          allowNativeContextMenu: inputOptions.allowNativeContextMenu ?? defaultInputSettings.allowNativeContextMenu,
+          allowTextSelection: inputOptions.allowTextSelection ?? defaultInputSettings.allowTextSelection,
+        },
+        hello: appSettings.hello ?? true,
+        platform: this.platform,
+        ...(appSettings.seed !== undefined && { seed: appSettings.seed }),
+        ...(appSettings.fixedTimeStep !== undefined && { fixedTimeStep: appSettings.fixedTimeStep }),
+      };
+
+      // Capture extension snapshot before constructing extension-sensitive subsystems.
+      this._snapshot = appSettings.extensions === undefined ? getGlobalSnapshotInternal() : buildSnapshot([...(appSettings.extensions ?? [])]);
+
+      this.loader = constructed.track(new Loader(this.options.loader));
+
       materializeAssetBindings(this.loader, [...coreAssetBindings, ...this._snapshot.assets]);
       materializeSerializerBindings(this.serializers, this._snapshot.serializers);
+
+      this._backendType = this.resolveInitialBackendType();
+      // `createBackend` rolls back a backend whose renderer bindings throw on
+      // its own — it also runs from the post-construction backend fallback,
+      // where there is no construction scope — and rethrows without assigning,
+      // so that failure never reaches the scope as a tracked item.
+      this._backend = constructed.track(this.createBackend(this._backendType, this._snapshot));
+      this._rendering = constructed.track(new RenderingContext(this._backend));
+      this.input = constructed.track(new InputManager(this));
+      this.interaction = constructed.track(new InteractionManager(this));
+      this.scenes = constructed.track(new SceneDirector<Registry>(this, appSettings.scenes));
+      this.random = new Random(this.options.seed);
+      this._updateHandler = this.update.bind(this);
+
+      const fixedStepMs = this.options.fixedTimeStep !== undefined ? this.options.fixedTimeStep * 1000 : defaultFixedStepMs;
+
+      this._fixed = new FixedTimestep(fixedStepMs, maxFixedSteps);
+      this._fixedTime = freezeTime(new Time(fixedStepMs));
+
+      this._startupClock.start();
+
+      this._documentVisible = this.platform.documentVisible;
+      this._visibilitySubscription = this.platform.onVisibilityChange(visible => {
+        this._onPlatformVisibilityChange(visible);
+      });
+
+      this.input.onCanvasFocusChange.add(focused => {
+        this.onCanvasFocusChange.dispatch(focused);
+      });
+
+      this.onVisibilityChange.add(visible => {
+        this._audio._applyVisibility(visible);
+      });
+
+      // The engine's own per-frame work, registered as ordinary systems in the
+      // `preUpdate` phase rather than as a separate hard-coded stage. They occupy
+      // the negative `order` range, so an application system added without an
+      // `order` runs after all of them — and `before`/`after` can name them.
+      this.systems._addCoreSystem(this.input, { order: SystemOrder.CoreInput });
+      this.systems._addCoreSystem(this.interaction, { order: SystemOrder.CoreInteraction });
+      this.systems._addCoreSystem(this._audio, { order: SystemOrder.CoreAudio });
+      this.systems._addCoreSystem(this.tweens, { order: SystemOrder.CoreTweens });
+      this.systems._addCoreSystem(this.animations, { order: SystemOrder.CoreAnimation });
+      this.systems._addCoreSystem(this._rendering, { order: SystemOrder.CoreRendering });
+
+      this._coreSystems = [this.input, this.interaction, this._audio, this.tweens, this.animations, this._rendering];
+
+      // Every core manager exists by this point, so app-system bindings can capture references to them.
+      materializeApplicationSystems(this, this._snapshot.systems);
     } catch (error) {
-      try {
-        this.loader.destroy();
-      } catch {
-        /* cleanup failure is secondary */
-      }
+      // The caller gets no instance, so this is the only chance to release
+      // what was built. The original failure is what propagates — rollback
+      // never rewrites it.
+      this._rollbackConstruction(constructed);
+
       throw error;
     }
+  }
 
-    this._backendType = this.resolveInitialBackendType();
-    this._backend = this.createBackend(this._backendType, this._snapshot);
-    this._rendering = new RenderingContext(this._backend);
-    this.input = new InputManager(this);
-    this.interaction = new InteractionManager(this);
-    this.scenes = new SceneDirector<Registry>(this, appSettings.scenes);
-    this.random = new Random(this.options.seed);
-    this._updateHandler = this.update.bind(this);
+  /**
+   * Release every subsystem a failed constructor had already built. Without
+   * it, a throw from any construction step — most realistically an extension
+   * binding in `materializeApplicationSystems()`, the last one — strands the
+   * platform adapter, loader, backend, rendering context, input, interaction
+   * and scene director with no owner: the caller never receives an
+   * `Application` and so can never call {@link Application.destroy}.
+   *
+   * `constructed` covers the members that may or may not exist yet, in reverse
+   * construction order. The field-initialised members are handled directly:
+   * they run before the constructor body and take no arguments, so they are
+   * either fully built or the constructor never started — there is nothing
+   * partial for a scope to track. Two more cannot be scope entries at all:
+   * {@link Application._visibilitySubscription} is a plain function rather
+   * than a `Destroyable`, and an *injected* {@link PlatformAdapter} is not
+   * ours to destroy — so with an injected adapter that subscription, and
+   * through it this dead application, would otherwise stay alive.
+   *
+   * One entry is only synchronous on the surface: {@link SceneDirector}'s
+   * teardown is asynchronous, and `destroy()` fire-and-forgets it — a
+   * constructor cannot await. That is sound here and only here, because a
+   * director reached through this path has never navigated: no active scope,
+   * no retained or preloaded scopes, no in-flight teardown to wait on, so its
+   * disposal reduces to destroying its own Signals. It is *not* a substitute
+   * for {@link Application._disposeManagedResources}, which awaits
+   * `scenes._dispose()` precisely because by then there is scene state to
+   * unwind before its dependencies go.
+   *
+   * A teardown failure is logged, never propagated: the error that aborted
+   * construction is the one the caller must see, and the scope rethrows an
+   * `AggregateError` in development builds, which would replace it.
+   */
+  private _rollbackConstruction(constructed: DisposalScope): void {
+    // A binding that ran before the failing one holds a reference to this
+    // half-built application. Marking it destroyed makes a later `start()` on
+    // that reference fail loudly instead of running on torn-down subsystems.
+    this._destroyed = true;
 
-    const fixedStepMs = this.options.fixedTimeStep !== undefined ? this.options.fixedTimeStep * 1000 : defaultFixedStepMs;
+    try {
+      this._visibilitySubscription?.();
+      this._visibilitySubscription = null;
 
-    this._fixed = new FixedTimestep(fixedStepMs, maxFixedSteps);
-    this._fixedTime = freezeTime(new Time(fixedStepMs));
+      // Application systems materialised before the failure go first: they are
+      // the last thing constructed, and their own `destroy()` may read the core
+      // managers. Those managers are registered here too but are owned by the
+      // Application, so unregister them and let `constructed` destroy each
+      // exactly once — same reason `_disposeManagedResources` does it.
+      for (const system of [...this._coreSystems].reverse()) {
+        this.systems._removeCoreSystem(system);
+      }
 
-    this._startupClock.start();
+      this.systems.destroy();
 
-    this._documentVisible = this.platform.documentVisible;
-    this._visibilitySubscription = this.platform.onVisibilityChange(visible => {
-      this._onPlatformVisibilityChange(visible);
-    });
+      this.animations.destroy();
+      this.tweens.destroy();
+      this._audio.destroy();
 
-    this.input.onCanvasFocusChange.add(focused => {
-      this.onCanvasFocusChange.dispatch(focused);
-    });
+      constructed.destroy();
 
-    this.onVisibilityChange.add(visible => {
-      this._audio._applyVisibility(visible);
-    });
-
-    // The engine's own per-frame work, registered as ordinary systems in the
-    // `preUpdate` phase rather than as a separate hard-coded stage. They occupy
-    // the negative `order` range, so an application system added without an
-    // `order` runs after all of them — and `before`/`after` can name them.
-    this.systems._addCoreSystem(this.input, { order: SystemOrder.CoreInput });
-    this.systems._addCoreSystem(this.interaction, { order: SystemOrder.CoreInteraction });
-    this.systems._addCoreSystem(this._audio, { order: SystemOrder.CoreAudio });
-    this.systems._addCoreSystem(this.tweens, { order: SystemOrder.CoreTweens });
-    this.systems._addCoreSystem(this.animations, { order: SystemOrder.CoreAnimation });
-    this.systems._addCoreSystem(this._rendering, { order: SystemOrder.CoreRendering });
-
-    this._coreSystems = [this.input, this.interaction, this._audio, this.tweens, this.animations, this._rendering];
-
-    // Every core manager exists by this point, so app-system bindings can capture references to them.
-    materializeApplicationSystems(this, this._snapshot.systems);
+      this._startupClock.destroy();
+      this._activeClock.destroy();
+      this._frameClock.destroy();
+      this.onResize.destroy();
+      this.onFrame.destroy();
+      this.onFixedFrame.destroy();
+      this.onCanvasFocusChange.destroy();
+      this.onVisibilityChange.destroy();
+      this.onBackendLost.destroy();
+      this.onBackendRestored.destroy();
+      this.onError.destroy();
+    } catch (rollbackError) {
+      logger.error('Application construction failed, and rolling back the subsystems it had already built failed as well.', {
+        source: 'Application',
+        ...(rollbackError instanceof Error && { error: rollbackError }),
+      });
+    }
   }
 
   public get status(): ApplicationStatus {
