@@ -373,8 +373,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * synchronous WebGL2 shader compile/link failures, which surface as
    * {@link RenderError}s), an asynchronous GPU error reported by the backend
    * ({@link RenderBackend.onRenderError} — WGSL compilation errors, WebGPU
-   * uncaptured validation/OOM/internal errors), or a scene-unload failure in
-   * {@link Application.stop}.
+   * uncaptured validation/OOM/internal errors, and WebGPU device-recovery
+   * exhaustion), or a scene-unload failure in {@link Application.stop}.
    *
    * The frame guard keeps the loop alive through intermittent failures and
    * halts it (status `Stopped`) after 3 consecutive failing frames. Narrow

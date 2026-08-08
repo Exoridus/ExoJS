@@ -11,6 +11,7 @@ import { ColorFilter } from '#rendering/filters/ColorFilter';
 import { Graphics } from '#rendering/primitives/Graphics';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { Renderer } from '#rendering/Renderer';
+import type { RenderError } from '#rendering/RenderError';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Text } from '#rendering/text/Text';
 import { TextStyle } from '#rendering/text/TextStyle';
@@ -2303,6 +2304,7 @@ describe('WebGpuBackend', () => {
 
   test('onDeviceLost signal fires when the GPU device is lost', async () => {
     const environment = createMockWebGpuEnvironment();
+    let manager: WebGpuBackend | null = null;
 
     try {
       const app = {
@@ -2312,7 +2314,8 @@ describe('WebGpuBackend', () => {
           clearColor: Color.black,
         },
       } as unknown as Application;
-      const manager = new WebGpuBackend(app);
+
+      manager = new WebGpuBackend(app);
       installCoreAndParticleRenderers(manager);
       const lostHandler = vi.fn();
 
@@ -2330,6 +2333,76 @@ describe('WebGpuBackend', () => {
       expect(lostHandler).toHaveBeenCalledTimes(1);
       expect(lostHandler.mock.calls[0][0]).toMatchObject({ message: 'gpu removed' });
       expect(manager.deviceLost).toBe(true);
+    } finally {
+      // The device loss above kicked off a background recovery attempt
+      // (real setTimeout-driven, not awaited by this test). destroy() before
+      // teardown so it cannot keep running against a torn-down/replaced
+      // navigator.gpu mock in a later test.
+      manager?.destroy();
+      environment.restore();
+    }
+  });
+
+  test('exhausting all device-recovery attempts reports an aggregated error instead of failing silently', async () => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const app = {
+        canvas: environment.canvas,
+        options: {
+          canvas: { width: 128, height: 128 },
+          clearColor: Color.black,
+        },
+      } as unknown as Application;
+      const manager = new WebGpuBackend(app);
+      installCoreAndParticleRenderers(manager);
+
+      await manager.initialize();
+
+      const renderErrorHandler = vi.fn();
+
+      manager.onRenderError.add(renderErrorHandler);
+
+      // Every recovery attempt re-requests an adapter via _initialize(); make
+      // each one fail with a distinct message so the fix can be checked against
+      // the FULL set of per-attempt causes, not just the last one.
+      let attempt = 0;
+      const gpuNavigator = navigator as unknown as { gpu: { requestAdapter: MockInstance } };
+
+      gpuNavigator.gpu.requestAdapter = vi.fn(() => {
+        attempt++;
+
+        return Promise.reject(new Error(`adapter request failed (attempt ${attempt})`));
+      });
+
+      environment.simulateDeviceLost({ message: 'gpu removed' });
+      await Promise.resolve();
+
+      // 5 retries with exponential backoff (100/200/400/800/1600ms of real
+      // timers) run before recovery gives up — wait for the final dispatch.
+      await vi.waitFor(
+        () => {
+          expect(renderErrorHandler).toHaveBeenCalledTimes(1);
+        },
+        { timeout: 5000, interval: 25 },
+      );
+
+      const error = renderErrorHandler.mock.calls[0]?.[0] as RenderError;
+
+      expect(error.code).toBe('device-recovery-failed');
+      expect(error.cause).toBeInstanceOf(AggregateError);
+
+      const aggregate = error.cause as AggregateError;
+
+      // Every one of the 5 attempts must be represented — not just the last
+      // failure — since an earlier attempt can fail for a different reason
+      // than the final one.
+      expect(aggregate.errors).toHaveLength(5);
+
+      for (const cause of aggregate.errors) {
+        expect(cause).toBeInstanceOf(Error);
+        expect((cause as Error).message).toMatch(/^Failed to request a WebGPU adapter\. adapter request failed \(attempt \d+\)$/);
+      }
     } finally {
       environment.restore();
     }

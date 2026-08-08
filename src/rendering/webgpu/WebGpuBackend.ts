@@ -136,7 +136,11 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
  * fresh adapter+device with exponential backoff (up to 5 tries), then
  * fires {@link WebGpuBackend.onDeviceRestored}. While recovering, draw
  * submissions silently no-op so user code survives transient outages
- * without explicit error handling.
+ * without explicit error handling. If every retry fails, a
+ * {@link RenderError} with code `'device-recovery-failed'` (carrying every
+ * attempt's cause as an `AggregateError`) is dispatched through
+ * {@link WebGpuBackend.onRenderError} instead of leaving the canvas dead
+ * with no signal.
  *
  * Initialization is async ({@link WebGpuBackend.initialize}); the
  * {@link Application} class drives that during `start()` and
@@ -1704,6 +1708,11 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     this._isRecovering = true;
+    // Every attempt's failure cause is kept, not just the last one — an early
+    // attempt can fail for a different reason (e.g. adapter momentarily gone)
+    // than the final one (e.g. device creation rejected), and that history
+    // matters for diagnosing why recovery never completed.
+    const recoveryCauses: unknown[] = [];
 
     try {
       while (this._recoveryAttempt < this._maxRecoveryAttempts && !this._destroyed) {
@@ -1728,10 +1737,12 @@ export class WebGpuBackend implements RenderBackend {
           this.onDeviceRestored.dispatch();
 
           return;
-        } catch {
+        } catch (error) {
           if (this._destroyed) {
             return;
           }
+
+          recoveryCauses.push(error);
 
           const delay = this._recoveryBackoffMs * Math.pow(2, this._recoveryAttempt - 1);
 
@@ -1740,9 +1751,34 @@ export class WebGpuBackend implements RenderBackend {
           });
         }
       }
+
+      if (!this._destroyed) {
+        this._reportRecoveryFailure(recoveryCauses);
+      }
     } finally {
       this._isRecovering = false;
     }
+  }
+
+  /**
+   * All {@link _maxRecoveryAttempts} device-recovery retries failed: the
+   * canvas is now permanently dead (frozen on its last presented frame)
+   * until the app is reloaded. Report this loudly — the alternative is a
+   * black, frozen canvas with a silent console, the hardest failure mode to
+   * self-diagnose. Dispatched through {@link onRenderError} (which
+   * {@link Application} already forwards to `onError`) rather than a
+   * dedicated signal: this is fundamentally an error report, not a
+   * transient lifecycle state like {@link onDeviceLost}/{@link onDeviceRestored}.
+   */
+  private _reportRecoveryFailure(causes: readonly unknown[]): void {
+    this._reportRenderError(
+      new RenderError({
+        code: 'device-recovery-failed',
+        backendType: RenderBackendType.WebGpu,
+        message: `[ExoJS] WebGPU device recovery failed after ${this._maxRecoveryAttempts} attempt(s). The canvas will stay black until the app is reloaded.`,
+        cause: new AggregateError(causes, 'All WebGPU device-recovery attempts failed.'),
+      }),
+    );
   }
 
   /**

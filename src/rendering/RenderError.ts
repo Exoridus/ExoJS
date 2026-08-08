@@ -11,7 +11,8 @@ export type RenderErrorCode =
   | 'pipeline-creation' // WebGPU pipeline/bind-group-layout creation failure
   | 'validation' // WebGPU uncaptured validation error (draw/submit time)
   | 'out-of-memory' // GPUOutOfMemoryError / GL OOM
-  | 'internal'; // GPUInternalError / anything unclassifiable
+  | 'internal' // GPUInternalError / anything unclassifiable
+  | 'device-recovery-failed'; // WebGPU device loss recovery exhausted all retry attempts
 
 /** Construction options for a {@link RenderError}. */
 export interface RenderErrorOptions {
