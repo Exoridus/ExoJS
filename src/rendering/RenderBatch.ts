@@ -37,13 +37,6 @@ export class RenderBatch {
   private _count = 0;
 
   public constructor(geometry: Geometry, material: MeshMaterial | null = null) {
-    // The batch uploads its geometry to the GPU once and caches it by identity,
-    // so the geometry must be static (the default). dynamic/stream geometry has
-    // no persistent GPU buffer and is rejected.
-    if (geometry.usage !== 'static') {
-      throw new Error(`RenderBatch requires geometry with usage='static' (got '${geometry.usage}').`);
-    }
-
     // Defensive guard for JS callers; MeshMaterial's `target` is the literal
     // 'mesh' for TypeScript callers. Whether the material's shader satisfies the
     // instancing contract can only be decided from the LINKED program, so that

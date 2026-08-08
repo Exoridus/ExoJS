@@ -56,13 +56,17 @@ interface PendingMeshDraw {
   supportsInstancing: boolean;
 }
 
-interface StaticGeometryCacheEntry {
+interface GeometryCacheEntry {
   readonly geometry: Geometry;
   readonly vertexBuffer: WebGl2RenderBuffer;
   readonly indexBuffer: WebGl2RenderBuffer;
   readonly vaos: Map<Shader, WebGl2VertexArrayObject>;
   readonly disposeListener: () => void;
   indexCount: number;
+  // The geometry version the buffers currently hold. Re-packed on mismatch, so
+  // dynamic/stream geometry reaches the GPU via Geometry.invalidate(). The
+  // buffer objects themselves are reused, which keeps the cached VAOs valid.
+  version: number;
 }
 
 export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements WebGl2RetainedBatchReplayer {
@@ -106,7 +110,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
   // PendingMeshDraw literal is allocated per mesh per frame).
   private readonly _pendingDraws: PendingMeshDraw[] = [];
   private _pendingCount = 0;
-  private readonly _staticGeometryCache = new Map<Geometry, StaticGeometryCacheEntry>();
+  private readonly _geometryCache = new Map<Geometry, GeometryCacheEntry>();
   private _connection: MeshRendererConnection | null = null;
   private _currentBlendMode: BlendModes | null = null;
 
@@ -192,12 +196,14 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       throw new Error(`RenderBatch material shader is not instancing-compatible: ${this._describeInstancingGap(shader)}.`);
     }
 
-    // Custom-material batches are not recordable: the recorded byte stream
-    // replays through the default shader. If one arrives inside an open capture,
-    // poison it so the group's set never validates and it degrades to entry
-    // replay instead of wrong pixels — mirroring the sprite renderer's
-    // custom-material poison and the dynamic-geometry poison below.
-    if (material !== null && backend._isRetainedCapturing) {
+    // Neither a custom material nor mutable geometry is recordable: the recorded
+    // byte stream replays through the default shader, and a re-packed buffer is
+    // not the stable, persistent one a retained batch references. If either
+    // arrives inside an open capture, poison it so the group's set never
+    // validates and it degrades to entry replay instead of wrong pixels —
+    // mirroring the sprite renderer's custom-material poison and
+    // _drawDynamicInstancedSingle's dynamic-geometry poison.
+    if ((material !== null || geometry.usage !== 'static') && backend._isRetainedCapturing) {
       backend._poisonRetainedCaptures();
     }
 
@@ -205,7 +211,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     // when set away from the default (Normal) — same rule as the node path.
     const blendMode = material !== null && mesh.blendMode === BlendModes.Normal ? material.blendMode : mesh.blendMode;
     const texture = mesh.texture ?? Texture.white;
-    const cacheEntry = this._getOrCreateStaticGeometryEntry(geometry, mesh, connection);
+    const cacheEntry = this._getOrCreateGeometryEntry(geometry, mesh, connection);
     const vao = this._getOrCreateStaticGeometryVao(cacheEntry, shader, connection.gl, connection.dynamicNodeIndexBuffer);
 
     this._setBlendMode(blendMode, backend);
@@ -334,7 +340,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       customShader.disconnect();
     }
 
-    for (const entry of this._staticGeometryCache.values()) {
+    for (const entry of this._geometryCache.values()) {
       for (const vao of entry.vaos.values()) {
         vao.destroy();
       }
@@ -344,7 +350,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       entry.vertexBuffer.destroy();
     }
 
-    this._staticGeometryCache.clear();
+    this._geometryCache.clear();
     connection.dynamicNodeIndexBuffer.destroy();
     connection.dynamicIndexBuffer.destroy();
     connection.dynamicVertexBuffer.destroy();
@@ -430,7 +436,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     const first = this._pendingDraws[start]!;
     const geometry = first.mesh.geometry!;
     const count = end - start;
-    const cacheEntry = this._getOrCreateStaticGeometryEntry(geometry, first.mesh, connection);
+    const cacheEntry = this._getOrCreateGeometryEntry(geometry, first.mesh, connection);
     const vao = this._getOrCreateStaticGeometryVao(cacheEntry, first.shader, connection.gl, connection.dynamicNodeIndexBuffer);
 
     this._setBlendMode(first.blendMode, backend);
@@ -783,10 +789,14 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     return `${gaps.join(', ')} — include INSTANCE_TRANSFORM_GLSL and position via exoInstanceClipPosition()`;
   }
 
-  private _getOrCreateStaticGeometryEntry(geometry: Geometry, mesh: Mesh, connection: MeshRendererConnection): StaticGeometryCacheEntry {
-    const existing = this._staticGeometryCache.get(geometry);
+  private _getOrCreateGeometryEntry(geometry: Geometry, mesh: Mesh, connection: MeshRendererConnection): GeometryCacheEntry {
+    const existing = this._geometryCache.get(geometry);
 
     if (existing !== undefined) {
+      if (existing.version !== geometry.version) {
+        this._repackGeometryEntry(existing, mesh);
+      }
+
       return existing;
     }
 
@@ -803,11 +813,14 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     this._packIndices(mesh, 0, indexData);
 
     const accountant = this.getBackend().accountant;
-    const vertexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, floatView, BufferUsage.StaticDraw).connect(
+    // Non-static geometry is re-uploaded whenever its version moves, so the
+    // driver is told to expect repeated writes to the same buffer object.
+    const bufferUsage = geometry.usage === 'static' ? BufferUsage.StaticDraw : BufferUsage.DynamicDraw;
+    const vertexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, floatView, bufferUsage).connect(
       this._createBufferRuntime(connection.gl, connection.buffers),
       accountant,
     );
-    const indexBuffer = new WebGl2RenderBuffer(BufferTypes.ElementArrayBuffer, indexData, BufferUsage.StaticDraw).connect(
+    const indexBuffer = new WebGl2RenderBuffer(BufferTypes.ElementArrayBuffer, indexData, bufferUsage).connect(
       this._createBufferRuntime(connection.gl, connection.buffers),
       accountant,
     );
@@ -816,7 +829,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     indexBuffer.upload(indexData);
 
     const disposeListener = (): void => {
-      const entry = this._staticGeometryCache.get(geometry);
+      const entry = this._geometryCache.get(geometry);
 
       if (entry === undefined) {
         return;
@@ -829,27 +842,53 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       entry.vaos.clear();
       entry.indexBuffer.destroy();
       entry.vertexBuffer.destroy();
-      this._staticGeometryCache.delete(geometry);
+      this._geometryCache.delete(geometry);
     };
 
     geometry._onDispose(disposeListener);
 
-    const created: StaticGeometryCacheEntry = {
+    const created: GeometryCacheEntry = {
       geometry,
       vertexBuffer,
       indexBuffer,
       vaos: new Map(),
       disposeListener,
       indexCount,
+      version: geometry.version,
     };
 
-    this._staticGeometryCache.set(geometry, created);
+    this._geometryCache.set(geometry, created);
 
     return created;
   }
 
+  /**
+   * Re-pack and re-upload a cached entry whose geometry has been mutated and
+   * {@link Geometry.invalidate}d. The `WebGl2RenderBuffer` objects are reused
+   * rather than recreated, so every VAO already cached against this entry stays
+   * valid and no VAO rebuild is needed.
+   */
+  private _repackGeometryEntry(entry: GeometryCacheEntry, mesh: Mesh): void {
+    const vertexCount = mesh.vertexCount;
+    const indexCount = mesh.indexCount;
+    const interleaved = new ArrayBuffer(vertexCount * vertexStrideBytes);
+    const floatView = new Float32Array(interleaved);
+    const uintView = new Uint32Array(interleaved);
+
+    this._packVertices(mesh, 0, floatView, uintView);
+
+    const indexData = new Uint16Array(indexCount);
+
+    this._packIndices(mesh, 0, indexData);
+
+    entry.vertexBuffer.upload(floatView);
+    entry.indexBuffer.upload(indexData);
+    entry.indexCount = indexCount;
+    entry.version = entry.geometry.version;
+  }
+
   private _getOrCreateStaticGeometryVao(
-    entry: StaticGeometryCacheEntry,
+    entry: GeometryCacheEntry,
     shader: Shader,
     gl: WebGL2RenderingContext,
     nodeIndexBuffer: WebGl2RenderBuffer,

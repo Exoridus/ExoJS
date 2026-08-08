@@ -91,11 +91,13 @@ describe('RenderBatch', () => {
     geometry.destroy();
   });
 
-  test('rejects non-static geometry', () => {
-    const geometry = triangleGeometry('dynamic');
+  test.each(['static', 'dynamic', 'stream'] as const)('accepts %s geometry', (usage) => {
+    const geometry = triangleGeometry(usage);
+    const batch = new RenderBatch(geometry);
 
-    expect(() => new RenderBatch(geometry)).toThrow(/usage='static'/);
+    expect(batch.geometry).toBe(geometry);
 
+    batch.destroy();
     geometry.destroy();
   });
 

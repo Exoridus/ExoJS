@@ -219,12 +219,17 @@ function meshPipelineCacheKey(blendMode: BlendModes, format: GPUTextureFormat, s
   return `${blendMode}:${format}:${stencil ? 's' : 'n'}`;
 }
 
-interface StaticGeometryCacheEntry {
+interface GeometryCacheEntry {
   readonly geometry: Geometry;
-  readonly vertexBuffer: GPUBuffer;
-  readonly indexBuffer: GPUBuffer;
-  readonly indexCount: number;
+  // Mutable: a GPUBuffer's size is fixed at creation, so geometry that grows on
+  // re-pack needs a fresh buffer. Steady-state mutation reuses these.
+  vertexBuffer: GPUBuffer;
+  indexBuffer: GPUBuffer;
+  indexCount: number;
   readonly disposeListener: () => void;
+  // The geometry version currently resident in the buffers; re-uploaded on
+  // mismatch so dynamic/stream geometry reaches the GPU via Geometry.invalidate().
+  version: number;
 }
 
 /**
@@ -325,7 +330,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   private readonly _drawCalls: MeshDrawCall[] = [];
   private readonly _pipelines = new Map<string, GPURenderPipeline>();
   private readonly _instancedPipelines = new Map<string, GPURenderPipeline>();
-  private readonly _staticGeometryCache = new Map<Geometry, StaticGeometryCacheEntry>();
+  private readonly _geometryCache = new Map<Geometry, GeometryCacheEntry>();
   private _textureBindGroups = new WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView }>();
   private readonly _customShaders = new Map<Material, CustomShaderResources>();
 
@@ -457,12 +462,6 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       throw new Error('RenderBatch custom materials are not supported on the WebGPU backend yet (v1 renders with the default mesh material).');
     }
 
-    const geometry = mesh.geometry;
-
-    if (geometry?.usage !== 'static') {
-      throw new Error('drawInstancedBatch requires a mesh with usage="static" geometry.');
-    }
-
     const texture = mesh.texture ?? TextureClass.white;
     const premultiplySample = backend.shouldPremultiplyTextureSample(texture);
 
@@ -473,7 +472,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
     this._writeInstancedUniformSlot(0, backend, premultiplySample);
 
-    const staticGeometry = this._getOrCreateStaticGeometryEntry(mesh);
+    const staticGeometry = this._getOrCreateGeometryEntry(mesh);
     const instanceNodeIndexBuffer = this._instancedNodeIndexBuffer;
 
     if (instanceNodeIndexBuffer === null) {
@@ -731,7 +730,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
             pass.setBindGroup(1, this._getTextureBindGroup(backend, dc.texture));
           }
 
-          const staticGeometry = this._getOrCreateStaticGeometryEntry(dc.mesh);
+          const staticGeometry = this._getOrCreateGeometryEntry(dc.mesh);
           const instanceNodeIndexBuffer = this._instancedNodeIndexBuffer;
 
           if (instanceNodeIndexBuffer === null) {
@@ -992,12 +991,12 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     this._instancedPipelines.clear();
     this._textureBindGroups = new WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView }>();
 
-    for (const entry of this._staticGeometryCache.values()) {
+    for (const entry of this._geometryCache.values()) {
       entry.vertexBuffer.destroy();
       entry.indexBuffer.destroy();
     }
 
-    this._staticGeometryCache.clear();
+    this._geometryCache.clear();
     this._vertexBuffer = null;
     this._indexBuffer = null;
     this._uniformBuffer = null;
@@ -1645,27 +1644,77 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     return descriptor;
   }
 
-  private _getOrCreateStaticGeometryEntry(mesh: Mesh): StaticGeometryCacheEntry {
+  private _getOrCreateGeometryEntry(mesh: Mesh): GeometryCacheEntry {
     const geometry = mesh.geometry;
 
-    if (geometry?.usage !== 'static') {
-      throw new Error('Static mesh batching requires Geometry with usage="static".');
+    if (geometry === null) {
+      throw new Error('Mesh geometry batching requires a mesh constructed from a Geometry.');
     }
 
-    const existing = this._staticGeometryCache.get(geometry);
+    const existing = this._geometryCache.get(geometry);
 
     if (existing !== undefined) {
+      if (existing.version !== geometry.version) {
+        this._repackGeometryEntry(existing, mesh);
+      }
+
       return existing;
     }
 
+    const packed = this._packGeometry(mesh);
+
+    const vertexBuffer = this._device!.createBuffer({
+      label: 'mesh:cached-geometry-vertex-buffer',
+      size: packed.vertexData.byteLength,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    });
+    const indexBuffer = this._device!.createBuffer({
+      label: 'mesh:cached-geometry-index-buffer',
+      size: packed.alignedIndexByteLen,
+      usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+    });
+
+    this._device!.queue.writeBuffer(vertexBuffer, 0, packed.vertexData, 0, packed.vertexData.byteLength);
+    this._device!.queue.writeBuffer(indexBuffer, 0, packed.indexData.buffer, packed.indexData.byteOffset, packed.alignedIndexByteLen);
+
+    const disposeListener = (): void => {
+      const entry = this._geometryCache.get(geometry);
+
+      if (entry === undefined) {
+        return;
+      }
+
+      entry.vertexBuffer.destroy();
+      entry.indexBuffer.destroy();
+      this._geometryCache.delete(geometry);
+    };
+
+    geometry._onDispose(disposeListener);
+
+    const created: GeometryCacheEntry = {
+      geometry,
+      vertexBuffer,
+      indexBuffer,
+      indexCount: mesh.indexCount,
+      disposeListener,
+      version: geometry.version,
+    };
+
+    this._geometryCache.set(geometry, created);
+
+    return created;
+  }
+
+  // Pack a mesh into fresh CPU-side vertex/index arrays in the shared layout.
+  // One extra index element is allocated when indexCount is odd so the GPU
+  // buffer and writeBuffer byte count round up to 4 without a buffer overread.
+  private _packGeometry(mesh: Mesh): { vertexData: ArrayBuffer; indexData: Uint16Array; alignedIndexByteLen: number } {
     const vertexData = new ArrayBuffer(mesh.vertexCount * vertexStrideBytes);
     const vertexFloatView = new Float32Array(vertexData);
     const vertexUintView = new Uint32Array(vertexData);
 
     this._writeMeshVerticesIntoBuffer(mesh, 0, vertexFloatView, vertexUintView);
 
-    // Allocate one extra element when indexCount is odd so the GPU buffer and
-    // writeBuffer byte count can be rounded up to 4 without a buffer overread.
     const indexData = new Uint16Array(mesh.indexCount + (mesh.indexCount & 1));
 
     if (mesh.indices !== null) {
@@ -1676,48 +1725,46 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       }
     }
 
-    const indexByteLen = mesh.indexCount * Uint16Array.BYTES_PER_ELEMENT;
-    const alignedIndexByteLen = (indexByteLen + 3) & ~3;
+    return {
+      vertexData,
+      indexData,
+      alignedIndexByteLen: (mesh.indexCount * Uint16Array.BYTES_PER_ELEMENT + 3) & ~3,
+    };
+  }
 
-    const vertexBuffer = this._device!.createBuffer({
-      label: 'mesh:static-geometry-vertex-buffer',
-      size: vertexData.byteLength,
-      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-    });
-    const indexBuffer = this._device!.createBuffer({
-      label: 'mesh:static-geometry-index-buffer',
-      size: alignedIndexByteLen,
-      usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
-    });
+  /**
+   * Re-upload a cached entry whose geometry has been mutated and
+   * {@link Geometry.invalidate}d. Buffers are recreated only when the packed
+   * data outgrows them, so steady-state mutation of a fixed-size geometry keeps
+   * the same `GPUBuffer` objects.
+   */
+  private _repackGeometryEntry(entry: GeometryCacheEntry, mesh: Mesh): void {
+    const device = this._device!;
+    const packed = this._packGeometry(mesh);
 
-    this._device!.queue.writeBuffer(vertexBuffer, 0, vertexData, 0, vertexData.byteLength);
-    this._device!.queue.writeBuffer(indexBuffer, 0, indexData.buffer, indexData.byteOffset, alignedIndexByteLen);
-
-    const disposeListener = (): void => {
-      const entry = this._staticGeometryCache.get(geometry);
-
-      if (entry === undefined) {
-        return;
-      }
-
+    if (packed.vertexData.byteLength > entry.vertexBuffer.size) {
       entry.vertexBuffer.destroy();
+      entry.vertexBuffer = device.createBuffer({
+        label: 'mesh:cached-geometry-vertex-buffer',
+        size: packed.vertexData.byteLength,
+        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      });
+    }
+
+    if (packed.alignedIndexByteLen > entry.indexBuffer.size) {
       entry.indexBuffer.destroy();
-      this._staticGeometryCache.delete(geometry);
-    };
+      entry.indexBuffer = device.createBuffer({
+        label: 'mesh:cached-geometry-index-buffer',
+        size: packed.alignedIndexByteLen,
+        usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+      });
+    }
 
-    geometry._onDispose(disposeListener);
+    device.queue.writeBuffer(entry.vertexBuffer, 0, packed.vertexData, 0, packed.vertexData.byteLength);
+    device.queue.writeBuffer(entry.indexBuffer, 0, packed.indexData.buffer, packed.indexData.byteOffset, packed.alignedIndexByteLen);
 
-    const created: StaticGeometryCacheEntry = {
-      geometry,
-      vertexBuffer,
-      indexBuffer,
-      indexCount: mesh.indexCount,
-      disposeListener,
-    };
-
-    this._staticGeometryCache.set(geometry, created);
-
-    return created;
+    entry.indexCount = mesh.indexCount;
+    entry.version = entry.geometry.version;
   }
 
   private _ensureVertexCapacity(vertexCount: number): void {
