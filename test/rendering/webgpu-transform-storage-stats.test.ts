@@ -8,7 +8,7 @@ import { WebGpuTransformStorage } from '#rendering/webgpu/WebGpuTransformStorage
 class ConsumingDrawable extends Drawable {
   public constructor(x: number, y: number, tint: Color) {
     super();
-    this.getLocalBounds().set(0, 0, 16, 16);
+    this._setLocalBounds(0, 0, 16, 16);
     this.setPosition(x, y);
     this.setTint(tint);
   }
@@ -18,7 +18,7 @@ class ConsumingDrawable extends Drawable {
 class NonConsumingDrawable extends Drawable {
   public constructor(x: number, y: number, tint: Color) {
     super();
-    this.getLocalBounds().set(0, 0, 16, 16);
+    this._setLocalBounds(0, 0, 16, 16);
     this.setPosition(x, y);
     this.setTint(tint);
   }

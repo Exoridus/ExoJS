@@ -114,7 +114,7 @@ const createStubRuntime = (): RenderBackend => {
 
 const createNode = (x: number, y: number, size = 16): Drawable => {
   const node = new Drawable();
-  node.getLocalBounds().set(0, 0, size, size);
+  node._setLocalBounds(0, 0, size, size);
   node.setPosition(x, y);
   return node;
 };

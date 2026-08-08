@@ -862,7 +862,7 @@
         },
         {
           "name": "getLocalBounds",
-          "signature": "getLocalBounds(): Rectangle",
+          "signature": "getLocalBounds(): ReadonlyRectangle",
           "signatureTokens": [
             {
               "text": "getLocalBounds",
@@ -881,13 +881,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "Rectangle",
+              "text": "ReadonlyRectangle",
               "kind": "type"
             }
           ],
           "params": [],
-          "returnType": "Rectangle",
-          "description": ""
+          "returnType": "ReadonlyRectangle",
+          "description": "Recomputed lazily on read, so it writes _localBounds directly rather than going through _setLocalBounds: an invalidating write inside a getter would re-dirty the node on every read."
         },
         {
           "name": "getNormals",

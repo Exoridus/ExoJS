@@ -293,8 +293,7 @@ export class BitmapText extends AbstractText {
       // contract like the non-empty path below, so a BitmapText going empty
       // does not leave a stale local bounds / un-dirtied revision behind for
       // culling, hit-testing, or an instruction-set cache of prior geometry.
-      this.getLocalBounds().set(0, 0, 0, 0);
-      this._invalidateBoundsCascade();
+      this._setLocalBounds(0, 0, 0, 0);
       this._updateOrigin();
       return;
     }
@@ -320,8 +319,7 @@ export class BitmapText extends AbstractText {
       if (py > maxY) maxY = py;
     }
     this._textBounds = { width: maxX, height: maxY };
-    this.getLocalBounds().set(0, 0, maxX, maxY);
-    this._invalidateBoundsCascade();
+    this._setLocalBounds(0, 0, maxX, maxY);
 
     // An anchor is a fraction of the bounds, so a node whose text just changed
     // width has to re-derive its origin — otherwise a centred label drifts left

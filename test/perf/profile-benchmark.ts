@@ -219,7 +219,7 @@ const makeRegularPolygon = (cx: number, cy: number, radius: number, sides: numbe
 
 const makeInteractiveDrawable = (x: number, y: number, size = 32): Drawable => {
   const d = new Drawable();
-  d.getLocalBounds().set(0, 0, size, size);
+  d._setLocalBounds(0, 0, size, size);
   d.setPosition(x, y);
   d.interactive = true;
   return d;
@@ -489,7 +489,7 @@ const scenarioResults: ProfileScenarioResult[] = [];
               lvl2.addChild(lvl3);
               for (let d = 0; d < 10; d++) {
                 const leaf = new Drawable();
-                leaf.getLocalBounds().set(0, 0, 16, 16);
+                leaf._setLocalBounds(0, 0, 16, 16);
                 leaf.setPosition(d * 20, c * 20);
                 lvl3.addChild(leaf);
               }

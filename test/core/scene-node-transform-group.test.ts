@@ -119,7 +119,7 @@ describe('own-transform dirty seam (_markOwnTransformDirty)', () => {
     const parent = new Container();
     const node = new Drawable();
 
-    node.getLocalBounds().set(0, 0, 16, 16);
+    node._setLocalBounds(0, 0, 16, 16);
     parent.addChild(node);
     parent.getBounds(); // settle bounds flags
 

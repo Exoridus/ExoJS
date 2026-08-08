@@ -1,4 +1,4 @@
-import type { Rectangle } from '#math/Rectangle';
+import type { ReadonlyRectangle } from '#math/Rectangle';
 import { Drawable } from '#rendering/Drawable';
 import type { Texture } from '#rendering/texture/Texture';
 import { TextureRegion } from '#rendering/texture/TextureRegion';
@@ -188,10 +188,14 @@ export class NineSliceSprite extends Drawable {
   // Bounds
   // -----------------------------------------------------------------------
 
-  public override getLocalBounds(): Rectangle {
-    const bounds = super.getLocalBounds();
-    bounds.set(0, 0, this._width, this._height);
-    return bounds;
+  /**
+   * Recomputed lazily on read from the current logical size, so it writes
+   * `_localBounds` directly instead of going through `_setLocalBounds`: an
+   * invalidating write inside a getter would re-dirty the node on every read.
+   * The size setters own the invalidation for this node.
+   */
+  public override getLocalBounds(): ReadonlyRectangle {
+    return this._localBounds.set(0, 0, this._width, this._height);
   }
 
   // -----------------------------------------------------------------------

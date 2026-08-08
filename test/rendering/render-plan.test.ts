@@ -16,14 +16,14 @@ import { Texture } from '#rendering/texture/Texture';
 class BoxDrawable extends Drawable {
   public constructor(public readonly id: string) {
     super();
-    this.getLocalBounds().set(0, 0, 16, 16);
+    this._setLocalBounds(0, 0, 16, 16);
   }
 }
 
 class CustomDrawable extends Drawable {
   public constructor() {
     super();
-    this.getLocalBounds().set(0, 0, 20, 20);
+    this._setLocalBounds(0, 0, 20, 20);
   }
 }
 

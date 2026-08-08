@@ -1,4 +1,5 @@
 import type { Matrix } from '#math/Matrix';
+import type { ReadonlyRectangle } from '#math/Rectangle';
 import { Rectangle } from '#math/Rectangle';
 
 /**
@@ -53,7 +54,7 @@ export class Bounds {
    * the rectangle's corners are transformed into the bounds' coordinate
    * space first (via `Rectangle.temp` — does not mutate `rectangle`).
    */
-  public addRect(rectangle: Rectangle, transform?: Matrix): this {
+  public addRect(rectangle: ReadonlyRectangle, transform?: Matrix): this {
     if (transform) {
       rectangle = rectangle.transform(transform, Rectangle.temp);
     }

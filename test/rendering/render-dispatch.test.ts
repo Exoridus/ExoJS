@@ -1,4 +1,4 @@
-﻿import { Container } from '#rendering/Container';
+import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import { Mesh } from '#rendering/mesh/Mesh';
 import type { RenderBackend } from '#rendering/RenderBackend';
@@ -134,7 +134,7 @@ describe('render dispatch', () => {
     const { runtime, draw } = createRuntime();
     const drawable = new Drawable();
 
-    drawable.getLocalBounds().set(0, 0, 16, 16);
+    drawable._setLocalBounds(0, 0, 16, 16);
     drawable.setPosition(1000, 1000);
     drawable.render(runtime);
 
@@ -146,7 +146,7 @@ describe('render dispatch', () => {
     const { runtime, draw } = createRuntime();
     const drawable = new Drawable();
 
-    drawable.getLocalBounds().set(0, 0, 16, 16);
+    drawable._setLocalBounds(0, 0, 16, 16);
     drawable.setPosition(1000, 1000);
     drawable.cullable = false;
     drawable.render(runtime);
@@ -160,7 +160,7 @@ describe('render dispatch', () => {
     const container = new Container();
     const child = new Drawable();
 
-    child.getLocalBounds().set(0, 0, 16, 16);
+    child._setLocalBounds(0, 0, 16, 16);
     container.setPosition(500, 500);
     container.addChild(child);
     container.render(runtime);
@@ -173,7 +173,7 @@ describe('render dispatch', () => {
     const { runtime, draw } = createRuntime();
     const drawable = new Drawable();
 
-    drawable.getLocalBounds().set(0, 0, 16, 16);
+    drawable._setLocalBounds(0, 0, 16, 16);
     drawable.setPosition(260, 100);
     runtime.resetStats();
     drawable.render(runtime);

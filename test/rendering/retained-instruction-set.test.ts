@@ -30,14 +30,14 @@ import { RetainedContainer } from '#rendering/RetainedContainer';
 class RecordableLeaf extends Drawable {
   public constructor(public readonly id = '') {
     super();
-    this.getLocalBounds().set(0, 0, 16, 16);
+    this._setLocalBounds(0, 0, 16, 16);
   }
 }
 
 class UnflaggedLeaf extends Drawable {
   public constructor() {
     super();
-    this.getLocalBounds().set(0, 0, 16, 16);
+    this._setLocalBounds(0, 0, 16, 16);
   }
 }
 
@@ -47,14 +47,14 @@ class MaterialLeaf extends Drawable {
 
   public constructor() {
     super();
-    this.getLocalBounds().set(0, 0, 16, 16);
+    this._setLocalBounds(0, 0, 16, 16);
   }
 }
 
 class UnregisteredLeaf extends Drawable {
   public constructor() {
     super();
-    this.getLocalBounds().set(0, 0, 16, 16);
+    this._setLocalBounds(0, 0, 16, 16);
   }
 }
 

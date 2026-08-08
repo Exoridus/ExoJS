@@ -16,6 +16,7 @@ import type { Line } from '#math/Line';
 import { Matrix } from '#math/Matrix';
 import { ObservableVector, type ObservableVectorOwner } from '#math/ObservableVector';
 import { Polygon } from '#math/Polygon';
+import type { ReadonlyRectangle } from '#math/Rectangle';
 import { Rectangle } from '#math/Rectangle';
 import { degreesToRadians, trimRotation } from '#math/utils';
 import { Vector } from '#math/Vector';
@@ -211,7 +212,16 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   protected _globalTransformVersion = 1;
   private _combinedParentVersion = -1;
   private _boundsBuiltAtVersion = -1;
-  private _localBounds = new Rectangle();
+  /**
+   * The node's local extent. `protected`, not `private`, for the ONE subclass
+   * pattern the invalidating writers below cannot serve: a subclass that
+   * recomputes its extent lazily from inside its own {@link getLocalBounds}
+   * override. Such an override must write this rectangle directly — routing it
+   * through {@link _setLocalBounds} would cascade an invalidation on every
+   * read, which re-dirties the node once per frame and defeats the retained
+   * static-subtree skip. Every other writer belongs in {@link _setLocalBounds}.
+   */
+  protected readonly _localBounds = new Rectangle();
   private _anchor = new ObservableVector(this, SceneNodeVectorChannel.Anchor, 0, 0);
   private _parentNode: Container | null = null;
   private _zIndex = 0;
@@ -511,8 +521,41 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     return this;
   }
 
-  public getLocalBounds(): Rectangle {
+  /**
+   * This node's untransformed extent in its own local coordinate space.
+   *
+   * Returns the LIVE internal rectangle, not a copy: it is read on hot paths
+   * ({@link updateBounds} re-reads it on every transform-dirty recompute, i.e.
+   * potentially every frame for a moving node), so copying it here would add a
+   * per-frame allocation. It is therefore typed as a {@link ReadonlyRectangle}
+   * — reads are unchanged, writes are rejected at compile time.
+   *
+   * Writing to it directly would skip the bounds/content invalidation the
+   * engine needs, leaving culling, hit-testing and retained render fragments on
+   * a stale extent. A custom {@link Drawable} that owns its own size sets it
+   * through {@link _setLocalBounds}, which writes and invalidates in one step.
+   */
+  public getLocalBounds(): ReadonlyRectangle {
     return this._localBounds;
+  }
+
+  /**
+   * Write this node's local extent and run the bounds invalidation the change
+   * implies — the node's own bounds flag, the ancestor bounds cascade, and the
+   * content-dirty stamp that keeps retained fragments from replaying the old
+   * extent.
+   *
+   * This is the only supported way to resize a node from outside
+   * {@link getLocalBounds}; the rectangle itself is handed out read-only so the
+   * invalidation cannot be forgotten. Built-in drawables (Sprite, Text,
+   * BitmapText, Mesh, …) and custom ones alike go through here.
+   * @internal
+   */
+  public _setLocalBounds(x: number, y: number, width: number, height: number): this {
+    this._localBounds.set(x, y, width, height);
+    this._invalidateBoundsCascade();
+
+    return this;
   }
 
   /**

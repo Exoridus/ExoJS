@@ -1008,7 +1008,7 @@
         },
         {
           "name": "getLocalBounds",
-          "signature": "getLocalBounds(): Rectangle",
+          "signature": "getLocalBounds(): ReadonlyRectangle",
           "signatureTokens": [
             {
               "text": "getLocalBounds",
@@ -1027,13 +1027,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "Rectangle",
+              "text": "ReadonlyRectangle",
               "kind": "type"
             }
           ],
           "params": [],
-          "returnType": "Rectangle",
-          "description": ""
+          "returnType": "ReadonlyRectangle",
+          "description": "This node's untransformed extent in its own local coordinate space. Returns the LIVE internal rectangle, not a copy: it is read on hot paths (updateBounds re-reads it on every transform-dirty recompute, i.e. potentially every frame for a moving node), so copying it here would add a per-frame allocation. It is therefore typed as a ReadonlyRectangle — reads are unchanged, writes are rejected at compile time. Writing to it directly would skip the bounds/content invalidation the engine needs, leaving culling, hit-testing and retained render fragments on a stale extent. A custom Drawable that owns its own size sets it through _setLocalBounds, which writes and invalidates in one step."
         },
         {
           "name": "getNormals",

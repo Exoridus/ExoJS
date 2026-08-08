@@ -15,7 +15,7 @@ import { SceneNode } from '#core/SceneNode';
 class BoundedNode extends SceneNode {
   public constructor() {
     super();
-    this.getLocalBounds().set(0, 0, 100, 40);
+    this._setLocalBounds(0, 0, 100, 40);
   }
 }
 

@@ -125,7 +125,7 @@ const buildStressTree = (targetCount: number, seed: number): StressTree => {
 
     const leaf = new Drawable();
 
-    leaf.getLocalBounds().set(0, 0, 16, 16);
+    leaf._setLocalBounds(0, 0, 16, 16);
     leaf.setPosition(WORLD_OX + rng() * WORLD_W, WORLD_OY + rng() * WORLD_H);
     parent.addChild(leaf);
     leaves.push(leaf);

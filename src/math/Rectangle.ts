@@ -20,6 +20,7 @@ import type { Line } from './Line';
 import type { Matrix } from './Matrix';
 import { ObservableVector, type ObservableVectorOwner } from './ObservableVector';
 import type { Polygon } from './Polygon';
+import type { RectangleLike } from './RectangleLike';
 import type { ShapeLike } from './ShapeLike';
 import { Size } from './Size';
 import { inRange } from './utils';
@@ -29,6 +30,42 @@ let temp: Rectangle | null = null;
 const tempPoint = new ObservableVector(null);
 
 /**
+ * Read-only view of a {@link Rectangle}: every accessor and non-mutating query
+ * a rectangle offers, with none of its writers.
+ *
+ * Returned by APIs that hand out a LIVE internal rectangle for zero allocation
+ * cost — {@link SceneNode.getLocalBounds} being the canonical one. Those
+ * rectangles are read on hot per-frame paths, so cloning them defensively would
+ * add a per-frame allocation; the view costs nothing at runtime and removes the
+ * write at the type level instead. Owners keep a real {@link Rectangle} and
+ * expose a dedicated writer that also runs whatever invalidation the write
+ * implies.
+ *
+ * Same idea as a `readonly T[]`: the object underneath is still the mutable
+ * one, the view just does not offer a way to change it.
+ */
+export interface ReadonlyRectangle extends Collidable {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+  readonly left: number;
+  readonly top: number;
+  readonly right: number;
+  readonly bottom: number;
+  equals(rectangle?: Partial<RectangleLike>): boolean;
+  clone(): Rectangle;
+  getBounds(): Rectangle;
+  containsRect(rect: Rectangle): boolean;
+  /**
+   * Unlike {@link Rectangle.transform}, `result` is REQUIRED here: the
+   * defaulted overload writes the transformed box back into the receiver, which
+   * a read-only view must not offer.
+   */
+  transform(matrix: Matrix, result: Rectangle): Rectangle;
+}
+
+/**
  * Mutable axis-aligned rectangle defined by a top-left origin `(x, y)` and
  * dimensions `(width, height)`. Implements {@link ShapeLike} with full SAT
  * collision response for rectangles and polygons, and specialised algorithms
@@ -36,8 +73,11 @@ const tempPoint = new ObservableVector(null);
  *
  * `Rectangle.temp` is a shared scratch instance. Edge normals are lazily
  * computed and cached; they are invalidated when position or size mutates.
+ *
+ * See {@link ReadonlyRectangle} for the read-only view engine APIs hand out
+ * when they return a live internal rectangle.
  */
-export class Rectangle implements ShapeLike, ObservableVectorOwner {
+export class Rectangle implements ShapeLike, ObservableVectorOwner, ReadonlyRectangle {
   public readonly collisionType: CollisionType = CollisionType.Rectangle;
 
   private readonly _position: ObservableVector;

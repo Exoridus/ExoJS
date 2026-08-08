@@ -45,7 +45,7 @@ const nodeIndexWord = 5;
 class ByteLeaf extends Drawable {
   public constructor(public readonly id = '') {
     super();
-    this.getLocalBounds().set(0, 0, 16, 16);
+    this._setLocalBounds(0, 0, 16, 16);
   }
 }
 

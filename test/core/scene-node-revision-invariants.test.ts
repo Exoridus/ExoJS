@@ -51,7 +51,7 @@ const containerCase = (name: string, expects: DirtyKind, mutate: (node: Containe
 // height) would be no-ops against the default fixture. Give those cases a
 // node with non-empty local bounds so the mutation actually changes a value.
 const withLocalBounds = <T extends Drawable | Container>(node: T): T => {
-  node.getLocalBounds().set(0, 0, 16, 16);
+  node._setLocalBounds(0, 0, 16, 16);
 
   return node;
 };
