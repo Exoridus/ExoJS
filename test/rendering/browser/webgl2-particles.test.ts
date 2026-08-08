@@ -24,7 +24,7 @@ import type { RenderNode } from '#rendering/RenderNode';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
-import { particlesExtension, ParticleSystem } from '../../../packages/exojs-particles/src/index';
+import { particlesExtension, ParticleSystem, RibbonParticles } from '../../../packages/exojs-particles/src/index';
 import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
@@ -228,6 +228,93 @@ describe('WebGL2 ParticleSystem — solid color', () => {
 
       expectPixelNear(readWebGl2Pixel(backend, 32, 32), [0, 255, 0, 255]);
       expectPixelNear(readWebGl2Pixel(backend, 4, 4), [0, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+});
+
+describe('WebGL2 ParticleSystem — ribbon', () => {
+  test('a chain of particles renders as one connected band', async () => {
+    const backend = await createBackend();
+    const texture = createSolidTexture('#ffffff', 16, 16);
+    const root = new Container();
+    // The ribbon mode ships its own shader pair, which only a real backend ever
+    // compiles — a broken one draws nothing and fails the interior assertions
+    // below rather than passing silently in the node lanes.
+    const system = new ParticleSystem(texture, { capacity: 8, render: new RibbonParticles({ width: 12 }) });
+
+    try {
+      // Three particles on a horizontal line, system-local. The strip expands
+      // ±6px around it, so at (32, 32) it covers x 16..48, y 26..38.
+      for (const x of [-16, 0, 16]) {
+        const slot = system.spawn();
+
+        system.posX[slot] = x;
+        system.posY[slot] = 0;
+        system.scaleX[slot] = 1;
+        system.scaleY[slot] = 1;
+        system.color[slot] = new Color(0, 255, 0).toRgba();
+        system.lifetime[slot] = 1;
+      }
+
+      system.setPosition(32, 32);
+      root.addChild(system);
+
+      render(backend, root);
+
+      // Along the band: both ends and the middle are filled, which a
+      // strip-that-drew-only-one-segment would not satisfy.
+      expectPixelNear(readWebGl2Pixel(backend, 20, 32), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 44, 32), [0, 255, 0, 255]);
+      // Across it: the band is a band, not the whole column.
+      expectPixelNear(readWebGl2Pixel(backend, 32, 12), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 52), [0, 0, 0, 255]);
+      // Past the ends of the path, and a safely empty corner.
+      expectPixelNear(readWebGl2Pixel(backend, 58, 32), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 4, 4), [0, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('the strip tapers with the per-particle scale', async () => {
+    const backend = await createBackend();
+    const texture = createSolidTexture('#ffffff', 16, 16);
+    const root = new Container();
+    const system = new ParticleSystem(texture, { capacity: 8, render: new RibbonParticles({ width: 20 }) });
+
+    try {
+      // Half-width runs from 10px at the head down to 1px at the tail, which is
+      // what `ScaleOverLifetime` drives in a real scene.
+      const scales = [1, 0.1];
+
+      for (let i = 0; i < scales.length; i++) {
+        const slot = system.spawn();
+
+        system.posX[slot] = i === 0 ? -16 : 16;
+        system.posY[slot] = 0;
+        system.scaleX[slot] = scales[i]!;
+        system.scaleY[slot] = 1;
+        system.color[slot] = new Color(0, 255, 0).toRgba();
+        system.lifetime[slot] = 1;
+      }
+
+      system.setPosition(32, 32);
+      root.addChild(system);
+
+      render(backend, root);
+
+      // Wide end: 8px off the centre line is still inside the band.
+      expectPixelNear(readWebGl2Pixel(backend, 17, 25), [0, 255, 0, 255]);
+      // Narrow end: the same offset is outside it, while the centre is not.
+      expectPixelNear(readWebGl2Pixel(backend, 47, 25), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 47, 32), [0, 255, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
