@@ -47,7 +47,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The shape one particle draws, in system-local units before the per-particle scale and rotation are applied. Read once, at construction: mutating it afterwards does not re-bake the shader. Its position attribute (a_position/position) supplies the vertex positions and its texcoord attribute (a_texcoord/texcoord/a_uv/uv) the UVs. See MeshParticles for what a geometry without the latter renders as."
+          "description": "The shape one particle draws, in system-local units before the per-particle scale and rotation are applied. Its position attribute (a_position/position) supplies the vertex positions and its texcoord attribute (a_texcoord/texcoord/a_uv/uv) the UVs. See MeshParticles for what a geometry without the latter renders as, and for how to make a mutation take effect."
         }
       ],
       "paragraphs": [],

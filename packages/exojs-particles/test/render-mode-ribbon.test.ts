@@ -21,7 +21,7 @@ describe('RibbonParticles', () => {
 
     expect(mode.instanced).toBe(false);
     expect(mode.gpuEligible).toBe(false);
-    expect(mode.geometry.topology).toBe('triangle-strip');
+    expect(mode.dataLayout.topology).toBe('triangle-strip');
   });
 
   it('emits two vertices per particle', () => {

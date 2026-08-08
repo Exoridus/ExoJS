@@ -6,11 +6,11 @@
   "subsystem": "particles",
   "importPath": "@codexo/exojs-particles",
   "tier": "stable",
-  "memberCount": 12,
+  "memberCount": 13,
   "counts": {
     "constructors": 1,
     "methods": 5,
-    "properties": 6,
+    "properties": 7,
     "events": 0
   },
   "sections": [
@@ -295,11 +295,11 @@
       "title": "Properties",
       "members": [
         {
-          "name": "geometry",
-          "signature": "geometry: Geometry",
+          "name": "dataLayout",
+          "signature": "dataLayout: ParticleBufferLayout",
           "signatureTokens": [
             {
-              "text": "geometry",
+              "text": "dataLayout",
               "kind": "name"
             },
             {
@@ -307,13 +307,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "Geometry",
+              "text": "ParticleBufferLayout",
               "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "The quad's four corners are derived in the shader — from gl_VertexID on WebGL2 and from vertex_index on WebGPU — so this geometry describes the per-instance layout and carries a zero-filled placeholder large enough for the four corner slots the index buffer addresses."
+          "description": "The quad's four corners are derived in the shader — from gl_VertexID on WebGL2 and from vertex_index on WebGPU — so this mode declares no per-vertex geometry and its layout carries the indices that address those four corner slots."
         },
         {
           "name": "gpuEligible",
@@ -355,7 +355,36 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Draw model. true issues an instanced draw against geometry; false a plain draw over the built vertex buffer. Declared here because Geometry carries topology but has no instancing concept."
+          "description": "Draw model. true issues an instanced draw, false a plain draw over the built vertex buffer. Declared here because a layout carries topology but has no instancing concept."
+        },
+        {
+          "name": "vertexGeometry",
+          "signature": "vertexGeometry: Geometry | null",
+          "signatureTokens": [
+            {
+              "text": "vertexGeometry",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Geometry",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fixed per-vertex geometry this mode instances, or null when it derives its vertices in the shader from the vertex index — which is what QuadParticles and RibbonParticles do. When set, it supplies the topology, index list and index count for the draw in place of dataLayout's, and the executors bind its vertexData as a second vertex buffer stepping per vertex beside the per-instance one. Only meaningful on an instanced mode: without instancing both buffers would step per vertex and no draw is expressible. Attribute names must not collide with dataLayout's, since both sets bind into the same shader. Mutating the geometry is picked up on the next draw through its version, so invalidate() after an in-place edit is enough to reach the GPU."
         },
         {
           "name": "count",

@@ -2,7 +2,7 @@ import { Geometry } from '@codexo/exojs';
 import { describe, expect, it } from 'vitest';
 
 import { ParticleSystem } from '../src/ParticleSystem';
-import { MeshParticles } from '../src/renderModes/MeshParticles';
+import { MeshParticles, meshParticleWgsl } from '../src/renderModes/MeshParticles';
 import { QuadParticles } from '../src/renderModes/QuadParticles';
 
 /** A right triangle with the right angle top-left, UVs spanning its bounds. */
@@ -49,7 +49,7 @@ describe('MeshParticles', () => {
 
     expect(mode.instanced).toBe(true);
     expect(mode.gpuEligible).toBe(true);
-    expect(mode.geometry.topology).toBe('triangle-list');
+    expect(mode.vertexGeometry.topology).toBe('triangle-list');
   });
 
   it('keeps the supplied geometry as its mesh and draws one instance of it', () => {
@@ -58,23 +58,23 @@ describe('MeshParticles', () => {
 
     expect(mode.mesh).toBe(mesh);
     // Non-indexed: the draw covers the mesh's own vertices per instance.
-    expect(mode.geometry.indices).toBeNull();
-    expect(mode.geometry.indexCount).toBe(mesh.vertexCount);
+    expect(mode.vertexGeometry.indices).toBeNull();
+    expect(mode.vertexGeometry.indexCount).toBe(mesh.vertexCount);
   });
 
   it('adopts the mesh index buffer when it has one', () => {
     const mesh = makeTriangle(true);
     const mode = new MeshParticles({ geometry: mesh });
 
-    expect(mode.geometry.indices).toBe(mesh.indices);
-    expect(mode.geometry.indexCount).toBe(3);
+    expect(mode.vertexGeometry.indices).toBe(mesh.indices);
+    expect(mode.vertexGeometry.indexCount).toBe(3);
   });
 
   it('declares the shared 40-byte per-instance layout rather than the mesh layout', () => {
     const mode = new MeshParticles({ geometry: makeTriangle() });
 
-    expect(mode.geometry.stride).toBe(40);
-    expect(mode.geometry.attributes.map(attribute => attribute.name)).toEqual(['a_position', 'a_scale', 'a_rotation', 'a_color', 'a_uvMin', 'a_uvMax']);
+    expect(mode.dataLayout.stride).toBe(40);
+    expect(mode.dataLayout.attributes.map(attribute => attribute.name)).toEqual(['a_position', 'a_scale', 'a_rotation', 'a_color', 'a_uvMin', 'a_uvMax']);
   });
 
   it('builds one 40-byte instance per live particle', () => {
@@ -117,30 +117,50 @@ describe('MeshParticles', () => {
     expect(mode.count).toBe(0);
   });
 
-  it('bakes the mesh vertices into both shader sources', () => {
+  it('normalises the mesh into a per-vertex geometry of (x, y, u, v)', () => {
     const mode = new MeshParticles({ geometry: makeTriangle() });
-    const shader = mode.material.shader;
+    const table = mode.vertexGeometry.vertexData as Float32Array;
 
-    expect(shader.glsl?.vertex).toContain('const vec4 c_meshVertices[3]');
-    expect(shader.glsl?.vertex).toContain('vec4(16.0, -16.0, 1.0, 0.0)');
-    expect(shader.wgsl).toContain('array<vec4<f32>, 3>');
-    expect(shader.wgsl).toContain('vec4<f32>(16.0, -16.0, 1.0, 0.0)');
+    expect(mode.vertexGeometry.stride).toBe(16);
+    expect(mode.vertexGeometry.attributes.map(attribute => attribute.name)).toEqual(['a_meshPosition', 'a_meshTexcoord']);
+    // First two vertices of the triangle, each as position then UV.
+    expect(Array.from(table.subarray(0, 8))).toEqual([-16, -16, 0, 0, 16, -16, 1, 0]);
+  });
+
+  it('carries no geometry-dependent literals in its shader source', () => {
+    // A constant rather than a function of the mesh is what lets any number of
+    // modes drawing different shapes share one compiled program per backend.
+    // The old baked table declared a fixed-size array of vertex literals.
+    expect(meshParticleWgsl).not.toContain('array<vec4<f32>,');
+    expect(meshParticleWgsl).toContain('@location(6) meshPosition: vec2<f32>');
+    expect(meshParticleWgsl).toContain('@location(7) meshTexcoord: vec2<f32>');
   });
 
   it('mixes the mesh UV across the particle frame rather than the whole texture', () => {
-    const mode = new MeshParticles({ geometry: makeTriangle() });
-    const shader = mode.material.shader;
-
-    expect(shader.glsl?.vertex).toContain('mix(a_uvMin, a_uvMax, meshVertex.zw)');
-    expect(shader.wgsl).toContain('mix(input.uvMin, input.uvMax, meshVertex.zw)');
+    expect(meshParticleWgsl).toContain('mix(input.uvMin, input.uvMax, input.meshTexcoord)');
   });
 
-  it('bakes zero UVs for a mesh without a texcoord attribute', () => {
+  it('carries zero UVs for a mesh without a texcoord attribute', () => {
     const mode = new MeshParticles({ geometry: makeUntexturedTriangle() });
+    const table = mode.vertexGeometry.vertexData as Float32Array;
 
     // Every vertex carries UV (0, 0), so the mix collapses to uvMin and the
     // mesh samples one texel of its frame.
-    expect(mode.material.shader.glsl?.vertex).toContain('vec4(-4.0, -4.0, 0.0, 0.0)');
-    expect(mode.material.shader.glsl?.vertex).toContain('vec4(4.0, -4.0, 0.0, 0.0)');
+    expect(Array.from(table.subarray(0, 8))).toEqual([-4, -4, 0, 0, 4, -4, 0, 0]);
+  });
+
+  it('re-reads the mesh after an in-place mutation', () => {
+    const mesh = makeTriangle();
+    const mode = new MeshParticles({ geometry: mesh });
+    const system = new ParticleSystem({ capacity: 8 });
+    const before = mode.vertexGeometry.version;
+
+    (mesh.vertexData as Float32Array)[0] = 32;
+    mesh.invalidate();
+    mode.build(system);
+
+    expect((mode.vertexGeometry.vertexData as Float32Array)[0]).toBe(32);
+    // A bumped version is what tells the executors to re-upload the buffer.
+    expect(mode.vertexGeometry.version).toBeGreaterThan(before);
   });
 });

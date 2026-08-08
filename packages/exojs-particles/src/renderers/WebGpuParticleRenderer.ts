@@ -1,6 +1,6 @@
 /// <reference types="@webgpu/types" />
 
-import type { Geometry, GeometryAttribute, Material } from '@codexo/exojs';
+import type { GeometryAttribute, Material } from '@codexo/exojs';
 import type { BlendModes } from '@codexo/exojs/renderer-sdk';
 import type { WebGpuBackend } from '@codexo/exojs/renderer-sdk';
 import { DataTexture } from '@codexo/exojs/renderer-sdk';
@@ -10,6 +10,7 @@ import { getWebGpuBlendState } from '@codexo/exojs/renderer-sdk';
 import { stencilContentDepthStencilState } from '@codexo/exojs/renderer-sdk';
 
 import type { ParticleSystem } from '#ParticleSystem';
+import { assertVertexGeometryCompatible } from '#renderModes/ParticleBufferLayout';
 import type { ParticleRenderMode } from '#renderModes/ParticleRenderMode';
 
 const uniformByteLength = 176;
@@ -58,13 +59,19 @@ const resolveVertexFormat = (attribute: GeometryAttribute): GPUVertexFormat => {
 
 /**
  * The WebGPU-side realisation of one render mode: its compiled shader module,
- * the vertex layout its geometry declares, its index buffer and the vertex
- * buffer its built data is uploaded into. Cached per {@link Material} — the
- * mode's material is its stable identity, and its `destroy()` evicts the entry.
+ * the vertex layouts it declares, its index buffer and the buffers its data is
+ * uploaded into. Cached per {@link Material} — the mode's material is its
+ * stable identity, and its `destroy()` evicts the entry.
  */
 interface ParticleModeResources {
   readonly shaderModule: GPUShaderModule;
   readonly vertexLayout: GPUVertexBufferLayout;
+  /** Per-vertex layout for a mode that supplies its own geometry, else null. */
+  readonly meshLayout: GPUVertexBufferLayout | null;
+  /** Buffer behind {@link meshLayout}. */
+  meshBuffer: GPUBuffer | null;
+  /** Geometry version last written into {@link meshBuffer}; -1 when there is none. */
+  meshVersion: number;
   readonly stride: number;
   readonly topology: GPUPrimitiveTopology;
   readonly stripIndexFormat: GPUIndexFormat | undefined;
@@ -93,16 +100,18 @@ interface WebGpuParticleDrawCall {
  * uniforms (projection, transform, local bounds, texture flags), uploads what
  * the mode built and issues the draw the mode declares.
  *
- * Everything mode-specific is read off the core `Geometry`/`Material` types
+ * Everything mode-specific is read off the mode's `dataLayout`/`Material`
  * rather than hard-coded: the render pipeline's vertex layout comes from the
- * geometry's attributes and stride, its primitive from the geometry's topology,
- * its shader from the material's WGSL, and the draw is instanced or plain per
- * `ParticleRenderMode.instanced`.
+ * layout's attributes and stride, its shader from the material's WGSL, and the
+ * draw is instanced or plain per `ParticleRenderMode.instanced`. A mode
+ * declaring a `vertexGeometry` gets a second buffer stepping per vertex, and
+ * that geometry supplies the topology and indices instead.
  *
  * WGSL binds vertex inputs by number rather than by name, and `GeometryAttribute`
  * carries no location, so the binding rule is positional: `@location(i)` is
- * `geometry.attributes[i]`. This is the WebGPU counterpart of the WebGL2
- * renderer's name lookup through the compiled program.
+ * `dataLayout.attributes[i]`, with any per-vertex attributes taking the
+ * locations after them. This is the WebGPU counterpart of the WebGL2 renderer's
+ * name lookup through the compiled program.
  *
  * A system running in GPU compute mode bypasses the mode's builder entirely:
  * its compute pipeline has already written the interleaved instance data
@@ -273,6 +282,11 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
       pass.setBindGroup(1, textureBindGroup);
       pass.setVertexBuffer(0, vertexBuffer);
 
+      if (resources.meshBuffer !== null) {
+        this._syncMeshBuffer(device, resources, mode);
+        pass.setVertexBuffer(1, resources.meshBuffer);
+      }
+
       // `mode.count` is instance count for an instanced mode and vertex count
       // otherwise, so it drives exactly one of the two draw arguments.
       const instanceCount = resources.instanced ? drawCount : 1;
@@ -412,8 +426,15 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
       throw new Error('Particle material shader has no `wgsl` source; cannot render through the WebGPU backend.');
     }
 
-    const geometry: Geometry = mode.geometry;
-    const indices = geometry.indices;
+    const layout = mode.dataLayout;
+    const meshGeometry = mode.vertexGeometry;
+
+    assertVertexGeometryCompatible(layout, meshGeometry, mode.instanced, mode.constructor.name);
+
+    // A mode with its own per-vertex geometry draws that geometry's topology
+    // and indices; one without derives its vertices in the shader and carries
+    // both on its layout instead.
+    const indices = meshGeometry !== null ? meshGeometry.indices : layout.indices;
     let indexBuffer: GPUBuffer | null = null;
 
     if (indices !== null) {
@@ -430,30 +451,59 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
       device.queue.writeBuffer(indexBuffer, 0, indexData.buffer, indexData.byteOffset, indexData.byteLength);
     }
 
-    const topology: GPUPrimitiveTopology = geometry.topology;
+    const topology: GPUPrimitiveTopology = meshGeometry !== null ? meshGeometry.topology : layout.topology;
     const indexFormat: GPUIndexFormat = indices instanceof Uint32Array ? 'uint32' : 'uint16';
     const indexedStrip = topology === 'triangle-strip' && indexBuffer !== null;
+
+    // Instance attributes keep locations 0..n-1 so the compute-emitted layout
+    // and the modes that derive their vertices in the shader stay untouched;
+    // the mesh's own attributes take the locations after them.
+    let meshBuffer: GPUBuffer | null = null;
+    let meshLayout: GPUVertexBufferLayout | null = null;
+
+    if (meshGeometry !== null) {
+      const meshData = meshGeometry.vertexData;
+
+      meshLayout = {
+        arrayStride: meshGeometry.stride,
+        stepMode: 'vertex',
+        attributes: meshGeometry.attributes.map((attribute, index) => ({
+          shaderLocation: layout.attributes.length + index,
+          offset: attribute.offset,
+          format: resolveVertexFormat(attribute),
+        })),
+      };
+
+      meshBuffer = device.createBuffer({
+        size: Math.ceil(meshData.byteLength / 4) * 4,
+        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      });
+      device.queue.writeBuffer(meshBuffer, 0, meshData instanceof Float32Array ? meshData.buffer : meshData, 0, meshData.byteLength);
+    }
 
     return {
       shaderModule: device.createShaderModule({ code: wgsl }),
       vertexLayout: {
-        arrayStride: geometry.stride,
+        arrayStride: layout.stride,
         // Per-instance for an instanced mode, per-vertex otherwise — the same
         // interleaved layout serves both draw models.
         stepMode: mode.instanced ? 'instance' : 'vertex',
-        attributes: geometry.attributes.map((attribute, location) => ({
+        attributes: layout.attributes.map((attribute, location) => ({
           shaderLocation: location,
           offset: attribute.offset,
           format: resolveVertexFormat(attribute),
         })),
       },
-      stride: geometry.stride,
+      meshLayout,
+      meshBuffer,
+      meshVersion: meshGeometry?.version ?? -1,
+      stride: layout.stride,
       topology,
       // Required by WebGPU for indexed strip draws, and forbidden otherwise.
       stripIndexFormat: indexedStrip ? indexFormat : undefined,
       indexBuffer,
       indexFormat,
-      indexCount: geometry.indexCount,
+      indexCount: meshGeometry !== null ? meshGeometry.indexCount : layout.indexCount,
       instanced: mode.instanced,
       pipelines: new Map<string, GPURenderPipeline>(),
       vertexBuffer: null,
@@ -461,11 +511,30 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     };
   }
 
+  /**
+   * Re-write the mode's own geometry only when it was mutated since the last
+   * draw. One integer comparison keeps an unchanging mesh off the bus.
+   */
+  private _syncMeshBuffer(device: GPUDevice, resources: ParticleModeResources, mode: ParticleRenderMode): void {
+    const meshGeometry = mode.vertexGeometry;
+
+    if (meshGeometry === null || resources.meshBuffer === null || resources.meshVersion === meshGeometry.version) {
+      return;
+    }
+
+    const meshData = meshGeometry.vertexData;
+
+    resources.meshVersion = meshGeometry.version;
+    device.queue.writeBuffer(resources.meshBuffer, 0, meshData instanceof Float32Array ? meshData.buffer : meshData, 0, meshData.byteLength);
+  }
+
   private _destroyResources(resources: ParticleModeResources): void {
     resources.vertexBuffer?.destroy();
+    resources.meshBuffer?.destroy();
     resources.indexBuffer?.destroy();
     resources.pipelines.clear();
     resources.vertexBuffer = null;
+    resources.meshBuffer = null;
     resources.vertexBufferByteLength = 0;
   }
 
@@ -584,7 +653,9 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
       vertex: {
         module: resources.shaderModule,
         entryPoint: 'vertexMain',
-        buffers: [resources.vertexLayout],
+        // Instance data stays at slot 0: a GPU-mode system binds its compute
+        // pipeline's own instance buffer straight into it.
+        buffers: resources.meshLayout !== null ? [resources.vertexLayout, resources.meshLayout] : [resources.vertexLayout],
       },
       fragment: {
         module: resources.shaderModule,
