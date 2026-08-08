@@ -867,6 +867,12 @@ export class WebGl2Backend implements RenderBackend {
     return this;
   }
 
+  public trimRenderTexturePool(): this {
+    this._renderTexturePool.destroy();
+
+    return this;
+  }
+
   public setView(view: View | null): this {
     // Only flush the open batch when the view actually changes. The unconditional
     // flush forced one draw call per render() call (each render() re-applies the
