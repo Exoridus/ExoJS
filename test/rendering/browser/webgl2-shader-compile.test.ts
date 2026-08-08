@@ -16,18 +16,11 @@
 // Core shaders plus the extension packages' own — the particle stage ships
 // from `@codexo/exojs-particles`, so a glob over `src/` alone would leave the
 // only GLSL outside core uncompiled here.
-const shaderModules = {
-  ...(import.meta.glob('/src/rendering/webgl2/glsl/*.{vert,frag}', {
-    query: '?raw',
-    import: 'default',
-    eager: true,
-  }) as Record<string, string>),
-  ...(import.meta.glob('/packages/exojs-*/src/**/glsl/*.{vert,frag}', {
-    query: '?raw',
-    import: 'default',
-    eager: true,
-  }) as Record<string, string>),
-};
+const shaderModules = import.meta.glob(['/src/rendering/webgl2/glsl/*.{vert,frag}', '/packages/exojs-*/src/**/glsl/*.{vert,frag}'], {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>;
 
 type ShaderStage = 'vertex' | 'fragment';
 
