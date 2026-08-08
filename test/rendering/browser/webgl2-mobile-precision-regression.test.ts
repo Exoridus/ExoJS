@@ -2,7 +2,7 @@
  * WebGL2 mobile-GLES precision regression guard for the highp fix.
  *
  * The vertex stages that do position/UV math (`sprite.vert`, `mesh.vert`,
- * `particle.vert`, `text.vert`, the compositor stages, and the inlined
+ * the particles package's `particle.vert`, `text.vert`, the compositor stages, and the inlined
  * nine-slice/repeating sources) must declare `precision highp float`. Real
  * mobile GPUs (Mali/PowerVR) honour a reduced qualifier as genuine IEEE-754
  * half-float (5 exponent + 10 mantissa bits): near ±40k the ULP is 32 world
@@ -178,7 +178,9 @@ const isFp16ReportingBackend = (renderer: string): boolean => /swiftshader|angle
 const positionVertStages = {
   'sprite.vert': () => import('../../../src/rendering/webgl2/glsl/sprite.vert?raw'),
   'mesh.vert': () => import('../../../src/rendering/webgl2/glsl/mesh.vert?raw'),
-  'particle.vert': () => import('../../../src/rendering/webgl2/glsl/particle.vert?raw'),
+  // Ships from `@codexo/exojs-particles`, not core — core carries no particle
+  // stage of its own, so guarding a copy under `src/` would guard nothing.
+  'particle.vert': () => import('../../../packages/exojs-particles/src/renderers/glsl/particle.vert?raw'),
   'text.vert': () => import('../../../src/rendering/webgl2/glsl/text.vert?raw'),
   'mask-compose.vert': () => import('../../../src/rendering/webgl2/glsl/mask-compose.vert?raw'),
   'backdrop-blend.vert': () => import('../../../src/rendering/webgl2/glsl/backdrop-blend.vert?raw'),

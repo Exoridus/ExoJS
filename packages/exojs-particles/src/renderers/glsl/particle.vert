@@ -1,5 +1,5 @@
 #version 300 es
-precision lowp float;
+precision highp float;
 precision lowp int;
 
 // Per-instance attributes (one entry per particle, 40 bytes total).

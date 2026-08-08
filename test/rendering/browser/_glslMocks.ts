@@ -29,8 +29,6 @@ vi.mock('#rendering/webgl2/glsl/backdrop-blend.vert', async () => ({
 }));
 vi.mock('#rendering/webgl2/glsl/mesh.frag', async () => ({ default: (await import('../../../src/rendering/webgl2/glsl/mesh.frag?raw')).default }));
 vi.mock('#rendering/webgl2/glsl/mesh.vert', async () => ({ default: (await import('../../../src/rendering/webgl2/glsl/mesh.vert?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/particle.frag', async () => ({ default: (await import('../../../src/rendering/webgl2/glsl/particle.frag?raw')).default }));
-vi.mock('#rendering/webgl2/glsl/particle.vert', async () => ({ default: (await import('../../../src/rendering/webgl2/glsl/particle.vert?raw')).default }));
 vi.mock('#rendering/webgl2/glsl/sprite.frag', async () => ({ default: (await import('../../../src/rendering/webgl2/glsl/sprite.frag?raw')).default }));
 vi.mock('#rendering/webgl2/glsl/sprite.vert', async () => ({ default: (await import('../../../src/rendering/webgl2/glsl/sprite.vert?raw')).default }));
 vi.mock('#rendering/webgl2/glsl/stencil-clip.frag', async () => ({
