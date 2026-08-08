@@ -1,6 +1,6 @@
 {
   "title": "Time",
-  "description": "Time-duration value object stored internally in milliseconds. Provides unit-converted accessors (`seconds`, `minutes`, `hours`) and arithmetic helpers (Time.add, Time.subtract, Time.addTime). Constants on the class hold canonical durations: Time.zero, Time.oneSecond, Time.oneMinute, Time.oneHour, plus the TimeInterval multipliers used by the `factor` parameter. `Time.temp` is a shared scratch instance for hot paths — do not store the reference across calls.",
+  "description": "Time-duration value object stored internally in milliseconds. Provides unit-converted accessors (`seconds`, `minutes`, `hours`) and arithmetic helpers (Time.add, Time.subtract, Time.addTime). Constants on the class hold canonical durations: Time.zero, Time.oneSecond, Time.oneMinute, Time.oneHour, plus the TimeInterval multipliers used by the `factor` parameter. Every one of them is `Object.freeze`d — they are shared process-wide, so a mutating call on one (e.g. `Time.zero.add(1)`) throws instead of silently corrupting the shared instance for every other caller.",
   "symbol": "Time",
   "kind": "class",
   "subsystem": "core",
@@ -20,8 +20,7 @@
       "members": [],
       "paragraphs": [
         "Time-duration value object stored internally in milliseconds. Provides unit-converted accessors (`seconds`, `minutes`, `hours`) and arithmetic helpers (Time.add, Time.subtract, Time.addTime).",
-        "Constants on the class hold canonical durations: Time.zero, Time.oneSecond, Time.oneMinute, Time.oneHour, plus the TimeInterval multipliers used by the `factor` parameter.",
-        "`Time.temp` is a shared scratch instance for hot paths — do not store the reference across calls."
+        "Constants on the class hold canonical durations: Time.zero, Time.oneSecond, Time.oneMinute, Time.oneHour, plus the TimeInterval multipliers used by the `factor` parameter. Every one of them is `Object.freeze`d — they are shared process-wide, so a mutating call on one (e.g. `Time.zero.add(1)`) throws instead of silently corrupting the shared instance for every other caller."
       ],
       "importLine": "import { Time } from '@codexo/exojs'",
       "sourceLink": null
@@ -1159,7 +1158,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Canonical one-hour duration. Frozen — mutating methods throw instead of corrupting the shared instance."
         },
         {
           "name": "oneMillisecond",
@@ -1180,7 +1179,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Canonical one-millisecond duration. Frozen — mutating methods throw instead of corrupting the shared instance."
         },
         {
           "name": "oneMinute",
@@ -1201,7 +1200,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Canonical one-minute duration. Frozen — mutating methods throw instead of corrupting the shared instance."
         },
         {
           "name": "oneSecond",
@@ -1222,7 +1221,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Canonical one-second duration. Frozen — mutating methods throw instead of corrupting the shared instance."
         },
         {
           "name": "seconds",
@@ -1264,7 +1263,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Canonical zero duration. Frozen — mutating methods throw instead of corrupting the shared instance."
         },
         {
           "name": "hours",

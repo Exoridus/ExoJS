@@ -61,7 +61,7 @@ const makeAttachedScene = (): { scene: Scene; scope: SceneScope<void> } => {
 // drives `scene.systems` in practice.
 const tick = (scene: Scene): void => {
   scene.systems._beginFrame();
-  scene.systems._update(Time.temp.set(16));
+  scene.systems._update(new Time(16));
   scene.systems._endFrame();
 };
 

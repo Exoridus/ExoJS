@@ -7,7 +7,7 @@ import { Time } from '#core/Time';
 // Ordering semantics (order/before/after) are shared with the other phases and
 // covered in system-registry.test.ts; these specs cover the phase itself.
 
-const delta = (): Time => Time.temp.set(16);
+const delta = (): Time => new Time(16);
 
 describe('SystemRegistry preUpdate phase', () => {
   test('dispatches a system that only implements preUpdate', () => {

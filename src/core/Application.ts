@@ -404,6 +404,11 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   private readonly _frameClock: Clock = new Clock();
   private readonly _fixed: FixedTimestep;
   private readonly _fixedTime: Time;
+  // Scratch instance for the per-frame variable-step delta — mutated in
+  // place every frame instead of allocating a Time. Owned by the frame loop
+  // (not exposed publicly, unlike the old `Time.temp`), since it hands out
+  // the exact object user code sees as `frameDelta`.
+  private readonly _frameDelta: Time = new Time();
   private _frameAlpha = 0;
 
   private _status: ApplicationStatus = ApplicationStatus.Stopped;
@@ -998,7 +1003,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         this._frameClock.restart();
 
         const clampedDeltaMs = Math.min(rawDeltaMs, maxDeltaMs);
-        const frameDelta = Time.temp.set(clampedDeltaMs);
+        const frameDelta = this._frameDelta.set(clampedDeltaMs);
         const frameStart = performance.now();
 
         if (__DEV__) Perf.mark(frameStartMark);

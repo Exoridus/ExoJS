@@ -253,6 +253,10 @@ describe('Application', () => {
     rawApp['_backend'] = backend;
     rawApp['_frameClock'] = frameClock;
     rawApp['_fixed'] = { advance: () => 0, alpha: 0 };
+    // Object.create() bypasses the constructor, so the real field
+    // initializer (`= new Time()`) never runs — stand in with the minimal
+    // shape `update()` actually calls.
+    rawApp['_frameDelta'] = { set: vi.fn().mockReturnThis() };
     rawApp['_updateHandler'] = vi.fn();
     rawApp['_frameCount'] = 0;
     rawApp['onFrame'] = { dispatch: vi.fn() };

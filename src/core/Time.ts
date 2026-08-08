@@ -1,7 +1,5 @@
 import type { Cloneable, TimeInterval } from './types';
 
-let temp: Time | null = null;
-
 /**
  * Time-duration value object stored internally in milliseconds. Provides
  * unit-converted accessors (`seconds`, `minutes`, `hours`) and arithmetic
@@ -9,10 +7,10 @@ let temp: Time | null = null;
  *
  * Constants on the class hold canonical durations: {@link Time.zero},
  * {@link Time.oneSecond}, {@link Time.oneMinute}, {@link Time.oneHour}, plus
- * the {@link TimeInterval} multipliers used by the `factor` parameter.
- *
- * `Time.temp` is a shared scratch instance for hot paths — do not store the
- * reference across calls.
+ * the {@link TimeInterval} multipliers used by the `factor` parameter. Every
+ * one of them is `Object.freeze`d — they are shared process-wide, so a
+ * mutating call on one (e.g. `Time.zero.add(1)`) throws instead of silently
+ * corrupting the shared instance for every other caller.
  */
 export class Time implements Cloneable {
   private _milliseconds: number;
@@ -177,22 +175,24 @@ export class Time implements Cloneable {
     return new Time(value, Time.hours);
   }
 
-  public static readonly zero = new Time(0);
-  public static readonly oneMillisecond = new Time(1);
-  public static readonly oneSecond = new Time(1, Time.seconds);
-  public static readonly oneMinute = new Time(1, Time.minutes);
-  public static readonly oneHour = new Time(1, Time.hours);
+  /** Canonical zero duration. Frozen — mutating methods throw instead of corrupting the shared instance. */
+  public static readonly zero: Time = freeze(new Time(0));
+  /** Canonical one-millisecond duration. Frozen — mutating methods throw instead of corrupting the shared instance. */
+  public static readonly oneMillisecond: Time = freeze(new Time(1));
+  /** Canonical one-second duration. Frozen — mutating methods throw instead of corrupting the shared instance. */
+  public static readonly oneSecond: Time = freeze(new Time(1, Time.seconds));
+  /** Canonical one-minute duration. Frozen — mutating methods throw instead of corrupting the shared instance. */
+  public static readonly oneMinute: Time = freeze(new Time(1, Time.minutes));
+  /** Canonical one-hour duration. Frozen — mutating methods throw instead of corrupting the shared instance. */
+  public static readonly oneHour: Time = freeze(new Time(1, Time.hours));
+}
 
-  /**
-   * Shared scratch {@link Time} instance for intermediate calculations. Never
-   * retain the reference across frames or async boundaries.
-   * @internal
-   */
-  public static get temp(): Time {
-    if (temp === null) {
-      temp = new Time();
-    }
-
-    return temp;
-  }
+// `Object.freeze<T>` is typed to return `Readonly<T>`, and TypeScript's
+// mapped-type expansion of a class with a private field loses that field's
+// nominal brand — `Readonly<Time>` structurally stops satisfying `Time`
+// (TS2741), even though the underlying object is still a real `Time` at
+// runtime. The cast is safe: `freeze` never changes the value's shape, only
+// its writability.
+function freeze(value: Time): Time {
+  return Object.freeze(value) as Time;
 }
