@@ -29,69 +29,10 @@ import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
 
-const shaderSources = vi.hoisted(() => ({
-  // Verbatim copy of packages/exojs-particles/src/renderers/glsl/particle.vert
-  particleVert: `#version 300 es
-precision lowp float;
-precision lowp int;
-
-layout(location = 0) in vec2 a_translation;
-layout(location = 1) in vec2 a_scale;
-layout(location = 2) in float a_rotation;
-layout(location = 3) in vec4 a_color;
-layout(location = 4) in vec2 a_uvMin;
-layout(location = 5) in vec2 a_uvMax;
-
-uniform mat3 u_projection;
-uniform mat3 u_systemTransform;
-uniform vec4 u_localBounds;
-
-out vec2 v_texcoord;
-out vec4 v_color;
-
-void main(void) {
-    int vid = gl_VertexID;
-    int cornerX = ((vid + 1) >> 1) & 1;
-    int cornerY = vid >> 1;
-
-    float localX = (cornerX == 0) ? u_localBounds.x : u_localBounds.z;
-    float localY = (cornerY == 0) ? u_localBounds.y : u_localBounds.w;
-
-    vec2 rotation = vec2(sin(radians(a_rotation)), cos(radians(a_rotation)));
-    vec2 transformed = vec2(
-        (localX * (a_scale.x * rotation.y)) + (localY * (a_scale.y * rotation.x)),
-        (localX * (a_scale.x * -rotation.x)) + (localY * (a_scale.y * rotation.y))
-    );
-
-    vec3 worldPos = vec3(transformed + a_translation, 1.0);
-
-    gl_Position = vec4((u_projection * u_systemTransform * worldPos).xy, 0.0, 1.0);
-
-    float u = (cornerX == 0) ? a_uvMin.x : a_uvMax.x;
-    float v = (cornerY == 0) ? a_uvMin.y : a_uvMax.y;
-    v_texcoord = vec2(u, v);
-
-    v_color = vec4(a_color.rgb * a_color.a, a_color.a);
-}`,
-
-  // Verbatim copy of packages/exojs-particles/src/renderers/glsl/particle.frag
-  particleFrag: `#version 300 es
-precision lowp float;
-
-uniform sampler2D u_texture;
-
-in vec2 v_texcoord;
-in vec4 v_color;
-
-layout(location = 0) out vec4 fragColor;
-
-void main(void) {
-    fragColor = texture(u_texture, v_texcoord) * v_color;
-}`,
-}));
-
-vi.mock('../../../packages/exojs-particles/src/renderers/glsl/particle.vert', () => ({ default: shaderSources.particleVert }));
-vi.mock('../../../packages/exojs-particles/src/renderers/glsl/particle.frag', () => ({ default: shaderSources.particleFrag }));
+// The particle GLSL comes from `_glslMocks.ts`, which `?raw`-imports the shipped
+// `.vert`/`.frag` files. This spec renders the stock particle stage, so it must
+// not carry its own copy of those sources: a copy silently goes stale the next
+// time the shipped shader changes and the spec then tests a shader nobody ships.
 
 // ---------------------------------------------------------------------------
 // Infrastructure helpers

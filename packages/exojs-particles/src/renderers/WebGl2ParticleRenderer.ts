@@ -1,4 +1,5 @@
-﻿import type { BlendModes } from '@codexo/exojs/renderer-sdk';
+import type { AttributeType, Geometry, GeometryUsage, Material, Topology } from '@codexo/exojs';
+import type { BlendModes } from '@codexo/exojs/renderer-sdk';
 import type { Texture } from '@codexo/exojs/renderer-sdk';
 import type { View } from '@codexo/exojs/renderer-sdk';
 import type { WebGl2Backend } from '@codexo/exojs/renderer-sdk';
@@ -10,46 +11,89 @@ import { createWebGl2ShaderProgram } from '@codexo/exojs/renderer-sdk';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from '@codexo/exojs/renderer-sdk';
 
 import type { ParticleSystem } from '#ParticleSystem';
+import type { ParticleRenderMode } from '#renderModes/ParticleRenderMode';
 
-import fragmentSource from './glsl/particle.frag';
-import vertexSource from './glsl/particle.vert';
+const resolvePrimitive = (topology: Topology): RenderingPrimitives => {
+  switch (topology) {
+    case 'triangle-list':
+      return RenderingPrimitives.Triangles;
+    case 'triangle-strip':
+      return RenderingPrimitives.TriangleStrip;
+  }
+};
+
+const usageByGeometryUsage: Record<GeometryUsage, BufferUsage> = {
+  static: BufferUsage.StaticDraw,
+  dynamic: BufferUsage.DynamicDraw,
+  stream: BufferUsage.StreamDraw,
+};
 
 /**
- * Instanced particle renderer for WebGL2.
- *
- * One ParticleSystem = one batch. Each `render(system)` flushes any
- * pending batch, sets the system-level uniforms (transform, local
- * bounds, texture), and packs every active particle into the per-instance
- * buffer. The next `flush()` issues a single `drawElementsInstanced`.
- *
- * Per-instance layout (40 bytes per particle, 6 attributes):
- * ```
- *   translation  f32x2  (offset  0,  8 bytes)  particle position (system-local)
- *   scale        f32x2  (offset  8,  8 bytes)
- *   rotation     f32    (offset 16,  4 bytes)  degrees
- *   color        u8x4   (offset 20,  4 bytes)  RGBA tint, normalised
- *   uvMin        f32x2  (offset 24,  8 bytes)  pre-resolved frame uvMin
- *   uvMax        f32x2  (offset 32,  8 bytes)  pre-resolved frame uvMax
- * ```
- *
- * UVs are baked per-particle so the system can carry an atlas of frames
- * — `system.frames` declares the rectangles; each particle's
- * `textureIndex` selects one. The pack loop resolves frame-rectangle to
- * UVs once per particle per frame; no per-instance shader-side indexing
- * needed.
+ * Attribute component types that reach the shader as raw integers rather than
+ * as floats. Everything else — including normalised integer types such as the
+ * quad mode's `u8x4` colour — goes through `vertexAttribPointer` and arrives as
+ * a float, so only these two need `vertexAttribIPointer`.
  */
+const integerAttributeTypes = new Set<AttributeType>(['u32', 'i32']);
 
-const instanceStrideBytes = 40;
-const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
-const indicesPerQuad = 6;
-const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
+const resolveAttributeType = (gl: WebGL2RenderingContext, type: AttributeType): number => {
+  switch (type) {
+    case 'f32':
+      return gl.FLOAT;
+    case 'u8':
+      return gl.UNSIGNED_BYTE;
+    case 'u16':
+      return gl.UNSIGNED_SHORT;
+    case 'u32':
+      return gl.UNSIGNED_INT;
+    case 'i32':
+      return gl.INT;
+  }
+};
 
 interface ParticleRendererConnection {
   readonly gl: WebGL2RenderingContext;
   readonly buffers: Map<WebGl2RenderBuffer, { handle: WebGLBuffer; dataByteLength: number }>;
-  readonly vaoHandle: WebGLVertexArrayObject;
 }
 
+/**
+ * The GL-side realisation of one render mode: its compiled program, its vertex
+ * array object and the buffers behind it. Cached per {@link Material} — the
+ * mode's material is its stable identity, and its `destroy()` evicts the entry.
+ */
+interface ParticleModeResources {
+  readonly shader: Shader;
+  readonly vao: WebGl2VertexArrayObject;
+  readonly vertexBuffer: WebGl2RenderBuffer;
+  readonly indexBuffer: WebGl2RenderBuffer | null;
+  readonly stride: number;
+  readonly primitive: RenderingPrimitives;
+  readonly instanced: boolean;
+  /** Indices (or vertices, when the geometry carries none) per drawn element. */
+  readonly indexCount: number;
+  /** Byte view over the mode's scratch buffer, rebuilt whenever the mode grows it. */
+  bytes: Uint8Array;
+  source: ArrayBuffer | null;
+  view: View | null;
+  viewId: number;
+}
+
+/**
+ * Particle renderer for WebGL2.
+ *
+ * One ParticleSystem = one batch. The system's {@link ParticleRenderMode} owns
+ * the *how* — vertex layout, shader pair, draw model and the loop that fills
+ * the buffer — and this renderer is the executor: each `render(system)` flushes
+ * any pending batch, sets the system-level uniforms (transform, local bounds,
+ * texture) and asks the mode to build its vertex data. The next `flush()`
+ * uploads that data and issues the single draw the mode declares.
+ *
+ * Everything mode-specific is read off the mode's `Geometry`/`Material`, so a
+ * new primitive is a new mode rather than a change here: the vertex array
+ * object is wired from the geometry's named attributes, the draw is instanced
+ * or plain per `ParticleRenderMode.instanced`, and its primitive comes from the
+ * geometry's topology.
+ */
 export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSystem> {
   /**
    * The particle system's transform is bound as a `u_systemTransform` uniform and
@@ -60,59 +104,21 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
    */
   public readonly _consumesSharedTransform = false;
 
-  private readonly _shader: Shader;
-  /** Particles the scratch buffer can currently hold. Grows, never shrinks. */
-  private _instanceCapacity: number;
-  private _instanceData: ArrayBuffer;
-  private _instanceFloat32: Float32Array;
-  private _instanceUint32: Uint32Array;
+  /** Particles the GL-side vertex store is pre-sized for. A hint, not a limit. */
+  private readonly _batchSize: number;
+  private readonly _resources = new Map<Material, ParticleModeResources>();
 
-  private _instanceCount = 0;
+  private _drawCount = 0;
+  private _pendingMode: ParticleRenderMode | null = null;
+  private _pendingResources: ParticleModeResources | null = null;
   private _currentTexture: Texture | null = null;
   private _currentBlendMode: BlendModes | null = null;
-  private _currentView: View | null = null;
-  private _currentViewId = -1;
-
-  private _instanceBuffer: WebGl2RenderBuffer | null = null;
-  private _indexBuffer: WebGl2RenderBuffer | null = null;
-  private _vao: WebGl2VertexArrayObject | null = null;
   private _connection: ParticleRendererConnection | null = null;
 
   public constructor(batchSize: number) {
     super();
 
-    this._instanceCapacity = batchSize;
-    this._shader = new Shader(vertexSource, fragmentSource);
-    this._instanceData = new ArrayBuffer(batchSize * instanceStrideBytes);
-    this._instanceFloat32 = new Float32Array(this._instanceData);
-    this._instanceUint32 = new Uint32Array(this._instanceData);
-  }
-
-  /**
-   * Grow the per-instance scratch buffer to hold `particleCount` particles.
-   *
-   * Nothing about WebGL2 caps the instance count here — the buffer is a plain
-   * CPU-side allocation and the GL store is reallocated from it on the next
-   * upload. Growing instead of clamping is what keeps a system drawing the
-   * same number of particles on WebGL2 as it does on WebGPU. Growth is bounded
-   * by the system's own capacity, and doubling stops a system that ramps up to
-   * its peak from reallocating every frame.
-   */
-  private _ensureCapacity(particleCount: number): void {
-    if (particleCount <= this._instanceCapacity) {
-      return;
-    }
-
-    let capacity = this._instanceCapacity > 0 ? this._instanceCapacity : 1;
-
-    while (capacity < particleCount) {
-      capacity *= 2;
-    }
-
-    this._instanceCapacity = capacity;
-    this._instanceData = new ArrayBuffer(capacity * instanceStrideBytes);
-    this._instanceFloat32 = new Float32Array(this._instanceData);
-    this._instanceUint32 = new Uint32Array(this._instanceData);
+    this._batchSize = batchSize;
   }
 
   public render(system: ParticleSystem): this {
@@ -136,207 +142,227 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
       backend.setBlendMode(blendMode);
     }
 
-    // System-level uniforms are set before packing so the eventual
-    // flush() can sync them in one go.
-    const localBounds = system.vertices;
+    const mode = system.renderMode;
+    const resources = this._getOrCreateResources(mode);
+    const shader = resources.shader;
 
-    this._shader.getUniform('u_systemTransform').setValue(system.getGlobalTransform().toArray(false));
-    this._shader.getUniform('u_localBounds').setValue(localBounds);
-
-    const limit = system.liveCount;
-
-    // Must precede the view reads below: growing swaps in fresh typed-array
-    // views over a new backing buffer.
-    this._ensureCapacity(limit);
-
-    const f32 = this._instanceFloat32;
-    const u32 = this._instanceUint32;
-    const { posX, posY, scaleX, scaleY, rotations, color, textureIndex, alive } = system;
-
-    // Pre-compute frame UVs from system.frames + texture; falls back
-    // to the system.textureFrame when no atlas is declared.
-    const { uvMins, uvMaxs } = this._computeFrameUvs(system);
-    const frameCount = uvMins.length / 2;
-    const fallbackFrame = frameCount > 0 ? 0 : 0;
-
-    let writeIndex = 0;
-
-    for (let i = 0; i < limit; i++) {
-      // Skip dead slots in GPU-mode systems where the live range can
-      // contain holes.
-      if (alive[i] === 0) {
-        continue;
-      }
-
-      const offset = writeIndex * wordsPerInstance;
-      const frame = textureIndex[i]! < frameCount ? textureIndex[i]! : fallbackFrame;
-      const uvBase = frame * 2;
-
-      f32[offset + 0] = posX[i]!;
-      f32[offset + 1] = posY[i]!;
-      f32[offset + 2] = scaleX[i]!;
-      f32[offset + 3] = scaleY[i]!;
-      f32[offset + 4] = rotations[i]!;
-      u32[offset + 5] = color[i]!;
-      f32[offset + 6] = uvMins[uvBase + 0]!;
-      f32[offset + 7] = uvMins[uvBase + 1]!;
-      f32[offset + 8] = uvMaxs[uvBase + 0]!;
-      f32[offset + 9] = uvMaxs[uvBase + 1]!;
-
-      writeIndex++;
+    // System-level uniforms are set before building so the eventual flush()
+    // can sync them in one go. Guarded by declaration: they are offers to the
+    // mode's shader, not requirements on it.
+    if (shader.uniforms.has('u_systemTransform')) {
+      shader.getUniform('u_systemTransform').setValue(system.getGlobalTransform().toArray(false));
     }
 
-    this._instanceCount = writeIndex;
+    if (shader.uniforms.has('u_localBounds')) {
+      shader.getUniform('u_localBounds').setValue(system.vertices);
+    }
+
+    mode.build(system);
+
+    this._pendingMode = mode;
+    this._pendingResources = resources;
+    this._drawCount = mode.count;
 
     return this;
   }
 
-  /**
-   * Compute (uvMin, uvMax) pairs for every declared frame on the system.
-   * Pulled lazily and cached per (system, texture-version) to avoid the
-   * arithmetic in the hot pack loop. Falls back to a single entry from
-   * `system.textureFrame` when no atlas is declared.
-   */
-  private _computeFrameUvs(system: ParticleSystem): { uvMins: Float32Array; uvMaxs: Float32Array } {
-    const frames = system.frames;
-    const tex = system.texture;
-    const texW = tex.width;
-    const texH = tex.height;
-    const flipY = tex.flipY;
-
-    const count = frames.length === 0 ? 1 : frames.length;
-
-    // Re-allocate scratch when capacity grows.
-    if (this._uvMinsScratch.length < count * 2) {
-      this._uvMinsScratch = new Float32Array(count * 2);
-      this._uvMaxsScratch = new Float32Array(count * 2);
-    }
-
-    const mins = this._uvMinsScratch;
-    const maxs = this._uvMaxsScratch;
-
-    if (frames.length === 0) {
-      const f = system.textureFrame;
-      const minU = f.left / texW;
-      const maxU = f.right / texW;
-      const topV = f.top / texH;
-      const bottomV = f.bottom / texH;
-
-      mins[0] = minU;
-      mins[1] = flipY ? bottomV : topV;
-      maxs[0] = maxU;
-      maxs[1] = flipY ? topV : bottomV;
-
-      return { uvMins: mins, uvMaxs: maxs };
-    }
-
-    for (let i = 0; i < frames.length; i++) {
-      const f = frames[i]!;
-      const o = i * 2;
-      const minU = f.left / texW;
-      const maxU = f.right / texW;
-      const topV = f.top / texH;
-      const bottomV = f.bottom / texH;
-
-      mins[o + 0] = minU;
-      mins[o + 1] = flipY ? bottomV : topV;
-      maxs[o + 0] = maxU;
-      maxs[o + 1] = flipY ? topV : bottomV;
-    }
-
-    return { uvMins: mins, uvMaxs: maxs };
-  }
-
-  private _uvMinsScratch = new Float32Array(2);
-  private _uvMaxsScratch = new Float32Array(2);
-
   public flush(): void {
     const backend = this.getBackendOrNull();
-    const instanceBuffer = this._instanceBuffer;
-    const indexBuffer = this._indexBuffer;
-    const vao = this._vao;
+    const mode = this._pendingMode;
+    const resources = this._pendingResources;
 
-    if (this._instanceCount === 0 || backend === null || instanceBuffer === null || indexBuffer === null || vao === null) {
+    if (this._drawCount === 0 || backend === null || mode === null || resources === null) {
       return;
     }
 
     const view = backend.view;
 
-    if (this._currentView !== view || this._currentViewId !== view.updateId) {
-      this._currentView = view;
-      this._currentViewId = view.updateId;
-      this._shader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
+    if (resources.view !== view || resources.viewId !== view.updateId) {
+      resources.view = view;
+      resources.viewId = view.updateId;
+
+      if (resources.shader.uniforms.has('u_projection')) {
+        resources.shader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
+      }
     }
 
-    this._shader.sync();
-    backend.bindVertexArrayObject(vao);
-    instanceBuffer.upload(this._instanceFloat32.subarray(0, this._instanceCount * wordsPerInstance));
-    vao.drawInstanced(indicesPerQuad, 0, this._instanceCount, RenderingPrimitives.Triangles);
+    resources.shader.sync();
+    backend.bindVertexArrayObject(resources.vao);
+    resources.vertexBuffer.upload(this._resolveUpload(mode, resources));
+
+    if (resources.instanced) {
+      resources.vao.drawInstanced(resources.indexCount, 0, this._drawCount, resources.primitive);
+    } else {
+      resources.vao.draw(resources.indexBuffer !== null ? resources.indexCount : this._drawCount, 0, resources.primitive);
+    }
+
     backend.stats.batches++;
     backend.stats.drawCalls++;
 
-    this._instanceCount = 0;
+    this._drawCount = 0;
+    this._pendingMode = null;
+    this._pendingResources = null;
   }
 
   protected onConnect(backend: WebGl2Backend): void {
-    const gl = backend.context;
-
-    this._shader.connect(createWebGl2ShaderProgram(gl));
-    this._connection = this._createConnection(gl);
-
-    this._indexBuffer = new WebGl2RenderBuffer(BufferTypes.ElementArrayBuffer, quadIndices, BufferUsage.StaticDraw).connect(
-      this._createBufferRuntime(this._connection),
-    );
-    this._instanceBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._instanceData, BufferUsage.DynamicDraw).connect(
-      this._createBufferRuntime(this._connection),
-    );
-
-    this._shader.sync();
-
-    this._vao = new WebGl2VertexArrayObject()
-      .addIndex(this._indexBuffer)
-      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_position'), gl.FLOAT, false, instanceStrideBytes, 0, false, 1)
-      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_scale'), gl.FLOAT, false, instanceStrideBytes, 8, false, 1)
-      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_rotation'), gl.FLOAT, false, instanceStrideBytes, 16, false, 1)
-      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, instanceStrideBytes, 20, false, 1)
-      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_uvMin'), gl.FLOAT, false, instanceStrideBytes, 24, false, 1)
-      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_uvMax'), gl.FLOAT, false, instanceStrideBytes, 32, false, 1)
-      .connect(this._createVaoRuntime(this._connection));
+    this._connection = { gl: backend.context, buffers: new Map() };
   }
 
   protected onDisconnect(): void {
-    this._shader.disconnect();
-    this._instanceBuffer?.destroy();
-    this._instanceBuffer = null;
-    this._indexBuffer?.destroy();
-    this._indexBuffer = null;
-    this._vao?.destroy();
-    this._vao = null;
+    for (const resources of this._resources.values()) {
+      this._destroyResources(resources);
+    }
+
+    this._resources.clear();
     this._connection = null;
     this._currentTexture = null;
     this._currentBlendMode = null;
-    this._currentView = null;
-    this._currentViewId = -1;
-    this._instanceCount = 0;
+    this._drawCount = 0;
+    this._pendingMode = null;
+    this._pendingResources = null;
   }
 
   public destroy(): void {
     this.disconnect();
-    this._shader.destroy();
   }
 
-  private _createConnection(gl: WebGL2RenderingContext): ParticleRendererConnection {
+  /**
+   * The slice of the mode's scratch buffer this draw uploads. The byte view is
+   * cached and only rebuilt when the mode swaps in a larger backing buffer, so
+   * a steady-state frame allocates nothing beyond the subarray itself.
+   */
+  private _resolveUpload(mode: ParticleRenderMode, resources: ParticleModeResources): Uint8Array {
+    const data = mode.data;
+
+    if (resources.source !== data) {
+      resources.source = data;
+      resources.bytes = new Uint8Array(data);
+    }
+
+    return resources.bytes.subarray(0, this._drawCount * resources.stride);
+  }
+
+  private _getOrCreateResources(mode: ParticleRenderMode): ParticleModeResources {
+    const connection = this._connection;
+
+    if (connection === null) {
+      throw new Error('WebGl2ParticleRenderer is not connected to a backend.');
+    }
+
+    const material = mode.material;
+    const cached = this._resources.get(material);
+
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    const created = this._createResources(mode, material, connection);
+
+    this._resources.set(material, created);
+
+    // A destroyed mode takes its GPU resources with it: `ParticleSystem.destroy`
+    // destroys its mode, which destroys the material.
+    material._onDispose(() => {
+      const stored = this._resources.get(material);
+
+      if (stored === undefined) {
+        return;
+      }
+
+      if (this._pendingResources === stored) {
+        this._drawCount = 0;
+        this._pendingMode = null;
+        this._pendingResources = null;
+      }
+
+      this._destroyResources(stored);
+      this._resources.delete(material);
+    });
+
+    return created;
+  }
+
+  private _createResources(mode: ParticleRenderMode, material: Material, connection: ParticleRendererConnection): ParticleModeResources {
+    const gl = connection.gl;
+    const glsl = material.shader.glsl;
+
+    if (glsl === null) {
+      throw new Error('Particle material shader has no `glsl` source; cannot render through the WebGL2 backend.');
+    }
+
+    const geometry: Geometry = mode.geometry;
+    const shader = new Shader(glsl.vertex, glsl.fragment);
+
+    shader.connect(createWebGl2ShaderProgram(gl));
+    // Force the first finalize so the attribute/uniform maps read below are populated.
+    shader.sync();
+
+    const indices = geometry.indices;
+    const indexBuffer =
+      indices !== null
+        ? new WebGl2RenderBuffer(BufferTypes.ElementArrayBuffer, indices, BufferUsage.StaticDraw).connect(this._createBufferRuntime(connection))
+        : null;
+
+    // Pre-sized rather than capped: the mode grows its scratch buffer with the
+    // live particle count and the GL store is re-sized from it on upload, so a
+    // system drawing past the batch size still draws every particle.
+    const vertexBuffer = new WebGl2RenderBuffer(
+      BufferTypes.ArrayBuffer,
+      new ArrayBuffer(this._batchSize * geometry.stride),
+      usageByGeometryUsage[geometry.usage],
+    ).connect(this._createBufferRuntime(connection));
+
     const vaoHandle = gl.createVertexArray();
 
     if (vaoHandle === null) {
       throw new Error('WebGl2ParticleRenderer: could not create vertex array object.');
     }
 
+    // Per-instance for an instanced mode, per-vertex otherwise — the same
+    // interleaved layout serves both draw models.
+    const divisor = mode.instanced ? 1 : 0;
+    const vao = new WebGl2VertexArrayObject();
+
+    if (indexBuffer !== null) {
+      vao.addIndex(indexBuffer);
+    }
+
+    for (const attribute of geometry.attributes) {
+      vao.addAttribute(
+        vertexBuffer,
+        shader.getAttribute(attribute.name),
+        resolveAttributeType(gl, attribute.type),
+        attribute.normalized,
+        geometry.stride,
+        attribute.offset,
+        !attribute.normalized && integerAttributeTypes.has(attribute.type),
+        divisor,
+      );
+    }
+
+    vao.connect(this._createVaoRuntime(connection, vaoHandle, indices instanceof Uint32Array ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT));
+
     return {
-      gl,
-      buffers: new Map(),
-      vaoHandle,
+      shader,
+      vao,
+      vertexBuffer,
+      indexBuffer,
+      stride: geometry.stride,
+      primitive: resolvePrimitive(geometry.topology),
+      instanced: mode.instanced,
+      indexCount: geometry.indexCount,
+      bytes: new Uint8Array(0),
+      source: null,
+      view: null,
+      viewId: -1,
     };
+  }
+
+  private _destroyResources(resources: ParticleModeResources): void {
+    resources.vao.destroy();
+    resources.vertexBuffer.destroy();
+    resources.indexBuffer?.destroy();
+    resources.shader.destroy();
   }
 
   private _createBufferRuntime(connection: ParticleRendererConnection): WebGl2RenderBufferRuntime {
@@ -373,14 +399,14 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
     };
   }
 
-  private _createVaoRuntime(connection: ParticleRendererConnection): WebGl2VertexArrayObjectRuntime {
+  private _createVaoRuntime(connection: ParticleRendererConnection, vaoHandle: WebGLVertexArrayObject, indexType: number): WebGl2VertexArrayObjectRuntime {
     let appliedVersion = -1;
 
     return {
       bind: (vao): void => {
         const gl = connection.gl;
 
-        gl.bindVertexArray(connection.vaoHandle);
+        gl.bindVertexArray(vaoHandle);
 
         if (appliedVersion !== vao.version) {
           let lastBuffer: WebGl2RenderBuffer | null = null;
@@ -415,7 +441,7 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
         const gl = connection.gl;
 
         if (vao.indexBuffer) {
-          gl.drawElements(type, size, gl.UNSIGNED_SHORT, start);
+          gl.drawElements(type, size, indexType, start);
         } else {
           gl.drawArrays(type, start, size);
         }
@@ -424,13 +450,13 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
         const gl = connection.gl;
 
         if (vao.indexBuffer) {
-          gl.drawElementsInstanced(type, count, gl.UNSIGNED_SHORT, start, instanceCount);
+          gl.drawElementsInstanced(type, count, indexType, start, instanceCount);
         } else {
           gl.drawArraysInstanced(type, start, count, instanceCount);
         }
       },
       destroy: (vao): void => {
-        connection.gl.deleteVertexArray(connection.vaoHandle);
+        connection.gl.deleteVertexArray(vaoHandle);
         vao.disconnect();
       },
     };
