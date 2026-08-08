@@ -518,7 +518,7 @@
             }
           ],
           "returnType": "Tween",
-          "description": "Chain tweens in sequence: each tween starts automatically when the previous one completes. Returns the first tween; call .start() on it to kick off the whole sequence. All tweens are registered with this manager (idempotent — already-added tweens are not double-added)."
+          "description": "Chain tweens in sequence: each tween starts automatically when the previous one completes. Returns the first tween; call .start() on it to kick off the whole sequence. All tweens are bound to this manager, but only enter the update list when they are actually started — the first through your own .start() call, every later one through the chain. A sequence that is composed and never started therefore leaves nothing behind here."
         }
       ],
       "paragraphs": [],

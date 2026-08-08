@@ -94,7 +94,7 @@ describe('TweenManager', () => {
   });
 
   describe('sequence()', () => {
-    test('chains tweens in order and registers all of them with the manager', () => {
+    test('chains tweens in order and drives the whole chain, one link per frame', () => {
       const manager = new TweenManager();
       const a = makeTarget();
       const b = makeTarget();
@@ -107,19 +107,43 @@ describe('TweenManager', () => {
       const first = manager.sequence([t1, t2, t3]);
       expect(first).toBe(t1);
 
+      // Composing the sequence binds the tweens to the manager but does not
+      // enter them into the update list — each link registers itself when the
+      // preceding one chain-starts it.
+      expect(trackedCount(manager)).toBe(0);
+
       first.start();
+      expect(trackedCount(manager)).toBe(1);
 
-      // All three tweens are registered with the manager up front and are
-      // iterated in insertion order within a single snapshot. Since delta
-      // exactly matches each tween's duration, completing t1 chain-starts
-      // t2, which is then ticked later in the very same snapshot pass and
-      // also completes, cascading into t3 — all within one update() call.
       manager.preUpdate(sec(1.0));
-
       expect(t1.state).toBe(TweenState.Complete);
+      expect(t2.state).toBe(TweenState.Active);
+      expect(a.x).toBe(100);
+
+      manager.preUpdate(sec(1.0));
       expect(t2.state).toBe(TweenState.Complete);
+      expect(t3.state).toBe(TweenState.Active);
+      expect(b.x).toBe(200);
+
+      manager.preUpdate(sec(1.0));
       expect(t3.state).toBe(TweenState.Complete);
       expect(c.x).toBe(300);
+
+      // Nothing is left behind once the chain has run out.
+      expect(trackedCount(manager)).toBe(0);
+    });
+
+    test('does not retain tweens of a sequence that is never started', () => {
+      const manager = new TweenManager();
+      const t1 = new Tween(makeTarget()).to({ x: 100 }, 1.0);
+      const t2 = new Tween(makeTarget()).to({ x: 200 }, 1.0);
+
+      manager.sequence([t1, t2]);
+
+      expect(trackedCount(manager)).toBe(0);
+      manager.preUpdate(sec(1.0));
+      expect(t1.state).toBe(TweenState.Idle);
+      expect(t2.state).toBe(TweenState.Idle);
     });
 
     test('throws when given an empty array', () => {
@@ -138,8 +162,8 @@ describe('TweenManager', () => {
       const t3 = new Tween(makeTarget()).to({ x: 100 }, 1.0);
       const sparse = [t1, undefined, t3] as unknown as readonly Tween[];
 
-      // The subsequent unconditional add() loop calls add(undefined) for the
-      // hole, which throws — but the chain loop's guard runs first.
+      // The subsequent unconditional bind loop dereferences the hole, which
+      // throws — but the chain loop's guard runs first.
       expect(() => manager.sequence(sparse)).toThrow();
     });
   });

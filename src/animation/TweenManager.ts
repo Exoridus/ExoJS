@@ -47,8 +47,12 @@ export class TweenManager {
   /**
    * Chain `tweens` in sequence: each tween starts automatically when the
    * previous one completes. Returns the first tween; call `.start()` on it
-   * to kick off the whole sequence. All tweens are registered with this
-   * manager (idempotent — already-added tweens are not double-added).
+   * to kick off the whole sequence.
+   *
+   * All tweens are bound to this manager, but only enter the update list when
+   * they are actually started — the first through your own `.start()` call,
+   * every later one through the chain. A sequence that is composed and never
+   * started therefore leaves nothing behind here.
    *
    * @example
    * ```ts
@@ -70,8 +74,12 @@ export class TweenManager {
       if (current !== undefined && next !== undefined) current.chain(next);
     }
 
+    // Bind only — `Tween.start` does the registering, and every link after the
+    // first is started by `_complete()` on its predecessor. Pre-registering
+    // them here would be redundant and would pin an unstarted sequence (and
+    // its targets) in the application-wide manager for good.
     for (const tween of tweens) {
-      this.add(tween);
+      tween._attachManager(this);
     }
 
     return first;
