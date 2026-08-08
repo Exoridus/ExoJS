@@ -34,7 +34,7 @@ import type { RenderNode } from '#rendering/RenderNode';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
-import { particlesExtension, ParticleSystem } from '../../../packages/exojs-particles/src/index';
+import { particlesExtension, ParticleSystem, RibbonParticles } from '../../../packages/exojs-particles/src/index';
 import { readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
@@ -197,6 +197,59 @@ describe('WebGPU ParticleSystem — solid color', () => {
       const readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(32, 32), [0, 255, 0, 255]);
+      expectPixelNear(readPixel(4, 4), [0, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+});
+
+describe('WebGPU ParticleSystem — ribbon', () => {
+  test('a chain of particles renders as one connected band', async ctx => {
+    const backend = await setupBackend();
+
+    const texture = createSolidTexture('#ffffff');
+    const root = new Container();
+    // The ribbon mode ships its own WGSL, which only a real device ever
+    // compiles — a broken module draws nothing and fails the interior
+    // assertions below rather than passing silently in the node lanes.
+    const system = new ParticleSystem(texture, { capacity: 8, render: new RibbonParticles({ width: 12 }) });
+
+    try {
+      // Three particles on a horizontal line, system-local. The strip expands
+      // ±6px around it, so at (32, 32) it covers x 16..48, y 26..38.
+      for (const x of [-16, 0, 16]) {
+        const slot = system.spawn();
+
+        system.posX[slot] = x;
+        system.posY[slot] = 0;
+        system.scaleX[slot] = 1;
+        system.scaleY[slot] = 1;
+        system.color[slot] = new Color(0, 255, 0).toRgba();
+        system.lifetime[slot] = 1;
+      }
+
+      system.setPosition(32, 32);
+      root.addChild(system);
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      const readPixel = readWebGpuPixels(backend, canvasSize);
+
+      // Along the band: both ends and the middle are filled, which a
+      // strip-that-drew-only-one-segment would not satisfy.
+      expectPixelNear(readPixel(20, 32), [0, 255, 0, 255]);
+      expectPixelNear(readPixel(32, 32), [0, 255, 0, 255]);
+      expectPixelNear(readPixel(44, 32), [0, 255, 0, 255]);
+      // Across it: the band is a band, not the whole column.
+      expectPixelNear(readPixel(32, 12), [0, 0, 0, 255]);
+      expectPixelNear(readPixel(32, 52), [0, 0, 0, 255]);
+      // Past the ends of the path, and a safely empty corner.
+      expectPixelNear(readPixel(58, 32), [0, 0, 0, 255]);
       expectPixelNear(readPixel(4, 4), [0, 0, 0, 255]);
     } finally {
       root.destroy();

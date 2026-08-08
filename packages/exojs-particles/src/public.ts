@@ -12,4 +12,6 @@ export { ParticleSystem } from './ParticleSystem';
 export { ParticleMaterial } from './renderModes/ParticleMaterial';
 export { ParticleRenderMode } from './renderModes/ParticleRenderMode';
 export { QuadParticles } from './renderModes/QuadParticles';
+export type { RibbonParticlesOptions } from './renderModes/RibbonParticles';
+export { RibbonParticles } from './renderModes/RibbonParticles';
 export type { Extension, RendererBinding } from '@codexo/exojs/extensions';
