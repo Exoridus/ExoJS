@@ -153,7 +153,20 @@ export class Matrix implements Cloneable {
    * returns `this` for chaining.
    */
   public translate(x: number, y: number = x): Matrix {
-    return this.combine(Matrix.temp.set(1, 0, x, 0, 1, y, 0, 0, 1));
+    // Expanded from `combine(translationMatrix)` with the zero terms dropped.
+    // Routing this through `Matrix.temp` made the shared scratch self-aliasing:
+    // `Matrix.temp.translate(...)` overwrote the receiver with the translation
+    // matrix and then combined that with itself, and any caller parking a value
+    // in the scratch had it clobbered by an unrelated transform.
+    return this.set(
+      this.a + this.e * x,
+      this.b + this.f * x,
+      this.x + this.z * x,
+
+      this.c + this.e * y,
+      this.d + this.f * y,
+      this.y + this.z * y,
+    );
   }
 
   /**
@@ -164,8 +177,19 @@ export class Matrix implements Cloneable {
     const radian = degreesToRadians(angle);
     const cos = Math.cos(radian);
     const sin = Math.sin(radian);
+    const offsetX = centerX * (1 - cos) + centerY * sin;
+    const offsetY = centerY * (1 - cos) - centerX * sin;
 
-    return this.combine(Matrix.temp.set(cos, -sin, centerX * (1 - cos) + centerY * sin, sin, cos, centerY * (1 - cos) - centerX * sin, 0, 0, 1));
+    // Expanded from `combine(rotationMatrix)` — see the note on {@link translate}.
+    return this.set(
+      this.a * cos - this.c * sin + this.e * offsetX,
+      this.b * cos - this.d * sin + this.f * offsetX,
+      this.x * cos - this.y * sin + this.z * offsetX,
+
+      this.a * sin + this.c * cos + this.e * offsetY,
+      this.b * sin + this.d * cos + this.f * offsetY,
+      this.x * sin + this.y * cos + this.z * offsetY,
+    );
   }
 
   /**
@@ -173,7 +197,19 @@ export class Matrix implements Cloneable {
    * matrix. Mutates in place and returns `this` for chaining.
    */
   public scale(scaleX: number, scaleY: number = scaleX, centerX = 0, centerY: number = centerX): Matrix {
-    return this.combine(Matrix.temp.set(scaleX, 0, centerX * (1 - scaleX), 0, scaleY, centerY * (1 - scaleY), 0, 0, 1));
+    const offsetX = centerX * (1 - scaleX);
+    const offsetY = centerY * (1 - scaleY);
+
+    // Expanded from `combine(scaleMatrix)` — see the note on {@link translate}.
+    return this.set(
+      this.a * scaleX + this.e * offsetX,
+      this.b * scaleX + this.f * offsetX,
+      this.x * scaleX + this.z * offsetX,
+
+      this.c * scaleY + this.e * offsetY,
+      this.d * scaleY + this.f * offsetY,
+      this.y * scaleY + this.z * offsetY,
+    );
   }
 
   /**
