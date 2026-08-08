@@ -1,16 +1,16 @@
 {
   "title": "LoadingQueue",
-  "description": "An awaitable, progress-aware load operation. Implements `PromiseLike<T>` so it can be `await`ed directly and composed with `Promise.all([queue1, queue2])` without wrapping. Progress is updated as individual items complete via _notifyItem.",
+  "description": "An awaitable, progress-aware load operation. Implements `PromiseLike<T>` so it can be `await`ed directly and composed with `Promise.all([queue1, queue2])` without wrapping. Progress is updated as individual items complete via _notifyItem. A load that is no longer wanted can be dropped with cancel.",
   "symbol": "LoadingQueue",
   "kind": "class",
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 5,
+  "memberCount": 7,
   "counts": {
     "constructors": 0,
-    "methods": 3,
-    "properties": 1,
+    "methods": 4,
+    "properties": 2,
     "events": 1
   },
   "sections": [
@@ -21,7 +21,7 @@
       "paragraphs": [
         "An awaitable, progress-aware load operation.",
         "Implements `PromiseLike<T>` so it can be `await`ed directly and composed with `Promise.all([queue1, queue2])` without wrapping.",
-        "Progress is updated as individual items complete via _notifyItem."
+        "Progress is updated as individual items complete via _notifyItem. A load that is no longer wanted can be dropped with cancel."
       ],
       "importLine": "import { LoadingQueue } from '@codexo/exojs'",
       "sourceLink": null
@@ -30,6 +30,35 @@
       "id": "methods",
       "title": "Methods",
       "members": [
+        {
+          "name": "cancel",
+          "signature": "cancel(): void",
+          "signatureTokens": [
+            {
+              "text": "cancel",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Gives up on this load: drops the claims it registered and, once no other claim scope still wants the same asset, aborts the in-flight network request behind it. Idempotent. This is a claim-level operation, so the underlying fetch survives as long as anyone else needs it — a second scene loading the same texture keeps it downloading, and only the last cancellation actually stops the request. The queue then rejects with the platform's AbortError; a cancelled load is deliberately NOT reported through Loader.onError, since nothing failed. Cancelling a load whose assets are already resident behaves like Loader.release(...) for the keys this call claimed: the result is no longer wanted, so it is freed at refcount 0."
+        },
         {
           "name": "catch",
           "signature": "catch(onrejected?: (reason: unknown) => Caught | PromiseLike<Caught> | null): Promise<T | Caught>",
@@ -429,6 +458,27 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "cancelled",
+          "signature": "cancelled: boolean",
+          "signatureTokens": [
+            {
+              "text": "cancelled",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether cancel has been called on this queue."
+        },
         {
           "name": "progress",
           "signature": "progress: LoadingProgress",

@@ -6,6 +6,7 @@ import type { CacheStore } from './CacheStore';
 import type { CacheStrategy } from './CacheStrategy';
 import type { AssetConstructor } from './FactoryRegistry';
 import type { AssetLoaderContext, Loader } from './Loader';
+import { isAbortError } from './SharedAbort';
 
 /** Sink a decoded resource is handed to, returning the value callers should see for it. */
 export type ResourceStore = (type: AssetConstructor, alias: string, resource: unknown) => unknown;
@@ -109,7 +110,7 @@ export class AssetDecoder {
    * identity function — the cached value is returned unchanged.
    * @internal
    */
-  public _contextFetch<T>(source: string, storageName: string, process: (response: Response) => Promise<T>): Promise<T> {
+  public _contextFetch<T>(source: string, storageName: string, process: (response: Response) => Promise<T>, signal?: AbortSignal): Promise<T> {
     const url = this._resolveUrl(source);
     const factory: AssetFactory<T> = {
       storageName,
@@ -119,10 +120,11 @@ export class AssetDecoder {
         // Nothing to release: this strategy hands back the decoded value as-is.
       },
     };
-    return this._cacheStrategy.resolve(
-      { storageName, key: source, url, requestOptions: this._fetchOptions, factory, options: undefined },
-      this._stores,
-    ) as Promise<T>;
+    // Spread only when a signal is actually threaded through, so a plain fetch
+    // keeps handing the strategy the very `fetchOptions` object it always did.
+    const requestOptions = signal === undefined ? this._fetchOptions : { ...this._fetchOptions, signal };
+
+    return this._cacheStrategy.resolve({ storageName, key: source, url, requestOptions, factory, options: undefined }, this._stores) as Promise<T>;
   }
 
   /**
@@ -137,15 +139,21 @@ export class AssetDecoder {
    * namespace for every `fetch*` call made through this context, giving the
    * binding its own IDB namespace instead of sharing one with every other
    * handler.
+   *
+   * `signal` is the cancellation signal of the load this handler invocation
+   * belongs to. Every `fetch*` helper forwards it automatically; it is also
+   * exposed on the context so a handler doing its own fetching or decoding can
+   * honor it.
    * @internal
    */
-  public _buildHandlerContext(identityKey: string, storageName?: string): AssetLoaderContext {
+  public _buildHandlerContext(identityKey: string, storageName?: string, signal?: AbortSignal): AssetLoaderContext {
     const ctx: AssetLoaderContext = {
       loader: this._loader,
       identityKey,
-      fetchText: (source: string) => this._contextFetch<string>(source, storageName ?? '__ctx_text', r => r.text()),
-      fetchArrayBuffer: (source: string) => this._contextFetch<ArrayBuffer>(source, storageName ?? '__ctx_binary', r => r.arrayBuffer()),
-      fetchJson: <T = unknown>(source: string) => this._contextFetch<T>(source, storageName ?? '__ctx_json', r => r.json() as Promise<T>),
+      signal,
+      fetchText: (source: string) => this._contextFetch<string>(source, storageName ?? '__ctx_text', r => r.text(), signal),
+      fetchArrayBuffer: (source: string) => this._contextFetch<ArrayBuffer>(source, storageName ?? '__ctx_binary', r => r.arrayBuffer(), signal),
+      fetchJson: <T = unknown>(source: string) => this._contextFetch<T>(source, storageName ?? '__ctx_json', r => r.json() as Promise<T>, signal),
     };
     return ctx;
   }
@@ -158,6 +166,10 @@ export class AssetDecoder {
    * by calling `context.fetchText` /
    * `context.fetchArrayBuffer` / `context.fetchJson`, which route through
    * the loader's cache strategy.
+   *
+   * A cancellation rejection is rethrown unwrapped: the "Failed to load … from
+   * …" envelope would hide the `AbortError` name the residency dispatches on to
+   * tell a deliberate cancel apart from a genuine load failure.
    * @internal
    */
   public async _fetchWithHandler(
@@ -174,6 +186,10 @@ export class AssetDecoder {
 
       return this._storeResource(type, alias, resource);
     } catch (error: unknown) {
+      if (isAbortError(error)) {
+        throw error;
+      }
+
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to load "${alias}" from "${url}": ${message}`, { cause: error });
     }
@@ -183,9 +199,12 @@ export class AssetDecoder {
    * Dispatches a load through the `bindAsset` handler bound for `type`.
    * Shared by the foreground and background fetch dispatchers on `Loader` so
    * both honor `bindAsset` handlers identically.
+   *
+   * `signal` cancels the dispatched work — it reaches the network through the
+   * handler context's `fetch*` helpers.
    * @internal
    */
-  public _dispatchFetch(type: AssetConstructor, alias: string, path: string, options?: unknown): Promise<unknown> {
+  public _dispatchFetch(type: AssetConstructor, alias: string, path: string, options?: unknown, signal?: AbortSignal): Promise<unknown> {
     const handlerEntry = this._typeRegistry.getHandler(type);
 
     if (!handlerEntry) {
@@ -199,7 +218,7 @@ export class AssetDecoder {
       Object.assign(config, options as Record<string, unknown>);
     }
 
-    const context = this._buildHandlerContext(identityKey, handlerEntry.storageName);
+    const context = this._buildHandlerContext(identityKey, handlerEntry.storageName, signal);
 
     return this._fetchWithHandler(type, alias, path, config, handlerEntry.load, context);
   }
