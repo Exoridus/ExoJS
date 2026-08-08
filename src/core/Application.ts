@@ -30,6 +30,7 @@ import { Clock } from './Clock';
 import { Color } from './Color';
 import { assert, invariant } from './dev';
 import { showDevErrorOverlay } from './devErrorOverlay';
+import { DisposalScope } from './DisposalScope';
 import { FixedTimestep } from './FixedTimestep';
 import { computeLetterboxLayout } from './letterbox';
 import { hello, logger } from './logging';
@@ -49,7 +50,7 @@ import { Signal } from './Signal';
 import type { System } from './System';
 import { SystemOrder } from './SystemOrder';
 import { SystemRegistry } from './SystemRegistry';
-import { Time } from './Time';
+import { freezeTime, Time } from './Time';
 import { canvasSourceToDataUrl, isWebKitUserAgent } from './utils';
 
 export enum ApplicationStatus {
@@ -395,15 +396,30 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * The engine's own `preUpdate` systems, owned here rather than by the
    * registry. Reassigned when the backend fallback rebuilds one of them, so
    * that teardown unregisters the instances that are actually registered.
+   * Starts empty rather than unassigned so that a constructor rollback, which
+   * can run before the registrations happen, always finds a real list.
    */
-  private _coreSystems: readonly System[];
+  private _coreSystems: readonly System[] = [];
 
   private readonly _updateHandler: () => void;
   private readonly _startupClock: Clock = new Clock();
   private readonly _activeClock: Clock = new Clock();
   private readonly _frameClock: Clock = new Clock();
   private readonly _fixed: FixedTimestep;
+  // The fixed-step duration — a true constant for the Application's whole
+  // lifetime (set from `options.fixedTimeStep` in the constructor and never
+  // re-`set()` afterward, unlike `_frameDelta` below). It is handed to user
+  // code every fixed step via `systems._fixedUpdate`/`scenes.fixedUpdate`/
+  // `onFixedFrame.dispatch`, so — same bug class as the old `Time.temp` — a
+  // mutation from user code would corrupt every subsequent fixed step for
+  // the rest of the app's run, not just the current one. Frozen at
+  // construction (see `freezeTime`) so that throws instead.
   private readonly _fixedTime: Time;
+  // Scratch instance for the per-frame variable-step delta — mutated in
+  // place every frame instead of allocating a Time. Owned by the frame loop
+  // (not exposed publicly, unlike the old `Time.temp`), since it hands out
+  // the exact object user code sees as `frameDelta`.
+  private readonly _frameDelta: Time = new Time();
   private _frameAlpha = 0;
 
   private _status: ApplicationStatus = ApplicationStatus.Stopped;
@@ -474,113 +490,259 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this.canvas.style.imageRendering = canvasOptions.imageRendering;
     }
 
-    this._mountCanvas(canvasOptions.mount);
-    this._sizingMode = canvasOptions.sizingMode ?? 'fixed';
-    this._applySizingMode(this._sizingMode);
-
-    // Established before any subsystem, because input, interaction and the
-    // frame loop all read the host through it.
-    this._ownsPlatform = appSettings.platform === undefined;
-    this.platform = appSettings.platform ?? new BrowserPlatform(this.canvas);
-
-    this.options = {
-      clearColor: appSettings.clearColor ?? Color.cornflowerBlue,
-      backend: appSettings.backend ?? defaultBackendConfig,
-      canvas: {
-        element: this.canvas,
-        width: logicalWidth,
-        height: logicalHeight,
-        pixelRatio: this._pixelRatio,
-        tabIndex: this.canvas.tabIndex,
-        ...(canvasOptions.imageRendering !== undefined && { imageRendering: canvasOptions.imageRendering }),
-      },
-      loader: {
-        basePath: loaderOptions.basePath ?? '',
-        fetchOptions: loaderOptions.fetchOptions ?? { ...defaultLoaderFetchOptions },
-        ...(loaderOptions.cache !== undefined && { cache: loaderOptions.cache }),
-        ...(loaderOptions.cacheStrategy !== undefined && { cacheStrategy: loaderOptions.cacheStrategy }),
-        ...(loaderOptions.concurrency !== undefined && { concurrency: loaderOptions.concurrency }),
-      },
-      rendering: {
-        debug: renderingOptions.debug ?? defaultRenderingSettings.debug,
-        webglAttributes: renderingOptions.webglAttributes ?? defaultRenderingSettings.webglAttributes,
-        spriteRendererBatchSize: renderingOptions.spriteRendererBatchSize ?? defaultRenderingSettings.spriteRendererBatchSize,
-      },
-      input: {
-        gamepadDefinitions: inputOptions.gamepadDefinitions ?? [...defaultInputSettings.gamepadDefinitions],
-        gamepadSlotStrategy: inputOptions.gamepadSlotStrategy ?? defaultInputSettings.gamepadSlotStrategy,
-        pointerDistanceThreshold: inputOptions.pointerDistanceThreshold ?? defaultInputSettings.pointerDistanceThreshold,
-        dragThreshold: inputOptions.dragThreshold ?? defaultInputSettings.dragThreshold,
-        allowNativeContextMenu: inputOptions.allowNativeContextMenu ?? defaultInputSettings.allowNativeContextMenu,
-        allowTextSelection: inputOptions.allowTextSelection ?? defaultInputSettings.allowTextSelection,
-      },
-      hello: appSettings.hello ?? true,
-      platform: this.platform,
-      ...(appSettings.seed !== undefined && { seed: appSettings.seed }),
-      ...(appSettings.fixedTimeStep !== undefined && { fixedTimeStep: appSettings.fixedTimeStep }),
-    };
-
-    // Capture extension snapshot before constructing extension-sensitive subsystems.
-    this._snapshot = appSettings.extensions === undefined ? getGlobalSnapshotInternal() : buildSnapshot([...(appSettings.extensions ?? [])]);
-
-    this.loader = new Loader(this.options.loader);
+    // Ownership record for every subsystem built from here on. Construction is
+    // the one point in the lifecycle where a half-built Application can exist:
+    // if a later step throws, the caller never receives an instance and so can
+    // never call `destroy()`, which leaves everything built so far with no
+    // owner at all. Registration order is ownership order; the scope tears
+    // down in reverse.
+    //
+    // Deliberately constructor-local rather than a field: the WebGPU→WebGL2
+    // fallback in `initializeBackend()` destroys and replaces `_backend` and
+    // `_rendering` after construction, so a retained scope would hold two
+    // destroyed instances and miss the live ones. It records what construction
+    // built, which is exactly as long as it is needed.
+    const constructed = new DisposalScope();
 
     try {
+      // Inside the boundary because `_applySizingMode` is the first step that
+      // can own something: `'fill'` and `'letterbox'` attach a ResizeObserver
+      // to the parent element, and a DOM node holding an observer whose
+      // callback closes over a dead Application is a live leak, not an inert
+      // one — the next parent layout change would drive `resize()` into a
+      // destroyed backend.
+      this._mountCanvas(canvasOptions.mount);
+      this._sizingMode = canvasOptions.sizingMode ?? 'fixed';
+      this._applySizingMode(this._sizingMode);
+
+      // Established before any subsystem, because input, interaction and the
+      // frame loop all read the host through it.
+      this._ownsPlatform = appSettings.platform === undefined;
+      this.platform = appSettings.platform ?? new BrowserPlatform(this.canvas);
+
+      // Only an adapter created here is ours to release — an injected one stays
+      // the caller's on the failure path, exactly as in `destroy()`.
+      if (this._ownsPlatform) {
+        constructed.track(this.platform);
+      }
+
+      this.options = {
+        clearColor: appSettings.clearColor ?? Color.cornflowerBlue,
+        backend: appSettings.backend ?? defaultBackendConfig,
+        canvas: {
+          element: this.canvas,
+          width: logicalWidth,
+          height: logicalHeight,
+          pixelRatio: this._pixelRatio,
+          tabIndex: this.canvas.tabIndex,
+          ...(canvasOptions.imageRendering !== undefined && { imageRendering: canvasOptions.imageRendering }),
+        },
+        loader: {
+          basePath: loaderOptions.basePath ?? '',
+          fetchOptions: loaderOptions.fetchOptions ?? { ...defaultLoaderFetchOptions },
+          ...(loaderOptions.cache !== undefined && { cache: loaderOptions.cache }),
+          ...(loaderOptions.cacheStrategy !== undefined && { cacheStrategy: loaderOptions.cacheStrategy }),
+          ...(loaderOptions.concurrency !== undefined && { concurrency: loaderOptions.concurrency }),
+        },
+        rendering: {
+          debug: renderingOptions.debug ?? defaultRenderingSettings.debug,
+          webglAttributes: renderingOptions.webglAttributes ?? defaultRenderingSettings.webglAttributes,
+          spriteRendererBatchSize: renderingOptions.spriteRendererBatchSize ?? defaultRenderingSettings.spriteRendererBatchSize,
+        },
+        input: {
+          gamepadDefinitions: inputOptions.gamepadDefinitions ?? [...defaultInputSettings.gamepadDefinitions],
+          gamepadSlotStrategy: inputOptions.gamepadSlotStrategy ?? defaultInputSettings.gamepadSlotStrategy,
+          pointerDistanceThreshold: inputOptions.pointerDistanceThreshold ?? defaultInputSettings.pointerDistanceThreshold,
+          dragThreshold: inputOptions.dragThreshold ?? defaultInputSettings.dragThreshold,
+          allowNativeContextMenu: inputOptions.allowNativeContextMenu ?? defaultInputSettings.allowNativeContextMenu,
+          allowTextSelection: inputOptions.allowTextSelection ?? defaultInputSettings.allowTextSelection,
+        },
+        hello: appSettings.hello ?? true,
+        platform: this.platform,
+        ...(appSettings.seed !== undefined && { seed: appSettings.seed }),
+        ...(appSettings.fixedTimeStep !== undefined && { fixedTimeStep: appSettings.fixedTimeStep }),
+      };
+
+      // Capture extension snapshot before constructing extension-sensitive subsystems.
+      this._snapshot = appSettings.extensions === undefined ? getGlobalSnapshotInternal() : buildSnapshot([...(appSettings.extensions ?? [])]);
+
+      this.loader = constructed.track(new Loader(this.options.loader));
+
       materializeAssetBindings(this.loader, [...coreAssetBindings, ...this._snapshot.assets]);
       materializeSerializerBindings(this.serializers, this._snapshot.serializers);
+
+      this._backendType = this.resolveInitialBackendType();
+      // `createBackend` rolls back a backend whose renderer bindings throw on
+      // its own — it also runs from the post-construction backend fallback,
+      // where there is no construction scope — and rethrows without assigning,
+      // so that failure never reaches the scope as a tracked item.
+      this._backend = constructed.track(this.createBackend(this._backendType, this._snapshot));
+      this._rendering = constructed.track(new RenderingContext(this._backend));
+      this.input = constructed.track(new InputManager(this));
+      this.interaction = constructed.track(new InteractionManager(this));
+      this.scenes = constructed.track(new SceneDirector<Registry>(this, appSettings.scenes));
+      this.random = new Random(this.options.seed);
+      this._updateHandler = this.update.bind(this);
+
+      const fixedStepMs = this.options.fixedTimeStep !== undefined ? this.options.fixedTimeStep * 1000 : defaultFixedStepMs;
+
+      this._fixed = new FixedTimestep(fixedStepMs, maxFixedSteps);
+      this._fixedTime = freezeTime(new Time(fixedStepMs));
+
+      this._startupClock.start();
+
+      this._documentVisible = this.platform.documentVisible;
+      this._visibilitySubscription = this.platform.onVisibilityChange(visible => {
+        this._onPlatformVisibilityChange(visible);
+      });
+
+      this.input.onCanvasFocusChange.add(focused => {
+        this.onCanvasFocusChange.dispatch(focused);
+      });
+
+      this.onVisibilityChange.add(visible => {
+        this._audio._applyVisibility(visible);
+      });
+
+      // The engine's own per-frame work, registered as ordinary systems in the
+      // `preUpdate` phase rather than as a separate hard-coded stage. They occupy
+      // the negative `order` range, so an application system added without an
+      // `order` runs after all of them — and `before`/`after` can name them.
+      this.systems._addCoreSystem(this.input, { order: SystemOrder.CoreInput });
+      this.systems._addCoreSystem(this.interaction, { order: SystemOrder.CoreInteraction });
+      this.systems._addCoreSystem(this._audio, { order: SystemOrder.CoreAudio });
+      this.systems._addCoreSystem(this.tweens, { order: SystemOrder.CoreTweens });
+      this.systems._addCoreSystem(this.animations, { order: SystemOrder.CoreAnimation });
+      this.systems._addCoreSystem(this._rendering, { order: SystemOrder.CoreRendering });
+
+      this._coreSystems = [this.input, this.interaction, this._audio, this.tweens, this.animations, this._rendering];
+
+      // Every core manager exists by this point, so app-system bindings can capture references to them.
+      materializeApplicationSystems(this, this._snapshot.systems);
     } catch (error) {
-      try {
-        this.loader.destroy();
-      } catch {
-        /* cleanup failure is secondary */
-      }
+      // The caller gets no instance, so this is the only chance to release
+      // what was built. The original failure is what propagates — rollback
+      // never rewrites it.
+      this._rollbackConstruction(constructed);
+
       throw error;
     }
+  }
 
-    this._backendType = this.resolveInitialBackendType();
-    this._backend = this.createBackend(this._backendType, this._snapshot);
-    this._rendering = new RenderingContext(this._backend);
-    this.input = new InputManager(this);
-    this.interaction = new InteractionManager(this);
-    this.scenes = new SceneDirector<Registry>(this, appSettings.scenes);
-    this.random = new Random(this.options.seed);
-    this._updateHandler = this.update.bind(this);
+  /**
+   * Release every subsystem a failed constructor had already built. Without
+   * it, a throw from any construction step — most realistically an extension
+   * binding in `materializeApplicationSystems()`, the last one — strands the
+   * platform adapter, loader, backend, rendering context, input, interaction
+   * and scene director with no owner: the caller never receives an
+   * `Application` and so can never call {@link Application.destroy}.
+   *
+   * `constructed` covers the members that may or may not exist yet, in reverse
+   * construction order. The field-initialised members are handled directly:
+   * they run before the constructor body and take no arguments, so they are
+   * either fully built or the constructor never started — there is nothing
+   * partial for a scope to track. Two more cannot be scope entries at all,
+   * because neither is a `Destroyable`, and both are held from outside:
+   * {@link Application._resizeObserver} is held by the parent DOM node it
+   * observes, and {@link Application._visibilitySubscription} is a plain
+   * function held by the platform adapter — which, when *injected*, is not
+   * ours to destroy and would keep that subscription, and through it this
+   * dead application, alive.
+   *
+   * One entry is only synchronous on the surface: {@link SceneDirector}'s
+   * teardown is asynchronous, and `destroy()` fire-and-forgets it — a
+   * constructor cannot await. In the common case that is sound here, because
+   * a director reached through this path has not navigated: no active scope,
+   * no retained scopes, so its disposal reduces to destroying its own
+   * Signals. That is not an absolute guarantee, though: an extension's
+   * `ApplicationSystemBinding.create(app)` — invoked from
+   * `materializeApplicationSystems`, the last construction step, with the
+   * live `app` — could itself call `app.scenes.preload()` before a later
+   * binding throws, leaving a preloaded scope (and its in-flight `load()`)
+   * for this fire-and-forget teardown to race. It is *not* a substitute
+   * for {@link Application._disposeManagedResources}, which awaits
+   * `scenes._dispose()` precisely because by then there is scene state to
+   * unwind before its dependencies go.
+   *
+   * Every step is guarded on its own, and a failing one never cancels the
+   * rest. That is not defensive padding: the situation that brings us here is
+   * a misbehaving extension, so a throwing `destroy()` on an extension system
+   * is precisely the case to expect — and under a single `try` it would abort
+   * the rollback before `constructed.destroy()` ever ran, reinstating the very
+   * leak this method exists to close. It is the same contract
+   * {@link DisposalScope.destroy} keeps for its own items: attempt all of
+   * them, collect the failures, report at the end.
+   *
+   * Teardown failures are logged, never propagated: the error that aborted
+   * construction is the one the caller must see, and the scope rethrows an
+   * `AggregateError` in development builds, which would replace it.
+   */
+  private _rollbackConstruction(constructed: DisposalScope): void {
+    // A binding that ran before the failing one holds a reference to this
+    // half-built application. Marking it destroyed makes a later `start()` on
+    // that reference fail loudly instead of running on torn-down subsystems.
+    this._destroyed = true;
 
-    const fixedStepMs = this.options.fixedTimeStep !== undefined ? this.options.fixedTimeStep * 1000 : defaultFixedStepMs;
+    const failures: unknown[] = [];
+    const attempt = (step: () => void): void => {
+      try {
+        step();
+      } catch (error) {
+        failures.push(error);
+      }
+    };
 
-    this._fixed = new FixedTimestep(fixedStepMs, maxFixedSteps);
-    this._fixedTime = new Time(fixedStepMs);
-
-    this._startupClock.start();
-
-    this._documentVisible = this.platform.documentVisible;
-    this._visibilitySubscription = this.platform.onVisibilityChange(visible => {
-      this._onPlatformVisibilityChange(visible);
+    // Neither of these is a `Destroyable`, so neither can be a scope entry —
+    // and both outlive us if left: the observer is held by a live DOM node,
+    // and an injected platform adapter keeps the visibility subscription.
+    attempt(() => {
+      this._resizeObserver?.disconnect();
+      this._resizeObserver = null;
+    });
+    attempt(() => {
+      this._visibilitySubscription?.();
+      this._visibilitySubscription = null;
     });
 
-    this.input.onCanvasFocusChange.add(focused => {
-      this.onCanvasFocusChange.dispatch(focused);
+    // Application systems materialised before the failure go first: they are
+    // the last thing constructed, and their own `destroy()` may read the core
+    // managers. Those managers are registered here too but are owned by the
+    // Application, so unregister them and let `constructed` destroy each
+    // exactly once — same reason `_disposeManagedResources` does it.
+    attempt(() => {
+      for (const system of [...this._coreSystems].reverse()) {
+        this.systems._removeCoreSystem(system);
+      }
     });
 
-    this.onVisibilityChange.add(visible => {
-      this._audio._applyVisibility(visible);
+    attempt(() => this.systems.destroy());
+
+    attempt(() => this.animations.destroy());
+    attempt(() => this.tweens.destroy());
+    attempt(() => this._audio.destroy());
+
+    attempt(() => {
+      constructed.destroy();
     });
 
-    // The engine's own per-frame work, registered as ordinary systems in the
-    // `preUpdate` phase rather than as a separate hard-coded stage. They occupy
-    // the negative `order` range, so an application system added without an
-    // `order` runs after all of them — and `before`/`after` can name them.
-    this.systems._addCoreSystem(this.input, { order: SystemOrder.CoreInput });
-    this.systems._addCoreSystem(this.interaction, { order: SystemOrder.CoreInteraction });
-    this.systems._addCoreSystem(this._audio, { order: SystemOrder.CoreAudio });
-    this.systems._addCoreSystem(this.tweens, { order: SystemOrder.CoreTweens });
-    this.systems._addCoreSystem(this.animations, { order: SystemOrder.CoreAnimation });
-    this.systems._addCoreSystem(this._rendering, { order: SystemOrder.CoreRendering });
+    attempt(() => this._startupClock.destroy());
+    attempt(() => this._activeClock.destroy());
+    attempt(() => this._frameClock.destroy());
+    attempt(() => this.onResize.destroy());
+    attempt(() => this.onFrame.destroy());
+    attempt(() => this.onFixedFrame.destroy());
+    attempt(() => this.onCanvasFocusChange.destroy());
+    attempt(() => this.onVisibilityChange.destroy());
+    attempt(() => this.onBackendLost.destroy());
+    attempt(() => this.onBackendRestored.destroy());
+    attempt(() => this.onError.destroy());
 
-    this._coreSystems = [this.input, this.interaction, this._audio, this.tweens, this.animations, this._rendering];
-
-    // Every core manager exists by this point, so app-system bindings can capture references to them.
-    materializeApplicationSystems(this, this._snapshot.systems);
+    for (const failure of failures) {
+      logger.error('Application construction failed, and one of the steps rolling back what it had already built failed as well.', {
+        source: 'Application',
+        ...(failure instanceof Error && { error: failure }),
+      });
+    }
   }
 
   public get status(): ApplicationStatus {
@@ -910,23 +1072,23 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * Application.stop}, {@link Application.destroy} during the `Loading`
    * window) so `_frameLoopActive` is the single source of truth everywhere,
    * not only where the loop starts. Idempotent — a
-   * second call while the loop is already stopped is a no-op (returns
-   * `false`). Always aborts whatever scene navigation is in flight via
+   * second call while the loop is already stopped is a no-op. Always aborts
+   * whatever scene navigation is in flight via
    * {@link SceneDirector._abortInFlightNavigation} — a transition session
    * cannot progress without frame callbacks, so it must be settled here
    * rather than left to hang, regardless of caller. Deliberately does NOT
-   * call `scenes._clearScene()` itself — a fatal frame error must NOT unload
-   * the active scene (see {@link Application._handleFrameError}'s doc
-   * comment) — that decision, and this method's return value, are the
-   * caller's responsibility.
+   * unload the active scene itself — a fatal frame error must NOT unload it
+   * (see {@link Application._handleFrameError}'s doc comment); that decision
+   * belongs to the caller, and {@link Application.stop} makes it by calling
+   * {@link SceneDirector._stopAndClearActiveScene}.
    *
-   * @returns `true` if an in-flight navigation was aborted (nothing else
-   *   needs to unload the scene), `false` otherwise (including when the loop
-   *   was already stopped).
+   * `reason` is the error the aborted navigation rejects with. `stop()` passes
+   * the same instance it then hands to the stop-and-clear operation, so the
+   * two are one abort with one reason rather than two competing ones.
    */
-  private _stopFrameLoop(): boolean {
+  private _stopFrameLoop(reason: Error = new SceneNavigationAbortedError()): void {
     if (!this._frameLoopActive) {
-      return false;
+      return;
     }
 
     this._frameLoopActive = false;
@@ -934,7 +1096,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._activeClock.stop();
     this._frameClock.stop();
 
-    return this.scenes._abortInFlightNavigation(new SceneNavigationAbortedError());
+    this.scenes._abortInFlightNavigation(reason);
   }
 
   /**
@@ -998,7 +1160,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         this._frameClock.restart();
 
         const clampedDeltaMs = Math.min(rawDeltaMs, maxDeltaMs);
-        const frameDelta = Time.temp.set(clampedDeltaMs);
+        const frameDelta = this._frameDelta.set(clampedDeltaMs);
         const frameStart = performance.now();
 
         if (__DEV__) Perf.mark(frameStartMark);
@@ -1144,27 +1306,35 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * + frame clocks. Leaves backend, input, audio, etc. intact — call
    * {@link Application.destroy} to release everything. Acts whenever the
    * frame loop is actually live (`_frameLoopActive`), including mid-`start()`
-   * — not only while `_status` is `Running`: a
-   * transition-driven navigation (the initial one, or any later `change()`)
-   * may still be in flight, in which case {@link SceneDirector._abortInFlightNavigation}
-   * (invoked by {@link Application._stopFrameLoop} itself) rejects it with a
-   * dedicated error rather than leaving it to hang.
+   * — not only while `_status` is `Running`.
    *
-   * Whether the active scene actually gets unloaded is decided by
-   * `scenes.currentScene` AFTER the abort above, not by whether an abort
-   * happened: a mid-transition abort on the very first navigation leaves
-   * `currentScene` `null` (nothing ever committed — correctly skipped), but
-   * a mid-transition abort on a LATER `change()` call still finds whatever
-   * scene was active before that navigation started (it never committed
-   * away either) — that scene must still be unloaded, matching this
-   * method's "unload the active scene" contract regardless of why the loop
-   * stopped. When an abort actually happened, the unload goes through
-   * {@link SceneDirector._forceClearActiveSceneAfterAbort} rather than the
-   * ordinary {@link SceneDirector._clearScene} — the aborted navigation's own
-   * lock (`_navigationInFlight`) does not clear until its rejection finishes
-   * propagating a few microtask turns later, and `_clearScene()` would
-   * spuriously reject against that still-stale lock (see the dedicated
-   * method's own doc comment).
+   * A stop is allowed to interrupt a navigation — that is the point of it.
+   * Everything scene-related is therefore delegated to the single
+   * {@link SceneDirector._stopAndClearActiveScene} operation, which
+   * invalidates the navigation generation, aborts an in-flight transition
+   * session if there is one, and then unloads the
+   * active scene unconditionally. Splitting that into "abort" and "clear"
+   * steps is what used to let the navigation lock win the race and leave the
+   * scene standing; `stop()` itself never fails with a
+   * {@link ConcurrentSceneNavigationError}.
+   *
+   * That does not make the interrupted navigation's own lock disappear. A
+   * navigation suspended in a `Scene.load()`/`init()` that never settles keeps
+   * `stop()`'s interruption from ever reaching its own `catch`, so it holds
+   * the director's navigation lock indefinitely — and the next
+   * {@link Application.start} or {@link SceneDirector.change} after such a
+   * stop rejects with {@link ConcurrentSceneNavigationError} for as long as
+   * that `load()` stays pending. The stop still unloads the scene; it just
+   * cannot cancel a promise the scene never resolves.
+   *
+   * Any scene-teardown failure the interruption did not cause — a scene's own
+   * `unload()`/`destroy()` throwing — still surfaces through
+   * {@link Application.onError}. Scene teardown is asynchronous and
+   * fire-and-forget here: `stop()` returns as soon as the loop is halted, so
+   * a scene with an async `unload()` may still be settling afterwards. A
+   * subsequent {@link Application.destroy} still waits for that teardown
+   * before releasing anything the scene depends on; use `destroy()` when
+   * teardown ordering matters.
    */
   public stop(): this {
     if (!this._frameLoopActive) {
@@ -1175,20 +1345,19 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this._status = ApplicationStatus.Halting;
     }
 
-    const navigationAborted = this._stopFrameLoop();
+    // One reason object for the one abort: `_stopFrameLoop()` performs it (it
+    // has to — halting the loop strands a frame-driven session regardless of
+    // caller), and the same instance is handed to the stop-and-clear operation
+    // so the error the navigation actually rejects with is the error this call
+    // site names.
+    const reason = new SceneNavigationAbortedError();
 
-    if (this.scenes.currentScene !== null) {
-      const onClearSceneFailure = (error: unknown): void => {
-        logger.error('Application.stop() failed to unload the active scene.', { source: 'Application', ...(error instanceof Error && { error }) });
-        this.onError?.dispatch(error instanceof Error ? error : new Error(String(error)));
-      };
+    this._stopFrameLoop(reason);
 
-      if (navigationAborted) {
-        void this.scenes._forceClearActiveSceneAfterAbort().catch(onClearSceneFailure);
-      } else {
-        void this.scenes._clearScene().catch(onClearSceneFailure);
-      }
-    }
+    void this.scenes._stopAndClearActiveScene(reason).catch((error: unknown) => {
+      logger.error('Application.stop() failed to unload the active scene.', { source: 'Application', ...(error instanceof Error && { error }) });
+      this.onError?.dispatch(error instanceof Error ? error : new Error(String(error)));
+    });
 
     this._status = ApplicationStatus.Stopped;
 
@@ -1382,6 +1551,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * that would race against `scenes._dispose()`'s own active-scope teardown
    * for ownership of the same scope. `destroy()` instead halts the frame
    * loop directly and lets `scenes._dispose()` own scene teardown entirely.
+   *
+   * `destroy()` called right after a `stop()` is covered by the same
+   * guarantee, not an exception to it: the scene teardown `stop()` fired and
+   * did not await is published on the director, and `scenes._dispose()` waits
+   * for it — including a still-pending `Scene.unload()` — before any
+   * dependency is destroyed.
    */
   public destroy(): void {
     this._destroyed = true;
@@ -1409,10 +1584,11 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /**
    * @internal Awaited teardown, in order: `scenes` fully disposed first
-   * (active + every retained + every preloaded scope, including each one's
-   * own async `unload()`) — then every other owned subsystem, then clocks,
-   * then Signals. See {@link Application.destroy}'s doc comment for why
-   * scenes go first.
+   * (active + every retained + every preloaded scope, plus any teardown a
+   * fire-and-forget {@link Application.stop} left running, including each
+   * one's own async `unload()`) — then every other owned subsystem, then
+   * clocks, then Signals. See {@link Application.destroy}'s doc comment for
+   * why scenes go first.
    */
   private async _disposeManagedResources(): Promise<void> {
     try {

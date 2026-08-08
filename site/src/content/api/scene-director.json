@@ -395,7 +395,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Tear down every owned resource: abort an in-flight transition session, destroy the active scene, destroy every retained scene, then destroy all Signals. Fires _dispose() (async teardown) and returns immediately — errors are reported through the app error pipeline rather than propagated, matching every other synchronous destroy() in the engine. An async shutdown path that needs to know teardown has fully finished may await SceneDirector._dispose directly instead of calling this method."
+          "description": "Tear down every owned resource: abort an in-flight transition session, await any scene teardown already in flight, destroy the active scene, destroy every retained scene, destroy every preloaded-but-never-consumed scene, then destroy all Signals. Fires _dispose() (async teardown) and returns immediately — errors are reported through the app error pipeline rather than propagated, matching every other synchronous destroy() in the engine. An async shutdown path that needs to know teardown has fully finished may await SceneDirector._dispose directly instead of calling this method."
         },
         {
           "name": "draw",

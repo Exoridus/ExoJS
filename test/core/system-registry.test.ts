@@ -15,7 +15,7 @@ const makeSystem = (log: string[], name: string, order?: number): System => ({
 
 const tick = (registry: SystemRegistry): void => {
   registry._beginFrame();
-  registry._update(Time.temp.set(16));
+  registry._update(new Time(16));
   registry._endFrame();
 };
 

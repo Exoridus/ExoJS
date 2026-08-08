@@ -1,6 +1,7 @@
 import type { MockInstance } from 'vitest';
 
 import { Scene } from '#core/Scene';
+import { Time } from '#core/Time';
 
 // SceneDirector is fully mocked in this file's harness (see
 // loadApplicationHarness) — its change() is a plain vi.fn() that never
@@ -253,6 +254,10 @@ describe('Application', () => {
     rawApp['_backend'] = backend;
     rawApp['_frameClock'] = frameClock;
     rawApp['_fixed'] = { advance: () => 0, alpha: 0 };
+    // Object.create() bypasses the constructor, so the real field
+    // initializer (`= new Time()`) never runs — stand in with a real Time so
+    // the frame path stays type-honest.
+    rawApp['_frameDelta'] = new Time();
     rawApp['_updateHandler'] = vi.fn();
     rawApp['_frameCount'] = 0;
     rawApp['onFrame'] = { dispatch: vi.fn() };
@@ -565,11 +570,10 @@ describe('Application', () => {
     const rawApp = app as unknown as Record<string, unknown>;
     const sceneTeardownError = new Error('scene teardown failed');
     const sceneDirector = {
-      _clearScene: vi.fn().mockRejectedValue(sceneTeardownError),
-      // _stopFrameLoop() always aborts any
-      // in-flight navigation before scene teardown runs — false here means
-      // "nothing was in flight," matching this test's own setup, so stop()
-      // falls through to the _clearScene() path under test.
+      // stop() delegates everything scene-related to this one operation; a
+      // rejection from it is a genuine scene-teardown failure and must be
+      // caught rather than leaked as an unhandled rejection.
+      _stopAndClearActiveScene: vi.fn().mockRejectedValue(sceneTeardownError),
       _abortInFlightNavigation: vi.fn().mockReturnValue(false),
     };
     const activeClock = { stop: vi.fn() };
@@ -589,7 +593,7 @@ describe('Application', () => {
     app.stop();
     await Promise.resolve();
 
-    expect(sceneDirector._clearScene).toHaveBeenCalledTimes(1);
+    expect(sceneDirector._stopAndClearActiveScene).toHaveBeenCalledTimes(1);
     expect(cancelSpy).toHaveBeenCalledWith(99);
     expect(activeClock.stop).toHaveBeenCalledTimes(1);
     expect(frameClock.stop).toHaveBeenCalledTimes(1);
