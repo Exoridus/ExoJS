@@ -451,8 +451,15 @@ export class View implements ObservableVectorOwner {
       this._transform.d = y * this._cos;
     }
 
-    this._transform.x = -x * centerX;
-    this._transform.y = -y * centerY;
+    // Translate THEN rotate, i.e. `clip = R · (world - centre)`. Subtracting the
+    // centre in clip space instead — `R · world - centre` — pivots the camera
+    // around the world origin, so a rotated view looks at `R⁻¹ · centre` rather
+    // than the position it was given, and the error grows with the centre's
+    // distance from the origin. Folding the centre through the already-rotated
+    // basis rows is the same correction with no extra trigonometry; at
+    // `rotation = 0` the rows are axis-aligned and this reduces to `-x * centreX`.
+    this._transform.x = -(this._transform.a * centerX + this._transform.b * centerY);
+    this._transform.y = -(this._transform.c * centerX + this._transform.d * centerY);
 
     return this;
   }
