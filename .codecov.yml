@@ -1,3 +1,19 @@
+# Coverage arrives in exactly two uploads: `unit` (jsdom lane) and `browser`
+# (Chromium-WebGL2 lane). Both jobs in `_ci-checks.yml` are gated on the same
+# `changes.outputs.engine == 'true'`, so they either both run or neither does —
+# there is no case where one upload arrives alone and the second never comes.
+#
+# Without this, Codecov judges the first upload it receives and posts a verdict
+# on jsdom-only coverage: every line the browser lane covers counts as a miss,
+# so `codecov/patch` goes red for several minutes and only flips to green once
+# the second upload lands. The verdict was always correct in the end — the red
+# was purely an artefact of judging half the data.
+codecov:
+  notify:
+    after_n_builds: 2
+    # Don't judge before the CI run itself has finished reporting.
+    wait_for_ci: true
+
 coverage:
   # Minimum project-wide coverage before Codecov reports a failure.
   # Start permissive; tighten once coverage grows above these floors.
@@ -27,6 +43,7 @@ comment:
   layout: 'reach,diff,flags,components,files'
   behavior: default
   require_changes: true # only comment when coverage actually changes
+  after_n_builds: 2 # same reason as `codecov.notify` — never comment on half the data
 
 # Upload flags — one per CI lane that uploads (see _ci-checks.yml).
 flags:
