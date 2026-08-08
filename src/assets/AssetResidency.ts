@@ -9,6 +9,7 @@ import { AssetRef } from './AssetRef';
 import type { AssetTypeRegistry } from './AssetTypeRegistry';
 import type { AssetConstructor } from './FactoryRegistry';
 import type { SeamlessAdapter } from './seamless';
+import { isAbortError, SharedAbort } from './SharedAbort';
 import { WeakHandleSet } from './WeakHandleSet';
 
 interface QueueEntry {
@@ -101,6 +102,15 @@ export class AssetResidency {
   private readonly _resourceKeys = new WeakMap<object, { type: AssetConstructor; source: string }>();
   private readonly _inFlight = new Map<string, Promise<unknown>>();
   private readonly _preventStoreKeys = new Set<string>();
+
+  // ── Cancellation ──────────────────────────────────────────────────────────
+  // One {@link SharedAbort} per in-flight fetch, mirroring the two dedup
+  // keyspaces below it: `_abortByKey` for an alias-keyed fetch (one holder —
+  // the key itself), `_abortByIdentity` for an identity-deduped fetch whose
+  // holders are every alias key riding it. Aborting is therefore never a
+  // property of one consumer's cancel, but of the LAST holder leaving.
+  private readonly _abortByKey = new Map<string, SharedAbort>();
+  private readonly _abortByIdentity = new Map<string, SharedAbort>();
 
   // ── Identity / alias tracking for the Asset API ───────────────────────────
   private readonly _aliasKeyToIdentityKey = new Map<string, string>();
@@ -322,11 +332,12 @@ export class AssetResidency {
    * the twin path in {@link _evictValueKey} instead.
    *
    * Only a payload that has already converged into `_resources` is dropped here.
-   * A fetch still in flight (nothing stored yet) is left to the running fetch,
-   * which fills then frees on arrival — evicting mid-flight would race it. The
-   * value path is gated identically: the same race exists there (a claim can be
-   * released while the key's single fetch is still running), and the same rule
-   * resolves it.
+   * A fetch still in flight (nothing stored yet) has nothing to evict — it is
+   * CANCELLED instead: reaching refcount 0 means no claim scope is waiting for
+   * its result any more, which is exactly the condition the key's
+   * {@link SharedAbort} arms on. A fetch other holders still ride (a second
+   * alias on the same identity-deduped request) is left running; only the last
+   * departure aborts it. The value path is gated identically.
    */
   private _evictKey(key: string, type: AssetConstructor, source: string): void {
     const adapter = this._typeRegistry.getSeamlessAdapter(type);
@@ -378,6 +389,12 @@ export class AssetResidency {
     // for a seamless type the stored resource is always the handle object.
     else if (adapter === undefined && this._hasStored(type, source)) {
       this._evictValueKey(key, type, source, stored);
+    }
+    // Nothing resident: whatever fetch is running for this key (if any) has no
+    // claimer left waiting on it. Cancel it, and mark the key evicted so a later
+    // claim re-drives the fetch into the handles this abort leaves behind.
+    else if (this._abortInFlight(key)) {
+      this._evicted.add(key);
     }
 
     const queued = this._backgroundQueue.findIndex(entry => this._typeRegistry._key(entry.type, entry.alias) === key);
@@ -983,15 +1000,48 @@ export class AssetResidency {
    * never released and the queue wedges.
    */
   private _dispatchTracked(type: AssetConstructor, alias: string, path: string, options: unknown): Promise<unknown> {
+    const key = this._typeRegistry._key(type, alias);
+    const abort = new SharedAbort(key);
+
+    this._abortByKey.set(key, abort);
+
     let fetch: Promise<unknown>;
 
     try {
-      fetch = this._decoder._dispatchFetch(type, alias, path, options);
+      fetch = this._decoder._dispatchFetch(type, alias, path, options, abort.signal);
     } catch (error: unknown) {
       fetch = Promise.reject(this._normalizeError(error));
     }
 
-    return this._trackInFlight(type, alias, fetch);
+    return this._trackInFlight(type, alias, fetch, abort);
+  }
+
+  /**
+   * Drop `key`'s interest in whatever fetch is running for it, in BOTH dedup
+   * keyspaces: its own alias-keyed request, and the identity-deduped request it
+   * may share with sibling aliases. Returns whether either was actually
+   * aborted — a fetch a sibling holder still needs stays running.
+   */
+  private _abortInFlight(key: string): boolean {
+    let aborted = this._releaseAbort(this._abortByKey, key, key);
+    const identityKey = this._aliasKeyToIdentityKey.get(key);
+
+    if (identityKey !== undefined) {
+      aborted = this._releaseAbort(this._abortByIdentity, identityKey, key) || aborted;
+    }
+
+    return aborted;
+  }
+
+  /** Release one holder from a tracked {@link SharedAbort}, forgetting the handle if that aborted it. */
+  private _releaseAbort(handles: Map<string, SharedAbort>, handleKey: string, holder: string): boolean {
+    if (handles.get(handleKey)?.release(holder) !== true) {
+      return false;
+    }
+
+    handles.delete(handleKey);
+
+    return true;
   }
 
   /**
@@ -1026,13 +1076,20 @@ export class AssetResidency {
 
     const existing = this._inFlightByIdentity.get(identityKey);
     if (existing) {
+      // Join the shared request as an extra holder: this alias's own release
+      // must not cancel a fetch the alias that started it is still waiting on.
+      this._abortByIdentity.get(identityKey)?.retain(aliasKey);
+
       return existing.then(resource => this._storeResource(type, alias, resource));
     }
+
+    const abort = new SharedAbort(aliasKey);
+    this._abortByIdentity.set(identityKey, abort);
 
     let fetchPromise: Promise<unknown>;
     if (handlerEntry) {
       const fullConfig = { source, ...extraOnly };
-      const context = this._decoder._buildHandlerContext(identityKey, handlerEntry.storageName);
+      const context = this._decoder._buildHandlerContext(identityKey, handlerEntry.storageName, abort.signal);
       fetchPromise = this._decoder._fetchWithHandler(type, alias, source, fullConfig, handlerEntry.load, context);
     } else {
       fetchPromise = Promise.reject(this._typeRegistry._missingHandlerError(type));
@@ -1040,6 +1097,12 @@ export class AssetResidency {
 
     const tracked: Promise<unknown> = fetchPromise
       .finally(() => {
+        abort.settle();
+
+        if (this._abortByIdentity.get(identityKey) === abort) {
+          this._abortByIdentity.delete(identityKey);
+        }
+
         this._inFlightByIdentity.delete(identityKey);
       })
       .then(
@@ -1065,7 +1128,7 @@ export class AssetResidency {
     return tracked;
   }
 
-  private _trackInFlight(type: AssetConstructor, alias: string, promise: Promise<unknown>): Promise<unknown> {
+  private _trackInFlight(type: AssetConstructor, alias: string, promise: Promise<unknown>, abort?: SharedAbort): Promise<unknown> {
     const key = this._typeRegistry._key(type, alias);
     const trackedPromise = promise.finally(() => {
       // Clear only our OWN entry: a superseding load (e.g. a reclaim re-fetch
@@ -1077,6 +1140,15 @@ export class AssetResidency {
       }
 
       this._preventStoreKeys.delete(key);
+
+      // Disarm cancellation in the same tick the fetch settles: a release
+      // arriving afterwards must not abort a request whose result already
+      // landed. Same self-entry identity guard as the in-flight slot above.
+      abort?.settle();
+
+      if (abort !== undefined && this._abortByKey.get(key) === abort) {
+        this._abortByKey.delete(key);
+      }
     });
 
     // Non-swallowing observer: fails deferred handles / value refs (fresh
@@ -1088,8 +1160,21 @@ export class AssetResidency {
     return trackedPromise;
   }
 
+  /**
+   * Central failure sink for a tracked fetch.
+   *
+   * A CANCELLED fetch takes the same handle bookkeeping but none of the
+   * reporting: every handle/ref still has to settle — leaving them `'loading'`
+   * would strand `.loaded` and the load queues awaiting it forever — while
+   * `onError` and the missing-source diagnostic stay silent, because nothing
+   * failed. A cancel only ever happens once the key's last claim is gone, so
+   * there is no consumer left to surprise with someone else's cancellation, and
+   * the `'failed'` state it leaves behind is the same retry request a later
+   * `get()`/`_adopt`/claim already knows how to heal.
+   */
   private _onTrackedFailure(type: AssetConstructor, alias: string, key: string, error: unknown): void {
     const err = this._normalizeError(error);
+    const cancelled = isAbortError(error);
     const deferredEntry = this._deferred.get(key);
 
     if (deferredEntry !== undefined) {
@@ -1099,7 +1184,9 @@ export class AssetResidency {
         adapter?.fail(handle, err);
       }
 
-      this._warnMissingSource(alias, key, err);
+      if (!cancelled) {
+        this._warnMissingSource(alias, key, err);
+      }
     } else {
       const refEntry = this._refs.get(key);
 
@@ -1108,11 +1195,15 @@ export class AssetResidency {
           ref._fail(err);
         }
 
-        this._warnMissingSource(alias, key, err);
+        if (!cancelled) {
+          this._warnMissingSource(alias, key, err);
+        }
       }
     }
 
-    this._signals.onError.dispatch(type, alias, err);
+    if (!cancelled) {
+      this._signals.onError.dispatch(type, alias, err);
+    }
   }
 
   /**
@@ -1619,8 +1710,25 @@ export class AssetResidency {
   // Lifecycle
   // -----------------------------------------------------------------------
 
-  /** Clears all resident-resource, in-flight, claim, and background-queue state. Called from `Loader.destroy()`. */
+  /**
+   * Clears all resident-resource, in-flight, claim, and background-queue state,
+   * cancelling every fetch still running. Called from `Loader.destroy()` — the
+   * loader is going away, so no holder can possibly still want a result, and a
+   * download left running would only compete for bandwidth with whatever
+   * replaces it.
+   */
   public destroy(): void {
+    for (const abort of this._abortByKey.values()) {
+      abort.abort();
+    }
+
+    for (const abort of this._abortByIdentity.values()) {
+      abort.abort();
+    }
+
+    this._abortByKey.clear();
+    this._abortByIdentity.clear();
+
     this._resources.clear();
     this._inFlight.clear();
     this._preventStoreKeys.clear();

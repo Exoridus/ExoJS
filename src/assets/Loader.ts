@@ -26,6 +26,7 @@ import type { CacheStrategy } from './CacheStrategy';
 import type { AssetConstructor } from './FactoryRegistry';
 import { LoadingQueue } from './LoadingQueue';
 import type { SeamlessAdapter } from './seamless';
+import { isAbortError } from './SharedAbort';
 import { BinaryAsset, CsvAsset, Json, SubtitleAsset, TextAsset, WasmAsset, XmlAsset } from './tokens';
 
 /** Normalize the single-or-many `cache` option into the list the decoder takes. */
@@ -76,6 +77,17 @@ export interface AssetLoaderContext {
    * Useful for diagnostics; also equals the key used for in-flight dedup.
    */
   readonly identityKey: string;
+  /**
+   * Cancellation signal for the load this handler invocation belongs to. It
+   * aborts once no claim scope needs the result any more — a scene torn down
+   * mid-navigation, or a {@link LoadingQueue.cancel} call.
+   *
+   * The `fetch*` helpers below already forward it, so a handler built out of
+   * them needs no extra work. Forward it explicitly to any fetching or decoding
+   * the handler performs itself; `undefined` means the caller started this load
+   * without a cancellation channel.
+   */
+  readonly signal?: AbortSignal | undefined;
   /** Fetches `source` as UTF-8 text, routing through the loader's cache/IDB. */
   fetchText(source: string): Promise<string>;
   /** Fetches `source` as an `ArrayBuffer`, routing through the loader's cache/IDB. */
@@ -504,7 +516,7 @@ export class Loader {
         this._adopt(leaf, claimer, background);
       }
 
-      return this._createAdoptedQueue(entries, results => {
+      return this._createAdoptedQueue(claimer, entries, results => {
         const out: Record<string, unknown> = {};
 
         for (const [alias] of entries) {
@@ -522,7 +534,7 @@ export class Loader {
       const background = (arg1 as LoadOptions | undefined)?.priority === LoadPriority.Background;
       this._adopt(leaf, claimer, background);
 
-      return this._createAdoptedQueue([['value', leaf]], results => results.get('value'));
+      return this._createAdoptedQueue(claimer, [['value', leaf]], results => results.get('value'));
     }
 
     // 2b. Bare path string — normalize it to a `{ type, source }` descriptor and
@@ -540,7 +552,9 @@ export class Loader {
       // The font type requires a family option — infer it from the filename when not provided
       const options: unknown = type === 'font' ? { family: (path.split('/').pop()?.split(/[?#]/)[0] ?? '').replace(/\.[^.]+$/, '') } : undefined;
 
-      this._claim(this._typeRegistry._key(ctor, path), ctor, path, claimer);
+      const key = this._typeRegistry._key(ctor, path);
+
+      this._claim(key, ctor, path, claimer);
       this._onFgBatchStart(path, path);
       let notifyFn: ((success: boolean) => void) | null = null;
       const promise = this._residency._loadSingle(ctor, path, options).then(
@@ -551,11 +565,11 @@ export class Loader {
         },
         e => {
           notifyFn?.(false);
-          this._onFgBatchSettled(path, false, this._normalizeError(e));
+          this._onFgBatchSettled(path, false, this._settleError(e));
           throw e;
         },
       );
-      const queue = new LoadingQueue(promise, 1);
+      const queue = new LoadingQueue(promise, 1, () => this._cancelClaims(claimer, [key]));
       notifyFn = queue._notifyItem.bind(queue);
       return queue;
     }
@@ -1091,6 +1105,7 @@ export class Loader {
     buildResult: (results: Map<string, unknown>) => T,
   ): LoadingQueue<T> {
     const results = new Map<string, unknown>();
+    const claimedKeys: string[] = [];
     let notifyFn: ((success: boolean) => void) | null = null;
 
     const itemPromises = items.map(({ alias, asset }) => {
@@ -1107,13 +1122,16 @@ export class Loader {
           },
           error => {
             notifyFn?.(false);
-            this._onFgBatchSettled(alias, false, this._normalizeError(error));
+            this._onFgBatchSettled(alias, false, this._settleError(error));
             throw error;
           },
         );
       }
 
-      this._claim(this._typeRegistry._key(ctor, alias), ctor, alias, claimer);
+      const key = this._typeRegistry._key(ctor, alias);
+
+      claimedKeys.push(key);
+      this._claim(key, ctor, alias, claimer);
 
       return this._residency._loadSingleAsset(ctor, alias, asset).then(
         resource => {
@@ -1123,7 +1141,7 @@ export class Loader {
         },
         error => {
           notifyFn?.(false);
-          this._onFgBatchSettled(alias, false, this._normalizeError(error));
+          this._onFgBatchSettled(alias, false, this._settleError(error));
           throw error;
         },
       );
@@ -1131,7 +1149,7 @@ export class Loader {
 
     const promise = Promise.all(itemPromises).then(() => buildResult(results));
 
-    const queue = new LoadingQueue<T>(promise, items.length);
+    const queue = new LoadingQueue<T>(promise, items.length, () => this._cancelClaims(claimer, claimedKeys));
     notifyFn = queue._notifyItem.bind(queue);
 
     return queue;
@@ -1144,11 +1162,17 @@ export class Loader {
    * fetch is already driven by `_adopt`; each item's promise is simply the
    * leaf's own readiness promise (`leaf.loaded` — `Promise<this>` for a resource
    * handle, `Promise<T>` for an `AssetRef`). No `_claim` here: adoption already
-   * claimed each key. `buildResult` shapes the resolved values into the return.
+   * claimed each key — `claimer` is carried only so {@link LoadingQueue.cancel}
+   * can drop those very claims again. `buildResult` shapes the resolved values
+   * into the return.
    * @internal
    */
-  private _createAdoptedQueue<T>(entries: Array<[string, object]>, buildResult: (results: Map<string, unknown>) => T): LoadingQueue<T> {
+  private _createAdoptedQueue<T>(claimer: symbol, entries: Array<[string, object]>, buildResult: (results: Map<string, unknown>) => T): LoadingQueue<T> {
     const results = new Map<string, unknown>();
+    // Adoption registered every leaf under its residency key, so the reverse
+    // lookup is the honest source for what this queue claimed — the Loader does
+    // not re-derive the keys the residency just resolved.
+    const claimedKeys = entries.map(([, leaf]) => this._residency._getHandleKey(leaf)).filter((key): key is string => key !== undefined);
     let notifyFn: ((success: boolean) => void) | null = null;
 
     const itemPromises = entries.map(([alias, leaf]) => {
@@ -1164,7 +1188,7 @@ export class Loader {
         },
         error => {
           notifyFn?.(false);
-          this._onFgBatchSettled(alias, false, this._normalizeError(error));
+          this._onFgBatchSettled(alias, false, this._settleError(error));
           throw error;
         },
       );
@@ -1172,10 +1196,22 @@ export class Loader {
 
     const promise = Promise.all(itemPromises).then(() => buildResult(results));
 
-    const queue = new LoadingQueue<T>(promise, entries.length);
+    const queue = new LoadingQueue<T>(promise, entries.length, () => this._cancelClaims(claimer, claimedKeys));
     notifyFn = queue._notifyItem.bind(queue);
 
     return queue;
+  }
+
+  /**
+   * Back {@link LoadingQueue.cancel}: drop the claims this load registered
+   * under its own scope. Whether that actually stops a download is decided one
+   * level down — the residency aborts the in-flight fetch only once the key has
+   * no claim scope left, so a sibling scene loading the same asset keeps it.
+   */
+  private _cancelClaims(claimer: symbol, keys: readonly string[]): void {
+    for (const key of keys) {
+      this._release(key, claimer);
+    }
   }
 
   // -----------------------------------------------------------------------
@@ -1213,5 +1249,15 @@ export class Loader {
 
   private _normalizeError(error: unknown): Error {
     return error instanceof Error ? error : new Error(String(error));
+  }
+
+  /**
+   * The error a settling batch item should REPORT, or `undefined` for a
+   * cancellation. A cancelled load still settles the batch (so `onLoadProgress`
+   * and `onLoadComplete` stay in lockstep with what was started), but it is not
+   * a failure and must not reach {@link onLoadError} — the caller asked for it.
+   */
+  private _settleError(error: unknown): Error | undefined {
+    return isAbortError(error) ? undefined : this._normalizeError(error);
   }
 }

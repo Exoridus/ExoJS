@@ -6,11 +6,11 @@
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 5,
+  "memberCount": 6,
   "counts": {
     "constructors": 0,
     "methods": 3,
-    "properties": 2,
+    "properties": 3,
     "events": 0
   },
   "sections": [
@@ -256,6 +256,31 @@
           "params": [],
           "returnType": null,
           "description": "The owning Loader instance."
+        },
+        {
+          "name": "signal",
+          "signature": "signal?: AbortSignal",
+          "signatureTokens": [
+            {
+              "text": "signal",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AbortSignal",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Cancellation signal for the load this handler invocation belongs to. It aborts once no claim scope needs the result any more — a scene torn down mid-navigation, or a LoadingQueue.cancel call. The fetch* helpers below already forward it, so a handler built out of them needs no extra work. Forward it explicitly to any fetching or decoding the handler performs itself; undefined means the caller started this load without a cancellation channel."
         }
       ],
       "paragraphs": [],

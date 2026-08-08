@@ -187,7 +187,9 @@ describe('Loader', () => {
     mockFetch();
     await loader.load('demo.txt');
 
-    expect(global.fetch).toHaveBeenCalledWith('/demo.txt', fetchOptions);
+    // The loader adds the load's cancellation signal on top of the configured
+    // options; every configured field must still ride along untouched.
+    expect(global.fetch).toHaveBeenCalledWith('/demo.txt', { ...fetchOptions, signal: expect.any(AbortSignal) });
   });
 
   test('load() deduplicates concurrent requests for the same alias', async () => {
@@ -1182,7 +1184,7 @@ describe('basePath / fetchOptions property accessors', () => {
 
     await loader.load('demo.txt');
 
-    expect(global.fetch).toHaveBeenCalledWith('/demo.txt', { mode: 'no-cors' });
+    expect(global.fetch).toHaveBeenCalledWith('/demo.txt', { mode: 'no-cors', signal: expect.any(AbortSignal) });
   });
 });
 
