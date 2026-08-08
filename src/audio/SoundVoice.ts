@@ -31,9 +31,10 @@ export interface SoundVoiceInit extends BaseVoiceInit {
  * `AudioBufferSourceNode`. Each `AudioManager.play(sound)` creates an
  * independent SoundVoice; concurrent plays each get their own.
  *
- * Mixes in {@link Seekable} (live seek recreates the buffer source at the new
- * offset — buffer sources cannot be repositioned in place), {@link Loopable},
- * {@link RatePitched}, and (via {@link BaseVoice}) {@link Spatializable}.
+ * Mixes in {@link Seekable} and {@link Loopable} — both recreate the buffer
+ * source at the current position, since a source can be neither repositioned
+ * nor re-bounded in place — plus {@link RatePitched} and (via
+ * {@link BaseVoice}) {@link Spatializable}.
  *
  * @internal
  */
@@ -90,21 +91,7 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
   public seek(t: number): void {
     if (this._ended) return;
 
-    const offset = this._window.base + clamp(t, 0, this.duration);
-
-    // Buffer sources can't be repositioned — stop the current one (without
-    // letting its onended finish the voice) and start a fresh source.
-    this._source.onended = null;
-    try {
-      this._source.stop(0);
-    } catch {
-      // already stopped
-    }
-    this._source.disconnect();
-
-    this._source = this._startSource(offset);
-    this._offsetAtStart = offset;
-    this._startedAt = this._audioContext.currentTime;
+    this._restartSourceAt(this._window.base + clamp(t, 0, this.duration));
   }
 
   // -------------------------------------------------------------------------
@@ -126,22 +113,26 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
     const position = this.time;
 
     this._loop = value;
-    this._source.loop = value;
-
-    if (value) return;
 
     // The clip window is an invariant of the voice, not a property of the loop
-    // flag: a source started in loop mode carries no end bound, so switching
-    // loop off would let it run on to the end of the whole buffer and bleed
-    // into whatever sprite comes next in the atlas. Convert the remaining clip
-    // time into an explicit stop. Buffer-time remainder over the playback rate
-    // gives the wall-clock instant to stop at.
-    const remaining = Math.max(0, this.duration - position) / this._playbackRate;
-    try {
-      this._source.stop(this._audioContext.currentTime + remaining);
-    } catch {
-      // already stopped
-    }
+    // flag — and a buffer source can be neither repositioned nor re-bounded in
+    // place, so flipping `loop` on the live source is not enough in either
+    // direction:
+    //
+    // - A non-looping start is capped by `start()`'s `duration`, which the
+    //   spec measures over all played content "including any whole or partial
+    //   loop iterations". Enabling loop would not lift that cap; the source
+    //   would still end at the clip end and finish the voice.
+    // - A looping start carries no cap at all. Disabling loop would let the
+    //   source run on to the end of the whole buffer and bleed into whatever
+    //   sprite comes next in the atlas.
+    //
+    // Rebuilding at the current position settles both: the fresh source gets
+    // exactly the bound the new mode calls for, expressed in buffer time and
+    // therefore immune to later rate changes and to the per-frame Doppler
+    // modulation, and the restart rebases the playhead so `time` keeps
+    // reporting correctly across the switch.
+    this._restartSourceAt(this._window.base + position);
   }
 
   // -------------------------------------------------------------------------
@@ -207,6 +198,27 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
     this._source.disconnect();
   }
 
+  /**
+   * Retire the running buffer source and start a fresh one at `offset`
+   * (absolute buffer seconds), rebasing the playhead bookkeeping. Buffer
+   * sources can be neither repositioned nor re-bounded in place, so this is
+   * the only way to change where playback sits or where it must end. The old
+   * source's `onended` is cleared first so the swap does not finish the voice.
+   */
+  private _restartSourceAt(offset: number): void {
+    this._source.onended = null;
+    try {
+      this._source.stop(0);
+    } catch {
+      // already stopped
+    }
+    this._source.disconnect();
+
+    this._source = this._startSource(offset);
+    this._offsetAtStart = offset;
+    this._startedAt = this._audioContext.currentTime;
+  }
+
   /** Create, connect, and start a buffer source at `offset` seconds. */
   private _startSource(offset: number): AudioBufferSourceNode {
     const ctx = this._audioContext;
@@ -225,11 +237,14 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
     source.connect(this._panner ?? this._output);
     source.onended = (): void => this._finish();
 
-    const playDuration = this._loop ? undefined : this._window.end - offset;
-    if (!this._loop && playDuration !== undefined && playDuration > 0) {
-      source.start(0, offset, playDuration);
-    } else {
+    if (this._loop) {
       source.start(0, offset);
+    } else {
+      // Always capped, including when nothing is left to play: `seek()` clamps
+      // inclusively, so an offset exactly at the window end must render silence
+      // and end the voice rather than fall through to an uncapped start that
+      // would spill into the rest of the atlas buffer.
+      source.start(0, offset, Math.max(0, this._window.end - offset));
     }
 
     return source;
