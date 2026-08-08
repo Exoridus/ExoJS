@@ -2,6 +2,7 @@ import { Signal } from '#core/Signal';
 import type { AssetHandler } from '#extensions/Extension';
 
 import { type Asset, AssetImpl, type ValueAsset } from './Asset';
+import type { AssetCacheError } from './AssetCacheError';
 import { parseContainer } from './AssetContainer';
 import { AssetDecoder } from './AssetDecoder';
 import type {
@@ -276,10 +277,26 @@ export class Loader {
   /** Fired when an asset fails to load. Does NOT prevent onLoadComplete. */
   public readonly onLoadError = new Signal<[key: string, error: Error]>();
 
+  /**
+   * Fires for cache failures the configured {@link CacheStrategy} degraded
+   * instead of propagating — most commonly a persistent store hitting its
+   * quota. Purely diagnostic: the affected load still succeeds from the
+   * network, so without a listener the only symptom is that caching quietly
+   * stopped working.
+   *
+   * Narrow on {@link AssetCacheError.operation} and read {@link Error.cause}
+   * for the originating `DOMException` (`QuotaExceededError` and friends).
+   */
+  public readonly onCacheError = new Signal<[error: AssetCacheError]>();
+
   public constructor(options: LoaderOptions = {}) {
     const cache = options.cache;
     const stores = cache === undefined ? [] : toStoreList(cache);
     const cacheStrategy = options.cacheStrategy ?? new CacheFirstStrategy();
+
+    // The default strategy is constructed here and never handed out, so
+    // forwarding is the only way its diagnostics can reach the application.
+    cacheStrategy.onCacheError?.add(error => this.onCacheError.dispatch(error));
 
     this._decoder = new AssetDecoder(this, this._typeRegistry, {
       basePath: options.basePath ?? '',
@@ -1044,6 +1061,7 @@ export class Loader {
     this.onLoadProgress.destroy();
     this.onLoadComplete.destroy();
     this.onLoadError.destroy();
+    this.onCacheError.destroy();
   }
 
   // -----------------------------------------------------------------------

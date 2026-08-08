@@ -6,12 +6,12 @@
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 1,
+  "memberCount": 2,
   "counts": {
     "constructors": 0,
     "methods": 1,
     "properties": 0,
-    "events": 0
+    "events": 1
   },
   "sections": [
     {
@@ -121,6 +121,60 @@
           ],
           "returnType": "Promise<unknown>",
           "description": "Resolves a single asset according to the strategy's caching policy and returns the fully constructed resource."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "events",
+      "title": "Events",
+      "members": [
+        {
+          "name": "onCacheError",
+          "signature": "onCacheError?: Signal<[error]>",
+          "signatureTokens": [
+            {
+              "text": "onCacheError",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "error",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Optional diagnostic channel for cache failures the strategy degraded instead of propagating (a full quota, an unreadable store). Loader forwards it to its own onCacheError, so implementing it is what makes a degraded write observable to the application. Strategies that never touch a store — NetworkOnlyStrategy — omit it."
         }
       ],
       "paragraphs": [],

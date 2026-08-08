@@ -1,5 +1,6 @@
 import { supportsIndexedDb } from '#core/utils';
 
+import { AssetCacheError } from './AssetCacheError';
 import type { Database } from './Database';
 
 const defaultStoreNames: readonly string[] = [
@@ -34,6 +35,12 @@ const defaultStoreNames: readonly string[] = [
  * - **Explicit** — a `migrations` map keyed by target version runs the
  *   corresponding callback for each version between `oldVersion` and
  *   `newVersion`, allowing precise schema evolution.
+ *
+ * Every failure rejects with an {@link AssetCacheError} that names the failed
+ * {@link AssetCacheOperation}, the store and key involved, and carries the
+ * originating `IDBRequest.error` / `IDBTransaction.error` `DOMException` as
+ * {@link Error.cause} — so a `QuotaExceededError` is distinguishable from a
+ * transaction or schema failure without parsing message text.
  */
 export class IndexedDbDatabase implements Database {
   public readonly name: string;
@@ -91,8 +98,24 @@ export class IndexedDbDatabase implements Database {
         const currentStores: string[] = [...transaction.objectStoreNames];
         const { oldVersion, newVersion } = event;
 
-        database.addEventListener('error', () => reject(new Error('An error occurred while opening the database.')));
-        database.addEventListener('abort', () => reject(new Error('The database opening was aborted.')));
+        database.addEventListener('error', () =>
+          reject(
+            new AssetCacheError({
+              operation: 'connect',
+              message: 'An error occurred while opening the database.',
+              cause: transaction.error ?? request.error ?? undefined,
+            }),
+          ),
+        );
+        database.addEventListener('abort', () =>
+          reject(
+            new AssetCacheError({
+              operation: 'connect',
+              message: 'The database opening was aborted.',
+              cause: transaction.error ?? undefined,
+            }),
+          ),
+        );
 
         if (this._migrations) {
           const migrationKeys = Object.keys(this._migrations)
@@ -137,8 +160,25 @@ export class IndexedDbDatabase implements Database {
         resolve(true);
       });
 
-      request.addEventListener('error', () => reject(new Error('An error occurred while requesting the database connection.')));
-      request.addEventListener('blocked', () => reject(new Error('The request for the database connection has been blocked.')));
+      request.addEventListener('error', () =>
+        reject(
+          new AssetCacheError({
+            operation: 'connect',
+            message: 'An error occurred while requesting the database connection.',
+            cause: request.error ?? undefined,
+          }),
+        ),
+      );
+      // A `blocked` event carries no error object — another live connection is
+      // holding the old version open, which is a state, not a failure cause.
+      request.addEventListener('blocked', () =>
+        reject(
+          new AssetCacheError({
+            operation: 'connect',
+            message: 'The request for the database connection has been blocked.',
+          }),
+        ),
+      );
     });
   }
 
@@ -164,7 +204,17 @@ export class IndexedDbDatabase implements Database {
       const request = store.get(name) as IDBRequest<{ name: string; data: T } | undefined>;
 
       request.addEventListener('success', () => resolve(request.result?.data ?? null));
-      request.addEventListener('error', () => reject(new Error('An error occurred while loading an item.')));
+      request.addEventListener('error', () =>
+        reject(
+          new AssetCacheError({
+            operation: 'load',
+            message: 'An error occurred while loading an item.',
+            store: type,
+            key: name,
+            cause: request.error ?? undefined,
+          }),
+        ),
+      );
     });
   }
 
@@ -175,7 +225,17 @@ export class IndexedDbDatabase implements Database {
       const request = store.put({ name, data });
 
       request.addEventListener('success', () => resolve());
-      request.addEventListener('error', () => reject(new Error('An error occurred while saving an item.')));
+      request.addEventListener('error', () =>
+        reject(
+          new AssetCacheError({
+            operation: 'save',
+            message: 'An error occurred while saving an item.',
+            store: type,
+            key: name,
+            cause: request.error ?? undefined,
+          }),
+        ),
+      );
     });
   }
 
@@ -186,7 +246,17 @@ export class IndexedDbDatabase implements Database {
       const request = store.delete(name);
 
       request.addEventListener('success', () => resolve(true));
-      request.addEventListener('error', () => reject(new Error('An error occurred while deleting an item.')));
+      request.addEventListener('error', () =>
+        reject(
+          new AssetCacheError({
+            operation: 'delete',
+            message: 'An error occurred while deleting an item.',
+            store: type,
+            key: name,
+            cause: request.error ?? undefined,
+          }),
+        ),
+      );
     });
   }
 
@@ -197,7 +267,16 @@ export class IndexedDbDatabase implements Database {
       const request = store.clear();
 
       request.addEventListener('success', () => resolve(true));
-      request.addEventListener('error', () => reject(new Error('An error occurred while clearing a storage.')));
+      request.addEventListener('error', () =>
+        reject(
+          new AssetCacheError({
+            operation: 'clear',
+            message: 'An error occurred while clearing a storage.',
+            store: type,
+            cause: request.error ?? undefined,
+          }),
+        ),
+      );
     });
   }
 
@@ -208,7 +287,15 @@ export class IndexedDbDatabase implements Database {
       const request = indexedDB.deleteDatabase(this.name);
 
       request.addEventListener('success', () => resolve(true));
-      request.addEventListener('error', () => reject(new Error('An error occurred while deleting a storage.')));
+      request.addEventListener('error', () =>
+        reject(
+          new AssetCacheError({
+            operation: 'delete-storage',
+            message: 'An error occurred while deleting a storage.',
+            cause: request.error ?? undefined,
+          }),
+        ),
+      );
     });
   }
 

@@ -1,6 +1,6 @@
 {
   "title": "IndexedDbDatabase",
-  "description": "Database implementation backed by the browser's IndexedDB API. Each object store is created with a `keyPath` of `\"name\"`, so records are stored as `{ name, data }` objects. By default the database is initialised with stores for every built-in asset type (font, image, sound, etc.); pass a custom `storeNames` list to restrict or extend the set. Schema migrations are handled in two modes: - **Default** — the constructor-supplied `storeNames` list is diff'd against the existing stores and objects stores added/deleted accordingly. - **Explicit** — a `migrations` map keyed by target version runs the corresponding callback for each version between `oldVersion` and `newVersion`, allowing precise schema evolution.",
+  "description": "Database implementation backed by the browser's IndexedDB API. Each object store is created with a `keyPath` of `\"name\"`, so records are stored as `{ name, data }` objects. By default the database is initialised with stores for every built-in asset type (font, image, sound, etc.); pass a custom `storeNames` list to restrict or extend the set. Schema migrations are handled in two modes: - **Default** — the constructor-supplied `storeNames` list is diff'd against the existing stores and objects stores added/deleted accordingly. - **Explicit** — a `migrations` map keyed by target version runs the corresponding callback for each version between `oldVersion` and `newVersion`, allowing precise schema evolution. Every failure rejects with an AssetCacheError that names the failed AssetCacheOperation, the store and key involved, and carries the originating `IDBRequest.error` / `IDBTransaction.error` `DOMException` as Error.cause — so a `QuotaExceededError` is distinguishable from a transaction or schema failure without parsing message text.",
   "symbol": "IndexedDbDatabase",
   "kind": "class",
   "subsystem": "assets",
@@ -21,7 +21,8 @@
       "paragraphs": [
         "Database implementation backed by the browser's IndexedDB API.",
         "Each object store is created with a `keyPath` of `\"name\"`, so records are stored as `{ name, data }` objects. By default the database is initialised with stores for every built-in asset type (font, image, sound, etc.); pass a custom `storeNames` list to restrict or extend the set.",
-        "Schema migrations are handled in two modes: - **Default** — the constructor-supplied `storeNames` list is diff'd against the existing stores and objects stores added/deleted accordingly. - **Explicit** — a `migrations` map keyed by target version runs the corresponding callback for each version between `oldVersion` and `newVersion`, allowing precise schema evolution."
+        "Schema migrations are handled in two modes: - **Default** — the constructor-supplied `storeNames` list is diff'd against the existing stores and objects stores added/deleted accordingly. - **Explicit** — a `migrations` map keyed by target version runs the corresponding callback for each version between `oldVersion` and `newVersion`, allowing precise schema evolution.",
+        "Every failure rejects with an AssetCacheError that names the failed AssetCacheOperation, the store and key involved, and carries the originating `IDBRequest.error` / `IDBTransaction.error` `DOMException` as Error.cause — so a `QuotaExceededError` is distinguishable from a transaction or schema failure without parsing message text."
       ],
       "importLine": "import { IndexedDbDatabase } from '@codexo/exojs'",
       "sourceLink": null

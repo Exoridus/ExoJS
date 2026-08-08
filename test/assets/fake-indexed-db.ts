@@ -148,6 +148,7 @@ class FakeIdbObjectStore {
 
 class FakeIdbTransaction extends EventTarget {
   public aborted = false;
+  public error: Error | null = null;
 
   public constructor(
     private readonly _db: FakeIdbDatabase,
@@ -286,6 +287,9 @@ class FakeIdbFactory {
           const error = this._nextUpgradeError;
 
           this._nextUpgradeError = null;
+          // Real IndexedDB surfaces an upgrade failure on the versionchange
+          // transaction; the `error` event then bubbles to the connection.
+          transaction.error = error;
           db.dispatchEvent(new Event('error'));
           request._fail(error);
 

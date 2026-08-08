@@ -1,0 +1,167 @@
+{
+  "title": "AssetCacheErrorOptions",
+  "description": "Construction options for an AssetCacheError.",
+  "symbol": "AssetCacheErrorOptions",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for an AssetCacheError."
+      ],
+      "importLine": "import { AssetCacheErrorOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "cause",
+          "signature": "cause?: unknown",
+          "signatureTokens": [
+            {
+              "text": "cause",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The underlying failure — an IDBRequest.error DOMException, a store's own rejection, or anything a custom CacheStore threw. Passed through as Error.cause."
+        },
+        {
+          "name": "key",
+          "signature": "key?: string",
+          "signatureTokens": [
+            {
+              "text": "key",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Record key, when the operation targets a single record."
+        },
+        {
+          "name": "message",
+          "signature": "message: string",
+          "signatureTokens": [
+            {
+              "text": "message",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "One-line, actionable summary (becomes the Error.message prefix)."
+        },
+        {
+          "name": "operation",
+          "signature": "operation: AssetCacheOperation",
+          "signatureTokens": [
+            {
+              "text": "operation",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetCacheOperation",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Which cache operation failed."
+        },
+        {
+          "name": "store",
+          "signature": "store?: string",
+          "signatureTokens": [
+            {
+              "text": "store",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Object store / storage namespace, when the operation targets one."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/AssetCacheError.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetCacheError.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/AssetCacheError.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetCacheError.ts"
+}

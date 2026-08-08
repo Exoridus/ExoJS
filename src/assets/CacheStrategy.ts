@@ -1,3 +1,6 @@
+import type { Signal } from '#core/Signal';
+
+import type { AssetCacheError } from './AssetCacheError';
 import type { CacheStore } from './CacheStore';
 
 /** Minimal internal factory protocol consumed by cache policies. */
@@ -44,4 +47,12 @@ export interface CacheStrategy {
    * returns the fully constructed resource.
    */
   resolve(request: CacheRequest, stores: readonly CacheStore[]): Promise<unknown>;
+  /**
+   * Optional diagnostic channel for cache failures the strategy degraded
+   * instead of propagating (a full quota, an unreadable store). `Loader`
+   * forwards it to its own `onCacheError`, so implementing it is what makes a
+   * degraded write observable to the application. Strategies that never touch
+   * a store — {@link NetworkOnlyStrategy} — omit it.
+   */
+  readonly onCacheError?: Signal<[error: AssetCacheError]>;
 }
