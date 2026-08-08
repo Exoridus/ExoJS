@@ -161,6 +161,82 @@ describe('Application construction rollback', () => {
     ]);
   });
 
+  test('a throwing destroy() in an early rollback step does not cancel the rest of it', () => {
+    recordDestroy(BrowserPlatform.prototype, 'platform');
+    recordDestroy(Loader.prototype, 'loader');
+    recordDestroy(RenderingContext.prototype, 'rendering');
+    recordDestroy(InputManager.prototype, 'input');
+    recordDestroy(InteractionManager.prototype, 'interaction');
+    recordDestroy(SceneDirector.prototype, 'scenes');
+
+    // `SystemRegistry.destroy()` has no per-item guard, so this throw escapes
+    // the very first teardown step of the rollback. Under one shared `try`
+    // that aborted everything after it — ME-7 all over again, in exactly the
+    // scenario that triggers a rollback: a misbehaving extension.
+    const hostile: System = {
+      update: vi.fn(),
+      destroy: () => {
+        throw new Error('hostile system teardown');
+      },
+    };
+
+    expect(
+      () =>
+        new Application({
+          backend: { type: 'webgl2' },
+          extensions: [throwingSystemExtension(new Error('boom'), { create: () => hostile })],
+        }),
+    ).toThrow('boom');
+
+    expect(destroyOrder).toEqual(['scenes', 'interaction', 'input', 'rendering', 'backend', 'loader', 'platform']);
+  });
+
+  test('a ResizeObserver installed by the sizing mode is disconnected', () => {
+    const observed: Element[] = [];
+    const disconnected: number[] = [];
+
+    class RecordingResizeObserver {
+      public observe(target: Element): void {
+        observed.push(target);
+      }
+
+      public unobserve(): void {
+        /* not exercised here */
+      }
+
+      public disconnect(): void {
+        disconnected.push(observed.length);
+      }
+    }
+
+    vi.stubGlobal('ResizeObserver', RecordingResizeObserver);
+
+    const host = document.createElement('div');
+
+    document.body.append(host);
+
+    try {
+      expect(
+        () =>
+          new Application({
+            backend: { type: 'webgl2' },
+            canvas: { mount: host, sizingMode: 'fill' },
+            extensions: [throwingSystemExtension(new Error('boom'))],
+          }),
+      ).toThrow('boom');
+
+      // `_applySizingMode` runs before any subsystem exists, so the observer is
+      // the earliest thing construction owns. Left connected, the parent node
+      // keeps a callback closing over a dead Application — and the next layout
+      // change drives resize() into a destroyed backend.
+      expect(observed).toEqual([host]);
+      expect(disconnected).toEqual([1]);
+    } finally {
+      host.remove();
+      vi.unstubAllGlobals();
+    }
+  });
+
   test('a system materialised before the failing binding is destroyed', () => {
     const destroyed = vi.fn();
     const earlier: System = { update: vi.fn(), destroy: destroyed };

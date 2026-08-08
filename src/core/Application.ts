@@ -490,10 +490,6 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this.canvas.style.imageRendering = canvasOptions.imageRendering;
     }
 
-    this._mountCanvas(canvasOptions.mount);
-    this._sizingMode = canvasOptions.sizingMode ?? 'fixed';
-    this._applySizingMode(this._sizingMode);
-
     // Ownership record for every subsystem built from here on. Construction is
     // the one point in the lifecycle where a half-built Application can exist:
     // if a later step throws, the caller never receives an instance and so can
@@ -509,6 +505,16 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     const constructed = new DisposalScope();
 
     try {
+      // Inside the boundary because `_applySizingMode` is the first step that
+      // can own something: `'fill'` and `'letterbox'` attach a ResizeObserver
+      // to the parent element, and a DOM node holding an observer whose
+      // callback closes over a dead Application is a live leak, not an inert
+      // one — the next parent layout change would drive `resize()` into a
+      // destroyed backend.
+      this._mountCanvas(canvasOptions.mount);
+      this._sizingMode = canvasOptions.sizingMode ?? 'fixed';
+      this._applySizingMode(this._sizingMode);
+
       // Established before any subsystem, because input, interaction and the
       // frame loop all read the host through it.
       this._ownsPlatform = appSettings.platform === undefined;
@@ -635,11 +641,13 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * construction order. The field-initialised members are handled directly:
    * they run before the constructor body and take no arguments, so they are
    * either fully built or the constructor never started — there is nothing
-   * partial for a scope to track. Two more cannot be scope entries at all:
-   * {@link Application._visibilitySubscription} is a plain function rather
-   * than a `Destroyable`, and an *injected* {@link PlatformAdapter} is not
-   * ours to destroy — so with an injected adapter that subscription, and
-   * through it this dead application, would otherwise stay alive.
+   * partial for a scope to track. Two more cannot be scope entries at all,
+   * because neither is a `Destroyable`, and both are held from outside:
+   * {@link Application._resizeObserver} is held by the parent DOM node it
+   * observes, and {@link Application._visibilitySubscription} is a plain
+   * function held by the platform adapter — which, when *injected*, is not
+   * ours to destroy and would keep that subscription, and through it this
+   * dead application, alive.
    *
    * One entry is only synchronous on the surface: {@link SceneDirector}'s
    * teardown is asynchronous, and `destroy()` fire-and-forgets it — a
@@ -651,7 +659,16 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * `scenes._dispose()` precisely because by then there is scene state to
    * unwind before its dependencies go.
    *
-   * A teardown failure is logged, never propagated: the error that aborted
+   * Every step is guarded on its own, and a failing one never cancels the
+   * rest. That is not defensive padding: the situation that brings us here is
+   * a misbehaving extension, so a throwing `destroy()` on an extension system
+   * is precisely the case to expect — and under a single `try` it would abort
+   * the rollback before `constructed.destroy()` ever ran, reinstating the very
+   * leak this method exists to close. It is the same contract
+   * {@link DisposalScope.destroy} keeps for its own items: attempt all of
+   * them, collect the failures, report at the end.
+   *
+   * Teardown failures are logged, never propagated: the error that aborted
    * construction is the one the caller must see, and the scope rethrows an
    * `AggregateError` in development builds, which would replace it.
    */
@@ -661,42 +678,64 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     // that reference fail loudly instead of running on torn-down subsystems.
     this._destroyed = true;
 
-    try {
+    const failures: unknown[] = [];
+    const attempt = (step: () => void): void => {
+      try {
+        step();
+      } catch (error) {
+        failures.push(error);
+      }
+    };
+
+    // Neither of these is a `Destroyable`, so neither can be a scope entry —
+    // and both outlive us if left: the observer is held by a live DOM node,
+    // and an injected platform adapter keeps the visibility subscription.
+    attempt(() => {
+      this._resizeObserver?.disconnect();
+      this._resizeObserver = null;
+    });
+    attempt(() => {
       this._visibilitySubscription?.();
       this._visibilitySubscription = null;
+    });
 
-      // Application systems materialised before the failure go first: they are
-      // the last thing constructed, and their own `destroy()` may read the core
-      // managers. Those managers are registered here too but are owned by the
-      // Application, so unregister them and let `constructed` destroy each
-      // exactly once — same reason `_disposeManagedResources` does it.
+    // Application systems materialised before the failure go first: they are
+    // the last thing constructed, and their own `destroy()` may read the core
+    // managers. Those managers are registered here too but are owned by the
+    // Application, so unregister them and let `constructed` destroy each
+    // exactly once — same reason `_disposeManagedResources` does it.
+    attempt(() => {
       for (const system of [...this._coreSystems].reverse()) {
         this.systems._removeCoreSystem(system);
       }
+    });
 
-      this.systems.destroy();
+    attempt(() => this.systems.destroy());
 
-      this.animations.destroy();
-      this.tweens.destroy();
-      this._audio.destroy();
+    attempt(() => this.animations.destroy());
+    attempt(() => this.tweens.destroy());
+    attempt(() => this._audio.destroy());
 
+    attempt(() => {
       constructed.destroy();
+    });
 
-      this._startupClock.destroy();
-      this._activeClock.destroy();
-      this._frameClock.destroy();
-      this.onResize.destroy();
-      this.onFrame.destroy();
-      this.onFixedFrame.destroy();
-      this.onCanvasFocusChange.destroy();
-      this.onVisibilityChange.destroy();
-      this.onBackendLost.destroy();
-      this.onBackendRestored.destroy();
-      this.onError.destroy();
-    } catch (rollbackError) {
-      logger.error('Application construction failed, and rolling back the subsystems it had already built failed as well.', {
+    attempt(() => this._startupClock.destroy());
+    attempt(() => this._activeClock.destroy());
+    attempt(() => this._frameClock.destroy());
+    attempt(() => this.onResize.destroy());
+    attempt(() => this.onFrame.destroy());
+    attempt(() => this.onFixedFrame.destroy());
+    attempt(() => this.onCanvasFocusChange.destroy());
+    attempt(() => this.onVisibilityChange.destroy());
+    attempt(() => this.onBackendLost.destroy());
+    attempt(() => this.onBackendRestored.destroy());
+    attempt(() => this.onError.destroy());
+
+    for (const failure of failures) {
+      logger.error('Application construction failed, and one of the steps rolling back what it had already built failed as well.', {
         source: 'Application',
-        ...(rollbackError instanceof Error && { error: rollbackError }),
+        ...(failure instanceof Error && { error: failure }),
       });
     }
   }

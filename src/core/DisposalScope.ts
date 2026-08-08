@@ -3,9 +3,15 @@ import type { Destroyable } from './types';
 /**
  * Ownership container for {@link Destroyable} resources. Items registered with
  * {@link track} are destroyed in reverse registration order when the scope
- * itself is destroyed — the spine of ExoJS's ownership-driven cleanup. A
- * {@link Scene} owns one (exposed via `Scene.track`); an `Application` owns one
- * for app-scoped services.
+ * itself is destroyed — the spine of ExoJS's ownership-driven cleanup.
+ *
+ * A {@link Scene} owns one for its whole lifetime, exposed as `Scene.track`.
+ * An `Application` does not: it creates one for the duration of its
+ * constructor, to release the subsystems already built if a later construction
+ * step throws (the caller never receives an instance, so `destroy()` is
+ * unreachable). Its own `Application.destroy()` runs an explicit ordered
+ * teardown instead, because the WebGPU→WebGL2 backend fallback replaces
+ * subsystems after construction, which a long-lived scope would not follow.
  *
  * `track` is idempotent and returns its argument for fluent capture:
  *
