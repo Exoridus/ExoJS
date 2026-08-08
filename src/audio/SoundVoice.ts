@@ -120,11 +120,27 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
       this._loop = value;
       return;
     }
+
+    // Read the playhead before the flag flips — `time` wraps modulo the span
+    // while looping, and the value needed below is the pre-change position.
+    const position = this.time;
+
     this._loop = value;
     this._source.loop = value;
-    if (value) {
-      this._source.loopStart = this._window.loopStart;
-      this._source.loopEnd = this._window.loopEnd;
+
+    if (value) return;
+
+    // The clip window is an invariant of the voice, not a property of the loop
+    // flag: a source started in loop mode carries no end bound, so switching
+    // loop off would let it run on to the end of the whole buffer and bleed
+    // into whatever sprite comes next in the atlas. Convert the remaining clip
+    // time into an explicit stop. Buffer-time remainder over the playback rate
+    // gives the wall-clock instant to stop at.
+    const remaining = Math.max(0, this.duration - position) / this._playbackRate;
+    try {
+      this._source.stop(this._audioContext.currentTime + remaining);
+    } catch {
+      // already stopped
     }
   }
 
@@ -200,10 +216,11 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
     source.playbackRate.value = this._playbackRate;
     source.detune.value = this._detune;
 
-    if (this._loop) {
-      source.loopStart = this._window.loopStart;
-      source.loopEnd = this._window.loopEnd;
-    }
+    // Always stamped, not only for a looping start: the loop window belongs to
+    // the voice's clip, so enabling loop later must not have to reconstruct it
+    // from state the source no longer carries.
+    source.loopStart = this._window.loopStart;
+    source.loopEnd = this._window.loopEnd;
 
     source.connect(this._panner ?? this._output);
     source.onended = (): void => this._finish();

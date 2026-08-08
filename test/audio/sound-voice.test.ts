@@ -376,6 +376,72 @@ describe('SoundVoice — capabilities', () => {
     sound.destroy();
   });
 
+  // ---- the clip window is a permanent invariant of the voice ----
+
+  test('a non-looping sprite voice still carries its clip window on the source', () => {
+    const factory = setupSourceSpy();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub(10));
+    sound.defineSprite('hit', { start: 2, end: 3 });
+
+    sound._createSpriteVoice(manager, 'hit');
+
+    expect(factory.sources[0].loopStart).toBe(2);
+    expect(factory.sources[0].loopEnd).toBe(3);
+
+    factory.restore();
+    sound.destroy();
+  });
+
+  test('disabling loop keeps a sprite voice inside its clip window', () => {
+    const factory = setupSourceSpy();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub(10));
+    sound.defineSprite('hit', { start: 2, end: 3, loop: true });
+    const ctx = getAudioContext();
+
+    const voice = sound._createSpriteVoice(manager, 'hit') as SoundVoice;
+    const source = factory.sources[0];
+
+    // A looping start passes no duration, so nothing bounds the source yet.
+    expect(source.start).toHaveBeenCalledWith(0, 2);
+
+    ctx.currentTime = 0.25; // a quarter into the 1s clip
+
+    voice.loop = false;
+
+    expect(source.loop).toBe(false);
+    // Stopped at the end of the clip window, not at the end of the 10s buffer —
+    // otherwise the next sprite in the atlas would bleed in.
+    expect(source.stop).toHaveBeenCalledWith(1);
+
+    ctx.currentTime = 0;
+    factory.restore();
+    sound.destroy();
+  });
+
+  test('disabling loop accounts for the current playback rate', () => {
+    const factory = setupSourceSpy();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub(10));
+    sound.defineSprite('hit', { start: 2, end: 3, loop: true });
+    const ctx = getAudioContext();
+
+    const voice = sound._createSpriteVoice(manager, 'hit', { playbackRate: 2 }) as SoundVoice;
+    const source = factory.sources[0];
+
+    ctx.currentTime = 0.25; // 0.5s of buffer time consumed at rate 2
+
+    voice.loop = false;
+
+    // 0.5s of clip left, played at rate 2 => 0.25s of wall-clock time.
+    expect(source.stop).toHaveBeenCalledWith(0.5);
+
+    ctx.currentTime = 0;
+    factory.restore();
+    sound.destroy();
+  });
+
   test('detune setter is a no-op once the voice has ended', () => {
     const factory = setupSourceSpy();
     const manager = new AudioManager();
