@@ -451,8 +451,8 @@ export class View implements ObservableVectorOwner {
       this._transform.d = y * this._cos;
     }
 
-    this._transform.x = x * -this._transform.a - y * this._transform.b + -x * centerX;
-    this._transform.y = x * -this._transform.c - y * this._transform.d + -y * centerY;
+    this._transform.x = -x * centerX;
+    this._transform.y = -y * centerY;
 
     return this;
   }
