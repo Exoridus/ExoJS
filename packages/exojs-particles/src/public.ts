@@ -9,4 +9,7 @@ export type { ParticlesExtensionOptions } from './particlesExtension';
 export { createParticlesExtension, particlesExtension } from './particlesExtension';
 export type { ParticleSystemOptions } from './ParticleSystem';
 export { ParticleSystem } from './ParticleSystem';
+export { ParticleMaterial } from './renderModes/ParticleMaterial';
+export { ParticleRenderMode } from './renderModes/ParticleRenderMode';
+export { QuadParticles } from './renderModes/QuadParticles';
 export type { Extension, RendererBinding } from '@codexo/exojs/extensions';

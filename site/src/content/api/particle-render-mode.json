@@ -1,0 +1,442 @@
+{
+  "title": "ParticleRenderMode",
+  "description": "Turns a particle system's SoA storage into drawable vertex data. A mode owns the whole \"how\": the vertex layout, the shader pair, the draw model, and the loop that fills the buffer. The backend renderers only upload what it produces and issue the draw it declares, so a new primitive is a new mode rather than a renderer change. Implementations are fixed at system construction (see `ParticleSystemOptions.render`) and default to `QuadParticles`.",
+  "symbol": "ParticleRenderMode",
+  "kind": "class",
+  "subsystem": "particles",
+  "importPath": "@codexo/exojs-particles",
+  "tier": "stable",
+  "memberCount": 12,
+  "counts": {
+    "constructors": 1,
+    "methods": 5,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Turns a particle system's SoA storage into drawable vertex data.",
+        "A mode owns the whole \"how\": the vertex layout, the shader pair, the draw model, and the loop that fills the buffer. The backend renderers only upload what it produces and issue the draw it declares, so a new primitive is a new mode rather than a renderer change.",
+        "Implementations are fixed at system construction (see `ParticleSystemOptions.render`) and default to `QuadParticles`."
+      ],
+      "importLine": "import { ParticleRenderMode } from '@codexo/exojs-particles'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): ParticleRenderMode",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ParticleRenderMode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "ParticleRenderMode",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "_ensureCapacity",
+          "signature": "_ensureCapacity(byteLength: number): void",
+          "signatureTokens": [
+            {
+              "text": "_ensureCapacity",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "byteLength",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "byteLength",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Grow the scratch buffer to hold at least byteLength. Grow-only: a shrinking particle count reuses the larger buffer rather than reallocating, matching the renderers' existing buffer policy."
+        },
+        {
+          "name": "_onBufferGrown",
+          "signature": "_onBufferGrown(_data: ArrayBuffer): void",
+          "signatureTokens": [
+            {
+              "text": "_onBufferGrown",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "_data",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBuffer",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "_data",
+              "type": "ArrayBuffer",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Re-create typed-array views after _ensureCapacity reallocates."
+        },
+        {
+          "name": "_setCount",
+          "signature": "_setCount(count: number): void",
+          "signatureTokens": [
+            {
+              "text": "_setCount",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "count",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "count",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Record the element count produced by a build."
+        },
+        {
+          "name": "build",
+          "signature": "build(system: ParticleSystem): void",
+          "signatureTokens": [
+            {
+              "text": "build",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "system",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ParticleSystem",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "system",
+              "type": "ParticleSystem",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Fill the scratch buffer from system's current SoA state."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Optional cleanup, called from ParticleSystem.destroy."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "geometry",
+          "signature": "geometry: Geometry",
+          "signatureTokens": [
+            {
+              "text": "geometry",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Geometry",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Base geometry: topology, named attributes, buffer usage."
+        },
+        {
+          "name": "gpuEligible",
+          "signature": "gpuEligible: boolean",
+          "signatureTokens": [
+            {
+              "text": "gpuEligible",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether this mode can run while the system is in GPU compute mode. Mirrors UpdateModule.wgsl(): a mode that cannot forces the whole system onto the CPU path, silently and observably via ParticleSystem.gpuMode. A GPU-eligible mode's layout must match what the compute pipeline emits into gpuState.instanceBuffer — today that is QuadParticles's layout, and it is the only GPU-eligible mode."
+        },
+        {
+          "name": "instanced",
+          "signature": "instanced: boolean",
+          "signatureTokens": [
+            {
+              "text": "instanced",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Draw model. true issues an instanced draw against geometry; false a plain draw over the built vertex buffer. Declared here because Geometry carries topology but has no instancing concept."
+        },
+        {
+          "name": "material",
+          "signature": "material: Material",
+          "signatureTokens": [
+            {
+              "text": "material",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Material",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Shader pair plus uniforms/textures for this mode."
+        },
+        {
+          "name": "count",
+          "signature": "count: number",
+          "signatureTokens": [
+            {
+              "text": "count",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Element count of the draw call this mode's last build produced. Draw-model relative: instance count when instanced, vertex count otherwise. Do not assume one meaning."
+        },
+        {
+          "name": "data",
+          "signature": "data: ArrayBuffer",
+          "signatureTokens": [
+            {
+              "text": "data",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBuffer",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The buffer the renderer uploads. Valid until the next build."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-particles/src/renderModes/ParticleRenderMode.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/renderModes/ParticleRenderMode.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-particles/src/renderModes/ParticleRenderMode.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/renderModes/ParticleRenderMode.ts"
+}

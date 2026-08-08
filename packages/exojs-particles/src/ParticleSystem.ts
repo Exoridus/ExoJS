@@ -12,6 +12,8 @@ import { ParticleGpuState } from '#gpu/ParticleGpuState';
 import type { DeathModule } from '#modules/DeathModule';
 import type { SpawnModule } from '#modules/SpawnModule';
 import type { UpdateModule } from '#modules/UpdateModule';
+import type { ParticleRenderMode } from '#renderModes/ParticleRenderMode';
+import { QuadParticles } from '#renderModes/QuadParticles';
 
 const defaultCapacity = 4096;
 
@@ -60,6 +62,14 @@ export interface ParticleSystemOptions {
    * anything else (incl. WebGL2) ⇒ CPU mode.
    */
   device?: GPUDevice;
+  /**
+   * How this system's particles become vertices. Fixed at construction;
+   * defaults to {@link QuadParticles}. A mode with `gpuEligible === false`
+   * forces the system onto the CPU path — silently, exactly like an update
+   * module without a `wgsl()` implementation, and observable through
+   * {@link ParticleSystem.gpuMode}.
+   */
+  readonly render?: ParticleRenderMode;
 }
 
 /**
@@ -80,7 +90,8 @@ export interface ParticleSystemOptions {
  *
  * **Auto-routing CPU vs GPU:** at first {@link update}, the system checks:
  * if a `WebGpuBackend` was supplied AND every registered update module has
- * `wgsl()`, the GPU path engages — a composite compute pipeline runs
+ * `wgsl()` AND the render mode is GPU-eligible, the GPU path engages — a
+ * composite compute pipeline runs
  * integration plus all module bodies in one dispatch and writes directly
  * into the renderer's instance buffer (no CPU readback). Otherwise the CPU
  * path runs the existing per-module `apply()` loops.
@@ -183,6 +194,8 @@ export class ParticleSystem extends Drawable {
    */
   private _spawnRecord: number[] | null = null;
 
+  private readonly _renderMode: ParticleRenderMode;
+
   private _texture: Texture;
   private readonly _frames: Rectangle[] = [];
   private readonly _textureFrame: Rectangle = new Rectangle();
@@ -253,6 +266,7 @@ export class ParticleSystem extends Drawable {
     this.alive = new Uint8Array(capacity);
 
     this._device = options.device ?? null;
+    this._renderMode = options.render ?? new QuadParticles();
     this._texture = texture ?? getDefaultWhiteTexture();
 
     if (frames !== null) {
@@ -262,6 +276,15 @@ export class ParticleSystem extends Drawable {
     }
 
     this.resetTextureFrame();
+  }
+
+  /**
+   * The render mode this system's particles are drawn with. Fixed at
+   * construction via `ParticleSystemOptions.render`; the backend renderers
+   * read it every draw to learn the vertex layout, shader and draw model.
+   */
+  public get renderMode(): ParticleRenderMode {
+    return this._renderMode;
   }
 
   public get texture(): Texture {
@@ -565,6 +588,7 @@ export class ParticleSystem extends Drawable {
     this.clearSpawnModules();
     this.clearUpdateModules();
     this.clearDeathModules();
+    this._renderMode.destroy();
 
     if (this._gpuState !== null) {
       this._gpuState.destroy();
@@ -597,7 +621,7 @@ export class ParticleSystem extends Drawable {
       return;
     }
 
-    const allEligible = this._updateModules.every(m => typeof m.wgsl === 'function');
+    const allEligible = this._updateModules.every(m => typeof m.wgsl === 'function') && this._renderMode.gpuEligible;
 
     if (!allEligible) {
       return;
