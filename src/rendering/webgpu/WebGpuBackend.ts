@@ -78,6 +78,13 @@ interface ManagedWebGpuTextureState {
    * for `rgba8`/`r8`) and never changes for a given texture instance.
    */
   partialUploadScratch: Float32Array | Uint8Array | null;
+  /**
+   * Cached exact-length view over `partialUploadScratch` for the region size
+   * last uploaded. Keeps a steady-state partial upload (same region size every
+   * sync) allocation-free instead of minting a fresh `subarray` per call.
+   * Invalidated whenever the backing scratch is replaced.
+   */
+  partialUploadView: Float32Array | Uint8Array | null;
 }
 
 interface PixelClipBoundsState {
@@ -2037,6 +2044,7 @@ export class WebGpuBackend implements RenderBackend {
         hasContent: false,
         accountedBytes: 0,
         partialUploadScratch: null,
+        partialUploadView: null,
       };
 
       state.accountedBytes = this._accountant.reallocate(0, this._estimateTextureBytes(texture, mipLevelCount));
@@ -2153,6 +2161,17 @@ export class WebGpuBackend implements RenderBackend {
    * keeps a barrier-heavy scene's per-frame CPU garbage flat instead of
    * scaling with flush count: each flush's transform (and separate tint) sync
    * would otherwise allocate its own throwaway packing buffer.
+   *
+   * The exact-length view over an over-sized scratch is cached alongside it
+   * (`partialUploadView`), so a texture whose dirty region keeps the same size
+   * — the steady state for the transform/tint pair — allocates nothing at all
+   * rather than a fresh `subarray` per sync. Handing `writeTexture` the whole
+   * scratch instead would also be legal (it derives its read extent from
+   * `dataLayout` + `size`, and an over-sized `data` only has to satisfy
+   * `offset + requiredBytesInCopy <= byteLength`), but this path has no
+   * real-device test coverage, so the exact-length view stays: it is the same
+   * bytes either way and does not depend on every implementation matching the
+   * spec's upper bound.
    */
   private _acquirePartialUploadScratch(state: ManagedWebGpuTextureState, source: Float32Array | Uint8Array, length: number): Float32Array | Uint8Array {
     const isFloat = source instanceof Float32Array;
@@ -2161,9 +2180,22 @@ export class WebGpuBackend implements RenderBackend {
     if (scratch === null || scratch.length < length || isFloat !== scratch instanceof Float32Array) {
       scratch = isFloat ? new Float32Array(length) : new Uint8Array(length);
       state.partialUploadScratch = scratch;
+      // The cached view belongs to the replaced buffer — drop it with it.
+      state.partialUploadView = null;
     }
 
-    return scratch.length === length ? scratch : scratch.subarray(0, length);
+    if (scratch.length === length) {
+      return scratch;
+    }
+
+    let view = state.partialUploadView;
+
+    if (view?.length !== length) {
+      view = scratch.subarray(0, length);
+      state.partialUploadView = view;
+    }
+
+    return view;
   }
 
   private _syncTexture(texture: Texture | RenderTexture): ManagedWebGpuTextureState {

@@ -125,6 +125,51 @@ describe('WebGPU partial DataTexture upload: packing scratch reuse', () => {
     expect(distinctBuffers(partialViews)).toBe(2);
   });
 
+  test('a steady-state region size reuses one view object, not just one buffer', () => {
+    const texture = new DataTexture({ width: 64, height: 64, format: TextureFormat.R32F });
+
+    syncTexture(backend, texture);
+
+    const fullUploadCount = environment.writeTextureData().length;
+
+    // Grow the scratch first, so every later upload is served by a view over an
+    // over-sized buffer rather than by the buffer itself.
+    texture.commitRect(0, 0, 32, 32);
+    syncTexture(backend, texture);
+
+    for (let row = 0; row < 4; row++) {
+      texture.commitRect(0, row, 8, 1);
+      syncTexture(backend, texture);
+    }
+
+    const steadyViews = environment.writeTextureData().slice(fullUploadCount + 1);
+
+    expect(steadyViews).toHaveLength(4);
+    expect(new Set(steadyViews).size).toBe(1);
+    expect(steadyViews[0]!.byteLength).toBe(8 * Float32Array.BYTES_PER_ELEMENT);
+  });
+
+  test('a region size change swaps the cached view without touching the grown buffer', () => {
+    const texture = new DataTexture({ width: 64, height: 64, format: TextureFormat.R32F });
+
+    syncTexture(backend, texture);
+
+    const fullUploadCount = environment.writeTextureData().length;
+
+    texture.commitRect(0, 0, 32, 32);
+    syncTexture(backend, texture);
+    texture.commitRect(0, 0, 8, 1);
+    syncTexture(backend, texture);
+    texture.commitRect(0, 0, 4, 1);
+    syncTexture(backend, texture);
+
+    const [, small, smaller] = environment.writeTextureData().slice(fullUploadCount);
+
+    expect(small).not.toBe(smaller);
+    expect(small!.buffer).toBe(smaller!.buffer);
+    expect(smaller!.byteLength).toBe(4 * Float32Array.BYTES_PER_ELEMENT);
+  });
+
   test('the packed bytes still carry the correct sub-region contents', () => {
     const texture = new DataTexture({ width: 4, height: 4, format: TextureFormat.R8 });
 
