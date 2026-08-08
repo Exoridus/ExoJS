@@ -905,13 +905,29 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       throw new Error('Could not create vertex array object.');
     }
 
-    const nodeAttribute = shader.getAttribute('a_nodeIndex');
-    const vao = new WebGl2VertexArrayObject()
-      .addIndex(entry.indexBuffer)
-      .addAttribute(entry.vertexBuffer, shader.getAttribute('a_position'), gl.FLOAT, false, vertexStrideBytes, 0)
-      .addAttribute(entry.vertexBuffer, shader.getAttribute('a_texcoord'), gl.FLOAT, false, vertexStrideBytes, 8)
-      .addAttribute(entry.vertexBuffer, shader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, vertexStrideBytes, 16)
-      .addAttribute(nodeIndexBuffer, nodeAttribute, gl.UNSIGNED_INT, false, Uint32Array.BYTES_PER_ELEMENT, 0, true, 1)
+    // a_nodeIndex is mandatory — it is how any instanced draw reaches its
+    // transform, and _isInstancingCompatible already rejects a custom shader
+    // without it. The three geometry attributes are optional: GL strips
+    // declared-but-unread inputs at link time, so a custom batch shader that
+    // ignores texcoords or vertex colors simply has no such attribute to bind.
+    // Skipping those keeps the interleaved layout's offsets untouched.
+    const vao = new WebGl2VertexArrayObject().addIndex(entry.indexBuffer);
+    const geometryAttributes = [
+      { name: 'a_position', type: gl.FLOAT, normalized: false, offset: 0 },
+      { name: 'a_texcoord', type: gl.FLOAT, normalized: false, offset: 8 },
+      { name: 'a_color', type: gl.UNSIGNED_BYTE, normalized: true, offset: 16 },
+    ] as const;
+
+    for (const { name, type, normalized, offset } of geometryAttributes) {
+      const attribute = shader.attributes.get(name);
+
+      if (attribute !== undefined) {
+        vao.addAttribute(entry.vertexBuffer, attribute, type, normalized, vertexStrideBytes, offset);
+      }
+    }
+
+    vao
+      .addAttribute(nodeIndexBuffer, shader.getAttribute('a_nodeIndex'), gl.UNSIGNED_INT, false, Uint32Array.BYTES_PER_ELEMENT, 0, true, 1)
       .connect(this._createVaoRuntime(gl, vaoHandle));
 
     entry.vaos.set(shader, vao);

@@ -14,8 +14,11 @@ import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Matrix } from '#math/Matrix';
 import { Geometry } from '#rendering/geometry/Geometry';
+import { MeshMaterial } from '#rendering/material/MeshMaterial';
+import { ShaderSource } from '#rendering/material/ShaderSource';
 import { RenderBatch } from '#rendering/RenderBatch';
 import { RenderingContext } from '#rendering/RenderingContext';
+import { INSTANCE_TRANSFORM_GLSL } from '#rendering/shader/instanceContract';
 import { View } from '#rendering/View';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
@@ -103,6 +106,54 @@ const coloredQuad = (x0: number, y0: number, x1: number, y1: number, rgba: RgbaT
     stride,
   });
 };
+
+// Overwrite only the six position pairs of a quad laid out by `coloredQuad`,
+// leaving the interleaved vertex colors untouched.
+const writeQuadCorners = (buffer: ArrayBuffer, x0: number, y0: number, x1: number, y1: number, stride: number): void => {
+  const corners: ReadonlyArray<readonly [number, number]> = [
+    [x0, y0],
+    [x1, y0],
+    [x1, y1],
+    [x0, y0],
+    [x1, y1],
+    [x0, y1],
+  ];
+  const view = new DataView(buffer);
+
+  corners.forEach(([x, y], index) => {
+    view.setFloat32(index * stride + 0, x, true);
+    view.setFloat32(index * stride + 4, y, true);
+  });
+};
+
+// The same quad as `coloredQuad`, but declared mutable so the renderer keeps its
+// GPU buffers in sync with `Geometry.version` instead of packing once.
+const mutableQuad = (x0: number, y0: number, x1: number, y1: number, stride: number): Geometry => {
+  const source = coloredQuad(x0, y0, x1, y1, [255, 255, 255, 255]);
+  const geometry = new Geometry({
+    attributes: [
+      { name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 },
+      { name: 'a_color', size: 4, type: 'u8', normalized: true, offset: 8 },
+    ],
+    vertexData: source.vertexData,
+    stride,
+    usage: 'dynamic',
+  });
+
+  return geometry;
+};
+
+// A mesh material whose vertex shader is built on the exported instancing
+// contract — the constant under test, not a copy of it.
+const contractMaterial = (vertexBody: string): MeshMaterial =>
+  new MeshMaterial({
+    shader: new ShaderSource({
+      glsl: {
+        vertex: `#version 300 es\n${INSTANCE_TRANSFORM_GLSL}\n${vertexBody}`,
+        fragment: '#version 300 es\nprecision mediump float;\nin vec4 v_tint;\nout vec4 fragColor;\nvoid main(){fragColor=vec4(v_tint.rgb*v_tint.a,v_tint.a);}',
+      },
+    }),
+  });
 
 // A screen-space view matching the canvas: world (0,0)..(64,64) maps to the
 // whole surface, top-left origin.
@@ -215,6 +266,106 @@ describe('WebGL2 RenderingContext.drawBatch', () => {
       expectPixelNear(readWebGl2Pixel(backend, 40, 8), [0, 255, 0, 255]); // instance 1 → green
       expectPixelNear(readWebGl2Pixel(backend, 8, 40), [0, 0, 255, 255]); // instance 2 → blue
       expectPixelNear(readWebGl2Pixel(backend, 60, 60), [0, 0, 0, 255]); // empty → cleared black
+    } finally {
+      batch.destroy();
+      geometry.destroy();
+      context.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('renders a custom-material batch built on INSTANCE_TRANSFORM_GLSL', async () => {
+    const backend = await createBackend();
+    const context = new RenderingContext(backend);
+    const geometry = coloredQuad(0, 0, 16, 16, [255, 255, 255, 255]);
+    // The shader reads neither a_texcoord nor a_color, so GL strips both at link
+    // time — this also covers the batch VAO binding geometry attributes
+    // optionally rather than demanding all three.
+    const material = contractMaterial(`
+      out vec4 v_tint;
+
+      void main() {
+        gl_Position = vec4(exoInstanceClipPosition(a_position, a_nodeIndex), 0.0, 1.0);
+        v_tint = exoInstanceTint(a_nodeIndex);
+      }`);
+    const batch = new RenderBatch(geometry, material)
+      .add(new Matrix(1, 0, 0, 0, 1, 0), new Color(255, 0, 0))
+      .add(new Matrix(1, 0, 32, 0, 1, 0), new Color(0, 255, 0));
+
+    try {
+      backend.resetStats();
+      backend.clear(Color.black);
+      context.drawBatch(batch, { view: screenView() });
+
+      // Still one instanced draw: a custom material does not split the batch.
+      expect(backend.stats.drawCalls).toBe(1);
+      // Both the transform and the tint arrived through the contract helpers,
+      // so the shared transform-buffer layout is genuinely encapsulated.
+      expectPixelNear(readWebGl2Pixel(backend, 8, 8), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 40, 8), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 8, 40), [0, 0, 0, 255]);
+    } finally {
+      batch.destroy();
+      material.destroy();
+      geometry.destroy();
+      context.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('rejects a custom material whose shader ignores the instancing contract', async () => {
+    const backend = await createBackend();
+    const context = new RenderingContext(backend);
+    const geometry = coloredQuad(0, 0, 16, 16, [255, 255, 255, 255]);
+    const material = new MeshMaterial({
+      shader: new ShaderSource({
+        glsl: {
+          vertex: '#version 300 es\nin vec2 a_position;\nvoid main(){gl_Position=vec4(a_position,0.0,1.0);}',
+          fragment: '#version 300 es\nprecision mediump float;\nout vec4 c;\nvoid main(){c=vec4(1.0);}',
+        },
+      }),
+    });
+    const batch = new RenderBatch(geometry, material).add(new Matrix());
+
+    try {
+      backend.clear(Color.black);
+
+      // Throws rather than falling back: the fallback would silently turn one
+      // instanced draw into `count` draw calls.
+      expect(() => context.drawBatch(batch, { view: screenView() })).toThrow(/not instancing-compatible/);
+    } finally {
+      batch.destroy();
+      material.destroy();
+      geometry.destroy();
+      context.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('re-uploads a mutated dynamic geometry on invalidate()', async () => {
+    const backend = await createBackend();
+    const context = new RenderingContext(backend);
+    const stride = 12;
+    const geometry = mutableQuad(0, 0, 16, 16, stride);
+    const batch = new RenderBatch(geometry).add(new Matrix(), new Color(255, 255, 255));
+
+    try {
+      backend.resetStats();
+      backend.clear(Color.black);
+      context.drawBatch(batch, { view: screenView() });
+      expectPixelNear(readWebGl2Pixel(backend, 8, 8), [255, 255, 255, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 40, 40), [0, 0, 0, 255]);
+
+      // Grow the quad in place and publish the change through the existing seam.
+      writeQuadCorners(geometry.vertexData as ArrayBuffer, 0, 0, 56, 56, stride);
+      geometry.invalidate();
+
+      backend.clear(Color.black);
+      context.drawBatch(batch, { view: screenView() });
+
+      // The enlarged quad now covers a pixel the original did not reach, so the
+      // re-packed vertex buffer really did reach the GPU.
+      expectPixelNear(readWebGl2Pixel(backend, 40, 40), [255, 255, 255, 255]);
     } finally {
       batch.destroy();
       geometry.destroy();
