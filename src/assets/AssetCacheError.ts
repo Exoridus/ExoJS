@@ -17,10 +17,16 @@ export interface AssetCacheErrorOptions {
   readonly operation: AssetCacheOperation;
   /** One-line, actionable summary (becomes the {@link Error.message} prefix). */
   readonly message: string;
-  /** Object store / storage namespace, when the operation targets one. */
-  readonly store?: string;
-  /** Record key, when the operation targets a single record. */
-  readonly key?: string;
+  /**
+   * Object store / storage namespace, when the operation targets one.
+   * Explicitly `undefined` is accepted — a database-wide operation has none.
+   */
+  readonly store?: string | undefined;
+  /**
+   * Record key, when the operation targets a single record. Explicitly
+   * `undefined` is accepted — a store-wide operation has none.
+   */
+  readonly key?: string | undefined;
   /**
    * The underlying failure — an `IDBRequest.error` `DOMException`, a store's
    * own rejection, or anything a custom {@link CacheStore} threw. Passed

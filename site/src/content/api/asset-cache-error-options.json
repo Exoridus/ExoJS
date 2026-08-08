@@ -76,7 +76,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Record key, when the operation targets a single record."
+          "description": "Record key, when the operation targets a single record. Explicitly undefined is accepted — a store-wide operation has none."
         },
         {
           "name": "message",
@@ -143,7 +143,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Object store / storage namespace, when the operation targets one."
+          "description": "Object store / storage namespace, when the operation targets one. Explicitly undefined is accepted — a database-wide operation has none."
         }
       ],
       "paragraphs": [],

@@ -391,6 +391,87 @@ describe('IndexedDbDatabase', () => {
       expect((error as TypedCacheError).cause).toBeUndefined();
     });
 
+    test('opening an unknown object store rejects with a typed error for the attempted operation', async () => {
+      const { IndexedDbDatabase, AssetCacheError } = await loadWithFakeIndexedDb();
+      // A `bindAsset` handler with its own `storageName` that the database was
+      // never configured for lands exactly here: `transaction()`/`objectStore()`
+      // throws synchronously (a `NotFoundError` DOMException in a real browser)
+      // rather than failing an IDBRequest.
+      const db = new IndexedDbDatabase('unknown-store-db', 1, ['image']);
+
+      const error = await rejection(db.load('does-not-exist', 'hero'));
+
+      expect(error).toBeInstanceOf(AssetCacheError);
+      expect((error as TypedCacheError).operation).toBe('load');
+      expect((error as TypedCacheError).store).toBe('does-not-exist');
+      expect((error as TypedCacheError).key).toBe('hero');
+      expect((error as TypedCacheError).cause).toBeInstanceOf(Error);
+    });
+
+    test('each data operation labels an unknown-store failure with its own operation', async () => {
+      const { IndexedDbDatabase } = await loadWithFakeIndexedDb();
+      const db = new IndexedDbDatabase('unknown-store-ops-db', 1, ['image']);
+
+      const operations = await Promise.all([rejection(db.save('nope', 'hero', 1)), rejection(db.delete('nope', 'hero')), rejection(db.clearStorage('nope'))]);
+
+      expect(operations.map(error => (error as TypedCacheError).operation)).toEqual(['save', 'delete', 'clear']);
+      // `clearStorage` targets a whole store, so it carries no record key.
+      expect((operations[2] as TypedCacheError).key).toBeNull();
+    });
+
+    test('a connect failure surfacing through a data operation keeps its connect operation', async () => {
+      const { IndexedDbDatabase, AssetCacheError, fakeIdb } = await loadWithFakeIndexedDb();
+      const db = new IndexedDbDatabase('connect-through-load-db', 1, ['image']);
+      const openError = new Error('underlying open failure');
+
+      fakeIdb.failNextOpen(openError);
+
+      const error = await rejection(db.load('image', 'hero'));
+
+      expect(error).toBeInstanceOf(AssetCacheError);
+      // Already typed by `connect()` — re-wrapping it as a 'load' failure would
+      // bury the real cause one level deeper and mislabel the operation.
+      expect((error as TypedCacheError).operation).toBe('connect');
+      expect((error as TypedCacheError).cause).toBe(openError);
+    });
+
+    test('a synchronous throw from indexedDB.open() is typed too', async () => {
+      const { IndexedDbDatabase, AssetCacheError, fakeIdb } = await loadWithFakeIndexedDb();
+      // `open()` throws rather than failing its request for an invalid version
+      // — `new IndexedDbDatabase(name, 0)` reaches this through public API.
+      const openThrow = new TypeError('The version provided must not be 0.');
+
+      vi.spyOn(fakeIdb.factory, 'open').mockImplementation(() => {
+        throw openThrow;
+      });
+
+      const db = new IndexedDbDatabase('sync-open-throw-db', 1, ['image']);
+      const error = await rejection(db.connect());
+
+      expect(error).toBeInstanceOf(AssetCacheError);
+      expect((error as TypedCacheError).operation).toBe('connect');
+      expect((error as TypedCacheError).cause).toBe(openThrow);
+    });
+
+    test('a synchronous throw from indexedDB.deleteDatabase() is typed too', async () => {
+      const { IndexedDbDatabase, AssetCacheError, fakeIdb } = await loadWithFakeIndexedDb();
+      const db = new IndexedDbDatabase('sync-delete-throw-db', 1, ['image']);
+
+      await db.connect();
+
+      const deleteThrow = new TypeError('deleteDatabase refused');
+
+      vi.spyOn(fakeIdb.factory, 'deleteDatabase').mockImplementation(() => {
+        throw deleteThrow;
+      });
+
+      const error = await rejection(db.deleteStorage());
+
+      expect(error).toBeInstanceOf(AssetCacheError);
+      expect((error as TypedCacheError).operation).toBe('delete-storage');
+      expect((error as TypedCacheError).cause).toBe(deleteThrow);
+    });
+
     test('deleteStorage() rejects with a typed delete-storage error carrying the request error', async () => {
       const { IndexedDbDatabase, AssetCacheError, fakeIdb } = await loadWithFakeIndexedDb();
       const db = new IndexedDbDatabase('typed-delete-storage-db', 1, ['image']);

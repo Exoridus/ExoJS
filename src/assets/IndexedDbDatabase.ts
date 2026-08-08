@@ -1,6 +1,6 @@
 import { supportsIndexedDb } from '#core/utils';
 
-import { AssetCacheError } from './AssetCacheError';
+import { AssetCacheError, type AssetCacheOperation } from './AssetCacheError';
 import type { Database } from './Database';
 
 const defaultStoreNames: readonly string[] = [
@@ -38,9 +38,12 @@ const defaultStoreNames: readonly string[] = [
  *
  * Every failure rejects with an {@link AssetCacheError} that names the failed
  * {@link AssetCacheOperation}, the store and key involved, and carries the
- * originating `IDBRequest.error` / `IDBTransaction.error` `DOMException` as
- * {@link Error.cause} — so a `QuotaExceededError` is distinguishable from a
- * transaction or schema failure without parsing message text.
+ * originating `DOMException` as {@link Error.cause} — so a `QuotaExceededError`
+ * is distinguishable from a transaction or schema failure without parsing
+ * message text. That holds for the parts of the IndexedDB API that throw
+ * synchronously instead of failing a request (opening a transaction on an
+ * unknown store, `open()` with an invalid version) just as it does for a
+ * failed `IDBRequest`.
  */
 export class IndexedDbDatabase implements Database {
   public readonly name: string;
@@ -84,14 +87,47 @@ export class IndexedDbDatabase implements Database {
     return this._database!.transaction([type], transactionMode).objectStore(type);
   }
 
+  /**
+   * {@link getObjectStore} for one labelled operation, with its synchronous
+   * throws converted to {@link AssetCacheError}.
+   *
+   * `transaction()`/`objectStore()` throw rather than failing a request: a
+   * `NotFoundError` for a store this database was never configured with — the
+   * realistic case being a `bindAsset` handler whose `storageName` is missing
+   * from `storeNames` — and an `InvalidStateError` on a closing connection.
+   * Both would otherwise escape as bare `DOMException`s and break the promise
+   * this class makes about its failures. An already-typed error (from
+   * {@link connect}) passes through unchanged so it keeps its own operation.
+   */
+  private async _openStore(operation: AssetCacheOperation, type: string, transactionMode?: IDBTransactionMode, key?: string): Promise<IDBObjectStore> {
+    try {
+      return await this.getObjectStore(type, transactionMode);
+    } catch (error: unknown) {
+      if (error instanceof AssetCacheError) {
+        throw error;
+      }
+
+      throw new AssetCacheError({ operation, message: 'An error occurred while opening an object store.', store: type, key, cause: error });
+    }
+  }
+
   public async connect(): Promise<boolean> {
     if (this._connected && this._database) {
       return true;
     }
 
-    return new Promise((resolve, reject) => {
-      const request: IDBOpenDBRequest = indexedDB.open(this.name, this.version);
+    // `open()` throws rather than failing its request for an invalid version
+    // (0) or in a context where storage is denied, so it cannot live inside the
+    // promise executor if the rejection is to stay typed.
+    let request: IDBOpenDBRequest;
 
+    try {
+      request = indexedDB.open(this.name, this.version);
+    } catch (error: unknown) {
+      throw new AssetCacheError({ operation: 'connect', message: 'The database connection could not be requested.', cause: error });
+    }
+
+    return new Promise((resolve, reject) => {
       request.addEventListener('upgradeneeded', event => {
         const database = request.result;
         const transaction = request.transaction!;
@@ -195,7 +231,7 @@ export class IndexedDbDatabase implements Database {
   }
 
   public async load<T = unknown>(type: string, name: string): Promise<T | null> {
-    const store = await this.getObjectStore(type);
+    const store = await this._openStore('load', type, 'readonly', name);
 
     return new Promise((resolve, reject) => {
       // `IDBRequest.result` is typed `any`; the records this store writes in
@@ -219,7 +255,7 @@ export class IndexedDbDatabase implements Database {
   }
 
   public async save(type: string, name: string, data: unknown): Promise<void> {
-    const store = await this.getObjectStore(type, 'readwrite');
+    const store = await this._openStore('save', type, 'readwrite', name);
 
     return new Promise((resolve, reject) => {
       const request = store.put({ name, data });
@@ -240,7 +276,7 @@ export class IndexedDbDatabase implements Database {
   }
 
   public async delete(type: string, name: string): Promise<boolean> {
-    const store = await this.getObjectStore(type, 'readwrite');
+    const store = await this._openStore('delete', type, 'readwrite', name);
 
     return new Promise((resolve, reject) => {
       const request = store.delete(name);
@@ -261,7 +297,7 @@ export class IndexedDbDatabase implements Database {
   }
 
   public async clearStorage(type: string): Promise<boolean> {
-    const store = await this.getObjectStore(type, 'readwrite');
+    const store = await this._openStore('clear', type, 'readwrite');
 
     return new Promise((resolve, reject) => {
       const request = store.clear();
@@ -283,9 +319,16 @@ export class IndexedDbDatabase implements Database {
   public async deleteStorage(): Promise<boolean> {
     await this.disconnect();
 
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.deleteDatabase(this.name);
+    // Same reason as `connect()`: a synchronous throw here would escape untyped.
+    let request: IDBOpenDBRequest;
 
+    try {
+      request = indexedDB.deleteDatabase(this.name);
+    } catch (error: unknown) {
+      throw new AssetCacheError({ operation: 'delete-storage', message: 'The storage deletion could not be requested.', cause: error });
+    }
+
+    return new Promise((resolve, reject) => {
       request.addEventListener('success', () => resolve(true));
       request.addEventListener('error', () =>
         reject(
