@@ -9,6 +9,8 @@ export type { ParticlesExtensionOptions } from './particlesExtension';
 export { createParticlesExtension, particlesExtension } from './particlesExtension';
 export type { ParticleSystemOptions } from './ParticleSystem';
 export { ParticleSystem } from './ParticleSystem';
+export type { MeshParticlesOptions } from './renderModes/MeshParticles';
+export { MeshParticles } from './renderModes/MeshParticles';
 export { ParticleMaterial } from './renderModes/ParticleMaterial';
 export { ParticleRenderMode } from './renderModes/ParticleRenderMode';
 export { QuadParticles } from './renderModes/QuadParticles';

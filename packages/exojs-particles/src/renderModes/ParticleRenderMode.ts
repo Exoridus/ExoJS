@@ -50,8 +50,10 @@ export abstract class ParticleRenderMode {
    * onto the CPU path, silently and observably via `ParticleSystem.gpuMode`.
    *
    * A GPU-eligible mode's layout must match what the compute pipeline emits
-   * into `gpuState.instanceBuffer` — today that is `QuadParticles`'s layout,
-   * and it is the only GPU-eligible mode.
+   * into `gpuState.instanceBuffer` — the shared 40-byte per-instance layout
+   * (`instanceAttributes`). `QuadParticles` and `MeshParticles` both declare
+   * exactly that layout and differ only in the shape they expand it into,
+   * which is why both are eligible without the compute shader knowing either.
    */
   public readonly gpuEligible: boolean = false;
 
