@@ -168,7 +168,7 @@ describe('WebGPU AnimatedSprite — frame-region UV swap', () => {
       expectPixelNear(readPixel(16, 16), [255, 0, 0, 255]);
 
       // Advance exactly one frame's worth of time (fps 10 → 100ms/frame)
-      sprite.update(100);
+      sprite.update(100 / 1000);
       expect(sprite.currentFrame).toBe(1);
 
       if (!(await renderScene(ctx, backend, root))) {
@@ -201,7 +201,7 @@ describe('WebGPU AnimatedSprite — frame-region UV swap', () => {
       sprite.setPosition(8, 8);
       root.addChild(sprite);
 
-      sprite.update(100);
+      sprite.update(100 / 1000);
       expect(sprite.currentFrame).toBe(1);
 
       // Restart (the default) rewinds to frame 0

@@ -113,14 +113,11 @@ init() {
     this.player.play('walk');
     this.root.addChild(this.player);
 }
-
-update(delta: Time) {
-    this.player.update(delta); // advance the active clip
-}
 ```
 
-Like any `AnimatedSprite`, you must call `player.update(delta)` each frame to advance playback — see
-the [Animation](/ExoJS/en/guide/rendering/animation/) guide for the full clip/playback API.
+Like any `AnimatedSprite`, playback advances on its own once the sprite is in the scene tree — the
+engine's `AnimationManager` ticks it every frame. See the
+[Animation](/ExoJS/en/guide/rendering/animation/) guide for the full clip/playback API.
 
 The parsed clips are also exposed directly on `sheet.clips` — a read-only `Map` keyed by tag name —
 so you can inspect what was imported or build a sprite by hand:

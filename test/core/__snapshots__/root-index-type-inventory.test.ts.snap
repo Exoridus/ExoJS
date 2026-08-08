@@ -13,6 +13,7 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "AnimatedSprite: class",
   "AnimatedSpriteClipDefinition: interface",
   "AnimatedSpritePlayOptions: interface",
+  "AnimationManager: class",
   "AnyAssetConfig: type alias",
   "AnyAssets: type alias",
   "AnySceneConstructor: type alias",

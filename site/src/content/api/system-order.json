@@ -6,7 +6,7 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 9,
+  "memberCount": 10,
   "counts": {
     "constructors": 0,
     "methods": 0,
@@ -28,6 +28,19 @@
       "id": "members",
       "title": "Members",
       "members": [
+        {
+          "name": "CoreAnimation",
+          "signature": "CoreAnimation",
+          "signatureTokens": [
+            {
+              "text": "CoreAnimation",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
         {
           "name": "CoreAudio",
           "signature": "CoreAudio",

@@ -7,6 +7,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "ActionMap",
   "AmbiguousSceneInstanceError",
   "AnimatedSprite",
+  "AnimationManager",
   "Application",
   "ApplicationStatus",
   "ArcadeStickGamepadMapping",

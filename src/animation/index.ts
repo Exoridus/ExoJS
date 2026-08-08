@@ -1,3 +1,4 @@
+export { AnimationManager } from './AnimationManager';
 export type { EasingFunction } from './Easing';
 export { Ease } from './Easing';
 export { Tween } from './Tween';

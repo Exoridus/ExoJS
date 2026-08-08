@@ -293,12 +293,34 @@ player.onComplete.add(clip => {
 });
 ```
 
-Call `player.update(delta)` each frame. The delta can be a `Time` object (from the scene's `update`) or a number in milliseconds:
+Playback advances by itself. Once the sprite is part of the scene tree, the engine's
+`AnimationManager` (`app.animations`) ticks every playing `AnimatedSprite` once per frame — there is
+nothing to call from your own `update`:
 
 ```ts
-update(delta: Time) {
-    this.player.update(delta);
+import { AnimatedSprite, Scene } from '@codexo/exojs';
+
+class Level extends Scene {
+    private player!: AnimatedSprite;
+
+    override init(): void {
+        this.addChild(this.player);
+        this.player.play('walk'); // advances automatically from here on
+    }
 }
+```
+
+A sprite you never add to the tree — one drawn immediate-mode via `context.render(sprite)` — has no
+owning application to reach, so drive it yourself with `update(deltaSeconds)`. The argument is
+**seconds**, the same unit as `Tween.update`:
+
+```ts
+import { AnimatedSprite } from '@codexo/exojs';
+
+declare const detached: AnimatedSprite;
+declare const frameSeconds: number;
+
+detached.update(frameSeconds);
 ```
 
 ### From a Spritesheet

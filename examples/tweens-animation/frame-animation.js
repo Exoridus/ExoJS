@@ -24,14 +24,14 @@ class FrameAnimationScene extends Scene {
         });
         // The onFrame signal fires on every frame advance with the 0-based index.
         this.sprite.onFrame.add((_clip, frame) => this.hud.setStatus(`Frame: ${frame + 1}/${this.frameCount}`));
+        // In the scene tree, playback is advanced by the engine's
+        // AnimationManager once per frame -- no update() call of our own.
+        this.addChild(this.sprite);
         this.sprite.play('walk');
-    }
-    update(delta) {
-        this.sprite.update(delta);
     }
     draw(context) {
         context.backend.clear();
-        context.render(this.sprite);
+        context.render(this.root);
     }
 }
 const app = new Application({
