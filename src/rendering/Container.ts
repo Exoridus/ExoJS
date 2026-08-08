@@ -523,12 +523,33 @@ export class Container extends RenderNode {
   }
 
   public override updateBounds(): this {
-    this._bounds.reset().addRect(this.getLocalBounds(), this.getGlobalTransform());
+    const localBounds = this.getLocalBounds();
+    // A plain container carries no geometry of its own: its local rect is the
+    // empty 0x0 box at the local origin. Merging that unconditionally pins the
+    // origin into every aggregate, so a container whose children all sit far
+    // away would report an AABB stretching back to its own position.
+    const hasLocalContent = localBounds.width !== 0 || localBounds.height !== 0;
+    let hasContent = hasLocalContent;
+
+    this._bounds.reset();
+
+    if (hasLocalContent) {
+      this._bounds.addRect(localBounds, this.getGlobalTransform());
+    }
 
     for (const child of this._childList) {
       if (child.visible) {
         this._bounds.addRect(child.getBounds());
+        hasContent = true;
       }
+    }
+
+    // Nothing contributed an extent. Fall back to the degenerate local rect so
+    // the aggregate stays a real rectangle at this container's own transform —
+    // handing out the untouched accumulator would leak its Infinity/-Infinity
+    // seed into width/height and every edge accessor.
+    if (!hasContent) {
+      this._bounds.addRect(localBounds, this.getGlobalTransform());
     }
 
     return this;

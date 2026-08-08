@@ -377,17 +377,21 @@ describe('builder: transformNode marking, cull suppression, snapshot/replay roun
     const backend = createTestBackend();
     const root = new Container();
     const group = new BoundaryContainer();
+    const nearLeaf = new LeafDrawable('near');
     const farLeaf = new LeafDrawable('far');
 
-    // Group-relative position far outside the 800x600 view: without
-    // suppression this child would be culled against a space it is not in.
+    // The near leaf keeps the group's own AABB inside the view, so the group
+    // survives container-level culling and per-child culling is what this test
+    // actually exercises. Group-relative position far outside the 800x600
+    // view: without suppression the far child would be culled against a space
+    // it is not in.
     farLeaf.setPosition(5000, 5000);
-    group.addChild(farLeaf);
+    group.addChild(nearLeaf, farLeaf);
     root.addChild(group);
 
     const draws = collectDraws(root, backend);
 
-    expect(draws.map(d => (d.drawable as LeafDrawable).id)).toEqual(['far']);
+    expect(draws.map(d => (d.drawable as LeafDrawable).id)).toEqual(['near', 'far']);
 
     root.destroy();
     backend.destroy();
