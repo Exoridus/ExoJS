@@ -22,6 +22,7 @@ import {
 } from '#rendering/plan/RetainedInstructionSet';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
+import type { InstanceDataView } from '#rendering/RenderBatch';
 import type { Renderer } from '#rendering/Renderer';
 import { RendererRegistry } from '#rendering/RendererRegistry';
 import type { RenderError } from '#rendering/RenderError';
@@ -600,7 +601,7 @@ export class WebGl2Backend implements RenderBackend {
     return this;
   }
 
-  public drawInstanced(mesh: Mesh, transforms: readonly Matrix[], tints: readonly Color[], count: number): this {
+  public drawInstanced(mesh: Mesh, transforms: readonly Matrix[], tints: readonly Color[], count: number, instances: InstanceDataView | null = null): this {
     if (count <= 0 || mesh.vertexCount === 0) {
       return this;
     }
@@ -627,7 +628,7 @@ export class WebGl2Backend implements RenderBackend {
       this._transformBuffer.push(transforms[i]!, tints[i]!);
     }
 
-    renderer.drawInstancedBatch(mesh, startNodeIndex, count);
+    renderer.drawInstancedBatch(mesh, startNodeIndex, count, instances);
     this._activeDrawCommand = null;
     this._stats.submittedNodes += count;
 

@@ -91,11 +91,13 @@ describe('RenderBatch', () => {
     geometry.destroy();
   });
 
-  test('rejects non-static geometry', () => {
-    const geometry = triangleGeometry('dynamic');
+  test.each(['static', 'dynamic', 'stream'] as const)('accepts %s geometry', usage => {
+    const geometry = triangleGeometry(usage);
+    const batch = new RenderBatch(geometry);
 
-    expect(() => new RenderBatch(geometry)).toThrow(/usage='static'/);
+    expect(batch.geometry).toBe(geometry);
 
+    batch.destroy();
     geometry.destroy();
   });
 
@@ -104,6 +106,87 @@ describe('RenderBatch', () => {
     const spriteMaterial = { target: 'sprite' } as unknown as MeshMaterial;
 
     expect(() => new RenderBatch(geometry, spriteMaterial)).toThrow(/must target 'mesh'/);
+
+    geometry.destroy();
+  });
+
+  test('interleaves declared instance attributes in declaration order', () => {
+    const geometry = triangleGeometry();
+    const batch = new RenderBatch(geometry, null, {
+      instanceAttributes: [
+        { name: 'a_offset', format: 'float32x2' },
+        { name: 'a_rotation', format: 'float32' },
+      ],
+    });
+
+    batch.add(new Matrix(), null, { a_offset: [1, 2], a_rotation: 3 });
+    batch.add(new Matrix(), null, { a_offset: [4, 5], a_rotation: 6 });
+
+    const view = batch._instanceView!;
+
+    expect(view.strideFloats).toBe(3);
+    expect(view.layoutKey).toBe('a_offset:2,a_rotation:1');
+    expect([...view.data.subarray(0, 6)]).toEqual([1, 2, 3, 4, 5, 6]);
+
+    batch.destroy();
+    geometry.destroy();
+  });
+
+  test('exposes no instance view when no attributes are declared', () => {
+    const geometry = triangleGeometry();
+    const batch = new RenderBatch(geometry);
+
+    batch.add(new Matrix());
+
+    expect(batch._instanceView).toBeNull();
+
+    batch.destroy();
+    geometry.destroy();
+  });
+
+  test('keeps the instance view identity stable as storage grows', () => {
+    const geometry = triangleGeometry();
+    const batch = new RenderBatch(geometry, null, { instanceAttributes: [{ name: 'a_value', format: 'float32' }] });
+    const first = batch._instanceView;
+
+    for (let i = 0; i < 64; i++) {
+      batch.add(new Matrix(), null, { a_value: i });
+    }
+
+    // Reading the view every frame must not allocate, so the object is cached
+    // and only its `data` reference is re-pointed when the storage doubles.
+    expect(batch._instanceView).toBe(first);
+    expect(batch._instanceView!.data[63]).toBe(63);
+
+    batch.destroy();
+    geometry.destroy();
+  });
+
+  test('rejects instance data that does not match the declared layout', () => {
+    const geometry = triangleGeometry();
+    const batch = new RenderBatch(geometry, null, { instanceAttributes: [{ name: 'a_offset', format: 'float32x2' }] });
+
+    expect(() => batch.add(new Matrix())).toThrow(/requires instance data/);
+    expect(() => batch.add(new Matrix(), null, { a_other: [1, 2] })).toThrow(/missing instance attribute 'a_offset'/);
+    expect(() => batch.add(new Matrix(), null, { a_offset: [1, 2, 3] })).toThrow(/expects 2 components \(got 3\)/);
+    expect(() => batch.add(new Matrix(), null, { a_offset: 1 })).toThrow(/expects 2 components \(got a single number\)/);
+
+    batch.destroy();
+    geometry.destroy();
+  });
+
+  test('rejects a duplicate instance attribute name', () => {
+    const geometry = triangleGeometry();
+
+    expect(
+      () =>
+        new RenderBatch(geometry, null, {
+          instanceAttributes: [
+            { name: 'a_offset', format: 'float32x2' },
+            { name: 'a_offset', format: 'float32' },
+          ],
+        }),
+    ).toThrow(/declared more than once/);
 
     geometry.destroy();
   });

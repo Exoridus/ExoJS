@@ -71,6 +71,7 @@ export { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 export type { MeshOptions } from '#rendering/mesh/Mesh';
 export { Mesh } from '#rendering/mesh/Mesh';
 export { Graphics } from '#rendering/primitives/Graphics';
+export { INSTANCE_TRANSFORM_GLSL, INSTANCE_TRANSFORM_WGSL } from '#rendering/shader/instanceContract';
 export type { ShaderProgram } from '#rendering/shader/Shader';
 export { Shader } from '#rendering/shader/Shader';
 export { ShaderAttribute } from '#rendering/shader/ShaderAttribute';

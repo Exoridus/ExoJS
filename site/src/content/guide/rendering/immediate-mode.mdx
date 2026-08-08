@@ -97,8 +97,8 @@ A [`RenderBatch`](/ExoJS/en/api/render-batch/) is one geometry plus one material
 ```ts
 import { Geometry, RenderBatch } from '@codexo/exojs';
 
-// In Scene.init — the geometry must be 'static' (the default); the batch
-// uploads it to the GPU once and caches it by identity.
+// In Scene.init — 'static' is the default and the right choice for a shape
+// that never changes: the batch uploads it once and caches it by identity.
 const sparkGeometry = new Geometry({
     attributes: [{ name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 }],
     vertexData: new Float32Array([0, 0, 8, 0, 4, 8]),
@@ -130,13 +130,113 @@ draw(context: RenderingContext) {
 }
 ```
 
-A few rules the batch enforces:
+Two things worth knowing:
 
-- The geometry must be `usage: 'static'` — the GPU buffer is uploaded once and cached by identity. Dynamic or stream geometry is rejected.
-- v1 renders batches with the default mesh material (per-instance tint over the geometry's vertex colors); a custom `RenderBatch.material` on the instanced path is not yet supported.
 - An empty batch (`count === 0`) is a no-op.
+- Geometry of any `usage` works. `'static'` is uploaded once and cached by identity, which is what you want for a shape that never changes. `'dynamic'` or `'stream'` geometry is re-packed and re-uploaded whenever you call [`invalidate`](/ExoJS/en/api/geometry/) on it, so a mesh you rewrite per frame reaches the GPU without rebuilding the batch:
+
+```ts no-check
+// Rewrite the vertex data in place, then publish the change.
+writeWaveVertices(this.ribbon.vertexData as ArrayBuffer, this.elapsed);
+this.ribbon.invalidate();
+
+context.drawBatch(this.batch);
+```
 
 Call `batch.destroy()` in `Scene.unload`/`destroy` to release the pooled storage. The geometry and any material are owned by you and are not destroyed with the batch.
+
+## Custom materials and per-instance data
+
+By default a batch renders through the default mesh material, so the only thing that varies per instance is the transform and the tint. Pass a [`MeshMaterial`](/ExoJS/en/api/mesh-material/) instead and you drive every instance with your own shader — and you can feed it your own per-instance values.
+
+Declare those values as `instanceAttributes` when constructing the batch. The engine interleaves them into one buffer and hands each instance its own slice:
+
+```ts no-check
+const batch = new RenderBatch(sparkGeometry, sparkMaterial, {
+    instanceAttributes: [
+        { name: 'a_offset', format: 'float32x2' },
+        { name: 'a_phase', format: 'float32' },
+    ],
+});
+```
+
+`add` takes the values as its third argument, keyed by attribute name, and **copies** them — exactly like it copies the `Matrix` and `Color`. So hoist one scratch object out of the loop rather than allocating a literal per instance, or the batch stops being allocation-free:
+
+```ts no-check
+const data = { a_offset: [0, 0], a_phase: 0 };
+
+this.batch.clear();
+for (const spark of this.sparks) {
+    data.a_offset[0] = spark.driftX;
+    data.a_offset[1] = spark.driftY;
+    data.a_phase = spark.phase;
+
+    this.scratch.set(spark.scale, 0, spark.x, 0, spark.scale, spark.y);
+    this.batch.add(this.scratch, spark.tint, data);
+}
+```
+
+### The shader contract
+
+A batch reaches each instance's transform and tint through a buffer the engine shares across the whole frame, indexed per instance. Your shader has to read it the same way the engine does — which means knowing the buffer's exact memory layout, how the affine matrix is unpacked, and how pixel snapping is applied.
+
+You should not have to know any of that, and it is not stable: the tint has already moved into a separate row once, to keep the transform row inside two texels. A shader that had copied the old access would have broken silently, as wrong colours rather than as a compile error.
+
+So the engine exports the contract instead. Insert [`INSTANCE_TRANSFORM_GLSL`](/ExoJS/en/api/functions/) after your `#version` directive and position through `exoInstanceClipPosition` — it returns **clip space**, snapping included, because snapping is defined in device pixels and needs the projection and viewport together:
+
+```ts
+import { INSTANCE_TRANSFORM_GLSL, MeshMaterial, ShaderSource } from '@codexo/exojs';
+
+const sparkMaterial = new MeshMaterial({
+    shader: new ShaderSource({
+        glsl: {
+            vertex: `#version 300 es
+${INSTANCE_TRANSFORM_GLSL}
+
+in vec2 a_offset;
+in float a_phase;
+
+out vec4 v_tint;
+
+void main() {
+    vec2 local = a_position + a_offset;
+    gl_Position = vec4(exoInstanceClipPosition(local, a_nodeIndex), 0.0, 1.0);
+    v_tint = exoInstanceTint(a_nodeIndex) * (0.5 + 0.5 * sin(a_phase));
+}`,
+            fragment: `#version 300 es
+precision mediump float;
+
+in vec4 v_tint;
+
+out vec4 fragColor;
+
+void main() {
+    fragColor = vec4(v_tint.rgb * v_tint.a, v_tint.a);
+}`,
+        },
+    }),
+});
+```
+
+The constant declares `a_position`, `a_texcoord`, `a_color` and `a_nodeIndex` for you, along with the uniforms behind the two helpers. Attributes you do not use are stripped when the shader links, which is fine — the batch binds only what survived.
+
+A shader that ignores the contract is **rejected** on the first `drawBatch`, naming what it is missing. It is not quietly rendered another way: falling back would turn one instanced draw into one draw call per instance, and you would only ever find that in a profiler. The check reads the linked program, so it cannot run any earlier than the first draw.
+
+### Targeting WebGPU too
+
+Give the same `ShaderSource` a `wgsl` body built on [`INSTANCE_TRANSFORM_WGSL`](/ExoJS/en/api/functions/), which exposes the same two helpers. Two differences follow from WGSL itself:
+
+- It has no global vertex inputs, so your entry point declares them in an input struct and passes `nodeIndex` to the helpers explicitly. The GLSL helpers take it as a parameter too, so both shader bodies read alike.
+- It has no name-based vertex binding, so **declaration order fixes the location**: the Nth declared instance attribute is `@location(7 + N)`, starting from [`FIRST_INSTANCE_ATTRIBUTE_LOCATION`](/ExoJS/en/api/functions/). Locations 0–2 carry the geometry and 6 carries the node index.
+
+```ts no-check
+struct VertexInput {
+    @location(0) position: vec2<f32>,
+    @location(6) nodeIndex: u32,
+    @location(7) offset: vec2<f32>,   // first declared instanceAttribute
+    @location(8) phase: f32,          // second
+};
+```
 
 ## Proving the draw call: RenderStats
 

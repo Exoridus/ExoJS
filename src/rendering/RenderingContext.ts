@@ -492,18 +492,18 @@ export class RenderingContext implements DrawContext {
    * order relative to the surrounding {@link render} calls. An empty batch is a
    * no-op.
    *
-   * v1 renders with the default mesh material (per-instance tint over the
-   * geometry's vertex colors); a custom {@link RenderBatch.material} is not yet
-   * supported on the instanced path.
+   * With no {@link RenderBatch.material material} the batch renders through the
+   * default mesh material (per-instance tint over the geometry's vertex colors).
+   * A custom material is supported, but its shader must read the per-instance
+   * transform from the shared transform buffer via `a_nodeIndex` — build it on
+   * `INSTANCE_TRANSFORM_GLSL` / `INSTANCE_TRANSFORM_WGSL`, which supply that
+   * contract. A shader that does not satisfy it throws on the first draw (the
+   * check reads the linked program, so it cannot run any earlier).
    *
    * @param batch   The instanced submission (geometry + per-instance transforms/tints).
    * @param options Optional {@link DrawBatchOptions.view view} override.
    */
   public drawBatch(batch: RenderBatch, options: DrawBatchOptions = {}): void {
-    if (batch.material !== null) {
-      throw new Error('drawBatch custom materials are not supported yet — v1 renders batches with the default mesh material.');
-    }
-
     if (batch.count === 0) {
       return;
     }
@@ -520,7 +520,7 @@ export class RenderingContext implements DrawContext {
     // transforms/tints and flush it immediately.
     this._backend.setView(view);
     mesh.configureBatchSource(batch.geometry, batch.material);
-    this._backend.drawInstanced(mesh, batch._instanceTransforms, batch._instanceTints, batch.count);
+    this._backend.drawInstanced(mesh, batch._instanceTransforms, batch._instanceTints, batch.count, batch._instanceView);
     this._backend.flush();
   }
 
