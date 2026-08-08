@@ -181,7 +181,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Schedule release → 0 starting at atTime. Call this when the note should stop (e.g., key release, sound dismissed)."
+          "description": "Schedule release → 0 starting at atTime. Call this when the note should stop (e.g., key release, sound dismissed). The release starts from wherever the envelope actually is, including mid-attack and mid-decay. A bare cancelScheduledValues would drop the in-flight ramp and snap the parameter back to the previous event's value (0 during attack) — an audible click."
         },
         {
           "name": "trigger",
