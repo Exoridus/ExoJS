@@ -31,8 +31,9 @@ export interface AssetCacheErrorOptions {
 
 /**
  * Structured asset-cache failure. Thrown by {@link IndexedDbDatabase} for every
- * failed IndexedDB request and dispatched by {@link CacheFirstStrategy.onCacheError}
- * for cache errors the strategy degrades instead of propagating.
+ * failed IndexedDB request, and handed to {@link CacheRequest.reportCacheError}
+ * — which `Loader` routes to {@link Loader.onCacheError} — for cache errors a
+ * {@link CacheStrategy} degrades instead of propagating.
  *
  * Extends {@link Error}, so callers can narrow with `error instanceof AssetCacheError`
  * and read {@link AssetCacheError.operation}, {@link AssetCacheError.store} and
