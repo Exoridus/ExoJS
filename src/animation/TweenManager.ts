@@ -10,8 +10,10 @@ interface Ticker {
 
 /**
  * Owns and advances a collection of {@link Tween} instances, driving them
- * once per frame from {@link Application.update}. Created tweens are tracked
- * automatically; manually constructed tweens can be opted in via
+ * once per frame from {@link Application.update}. A tween created here enters
+ * the update list when {@link Tween.start} is called and leaves it again on
+ * completion or {@link Tween.stop}, so the manager only ever holds tweens that
+ * are running or paused. Manually constructed tweens can be opted in via
  * {@link TweenManager.add}.
  *
  * Custom updatables (such as {@link TweenSequencer}) can be registered via
@@ -28,13 +30,16 @@ export class TweenManager {
   private _destroyed = false;
 
   /**
-   * Create a new Tween targeting `target`, register it with this manager, and
-   * return it. Call .to(...).start() on the result to begin animating.
+   * Create a new Tween bound to this manager and return it. Call
+   * `.to(...).start()` on the result to begin animating.
+   *
+   * The tween is only entered into the update list by {@link Tween.start} — a
+   * tween that is configured but never started is not retained here, so it
+   * cannot keep its target alive for the lifetime of the application.
    */
   public create<T extends object>(target: T): Tween<T> {
     const tween = new Tween(target);
     tween._attachManager(this);
-    this._tweens.push(tween);
 
     return tween;
   }

@@ -6,6 +6,8 @@ import { Time } from '#core/Time';
 /** TweenManager.update() takes a Time; tests express their deltas in seconds. */
 const sec = (seconds: number): Time => new Time(seconds, Time.seconds);
 const makeTarget = () => ({ x: 0, y: 0 });
+/** Number of tweens the manager currently holds a reference to. */
+const trackedCount = (manager: TweenManager): number => (manager as unknown as { _tweens: unknown[] })._tweens.length;
 
 describe('TweenManager', () => {
   test('create() returns a Tween bound to the manager', () => {
@@ -177,5 +179,56 @@ describe('TweenManager', () => {
 
     expect(() => manager.preUpdate(sec(1.0))).not.toThrow();
     expect(tweenA.state).toBe(TweenState.Complete);
+  });
+
+  // ---- the manager only holds tweens that are actually running ----
+
+  test('create() does not retain a tween that is never started', () => {
+    const manager = new TweenManager();
+
+    manager.create(makeTarget()).to({ x: 100 }, 1.0);
+
+    // The tween (and through it, the target node) must not stay referenced by
+    // the application-wide manager just because it was configured.
+    expect(trackedCount(manager)).toBe(0);
+  });
+
+  test('start() registers a created tween so it is advanced each frame', () => {
+    const manager = new TweenManager();
+    const target = makeTarget();
+
+    const tween = manager.create(target).to({ x: 100 }, 1.0).start();
+
+    expect(trackedCount(manager)).toBe(1);
+    manager.preUpdate(sec(0.5));
+    expect(target.x).toBeCloseTo(50, 5);
+    expect(tween.state).toBe(TweenState.Active);
+  });
+
+  test('stop() evicts a tween that was added but never started', () => {
+    const manager = new TweenManager();
+    const tween = new Tween(makeTarget()).to({ x: 100 }, 1.0);
+
+    manager.add(tween);
+    expect(trackedCount(manager)).toBe(1);
+
+    tween.stop();
+
+    expect(trackedCount(manager)).toBe(0);
+  });
+
+  test('stop() evicts an already-completed tween that was re-added', () => {
+    const manager = new TweenManager();
+    const tween = manager.create(makeTarget()).to({ x: 100 }, 1.0).start();
+
+    manager.preUpdate(sec(1.0));
+    expect(tween.state).toBe(TweenState.Complete);
+
+    manager.add(tween);
+    expect(trackedCount(manager)).toBe(1);
+
+    tween.stop();
+
+    expect(trackedCount(manager)).toBe(0);
   });
 });
