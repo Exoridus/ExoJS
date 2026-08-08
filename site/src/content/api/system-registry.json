@@ -167,7 +167,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Destroy every remaining registered system exactly once, in reverse registration order, then clear the registry. A system already removed via SystemRegistry.remove — even if not yet structurally finalized — is not destroyed: remove() never destroys."
+          "description": "Destroy every remaining registered system exactly once, in reverse registration order, then clear the registry. A system already removed via SystemRegistry.remove — even if not yet structurally finalized — is not destroyed: remove() never destroys. Each system is destroyed under its own guard and the clear-and-reset tail always runs, so one throwing system can neither skip the systems after it nor leave the registry live. Systems are the extension seam, which makes a throwing destroy() the case to expect rather than a remote one. Failures are logged, never propagated — including in development, where DisposalScope.destroy rethrows an AggregateError instead. The difference is the caller: Application._disposeManagedResources invokes this method unguarded, part-way through an ordered teardown, so a throw here would strand the rendering context, audio, input, backend, platform and clocks that come after it — reinstating the very leak this guard closes."
         },
         {
           "name": "has",

@@ -143,6 +143,31 @@ describe('Application app-system extension bindings', () => {
     expect(order).toEqual(['user', 'extension']);
   });
 
+  test('a throwing extension system does not strand the teardown steps after systems.destroy()', async () => {
+    const extSystem: System = {
+      update: vi.fn(),
+      destroy: (): never => {
+        throw new Error('extension system blew up');
+      },
+    };
+    const binding: ApplicationSystemBinding = { create: () => extSystem };
+    const ext: Extension = { id: 'throwing-destroy', systems: [binding] };
+    const app = new Application({ backend: { type: 'webgl2' }, extensions: [ext] });
+
+    // onFrame is destroyed at the very end of _disposeManagedResources, well
+    // past systems.destroy() — a live handler afterwards means the chain that
+    // also releases rendering, audio, input, backend and platform was cut short.
+    app.onFrame.add(() => {});
+
+    app.destroy();
+
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(app.onFrame.count).toBe(0);
+  });
+
   test('a renderer-only extension adds no system of its own', () => {
     const ext: Extension = { id: 'renderer-only', renderers: [] };
     const baseline = new Application({ backend: { type: 'webgl2' } });

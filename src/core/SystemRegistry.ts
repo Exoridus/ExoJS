@@ -425,12 +425,30 @@ export class SystemRegistry implements Destroyable {
    * registration order, then clear the registry. A system already removed
    * via {@link SystemRegistry.remove} — even if not yet structurally
    * finalized — is not destroyed: `remove()` never destroys.
+   *
+   * Each system is destroyed under its own guard and the clear-and-reset tail
+   * always runs, so one throwing system can neither skip the systems after it
+   * nor leave the registry live. Systems are the extension seam, which makes a
+   * throwing `destroy()` the case to expect rather than a remote one.
+   *
+   * Failures are logged, never propagated — including in development, where
+   * {@link DisposalScope.destroy} rethrows an `AggregateError` instead. The
+   * difference is the caller: `Application._disposeManagedResources` invokes
+   * this method unguarded, part-way through an ordered teardown, so a throw
+   * here would strand the rendering context, audio, input, backend, platform
+   * and clocks that come after it — reinstating the very leak this guard
+   * closes.
    */
   public destroy(): void {
     const remaining = [...this._registrations.values()].filter(registration => registration.active).sort((a, b) => b.sequence - a.sequence);
+    const failures: unknown[] = [];
 
     for (const registration of remaining) {
-      registration.system.destroy?.();
+      try {
+        registration.system.destroy?.();
+      } catch (error) {
+        failures.push(error);
+      }
     }
 
     this._registrations.clear();
@@ -443,6 +461,10 @@ export class SystemRegistry implements Destroyable {
     this._activeCount = 0;
     this.onAdd.destroy();
     this.onRemove.destroy();
+
+    for (const error of failures) {
+      logger.error('SystemRegistry.destroy(): a system threw while being destroyed.', { source: 'SystemRegistry', ...(error instanceof Error && { error }) });
+    }
   }
 
   private _insert(system: System, options?: SystemRegistrationOptions): void {
