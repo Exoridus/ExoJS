@@ -86,7 +86,12 @@ export class Vector extends AbstractVector implements ShapeLike {
   }
 
   public contains(x: number, y: number): boolean {
-    return intersectionPointPoint(Vector.temp.set(x, y), this);
+    // Point-vs-point containment is exact equality (the shared threshold is 0).
+    // Routing the probe through `Vector.temp` made this self-aliasing: calling
+    // it ON the scratch overwrote the receiver with the probe and then measured
+    // its distance to itself, so it always answered `true` — and any other call
+    // clobbered whatever the scratch was holding.
+    return this.x === x && this.y === y;
   }
 
   public getNormals(): Vector[] {
