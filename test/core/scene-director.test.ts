@@ -2995,12 +2995,12 @@ describe('SceneDirector._abortInFlightNavigation()', () => {
   });
 
   test("restore()'s claim restoration does not resurrect a scope that Application.stop() already force-cleared and disposed post-commit", async () => {
-    // Reproduces the exact sequence Application.stop() drives: it aborts the
-    // in-flight session (rejecting restore()'s promise) AND separately calls
-    // _forceClearActiveSceneAfterAbort(), which nulls _activeScope and
-    // disposes it OUTSIDE restore()'s own control flow. If restore()'s catch
-    // still infers "never committed" from `_activeScope !== retainedScope`,
-    // it wrongly re-adds the now-disposed scope back into _retained.
+    // Reproduces the exact sequence Application.stop() drives:
+    // _stopAndClearActiveScene() aborts the in-flight session (rejecting
+    // restore()'s promise) and then nulls _activeScope and disposes it,
+    // OUTSIDE restore()'s own control flow. If restore()'s catch still infers
+    // "never committed" from `_activeScope !== retainedScope`, it wrongly
+    // re-adds the now-disposed scope back into _retained.
     const app = createApplicationStub();
     const First = makeSceneClass();
     const Second = makeSceneClass();
@@ -3040,22 +3040,149 @@ describe('SceneDirector._abortInFlightNavigation()', () => {
 
     const reason = new SceneNavigationAbortedError();
 
-    // Mirrors Application.stop(): abort the session, then force-clear the
-    // (now-committed) active scope, exactly as stop() does immediately after
-    // aborting — before restore()'s own catch has had a chance to run.
-    director._abortInFlightNavigation(reason);
-
-    const forceClear = director._forceClearActiveSceneAfterAbort();
+    // Mirrors Application.stop(): one operation that aborts the session and
+    // clears the (now-committed) active scope — before restore()'s own catch
+    // has had a chance to run.
+    const stopAndClear = director._stopAndClearActiveScene(reason);
 
     await expect(navigation).rejects.toBe(reason);
-    await forceClear;
+    await stopAndClear;
 
     // The committed-but-aborted scope must NOT be put back into _retained —
-    // it was already disposed by _forceClearActiveSceneAfterAbort().
+    // it was already disposed by _stopAndClearActiveScene().
     expect(retained.has(First)).toBe(false);
 
     // The most direct proof: a subsequent restore() must fail cleanly with
     // RetainedSceneNotFoundError rather than reactivate the disposed scope.
     await expect(director.restore(First)).rejects.toBeInstanceOf(RetainedSceneNotFoundError);
+  });
+});
+
+describe('SceneDirector._stopAndClearActiveScene()', () => {
+  test('clears and destroys the active scene when nothing is in flight', async () => {
+    const app = createApplicationStub();
+    const unload = vi.fn();
+    const TestScene = makeSceneClass({ unload });
+    const director = new SceneDirector(app, { test: TestScene });
+
+    await director.change(TestScene);
+
+    const cleared: Array<Scene | null> = [];
+
+    director.onChangeScene.add(scene => cleared.push(scene));
+
+    await director._stopAndClearActiveScene(new SceneNavigationAbortedError());
+
+    expect(director.currentScene).toBeNull();
+    expect(unload).toHaveBeenCalledTimes(1);
+    expect(cleared).toEqual([null]);
+  });
+
+  test('is a no-op when no scene is active', async () => {
+    const director = new SceneDirector(createApplicationStub(), {});
+
+    await expect(director._stopAndClearActiveScene(new SceneNavigationAbortedError())).resolves.toBeUndefined();
+    expect(director.currentScene).toBeNull();
+  });
+
+  test('clears the active scene while a NON-transitioned navigation still holds the lock — never ConcurrentSceneNavigationError', async () => {
+    // The defect this operation exists for: there is no session here, so an
+    // abort-then-_clearScene() sequence would find `_navigationInFlight`
+    // still set by the hanging change() and reject with
+    // ConcurrentSceneNavigationError, leaving the scene standing.
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    let resolveLoad!: () => void;
+    const SlowLoad = makeSceneClass({
+      load: () =>
+        new Promise<void>(resolve => {
+          resolveLoad = resolve;
+        }),
+    });
+    const director = new SceneDirector(app, { first: First, slow: SlowLoad });
+
+    await director.change(First);
+
+    const navigation = director.change(SlowLoad);
+
+    void navigation.catch(() => undefined);
+    await Promise.resolve(); // commitSwitch is now suspended in SlowLoad.load()
+
+    // Sanity: the ordinary navigation path genuinely loses to the lock here.
+    await expect(director._clearScene()).rejects.toBeInstanceOf(ConcurrentSceneNavigationError);
+    expect(director.currentScene).not.toBeNull();
+
+    // The stop path does not.
+    await director._stopAndClearActiveScene(new SceneNavigationAbortedError());
+
+    expect(director.currentScene).toBeNull();
+
+    // And the interrupted navigation cannot resurrect a scene when it resumes:
+    // the generation bump makes its own race guard bail.
+    resolveLoad();
+    await expect(navigation).rejects.toBeInstanceOf(SceneNavigationAbortedError);
+    expect(director.currentScene).toBeNull();
+  });
+
+  test('aborts an in-flight transition session and clears the scene it had already committed', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    const Second = makeSceneClass();
+    const director = new SceneDirector(app, { first: First, second: Second });
+
+    await director.change(First);
+
+    let environmentRef: SceneTransitionEnvironment | null = null;
+    const session = new FakeSession(); // never reports done — still "playing" after commit
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'none', currentFrame: 'none' };
+      }
+      protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
+        environmentRef = environment;
+
+        return session;
+      }
+    })();
+
+    const navigation = director.change(Second, { transition });
+
+    void navigation.catch(() => undefined);
+
+    environmentRef?.commit();
+    tick(director, app);
+    await settle();
+
+    expect(director.currentScene).toBeInstanceOf(Second);
+
+    const reason = new SceneNavigationAbortedError();
+    const stopAndClear = director._stopAndClearActiveScene(reason);
+
+    await expect(navigation).rejects.toBe(reason);
+    await stopAndClear;
+
+    expect(session.destroyCallCount).toBe(1);
+    expect(director.currentScene).toBeNull();
+    expect((director as unknown as { _transitionGateOpen: boolean })._transitionGateOpen).toBe(false);
+  });
+
+  test("a failing scope disposal rejects — only the concurrent-navigation rejection was dropped, not a scene's own teardown failure", async () => {
+    const app = createApplicationStub();
+    const TestScene = makeSceneClass();
+    const director = new SceneDirector(app, { test: TestScene });
+
+    await director.change(TestScene);
+
+    const disposalError = new Error('scope destroy blew up');
+    const destroySpy = vi.spyOn(SceneScope.prototype, 'destroy').mockRejectedValueOnce(disposalError);
+
+    try {
+      await expect(director._stopAndClearActiveScene(new SceneNavigationAbortedError())).rejects.toBe(disposalError);
+      // The scope is still detached from the director regardless — a failed
+      // teardown must not leave the scene reachable as "active".
+      expect(director.currentScene).toBeNull();
+    } finally {
+      destroySpy.mockRestore();
+    }
   });
 });

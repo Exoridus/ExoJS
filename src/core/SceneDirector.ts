@@ -436,14 +436,19 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
-   * @internal Clear the active scene (if any) without activating a new one.
-   * Used by {@link Application.stop}/{@link Application.destroy} (no
-   * transition, the default — runs the direct fast path), and by
-   * {@link SceneDirector.unload}'s active-scope match, where an explicit
-   * `transition` drives a full {@link SceneTransitionSession} (operation
-   * `'unload'`, `hasIncomingScene: false` — the discard has no scene to
-   * enter). Never part of the public navigation surface itself (navigation
-   * always targets a registered constructor).
+   * @internal Clear the active scene (if any) without activating a new one,
+   * as an ordinary navigation — it takes the navigation lock and therefore
+   * rejects with {@link ConcurrentSceneNavigationError} while another
+   * navigation is in flight. Used by {@link SceneDirector.unload}'s
+   * active-scope match, where an explicit `transition` drives a full
+   * {@link SceneTransitionSession} (operation `'unload'`,
+   * `hasIncomingScene: false` — the discard has no scene to enter). Never
+   * part of the public navigation surface itself (navigation always targets a
+   * registered constructor).
+   *
+   * Not the path a shutdown takes: {@link Application.stop} goes through
+   * {@link SceneDirector._stopAndClearActiveScene}, which is allowed to
+   * interrupt an in-flight navigation instead of losing to it.
    */
   public async _clearScene(transition?: SceneTransition | null): Promise<this> {
     await this._runWithNavigation(async () => {
@@ -462,7 +467,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
         // onChangeScene fires before outgoing teardown starts (and therefore
         // before onStopScene, dispatched inside _disposeScene) — matches
         // change()/restore()'s order (new-scene signals before the outgoing
-        // scope's), and _forceClearActiveSceneAfterAbort()'s equivalent.
+        // scope's), and _stopAndClearActiveScene()'s equivalent.
         this.onChangeScene.dispatchIsolated(error => this._reportLifecycleError(error), null);
 
         // Outgoing teardown backgrounds (same contract as change()/restore());
@@ -480,31 +485,49 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
-   * @internal Force-unload the active scene without going through the
-   * navigation lock ({@link SceneDirector._runWithNavigation}) — used
-   * exclusively by {@link Application.stop} for the one case where routing
-   * through {@link SceneDirector._clearScene} would spuriously throw
-   * {@link ConcurrentSceneNavigationError}: `stop()` just aborted a
-   * transitioned navigation's in-flight session via
-   * {@link SceneDirector._abortInFlightNavigation}, which settles that
-   * navigation's outer promise synchronously — but the aborted navigation's
-   * OWN `_runWithNavigation` wrapper (around the whole `change()`/`restore()`
-   * body) only clears `_navigationInFlight` several microtask turns later,
-   * once the rejection has actually propagated back up through its `await`/
-   * `catch`. Calling `_clearScene()` synchronously inside that window (as
-   * `Application.stop()` does, immediately after aborting) would see a stale
-   * `_navigationInFlight === true` and reject with
-   * {@link ConcurrentSceneNavigationError} instead of unloading anything.
+   * @internal The one stop-and-clear operation behind {@link Application.stop}:
+   * end whatever navigation is in flight and unload the active scene as a
+   * single step, rather than as two steps racing each other across the
+   * navigation lock.
    *
-   * Safe to bypass the lock here regardless of that staleness: the aborted
-   * navigation can no longer mutate `_activeScope` unnoticed once its
-   * session is gone — either its `commitSwitch` never started (nothing left
-   * to run for it), or it already had and is still asynchronously preparing,
-   * in which case its own race guard detects the now-cleared session
-   * when it resumes and bails without touching `_activeScope` (see
-   * `change()`'s `commitSwitch`). No-op when no scene is active.
+   * In order:
+   *
+   * 1. **Invalidate the navigation generation and abort any in-flight
+   *    session** — {@link SceneDirector._abortInFlightNavigation} bumps
+   *    `_navigationGeneration` unconditionally and, when a
+   *    {@link SceneTransitionSession} is in flight, settles that navigation's
+   *    outer promise synchronously. The generation bump is what makes this
+   *    safe for a navigation that has NO session to abort (a plain
+   *    `change()`/`restore()`, or a transitioned one still awaiting its
+   *    incoming scene's `load()`/`init()`): when its `commitSwitch` resumes
+   *    it sees the generation moved and bails at its own race guard instead
+   *    of committing on top of the scene this call is about to clear.
+   * 2. **Clear and destroy the active scope, unconditionally** — deliberately
+   *    NOT through {@link SceneDirector._clearScene}: that routes through
+   *    {@link SceneDirector._runWithNavigation}, and an interrupted
+   *    navigation still holds `_navigationInFlight` (its own
+   *    `_runWithNavigation` wrapper only releases it once its rejection has
+   *    propagated back up through `await`/`catch`, several microtask turns
+   *    later — and for a navigation stuck in a pending `load()`, not at all).
+   *    Taking the lock here would reject with
+   *    {@link ConcurrentSceneNavigationError} and leave the scene standing,
+   *    which is exactly what a stop must not do. A stop is allowed to
+   *    interrupt a navigation; that is the point of it.
+   *
+   * Bypassing the lock is safe precisely because of step 1: the interrupted
+   * navigation can no longer mutate `_activeScope` unnoticed — either its
+   * `commitSwitch` never started (nothing left to run for it), or it started
+   * and is still asynchronously preparing, in which case its race guard sees
+   * the bumped generation (and, for a session-driven commit, the cleared
+   * session) when it resumes and bails without touching `_activeScope`.
+   *
+   * No-op on the scene side when no scene is active. Failure semantics stay
+   * honest: the "someone else is navigating" rejection is gone, but a scene's
+   * own throwing `unload()`/`destroy()` still rejects this promise.
    */
-  public async _forceClearActiveSceneAfterAbort(): Promise<void> {
+  public async _stopAndClearActiveScene(reason: Error): Promise<void> {
+    this._abortInFlightNavigation(reason);
+
     const previousScope = this._activeScope;
 
     if (previousScope === null) {
@@ -551,8 +574,8 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     // Flipped `true` at the exact point `commitSwitch` mutates `_activeScope`
     // to `retainedScope` — mirrors `change()`'s local `commitStarted` flag
     // (see its doc comment). `_activeScope` identity alone can no longer
-    // answer "did the switch commit?": `_forceClearActiveSceneAfterAbort()`
-    // (called by `Application.stop()` after aborting an in-flight session)
+    // answer "did the switch commit?": `_stopAndClearActiveScene()`
+    // (the single stop-and-clear step `Application.stop()` runs)
     // nulls `_activeScope` — and disposes the scope it held — from OUTSIDE
     // this method's own control flow, on a navigation that had already
     // committed. A local flag set only by this method's own commit path is
@@ -609,7 +632,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       // it so a future restore()/unload() can still reach it. Checked via the
       // local `committed` flag, not `_activeScope` identity: an already-
       // committed switch can have its `_activeScope` externally nulled (and
-      // the scope disposed) by `_forceClearActiveSceneAfterAbort()` before
+      // the scope disposed) by `_stopAndClearActiveScene()` before
       // this catch runs — re-adding it here would put a disposed scope back
       // into `_retained` as if it were still reactivatable.
       if (!committed) {
@@ -1154,7 +1177,15 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * never undone). Idempotent: a second call once the session has
    * settled is a no-op `false`, since `_finishActiveSession` already cleared
    * `_activeSession`. Called by {@link Application} whenever it stops the
-   * frame loop.
+   * frame loop, and again — deliberately, since it is idempotent — as the
+   * first step of {@link SceneDirector._stopAndClearActiveScene}, so that
+   * operation is self-sufficient rather than relying on a caller having
+   * aborted first.
+   *
+   * The `_navigationGeneration` bump happens on EVERY call, including the
+   * `false` ones: it is the invalidation token a still-preparing
+   * `commitSwitch` checks, and a navigation with no session to abort is
+   * exactly the case that needs it.
    *
    * NOTE: a `commitSwitch()` whose `_prepareScene()`/`_awaitClaimedPreload()`
    * is still asynchronously awaiting when this fires is handled by that

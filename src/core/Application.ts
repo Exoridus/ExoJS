@@ -923,23 +923,19 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * Application.stop}, {@link Application.destroy} during the `Loading`
    * window) so `_frameLoopActive` is the single source of truth everywhere,
    * not only where the loop starts. Idempotent — a
-   * second call while the loop is already stopped is a no-op (returns
-   * `false`). Always aborts whatever scene navigation is in flight via
+   * second call while the loop is already stopped is a no-op. Always aborts
+   * whatever scene navigation is in flight via
    * {@link SceneDirector._abortInFlightNavigation} — a transition session
    * cannot progress without frame callbacks, so it must be settled here
    * rather than left to hang, regardless of caller. Deliberately does NOT
-   * call `scenes._clearScene()` itself — a fatal frame error must NOT unload
-   * the active scene (see {@link Application._handleFrameError}'s doc
-   * comment) — that decision, and this method's return value, are the
-   * caller's responsibility.
-   *
-   * @returns `true` if an in-flight navigation was aborted (nothing else
-   *   needs to unload the scene), `false` otherwise (including when the loop
-   *   was already stopped).
+   * unload the active scene itself — a fatal frame error must NOT unload it
+   * (see {@link Application._handleFrameError}'s doc comment); that decision
+   * belongs to the caller, and {@link Application.stop} makes it by calling
+   * {@link SceneDirector._stopAndClearActiveScene}.
    */
-  private _stopFrameLoop(): boolean {
+  private _stopFrameLoop(): void {
     if (!this._frameLoopActive) {
-      return false;
+      return;
     }
 
     this._frameLoopActive = false;
@@ -947,7 +943,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._activeClock.stop();
     this._frameClock.stop();
 
-    return this.scenes._abortInFlightNavigation(new SceneNavigationAbortedError());
+    this.scenes._abortInFlightNavigation(new SceneNavigationAbortedError());
   }
 
   /**
@@ -1157,27 +1153,24 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * + frame clocks. Leaves backend, input, audio, etc. intact — call
    * {@link Application.destroy} to release everything. Acts whenever the
    * frame loop is actually live (`_frameLoopActive`), including mid-`start()`
-   * — not only while `_status` is `Running`: a
-   * transition-driven navigation (the initial one, or any later `change()`)
-   * may still be in flight, in which case {@link SceneDirector._abortInFlightNavigation}
-   * (invoked by {@link Application._stopFrameLoop} itself) rejects it with a
-   * dedicated error rather than leaving it to hang.
+   * — not only while `_status` is `Running`.
    *
-   * Whether the active scene actually gets unloaded is decided by
-   * `scenes.currentScene` AFTER the abort above, not by whether an abort
-   * happened: a mid-transition abort on the very first navigation leaves
-   * `currentScene` `null` (nothing ever committed — correctly skipped), but
-   * a mid-transition abort on a LATER `change()` call still finds whatever
-   * scene was active before that navigation started (it never committed
-   * away either) — that scene must still be unloaded, matching this
-   * method's "unload the active scene" contract regardless of why the loop
-   * stopped. When an abort actually happened, the unload goes through
-   * {@link SceneDirector._forceClearActiveSceneAfterAbort} rather than the
-   * ordinary {@link SceneDirector._clearScene} — the aborted navigation's own
-   * lock (`_navigationInFlight`) does not clear until its rejection finishes
-   * propagating a few microtask turns later, and `_clearScene()` would
-   * spuriously reject against that still-stale lock (see the dedicated
-   * method's own doc comment).
+   * A stop is allowed to interrupt a navigation — that is the point of it.
+   * Everything scene-related is therefore delegated to the single
+   * {@link SceneDirector._stopAndClearActiveScene} operation, which
+   * invalidates the navigation generation, aborts an in-flight transition
+   * session if there is one, and then unloads the
+   * active scene unconditionally. Splitting that into "abort" and "clear"
+   * steps is what used to let the navigation lock win the race and leave the
+   * scene standing; a `ConcurrentSceneNavigationError` is never a legitimate
+   * outcome of stopping.
+   *
+   * Any scene-teardown failure the interruption did not cause — a scene's own
+   * `unload()`/`destroy()` throwing — still surfaces through
+   * {@link Application.onError}. Scene teardown is asynchronous and
+   * fire-and-forget here: `stop()` returns as soon as the loop is halted, so
+   * a scene with an async `unload()` may still be settling afterwards. Use
+   * {@link Application.destroy} when teardown ordering matters.
    */
   public stop(): this {
     if (!this._frameLoopActive) {
@@ -1188,20 +1181,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this._status = ApplicationStatus.Halting;
     }
 
-    const navigationAborted = this._stopFrameLoop();
+    this._stopFrameLoop();
 
-    if (this.scenes.currentScene !== null) {
-      const onClearSceneFailure = (error: unknown): void => {
-        logger.error('Application.stop() failed to unload the active scene.', { source: 'Application', ...(error instanceof Error && { error }) });
-        this.onError?.dispatch(error instanceof Error ? error : new Error(String(error)));
-      };
-
-      if (navigationAborted) {
-        void this.scenes._forceClearActiveSceneAfterAbort().catch(onClearSceneFailure);
-      } else {
-        void this.scenes._clearScene().catch(onClearSceneFailure);
-      }
-    }
+    void this.scenes._stopAndClearActiveScene(new SceneNavigationAbortedError()).catch((error: unknown) => {
+      logger.error('Application.stop() failed to unload the active scene.', { source: 'Application', ...(error instanceof Error && { error }) });
+      this.onError?.dispatch(error instanceof Error ? error : new Error(String(error)));
+    });
 
     this._status = ApplicationStatus.Stopped;
 
