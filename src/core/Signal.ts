@@ -8,6 +8,9 @@ import { removeArrayItems } from './utils';
  */
 type SignalHandler<Args extends unknown[]> = (...params: Args) => void;
 
+/** A deferred mutation queued while a Signal is mid-dispatch, resolved once the outermost dispatch finishes. */
+type PendingOp = 'add' | 'remove';
+
 /**
  * Lightweight typed event emitter. Each `Signal` represents one named
  * notification channel (e.g. `onResize`, `onFrame`). Listeners are added with
@@ -24,13 +27,21 @@ type SignalHandler<Args extends unknown[]> = (...params: Args) => void;
  * this same Signal again nests safely. Handlers added or removed during
  * dispatch take effect on the next call, never the dispatch in progress —
  * both `add` and `remove` mid-dispatch defer their mutation until after the
- * outermost dispatch finishes.
+ * outermost dispatch finishes, and reconcile per handler (the *last*
+ * `add`/`remove` requested for a given handler during one outermost dispatch
+ * wins, resolved against whether `_handlers` — never mutated while any
+ * dispatch is in progress — actually contained that handler when dispatch
+ * started) rather than each call consulting the other's un-flushed queue as
+ * if it were already-applied state. {@link Signal.destroy} is safe to call
+ * from inside a listener: it terminates the dispatch that triggered it (and
+ * every dispatch nested inside it on the same call stack) immediately,
+ * without invoking any further listener at any nesting level.
  */
 export class Signal<Args extends unknown[] = []> {
   private readonly _handlers: Array<SignalHandler<Args>> = [];
   private _dispatchDepth = 0;
-  private _pendingAdds: Array<SignalHandler<Args>> | null = null;
-  private _pendingRemoves: Array<SignalHandler<Args>> | null = null;
+  private _pendingOps: Map<SignalHandler<Args>, PendingOp> | null = null;
+  private _destroyed = false;
 
   /** Number of currently registered listeners. */
   public get count(): number {
@@ -47,13 +58,25 @@ export class Signal<Args extends unknown[] = []> {
    * twice is a no-op. Use arrow functions or pre-bound methods to ensure
    * correct `this` inside the handler. Adding a handler while this Signal is
    * dispatching defers registration until the outermost dispatch finishes —
-   * it does not receive the dispatch in progress, only the next one.
+   * it does not receive the dispatch in progress, only the next one. A
+   * `remove` followed by an `add` for the same handler within one outermost
+   * dispatch nets to "still registered" — the add is not silently dropped
+   * just because the remove was queued first. No-op once {@link
+   * Signal.destroy} has been called.
    */
   public add(handler: SignalHandler<Args>): this {
+    if (this._destroyed) {
+      return this;
+    }
+
     if (this._dispatchDepth > 0) {
-      if (!this._handlers.includes(handler) && !this._pendingAdds?.includes(handler)) {
-        (this._pendingAdds ??= []).push(handler);
-      }
+      // Always record the latest intent, resolved later against the actual
+      // (unmutated while depth > 0) `_handlers` membership in
+      // `_flushPending` — not against whether `handler` currently "looks"
+      // present/absent from this call's point of view, which is exactly
+      // what let a `remove` immediately before this `add` win regardless of
+      // order.
+      (this._pendingOps ??= new Map()).set(handler, 'add');
     } else if (!this._handlers.includes(handler)) {
       this._handlers.push(handler);
     }
@@ -91,10 +114,19 @@ export class Signal<Args extends unknown[] = []> {
     return this;
   }
 
-  /** Remove a previously registered handler. No-op if absent. */
+  /**
+   * Remove a previously registered handler. No-op if absent, and no-op once
+   * {@link Signal.destroy} has been called. See {@link Signal.add} for how a
+   * `remove` and a later `add` for the same handler reconcile when both are
+   * requested during the same outermost dispatch.
+   */
   public remove(handler: SignalHandler<Args>): this {
+    if (this._destroyed) {
+      return this;
+    }
+
     if (this._dispatchDepth > 0) {
-      (this._pendingRemoves ??= []).push(handler);
+      (this._pendingOps ??= new Map()).set(handler, 'remove');
     } else {
       const index = this._handlers.indexOf(handler);
 
@@ -106,14 +138,19 @@ export class Signal<Args extends unknown[] = []> {
     return this;
   }
 
-  /** Remove every listener. */
+  /** Remove every listener. No-op once {@link Signal.destroy} has been called. */
   public clear(): this {
+    if (this._destroyed) {
+      return this;
+    }
+
     if (this._dispatchDepth > 0) {
-      this._pendingRemoves = [...this._handlers];
-      // Cancel anything scheduled to be added by this same dispatch too —
-      // "clear every listener" must not be undone by a pending add that was
-      // queued earlier in the same outermost dispatch.
-      this._pendingAdds = null;
+      // Every handler currently, actually present in `_handlers` must end
+      // up removed, and anything only *pending* addition from earlier in
+      // this same dispatch (not yet applied to `_handlers`) must never land
+      // — replacing the whole map (rather than layering onto it) discards
+      // those pending adds instead of carrying them past the clear.
+      this._pendingOps = new Map(this._handlers.map(handler => [handler, 'remove'] as const));
     } else {
       this._handlers.length = 0;
     }
@@ -125,6 +162,10 @@ export class Signal<Args extends unknown[] = []> {
    * Notify every registered listener in registration order. Listeners may
    * safely add or remove themselves or others during dispatch — both kinds
    * of mutation are deferred until after the outermost dispatch completes.
+   * A listener that calls {@link Signal.destroy} aborts this dispatch (and
+   * every dispatch nested inside it) immediately: no further listener, at
+   * any nesting level, is invoked, and any add/remove queued earlier in the
+   * now-aborted dispatch(es) is discarded rather than applied.
    */
   public dispatch(...params: Args): this {
     const length = this._handlers.length;
@@ -137,6 +178,18 @@ export class Signal<Args extends unknown[] = []> {
 
     try {
       for (let i = 0; i < length; i++) {
+        // Checked every iteration (not just once) so a `destroy()` called by
+        // an earlier listener in *this* pass — or by a listener several
+        // nested-dispatch frames down, unwinding back up through every
+        // enclosing loop on the call stack — stops each of those loops
+        // before it can index into `_handlers`, which `destroy()` has
+        // already emptied. Without this, the loop below would throw
+        // (`this._handlers[i]` no longer a function) instead of terminating
+        // cleanly.
+        if (this._destroyed) {
+          break;
+        }
+
         this._handlers[i]!(...params);
       }
     } finally {
@@ -169,7 +222,10 @@ export class Signal<Args extends unknown[] = []> {
    *
    * A throwing listener is reported to `onError` (itself guarded — a
    * throwing `onError` callback never propagates back into this dispatch)
-   * and dispatch continues to the remaining listeners.
+   * and dispatch continues to the remaining listeners. A listener that calls
+   * {@link Signal.destroy} still aborts this dispatch immediately, the same
+   * as in {@link Signal.dispatch} — destruction is not a "throw" `onError`
+   * can observe or recover from.
    * `_dispatchDepth`/pending-add/pending-remove bookkeeping is guaranteed via
    * `finally`, so a throw here can never corrupt a later
    * `dispatch()`/`add()`/`remove()` call on this Signal the way an unguarded
@@ -189,6 +245,10 @@ export class Signal<Args extends unknown[] = []> {
 
     try {
       for (let i = 0; i < length; i++) {
+        if (this._destroyed) {
+          break;
+        }
+
         try {
           this._handlers[i]!(...params);
         } catch (error) {
@@ -211,34 +271,47 @@ export class Signal<Args extends unknown[] = []> {
     return this;
   }
 
-  /** Apply every deferred `add`/`remove`/`clear` once the outermost dispatch has finished. */
+  /**
+   * Apply every deferred `add`/`remove`/`clear` once the outermost dispatch
+   * has finished — each handler's *last* requested op wins, resolved against
+   * whatever `_handlers` actually contains at this point (unchanged since
+   * before the outermost dispatch began).
+   */
   private _flushPending(): void {
-    if (this._pendingAdds !== null) {
-      for (const handler of this._pendingAdds) {
-        if (!this._handlers.includes(handler)) {
+    if (this._pendingOps === null) {
+      return;
+    }
+
+    for (const [handler, op] of this._pendingOps) {
+      const index = this._handlers.indexOf(handler);
+
+      if (op === 'add') {
+        if (index === -1) {
           this._handlers.push(handler);
         }
+      } else if (index !== -1) {
+        removeArrayItems(this._handlers, index, 1);
       }
-
-      this._pendingAdds = null;
     }
 
-    if (this._pendingRemoves !== null) {
-      for (const handler of this._pendingRemoves) {
-        const index = this._handlers.indexOf(handler);
-
-        if (index !== -1) {
-          removeArrayItems(this._handlers, index, 1);
-        }
-      }
-
-      this._pendingRemoves = null;
-    }
+    this._pendingOps = null;
   }
 
+  /**
+   * Permanently empty and disable this Signal. Idempotent — calling it more
+   * than once, or on an already-empty Signal, is safe. `add`/`remove`/
+   * `clear` become no-ops afterward.
+   *
+   * Safe to call from inside a listener while this Signal is dispatching:
+   * the dispatch that triggered it (and every dispatch nested inside it on
+   * the same call stack) terminates immediately after — no further
+   * listener, at any nesting level, is invoked, and any add/remove queued
+   * earlier in the now-aborted dispatch(es) is discarded rather than
+   * applied once the call stack unwinds.
+   */
   public destroy(): void {
+    this._destroyed = true;
     this._handlers.length = 0;
-    this._pendingAdds = null;
-    this._pendingRemoves = null;
+    this._pendingOps = null;
   }
 }

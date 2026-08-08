@@ -284,6 +284,130 @@ describe('Signal', () => {
     signal.dispatch();
     expect(calls).toEqual(['a', 'b']); // `b` present exactly once, not duplicated
   });
+
+  it('remove() then add() for the same handler within one dispatch nets to "still registered"', () => {
+    // Regression: add() used to consult the un-flushed `_handlers` array —
+    // still physically containing `h` while depth > 0 — and treat that as
+    // "already registered, nothing to do", so it queued no pending op. The
+    // later flush then only saw the pending remove and dropped `h` for good,
+    // even though the caller's last word on `h` was "add it back".
+    const signal = new Signal();
+    const calls: string[] = [];
+    const h = (): void => calls.push('h');
+    const trigger = (): void => {
+      calls.push('trigger');
+      signal.remove(h);
+      signal.add(h);
+    };
+
+    signal.add(trigger);
+    signal.add(h);
+    signal.dispatch(); // `h` is still in the handler set dispatch() started with, so it still fires this pass
+
+    expect(calls).toEqual(['trigger', 'h']);
+    expect(signal.has(h)).toBe(true); // net effect of remove-then-add: still registered
+
+    calls.length = 0;
+    signal.dispatch();
+    expect(calls).toEqual(['trigger', 'h']); // and it keeps firing on subsequent dispatches
+  });
+
+  it('add() then remove() for the same (not-yet-present) handler within one dispatch nets to "never registered"', () => {
+    const signal = new Signal();
+    const calls: string[] = [];
+    const h = (): void => calls.push('h');
+    const trigger = (): void => {
+      calls.push('trigger');
+      signal.add(h);
+      signal.remove(h);
+    };
+
+    signal.add(trigger);
+    signal.dispatch();
+
+    expect(calls).toEqual(['trigger']);
+    expect(signal.has(h)).toBe(false);
+    expect(signal.count).toBe(1); // only `trigger`
+  });
+
+  it('clear() during dispatch discards a pending add queued earlier in the same dispatch', () => {
+    const signal = new Signal();
+    const calls: string[] = [];
+    const c = (): void => calls.push('c');
+    const trigger = (): void => {
+      calls.push('trigger');
+      signal.add(c);
+      signal.clear();
+    };
+
+    signal.add(trigger);
+    signal.dispatch();
+
+    expect(signal.count).toBe(0); // clear() wins — `c` never lands, `trigger` is gone too
+
+    calls.length = 0;
+    signal.dispatch();
+    expect(calls).toEqual([]);
+  });
+
+  it('destroy() called from a listener aborts the dispatch instead of throwing, and remaining listeners do not run', () => {
+    // Regression: destroy() emptied `_handlers` in place while dispatch()
+    // was still iterating a pre-captured `length`, so the very next
+    // iteration indexed past the (now truncated-to-empty) array and threw
+    // `this._handlers[i] is not a function`.
+    const signal = new Signal();
+    const calls: string[] = [];
+
+    signal.add(() => {
+      calls.push('a');
+      signal.destroy();
+    });
+    signal.add(() => calls.push('b')); // must NOT run — destroy() happened first
+    signal.add(() => calls.push('c')); // must NOT run either
+
+    expect(() => signal.dispatch()).not.toThrow();
+    expect(calls).toEqual(['a']);
+    expect(signal.count).toBe(0);
+
+    // The signal is left destroyed, not merely emptied — further mutation
+    // is inert rather than resurrecting it.
+    signal.add(() => calls.push('resurrected'));
+    expect(signal.count).toBe(0);
+    expect(() => signal.dispatch()).not.toThrow();
+    expect(calls).toEqual(['a']);
+  });
+
+  it('destroy() called from a nested dispatch unwinds every enclosing dispatch on the same Signal cleanly', () => {
+    const signal = new Signal();
+    const calls: string[] = [];
+    let nested = false;
+
+    const c = (): void => calls.push('c'); // registered after `a`/`b` — must never run once destroyed
+    const b = (): void => {
+      calls.push('b');
+      signal.destroy(); // called from inside a *nested* dispatch frame
+    };
+    const a = (): void => {
+      calls.push('a');
+
+      if (!nested) {
+        nested = true;
+        signal.dispatch(); // nested dispatch — `b` (and destroy()) run inside this
+      }
+    };
+
+    signal.add(a);
+    signal.add(b);
+    signal.add(c);
+
+    expect(() => signal.dispatch()).not.toThrow();
+
+    // Nested dispatch: a, a (re-entrant), b (destroys) — both the nested
+    // loop (at its next index) and the outer loop (resumed after `a`
+    // returns) see `_destroyed` and stop before ever reaching `c`.
+    expect(calls).toEqual(['a', 'a', 'b']);
+    expect(signal.count).toBe(0);
+  });
 });
 
 describe('dispatchIsolated', () => {
