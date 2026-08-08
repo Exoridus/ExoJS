@@ -46,6 +46,13 @@ export class AudioManager {
 
   private readonly _registered = new Map<string, AudioBus>();
   private readonly _spatial = new Set<SpatialVoice>();
+  /**
+   * Every voice created against this manager that has not ended yet — the
+   * registry {@link AudioManager.destroy} needs in order to actually silence
+   * playback. `_spatial` only ever holds the subset that is being panned per
+   * frame, which is why it cannot serve this purpose.
+   */
+  private readonly _voices = new Set<Voice>();
   private _muteOnHidden = false;
 
   public constructor() {
@@ -177,6 +184,20 @@ export class AudioManager {
     this._spatial.delete(voice);
   }
 
+  /**
+   * Internal: track a live voice so {@link AudioManager.destroy} can stop it.
+   * Called from the voice's own constructor, which covers every creation path —
+   * `play()`, `open()`, sprite playback, and pooled replays alike.
+   */
+  public _registerVoice(voice: Voice): void {
+    this._voices.add(voice);
+  }
+
+  /** Internal: drop a voice that has ended. Called from the voice's own teardown. */
+  public _unregisterVoice(voice: Voice): void {
+    this._voices.delete(voice);
+  }
+
   /** Internal: called by Application when visibility changes. */
   public _applyVisibility(visible: boolean): void {
     if (this._muteOnHidden) {
@@ -231,6 +252,15 @@ export class AudioManager {
   }
 
   public destroy(): void {
+    // Voices first: tearing down the buses only detaches nodes from the graph,
+    // it does not stop a source. An `<audio>` element in particular keeps
+    // decoding and a buffer source keeps rendering until its voice is stopped,
+    // so an unstopped voice would outlive the application it belonged to.
+    // Iterated over a copy — each `stop()` deregisters the voice via `onEnd`.
+    for (const voice of [...this._voices]) {
+      voice.stop();
+    }
+    this._voices.clear();
     this.listener.destroy();
     this._spatial.clear();
     for (const bus of this._registered.values()) {

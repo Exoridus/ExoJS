@@ -2,7 +2,10 @@
 
 import { getAudioContext } from '#audio/audio-context';
 import { AudioBus } from '#audio/AudioBus';
+import type { AudioInput } from '#audio/AudioInput';
 import { AudioManager } from '#audio/AudioManager';
+import { AudioStream } from '#audio/AudioStream';
+import { Sound } from '#audio/Sound';
 import { Signal } from '#core/Signal';
 
 // ---------------------------------------------------------------------------
@@ -58,6 +61,21 @@ const makeFakeAudioContext = (): AudioContext =>
         pan: makeFakeParam(),
       }) as unknown as StereoPannerNode,
   }) as unknown as AudioContext;
+
+const createAudioBufferStub = (duration = 2): AudioBuffer => ({ duration }) as AudioBuffer;
+
+const createAudioElementStub = (): HTMLAudioElement => {
+  const el = document.createElement('audio');
+  Object.defineProperty(el, 'duration', { configurable: true, value: 30 });
+  Object.defineProperty(el, 'currentTime', { configurable: true, writable: true, value: 0 });
+  Object.defineProperty(el, 'loop', { configurable: true, writable: true, value: false });
+  Object.defineProperty(el, 'playbackRate', { configurable: true, writable: true, value: 1 });
+  Object.defineProperty(el, 'paused', { configurable: true, writable: true, value: true });
+  return el;
+};
+
+/** Size of the manager's internal live-voice registry. */
+const liveVoiceCount = (manager: AudioManager): number => (manager as unknown as { _voices: Set<unknown> })._voices.size;
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -263,5 +281,76 @@ describe('AudioManager', () => {
     await Promise.resolve(); // the already-running dispatch is deferred one microtask
 
     expect(onUnlock).toHaveBeenCalledTimes(1);
+  });
+
+  // ---- live-voice registry ----
+
+  test('play() registers the new voice with the manager', () => {
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+
+    expect(liveVoiceCount(manager)).toBe(0);
+    manager.play(sound);
+    expect(liveVoiceCount(manager)).toBe(1);
+
+    sound.destroy();
+  });
+
+  test('a voice that ends deregisters itself from the manager', () => {
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+    const voice = manager.play(sound);
+
+    voice.stop();
+
+    expect(voice.ended).toBe(true);
+    expect(liveVoiceCount(manager)).toBe(0);
+
+    sound.destroy();
+  });
+
+  test('destroy() stops every voice that is still playing', () => {
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+    const first = manager.play(sound);
+    const second = manager.play(sound);
+
+    expect(first.ended).toBe(false);
+    expect(second.ended).toBe(false);
+
+    manager.destroy();
+
+    expect(first.ended).toBe(true);
+    expect(second.ended).toBe(true);
+    expect(liveVoiceCount(manager)).toBe(0);
+
+    sound.destroy();
+  });
+
+  test('destroy() stops a stream voice so its media element stops decoding', () => {
+    const manager = new AudioManager();
+    const el = createAudioElementStub();
+    const stream = new AudioStream(el);
+    const voice = manager.play(stream);
+    const pauseSpy = vi.spyOn(el, 'pause');
+
+    manager.destroy();
+
+    expect(voice.ended).toBe(true);
+    expect(pauseSpy).toHaveBeenCalled();
+
+    stream.destroy();
+  });
+
+  test('destroy() stops an input voice opened through open()', () => {
+    const manager = new AudioManager();
+    const input = { stream: {} as MediaStream } as AudioInput;
+    const voice = manager.open(input);
+
+    expect(voice.ended).toBe(false);
+
+    manager.destroy();
+
+    expect(voice.ended).toBe(true);
   });
 });
