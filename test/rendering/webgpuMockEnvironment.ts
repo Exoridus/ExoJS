@@ -30,6 +30,8 @@ export interface MockWebGpuEnvironment {
   writeBufferLabels(): readonly string[];
   /** Labels of every device.createBuffer call, in call order. */
   createBufferLabels(): readonly string[];
+  /** The `data` view handed to every queue.writeTexture call, in call order. */
+  writeTextureData(): readonly ArrayBufferView[];
   /** Number of render pipelines synchronously created (async prewarm excluded). */
   syncPipelineCount(): number;
   drawIndexedCount(): number;
@@ -53,6 +55,7 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
   const bindGroupLabels: string[] = [];
   const writeBufferLabels: string[] = [];
   const createBufferLabels: string[] = [];
+  const writeTextureData: ArrayBufferView[] = [];
 
   const pass = {
     setPipeline: (): void => {},
@@ -78,7 +81,9 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
     },
     submit: (): void => {},
     copyExternalImageToTexture: (): void => {},
-    writeTexture: (): void => {},
+    writeTexture: (_destination: unknown, data: ArrayBufferView): void => {
+      writeTextureData.push(data);
+    },
   };
   const device = {
     createShaderModule: () => ({}) as GPUShaderModule,
@@ -153,6 +158,7 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
     bindGroupLabels: () => bindGroupLabels,
     writeBufferLabels: () => writeBufferLabels,
     createBufferLabels: () => createBufferLabels,
+    writeTextureData: () => writeTextureData,
     syncPipelineCount: () => syncPipelineCount,
     drawIndexedCount: () => drawIndexedCount,
     restore: (): void => {

@@ -67,6 +67,17 @@ interface ManagedWebGpuTextureState {
   hasContent: boolean;
   /** GPU bytes currently booked for this texture's storage with the resource accountant. */
   accountedBytes: number;
+  /**
+   * Reusable packing buffer for a partial `DataTexture` upload (see
+   * `_syncTexture`'s partial branch), sized to the largest region packed so
+   * far and never shrunk. Kept per-texture (not a shared backend scratch) so
+   * concurrently-tracked `DataTexture`s (e.g. the transform + tint pair, each
+   * syncing every flush of a barrier-heavy scene) never race over one buffer.
+   * `null` until the first partial upload; the array kind narrows to the
+   * texture's own buffer kind (`Float32Array` for `rgba32f`/`r32f`, `Uint8Array`
+   * for `rgba8`/`r8`) and never changes for a given texture instance.
+   */
+  partialUploadScratch: Float32Array | Uint8Array | null;
 }
 
 interface PixelClipBoundsState {
@@ -2025,6 +2036,7 @@ export class WebGpuBackend implements RenderBackend {
         mipLevelCount,
         hasContent: false,
         accountedBytes: 0,
+        partialUploadScratch: null,
       };
 
       state.accountedBytes = this._accountant.reallocate(0, this._estimateTextureBytes(texture, mipLevelCount));
@@ -2133,6 +2145,27 @@ export class WebGpuBackend implements RenderBackend {
     }
   }
 
+  /**
+   * Return a packing scratch view sized exactly `length`, backed by
+   * `state.partialUploadScratch` (grown on demand, never shrunk, kind-matched
+   * to `source`). Reusing this buffer across every partial `DataTexture`
+   * upload — instead of allocating a fresh temporary array per sync — is what
+   * keeps a barrier-heavy scene's per-frame CPU garbage flat instead of
+   * scaling with flush count: each flush's transform (and separate tint) sync
+   * would otherwise allocate its own throwaway packing buffer.
+   */
+  private _acquirePartialUploadScratch(state: ManagedWebGpuTextureState, source: Float32Array | Uint8Array, length: number): Float32Array | Uint8Array {
+    const isFloat = source instanceof Float32Array;
+    let scratch = state.partialUploadScratch;
+
+    if (scratch === null || scratch.length < length || isFloat !== scratch instanceof Float32Array) {
+      scratch = isFloat ? new Float32Array(length) : new Uint8Array(length);
+      state.partialUploadScratch = scratch;
+    }
+
+    return scratch.length === length ? scratch : scratch.subarray(0, length);
+  }
+
   private _syncTexture(texture: Texture | RenderTexture): ManagedWebGpuTextureState {
     assertLiveTexture(texture);
 
@@ -2192,11 +2225,14 @@ export class WebGpuBackend implements RenderBackend {
           );
           this._accountant.recordTextureUpload(texture.width * texture.height * formatInfo.bytesPerPixel);
         } else {
-          // Partial upload: pack the dirty region into a contiguous buffer.
+          // Partial upload: pack the dirty region into a reusable scratch view
+          // (grown once, never reallocated per call — see
+          // `_acquirePartialUploadScratch`) that `writeTexture` can read.
+          // `queue.writeTexture` snapshots the bytes at call time, so the same
+          // buffer is free to be repacked on the very next sync.
           const channels = formatInfo.channels;
           const bytesPerPixel = formatInfo.bytesPerPixel;
-          const subBytes = region.width * region.height * bytesPerPixel;
-          const subBuffer = texture.buffer instanceof Float32Array ? new Float32Array(subBytes / 4) : new Uint8Array(subBytes);
+          const subBuffer = this._acquirePartialUploadScratch(state, texture.buffer, region.width * region.height * channels);
           const rowChannels = texture.width * channels;
           const subRowChannels = region.width * channels;
 
