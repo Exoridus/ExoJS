@@ -158,12 +158,16 @@ describe('SceneNode.getBounds() — dirty-flag cache', () => {
     parent.addChild(child);
     child.setPosition(0, 0);
 
-    const parentBoundsW1 = parent.getBounds().width;
+    const parentBoundsX1 = parent.getBounds().x;
 
     child.setPosition(200, 200);
     const parentBoundsAfter = parent.getBounds();
 
-    expect(parentBoundsAfter.width).toBeGreaterThan(parentBoundsW1);
+    // A structural container spans exactly its children, so a moved child
+    // translates the parent rect rather than growing it.
+    expect(parentBoundsAfter.x).toBeGreaterThan(parentBoundsX1);
+    expect(parentBoundsAfter.x).toBeCloseTo(200);
+    expect(parentBoundsAfter.y).toBeCloseTo(200);
 
     parent.destroy();
   });
@@ -256,16 +260,16 @@ describe('SceneNode.getBounds() — dirty-flag cache', () => {
     // ancestor; the short-circuit may only stop at an already-dirty one.
     leaf.setPosition(300, 400);
 
-    // Each level must report the grown bounds — none may be skipped. The leaf
-    // itself merely translates (width unchanged), but every container's union
-    // with the far-moved leaf must now span out to the leaf.
+    // Each level must report the moved bounds — none may be skipped. The leaf
+    // merely translates, and every structural container spans exactly its
+    // children, so each ancestor rect must follow the leaf out to (300, 400).
     expect(leaf.getBounds().x).toBeCloseTo(300);
     expect(leaf.getBounds().y).toBeCloseTo(400);
 
-    expect(parent.getBounds().width).toBeCloseTo(310);
-    expect(parent.getBounds().height).toBeCloseTo(410);
-    expect(grandparent.getBounds().width).toBeCloseTo(310);
-    expect(grandparent.getBounds().height).toBeCloseTo(410);
+    expect(parent.getBounds().x).toBeCloseTo(300);
+    expect(parent.getBounds().y).toBeCloseTo(400);
+    expect(grandparent.getBounds().x).toBeCloseTo(300);
+    expect(grandparent.getBounds().y).toBeCloseTo(400);
 
     leaf.destroy();
     parent.destroy();

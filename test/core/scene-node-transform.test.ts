@@ -360,7 +360,9 @@ describe('SceneNode bounds after transform changes', () => {
 
     const view = { getBounds: () => new Rectangle(400, 0, 300, 300) } as unknown as View;
 
-    expect(container.getBounds().width).toBe(600);
+    // The container spans exactly its single child (500..600), not the origin.
+    expect(container.getBounds().x).toBe(500);
+    expect(container.getBounds().width).toBe(100);
     expect(container.inView(view)).toBe(true);
 
     child.visible = false;

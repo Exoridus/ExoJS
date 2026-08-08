@@ -214,6 +214,7 @@ export class RetainedContainer extends Container {
   private _aggregateContentRevision = -1;
   private _aggregateStructureRevision = -1;
   private _aggregateTransformRevision = -1;
+  private _groupAggregateEmpty = true;
 
   /**
    * World AABB of the group: children aggregate in group-local space, so
@@ -255,7 +256,11 @@ export class RetainedContainer extends Container {
       this._aggregateTransformRevision = transformRevision;
     }
 
-    this._bounds.reset().addRect(this._groupAggregate.getRect(), world);
+    this._bounds.reset();
+
+    if (!this._groupAggregateEmpty) {
+      this._bounds.addRect(this._groupAggregate.getRect(), world);
+    }
 
     // Index loop, no iterator allocation: this runs on every group move.
     for (let index = 0; index < this._liveBoundsChildren.length; index++) {
@@ -270,13 +275,29 @@ export class RetainedContainer extends Container {
       }
     }
 
+    // No aggregate and no live children: keep a degenerate rect at the group's
+    // own transform instead of the untouched Infinity/-Infinity accumulator.
+    if (this._groupAggregateEmpty && this._liveBoundsChildren.length === 0) {
+      this._bounds.addRect(this.getLocalBounds(), world);
+    }
+
     return this;
   }
 
   /** Rebuild the cached group-local aggregate + the live-children list (see the block comment above {@link updateBounds}). */
   private _rebuildGroupAggregate(): void {
-    this._groupAggregate.reset().addRect(this.getLocalBounds());
+    const localBounds = this.getLocalBounds();
+    // Same origin-pinning trap as `Container.updateBounds`: a group without own
+    // geometry must not seed its aggregate with the empty local rect.
+    const hasLocalContent = localBounds.width !== 0 || localBounds.height !== 0;
+
+    this._groupAggregate.reset();
+    this._groupAggregateEmpty = !hasLocalContent;
     this._liveBoundsChildren.length = 0;
+
+    if (hasLocalContent) {
+      this._groupAggregate.addRect(localBounds);
+    }
 
     for (let index = 0; index < this._children.length; index++) {
       const child = this._children[index]!;
@@ -292,6 +313,7 @@ export class RetainedContainer extends Container {
         this._liveBoundsChildren.push(child);
       } else {
         this._groupAggregate.addRect(child.getBounds());
+        this._groupAggregateEmpty = false;
       }
     }
   }

@@ -184,7 +184,7 @@ export class Container extends RenderNode {
    */
   public addChild(...children: RenderNode[]): this {
     for (const child of children) {
-      this.addChildAt(child, this._childList.length);
+      this._attachChild(child, null);
     }
 
     return this;
@@ -195,12 +195,26 @@ export class Container extends RenderNode {
    * from any previous parent first. Throws if `index` is out of bounds, if
    * `child` has already been `destroy()`ed, or if `child` is an ancestor of
    * this container (would create a cycle). Self-as-child is a no-op.
+   *
+   * When `child` already belongs to this container the call is a pure reorder:
+   * the node keeps its parent, its stage and its keyboard focus.
    */
   public addChildAt(child: RenderNode, index: number): this {
     if (index < 0 || index > this._childList.length) {
       throw new Error(`The index ${index} is out of bounds ${this._childList.length}`);
     }
 
+    return this._attachChild(child, index);
+  }
+
+  /**
+   * Shared insert path for {@link addChild} and {@link addChildAt}. A `null`
+   * index means "append", and the position is resolved only after the child is
+   * detached from its previous parent — that detach dispatches focus and
+   * interaction callbacks, i.e. arbitrary user code that can grow or shrink
+   * this container's list while the insert is still in flight.
+   */
+  private _attachChild(child: RenderNode, index: number | null): this {
     if (child === this) {
       return this;
     }
@@ -228,12 +242,18 @@ export class Container extends RenderNode {
       );
     }
 
+    if (child.parent === this) {
+      return this._reorderChild(child, index);
+    }
+
     if (child.parent) {
       child.parent.removeChild(child);
     }
 
+    const insertAt = this._resolveInsertIndex(index);
+
     child._setParent(this);
-    this._childList.splice(index, 0, child);
+    this._childList.splice(insertAt, 0, child);
     this._invalidateChildOrder();
     this.invalidateCache();
     this._markStructureDirty();
@@ -245,6 +265,30 @@ export class Container extends RenderNode {
     this._stage?.interaction._notifyNodeAdded(child);
 
     return this;
+  }
+
+  /**
+   * Move a node that already belongs to this container to `index`. Routing a
+   * same-parent insert through `removeChild()` would tear the node off the
+   * stage and blur it, so a pure reorder used to steal keyboard focus and
+   * re-announce the node to the interaction manager. Neither the child's
+   * transform nor the aggregate bounds change, so only the order-dependent
+   * caches are invalidated.
+   */
+  private _reorderChild(child: RenderNode, index: number | null): this {
+    removeArrayItems(this._childList, this.getChildIndex(child), 1);
+
+    this._childList.splice(this._resolveInsertIndex(index), 0, child);
+    this._invalidateChildOrder();
+    this.invalidateCache();
+    this._markStructureDirty();
+
+    return this;
+  }
+
+  /** Clamp an insert position against the CURRENT list length; `null` appends. */
+  private _resolveInsertIndex(index: number | null): number {
+    return index === null ? this._childList.length : Math.min(index, this._childList.length);
   }
 
   public swapChildren(firstChild: RenderNode, secondChild: RenderNode): this {
@@ -351,15 +395,25 @@ export class Container extends RenderNode {
       throw new Error('Values are outside the acceptable range.');
     }
 
-    // Cascade bounds before clearing any parent references.
-    if (range > 0) {
-      this._invalidateBoundsCascade();
+    if (range === 0) {
+      return this;
     }
 
-    for (let i = begin; i < end; i++) {
-      const child = this._childList[i];
+    // Cascade bounds before clearing any parent references.
+    this._invalidateBoundsCascade();
 
-      if (child?.parent === this) {
+    const removed = this._childList.slice(begin, end);
+
+    // Same ordering rule as `removeChildAt`: commit the array write and drop
+    // the children-view cache BEFORE any notify below can run user code (an
+    // `onBlur` handler reading `container.children`). Running every notify
+    // first and splicing afterwards handed that handler a list that still held
+    // every node being removed.
+    removeArrayItems(this._childList, begin, range);
+    this._invalidateChildOrder();
+
+    for (const child of removed) {
+      if (child.parent === this) {
         child._setParent(null);
         child._invalidateSubtreeTransform();
         this._stage?.interaction._notifyNodeRemoved(child);
@@ -368,8 +422,6 @@ export class Container extends RenderNode {
       }
     }
 
-    removeArrayItems(this._childList, begin, range);
-    this._invalidateChildOrder();
     this.invalidateCache();
     this._markStructureDirty();
 
@@ -523,12 +575,33 @@ export class Container extends RenderNode {
   }
 
   public override updateBounds(): this {
-    this._bounds.reset().addRect(this.getLocalBounds(), this.getGlobalTransform());
+    const localBounds = this.getLocalBounds();
+    // A plain container carries no geometry of its own: its local rect is the
+    // empty 0x0 box at the local origin. Merging that unconditionally pins the
+    // origin into every aggregate, so a container whose children all sit far
+    // away would report an AABB stretching back to its own position.
+    const hasLocalContent = localBounds.width !== 0 || localBounds.height !== 0;
+    let hasContent = hasLocalContent;
+
+    this._bounds.reset();
+
+    if (hasLocalContent) {
+      this._bounds.addRect(localBounds, this.getGlobalTransform());
+    }
 
     for (const child of this._childList) {
       if (child.visible) {
         this._bounds.addRect(child.getBounds());
+        hasContent = true;
       }
+    }
+
+    // Nothing contributed an extent. Fall back to the degenerate local rect so
+    // the aggregate stays a real rectangle at this container's own transform —
+    // handing out the untouched accumulator would leak its Infinity/-Infinity
+    // seed into width/height and every edge accessor.
+    if (!hasContent) {
+      this._bounds.addRect(localBounds, this.getGlobalTransform());
     }
 
     return this;

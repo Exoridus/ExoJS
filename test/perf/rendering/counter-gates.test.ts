@@ -81,10 +81,13 @@ const EXPECTED = {
   // Plain Container, 10 of the 1000 sprites moved every frame. A child move
   // content-dirties the container, busting the retained-plan cache → full re-collect
   // (1001 visits, 1000 material keys) PLUS the extra world-transform resolutions
-  // the moved sprites' invalidation cascade forces (gt 8022 vs the 6001 of a
+  // the moved sprites' invalidation cascade forces (gt 8021 vs the 6001 of a
   // pure pan). Pins the dirty-path shape: the early-out-epoch dirty-walk rework
   // is expected to cut `collect`/`globalTransform` here — update deliberately.
-  mutate10: { collect: 1001, inView: 1001, globalTransform: 8022, materialKey: 1000, submittedNodes: 1000, culledNodes: 0, drawCalls: 1, batches: 1 },
+  // The one resolution below the former 8022: a structural container no longer
+  // folds its own empty local rect into the aggregate, so `updateBounds` stops
+  // resolving the container's world matrix for a rect that contributed nothing.
+  mutate10: { collect: 1001, inView: 1001, globalTransform: 8021, materialKey: 1000, submittedNodes: 1000, culledNodes: 0, drawCalls: 1, batches: 1 },
 } as const;
 
 const withHarness = (fn: (harness: WebGl2Harness) => void): void => {
