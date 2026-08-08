@@ -1,11 +1,11 @@
 {
-  "title": "Material",
-  "description": "Describes the look of a renderable — shader, uniforms, textures, blend mode, and sampling state — independent of its geometry. A `Material` can be shared across many drawables; renderers cache compiled programs/pipelines keyed on pipelineKey and reuse bindings keyed on bindKey. Subclasses fix the target drawable class. Call destroy when the material is no longer needed to release the GPU resources cached on every backend it was used on. Both keys are derived live from the current material state, so they stay stable across repeated reads and change exactly when the relevant state changes — even when uniforms, textures, blendMode, or sampler are mutated in place.",
-  "symbol": "Material",
+  "title": "ParticleMaterial",
+  "description": "Material specialization for particle render modes. `Material`'s constructor is protected, so every material family declares a thin subclass that fixes target and opens construction up — this is the particle counterpart of core's `MeshMaterial` and `SpriteMaterial`. Particle draws bind their system-level state (transform, local bounds, texture) through the renderer rather than through the material, so this subclass adds no behaviour of its own; it exists to name the contract.",
+  "symbol": "ParticleMaterial",
   "kind": "class",
-  "subsystem": "rendering",
-  "importPath": "@codexo/exojs",
-  "tier": "advanced",
+  "subsystem": "particles",
+  "importPath": "@codexo/exojs-particles",
+  "tier": "stable",
   "memberCount": 12,
   "counts": {
     "constructors": 1,
@@ -19,11 +19,11 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Describes the look of a renderable — shader, uniforms, textures, blend mode, and sampling state — independent of its geometry.",
-        "A `Material` can be shared across many drawables; renderers cache compiled programs/pipelines keyed on pipelineKey and reuse bindings keyed on bindKey. Subclasses fix the target drawable class. Call destroy when the material is no longer needed to release the GPU resources cached on every backend it was used on.",
-        "Both keys are derived live from the current material state, so they stay stable across repeated reads and change exactly when the relevant state changes — even when uniforms, textures, blendMode, or sampler are mutated in place."
+        "Material specialization for particle render modes.",
+        "`Material`'s constructor is protected, so every material family declares a thin subclass that fixes target and opens construction up — this is the particle counterpart of core's `MeshMaterial` and `SpriteMaterial`.",
+        "Particle draws bind their system-level state (transform, local bounds, texture) through the renderer rather than through the material, so this subclass adds no behaviour of its own; it exists to name the contract."
       ],
-      "importLine": "import { Material } from '@codexo/exojs'",
+      "importLine": "import { ParticleMaterial } from '@codexo/exojs-particles'",
       "sourceLink": null
     },
     {
@@ -32,7 +32,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(options: MaterialOptions): Material",
+          "signature": "new(options: MaterialOptions): ParticleMaterial",
           "signatureTokens": [
             {
               "text": "new",
@@ -63,7 +63,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Material",
+              "text": "ParticleMaterial",
               "kind": "type"
             }
           ],
@@ -74,7 +74,7 @@
               "optional": false
             }
           ],
-          "returnType": "Material",
+          "returnType": "ParticleMaterial",
           "description": ""
         }
       ],
@@ -341,7 +341,7 @@
         },
         {
           "name": "target",
-          "signature": "target: \"mesh\" | \"sprite\" | \"particle\"",
+          "signature": "target: \"particle\"",
           "signatureTokens": [
             {
               "text": "target",
@@ -349,22 +349,6 @@
             },
             {
               "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"mesh\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"sprite\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
               "kind": "punctuation"
             },
             {
@@ -520,11 +504,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/rendering/material/Material.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/material/Material.ts"
+        "label": "packages/exojs-particles/src/renderModes/ParticleMaterial.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/renderModes/ParticleMaterial.ts"
       }
     }
   ],
-  "sourcePath": "src/rendering/material/Material.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/material/Material.ts"
+  "sourcePath": "packages/exojs-particles/src/renderModes/ParticleMaterial.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/renderModes/ParticleMaterial.ts"
 }

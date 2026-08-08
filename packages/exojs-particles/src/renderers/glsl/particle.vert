@@ -1,9 +1,9 @@
 #version 300 es
-precision lowp float;
+precision highp float;
 precision lowp int;
 
 // Per-instance attributes (one entry per particle, 40 bytes total).
-layout(location = 0) in vec2 a_translation;     // particle position in system-local space
+layout(location = 0) in vec2 a_position;         // particle position in system-local space
 layout(location = 1) in vec2 a_scale;            // particle scale
 layout(location = 2) in float a_rotation;        // particle rotation in degrees
 layout(location = 3) in vec4 a_color;            // RGBA tint
@@ -34,7 +34,7 @@ void main(void) {
         (localX * (a_scale.x * -rotation.x)) + (localY * (a_scale.y * rotation.y))
     );
 
-    vec3 worldPos = vec3(transformed + a_translation, 1.0);
+    vec3 worldPos = vec3(transformed + a_position, 1.0);
 
     gl_Position = vec4((u_projection * u_systemTransform * worldPos).xy, 0.0, 1.0);
 

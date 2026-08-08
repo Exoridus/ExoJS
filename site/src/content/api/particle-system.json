@@ -1,16 +1,16 @@
 {
   "title": "ParticleSystem",
-  "description": "The central coordinator of the particle pipeline. `ParticleSystem` is a Drawable that owns: - **SoA particle storage** — one typed array per attribute (position, velocity, scale, rotation, color, lifetime, ...), sized to a fixed capacity at construction. User code reads/writes via `system.posX[slot]`, `system.velX[slot]`, etc. - **Spawn modules** — write new particles into freshly allocated slots. - **Update modules** — mutate the live range each frame (forces, color blends, scale curves, drag, ...). Built-in modules ship both CPU and WGSL implementations; custom modules can opt into GPU acceleration by implementing `wgsl()`. - **Death modules** — fire once per dying particle, before its slot is recycled (sub-emitters, event hooks). **Auto-routing CPU vs GPU:** at first update, the system checks: if a `WebGpuBackend` was supplied AND every registered update module has `wgsl()`, the GPU path engages — a composite compute pipeline runs integration plus all module bodies in one dispatch and writes directly into the renderer's instance buffer (no CPU readback). Otherwise the CPU path runs the existing per-module `apply()` loops. **Per-frame order in update (CPU mode):** 1. Run every spawn module. 2. Integrate position from velocity, rotation from rotationSpeed, advance `elapsed`. 3. Run every update module on the live range. 4. Compact: scan `[0, liveCount)` forward, fire death modules on expired slots, copy survivors down. `liveCount` shrinks to the survivor count. **Per-frame order in update (GPU mode):** 1. Run every spawn module (CPU writes initial values into the spawn slot). 2. Detect expiries on CPU (via `elapsed >= lifetime`); fire death modules; set `lifetime[slot] = -1` sentinel + clear `alive[slot]` so the GPU shader skips them. **No compaction** — slots are recycled on next spawn. 3. Dispatch the composite compute pipeline. Integration + update modules + pack-instances run in one pass; the instance buffer is written directly. CPU SoA stays as-is for spawn writes. **Coordinate space:** particle positions are LOCAL to the system. The system's `getGlobalTransform()` is applied on top during rendering — both the WebGL2 and WebGPU shaders multiply `projection * translation * rotated`. Setting world-space positions on individual particles double-translates. Position the system itself via `system.setPosition(...)` and emit relative to `(0, 0)`. **Pixel snapping:** Drawable.pixelSnapMode is intentionally ignored for particle systems. Particle instances bake their own per-particle transforms in the emitter/compute path rather than reading the shared pixel-snap transform row, so a snap mode set on the system has no effect on rendered output — snapping thousands of independently-moving sub-pixel particles to the device grid is neither meaningful nor desirable.",
+  "description": "The central coordinator of the particle pipeline. `ParticleSystem` is a Drawable that owns: - **SoA particle storage** — one typed array per attribute (position, velocity, scale, rotation, color, lifetime, ...), sized to a fixed capacity at construction. User code reads/writes via `system.posX[slot]`, `system.velX[slot]`, etc. - **Spawn modules** — write new particles into freshly allocated slots. - **Update modules** — mutate the live range each frame (forces, color blends, scale curves, drag, ...). Built-in modules ship both CPU and WGSL implementations; custom modules can opt into GPU acceleration by implementing `wgsl()`. - **Death modules** — fire once per dying particle, before its slot is recycled (sub-emitters, event hooks). **Auto-routing CPU vs GPU:** at first update, the system checks: if a `WebGpuBackend` was supplied AND every registered update module has `wgsl()` AND the render mode is GPU-eligible, the GPU path engages — a composite compute pipeline runs integration plus all module bodies in one dispatch and writes directly into the renderer's instance buffer (no CPU readback). Otherwise the CPU path runs the existing per-module `apply()` loops. **Per-frame order in update (CPU mode):** 1. Run every spawn module. 2. Integrate position from velocity, rotation from rotationSpeed, advance `elapsed`. 3. Run every update module on the live range. 4. Compact: scan `[0, liveCount)` forward, fire death modules on expired slots, copy survivors down. `liveCount` shrinks to the survivor count. **Per-frame order in update (GPU mode):** 1. Run every spawn module (CPU writes initial values into the spawn slot). 2. Detect expiries on CPU (via `elapsed >= lifetime`); fire death modules; set `lifetime[slot] = -1` sentinel + clear `alive[slot]` so the GPU shader skips them. **No compaction** — slots are recycled on next spawn. 3. Dispatch the composite compute pipeline. Integration + update modules + pack-instances run in one pass; the instance buffer is written directly. CPU SoA stays as-is for spawn writes. **Coordinate space:** particle positions are LOCAL to the system. The system's `getGlobalTransform()` is applied on top during rendering — both the WebGL2 and WebGPU shaders multiply `projection * translation * rotated`. Setting world-space positions on individual particles double-translates. Position the system itself via `system.setPosition(...)` and emit relative to `(0, 0)`. **Pixel snapping:** Drawable.pixelSnapMode is intentionally ignored for particle systems. Particle instances bake their own per-particle transforms in the emitter/compute path rather than reading the shared pixel-snap transform row, so a snap mode set on the system has no effect on rendered output — snapping thousands of independently-moving sub-pixel particles to the device grid is neither meaningful nor desirable.",
   "symbol": "ParticleSystem",
   "kind": "class",
   "subsystem": "particles",
   "importPath": "@codexo/exojs-particles",
   "tier": "stable",
-  "memberCount": 127,
+  "memberCount": 128,
   "counts": {
     "constructors": 4,
     "methods": 49,
-    "properties": 60,
+    "properties": 61,
     "events": 14
   },
   "sections": [
@@ -21,7 +21,7 @@
       "paragraphs": [
         "The central coordinator of the particle pipeline. `ParticleSystem` is a Drawable that owns:",
         "- **SoA particle storage** — one typed array per attribute (position, velocity, scale, rotation, color, lifetime, ...), sized to a fixed capacity at construction. User code reads/writes via `system.posX[slot]`, `system.velX[slot]`, etc. - **Spawn modules** — write new particles into freshly allocated slots. - **Update modules** — mutate the live range each frame (forces, color blends, scale curves, drag, ...). Built-in modules ship both CPU and WGSL implementations; custom modules can opt into GPU acceleration by implementing `wgsl()`. - **Death modules** — fire once per dying particle, before its slot is recycled (sub-emitters, event hooks).",
-        "**Auto-routing CPU vs GPU:** at first update, the system checks: if a `WebGpuBackend` was supplied AND every registered update module has `wgsl()`, the GPU path engages — a composite compute pipeline runs integration plus all module bodies in one dispatch and writes directly into the renderer's instance buffer (no CPU readback). Otherwise the CPU path runs the existing per-module `apply()` loops.",
+        "**Auto-routing CPU vs GPU:** at first update, the system checks: if a `WebGpuBackend` was supplied AND every registered update module has `wgsl()` AND the render mode is GPU-eligible, the GPU path engages — a composite compute pipeline runs integration plus all module bodies in one dispatch and writes directly into the renderer's instance buffer (no CPU readback). Otherwise the CPU path runs the existing per-module `apply()` loops.",
         "**Per-frame order in update (CPU mode):** 1. Run every spawn module. 2. Integrate position from velocity, rotation from rotationSpeed, advance `elapsed`. 3. Run every update module on the live range. 4. Compact: scan `[0, liveCount)` forward, fire death modules on expired slots, copy survivors down. `liveCount` shrinks to the survivor count.",
         "**Per-frame order in update (GPU mode):** 1. Run every spawn module (CPU writes initial values into the spawn slot). 2. Detect expiries on CPU (via `elapsed >= lifetime`); fire death modules; set `lifetime[slot] = -1` sentinel + clear `alive[slot]` so the GPU shader skips them. **No compaction** — slots are recycled on next spawn. 3. Dispatch the composite compute pipeline. Integration + update modules + pack-instances run in one pass; the instance buffer is written directly. CPU SoA stays as-is for spawn writes.",
         "**Coordinate space:** particle positions are LOCAL to the system. The system's `getGlobalTransform()` is applied on top during rendering — both the WebGL2 and WebGPU shaders multiply `projection * translation * rotated`. Setting world-space positions on individual particles double-translates. Position the system itself via `system.setPosition(...)` and emit relative to `(0, 0)`.",
@@ -3467,6 +3467,27 @@
           "params": [],
           "returnType": null,
           "description": "When true, material-aware overlap reordering is disabled for this node's draw-order scope. Draw commands are submitted in exact document order (after scope-local z-sorting), preserving the painter's guarantee irrespective of material compatibility or AABB safety analysis. Adjacency coalescing of consecutive same-material draws still applies; it does not change visual output order."
+        },
+        {
+          "name": "renderMode",
+          "signature": "renderMode: ParticleRenderMode",
+          "signatureTokens": [
+            {
+              "text": "renderMode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ParticleRenderMode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The render mode this system's particles are drawn with. Fixed at construction via ParticleSystemOptions.render; the backend renderers read it every draw to learn the vertex layout, shader and draw model. Without that option this is the shared default mode — the same instance every other defaulted system draws with, so do not destroy it or mutate its material."
         },
         {
           "name": "rotation",

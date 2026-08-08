@@ -92,7 +92,7 @@ export abstract class Material {
   public sampler: SamplerOptions | null;
 
   /** Which drawable class this material can serve; renderers check compatibility. */
-  public abstract readonly target: 'mesh' | 'sprite';
+  public abstract readonly target: 'mesh' | 'sprite' | 'particle';
 
   private readonly _id: number;
   private readonly _disposeCallbacks = new Set<() => void>();

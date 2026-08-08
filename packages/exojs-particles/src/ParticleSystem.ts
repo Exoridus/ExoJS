@@ -12,6 +12,8 @@ import { ParticleGpuState } from '#gpu/ParticleGpuState';
 import type { DeathModule } from '#modules/DeathModule';
 import type { SpawnModule } from '#modules/SpawnModule';
 import type { UpdateModule } from '#modules/UpdateModule';
+import type { ParticleRenderMode } from '#renderModes/ParticleRenderMode';
+import { QuadParticles } from '#renderModes/QuadParticles';
 
 const defaultCapacity = 4096;
 
@@ -44,6 +46,36 @@ const getDefaultWhiteTexture = (): Texture => {
 };
 
 /**
+ * The process-wide default render mode, created on first use.
+ *
+ * Every system constructed without `ParticleSystemOptions.render` draws with
+ * this one instance. The backends key their GPU resources on the mode's
+ * material, so sharing it means N systems cost one compiled program / pipeline
+ * set, one vertex array object and one vertex buffer between them — what a
+ * single system costs.
+ *
+ * Sharing the mode also shares its scratch buffer, which is safe because that
+ * buffer is only live between a `build()` and the upload that immediately
+ * follows it: the WebGL2 renderer flushes the pending system at the top of
+ * every `render()` before building the next one, and the WebGPU renderer
+ * copies the built bytes out through `queue.writeBuffer` before it moves on to
+ * the next drawcall. That is exactly how the renderers behaved when each of
+ * them owned one shared pack buffer for all systems.
+ *
+ * Never destroyed. It outlives every individual system (see
+ * {@link ParticleSystem.destroy}), so a scene that destroys one system leaves
+ * the others drawing and a system constructed afterwards reuses the already
+ * compiled program instead of paying for a fresh one. The GPU resources behind
+ * it are released by the backend when the renderer disconnects.
+ */
+let defaultRenderMode: ParticleRenderMode | null = null;
+const getDefaultRenderMode = (): ParticleRenderMode => {
+  defaultRenderMode ??= new QuadParticles();
+
+  return defaultRenderMode;
+};
+
+/**
  * Options for {@link ParticleSystem}'s constructor — orthogonal config
  * that's independent of the texture source. Texture / frames / spritesheet
  * live in positional arguments to enforce mutual exclusivity at the type
@@ -60,6 +92,25 @@ export interface ParticleSystemOptions {
    * anything else (incl. WebGL2) ⇒ CPU mode.
    */
   device?: GPUDevice;
+  /**
+   * How this system's particles become vertices. Fixed at construction. A mode
+   * with `gpuEligible === false` forces the system onto the CPU path —
+   * silently, exactly like an update module without a `wgsl()` implementation,
+   * and observable through {@link ParticleSystem.gpuMode}.
+   *
+   * **Ownership.** A mode passed here belongs to the system: the system
+   * destroys it in {@link ParticleSystem.destroy}, which destroys the mode's
+   * material and geometry and releases the GPU resources cached against them.
+   * Pass one mode instance per system. Handing the same instance to two
+   * systems is not supported — destroying either one pulls the material out
+   * from under the other, which then silently rebuilds a fresh material and
+   * pays for a fresh shader compile mid-life. Two systems that should share
+   * one program simply omit this option; the default mode is shared for
+   * exactly that reason and is not owned by any system.
+   *
+   * @default a process-wide shared {@link QuadParticles}
+   */
+  readonly render?: ParticleRenderMode;
 }
 
 /**
@@ -80,7 +131,8 @@ export interface ParticleSystemOptions {
  *
  * **Auto-routing CPU vs GPU:** at first {@link update}, the system checks:
  * if a `WebGpuBackend` was supplied AND every registered update module has
- * `wgsl()`, the GPU path engages — a composite compute pipeline runs
+ * `wgsl()` AND the render mode is GPU-eligible, the GPU path engages — a
+ * composite compute pipeline runs
  * integration plus all module bodies in one dispatch and writes directly
  * into the renderer's instance buffer (no CPU readback). Otherwise the CPU
  * path runs the existing per-module `apply()` loops.
@@ -183,6 +235,10 @@ export class ParticleSystem extends Drawable {
    */
   private _spawnRecord: number[] | null = null;
 
+  private readonly _renderMode: ParticleRenderMode;
+  /** Whether {@link destroy} may destroy {@link _renderMode} — false for the shared default. */
+  private readonly _ownsRenderMode: boolean;
+
   private _texture: Texture;
   private readonly _frames: Rectangle[] = [];
   private readonly _textureFrame: Rectangle = new Rectangle();
@@ -253,6 +309,10 @@ export class ParticleSystem extends Drawable {
     this.alive = new Uint8Array(capacity);
 
     this._device = options.device ?? null;
+    // A mode the caller supplied is this system's to destroy; the default is
+    // shared with every other system that did not supply one, so it is not.
+    this._ownsRenderMode = options.render !== undefined;
+    this._renderMode = options.render ?? getDefaultRenderMode();
     this._texture = texture ?? getDefaultWhiteTexture();
 
     if (frames !== null) {
@@ -262,6 +322,19 @@ export class ParticleSystem extends Drawable {
     }
 
     this.resetTextureFrame();
+  }
+
+  /**
+   * The render mode this system's particles are drawn with. Fixed at
+   * construction via `ParticleSystemOptions.render`; the backend renderers
+   * read it every draw to learn the vertex layout, shader and draw model.
+   *
+   * Without that option this is the shared default mode — the same instance
+   * every other defaulted system draws with, so do not destroy it or mutate
+   * its material.
+   */
+  public get renderMode(): ParticleRenderMode {
+    return this._renderMode;
   }
 
   public get texture(): Texture {
@@ -566,6 +639,14 @@ export class ParticleSystem extends Drawable {
     this.clearUpdateModules();
     this.clearDeathModules();
 
+    // Only a mode this system exclusively owns goes down with it. The shared
+    // default is process-wide: destroying it here would tear the material,
+    // geometry and compiled program out from under every other system still
+    // drawing with it.
+    if (this._ownsRenderMode) {
+      this._renderMode.destroy();
+    }
+
     if (this._gpuState !== null) {
       this._gpuState.destroy();
       this._gpuState = null;
@@ -597,7 +678,7 @@ export class ParticleSystem extends Drawable {
       return;
     }
 
-    const allEligible = this._updateModules.every(m => typeof m.wgsl === 'function');
+    const allEligible = this._updateModules.every(m => typeof m.wgsl === 'function') && this._renderMode.gpuEligible;
 
     if (!allEligible) {
       return;

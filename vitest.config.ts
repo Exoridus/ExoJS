@@ -150,11 +150,21 @@ export default defineConfig({
         // The parity matrix runs in `browser-webgpu`: its runner imports the
         // browser context module, which throws on import under jsdom.
         exclude: ['test/rendering/browser/**/*.test.ts', 'test/rendering/parity/**/*.test.ts', 'test/perf/rendering/**/*.test.ts'],
+        // `_particleGlslMocks` un-stubs the particle package's GLSL: the WebGPU
+        // backend suite drives the particle renderer against a mock device, and
+        // its render mode's `Material` carries both languages, so the stub's
+        // empty GLSL would fail `ShaderSource` validation before the WGSL path
+        // is ever reached.
+        setupFiles: ['./test/setup-env.vitest.ts', './test/rendering/_particleGlslMocks.ts'],
       }),
       createJsdomTestProject({
         name: 'exojs-particles',
         alias: aliasConfig,
         include: ['packages/exojs-particles/test/**/*.test.ts'],
+        // Same reason as the `exojs` project above: a spec that reaches a render
+        // mode's `Material` needs real GLSL, because `ShaderSource` rejects the
+        // stub's empty string before the material is ever handed to a backend.
+        setupFiles: ['./test/setup-env.vitest.ts', './test/rendering/_particleGlslMocks.ts'],
       }),
       createJsdomTestProject({
         name: 'exojs-tilemap',

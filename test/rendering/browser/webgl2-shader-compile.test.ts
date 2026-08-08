@@ -13,7 +13,10 @@
 // against the same SwiftShader driver the WebGL2 browser project runs on. A
 // reserved-word (or any other compile) regression now fails right here.
 
-const shaderModules = import.meta.glob('/src/rendering/webgl2/glsl/*.{vert,frag}', {
+// Core shaders plus the extension packages' own — the particle stage ships
+// from `@codexo/exojs-particles`, so a glob over `src/` alone would leave the
+// only GLSL outside core uncompiled here.
+const shaderModules = import.meta.glob(['/src/rendering/webgl2/glsl/*.{vert,frag}', '/packages/exojs-*/src/**/glsl/*.{vert,frag}'], {
   query: '?raw',
   import: 'default',
   eager: true,
@@ -37,10 +40,11 @@ const shaders: readonly ShaderEntry[] = Object.entries(shaderModules)
 
 const sourceByName: Record<string, string> = Object.fromEntries(shaders.map(entry => [entry.name, entry.source]));
 
-// Vertex/fragment pairs as wired up by the WebGl2*Renderer sources; `text.vert`
-// is shared across all three text-fragment variants. Every file the glob picks
-// up must appear here (guarded below) so a dead `.vert`/`.frag` cannot sit in
-// the folder being compiled-but-never-linked — it has to be wired or removed.
+// Vertex/fragment pairs as wired up by the renderer sources; `text.vert` is
+// shared across all three text-fragment variants and `particle.*` comes from
+// the particles package's render mode. Every file the globs pick up must appear
+// here (guarded below) so a dead `.vert`/`.frag` cannot sit in the folder being
+// compiled-but-never-linked — it has to be wired or removed.
 const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['sprite.vert', 'sprite.frag'],
   ['mesh.vert', 'mesh.frag'],
