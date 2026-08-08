@@ -73,17 +73,46 @@ const removeInteractionListeners = (): void => {
 const dispatchReadyIfRunning = (): void => {
   const audioContext = getExistingAudioContext();
 
-  if (audioContext?.state !== 'running' || readyDispatched) {
+  if (audioContext?.state !== 'running') {
+    return;
+  }
+
+  // No gesture is needed while the context is running — drop the
+  // interaction listeners unconditionally, including on a re-arm after a
+  // later suspension (not just the very first time). `readyDispatched`
+  // below only gates the public one-shot signal, not this cleanup.
+  removeInteractionListeners();
+
+  if (readyDispatched) {
     return;
   }
 
   readyDispatched = true;
-  removeInteractionListeners();
   onAudioContextReady.dispatch(audioContext);
 };
 
+/**
+ * Reacts to every native `statechange` transition of the global
+ * `AudioContext`. On `'running'`, dispatches the (one-shot) public ready
+ * signal if it has not fired yet. On any other state — most importantly a
+ * context that drops back to `'suspended'` after having been running before
+ * (an iOS audio-session interruption, a bfcache restore, ...) — re-installs
+ * the interaction-gesture listeners so the next user gesture can resume it
+ * again. Without this, every audio object constructed after such a
+ * suspension would stay silent forever: `readyDispatched` was already
+ * `true` and the original gesture listeners had already been torn down by
+ * the first unlock.
+ */
 const onAudioContextStateChange = (): void => {
-  dispatchReadyIfRunning();
+  const audioContext = getExistingAudioContext();
+
+  if (audioContext?.state === 'running') {
+    dispatchReadyIfRunning();
+
+    return;
+  }
+
+  addInteractionListeners();
 };
 
 const addInteractionListeners = (): void => {
@@ -172,6 +201,14 @@ class AudioContextReadySignal extends Signal<[AudioContext]> {
  * state. Handles browser autoplay-policy by listening for user-interaction
  * events (`mousedown`, `touchstart`, `touchend`) and resuming a suspended
  * context automatically.
+ *
+ * This is a one-shot "became ready at least once" contract: it never
+ * dispatches a second time, even if the context later drops back to
+ * `'suspended'` (an iOS audio-session interruption, a bfcache restore, ...)
+ * and is subsequently resumed again. Use {@link isAudioContextReady} to
+ * check the *current* running state at any point; the interaction-gesture
+ * monitoring itself re-arms internally on every such suspension so audio
+ * keeps working across it, independent of whether this signal fires again.
  *
  * @example
  * ```ts

@@ -1650,7 +1650,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Dispatched for every engine error: an exception thrown by any part of the per-frame body (systems tick, fixed steps, scene update/draw, Application.onFrame subscribers, backend flush — including synchronous WebGL2 shader compile/link failures, which surface as RenderErrors), an asynchronous GPU error reported by the backend (RenderBackend.onRenderError — WGSL compilation errors, WebGPU uncaptured validation/OOM/internal errors), or a scene-unload failure in Application.stop. The frame guard keeps the loop alive through intermittent failures and halts it (status Stopped) after 3 consecutive failing frames. Narrow with error instanceof RenderError for structured GPU failure details; see Application.recentErrors for the bounded error history."
+          "description": "Dispatched for every engine error: an exception thrown by any part of the per-frame body (systems tick, fixed steps, scene update/draw, Application.onFrame subscribers, backend flush — including synchronous WebGL2 shader compile/link failures, which surface as RenderErrors), an asynchronous GPU error reported by the backend (RenderBackend.onRenderError — WGSL compilation errors, WebGPU uncaptured validation/OOM/internal errors, and WebGPU device-recovery exhaustion), or a scene-unload failure in Application.stop. The frame guard keeps the loop alive through intermittent failures and halts it (status Stopped) after 3 consecutive failing frames. Narrow with error instanceof RenderError for structured GPU failure details; see Application.recentErrors for the bounded error history."
         },
         {
           "name": "onFixedFrame",

@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "RenderErrorCode",
-          "signature": "\"shader-compile\" | \"shader-link\" | \"pipeline-creation\" | \"validation\" | \"out-of-memory\" | \"internal\"",
+          "signature": "\"shader-compile\" | \"shader-link\" | \"pipeline-creation\" | \"validation\" | \"out-of-memory\" | \"internal\" | \"device-recovery-failed\"",
           "signatureTokens": [
             {
               "text": "\"shader-compile\"",
@@ -74,6 +74,14 @@
             },
             {
               "text": "\"internal\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"device-recovery-failed\"",
               "kind": "keyword"
             }
           ],
