@@ -6,10 +6,10 @@
   "subsystem": "extensions",
   "importPath": "@codexo/exojs/extensions",
   "tier": "advanced",
-  "memberCount": 4,
+  "memberCount": 5,
   "counts": {
     "constructors": 0,
-    "methods": 4,
+    "methods": 5,
     "properties": 0,
     "events": 0
   },
@@ -148,6 +148,57 @@
           "params": [],
           "returnType": "void",
           "description": ""
+        },
+        {
+          "name": "dispose",
+          "signature": "dispose?(resource: Result): void",
+          "signatureTokens": [
+            {
+              "text": "dispose",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "resource",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Result",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "resource",
+              "type": "Result",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Releases the resources held by ONE loaded asset, called when the Loader evicts it at refcount 0 (its last claim was released). The handler stays alive; only that asset is torn down. A factory-backed handler forwards this to AssetFactory.dispose. Optional and safe to omit — implement it only when the produced asset owns something the garbage collector cannot reclaim on its own (a media element, a FontFace registered on document.fonts, a GPU buffer, a worker). Must be synchronous; use destroy for handler-wide teardown instead."
         },
         {
           "name": "getIdentityKey",
