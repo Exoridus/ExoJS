@@ -735,7 +735,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * host `devicePixelRatio` clamped to `2` (crisp on HiDPI out of the box, but
    * capped to avoid a runaway fill-rate cost on DPR-3 phones) unless an
    * explicit `canvas.pixelRatio` option was given. Holds the invariant
-   * `app.canvas.width === Math.round(app.width × app.pixelRatio)`.
+   * `app.canvas.width === Math.round(app.width × app.pixelRatio)` in every
+   * sizing mode except `'letterbox'`, where the backing store instead tracks
+   * the parent's fitted CSS content rect (`contentWidthCss × pixelRatio`,
+   * see {@link computeLetterboxLayout}) while {@link Application.width} stays
+   * fixed at the design size — the GL viewport is recomputed separately to
+   * map the design space onto that backing store.
    */
   public get pixelRatio(): number {
     return this._pixelRatio;

@@ -27,7 +27,7 @@
 /**
  * GLSL ES 3.00 vertex shader for the custom sprite-material path. Identical
  * corner expansion and attribute contract to the default sprite vertex shader
- * (tint read from the shared transform slot's texel 2, no per-instance color).
+ * (tint read from the separate `u_tintTexture`, no per-instance color).
  * @internal
  */
 export const spriteVertexGlsl = `#version 300 es
