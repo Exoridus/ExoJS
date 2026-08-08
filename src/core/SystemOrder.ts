@@ -20,6 +20,13 @@ export enum SystemOrder {
   CoreAudio = -300,
   /** Tween and sequencer advance. */
   CoreTweens = -200,
+  /**
+   * Sprite frame-animation advance. After {@link SystemOrder.CoreTweens} so a
+   * tween that drives playback (swapping clips, changing speed) has already
+   * applied this frame's value, and before {@link SystemOrder.CoreRendering}
+   * so the frame a sprite advances to is the one this frame renders.
+   */
+  CoreAnimation = -150,
   /** Renderer per-frame state reset and view update. Last of the engine's own pre-update systems. */
   CoreRendering = -100,
   /** The implicit order of a system that does not specify one. */

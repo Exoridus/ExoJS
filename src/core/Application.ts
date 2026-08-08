@@ -1,3 +1,4 @@
+import { AnimationManager } from '#animation/AnimationManager';
 import { TweenManager } from '#animation/TweenManager';
 import { coreAssetBindings } from '#assets/coreAssetBindings';
 import { Loader, type LoaderOptions } from '#assets/Loader';
@@ -303,7 +304,7 @@ const defaultInputSettings: Required<InputApplicationOptions> = {
 /**
  * Top-level engine instance. Owns the canvas, render backend, scene-stack
  * controller, the core managers (input, interaction, audio, tweens,
- * rendering), the app-level {@link SystemRegistry} for user/extension
+ * animations, rendering), the app-level {@link SystemRegistry} for user/extension
  * systems, asset loader, and the per-frame loop.
  *
  * Lifecycle: construct with options → `await app.start(scene)` → engine
@@ -342,9 +343,15 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   public readonly random: Random;
   public readonly tweens: TweenManager = new TweenManager();
   /**
+   * Drives frame playback for every {@link AnimatedSprite} that is playing and
+   * attached to this application's scene tree. Registration is automatic — see
+   * {@link AnimationManager}.
+   */
+  public readonly animations: AnimationManager = new AnimationManager();
+  /**
    * App-level system registry for user/extension systems — Application
    * lifetime, independent of the active scene. The core managers (input,
-   * interaction, audio, tweens, rendering) are driven directly by the
+   * interaction, audio, tweens, animations, rendering) are driven directly by the
    * internal per-frame prepare stage and never occupy this registry, so any
    * `order` is available; see {@link SystemOrder} for common reference
    * points. Scene-scoped systems live on `scenes.systems`.
@@ -567,9 +574,10 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this.systems._addCoreSystem(this.interaction, { order: SystemOrder.CoreInteraction });
     this.systems._addCoreSystem(this._audio, { order: SystemOrder.CoreAudio });
     this.systems._addCoreSystem(this.tweens, { order: SystemOrder.CoreTweens });
+    this.systems._addCoreSystem(this.animations, { order: SystemOrder.CoreAnimation });
     this.systems._addCoreSystem(this._rendering, { order: SystemOrder.CoreRendering });
 
-    this._coreSystems = [this.input, this.interaction, this._audio, this.tweens, this._rendering];
+    this._coreSystems = [this.input, this.interaction, this._audio, this.tweens, this.animations, this._rendering];
 
     // Every core manager exists by this point, so app-system bindings can capture references to them.
     materializeApplicationSystems(this, this._snapshot.systems);
@@ -934,8 +942,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    *
    * 1. **Pre-update** — `app.systems` pre-update phase, then the scene's
    *    `preUpdate()` hook and its own systems' pre-update phase. The engine's
-   *    input, interaction, audio, tween and rendering managers are ordinary
-   *    systems in this phase, pinned to the head of it by their
+   *    input, interaction, audio, tween, animation and rendering managers are
+   *    ordinary systems in this phase, pinned to the head of it by their
    *    {@link SystemOrder} `Core*` values, so this frame's input snapshot is
    *    current before anything simulates. An application system registered
    *    without an explicit `order` runs after all of them.
@@ -994,8 +1002,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         this.backend.stats.rawFrameDeltaMs = rawDeltaMs;
 
         // Bring per-frame state in sync before anything simulates: the engine's
-        // own input, interaction, audio, tween and rendering systems sit at the
-        // head of this phase (negative `order`), application systems follow.
+        // own input, interaction, audio, tween, animation and rendering systems
+        // sit at the head of this phase (negative `order`), application systems
+        // follow.
         this.systems._preUpdate(frameDelta);
         this.scenes.preUpdate(frameDelta);
 
@@ -1353,7 +1362,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /**
    * Tear down every owned subsystem (loader, the core managers — input,
-   * interaction, audio, tweens, rendering — the app system registry, backend,
+   * interaction, audio, tweens, animations, rendering — the app system registry, backend,
    * scene director, all clocks, all signals) and release event listeners. The
    * application instance is unusable after this call.
    *
@@ -1420,6 +1429,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this.systems.destroy();
 
     this._rendering.destroy();
+    this.animations.destroy();
     this.tweens.destroy();
     this._audio.destroy();
     this.interaction.destroy();

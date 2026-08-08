@@ -548,12 +548,12 @@ describe('serialization — AnimatedSprite', () => {
     const restored = deserializeTree(data, loader) as AnimatedSprite;
 
     restored.play('idle');
-    restored.update(100);
+    restored.update(100 / 1000);
     expect(restored.currentFrame).toBe(1);
 
     // Frame 1 holds 300ms (frameDurations), not the 100ms it would hold at
     // the default 12fps if frameDurations had been lost in the round-trip.
-    restored.update(100);
+    restored.update(100 / 1000);
     expect(restored.currentFrame).toBe(1);
   });
 
@@ -576,7 +576,7 @@ describe('serialization — AnimatedSprite', () => {
     restored.play('punch');
     expect(restored.getLocalBounds().x).toBe(0);
 
-    restored.update(100);
+    restored.update(100 / 1000);
     expect(restored.currentFrame).toBe(1);
     expect(restored.getLocalBounds().x).toBe(4);
     expect(restored.getLocalBounds().y).toBe(-2);
@@ -601,11 +601,11 @@ describe('serialization — AnimatedSprite', () => {
     restored.play('triple');
 
     // 2 frames @ 10fps = 100ms/frame; one full cycle is 200ms.
-    restored.update(200);
+    restored.update(200 / 1000);
     expect(restored.playing).toBe(true);
     expect(completeSpy).not.toHaveBeenCalled();
 
-    restored.update(200);
+    restored.update(200 / 1000);
     expect(restored.playing).toBe(false);
     expect(completeSpy).toHaveBeenCalledWith('triple');
   });

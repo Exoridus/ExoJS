@@ -1,5 +1,6 @@
+import type { AnimationManager } from '#animation/AnimationManager';
 import { Signal } from '#core/Signal';
-import type { Time } from '#core/Time';
+import type { Stage } from '#core/Stage';
 import type { Rectangle } from '#math/Rectangle';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
@@ -75,10 +76,16 @@ function assertValidRepeat(context: string, repeat: number): void {
  * {@link Rectangle}s over time to produce frame-based animation.
  *
  * Multiple named clips can be registered via {@link defineClip} or the
- * constructor. Call {@link play} to start a clip; call {@link update} each
- * frame with the elapsed delta (seconds or a `Time` object) to advance
- * playback. The `onFrame` signal fires on every frame advance and
- * `onComplete` fires when a clip completes its final {@link AnimatedSpriteClipDefinition.repeat} cycle.
+ * constructor. Call {@link play} to start a clip. Playback then advances by
+ * itself: a playing sprite attached to an {@link Application}'s scene tree
+ * registers with that application's {@link AnimationManager} and is ticked
+ * once per frame, with no `update()` call of your own. A sprite that is never
+ * attached to a tree — one drawn immediate-mode via `context.render(sprite)`,
+ * say — has no owning application to reach, so drive it by calling
+ * {@link update} with the frame delta in **seconds** yourself.
+ *
+ * The `onFrame` signal fires on every frame advance and `onComplete` fires
+ * when a clip completes its final {@link AnimatedSpriteClipDefinition.repeat} cycle.
  *
  * Use {@link AnimatedSprite.fromSpritesheet} to create an instance directly
  * from a {@link Spritesheet}'s named animations.
@@ -92,6 +99,14 @@ export class AnimatedSprite extends Sprite {
   private _repeatOverride: number | null = null;
   private _elapsedFrameTimeMs = 0;
   private _completedCycles = 0;
+  /**
+   * The {@link AnimationManager} this sprite is currently registered with, or
+   * `null` when it is not being ticked by one (not playing, not attached to a
+   * tree, or destroyed). Kept as the single record of the registration so
+   * {@link _syncManagerRegistration} can always undo exactly what it did, even
+   * after the owning stage has already been swapped out.
+   */
+  private _manager: AnimationManager | null = null;
 
   public readonly onComplete = new Signal<[clip: string]>();
   public readonly onFrame = new Signal<[clip: string, frame: number]>();
@@ -256,6 +271,11 @@ export class AnimatedSprite extends Sprite {
    * Start playing the named clip. By default restarts from frame 0; pass
    * `{ restart: false }` to resume from the current frame if the same clip
    * is already active. Optionally overrides the clip's `repeat` setting.
+   *
+   * Safe to call before the sprite is attached to a scene tree (in a
+   * constructor, ahead of `addChild`): the sprite simply has no owning
+   * {@link AnimationManager} to register with yet, and joins one the moment it
+   * is attached.
    */
   public play(name: string, options: AnimatedSpritePlayOptions = {}): this {
     const clip = this._clips.get(name);
@@ -283,6 +303,7 @@ export class AnimatedSprite extends Sprite {
 
     this._repeatOverride = options.repeat ?? this._repeatOverride;
     this._playing = true;
+    this._syncManagerRegistration();
 
     return this;
   }
@@ -291,6 +312,7 @@ export class AnimatedSprite extends Sprite {
   public stop(): this {
     this._playing = false;
     this._elapsedFrameTimeMs = 0;
+    this._syncManagerRegistration();
 
     if (!this._currentClipName) {
       return this;
@@ -310,6 +332,7 @@ export class AnimatedSprite extends Sprite {
 
   public pause(): this {
     this._playing = false;
+    this._syncManagerRegistration();
 
     return this;
   }
@@ -317,18 +340,28 @@ export class AnimatedSprite extends Sprite {
   public resume(): this {
     if (this._currentClipName !== null) {
       this._playing = true;
+      this._syncManagerRegistration();
     }
 
     return this;
   }
 
   /**
-   * Advance playback by `delta` milliseconds (or a `Time` object). Call once
-   * per frame from the game loop. Dispatches `onFrame` for each frame
-   * boundary crossed and `onComplete` when the clip completes its final
-   * {@link AnimatedSpriteClipDefinition.repeat} cycle.
+   * Advance playback by `deltaSeconds` — seconds, the same unit as
+   * {@link Tween.update}, and the unit a `Time` delta reports through
+   * `delta.seconds`. Clip authoring stays in its own units:
+   * {@link AnimatedSpriteClipDefinition.frameDurations} is still milliseconds
+   * per frame and `fps` is still frames per second; only this argument is
+   * seconds.
+   *
+   * Called automatically once per frame by the owning {@link AnimationManager}
+   * for a playing, attached sprite — call it yourself only for a sprite that
+   * is not part of an application's scene tree, or to step playback manually.
+   * Dispatches `onFrame` for each frame boundary crossed and `onComplete` when
+   * the clip completes its final {@link AnimatedSpriteClipDefinition.repeat}
+   * cycle.
    */
-  public update(delta: Time | number): this {
+  public update(deltaSeconds: number): this {
     if (!this._playing || this._currentClipName === null) {
       return this;
     }
@@ -339,7 +372,10 @@ export class AnimatedSprite extends Sprite {
       return this;
     }
 
-    const deltaMs = typeof delta === 'number' ? delta : delta.milliseconds;
+    // Clip timing is authored in milliseconds (`frameDurations`, and `fps`
+    // normalized to `frameDurationMs`), so the seconds-based frame delta is
+    // converted once here and every threshold comparison below stays in ms.
+    const deltaMs = deltaSeconds * 1000;
 
     if (deltaMs <= 0) {
       return this;
@@ -386,6 +422,9 @@ export class AnimatedSprite extends Sprite {
         // In-bounds: last frame index.
         this._applyFrame(clip, this._currentFrameIndex);
         this._playing = false;
+        // Leave the manager before the signal, so a handler that calls play()
+        // again re-registers on top of a clean state rather than being undone.
+        this._syncManagerRegistration();
         this.onComplete.dispatch(this._currentClipName);
 
         break;
@@ -401,7 +440,25 @@ export class AnimatedSprite extends Sprite {
     return this;
   }
 
+  /**
+   * @internal — join or leave the owning application's {@link AnimationManager}
+   * as this sprite enters or leaves a scene tree. This is what makes
+   * `play()`-before-`addChild()` work: playback state is kept on the sprite,
+   * and the registration follows attachment.
+   */
+  public override _setStage(stage: Stage | null): void {
+    super._setStage(stage);
+
+    this._syncManagerRegistration();
+  }
+
   public override destroy(): void {
+    this._playing = false;
+    // Before `super.destroy()`, which detaches from the parent and would run
+    // the sync through `_setStage(null)` anyway — doing it here first also
+    // covers a sprite destroyed while already detached.
+    this._syncManagerRegistration();
+
     super.destroy();
 
     this.onComplete.destroy();
@@ -432,6 +489,26 @@ export class AnimatedSprite extends Sprite {
     }
 
     return new AnimatedSprite(spritesheet.texture, clips);
+  }
+
+  /**
+   * Reconcile this sprite's {@link AnimationManager} registration with the two
+   * facts that decide it: whether playback is running, and which application
+   * (if any) currently owns the tree this sprite is attached to. Called from
+   * every place either fact can change — `play`/`stop`/`pause`/`resume`, clip
+   * completion, attach/detach, and `destroy` — so there is exactly one rule
+   * rather than a registration and a deregistration to keep in step.
+   */
+  private _syncManagerRegistration(): void {
+    const target = this._playing && !this.destroyed ? (this._stage?.app?.animations ?? null) : null;
+
+    if (this._manager === target) {
+      return;
+    }
+
+    this._manager?.remove(this);
+    this._manager = target;
+    target?.add(this);
   }
 
   /**

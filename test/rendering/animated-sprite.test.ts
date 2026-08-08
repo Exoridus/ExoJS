@@ -11,9 +11,40 @@ const createTextureStub = (): Texture =>
     updateSource: () => undefined,
   }) as unknown as Texture;
 
+/**
+ * Frame delta helper. `AnimatedSprite.update()` takes SECONDS (matching
+ * `Tween.update`), while clips are authored in milliseconds (`fps`,
+ * `frameDurations`) — these specs are written against the clip's own ms
+ * timings, so they convert at the call site.
+ */
+const seconds = (milliseconds: number): number => milliseconds / 1000;
+
 const createFrames = (): Rectangle[] => [new Rectangle(0, 0, 16, 16), new Rectangle(16, 0, 16, 16), new Rectangle(32, 0, 16, 16)];
 
 describe('AnimatedSprite', () => {
+  test('update() reads its argument as seconds, not milliseconds', () => {
+    // Regression: `update()` used to take `Time | number`, where the plain
+    // number was MILLISECONDS — the opposite unit to `Tween.update`, which is
+    // always seconds. A caller who forwarded `delta.seconds` (or a manager
+    // that did) advanced playback 1000x too slowly. The signature is now
+    // seconds-only, matching Tween.
+    const sprite = new AnimatedSprite(null, {
+      // 4 frames at 10fps: one frame per 100ms, i.e. per 0.1 seconds.
+      walk: { frames: [...createFrames(), new Rectangle(48, 0, 16, 16)], fps: 10 },
+    });
+
+    sprite.play('walk');
+
+    // 0.25 seconds = 250ms = two whole 100ms frame holds, with 50ms left over.
+    // Read as milliseconds this would not advance a single frame.
+    sprite.update(0.25);
+    expect(sprite.currentFrame).toBe(2);
+
+    // The 50ms remainder carries: another 0.05s completes frame 2's hold.
+    sprite.update(0.05);
+    expect(sprite.currentFrame).toBe(3);
+  });
+
   test('play() snaps the sprite to the frame size while preserving user scale', () => {
     // Regression: the sprite starts out showing the full atlas texture
     // (128x64 stub). The first frame application used the keep-pixel-size
@@ -32,7 +63,7 @@ describe('AnimatedSprite', () => {
     expect(sprite.height).toBe(3 * 16);
 
     // Subsequent frame advances keep the pixel size stable.
-    sprite.update(100);
+    sprite.update(seconds(100));
     expect(sprite.currentFrame).toBe(1);
     expect(sprite.width).toBe(3 * 16);
   });
@@ -71,10 +102,10 @@ describe('AnimatedSprite', () => {
     expect(sprite.currentClip).toBe('walk');
     expect(sprite.currentFrame).toBe(0);
 
-    sprite.update(100);
+    sprite.update(seconds(100));
     expect(sprite.currentFrame).toBe(1);
 
-    sprite.update(100);
+    sprite.update(seconds(100));
     expect(sprite.currentFrame).toBe(2);
   });
 
@@ -89,7 +120,7 @@ describe('AnimatedSprite', () => {
     });
 
     sprite.play('looped');
-    sprite.update(300);
+    sprite.update(seconds(300));
 
     expect(sprite.currentFrame).toBe(0);
     expect(sprite.playing).toBe(true);
@@ -108,7 +139,7 @@ describe('AnimatedSprite', () => {
 
     sprite.onComplete.add(completeSpy);
     sprite.play('burst');
-    sprite.update(300);
+    sprite.update(seconds(300));
 
     expect(sprite.currentFrame).toBe(2);
     expect(sprite.playing).toBe(false);
@@ -125,15 +156,15 @@ describe('AnimatedSprite', () => {
     });
 
     sprite.play('move');
-    sprite.update(100);
+    sprite.update(seconds(100));
     expect(sprite.currentFrame).toBe(1);
 
     sprite.pause();
-    sprite.update(200);
+    sprite.update(seconds(200));
     expect(sprite.currentFrame).toBe(1);
 
     sprite.resume();
-    sprite.update(100);
+    sprite.update(seconds(100));
     expect(sprite.currentFrame).toBe(2);
 
     sprite.stop();
@@ -159,18 +190,18 @@ describe('AnimatedSprite', () => {
     sprite.play('idle');
 
     // Frame 0 holds 100ms.
-    sprite.update(100);
+    sprite.update(seconds(100));
     expect(sprite.currentFrame).toBe(1);
 
     // Frame 1 holds 100ms.
-    sprite.update(100);
+    sprite.update(seconds(100));
     expect(sprite.currentFrame).toBe(2);
 
     // Frame 2 holds 300ms; 100ms is not enough to advance yet.
-    sprite.update(100);
+    sprite.update(seconds(100));
     expect(sprite.currentFrame).toBe(2);
 
-    sprite.update(200);
+    sprite.update(seconds(200));
     expect(sprite.currentFrame).toBe(0);
   });
 
@@ -211,7 +242,7 @@ describe('AnimatedSprite', () => {
     const sprite = AnimatedSprite.fromSpritesheet(spritesheet);
 
     sprite.play('idle');
-    sprite.update(84);
+    sprite.update(seconds(84));
 
     expect(sprite.currentClip).toBe('idle');
     expect(sprite.currentFrame).toBe(1);
@@ -235,12 +266,12 @@ describe('AnimatedSprite', () => {
     expect(sprite.getLocalBounds().x).toBe(0);
     expect(sprite.getLocalBounds().y).toBe(0);
 
-    sprite.update(100);
+    sprite.update(seconds(100));
     expect(sprite.currentFrame).toBe(1);
     expect(sprite.getLocalBounds().x).toBe(4);
     expect(sprite.getLocalBounds().y).toBe(-2);
 
-    sprite.update(100);
+    sprite.update(seconds(100));
     expect(sprite.currentFrame).toBe(2);
     expect(sprite.getLocalBounds().x).toBe(0);
     expect(sprite.getLocalBounds().y).toBe(0);
@@ -256,7 +287,7 @@ describe('AnimatedSprite', () => {
     });
 
     sprite.play('walk');
-    sprite.update(100);
+    sprite.update(seconds(100));
 
     expect(sprite.getLocalBounds().x).toBe(0);
     expect(sprite.getLocalBounds().y).toBe(0);
@@ -309,23 +340,23 @@ describe('AnimatedSprite', () => {
 
       // Each cycle is 3 frames @ 10fps = 300ms. Advance through 2 full
       // cycles first — playback should still be running, no onComplete yet.
-      sprite.update(300);
+      sprite.update(seconds(300));
       expect(sprite.playing).toBe(true);
       expect(completeSpy).not.toHaveBeenCalled();
 
-      sprite.update(300);
+      sprite.update(seconds(300));
       expect(sprite.playing).toBe(true);
       expect(completeSpy).not.toHaveBeenCalled();
 
       // Third cycle: stops on the last frame and fires onComplete exactly once.
-      sprite.update(300);
+      sprite.update(seconds(300));
       expect(sprite.playing).toBe(false);
       expect(sprite.currentFrame).toBe(2);
       expect(completeSpy).toHaveBeenCalledTimes(1);
       expect(completeSpy).toHaveBeenCalledWith('triple');
 
       // Further updates are a no-op once stopped.
-      sprite.update(300);
+      sprite.update(seconds(300));
       expect(sprite.playing).toBe(false);
       expect(completeSpy).toHaveBeenCalledTimes(1);
     });
@@ -341,8 +372,8 @@ describe('AnimatedSprite', () => {
       });
 
       sprite.play('finite');
-      sprite.update(300);
-      sprite.update(300);
+      sprite.update(seconds(300));
+      sprite.update(seconds(300));
 
       expect(sprite.playing).toBe(false);
       expect(sprite.currentFrame).toBe(2);
@@ -361,8 +392,8 @@ describe('AnimatedSprite', () => {
 
       sprite.onComplete.add(completeSpy);
       sprite.play('twice');
-      sprite.update(300);
-      sprite.update(300);
+      sprite.update(seconds(300));
+      sprite.update(seconds(300));
 
       expect(sprite.playing).toBe(false);
       expect(completeSpy).toHaveBeenCalledTimes(1);
@@ -373,11 +404,11 @@ describe('AnimatedSprite', () => {
       sprite.play('twice');
       expect(sprite.playing).toBe(true);
 
-      sprite.update(300);
+      sprite.update(seconds(300));
       expect(sprite.playing).toBe(true);
       expect(completeSpy).toHaveBeenCalledTimes(1);
 
-      sprite.update(300);
+      sprite.update(seconds(300));
       expect(sprite.playing).toBe(false);
       expect(completeSpy).toHaveBeenCalledTimes(2);
     });
@@ -392,7 +423,7 @@ describe('AnimatedSprite', () => {
 
       sprite.onComplete.add(completeSpy);
       sprite.play('walk', { repeat: 1 });
-      sprite.update(300);
+      sprite.update(seconds(300));
 
       expect(sprite.playing).toBe(false);
       expect(completeSpy).toHaveBeenCalledWith('walk');
@@ -426,40 +457,40 @@ describe('AnimatedSprite', () => {
       sprite.play('combo');
 
       // ── Cycle 1 ──
-      sprite.update(100); // frame 0 -> 1
+      sprite.update(seconds(100)); // frame 0 -> 1
       expect(sprite.currentFrame).toBe(1);
 
-      sprite.update(100); // frame 1 -> 2
+      sprite.update(seconds(100)); // frame 1 -> 2
       expect(sprite.currentFrame).toBe(2);
 
       // Frame 2 holds 300ms; short of that must not wrap yet.
-      sprite.update(299);
+      sprite.update(seconds(299));
       expect(sprite.currentFrame).toBe(2);
       expect(sprite.playing).toBe(true);
       expect(completeSpy).not.toHaveBeenCalled();
 
       // The remaining 1ms completes frame 2's 300ms hold and wraps into cycle 2.
-      sprite.update(1);
+      sprite.update(seconds(1));
       expect(sprite.currentFrame).toBe(0);
       expect(sprite.playing).toBe(true);
       expect(completeSpy).not.toHaveBeenCalled();
 
       // ── Cycle 2 — same per-frame durations must apply again ──
-      sprite.update(100); // frame 0 -> 1
+      sprite.update(seconds(100)); // frame 0 -> 1
       expect(sprite.currentFrame).toBe(1);
 
-      sprite.update(100); // frame 1 -> 2
+      sprite.update(seconds(100)); // frame 1 -> 2
       expect(sprite.currentFrame).toBe(2);
 
       // Short of frame 2's 300ms hold on the final cycle: still not complete.
-      sprite.update(299);
+      sprite.update(seconds(299));
       expect(sprite.currentFrame).toBe(2);
       expect(sprite.playing).toBe(true);
       expect(completeSpy).not.toHaveBeenCalled();
 
       // The final 1ms genuinely completes the 2nd full cycle (500ms of real
       // per-frame hold time each, 1000ms total) and fires onComplete exactly once.
-      sprite.update(1);
+      sprite.update(seconds(1));
       expect(sprite.currentFrame).toBe(2);
       expect(sprite.playing).toBe(false);
       expect(completeSpy).toHaveBeenCalledTimes(1);
@@ -483,7 +514,7 @@ describe('AnimatedSprite', () => {
 
       sprite.onComplete.add(completeSpy);
       sprite.play('still');
-      sprite.update(1000);
+      sprite.update(seconds(1000));
 
       expect(sprite.currentFrame).toBe(0);
       expect(sprite.playing).toBe(true);

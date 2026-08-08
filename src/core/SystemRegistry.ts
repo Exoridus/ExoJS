@@ -250,7 +250,7 @@ export class SystemRegistry implements Destroyable {
   public remove(system: System): boolean {
     if (__DEV__ && this._coreSystems.has(system)) {
       logger.warn(
-        "SystemRegistry.remove(): removing one of the engine's own core systems stops that part of the engine for good — input, interaction, audio, tweens or rendering will no longer run. This is allowed on purpose, but it is almost never what you want; to reorder around one, use `before`/`after` against it instead.",
+        "SystemRegistry.remove(): removing one of the engine's own core systems stops that part of the engine for good — input, interaction, audio, tweens, animations or rendering will no longer run. This is allowed on purpose, but it is almost never what you want; to reorder around one, use `before`/`after` against it instead.",
         { source: 'SystemRegistry', once: 'systems:remove-core' },
       );
     }

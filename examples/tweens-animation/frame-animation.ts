@@ -1,4 +1,4 @@
-import { AnimatedSprite, Application, Asset, Color, type RenderingContext, Scene, Spritesheet, type SpritesheetData, type Time } from '@codexo/exojs';
+import { AnimatedSprite, Application, Asset, Color, type RenderingContext, Scene, Spritesheet, type SpritesheetData } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 
@@ -33,16 +33,15 @@ class FrameAnimationScene extends Scene {
         // The onFrame signal fires on every frame advance with the 0-based index.
         this.sprite.onFrame.add((_clip, frame) => this.hud.setStatus(`Frame: ${frame + 1}/${this.frameCount}`));
 
+        // In the scene tree, playback is advanced by the engine's
+        // AnimationManager once per frame -- no update() call of our own.
+        this.addChild(this.sprite);
         this.sprite.play('walk');
-    }
-
-    override update(delta: Time): void {
-        this.sprite.update(delta);
     }
 
     override draw(context: RenderingContext): void {
         context.backend.clear();
-        context.render(this.sprite);
+        context.render(this.root);
     }
 }
 
