@@ -5,7 +5,9 @@ import { AudioBus } from '#audio/AudioBus';
 import type { AudioInput } from '#audio/AudioInput';
 import { AudioManager } from '#audio/AudioManager';
 import { AudioStream } from '#audio/AudioStream';
+import type { Voice } from '#audio/Playable';
 import { Sound } from '#audio/Sound';
+import { logger } from '#core/logging';
 import { Signal } from '#core/Signal';
 
 // ---------------------------------------------------------------------------
@@ -352,5 +354,73 @@ describe('AudioManager', () => {
     manager.destroy();
 
     expect(voice.ended).toBe(true);
+  });
+
+  // ---- teardown hardening ----
+
+  test('destroy() also drains a voice registered while the teardown is running', () => {
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+    const first = manager.play(sound);
+
+    // A voice appearing after the drain started. Reproduced through the
+    // internal registration hook because `play()` is refused once destroyed;
+    // an iteration over a snapshot would drop this one still running.
+    const late = { ended: false, stop: vi.fn() };
+    first.onEnd.add((): void => {
+      manager._registerVoice(late as unknown as Voice);
+    });
+
+    manager.destroy();
+
+    expect(late.stop).toHaveBeenCalledTimes(1);
+    expect(liveVoiceCount(manager)).toBe(0);
+
+    sound.destroy();
+  });
+
+  test('destroy() completes the teardown even when a voice throws while stopping', () => {
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+    const errorSpy = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
+
+    // Registered first so the throw happens before the healthy voice is reached.
+    const broken = {
+      ended: false,
+      stop: vi.fn(() => {
+        throw new Error('half-built voice');
+      }),
+    };
+    manager._registerVoice(broken as unknown as Voice);
+    const healthy = manager.play(sound);
+
+    expect(() => manager.destroy()).not.toThrow();
+
+    // The loop carried on past the throw...
+    expect(healthy.ended).toBe(true);
+    // ...and the tail (listener + buses) still ran.
+    expect(manager.hasBus('master')).toBe(false);
+    expect(errorSpy).toHaveBeenCalled();
+
+    sound.destroy();
+  });
+
+  test('play() after destroy() throws instead of registering an untracked voice', () => {
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+
+    manager.destroy();
+
+    expect(() => manager.play(sound)).toThrow(/destroyed AudioManager/);
+    expect(liveVoiceCount(manager)).toBe(0);
+
+    sound.destroy();
+  });
+
+  test('open() after destroy() throws', () => {
+    const manager = new AudioManager();
+    manager.destroy();
+
+    expect(() => manager.open({ stream: {} as MediaStream } as AudioInput)).toThrow(/destroyed AudioManager/);
   });
 });

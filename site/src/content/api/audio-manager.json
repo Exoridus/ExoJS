@@ -329,7 +329,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": ""
+          "description": "Tear the mix down: stop every voice still playing, then the listener and every bus. Terminal — AudioManager.play and AudioManager.open throw afterwards."
         },
         {
           "name": "getBus",
