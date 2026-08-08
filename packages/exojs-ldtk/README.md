@@ -6,11 +6,13 @@ Official ExoJS extension for loading [LDtk](https://ldtk.io) level files (`.ldtk
 ## Installation
 
 ```sh
-npm install @codexo/exojs @codexo/exojs-ldtk
+npm install @codexo/exojs @codexo/exojs-tilemap @codexo/exojs-ldtk
 ```
 
-`@codexo/exojs` is a peer dependency. `@codexo/exojs-tilemap` is a regular dependency and is
-installed transitively — you do not need to install it manually.
+Both `@codexo/exojs` and `@codexo/exojs-tilemap` are **peer** dependencies, so install them
+explicitly alongside the adapter. Nothing is pulled in transitively: strict package managers
+(pnpm, Yarn PnP) will not resolve an unlisted peer, and npm's auto-install of peers still leaves
+the versions outside your control. Keep the engine and every adapter on the same version.
 
 ## What this package provides
 

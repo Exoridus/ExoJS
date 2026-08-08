@@ -11,9 +11,10 @@ parse their format and hand this runtime fully-resolved tiles.
 npm install @codexo/exojs @codexo/exojs-tilemap
 ```
 
-`@codexo/exojs` is a peer dependency. Most users load Tiled maps and get this package
-transitively through `@codexo/exojs-tiled` — install it directly only for procedural or
-custom-format maps.
+`@codexo/exojs` is a peer dependency, so install it explicitly. This package is itself a peer of
+the format adapters (`@codexo/exojs-tiled`, `@codexo/exojs-ldtk`) rather than something they pull
+in transitively — install it whether you use an adapter or build procedural / custom-format maps
+directly.
 
 ## What this package provides
 
