@@ -113,7 +113,7 @@ describe('Signal', () => {
     const calls: string[] = [];
     let nested = false;
 
-    const b = (): void => calls.push('b');
+    const b = (): void => void calls.push('b');
     const a = (): void => {
       calls.push('a');
 
@@ -146,7 +146,7 @@ describe('Signal', () => {
     const calls: string[] = [];
     let nested = false;
 
-    const b = (): void => calls.push('b');
+    const b = (): void => void calls.push('b');
     const a = (): void => {
       calls.push('a');
 
@@ -208,7 +208,7 @@ describe('Signal', () => {
     const calls: string[] = [];
     let nested = false;
 
-    const b = (): void => calls.push('b');
+    const b = (): void => void calls.push('b');
     const a = (): void => {
       calls.push('a');
 
@@ -233,7 +233,7 @@ describe('Signal', () => {
     const calls: string[] = [];
     let nested = false;
 
-    const c = (): void => calls.push('c');
+    const c = (): void => void calls.push('c');
     const a = (): void => {
       calls.push('a');
 
@@ -263,7 +263,7 @@ describe('Signal', () => {
   it('add() of the same handler twice during dispatch is still idempotent', () => {
     const signal = new Signal();
     const calls: string[] = [];
-    const b = (): void => calls.push('b');
+    const b = (): void => void calls.push('b');
     let addCount = 0;
 
     const a = (): void => {
@@ -293,7 +293,7 @@ describe('Signal', () => {
     // even though the caller's last word on `h` was "add it back".
     const signal = new Signal();
     const calls: string[] = [];
-    const h = (): void => calls.push('h');
+    const h = (): void => void calls.push('h');
     const trigger = (): void => {
       calls.push('trigger');
       signal.remove(h);
@@ -315,7 +315,7 @@ describe('Signal', () => {
   it('add() then remove() for the same (not-yet-present) handler within one dispatch nets to "never registered"', () => {
     const signal = new Signal();
     const calls: string[] = [];
-    const h = (): void => calls.push('h');
+    const h = (): void => void calls.push('h');
     const trigger = (): void => {
       calls.push('trigger');
       signal.add(h);
@@ -333,7 +333,7 @@ describe('Signal', () => {
   it('clear() during dispatch discards a pending add queued earlier in the same dispatch', () => {
     const signal = new Signal();
     const calls: string[] = [];
-    const c = (): void => calls.push('c');
+    const c = (): void => void calls.push('c');
     const trigger = (): void => {
       calls.push('trigger');
       signal.add(c);
@@ -382,7 +382,7 @@ describe('Signal', () => {
     const calls: string[] = [];
     let nested = false;
 
-    const c = (): void => calls.push('c'); // registered after `a`/`b` — must never run once destroyed
+    const c = (): void => void calls.push('c'); // registered after `a`/`b` — must never run once destroyed
     const b = (): void => {
       calls.push('b');
       signal.destroy(); // called from inside a *nested* dispatch frame

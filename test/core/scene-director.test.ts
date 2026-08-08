@@ -3132,14 +3132,14 @@ describe('SceneDirector._stopAndClearActiveScene()', () => {
 
     await director.change(First);
 
-    let environmentRef: SceneTransitionEnvironment | null = null;
+    const environmentRef: { current: SceneTransitionEnvironment | null } = { current: null };
     const session = new FakeSession(); // never reports done — still "playing" after commit
     const transition = new (class extends SceneTransition {
       public getRequirements(): SceneTransitionRequirements {
         return { outgoingFrame: 'none', currentFrame: 'none' };
       }
       protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
-        environmentRef = environment;
+        environmentRef.current = environment;
 
         return session;
       }
@@ -3149,7 +3149,7 @@ describe('SceneDirector._stopAndClearActiveScene()', () => {
 
     void navigation.catch(() => undefined);
 
-    environmentRef?.commit();
+    environmentRef.current?.commit();
     tick(director, app);
     await settle();
 
@@ -3296,14 +3296,14 @@ describe('SceneDirector._stopAndClearActiveScene()', () => {
 
     await director.change(First);
 
-    let environmentRef: SceneTransitionEnvironment | null = null;
+    const environmentRef: { current: SceneTransitionEnvironment | null } = { current: null };
     const session = new FakeSession();
     const transition = new (class extends SceneTransition {
       public getRequirements(): SceneTransitionRequirements {
         return { outgoingFrame: 'none', currentFrame: 'none' };
       }
       protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
-        environmentRef = environment;
+        environmentRef.current = environment;
 
         return session;
       }
@@ -3313,7 +3313,7 @@ describe('SceneDirector._stopAndClearActiveScene()', () => {
 
     void navigation.catch(() => undefined);
 
-    environmentRef?.commit();
+    environmentRef.current?.commit();
     tick(director, app); // _performSessionCommit -> commitSwitch, now awaiting SlowLoad.load()
     await Promise.resolve();
 
