@@ -1,5 +1,6 @@
-﻿/// <reference types="@webgpu/types" />
+/// <reference types="@webgpu/types" />
 
+import type { Geometry, GeometryAttribute, Material } from '@codexo/exojs';
 import type { BlendModes } from '@codexo/exojs/renderer-sdk';
 import type { WebGpuBackend } from '@codexo/exojs/renderer-sdk';
 import { DataTexture } from '@codexo/exojs/renderer-sdk';
@@ -9,82 +10,73 @@ import { getWebGpuBlendState } from '@codexo/exojs/renderer-sdk';
 import { stencilContentDepthStencilState } from '@codexo/exojs/renderer-sdk';
 
 import type { ParticleSystem } from '#ParticleSystem';
+import type { ParticleRenderMode } from '#renderModes/ParticleRenderMode';
 
-const particleShaderSource = `
-struct ProjectionUniforms {
-    projection: mat4x4<f32>,
-    translation: mat4x4<f32>,
-    flags: vec4<f32>,
-    localBounds: vec4<f32>,    // quadMin.xy, quadSize.xy
-    uvBounds: vec4<f32>,       // uvMin.xy, uvMax.xy
-};
-
-@group(0) @binding(0)
-var<uniform> uniforms: ProjectionUniforms;
-
-@group(1) @binding(0)
-var particleTexture: texture_2d<f32>;
-
-@group(1) @binding(1)
-var particleSampler: sampler;
-
-// Per-instance attributes (one entry per particle, 40 bytes total).
-struct VertexInput {
-    @location(0) unitPosition: vec2<f32>,    // per-vertex (static unit quad)
-    @location(1) translation: vec2<f32>,
-    @location(2) scale: vec2<f32>,
-    @location(3) rotation: f32,
-    @location(4) color: vec4<f32>,
-    @location(5) uvMin: vec2<f32>,            // pre-resolved frame UV (top-left)
-    @location(6) uvMax: vec2<f32>,            // pre-resolved frame UV (bottom-right)
-};
-
-struct VertexOutput {
-    @builtin(position) position: vec4<f32>,
-    @location(0) texcoord: vec2<f32>,
-    @location(1) color: vec4<f32>,
-};
-
-@vertex
-fn vertexMain(input: VertexInput) -> VertexOutput {
-    let quadMin = uniforms.localBounds.xy;
-    let quadSize = uniforms.localBounds.zw;
-
-    let localPosition = quadMin + (input.unitPosition * quadSize);
-    let radians = radians(input.rotation);
-    let sinValue = sin(radians);
-    let cosValue = cos(radians);
-    let rotated = vec2<f32>(
-        (localPosition.x * (input.scale.x * cosValue)) + (localPosition.y * (input.scale.y * sinValue)) + input.translation.x,
-        (localPosition.x * (input.scale.x * -sinValue)) + (localPosition.y * (input.scale.y * cosValue)) + input.translation.y
-    );
-
-    var output: VertexOutput;
-
-    output.position = uniforms.projection * uniforms.translation * vec4<f32>(rotated, 0.0, 1.0);
-    output.texcoord = input.uvMin + ((input.uvMax - input.uvMin) * input.unitPosition);
-    output.color = vec4(input.color.rgb * input.color.a, input.color.a);
-
-    return output;
-}
-
-@fragment
-fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
-    let sample = textureSample(particleTexture, particleSampler, input.texcoord);
-    let premultipliedSample = select(sample, vec4(sample.rgb * sample.a, sample.a), uniforms.flags.x > 0.5);
-
-    return premultipliedSample * input.color;
-}
-`;
-
-const staticVertexStrideBytes = 8;
-const instanceWords = 10;
-const instanceStrideBytes = 40;
-const indicesPerParticle = 6;
 const uniformByteLength = 176;
-const initialParticleCapacity = 1;
-const staticVertexData = new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]);
-const staticIndexData = new Uint16Array([0, 1, 2, 0, 2, 3]);
+
+/**
+ * WebGPU vertex formats by `<n?><type>x<size>` key, where the leading `n`
+ * marks a normalised integer attribute. WebGPU has no 1- or 3-component 8/16-bit
+ * formats, so those combinations are deliberately absent and reported as an
+ * error rather than silently widened.
+ */
+const vertexFormatsByKey: Record<string, GPUVertexFormat> = {
+  f32x1: 'float32',
+  f32x2: 'float32x2',
+  f32x3: 'float32x3',
+  f32x4: 'float32x4',
+  u8x2: 'uint8x2',
+  u8x4: 'uint8x4',
+  nu8x2: 'unorm8x2',
+  nu8x4: 'unorm8x4',
+  u16x2: 'uint16x2',
+  u16x4: 'uint16x4',
+  nu16x2: 'unorm16x2',
+  nu16x4: 'unorm16x4',
+  u32x1: 'uint32',
+  u32x2: 'uint32x2',
+  u32x3: 'uint32x3',
+  u32x4: 'uint32x4',
+  i32x1: 'sint32',
+  i32x2: 'sint32x2',
+  i32x3: 'sint32x3',
+  i32x4: 'sint32x4',
+};
+
+const resolveVertexFormat = (attribute: GeometryAttribute): GPUVertexFormat => {
+  // `normalized` is meaningless for floats — WebGL2 ignores it for GL_FLOAT
+  // too, so the two backends agree on what such a declaration means.
+  const normalized = attribute.normalized && attribute.type !== 'f32';
+  const format = vertexFormatsByKey[`${normalized ? 'n' : ''}${attribute.type}x${attribute.size}`];
+
+  if (format === undefined) {
+    throw new Error(`WebGpuParticleRenderer: attribute "${attribute.name}" (${attribute.type} x${attribute.size}) has no WebGPU vertex format.`);
+  }
+
+  return format;
+};
+
+/**
+ * The WebGPU-side realisation of one render mode: its compiled shader module,
+ * the vertex layout its geometry declares, its index buffer and the vertex
+ * buffer its built data is uploaded into. Cached per {@link Material} — the
+ * mode's material is its stable identity, and its `destroy()` evicts the entry.
+ */
+interface ParticleModeResources {
+  readonly shaderModule: GPUShaderModule;
+  readonly vertexLayout: GPUVertexBufferLayout;
+  readonly stride: number;
+  readonly topology: GPUPrimitiveTopology;
+  readonly stripIndexFormat: GPUIndexFormat | undefined;
+  readonly indexBuffer: GPUBuffer | null;
+  readonly indexFormat: GPUIndexFormat;
+  /** Indices (or vertices, when the geometry carries none) per drawn element. */
+  readonly indexCount: number;
+  readonly instanced: boolean;
+  readonly pipelines: Map<string, GPURenderPipeline>;
+  vertexBuffer: GPUBuffer | null;
+  vertexBufferByteLength: number;
+}
 
 interface WebGpuParticleDrawCall {
   system: ParticleSystem;
@@ -92,6 +84,30 @@ interface WebGpuParticleDrawCall {
   blendMode: BlendModes;
 }
 
+/**
+ * Particle renderer for WebGPU.
+ *
+ * One ParticleSystem = one draw call. The system's {@link ParticleRenderMode}
+ * owns the *how* — vertex layout, shader, draw model and the loop that fills
+ * the buffer — and this renderer is the executor: it holds the system-level
+ * uniforms (projection, transform, local bounds, texture flags), uploads what
+ * the mode built and issues the draw the mode declares.
+ *
+ * Everything mode-specific is read off the core `Geometry`/`Material` types
+ * rather than hard-coded: the render pipeline's vertex layout comes from the
+ * geometry's attributes and stride, its primitive from the geometry's topology,
+ * its shader from the material's WGSL, and the draw is instanced or plain per
+ * `ParticleRenderMode.instanced`.
+ *
+ * WGSL binds vertex inputs by number rather than by name, and `GeometryAttribute`
+ * carries no location, so the binding rule is positional: `@location(i)` is
+ * `geometry.attributes[i]`. This is the WebGPU counterpart of the WebGL2
+ * renderer's name lookup through the compiled program.
+ *
+ * A system running in GPU compute mode bypasses the mode's builder entirely:
+ * its compute pipeline has already written the interleaved instance data
+ * GPU-side, so that buffer is bound directly.
+ */
 export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSystem> {
   /**
    * The particle system's transform is bound as a uniform and each particle is
@@ -106,20 +122,12 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
   private readonly _uniformData = new Float32Array(uniformByteLength / Float32Array.BYTES_PER_ELEMENT);
 
   private _device: GPUDevice | null = null;
-  private _shaderModule: GPUShaderModule | null = null;
   private _uniformBindGroupLayout: GPUBindGroupLayout | null = null;
   private _textureBindGroupLayout: GPUBindGroupLayout | null = null;
   private _pipelineLayout: GPUPipelineLayout | null = null;
   private _uniformBuffer: GPUBuffer | null = null;
   private _uniformBindGroup: GPUBindGroup | null = null;
-  private _staticVertexBuffer: GPUBuffer | null = null;
-  private _instanceBuffer: GPUBuffer | null = null;
-  private _indexBuffer: GPUBuffer | null = null;
-  private _instanceBufferByteLength = 0;
-  private _instanceData: ArrayBuffer = new ArrayBuffer(instanceStrideBytes * initialParticleCapacity);
-  private _float32View = new Float32Array(this._instanceData);
-  private _uint32View = new Uint32Array(this._instanceData);
-  private readonly _pipelines: Map<string, GPURenderPipeline> = new Map<string, GPURenderPipeline>();
+  private readonly _resources = new Map<Material, ParticleModeResources>();
 
   public render(system: ParticleSystem): void {
     const backend = this._backend;
@@ -158,10 +166,8 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     const device = this._device;
     const uniformBuffer = this._uniformBuffer;
     const uniformBindGroup = this._uniformBindGroup;
-    const staticVertexBuffer = this._staticVertexBuffer;
-    const indexBuffer = this._indexBuffer;
 
-    if (!backend || !device || !uniformBuffer || !uniformBindGroup || !staticVertexBuffer || !this._instanceBuffer || !indexBuffer) {
+    if (!backend || !device || !uniformBuffer || !uniformBindGroup) {
       return;
     }
 
@@ -185,12 +191,12 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     }
 
     // One command encoder / pass per drawcall. Each particle system's
-    // queue.writeBuffer calls target offset 0 of the instance and uniform
-    // buffers — a single pass with multiple systems would see all
+    // queue.writeBuffer calls target offset 0 of the mode's vertex and the
+    // uniform buffer — a single pass with multiple systems would see all
     // writeBuffers serialize before submit, leaving only the last
     // system's data in those buffers and making every earlier draw read
     // the wrong data. Also: _ensureCapacity may destroy and recreate the
-    // instance buffer on growth; keeping one drawcall per pass means
+    // vertex buffer on growth; keeping one drawcall per pass means
     // that destroy happens strictly between submits, so no pass holds a
     // reference to a buffer that has since been destroyed.
     for (let drawCallIndex = 0; drawCallIndex < this._drawCallCount; drawCallIndex++) {
@@ -202,7 +208,9 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
         continue;
       }
 
-      const pipeline = this._getPipeline(drawCall.blendMode, backend.renderTargetFormat, backend._passCoordinator.stencilActive);
+      const mode = system.renderMode;
+      const resources = this._getOrCreateResources(mode, device);
+      const pipeline = this._getPipeline(resources, drawCall.blendMode, backend.renderTargetFormat, backend._passCoordinator.stencilActive);
       const textureBinding = backend.getTextureBinding(drawCall.texture);
       const textureBindGroup = device.createBindGroup({
         layout: this._textureBindGroupLayout!,
@@ -222,19 +230,23 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
 
       // GPU mode: the system's compute pipeline already wrote the
       // interleaved instance data into its own buffer. Bind it
-      // directly — no CPU pack, no writeBuffer for instance data.
-      // CPU mode: pack from CPU SoA into our owned instance buffer.
-      let drawInstanceCount = particleCount;
-      const instanceBuffer = ((): GPUBuffer => {
+      // directly — no CPU build, no writeBuffer for instance data.
+      // CPU mode: the mode builds from CPU SoA into its scratch buffer,
+      // which is uploaded into the buffer this renderer owns for it.
+      let drawCount = particleCount;
+      const vertexBuffer = ((): GPUBuffer => {
         if (system.gpuMode && system.gpuState !== null) {
           return system.gpuState.instanceBuffer;
         }
 
-        this._ensureCapacity(particleCount);
-        drawInstanceCount = this._writeInstanceData(system);
-        device.queue.writeBuffer(this._instanceBuffer, 0, this._instanceData, 0, drawInstanceCount * instanceStrideBytes);
+        mode.build(system);
+        drawCount = mode.count;
 
-        return this._instanceBuffer;
+        const buffer = this._ensureCapacity(device, resources, drawCount);
+
+        device.queue.writeBuffer(buffer, 0, mode.data, 0, drawCount * resources.stride);
+
+        return buffer;
       })();
 
       device.queue.writeBuffer(uniformBuffer, 0, this._uniformData.buffer, this._uniformData.byteOffset, this._uniformData.byteLength);
@@ -247,10 +259,19 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
       pass.setBindGroup(0, uniformBindGroup);
       pass.setPipeline(pipeline);
       pass.setBindGroup(1, textureBindGroup);
-      pass.setVertexBuffer(0, staticVertexBuffer);
-      pass.setVertexBuffer(1, instanceBuffer);
-      pass.setIndexBuffer(indexBuffer, 'uint16');
-      pass.drawIndexed(indicesPerParticle, drawInstanceCount, 0, 0, 0);
+      pass.setVertexBuffer(0, vertexBuffer);
+
+      // `mode.count` is instance count for an instanced mode and vertex count
+      // otherwise, so it drives exactly one of the two draw arguments.
+      const instanceCount = resources.instanced ? drawCount : 1;
+
+      if (resources.indexBuffer !== null) {
+        pass.setIndexBuffer(resources.indexBuffer, resources.indexFormat);
+        pass.drawIndexed(resources.indexCount, instanceCount, 0, 0, 0);
+      } else {
+        pass.draw(resources.instanced ? resources.indexCount : drawCount, instanceCount, 0, 0);
+      }
+
       backend.stats.batches++;
       backend.stats.drawCalls++;
 
@@ -267,7 +288,6 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
   protected onConnect(backend: WebGpuBackend): void {
     this._backend = backend;
     this._device = this._backend.device;
-    this._shaderModule = this._device.createShaderModule({ code: particleShaderSource });
     this._uniformBindGroupLayout = this._device.createBindGroupLayout({
       entries: [
         {
@@ -315,75 +335,148 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
         },
       ],
     });
-    this._staticVertexBuffer = this._device.createBuffer({
-      size: staticVertexData.byteLength,
-      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-    });
-    this._device.queue.writeBuffer(this._staticVertexBuffer, 0, staticVertexData.buffer, staticVertexData.byteOffset, staticVertexData.byteLength);
-    this._indexBuffer = this._device.createBuffer({
-      size: staticIndexData.byteLength,
-      usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
-    });
-    this._device.queue.writeBuffer(this._indexBuffer, 0, staticIndexData.buffer, staticIndexData.byteOffset, staticIndexData.byteLength);
-    this._ensureCapacity(initialParticleCapacity);
   }
 
   protected onDisconnect(): void {
     this.flush();
 
-    this._staticVertexBuffer?.destroy();
-    this._instanceBuffer?.destroy();
-    this._indexBuffer?.destroy();
+    for (const resources of this._resources.values()) {
+      this._destroyResources(resources);
+    }
+
+    this._resources.clear();
     this._uniformBuffer?.destroy();
 
-    this._pipelines.clear();
-    this._indexBuffer = null;
-    this._staticVertexBuffer = null;
-    this._instanceBuffer = null;
     this._uniformBindGroup = null;
     this._uniformBuffer = null;
     this._pipelineLayout = null;
     this._textureBindGroupLayout = null;
     this._uniformBindGroupLayout = null;
-    this._shaderModule = null;
     this._device = null;
     this._backend = null;
-    this._instanceBufferByteLength = 0;
-    this._instanceData = new ArrayBuffer(instanceStrideBytes * initialParticleCapacity);
-    this._float32View = new Float32Array(this._instanceData);
-    this._uint32View = new Uint32Array(this._instanceData);
     this._drawCallCount = 0;
   }
 
-  private _ensureCapacity(particleCount: number): void {
-    const requiredInstanceBytes = particleCount * instanceStrideBytes;
+  private _getOrCreateResources(mode: ParticleRenderMode, device: GPUDevice): ParticleModeResources {
+    const material = mode.material;
+    const cached = this._resources.get(material);
 
-    if (requiredInstanceBytes > this._instanceData.byteLength) {
-      let byteLength = this._instanceData.byteLength;
-
-      while (byteLength < requiredInstanceBytes) {
-        byteLength *= 2;
-      }
-
-      this._instanceData = new ArrayBuffer(byteLength);
-      this._float32View = new Float32Array(this._instanceData);
-      this._uint32View = new Uint32Array(this._instanceData);
+    if (cached !== undefined) {
+      return cached;
     }
 
-    if (requiredInstanceBytes > this._instanceBufferByteLength) {
-      let byteLength = this._instanceBufferByteLength || instanceStrideBytes;
+    const created = this._createResources(mode, material, device);
 
-      while (byteLength < requiredInstanceBytes) {
-        byteLength *= 2;
+    this._resources.set(material, created);
+
+    // A destroyed mode takes its GPU resources with it: `ParticleSystem.destroy`
+    // destroys its mode, which destroys the material.
+    material._onDispose(() => {
+      const stored = this._resources.get(material);
+
+      if (stored === undefined) {
+        return;
       }
 
-      this._instanceBuffer?.destroy();
-      this._instanceBuffer = this._device!.createBuffer({
-        size: byteLength,
-        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      this._destroyResources(stored);
+      this._resources.delete(material);
+    });
+
+    return created;
+  }
+
+  private _createResources(mode: ParticleRenderMode, material: Material, device: GPUDevice): ParticleModeResources {
+    const wgsl = material.shader.wgsl;
+
+    if (wgsl === null) {
+      throw new Error('Particle material shader has no `wgsl` source; cannot render through the WebGPU backend.');
+    }
+
+    const geometry: Geometry = mode.geometry;
+    const indices = geometry.indices;
+    let indexBuffer: GPUBuffer | null = null;
+
+    if (indices !== null) {
+      // Padded to a 4-byte multiple, which `queue.writeBuffer` requires and a
+      // 16-bit index list of odd length does not satisfy on its own.
+      const indexData = new Uint8Array(Math.ceil(indices.byteLength / 4) * 4);
+
+      indexData.set(new Uint8Array(indices.buffer, indices.byteOffset, indices.byteLength));
+
+      indexBuffer = device.createBuffer({
+        size: indexData.byteLength,
+        usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
       });
-      this._instanceBufferByteLength = byteLength;
+      device.queue.writeBuffer(indexBuffer, 0, indexData.buffer, indexData.byteOffset, indexData.byteLength);
     }
+
+    const topology: GPUPrimitiveTopology = geometry.topology;
+    const indexFormat: GPUIndexFormat = indices instanceof Uint32Array ? 'uint32' : 'uint16';
+    const indexedStrip = topology === 'triangle-strip' && indexBuffer !== null;
+
+    return {
+      shaderModule: device.createShaderModule({ code: wgsl }),
+      vertexLayout: {
+        arrayStride: geometry.stride,
+        // Per-instance for an instanced mode, per-vertex otherwise — the same
+        // interleaved layout serves both draw models.
+        stepMode: mode.instanced ? 'instance' : 'vertex',
+        attributes: geometry.attributes.map((attribute, location) => ({
+          shaderLocation: location,
+          offset: attribute.offset,
+          format: resolveVertexFormat(attribute),
+        })),
+      },
+      stride: geometry.stride,
+      topology,
+      // Required by WebGPU for indexed strip draws, and forbidden otherwise.
+      stripIndexFormat: indexedStrip ? indexFormat : undefined,
+      indexBuffer,
+      indexFormat,
+      indexCount: geometry.indexCount,
+      instanced: mode.instanced,
+      pipelines: new Map<string, GPURenderPipeline>(),
+      vertexBuffer: null,
+      vertexBufferByteLength: 0,
+    };
+  }
+
+  private _destroyResources(resources: ParticleModeResources): void {
+    resources.vertexBuffer?.destroy();
+    resources.indexBuffer?.destroy();
+    resources.pipelines.clear();
+    resources.vertexBuffer = null;
+    resources.vertexBufferByteLength = 0;
+  }
+
+  /**
+   * Grow the mode's vertex buffer to hold `elementCount` elements of its
+   * stride. Grow-only and doubling, matching the mode's own scratch-buffer
+   * policy; the returned buffer is the one this draw must bind, since growth
+   * replaces it.
+   */
+  private _ensureCapacity(device: GPUDevice, resources: ParticleModeResources, elementCount: number): GPUBuffer {
+    const stride = resources.stride;
+    const requiredByteLength = Math.max(elementCount, 1) * stride;
+
+    if (resources.vertexBuffer !== null && requiredByteLength <= resources.vertexBufferByteLength) {
+      return resources.vertexBuffer;
+    }
+
+    let byteLength = resources.vertexBufferByteLength || stride;
+
+    while (byteLength < requiredByteLength) {
+      byteLength *= 2;
+    }
+
+    resources.vertexBuffer?.destroy();
+    resources.vertexBuffer = device.createBuffer({
+      size: byteLength,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    });
+    resources.vertexBufferByteLength = byteLength;
+
+    return resources.vertexBuffer;
   }
 
   private _writeUniformData(backend: WebGpuBackend, system: ParticleSystem, texture: Texture): void {
@@ -458,104 +551,9 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     u[43] = uvMaxY;
   }
 
-  private _writeInstanceData(system: ParticleSystem): number {
-    const { posX, posY, scaleX, scaleY, rotations, color, textureIndex, alive, liveCount } = system;
-    const f32 = this._float32View;
-    const u32 = this._uint32View;
-
-    const { uvMins, uvMaxs } = this._computeFrameUvs(system);
-    const frameCount = uvMins.length / 2;
-
-    let writeIndex = 0;
-
-    for (let particleIndex = 0; particleIndex < liveCount; particleIndex++) {
-      // Skip dead slots — present in GPU-mode systems where the live
-      // range can carry holes filled in on next spawn.
-      if (alive[particleIndex] === 0) {
-        continue;
-      }
-
-      const targetIndex = writeIndex * instanceWords;
-      const frame = textureIndex[particleIndex]! < frameCount ? textureIndex[particleIndex]! : 0;
-      const uvBase = frame * 2;
-
-      f32[targetIndex + 0] = posX[particleIndex]!;
-      f32[targetIndex + 1] = posY[particleIndex]!;
-      f32[targetIndex + 2] = scaleX[particleIndex]!;
-      f32[targetIndex + 3] = scaleY[particleIndex]!;
-      f32[targetIndex + 4] = rotations[particleIndex]!;
-      u32[targetIndex + 5] = color[particleIndex]!;
-      f32[targetIndex + 6] = uvMins[uvBase + 0]!;
-      f32[targetIndex + 7] = uvMins[uvBase + 1]!;
-      f32[targetIndex + 8] = uvMaxs[uvBase + 0]!;
-      f32[targetIndex + 9] = uvMaxs[uvBase + 1]!;
-
-      writeIndex++;
-    }
-
-    return writeIndex;
-  }
-
-  /**
-   * Same atlas/UV-resolution as the WebGL2 path. Returns the per-frame
-   * (uvMin, uvMax) pairs derived from `system.frames` (or fallback to
-   * `system.textureFrame` when no atlas is declared), already flipY-
-   * adjusted for the current texture.
-   */
-  private _uvMinsScratch = new Float32Array(2);
-  private _uvMaxsScratch = new Float32Array(2);
-  private _computeFrameUvs(system: ParticleSystem): { uvMins: Float32Array; uvMaxs: Float32Array } {
-    const frames = system.frames;
-    const tex = system.texture;
-    const texW = tex.width;
-    const texH = tex.height;
-    const flipY = tex.flipY;
-
-    const count = frames.length === 0 ? 1 : frames.length;
-
-    if (this._uvMinsScratch.length < count * 2) {
-      this._uvMinsScratch = new Float32Array(count * 2);
-      this._uvMaxsScratch = new Float32Array(count * 2);
-    }
-
-    const mins = this._uvMinsScratch;
-    const maxs = this._uvMaxsScratch;
-
-    if (frames.length === 0) {
-      const f = system.textureFrame;
-      const minU = f.left / texW;
-      const maxU = f.right / texW;
-      const topV = f.top / texH;
-      const bottomV = f.bottom / texH;
-
-      mins[0] = minU;
-      mins[1] = flipY ? bottomV : topV;
-      maxs[0] = maxU;
-      maxs[1] = flipY ? topV : bottomV;
-
-      return { uvMins: mins, uvMaxs: maxs };
-    }
-
-    for (let i = 0; i < frames.length; i++) {
-      const f = frames[i]!;
-      const o = i * 2;
-      const minU = f.left / texW;
-      const maxU = f.right / texW;
-      const topV = f.top / texH;
-      const bottomV = f.bottom / texH;
-
-      mins[o + 0] = minU;
-      mins[o + 1] = flipY ? bottomV : topV;
-      maxs[o + 0] = maxU;
-      maxs[o + 1] = flipY ? topV : bottomV;
-    }
-
-    return { uvMins: mins, uvMaxs: maxs };
-  }
-
-  private _getPipeline(blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {
+  private _getPipeline(resources: ParticleModeResources, blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {
     const pipelineKey = `${blendMode}:${format}:${stencil ? 's' : 'n'}`;
-    const existingPipeline = this._pipelines.get(pipelineKey);
+    const existingPipeline = resources.pipelines.get(pipelineKey);
 
     if (existingPipeline) {
       return existingPipeline;
@@ -564,59 +562,12 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     const descriptor: GPURenderPipelineDescriptor = {
       layout: this._pipelineLayout!,
       vertex: {
-        module: this._shaderModule!,
+        module: resources.shaderModule,
         entryPoint: 'vertexMain',
-        buffers: [
-          {
-            arrayStride: staticVertexStrideBytes,
-            attributes: [
-              {
-                shaderLocation: 0,
-                offset: 0,
-                format: 'float32x2',
-              },
-            ],
-          },
-          {
-            arrayStride: instanceStrideBytes,
-            stepMode: 'instance',
-            attributes: [
-              {
-                shaderLocation: 1,
-                offset: 0,
-                format: 'float32x2',
-              },
-              {
-                shaderLocation: 2,
-                offset: 8,
-                format: 'float32x2',
-              },
-              {
-                shaderLocation: 3,
-                offset: 16,
-                format: 'float32',
-              },
-              {
-                shaderLocation: 4,
-                offset: 20,
-                format: 'unorm8x4',
-              },
-              {
-                shaderLocation: 5,
-                offset: 24,
-                format: 'float32x2',
-              },
-              {
-                shaderLocation: 6,
-                offset: 32,
-                format: 'float32x2',
-              },
-            ],
-          },
-        ],
+        buffers: [resources.vertexLayout],
       },
       fragment: {
-        module: this._shaderModule!,
+        module: resources.shaderModule,
         entryPoint: 'fragmentMain',
         targets: [
           {
@@ -626,9 +577,10 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
           },
         ],
       },
-      primitive: {
-        topology: 'triangle-list',
-      },
+      // `stripIndexFormat` is required for an indexed strip and forbidden
+      // otherwise, so it is omitted rather than set to `undefined`.
+      primitive:
+        resources.stripIndexFormat === undefined ? { topology: resources.topology } : { topology: resources.topology, stripIndexFormat: resources.stripIndexFormat },
     };
 
     if (stencil) {
@@ -637,7 +589,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
 
     const pipeline = this._device!.createRenderPipeline(descriptor);
 
-    this._pipelines.set(pipelineKey, pipeline);
+    resources.pipelines.set(pipelineKey, pipeline);
 
     return pipeline;
   }

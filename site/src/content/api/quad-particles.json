@@ -315,7 +315,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The quad's four corners are derived in the shader — from gl_VertexID on WebGL2 and from a static unit-quad vertex buffer on WebGPU — so this geometry describes the per-instance layout and carries a zero-filled placeholder large enough for the four corner slots the index buffer addresses."
+          "description": "The quad's four corners are derived in the shader — from gl_VertexID on WebGL2 and from vertex_index on WebGPU — so this geometry describes the per-instance layout and carries a zero-filled placeholder large enough for the four corner slots the index buffer addresses."
         },
         {
           "name": "gpuEligible",

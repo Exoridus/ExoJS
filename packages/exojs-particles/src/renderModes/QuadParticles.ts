@@ -16,8 +16,12 @@ const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
 /**
  * WGSL counterpart of `glsl/particle.vert` + `glsl/particle.frag`. Vertex and
  * fragment entry points share one source per WGSL convention, and the
- * per-instance attributes bind by `@location`, matching the byte offsets
- * declared on {@link QuadParticles.geometry}.
+ * per-instance attributes bind by `@location`, matching the declaration order
+ * and byte offsets of {@link QuadParticles.geometry}.
+ *
+ * The quad's corner is derived from `vertex_index` exactly as the GLSL derives
+ * it from `gl_VertexID`, so both backends need nothing beyond this mode's own
+ * interleaved buffer and index buffer.
  */
 export const quadParticleWgsl = `
 struct ProjectionUniforms {
@@ -39,13 +43,13 @@ var particleSampler: sampler;
 
 // Per-instance attributes (one entry per particle, 40 bytes total).
 struct VertexInput {
-    @location(0) unitPosition: vec2<f32>,    // per-vertex (static unit quad)
-    @location(1) translation: vec2<f32>,
-    @location(2) scale: vec2<f32>,
-    @location(3) rotation: f32,
-    @location(4) color: vec4<f32>,
-    @location(5) uvMin: vec2<f32>,            // pre-resolved frame UV (top-left)
-    @location(6) uvMax: vec2<f32>,            // pre-resolved frame UV (bottom-right)
+    @builtin(vertex_index) vertexIndex: u32,
+    @location(0) translation: vec2<f32>,
+    @location(1) scale: vec2<f32>,
+    @location(2) rotation: f32,
+    @location(3) color: vec4<f32>,
+    @location(4) uvMin: vec2<f32>,            // pre-resolved frame UV (top-left)
+    @location(5) uvMax: vec2<f32>,            // pre-resolved frame UV (bottom-right)
 };
 
 struct VertexOutput {
@@ -59,7 +63,14 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     let quadMin = uniforms.localBounds.xy;
     let quadSize = uniforms.localBounds.zw;
 
-    let localPosition = quadMin + (input.unitPosition * quadSize);
+    // Unit-quad corner from the index buffer's value: 0 -> (0,0), 1 -> (1,0),
+    // 2 -> (1,1), 3 -> (0,1) — the same mapping the GLSL derives from gl_VertexID.
+    let unitPosition = vec2<f32>(
+        f32(((input.vertexIndex + 1u) >> 1u) & 1u),
+        f32(input.vertexIndex >> 1u)
+    );
+
+    let localPosition = quadMin + (unitPosition * quadSize);
     let radians = radians(input.rotation);
     let sinValue = sin(radians);
     let cosValue = cos(radians);
@@ -71,7 +82,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     var output: VertexOutput;
 
     output.position = uniforms.projection * uniforms.translation * vec4<f32>(rotated, 0.0, 1.0);
-    output.texcoord = input.uvMin + ((input.uvMax - input.uvMin) * input.unitPosition);
+    output.texcoord = input.uvMin + ((input.uvMax - input.uvMin) * unitPosition);
     output.color = vec4(input.color.rgb * input.color.a, input.color.a);
 
     return output;
@@ -117,7 +128,7 @@ export class QuadParticles extends ParticleRenderMode {
 
   /**
    * The quad's four corners are derived in the shader — from `gl_VertexID` on
-   * WebGL2 and from a static unit-quad vertex buffer on WebGPU — so this
+   * WebGL2 and from `vertex_index` on WebGPU — so this
    * geometry describes the per-instance layout and carries a zero-filled
    * placeholder large enough for the four corner slots the index buffer
    * addresses.
