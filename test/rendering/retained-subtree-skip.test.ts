@@ -112,6 +112,12 @@ const collectDraws = (root: Container, backend: RenderBackend): DrawCommand[] =>
   return draws;
 };
 
+interface RetainedPlanCarrier {
+  _retainedPlan: RetainedPlanCache | null;
+}
+
+const retainedPlanOf = (container: Container): RetainedPlanCache | null => (container as unknown as RetainedPlanCarrier)._retainedPlan;
+
 const snapshot = (draws: readonly DrawCommand[]) =>
   draws.map(d => ({
     id: (d.drawable as LeafDrawable).id,
@@ -220,6 +226,42 @@ describe('static-subtree skip: invalidation gates', () => {
     const draws = collectDraws(root, backend);
 
     expect(draws.map(d => (d.drawable as LeafDrawable).id)).toEqual(['a', 'b']);
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  // The stale-replay bug this guards: a captured direct drawable child that is
+  // `destroy()`ed WITHOUT a preceding `removeChild()`. `destroy()` now unlinks
+  // the node itself, so the capture key changes and the fast path is gone —
+  // asserted on the cache key rather than on the collected draws, because the
+  // draw-level symptom used to be papered over by a __DEV__-only slot scan that
+  // production builds strip out (and Vitest always compiles __DEV__ to `true`,
+  // so the draws alone cannot tell the two apart).
+  test('destroying a captured direct drawable child invalidates the capture key itself, not only via a dev-only scan', () => {
+    const backend = createTestBackend();
+    const root = new Container();
+    const doomed = new LeafDrawable('doomed');
+    const survivor = new LeafDrawable('survivor');
+
+    root.addChild(doomed, survivor);
+
+    expect(collectDraws(root, backend).map(d => (d.drawable as LeafDrawable).id)).toEqual(['doomed', 'survivor']);
+
+    const cache = retainedPlanOf(root);
+
+    expect(cache).not.toBeNull();
+
+    const isCaptureClean = (): boolean =>
+      cache!.isClean(root._contentRevision, root._structureRevision, root._transformRevision, backend.view.updateId, backend);
+
+    expect(isCaptureClean()).toBe(true);
+
+    doomed.destroy();
+
+    expect(isCaptureClean()).toBe(false);
+    expect(root.children).toEqual([survivor]);
+    expect(collectDraws(root, backend).map(d => (d.drawable as LeafDrawable).id)).toEqual(['survivor']);
 
     root.destroy();
     backend.destroy();

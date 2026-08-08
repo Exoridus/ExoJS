@@ -123,7 +123,6 @@ export class RetainedContainer extends Container {
   private _devFragmentBuilds = 0;
   private _devFragmentInvalidations = 0;
   private _devRetentionWarned = false;
-  private _devDestroyedWarned = false;
 
   public constructor() {
     super();
@@ -303,18 +302,11 @@ export class RetainedContainer extends Container {
       return;
     }
 
-    const fragmentClean = this._fragment.isClean(this._contentRevision, this._structureRevision, builder.backend);
-
-    if (fragmentClean && __DEV__ && this._fragment._devHasDestroyedDrawable()) {
-      // P3f: a descendant was destroy()ed but left attached, so no revision
-      // bumped and the capture still looks clean. Replaying it would splice a
-      // dead drawable for a whole frame and pin it against GC. Drop the capture
-      // (releasing the strong refs), warn once, and fall through to a full
-      // collect — which skips the destroyed child (RenderNode._collect dev
-      // guard) and recaptures a clean fragment.
-      this._fragment.invalidate();
-      this._warnReplayedDestroyed();
-    } else if (fragmentClean) {
+    // A recorded draw can no longer outlive its drawable: `SceneNode.destroy`
+    // unlinks the node, and that removal stamps every ancestor up to this
+    // boundary structure-dirty, so a destroyed descendant always fails the key
+    // check below instead of being replayed out of the recorded bundle.
+    if (this._fragment.isClean(this._contentRevision, this._structureRevision, builder.backend)) {
       // A content/structure-clean frame may still carry transform-only
       // descendant moves, since an own-transform move no longer content-
       // dirties. The recorded instruction set's baked transform rows are stale
@@ -499,13 +491,12 @@ export class RetainedContainer extends Container {
    * Release the retained GPU instruction set and fragment cache, then destroy
    * this container and its subtree.
    *
-   * Beware the in-place-destroy footgun: {@link SceneNode.destroy} does not
-   * detach a node from its parent, and the retained fragment keeps the whole
-   * previously-collected command range — including a child's resources — until
-   * a structural change drops it. Destroying a child directly leaves the
-   * fragment replaying freed resources, because nothing invalidated it. Call
-   * {@link Container.removeChild} first (removal bumps the structure revision
-   * and drops the fragment), or destroy the whole group at once.
+   * A retained fragment keeps the whole previously-collected command range —
+   * including a child's resources — until a structural change drops it.
+   * Destroying a descendant on its own is safe regardless of call order:
+   * {@link SceneNode.destroy} unlinks the node from its parent, and that
+   * removal bumps the structure revision up to this boundary, which drops the
+   * fragment instead of replaying freed resources.
    */
   public override destroy(): void {
     // Balance the constructor's boundary registration exactly once (destroy may
@@ -563,26 +554,6 @@ export class RetainedContainer extends Container {
   private _escapeCheckContent = -1;
   private _escapeCheckStructure = -1;
 
-  /**
-   * P3f dev diagnostic: warn ONCE when the retained fragment was found holding
-   * a child that was `destroy()`ed without `removeChild()` (so it stayed
-   * attached and the capture still looked clean). Dev builds only; the call
-   * site is `__DEV__`-guarded and stripped from production.
-   */
-  private _warnReplayedDestroyed(): void {
-    if (this._devDestroyedWarned) {
-      return;
-    }
-
-    this._devDestroyedWarned = true;
-    logger.warn(
-      `RetainedContainer${this.name ? ` '${this.name}'` : ''} held a child that was destroy()ed without ` +
-        'removeChild() — it stayed attached to the subtree, so no revision change dropped the retained fragment. ' +
-        'The stale capture has been evicted and the destroyed child skipped; detach children (removeChild) before ' +
-        'or instead of destroying them.',
-      { source: 'rendering' },
-    );
-  }
   private _deepBarrierWarned = false;
   /**
    * Direct children whose subtrees contain a deep barrier: they

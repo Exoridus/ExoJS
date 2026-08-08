@@ -35,6 +35,18 @@ const makeScopeDrawEntry = (drawable: Drawable, nodeIndex = 0): DrawScopeEntry =
   },
 });
 
+interface DrawPoolCarrier {
+  _drawPool: Array<{ drawable: Drawable | undefined }>;
+  _drawCursor: number;
+}
+
+/** The live prefix of the fragment's grow-only draw pool, as raw references. */
+const pooledDrawables = (fragment: RetainedGroupFragment): Array<Drawable | undefined> => {
+  const carrier = fragment as unknown as DrawPoolCarrier;
+
+  return carrier._drawPool.slice(0, carrier._drawCursor).map(record => record.drawable);
+};
+
 describe('RetainedGroupFragment', () => {
   test('isClean is false before any capture; hasCapture reflects lifecycle', () => {
     const fragment = new RetainedGroupFragment();
@@ -139,31 +151,21 @@ describe('RetainedGroupFragment', () => {
     drawable.destroy();
   });
 
-  test('_devHasDestroyedDrawable reports a destroyed captured drawable', () => {
-    const fragment = new RetainedGroupFragment();
-    const drawable = new Drawable();
-
-    fragment.capture(1, 1, fakeBackendA, [makeScopeDrawEntry(drawable)]);
-
-    expect(fragment._devHasDestroyedDrawable()).toBe(false);
-
-    drawable.destroy();
-
-    expect(fragment._devHasDestroyedDrawable()).toBe(true);
-  });
-
   test('invalidate() releases the pooled strong reference to drawables so they can GC', () => {
     const fragment = new RetainedGroupFragment();
     const drawable = new Drawable();
 
     fragment.capture(1, 1, fakeBackendA, [makeScopeDrawEntry(drawable)]);
+
+    expect(pooledDrawables(fragment)).toContain(drawable);
+
     drawable.destroy();
 
-    // Before the fix the grow-only draw pool still pins the destroyed drawable
-    // even after the entries array is emptied.
+    // Emptying the entries array is not enough: the grow-only draw pool holds
+    // its own strong reference and would keep pinning the destroyed drawable.
     fragment.invalidate();
 
-    expect(fragment._devHasDestroyedDrawable()).toBe(false);
+    expect(pooledDrawables(fragment)).not.toContain(drawable);
     expect(fragment.entries).toEqual([]);
   });
 });

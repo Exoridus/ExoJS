@@ -230,11 +230,11 @@ const realShaderPlugin = {
  * MUST be `false`: the competitor arms are pre-bundled from their published npm
  * dist (`optimizeDeps.include`), i.e. their PRODUCTION builds with dev-only
  * guards already stripped. Measuring exojs source with `__DEV__=true` therefore
- * pits an unshipped dev build (per-frame dev diagnostics — e.g.
- * `RetainedGroupFragment._devHasDestroyedDrawable`, a full O(captured-drawables)
- * scan every clean retained frame) against competitors' prod builds. That
- * asymmetry inflated the exojs numbers by 20-30x on the static-heavy retained
- * arm alone (2.3 ms vs the real ~0.1 ms prod floor). `false` compiles the same
+ * pits an unshipped dev build — carrying per-frame dev diagnostics that can scan
+ * the whole captured set on a clean retained frame — against competitors' prod
+ * builds. That asymmetry inflated the exojs numbers by 20-30x on the
+ * static-heavy retained arm alone (2.3 ms vs the real ~0.1 ms prod floor).
+ * `false` compiles the same
  * path a shipped exojs game runs, making the cross-arm comparison apples-to-apples.
  */
 const ENGINE_DEV_BUILD = false;

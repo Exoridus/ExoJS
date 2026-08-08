@@ -1730,9 +1730,8 @@ describe('RetainedContainer: deep-barrier escape scoped to the offending sub-bra
 });
 
 describe('RetainedContainer: destroyed-child eviction', () => {
-  test('a child destroy()ed without removeChild is evicted from the replay next frame and warns once', () => {
+  test('a child destroy()ed without removeChild drops the fragment key itself, so the replay cannot resurrect it', () => {
     const backend = createTestBackend();
-    const warnSpy = vi.spyOn(logger, 'warn');
     const root = new Container();
     const group = new RetainedContainer();
     const leafA = new LeafDrawable('a');
@@ -1745,26 +1744,27 @@ describe('RetainedContainer: destroyed-child eviction', () => {
 
     // Frame 1: full collect + capture (both children present).
     expect(collectDraws(root, backend).map(d => (d.drawable as LeafDrawable).id)).toEqual(['a', 'b']);
+    expect(fragmentOf(group).isClean(group._contentRevision, group._structureRevision, backend)).toBe(true);
 
-    // The footgun: destroy WITHOUT removeChild — the child stays attached, so
-    // no revision bump and the fragment is still "clean".
+    // The misuse: destroy WITHOUT removeChild. `destroy()` unlinks the child
+    // itself, which stamps the group structure-dirty — asserted on the fragment
+    // key rather than on the draws, because that is the part production runs
+    // (Vitest always compiles __DEV__ to `true`, so draw-level assertions alone
+    // could not distinguish a real invalidation from a dev-only rescue).
     leafA.destroy();
+
+    expect(leafA.parent).toBeNull();
+    expect(fragmentOf(group).isClean(group._contentRevision, group._structureRevision, backend)).toBe(false);
 
     // Frame 2: the retained fragment must NOT replay the destroyed drawable.
     const frame2 = collectDraws(root, backend).map(d => (d.drawable as LeafDrawable).id);
     expect(frame2).toEqual(['b']);
     expect(frame2).not.toContain('a');
 
-    // Frame 3: still evicted, and no per-frame warning storm.
+    // Frame 3: still gone once the fragment has recaptured without it.
     const frame3 = collectDraws(root, backend).map(d => (d.drawable as LeafDrawable).id);
     expect(frame3).toEqual(['b']);
 
-    const destroyedWarnings = warnSpy.mock.calls.filter(call => String(call[0]).includes('destroy'));
-
-    expect(destroyedWarnings).toHaveLength(1);
-    expect(String(destroyedWarnings[0]![0])).toContain('decor');
-
-    warnSpy.mockRestore();
     root.destroy();
     backend.destroy();
   });

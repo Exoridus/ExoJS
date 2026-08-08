@@ -1,12 +1,14 @@
 /**
- * Collect-time contract for a node that was `destroy()`ed but left attached to
- * the tree.
+ * Collect-time contract for a `destroy()`ed node.
  *
  * Two halves:
  *
  *   1. Behaviour — the node contributes nothing to the render plan. A destroyed
  *      node has released its pooled transform/bounds, so collecting it reads
  *      freed state and re-pins it; "renders nothing" is the only correct result.
+ *      `destroy()` unlinks the node from its parent, so the ordinary route into
+ *      the collector is already closed; the remaining one is a destroyed node
+ *      handed to the renderer as a detached root, which the guard still covers.
  *
  *   2. Production parity — the skip is never `__DEV__`-gated, so dev and
  *      production behave identically. Vitest always compiles `__DEV__` to
@@ -130,8 +132,8 @@ const collectIds = (root: Container, backend: RenderBackend): string[] => {
   return draws.map(d => (d.drawable as LeafDrawable).id);
 };
 
-describe('destroyed-but-attached node: collect behaviour', () => {
-  test('a destroyed direct child is excluded from the collected draws', () => {
+describe('destroyed node: collect behaviour', () => {
+  test('a destroyed direct child is unlinked and excluded from the collected draws', () => {
     const backend = createTestBackend();
     const root = new Container();
     const leafA = new LeafDrawable('a');
@@ -141,9 +143,10 @@ describe('destroyed-but-attached node: collect behaviour', () => {
 
     expect(collectIds(root, backend)).toEqual(['a', 'b']);
 
-    // The footgun: destroy WITHOUT removeChild, so the node stays linked in.
+    // The misuse this covers: destroy WITHOUT a preceding removeChild.
     leafA.destroy();
 
+    expect(leafA.parent).toBeNull();
     expect(collectIds(root, backend)).toEqual(['b']);
 
     backend.destroy();
@@ -163,7 +166,24 @@ describe('destroyed-but-attached node: collect behaviour', () => {
 
     leafA.destroy();
 
+    expect(leafA.parent).toBeNull();
     expect(collectIds(root, backend)).toEqual(['b']);
+
+    backend.destroy();
+  });
+
+  test('a destroyed node collected as a detached root contributes nothing', () => {
+    const backend = createTestBackend();
+    const root = new Container();
+    const leaf = new LeafDrawable('a');
+
+    root.addChild(leaf);
+
+    expect(collectIds(root, backend)).toEqual(['a']);
+
+    root.destroy();
+
+    expect(collectIds(root, backend)).toEqual([]);
 
     backend.destroy();
   });

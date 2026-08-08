@@ -89,10 +89,11 @@ export class FocusController implements FocusHooks {
 
   /**
    * Clear focus, or only clear it when `node` currently holds it. Fires
-   * `onBlur` — unless the previously focused node is already destroyed (a
-   * bare `destroy()` with no prior `removeChild()` never reaches
-   * {@link _notifyNodeRemoved}, so this can be the first place that notices),
-   * in which case no event is dispatched on it.
+   * `onBlur` — unless the previously focused node is already destroyed, in
+   * which case no event is dispatched on it. `destroy()` unlinks the node and
+   * so routes through {@link _notifyNodeRemoved} here, but it raises the
+   * destroyed flag first precisely so a teardown drops focus without calling
+   * back into user code on a node that is going away.
    */
   public blur(node?: RenderNode): void {
     const previous = this._focused;

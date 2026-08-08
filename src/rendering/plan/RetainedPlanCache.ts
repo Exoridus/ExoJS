@@ -161,25 +161,6 @@ export class RetainedPlanCache {
   }
 
   /**
-   * @internal — dev-only P3f probe: `true` when any captured slot still
-   * references a destroyed {@link Drawable} (a direct drawable child
-   * destroy()ed without `removeChild`, so no revision bump dropped the
-   * capture). Scans only the active slot list — the same O(slots) the replay
-   * already walks — and is stripped from production via the `__DEV__` guard at
-   * the call site.
-   */
-  public _devHasDestroyedDrawable(): boolean {
-    for (let index = 0; index < this._slots.length; index++) {
-      // `?.`: released pool records (post-invalidate) hold no drawable.
-      if (this._slots[index]!.drawable?.destroyed) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  /**
    * Drop the grow-only slot pool's strong references to their drawables so an
    * evicted/destroyed drawable can be garbage-collected. The pooled slot
    * objects survive and their `drawable` is rewritten in place on the next

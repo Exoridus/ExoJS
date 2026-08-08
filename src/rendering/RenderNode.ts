@@ -395,11 +395,11 @@ export abstract class RenderNode extends SceneNode {
   /** @internal */
   public _collect(builder: RenderPlanBuilder, seq?: number): void {
     if (this.destroyed) {
-      // A node destroy()ed but left attached to the tree (the documented
-      // footgun) has released its pooled transform/bounds; collecting it would
-      // read freed state and re-pin it. Skip it — the diagnostic is emitted
-      // once by the nearest RetainedContainer; the plain path degrades
-      // silently to "renders nothing", which is the correct result.
+      // A destroyed node has released its pooled transform/bounds; collecting
+      // it would read freed state and re-pin it. `destroy()` unlinks the node,
+      // so this normally cannot be reached through a parent's child list — but
+      // a destroyed node handed straight to the renderer as a detached root
+      // still lands here. Skip it: "renders nothing" is the correct result.
       //
       // Unconditional, NOT __DEV__-gated: the skip is the behaviour, not a
       // diagnostic. Gating it would let production keep replaying a destroyed
