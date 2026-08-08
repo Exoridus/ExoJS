@@ -1182,8 +1182,9 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     u32[offset + 5] = uMax | (vMax << 16);
 
     // packedSlotFlags (u32) at word 6 (offset 24). The tint is NOT packed here:
-    // the vertex shader reads it from the shared transform slot's texel 2 (m2),
-    // the same value the transform-storage upload wrote from this sprite's tint.
+    // the vertex shader reads it from the separate `tints` storage buffer
+    // (unpacked via unpack4x8unorm), the same value the transform-storage
+    // upload wrote from this sprite's tint.
     u32[offset + 6] = packedSlotFlags;
 
     // nodeIndex (u32) at word 7 (offset 28) — row into the shared transform buffer.

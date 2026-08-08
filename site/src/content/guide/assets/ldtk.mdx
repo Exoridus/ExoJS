@@ -14,10 +14,10 @@ image, and converting **each LDtk level** into a runtime [`TileMap`](/ExoJS/en/a
 can drop straight into the scene graph.
 
 > **Note:** `LdtkMap` ships as an official ExoJS extension package, separate from the core. It is
-> built on `@codexo/exojs-tilemap` (a regular dependency, installed transitively — you do not need
-> to add it yourself). Install `@codexo/exojs-ldtk` alongside `@codexo/exojs`:
+> built on `@codexo/exojs-tilemap`, and both that package and `@codexo/exojs` are peer
+> dependencies — install all three explicitly, on the same version:
 > ```sh
-> npm install @codexo/exojs @codexo/exojs-ldtk
+> npm install @codexo/exojs @codexo/exojs-tilemap @codexo/exojs-ldtk
 > ```
 
 Because each LDtk level becomes a generic `TileMap`, you render LDtk worlds with the same tilemap

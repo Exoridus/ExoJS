@@ -155,7 +155,7 @@ describe('CrossFadeSceneTransition', () => {
     expect(session.done).toBe(true);
   });
 
-  test('destroy() does not throw (no owned resources — pooled textures are Director-owned)', () => {
+  test('destroy() does not throw (its sprites only reference Director-owned pooled textures)', () => {
     const crossFade = new CrossFadeSceneTransition();
     const session = crossFade.beginSession(makeEnvironment());
 

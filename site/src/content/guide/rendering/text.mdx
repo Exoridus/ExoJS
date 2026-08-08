@@ -7,7 +7,9 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # Text
 
-[`Text`](/ExoJS/en/api/text/) renders GPU-accelerated text strings as nodes in the scene graph. Each `Text` instance rasterizes its glyphs into the engine's shared glyph atlas and draws them as a single `Mesh` — one draw call per text node, regardless of string length. The node extends `Container` and inherits full transform, filter, blend, and mask support.
+[`Text`](/ExoJS/en/api/text/) renders GPU-accelerated text strings as nodes in the scene graph. Each `Text` instance rasterizes its glyphs into a shared glyph atlas and hands the resulting quads to the text renderer, which merges every quad that shares a shader type and an atlas page into one draw call — across text nodes, not just within a single one.
+
+`Text` is a [`Drawable`](/ExoJS/en/api/drawable/) (via [`AbstractText`](/ExoJS/en/api/abstract-text/)), not a [`Container`](/ExoJS/en/api/container/): it carries the full transform, tint, blend mode, pixel-snap, filter, and mask surface of any other drawable, but it holds no children of its own. Nest it inside a `Container` when you need to group it with other nodes.
 
 ## A minimal text node
 
@@ -21,15 +23,15 @@ const label = new Text('Hello', {
 });
 ```
 
-The second argument is a `TextOptions` object — a flat merge of [`TextStyleOptions`](/ExoJS/en/api/text-style/) (visual appearance) and `LayoutOptions` (flow and overflow). All properties are optional and have defaults. The live `TextStyle` is stored as `text.style`; mutating its fields is cheap and is applied automatically before the next render pass — no manual rebuild call is needed:
+The second argument is a [`TextOptions`](/ExoJS/en/api/text-options/) object — a flat merge of [`TextStyleOptions`](/ExoJS/en/api/text-style-options/) (visual appearance) and [`LayoutOptions`](/ExoJS/en/api/layout-options/) (flow and overflow). All properties are optional and have defaults. The live [`TextStyle`](/ExoJS/en/api/text-style/) is stored as `text.style`; mutating its fields is cheap and is applied automatically before the next render pass — no manual rebuild call is needed:
 
 ```ts
 import { Color, Text } from '@codexo/exojs';
 
 const label = new Text('Hello', { fillColor: Color.black, fontSize: 24 });
 
-label.style.fontSize = 32;            // rebuilds the glyph mesh on the next draw
-label.style.fillColor = Color.tomato; // updates only the mesh tint — no atlas work
+label.style.fontSize = 32;            // re-lays out the glyphs on the next draw
+label.style.fillColor = Color.tomato; // shader-side colour only — no atlas work
 ```
 
 ## Font loading
@@ -52,12 +54,25 @@ init() {
 
 Loading resolves to a `FontFace`, registered with the document's `document.fonts` set. Once loaded, it becomes available to all `Text` instances via the `fontFamily` style property.
 
+You can also hand the loaded face to the node directly through the `font` style option. `Text` registers it with `document.fonts` itself and rebuilds once it is ready, which removes the ordering requirement between loading and construction:
+
+```ts
+async load() {
+    const face = await this.loader.load(Asset.type('font', 'font/MyFont.woff2', { family: 'MyFont' }));
+
+    this.title = new Text('Custom Font', { font: face, fontSize: 48 });
+}
+```
+
+`font` takes precedence over `fontFamily` when both are set.
+
 ## Style properties
 
-The visual appearance comes from [`TextStyleOptions`](/ExoJS/en/api/text-style/). All properties are optional:
+The visual appearance comes from [`TextStyleOptions`](/ExoJS/en/api/text-style-options/). All properties are optional:
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
+| `font` | `FontFace` | — | Pre-loaded font face; takes precedence over `fontFamily` |
 | `fontFamily` | `string` | `'Arial'` | CSS font family name |
 | `fontWeight` | `FontWeight` | `'normal'` | CSS font weight (`'normal'`, `'bold'`, or `'100'`–`'900'`) |
 | `fontStyle` | `'normal' \| 'italic'` | `'normal'` | Font style |
@@ -65,7 +80,7 @@ The visual appearance comes from [`TextStyleOptions`](/ExoJS/en/api/text-style/)
 | `fillColor` | `Color` | `Color.white` | Glyph fill colour |
 | `outlineColor` | `Color` | `Color.black` | SDF outline colour |
 | `outlineWidth` | `number` | `0` | Outline width in SDF units (`0`–`0.5`); `0` disables the outline |
-| `align` | `'left' \| 'center' \| 'right'` | `'left'` | Horizontal alignment |
+| `align` | [`TextAlignment`](/ExoJS/en/api/text-alignment/) — `'left' \| 'center' \| 'right' \| 'justify'` | `'left'` | Horizontal alignment |
 | `lineHeight` | `number` | `1.2` | Line-height multiplier on `fontSize` |
 | `leading` | `number` | `0` | Extra pixel gap between lines |
 | `shadowColor` | `Color` | `Color.black` | Drop-shadow colour |
@@ -76,18 +91,21 @@ The visual appearance comes from [`TextStyleOptions`](/ExoJS/en/api/text-style/)
 | `gradientColors` | `[Color, Color] \| null` | `null` | Two-stop fill gradient `[top, bottom]`; overrides `fillColor` |
 | `gradientAxis` | `'vertical' \| 'horizontal'` | `'vertical'` | Gradient orientation |
 
-Text flow and overflow come from `LayoutOptions`, merged into the same options object:
+Text flow and overflow come from [`LayoutOptions`](/ExoJS/en/api/layout-options/), merged into the same options object:
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `maxWidth` | `number` | — | Word-wrap boundary in pixels; longer lines break at word boundaries |
-| `maxHeight` | `number` | — | Clip boundary in pixels |
-| `overflow` | `'visible' \| 'clip' \| 'ellipsis'` | `'visible'` | Behaviour when text exceeds `maxHeight` |
+| `maxHeight` | `number` | — | Vertical boundary in pixels; only whole lines that fit are kept. No effect on its own — pair it with `overflow` |
+| `overflow` | `'visible' \| 'clip' \| 'ellipsis'` | `'visible'` | What happens to lines that do not fit `maxHeight`: keep them all, drop them, or drop them and mark the last visible line with `…` |
 | `letterSpacing` | `number` | `0` | Extra pixel gap between glyphs |
+| `direction` | `'ltr' \| 'rtl'` | `'ltr'` | `'rtl'` reverses each line's glyphs after wrapping; no full bidi or Arabic shaping, and `align` stays literal |
 | `breakWords` | `boolean` | `false` | Break words wider than `maxWidth` at character boundaries |
 | `whiteSpace` | `'normal' \| 'pre' \| 'pre-line'` | `'pre-line'` | Whitespace handling |
 
-Glyphs are rasterized into the shared SDF atlas; the mesh tint is initialized from `fillColor` when the mesh is built.
+Layout options stay reachable as `text.layout`. Unlike `style`, this is a plain options object with no change tracking: assigning a new one rebuilds the geometry, mutating the existing one in place does not.
+
+Glyphs are rasterized white into the shared SDF atlas and coloured at draw time, so `fillColor`, `outlineColor`, the shadow, and the gradient are shader work only — changing them never touches the atlas.
 
 ## Multiline text and wrap settings
 
@@ -135,9 +153,11 @@ centered.setPosition(400, 20);
 
 A center-aligned text node at `(400, 20)` centers its glyphs horizontally around `x=400` in local space.
 
+`'justify'` is the fourth mode: it spreads the extra space of a line evenly across its inter-word gaps so every line reaches the width of the widest line. The last line and any line with a single word are left alone, so a justified block never stretches a trailing fragment.
+
 ## Text in the scene graph
 
-`Text` extends `Container`, so it carries position, rotation, scale, origin, and anchor. You can rotate text, tint the whole node, apply filters, and nest it inside other containers:
+As a `Drawable`, `Text` carries position, rotation, scale, origin, and anchor like any other scene node. You can rotate text, tint the whole node, apply filters, and add it to a container — but not add children to it:
 
 ```ts
 this.hud = new Container();
@@ -147,15 +167,32 @@ this.hud.addChild(this.scoreLabel);
 this.addChild(this.hud);
 ```
 
-The text node's internal mesh is a `Container` child. Assigning to `text.text` rebuilds the glyph mesh. This means:
-- Changing text every frame is fine — the mesh is rebuilt on demand, at most once per frame.
-- Mutating `style` fields (e.g. `text.style.fillColor = ...`) is also picked up automatically before the next draw — no manual rebuild needed.
+The glyph geometry is not a child node — it lives on the `Text` itself as per-atlas-page quad data the text renderer consumes. Two rebuild paths feed it:
+- Assigning `text.text` (or `text.layout`, or a whole new `text.style`) re-lays out immediately. Assigning the same string is a no-op, so changing the text every frame only costs a rebuild on the frames it actually changes.
+- Mutating `style` fields (e.g. `text.style.fillColor = ...`) only raises a dirty flag. Any number of mutations in one frame coalesce into at most one rebuild, applied automatically before the next draw — no manual call needed. `text.syncDirty()` forces it early, which is what you want before reading bounds right after a style change.
+
+The node's local bounds track the laid-out text, so an anchored label re-derives its origin whenever the string changes width — a centred score readout stays centred as it grows.
+
+## Measuring text
+
+`text.textBounds` reports the pixel dimensions of the laid-out block in local space as a [`TextSize`](/ExoJS/en/api/text-size/) (`{ width, height }`) — use it to size a panel around a label or to position something next to it:
+
+```ts
+this.label = new Text('Ready', { fontSize: 24 });
+
+this.backdrop = new Panel({
+    width: this.label.textBounds.width + 16,
+    height: this.label.textBounds.height + 8,
+});
+```
+
+Reading it right after a style mutation returns the pre-change size, because style changes are only applied on the next draw. Call `this.label.syncDirty()` first to force the pending rebuild.
 
 ## Text constraints
 
-- The glyph atlas is shared across all `Text` instances and has a fixed default size. Large sets of unique glyph/style combinations can exhaust atlas space.
+- One glyph atlas is shared per font variant (family, style, weight, colour mode, SDF radius), so nodes that differ only in size or colour reuse the same atlas — and nodes that differ in family or weight do not. The atlas grows by adding 1024×1024 pages as needed; large sets of unique glyph/size combinations cost VRAM rather than failing, but a single glyph larger than one page throws.
 - `Text` does not expose per-character styling. Use separate `Text` instances for mixed-style strings.
-- `Text` does not measure or report its pixel dimensions through the public API — the mesh bounds reflect the glyph quad size but measured width/height in pixels is not exposed as a public getter.
+- `Text` is a leaf drawable, not a container — it takes no children.
 - Loader-based `FontAsset` loading is the built-in path for custom fonts; any font family available to the browser's canvas text engine can be used once loaded.
 
 ## Examples

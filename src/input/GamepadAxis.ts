@@ -75,9 +75,11 @@ export interface GamepadAxisOptions {
    */
   threshold?: number;
   /**
-   * Skip the deadzone clamp. Used for aggregate signed channels
-   * (`LeftStickX`, `LeftStickY`, ...) that need to preserve the full
-   * [-1, +1] range and apply their own deadzone client-side.
+   * Use a symmetric (absolute-value) deadzone that preserves sign, instead of
+   * the one-sided `value > threshold` check used for unipolar 0..1 axes. Used
+   * for aggregate signed channels (`LeftStickX`, `LeftStickY`, ...) that need
+   * the full [-1, +1] range, with values on either side of zero passing once
+   * past `threshold`.
    * Default `false`.
    */
   bipolar?: boolean;
@@ -126,8 +128,9 @@ export class GamepadAxis {
    * (typically `Gamepad.axes[i]`, in -1..1).
    *
    * Pipeline: clamp to [-1, 1] → optional invert → optional normalize to
-   * [0, 1] → bipolar passthrough OR deadzone (returns 0 when the absolute
-   * value is at or below `threshold`).
+   * [0, 1] → deadzone. `bipolar` picks a symmetric, sign-preserving deadzone
+   * (returns 0 when the absolute value is at or below `threshold`); otherwise
+   * a one-sided check is used (returns 0 unless the value exceeds `threshold`).
    */
   public transformValue(value: number): number {
     let result = clamp(value, -1, 1);

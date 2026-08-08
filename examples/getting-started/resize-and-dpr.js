@@ -47,8 +47,8 @@ const app = new Application({
 document.body.style.margin = '0';
 // #region guide:resize
 // This example demonstrates manual resize handling: the canvas is resized to
-// fill the window on every `resize` event. (For a hands-off alternative, enable
-// the `autosize` canvas option instead.)
+// fill the window on every `resize` event. (For a hands-off alternative, set the
+// `sizingMode` canvas option to `'fill'` and let the engine track the parent.)
 window.addEventListener('resize', () => {
     app.resize(window.innerWidth, window.innerHeight);
 });

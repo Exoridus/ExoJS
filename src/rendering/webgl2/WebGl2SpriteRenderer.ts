@@ -36,12 +36,13 @@ import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './
  *
  * Neither the per-instance world transform nor the tint live in this buffer:
  * both are fetched in the vertex shader from the shared {@link TransformBuffer}
- * texture (`u_transforms`) keyed by `a_nodeIndex`, exactly like the mesh
- * renderer (transform = texels 0/1, tint = texel 2). The render-group upload
- * boundary already packs every draw command's transform AND tint into that
- * buffer at its stable `nodeIndex`, so the sprite reads both back instead of
- * duplicating a per-instance color stream. The vertex shader still expands one
- * instance into four corners on the GPU.
+ * state, keyed by `a_nodeIndex`, exactly like the mesh renderer — the
+ * transform (`u_transforms`, 2 texels/row) and the tint (`u_tintTexture`, its
+ * own rgba8 texel/row) are separate textures, both written at the
+ * render-group upload boundary at the draw command's stable `nodeIndex`, so
+ * the sprite reads both back instead of duplicating a per-instance color
+ * stream. The vertex shader still expands one instance into four corners on
+ * the GPU.
  *
  * # Default vs custom-material path
  *
@@ -594,7 +595,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     u32[offset + 5] = uMax | (vMax << 16);
 
     // textureSlot (u32) at word 6. The tint is NOT packed here: the vertex
-    // shader reads it from the shared transform slot's texel 2 (same value the
+    // shader reads it from the separate u_tintTexture (same value the
     // transform-buffer upload boundary wrote from this sprite's tint).
     u32[offset + 6] = slot;
 

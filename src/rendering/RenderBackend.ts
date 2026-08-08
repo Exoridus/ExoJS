@@ -81,8 +81,10 @@ export interface RenderBackend {
    * shape. Nested clips intersect (ref-incremented). Used internally by the
    * `Geometry` `clipShape` path on {@link RenderNode.clip}.
    *
-   * Composes freely with the scissor stack. Backends without stencil support
-   * (currently WebGPU) throw a clear error rather than rendering incorrectly.
+   * Composes freely with the scissor stack. Both backends implement this
+   * with matching pixel-level behavior — WebGL2 via a stencil renderbuffer,
+   * WebGPU via a shared `depth24plus-stencil8` attachment and stencil-enabled
+   * pipeline variants.
    */
   pushStencilClip(shape: Geometry, transform: Matrix): this;
 

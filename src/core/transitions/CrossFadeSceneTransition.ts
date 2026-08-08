@@ -74,7 +74,10 @@ class CrossFadeSession implements SceneTransitionSession {
   }
 
   public destroy(): void {
-    // No owned resources — pooled textures are Director-owned.
+    // Owns `_currentSprite`/`_snapshotSprite`, but they only reference
+    // pooled textures (Director-owned) and are never attached to a scene
+    // graph — dropping the session's own reference is enough for GC to
+    // reclaim them, no explicit Sprite.destroy() needed here.
   }
 
   /** Draw `texture` full-frame (no offset — a crossfade only blends opacity) via `sprite` at `alpha`. */

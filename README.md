@@ -44,7 +44,8 @@ A TypeScript-first 2D engine for games and interactive apps. Explicit scene grap
 **Scene & UI**
 
 - `Application`, `Scene`, `SceneDirector` — one active scene with `change`/`restore`/`preload`/`unload` navigation, `pause`/`resume`, and fade, slide, or cross-fade transitions (or your own `SceneTransition`)
-- `scene.ui` — screen-fixed widget layer with `Label`, `Panel`, `Button`, `ProgressBar`, `Stack`, anchoring, and a `FocusManager` with keyboard navigation
+- `scene.ui` — screen-fixed widget layer with `Label`, `Panel`, `Button`, `ProgressBar`, `Stack`, `ScrollContainer`, `Tooltip`, and anchoring
+- Keyboard focus through `app.interaction` — `focus`, `blur`, `focusNext`/`focusPrevious` Tab traversal, and scoped focus traps for modals
 
 **Physics** (`@codexo/exojs-physics`)
 

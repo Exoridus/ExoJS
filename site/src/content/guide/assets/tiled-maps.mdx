@@ -13,10 +13,11 @@ format (`.tmj`) through the normal [`Loader`](/ExoJS/en/api/loader/) pipeline â€
 map, resolving its tileset image references, and returning a `TiledMap` you can read for layer
 and tile data.
 
-> **Note:** `TiledMap` ships as an official ExoJS extension package, separate from the core.
-> Install `@codexo/exojs-tiled` alongside `@codexo/exojs`:
+> **Note:** `TiledMap` ships as an official ExoJS extension package, separate from the core. It is
+> built on `@codexo/exojs-tilemap`, and both that package and `@codexo/exojs` are peer
+> dependencies â€” install all three explicitly, on the same version:
 > ```sh
-> npm install @codexo/exojs @codexo/exojs-tiled
+> npm install @codexo/exojs @codexo/exojs-tilemap @codexo/exojs-tiled
 > ```
 
 <Callout type="pitfall" title="TiledMap is data, not something you can draw">

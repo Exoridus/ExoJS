@@ -1,6 +1,6 @@
 {
   "title": "AudioSpriteClip",
-  "description": "Named sub-region of an AudioBuffer used as an audio sprite sheet. `start` / `end` are seconds into the buffer; `loop` makes Sound.playSprite loop the sprite indefinitely.",
+  "description": "Named sub-region of an AudioBuffer used as an audio sprite sheet. `start` / `end` are seconds into the buffer; `loop` makes the clip loop indefinitely when played.",
   "symbol": "AudioSpriteClip",
   "kind": "interface",
   "subsystem": "audio",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Named sub-region of an AudioBuffer used as an audio sprite sheet. `start` / `end` are seconds into the buffer; `loop` makes Sound.playSprite loop the sprite indefinitely."
+        "Named sub-region of an AudioBuffer used as an audio sprite sheet. `start` / `end` are seconds into the buffer; `loop` makes the clip loop indefinitely when played."
       ],
       "importLine": "import { AudioSpriteClip } from '@codexo/exojs'",
       "sourceLink": null

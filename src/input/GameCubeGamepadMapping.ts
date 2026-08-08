@@ -6,9 +6,13 @@ import { GenericDualAnalogGamepadMapping } from './GenericDualAnalogGamepadMappi
  * USB adapter such as the official Nintendo adapter for Wii U / Switch).
  *
  * Inherits the full {@link GenericDualAnalogGamepadMapping} button and axis
- * layout. Note that the GameCube controller has no right-stick click, no
- * D-pad as discrete buttons on all adapters, and uses analog shoulders —
- * the exact channel availability depends on the adapter's HID report.
+ * layout unchanged; `family` is the only distinguishing factor from the
+ * generic mapping. The real GameCube controller's channel availability
+ * (e.g. right-stick click, D-pad as discrete buttons, digital vs. analog
+ * shoulders) differs by adapter and is not modeled here — treat
+ * {@link GenericDualAnalogGamepadMapping.hasChannel} results for this
+ * mapping as the generic dual-analog layout, not a verified
+ * GameCube-accurate one.
  */
 export class GameCubeGamepadMapping extends GenericDualAnalogGamepadMapping {
   public override readonly family = GamepadMappingFamily.GameCube;

@@ -1374,10 +1374,9 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * per-frame ticking is done by `Application.update()` (or manually in
    * tests). The input gate is held open for the session's whole lifetime.
    *
-   * KNOWN LIMITATION: a transitioned navigation run as part of the very first
-   * navigation inside `Application.start()` deadlocks — nothing drives the per-frame methods
-   * yet (the frame loop has not started). Do not exercise a transitioned
-   * navigation through `Application.start()`; drive `SceneDirector` directly.
+   * Safe to exercise as the very first navigation inside `Application.start()`:
+   * the frame loop goes live before the initial navigation runs, so a
+   * frame-driven session always has something to drive it.
    */
   private async _runTransitionedAction(commit: () => Promise<void>, context: SceneTransitionContext, transition: SceneTransition): Promise<void> {
     const requirements = transition.getRequirements(context);

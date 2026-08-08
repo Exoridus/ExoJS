@@ -298,7 +298,10 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
   }
 
   public destroy(): void {
-    // No resources of its own — pooled textures/input gate are Director-owned.
+    // Owns `_identitySprite`, but it only references pooled textures
+    // (Director-owned) and is never attached to a scene graph — dropping the
+    // session's own reference is enough for GC to reclaim it, no explicit
+    // Sprite.destroy() needed here.
   }
 }
 
