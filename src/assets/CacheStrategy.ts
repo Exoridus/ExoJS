@@ -1,3 +1,4 @@
+import type { AssetCacheError } from './AssetCacheError';
 import type { CacheStore } from './CacheStore';
 
 /** Minimal internal factory protocol consumed by cache policies. */
@@ -24,6 +25,21 @@ export interface CacheRequest {
   readonly factory: CacheRequestFactory;
   /** Type-specific options forwarded to `factory.create`. */
   readonly options?: unknown;
+  /**
+   * Diagnostic sink for cache failures the strategy degrades instead of
+   * propagating (a full quota, an unreadable store). Supplied by the caller
+   * that issued this request — `Loader` passes one that feeds its own
+   * `onCacheError` — so a degraded write is reported to whoever asked for the
+   * asset and to nobody else.
+   *
+   * Request-scoped rather than a signal on the strategy: strategies are
+   * stateless policy objects and may legitimately be shared between several
+   * loaders, which a per-instance subscription would cross-wire (and keep
+   * alive past the subscriber's own teardown).
+   *
+   * Absent when the caller wants no diagnostics — never assume it is set.
+   */
+  readonly reportCacheError?: (error: AssetCacheError) => void;
 }
 
 /**

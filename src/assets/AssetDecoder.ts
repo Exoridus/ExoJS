@@ -1,5 +1,6 @@
 import type { AssetHandler } from '#extensions/Extension';
 
+import type { AssetCacheError } from './AssetCacheError';
 import type { AssetFactory } from './AssetFactory';
 import type { AssetTypeRegistry } from './AssetTypeRegistry';
 import type { CacheStore } from './CacheStore';
@@ -47,6 +48,16 @@ export class AssetDecoder {
    */
   private _storeResource: ResourceStore = () => {
     throw new Error('AssetDecoder decoded a resource before its owner bound a resource store. Call _bindResourceStore() first.');
+  };
+
+  /**
+   * Per-request diagnostic sink handed to the cache strategy. One stable
+   * closure per decoder — a strategy shared between loaders reports each
+   * degraded failure only to the loader whose request caused it, and holds no
+   * reference to any loader between calls.
+   */
+  private readonly _reportCacheError = (error: AssetCacheError): void => {
+    this._loader.onCacheError.dispatch(error);
   };
 
   public constructor(loader: Loader, typeRegistry: AssetTypeRegistry, options: AssetDecoderOptions) {
@@ -124,7 +135,10 @@ export class AssetDecoder {
     // keeps handing the strategy the very `fetchOptions` object it always did.
     const requestOptions = signal === undefined ? this._fetchOptions : { ...this._fetchOptions, signal };
 
-    return this._cacheStrategy.resolve({ storageName, key: source, url, requestOptions, factory, options: undefined }, this._stores) as Promise<T>;
+    return this._cacheStrategy.resolve(
+      { storageName, key: source, url, requestOptions, factory, options: undefined, reportCacheError: this._reportCacheError },
+      this._stores,
+    ) as Promise<T>;
   }
 
   /**

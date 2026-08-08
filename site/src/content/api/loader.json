@@ -6,12 +6,12 @@
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 35,
+  "memberCount": 36,
   "counts": {
     "constructors": 1,
     "methods": 25,
     "properties": 2,
-    "events": 7
+    "events": 8
   },
   "sections": [
     {
@@ -1955,6 +1955,47 @@
       "id": "events",
       "title": "Events",
       "members": [
+        {
+          "name": "onCacheError",
+          "signature": "onCacheError: Signal<[error]>",
+          "signatureTokens": [
+            {
+              "text": "onCacheError",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "error",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires for cache failures the configured CacheStrategy degraded instead of propagating — most commonly a persistent store hitting its quota. Purely diagnostic: the affected load still succeeds from the network, so without a listener the only symptom is that caching quietly stopped working. Narrow on AssetCacheError.operation and read Error.cause for the originating DOMException (QuotaExceededError and friends). Reports only failures caused by *this* loader's own requests, even when its CacheStrategy instance is shared with other loaders — the strategy is handed a per-request sink rather than subscribing to one."
+        },
         {
           "name": "onError",
           "signature": "onError: Signal<[type, alias, error]>",
