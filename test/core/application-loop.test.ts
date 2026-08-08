@@ -513,5 +513,32 @@ describe('Application.update() — loop timing', () => {
 
       expect(fixedSpy).toHaveBeenCalledTimes(5);
     });
+
+    // Regression: the same Time instance is handed to every fixed step for
+    // the whole Application's lifetime (unlike frameDelta, which is
+    // re-set() every frame), so a mutation from user code used to corrupt
+    // the fixed step permanently, not just for the current frame.
+    test('the Time instance handed to onFixedFrame/scenes.fixedUpdate is frozen — mutating it throws instead of corrupting future fixed steps', () => {
+      const fixedSpy = vi.spyOn(app.scenes, 'fixedUpdate');
+      let receivedViaOnFixedFrame: Time | undefined;
+
+      app.onFixedFrame.add(step => {
+        receivedViaOnFixedFrame = step;
+      });
+
+      mockFrameElapsed(app, STEP_MS);
+      app.update();
+
+      const stepFromScenes = fixedSpy.mock.calls[0]?.[0];
+
+      expect(stepFromScenes).toBeDefined();
+      expect(receivedViaOnFixedFrame).toBe(stepFromScenes); // same shared instance, both routes
+      expect(Object.isFrozen(stepFromScenes)).toBe(true);
+      expect(() => stepFromScenes!.set(999)).toThrow(TypeError);
+      expect(() => receivedViaOnFixedFrame!.add(1)).toThrow(TypeError);
+
+      // The value itself is provably unchanged by the attempted mutations.
+      expect(stepFromScenes!.milliseconds).toBeCloseTo(STEP_MS, 4);
+    });
   });
 });

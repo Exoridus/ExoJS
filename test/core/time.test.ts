@@ -37,7 +37,7 @@ describe('Time canonical constants are frozen', () => {
   for (const [constantName, value, expectedMilliseconds] of constants) {
     describe(`Time.${constantName}`, () => {
       test.each(mutators)('%s throws instead of mutating the shared instance', (_mutatorName, run) => {
-        expect(() => run(value)).toThrow();
+        expect(() => run(value)).toThrow(TypeError);
 
         // The shared instance itself must be provably unchanged, not merely
         // that *a* throw happened somewhere unrelated.

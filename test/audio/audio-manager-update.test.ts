@@ -2,6 +2,7 @@ import { getAudioContext } from '#audio/audio-context';
 import { AudioManager } from '#audio/AudioManager';
 import { Sound } from '#audio/Sound';
 import type { SoundVoice } from '#audio/SoundVoice';
+import { Time } from '#core/Time';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -158,6 +159,10 @@ describe('AudioManager.update()', () => {
       restart: vi.fn(),
     };
     rawApp['_fixed'] = { advance: () => 0, alpha: 0 };
+    // Object.create() bypasses the constructor, so the real field
+    // initializer (`= new Time()`) never runs — stand in with a real Time so
+    // the frame path stays type-honest.
+    rawApp['_frameDelta'] = new Time();
     rawApp['_updateHandler'] = vi.fn();
     rawApp['_frameCount'] = 0;
     rawApp['onFrame'] = { dispatch: vi.fn() };

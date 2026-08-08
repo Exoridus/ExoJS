@@ -176,23 +176,31 @@ export class Time implements Cloneable {
   }
 
   /** Canonical zero duration. Frozen — mutating methods throw instead of corrupting the shared instance. */
-  public static readonly zero: Time = freeze(new Time(0));
+  public static readonly zero: Time = freezeTime(new Time(0));
   /** Canonical one-millisecond duration. Frozen — mutating methods throw instead of corrupting the shared instance. */
-  public static readonly oneMillisecond: Time = freeze(new Time(1));
+  public static readonly oneMillisecond: Time = freezeTime(new Time(1));
   /** Canonical one-second duration. Frozen — mutating methods throw instead of corrupting the shared instance. */
-  public static readonly oneSecond: Time = freeze(new Time(1, Time.seconds));
+  public static readonly oneSecond: Time = freezeTime(new Time(1, Time.seconds));
   /** Canonical one-minute duration. Frozen — mutating methods throw instead of corrupting the shared instance. */
-  public static readonly oneMinute: Time = freeze(new Time(1, Time.minutes));
+  public static readonly oneMinute: Time = freezeTime(new Time(1, Time.minutes));
   /** Canonical one-hour duration. Frozen — mutating methods throw instead of corrupting the shared instance. */
-  public static readonly oneHour: Time = freeze(new Time(1, Time.hours));
+  public static readonly oneHour: Time = freezeTime(new Time(1, Time.hours));
 }
 
 // `Object.freeze<T>` is typed to return `Readonly<T>`, and TypeScript's
 // mapped-type expansion of a class with a private field loses that field's
 // nominal brand — `Readonly<Time>` structurally stops satisfying `Time`
 // (TS2741), even though the underlying object is still a real `Time` at
-// runtime. The cast is safe: `freeze` never changes the value's shape, only
-// its writability.
-function freeze(value: Time): Time {
+// runtime. The cast is safe: `freezeTime` never changes the value's shape,
+// only its writability.
+//
+// Exported (rather than kept module-private) so other core modules that own
+// a shared, never-mutated `Time` scratch instance handed to user code — e.g.
+// `Application._fixedTime`, dispatched via `onFixedFrame` — can close the
+// same "shared mutable Time reachable by user code" hole this fixes for the
+// canonical constants above. Not part of the public package surface: it is
+// not re-exported from the `#core` barrel, only reachable via a direct
+// same-package import.
+export function freezeTime(value: Time): Time {
   return Object.freeze(value) as Time;
 }

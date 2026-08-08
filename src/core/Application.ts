@@ -49,7 +49,7 @@ import { Signal } from './Signal';
 import type { System } from './System';
 import { SystemOrder } from './SystemOrder';
 import { SystemRegistry } from './SystemRegistry';
-import { Time } from './Time';
+import { freezeTime, Time } from './Time';
 import { canvasSourceToDataUrl, isWebKitUserAgent } from './utils';
 
 export enum ApplicationStatus {
@@ -403,6 +403,14 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   private readonly _activeClock: Clock = new Clock();
   private readonly _frameClock: Clock = new Clock();
   private readonly _fixed: FixedTimestep;
+  // The fixed-step duration — a true constant for the Application's whole
+  // lifetime (set from `options.fixedTimeStep` in the constructor and never
+  // re-`set()` afterward, unlike `_frameDelta` below). It is handed to user
+  // code every fixed step via `systems._fixedUpdate`/`scenes.fixedUpdate`/
+  // `onFixedFrame.dispatch`, so — same bug class as the old `Time.temp` — a
+  // mutation from user code would corrupt every subsequent fixed step for
+  // the rest of the app's run, not just the current one. Frozen at
+  // construction (see `freezeTime`) so that throws instead.
   private readonly _fixedTime: Time;
   // Scratch instance for the per-frame variable-step delta — mutated in
   // place every frame instead of allocating a Time. Owned by the frame loop
@@ -554,7 +562,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     const fixedStepMs = this.options.fixedTimeStep !== undefined ? this.options.fixedTimeStep * 1000 : defaultFixedStepMs;
 
     this._fixed = new FixedTimestep(fixedStepMs, maxFixedSteps);
-    this._fixedTime = new Time(fixedStepMs);
+    this._fixedTime = freezeTime(new Time(fixedStepMs));
 
     this._startupClock.start();
 
