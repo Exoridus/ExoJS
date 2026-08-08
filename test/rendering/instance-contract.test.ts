@@ -24,7 +24,7 @@ describe('instanced-batch shader contract', () => {
     // change would fix mesh.vert (its pixel tests go red) while the exported
     // constant silently kept fetching the old texel count.
     const expectedTexels = TRANSFORM_FLOATS_PER_ROW / floatsPerTexel;
-    const fetched = [...INSTANCE_TRANSFORM_GLSL.matchAll(/texelFetch\(u_transforms, ivec2\((\d+), row\), 0\)/g)].map((match) => Number(match[1]));
+    const fetched = [...INSTANCE_TRANSFORM_GLSL.matchAll(/texelFetch\(u_transforms, ivec2\((\d+), row\), 0\)/g)].map(match => Number(match[1]));
 
     expect(fetched).toEqual(Array.from({ length: expectedTexels }, (_, i) => i));
   });

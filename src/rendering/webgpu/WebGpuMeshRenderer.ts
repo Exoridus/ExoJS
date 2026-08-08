@@ -228,7 +228,7 @@ function instanceAttributeBufferLayout(instances: InstanceDataView): GPUVertexBu
   return {
     arrayStride: instances.strideFloats * Float32Array.BYTES_PER_ELEMENT,
     stepMode: 'instance',
-    attributes: instances.attributes.map((binding) => ({
+    attributes: instances.attributes.map(binding => ({
       shaderLocation: binding.location,
       offset: binding.offsetFloats * Float32Array.BYTES_PER_ELEMENT,
       format: instanceVertexFormats[binding.componentCount - 1]!,

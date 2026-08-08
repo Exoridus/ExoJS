@@ -986,16 +986,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
           throw new Error(`RenderBatch instance attribute '${binding.name}' is not present in the material's linked shader.`);
         }
 
-        vao.addAttribute(
-          instanceBuffer,
-          attribute,
-          gl.FLOAT,
-          false,
-          strideBytes,
-          binding.offsetFloats * Float32Array.BYTES_PER_ELEMENT,
-          false,
-          1,
-        );
+        vao.addAttribute(instanceBuffer, attribute, gl.FLOAT, false, strideBytes, binding.offsetFloats * Float32Array.BYTES_PER_ELEMENT, false, 1);
       }
     }
 

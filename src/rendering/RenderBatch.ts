@@ -112,7 +112,12 @@ export class RenderBatch {
   private _instanceData: Float32Array;
   // Mutable mirror of _instanceData handed to the backend; `data` is re-pointed
   // when the storage grows so the getter never allocates.
-  private readonly _instanceViewCache: { data: Float32Array; readonly strideFloats: number; readonly attributes: readonly InstanceAttributeBinding[]; readonly layoutKey: string } | null;
+  private readonly _instanceViewCache: {
+    data: Float32Array;
+    readonly strideFloats: number;
+    readonly attributes: readonly InstanceAttributeBinding[];
+    readonly layoutKey: string;
+  } | null;
 
   public constructor(geometry: Geometry, material: MeshMaterial | null = null, options: RenderBatchOptions = {}) {
     // Defensive guard for JS callers; MeshMaterial's `target` is the literal
@@ -161,7 +166,7 @@ export class RenderBatch {
             data: this._instanceData,
             strideFloats: offsetFloats,
             attributes: bindings,
-            layoutKey: bindings.map((binding) => `${binding.name}:${binding.componentCount}`).join(','),
+            layoutKey: bindings.map(binding => `${binding.name}:${binding.componentCount}`).join(','),
           };
   }
 

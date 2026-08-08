@@ -91,7 +91,7 @@ describe('RenderBatch', () => {
     geometry.destroy();
   });
 
-  test.each(['static', 'dynamic', 'stream'] as const)('accepts %s geometry', (usage) => {
+  test.each(['static', 'dynamic', 'stream'] as const)('accepts %s geometry', usage => {
     const geometry = triangleGeometry(usage);
     const batch = new RenderBatch(geometry);
 
