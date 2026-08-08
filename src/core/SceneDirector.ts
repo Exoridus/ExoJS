@@ -157,7 +157,30 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   private _sessionAction: (() => Promise<void>) | null = null;
   private _sessionSettle: ((outcome: SceneTransitionOutcome) => void) | null = null;
   private _sessionCommitStarted = false;
+  /**
+   * The teardown the CURRENT navigation must await before its own promise
+   * resolves — one navigation's view, deliberately overwritten by the next
+   * one. Never the answer to "is any scene still tearing down?"; that is
+   * `_pendingTeardowns` below.
+   */
   private _pendingOutgoingTeardown: Promise<void> | null = null;
+  /**
+   * EVERY scene teardown this Director has started that has not settled yet —
+   * `change()`/`restore()`'s outgoing scope, `_clearScene()`'s discard, and
+   * `_stopAndClearActiveScene()`'s. Entries remove themselves as they settle.
+   *
+   * Separate from `_pendingOutgoingTeardown` because the two answer different
+   * questions, and conflating them is a bug: a navigation that commits while
+   * an earlier teardown is still running overwrites the single handle (with
+   * `Promise.resolve()` when it has no outgoing scope of its own), which
+   * would leave {@link SceneDirector._dispose} — and therefore
+   * `Application.destroy()` — no longer waiting for a `Scene.unload()` that
+   * is still running against the very managers it is about to destroy.
+   * Folding into the single handle instead would fix that at the cost of
+   * making an ordinary `change()` wait on an unrelated, possibly
+   * never-settling teardown, so the two are tracked apart.
+   */
+  private readonly _pendingTeardowns = new Set<Promise<void>>();
   private _sessionResources: TransitionResources | null = null;
   private _inputGateDepth = 0;
   private _navigationInFlight = false;
@@ -390,7 +413,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
         // while the session keeps playing, and the navigation awaits it last
         // via `_awaitPendingOutgoingTeardown`.
         this._navigation.dispatchStopScene(pendingStopScene);
-        this._pendingOutgoingTeardown = this._navigation.beginOutgoingTeardown(pendingStopScene);
+        this._pendingOutgoingTeardown = this._trackTeardown(this._navigation.beginOutgoingTeardown(pendingStopScene));
       };
 
       const resolvedTransition = resolveSceneTransitionSelection('change', options.transition, this._registry.defaultTransitions.get(resolvedTarget));
@@ -472,7 +495,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
         // Outgoing teardown backgrounds (same contract as change()/restore());
         // awaited last via `_awaitPendingOutgoingTeardown`.
-        this._pendingOutgoingTeardown = previousScope !== null ? this._disposeScene(previousScope) : null;
+        this._pendingOutgoingTeardown = previousScope !== null ? this._trackTeardown(this._disposeScene(previousScope)) : null;
 
         return Promise.resolve();
       };
@@ -521,16 +544,13 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * the bumped generation (and, for a session-driven commit, the cleared
    * session) when it resumes and bails without touching `_activeScope`.
    *
-   * The disposal is published into `_pendingOutgoingTeardown` for its whole
-   * duration — the same handle `change()`/`restore()`/`_clearScene()` use, and
-   * the one {@link SceneDirector._dispose} awaits before it lets any other
+   * The disposal is registered in `_pendingTeardowns`, so
+   * {@link SceneDirector._dispose} waits for it before letting any other
    * manager be torn down. Callers of this operation are typically
    * fire-and-forget ({@link Application.stop} does not await it), so without
-   * that publication a `destroy()` following close behind a `stop()` would
+   * that registration a `destroy()` following close behind a `stop()` would
    * start destroying the loader, rendering context, audio manager and backend
-   * while the scene's own async `unload()` was still running against them. Any
-   * teardown a committed navigation already left pending is folded in rather
-   * than overwritten.
+   * while the scene's own async `unload()` was still running against them.
    *
    * No-op on the scene side when no scene is active. Failure semantics stay
    * honest: the "someone else is navigating" rejection is gone, but a scene's
@@ -550,25 +570,10 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
     this.onChangeScene.dispatchIsolated(error => this._reportLifecycleError(error), null);
 
-    // A navigation that committed but never got to await its own outgoing
-    // teardown (this operation interrupts exactly such navigations) may have
-    // left one in flight — combined rather than clobbered, so `_dispose()`
-    // still waits for both.
-    const alreadyPending = this._pendingOutgoingTeardown;
-    const disposal = this._disposeScene(previousScope);
-    const teardown = alreadyPending === null ? disposal : Promise.all([alreadyPending, disposal]).then((): void => {});
-
-    this._pendingOutgoingTeardown = teardown;
-
-    try {
-      await teardown;
-    } finally {
-      // Cleared only if still ours — a navigation that started a fresh
-      // teardown meanwhile owns the handle now.
-      if (this._pendingOutgoingTeardown === teardown) {
-        this._pendingOutgoingTeardown = null;
-      }
-    }
+    // `_pendingOutgoingTeardown` is deliberately NOT touched: it belongs to
+    // whatever navigation this stop just interrupted, and that navigation's
+    // own teardown is already tracked in its own right.
+    await this._trackTeardown(this._disposeScene(previousScope));
   }
 
   /**
@@ -641,7 +646,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
           this.onChangeScene.dispatchIsolated(error => this._reportLifecycleError(error), retainedScope.scene as Scene);
 
           this._navigation.dispatchStopScene(pendingStopScene);
-          this._pendingOutgoingTeardown = this._navigation.beginOutgoingTeardown(pendingStopScene);
+          this._pendingOutgoingTeardown = this._trackTeardown(this._navigation.beginOutgoingTeardown(pendingStopScene));
 
           return Promise.resolve();
         };
@@ -1112,20 +1117,13 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
     // A prior committed switch's outgoing scope may still be tearing down in
     // the background, and so may the scene a fire-and-forget
-    // `Application.stop()` just cleared — `change()`/`restore()`/
-    // `_clearScene()`/`_stopAndClearActiveScene()` all publish that teardown
-    // into this same handle. Wait for it before touching any other manager, or
-    // `destroy()`'s documented guarantee ("scenes fully disposed first,
-    // including any scene's own async unload()") is false whenever destroy()
-    // follows close behind a switch or a `stop()`.
-    try {
-      await this._awaitPendingOutgoingTeardown();
-    } catch (error) {
-      logger.error('SceneDirector.destroy() failed to await a pending outgoing scene teardown.', {
-        source: 'SceneDirector',
-        ...(error instanceof Error && { error }),
-      });
-    }
+    // `Application.stop()` just cleared. EVERY one of them is waited for here
+    // — via `_pendingTeardowns`, not the single-navigation
+    // `_pendingOutgoingTeardown` handle, which the next navigation to commit
+    // overwrites. Without that, `destroy()`'s documented guarantee ("scenes
+    // fully disposed first, including any scene's own async unload()") is
+    // false whenever destroy() follows a switch or a `stop()`.
+    await this._awaitPendingTeardowns();
 
     const activeScope = this._activeScope;
 
@@ -1424,6 +1422,57 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
     if (pending !== null) {
       await pending;
+    }
+  }
+
+  /**
+   * Register a scene teardown as in flight for as long as it takes to settle,
+   * so {@link SceneDirector._dispose} can wait for ALL of them regardless of
+   * which navigation (or stop) started them, and returns it unchanged for the
+   * caller to await or publish as it sees fit.
+   *
+   * The `catch` is attached to a DERIVED promise, not to `teardown` itself:
+   * it marks the rejection handled — a teardown whose owner never gets to
+   * await it (a navigation aborted before `_awaitPendingOutgoingTeardown`)
+   * must not surface as an unhandled rejection — while leaving `teardown`
+   * itself free to reject for whoever does await it.
+   */
+  private _trackTeardown(teardown: Promise<void>): Promise<void> {
+    this._pendingTeardowns.add(teardown);
+
+    void teardown
+      .catch(() => {})
+      .finally(() => {
+        this._pendingTeardowns.delete(teardown);
+      });
+
+    return teardown;
+  }
+
+  /**
+   * Wait for every scene teardown still in flight, including any started
+   * while waiting. Never rejects: each failure is logged individually, so one
+   * failing teardown can neither cut the wait short for the others nor hide
+   * their errors behind the first rejection.
+   */
+  private async _awaitPendingTeardowns(): Promise<void> {
+    // The per-navigation view onto one of these; cleared so a later
+    // `_awaitPendingOutgoingTeardown()` does not wait on it a second time.
+    this._pendingOutgoingTeardown = null;
+
+    while (this._pendingTeardowns.size > 0) {
+      const inFlight = [...this._pendingTeardowns];
+
+      this._pendingTeardowns.clear();
+
+      for (const result of await Promise.allSettled(inFlight)) {
+        if (result.status === 'rejected') {
+          logger.error('SceneDirector teardown: a pending scene teardown failed.', {
+            source: 'SceneDirector',
+            ...(result.reason instanceof Error && { error: result.reason }),
+          });
+        }
+      }
     }
   }
 

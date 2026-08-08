@@ -250,6 +250,43 @@ describe('Application.stop() unloads the active scene regardless of an in-flight
     expect(backendDestroy).toHaveBeenCalledTimes(1);
   });
 
+  test('a navigation landing between stop() and destroy() does not cancel the wait for the stopped scene unload()', async () => {
+    let releaseUnload: (() => void) | null = null;
+
+    class SlowUnloadScene extends Scene {
+      public override unload(): Promise<void> {
+        return new Promise<void>(resolve => {
+          releaseUnload = resolve;
+        });
+      }
+    }
+    class OtherScene extends Scene {}
+
+    const app = new Application({ backend: { type: 'webgl2' }, scenes: { slow: SlowUnloadScene, other: OtherScene } });
+
+    await app.start(SlowUnloadScene);
+
+    const backendDestroy = vi.spyOn(app.backend, 'destroy');
+
+    app.stop();
+
+    // The intervening navigation has no outgoing scope of its own, so its
+    // commit publishes an already-resolved teardown handle. That must not
+    // become the thing destroy() waits on.
+    await app.scenes.change(OtherScene);
+
+    app.destroy();
+    await settle();
+
+    expect(releaseUnload).not.toBeNull();
+    expect(backendDestroy).not.toHaveBeenCalled();
+
+    releaseUnload!();
+    await settle();
+
+    expect(backendDestroy).toHaveBeenCalledTimes(1);
+  });
+
   test('stop() during a transitioned, committed navigation unloads the freshly committed scene', async () => {
     class TitleScene extends Scene {}
     class GameScene extends Scene {}
