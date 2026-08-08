@@ -6,10 +6,10 @@
   "subsystem": "tilemap",
   "importPath": "@codexo/exojs-tilemap",
   "tier": "stable",
-  "memberCount": 10,
+  "memberCount": 11,
   "counts": {
     "constructors": 0,
-    "methods": 8,
+    "methods": 9,
     "properties": 2,
     "events": 0
   },
@@ -120,6 +120,74 @@
           ],
           "returnType": "void",
           "description": "Apply Wang autotiling to layer using wangSet. Iterates every cell in the layer. For each cell that belongs to the Wang group, computes a neighbor bitmask and looks up the correct local tile ID from WangSet.blobMap. The layer is mutated in place; cells whose computed bitmask has no mapping in the blobMap are left unchanged. The function performs two passes (snapshot then write) so neighbor tests always reflect the pre-call state regardless of processing order. **Group membership.** With no matchFn, a cell belongs to the group when its tilesetIndex matches WangSet.tilesetIndex and its localTileId is a member of the set. Membership covers every variant the set can produce, so re-running autoTile (or refreshCell) on already-autotiled data is stable. Paint with a tile ID that is a member (a blobMap value, or one listed in WangSetOptions.members). **Blob mode bitmask (bit positions):**  1 | 2 | 4 8 | -- | 16 32 | 64 | 128  Diagonal bits (1, 4, 32, 128) are only set when both adjacent cardinals are also set (the \"corner dependency\" rule that reduces 256 raw combinations to 47 valid blob states). **Edge mode bitmask (bit positions):** Top=1, Right=2, Bottom=4, Left=8."
+        },
+        {
+          "name": "buildTileCollisionGeometry",
+          "signature": "buildTileCollisionGeometry(layer: TileLayer, options: TileCollisionOptions): TileCollisionGeometry",
+          "signatureTokens": [
+            {
+              "text": "buildTileCollisionGeometry",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "layer",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileLayer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileCollisionOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileCollisionGeometry",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "layer",
+              "type": "TileLayer",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "TileCollisionOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "TileCollisionGeometry",
+          "description": "Extract collision geometry from a tile layer's per-tile import('./types').TileDefinition.collision shapes. Every placed tile in region is resolved back to its tileset definition, and each collision shape is transformed from tile-local pixel space into layer pixel space (+Y down) — applying the tile's flip/rotation transform, the tileset draw offset, and the layer's pixel offset, so the geometry lands exactly where the tile is drawn. Shapes that end up covering exactly one whole tile cell are collected into an occupancy grid and merged into as few TileCollisionRects as a greedy pass manages — a 200×200 solid region becomes one rectangle instead of 40 000. Cells only merge with neighbours whose source object carries the same type string, so a water run never fuses into an adjacent solid run. Everything else (partial boxes, ellipses, polygons, polylines, points, rotated geometry) passes through individually as a TileCollisionShape. This package has no physics dependency and builds no bodies: the result is plain geometry. Turning it into colliders is a short loop in application code."
         },
         {
           "name": "createSampledChunkSource",
