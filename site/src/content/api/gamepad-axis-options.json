@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Skip the deadzone clamp. Used for aggregate signed channels (LeftStickX, LeftStickY, ...) that need to preserve the full [-1, +1] range and apply their own deadzone client-side. Default false."
+          "description": "Use a symmetric (absolute-value) deadzone that preserves sign, instead of the one-sided value > threshold check used for unipolar 0..1 axes. Used for aggregate signed channels (LeftStickX, LeftStickY, ...) that need the full [-1, +1] range, with values on either side of zero passing once past threshold. Default false."
         },
         {
           "name": "invert",

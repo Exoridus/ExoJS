@@ -1,6 +1,6 @@
 {
   "title": "GameCubeGamepadMapping",
-  "description": "Mapping for Nintendo GameCube controllers (typically connected via a USB adapter such as the official Nintendo adapter for Wii U / Switch). Inherits the full GenericDualAnalogGamepadMapping button and axis layout. Note that the GameCube controller has no right-stick click, no D-pad as discrete buttons on all adapters, and uses analog shoulders — the exact channel availability depends on the adapter's HID report.",
+  "description": "Mapping for Nintendo GameCube controllers (typically connected via a USB adapter such as the official Nintendo adapter for Wii U / Switch). Inherits the full GenericDualAnalogGamepadMapping button and axis layout unchanged; `family` is the only distinguishing factor from the generic mapping. The real GameCube controller's channel availability (e.g. right-stick click, D-pad as discrete buttons, digital vs. analog shoulders) differs by adapter and is not modeled here — treat GenericDualAnalogGamepadMapping.hasChannel results for this mapping as the generic dual-analog layout, not a verified GameCube-accurate one.",
   "symbol": "GameCubeGamepadMapping",
   "kind": "class",
   "subsystem": "input",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Mapping for Nintendo GameCube controllers (typically connected via a USB adapter such as the official Nintendo adapter for Wii U / Switch).",
-        "Inherits the full GenericDualAnalogGamepadMapping button and axis layout. Note that the GameCube controller has no right-stick click, no D-pad as discrete buttons on all adapters, and uses analog shoulders — the exact channel availability depends on the adapter's HID report."
+        "Inherits the full GenericDualAnalogGamepadMapping button and axis layout unchanged; `family` is the only distinguishing factor from the generic mapping. The real GameCube controller's channel availability (e.g. right-stick click, D-pad as discrete buttons, digital vs. analog shoulders) differs by adapter and is not modeled here — treat GenericDualAnalogGamepadMapping.hasChannel results for this mapping as the generic dual-analog layout, not a verified GameCube-accurate one."
       ],
       "importLine": "import { GameCubeGamepadMapping } from '@codexo/exojs'",
       "sourceLink": null

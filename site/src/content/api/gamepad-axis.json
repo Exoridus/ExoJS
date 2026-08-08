@@ -182,7 +182,7 @@
             }
           ],
           "returnType": "number",
-          "description": "Apply the axis transform pipeline to a raw browser axis value (typically Gamepad.axes[i], in -1..1). Pipeline: clamp to [-1, 1] → optional invert → optional normalize to [0, 1] → bipolar passthrough OR deadzone (returns 0 when the absolute value is at or below threshold)."
+          "description": "Apply the axis transform pipeline to a raw browser axis value (typically Gamepad.axes[i], in -1..1). Pipeline: clamp to [-1, 1] → optional invert → optional normalize to [0, 1] → deadzone. bipolar picks a symmetric, sign-preserving deadzone (returns 0 when the absolute value is at or below threshold); otherwise a one-sided check is used (returns 0 unless the value exceeds threshold)."
         }
       ],
       "paragraphs": [],

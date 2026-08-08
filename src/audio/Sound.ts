@@ -39,8 +39,8 @@ interface NormalizedAudioSpriteClip {
 
 /**
  * Named sub-region of an {@link AudioBuffer} used as an audio sprite sheet.
- * `start` / `end` are seconds into the buffer; `loop` makes
- * {@link Sound.playSprite} loop the sprite indefinitely.
+ * `start` / `end` are seconds into the buffer; `loop` makes the clip loop
+ * indefinitely when played.
  */
 export interface AudioSpriteClip {
   start: number;
@@ -64,7 +64,7 @@ export interface SoundOptions {
   muted?: boolean;
 }
 
-/** Per-call overrides for {@link Sound.play} and {@link Sound.playSprite}. */
+/** Per-call overrides for {@link AudioManager.play}. */
 export interface SoundPlayOptions extends PlayOptions {
   /**
    * When `true`, all currently-playing instances of this sound are stopped
@@ -419,12 +419,12 @@ export class Sound implements Playable {
    */
   private _notLoadedVoice(bus: AudioBus): Voice | null {
     if (this._loadState.value === 'failed') {
-      logger.warn('Sound.play() called on a sound that failed to load; playing silence.', { source: 'Sound' });
+      logger.warn('AudioManager.play() called on a sound that failed to load; playing silence.', { source: 'Sound' });
       return new NoopVoice(bus);
     }
 
     if (this._audioBuffer === null || this._loadState.value === 'loading') {
-      logger.warn('Sound.play() called on a sound that is not yet loaded; playing silence. Await sound.loaded or use loader.load().', { source: 'Sound' });
+      logger.warn('AudioManager.play() called on a sound that is not yet loaded; playing silence. Await sound.loaded or use loader.load().', { source: 'Sound' });
       return new NoopVoice(bus);
     }
 
