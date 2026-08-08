@@ -4,12 +4,33 @@ import { vi } from 'vitest';
 // each test file's `vi.mock('@codexo/exojs', …)` factory via
 // `configureApplicationStatus(actual.ApplicationStatus)` so the mock never
 // hard-codes the enum's numeric members (and can't drift from the real engine).
-const status = { stopped: 4, running: 2 };
+const status = { stopped: 4, running: 2, loading: 1 };
 
 /** Inject the real enum values so the mock's status matches what the hooks compare against. */
-export function configureApplicationStatus(applicationStatus: { Stopped: number; Running: number }): void {
+export function configureApplicationStatus(applicationStatus: { Stopped: number; Running: number; Loading: number }): void {
   status.stopped = applicationStatus.Stopped;
   status.running = applicationStatus.Running;
+  status.loading = applicationStatus.Loading;
+}
+
+/**
+ * Stand-in for the engine's `ConcurrentSceneNavigationError`, used until a test
+ * file injects the real class via {@link configureConcurrentNavigationError}.
+ * It cannot be imported at module scope here for the same reason `MockSignal`
+ * exists (see below).
+ */
+class MockConcurrentSceneNavigationError extends Error {
+  public constructor() {
+    super('A Scene switch or transition is already in progress.');
+    this.name = 'ConcurrentSceneNavigationError';
+  }
+}
+
+let concurrentNavigationError: new () => Error = MockConcurrentSceneNavigationError;
+
+/** Inject the real error class so tests can assert on its identity, not just its name. */
+export function configureConcurrentNavigationError(errorClass: new () => Error): void {
+  concurrentNavigationError = errorClass;
 }
 
 interface MockSceneDirector {
@@ -102,6 +123,21 @@ export class MockApplication {
     this.destroyed = true;
   });
 
+  /** Every scene instance activated through `start()`/`scenes.change()`, in activation order. */
+  public readonly activations: unknown[] = [];
+
+  /**
+   * True while `start()`'s initial navigation is running. The real
+   * SceneDirector never queues navigation: an overlapping `change()` rejects
+   * with `ConcurrentSceneNavigationError` — including against the navigation
+   * `Application.start()` performs internally, which is the window a React
+   * StrictMode double-mount lands in.
+   */
+  private _navigationInFlight = false;
+
+  /** The in-flight `start()` run, mirroring `Application._startPromise`. */
+  private _startPromise: Promise<MockApplication> | null = null;
+
   public readonly scenes: MockSceneDirector = {
     currentScene: null,
     // The real SceneDirector.change() takes a constructor and constructs a
@@ -110,17 +146,56 @@ export class MockApplication {
     // exposes, while `change.mock.calls` still records the raw constructor
     // argument tests assert against.
     change: vi.fn(async (SceneClass: new () => unknown): Promise<MockSceneDirector> => {
-      this.scenes.currentScene = new SceneClass();
+      if (this._navigationInFlight) {
+        throw new concurrentNavigationError();
+      }
+
+      this._activate(SceneClass);
+
       return this.scenes;
     }),
   };
 
   public readonly start = vi.fn(async (SceneClass?: new () => unknown): Promise<MockApplication> => {
-    this.status = status.running;
-    if (SceneClass !== undefined) {
-      this.scenes.currentScene = new SceneClass();
+    // Mirrors the real Application.start(): a call made while an earlier one is
+    // still in flight joins it (and ignores its own target) instead of
+    // returning a resolved promise mid-startup; a call on an already-running
+    // application is a no-op.
+    if (this._startPromise !== null) {
+      return this._startPromise;
     }
-    return this;
+
+    if (this.status !== status.stopped) {
+      return this;
+    }
+
+    // `Loading` is entered synchronously, before the first await, so a caller
+    // in the same tick observes a startup that is genuinely still running.
+    this.status = status.loading;
+    this._navigationInFlight = SceneClass !== undefined;
+
+    const startPromise = (async (): Promise<MockApplication> => {
+      try {
+        // Stands in for backend init / capability detection — the async window
+        // during which the initial navigation has not completed yet.
+        await Promise.resolve();
+
+        if (SceneClass !== undefined) {
+          this._activate(SceneClass);
+        }
+
+        this.status = status.running;
+
+        return this;
+      } finally {
+        this._navigationInFlight = false;
+        this._startPromise = null;
+      }
+    })();
+
+    this._startPromise = startPromise;
+
+    return startPromise;
   });
 
   public constructor(options: MockApplicationOptions = {}) {
@@ -130,6 +205,14 @@ export class MockApplication {
     // captures the later live-sync writes the hook performs.
     this._sizingMode = options.canvas?.sizingMode ?? 'fixed';
     MockApplication.instances.push(this);
+  }
+
+  /** Construct and install a scene instance, recording the activation. */
+  private _activate(SceneClass: new () => unknown): void {
+    const scene = new SceneClass();
+
+    this.scenes.currentScene = scene;
+    this.activations.push(scene);
   }
 
   public get sizingMode(): string {

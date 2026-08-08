@@ -6,7 +6,7 @@ import type { MockInstance } from 'vitest';
  * WebGL2/WebGPU backends are mocked (kept out of jsdom) — SceneDirector,
  * the scene registry, and scene activation all run for real.
  */
-import { Application } from '#core/Application';
+import { Application, ApplicationStatus } from '#core/Application';
 import { Scene } from '#core/Scene';
 
 // ---------------------------------------------------------------------------
@@ -127,6 +127,58 @@ describe('Application.start() — scene-less and constructor overloads', () => {
     await expect(app.start(FailingLoadScene)).rejects.toThrow('load failed');
 
     expect((app as unknown as { _frameLoopActive: boolean })._frameLoopActive).toBe(false);
+
+    app.destroy();
+  });
+
+  test('a second start() while startup is in flight joins it instead of resolving early', async () => {
+    class ConcurrentStartScene extends Scene {}
+    const app = new Application({ backend: { type: 'webgl2' }, scenes: { concurrent: ConcurrentStartScene } });
+
+    const first = app.start(ConcurrentStartScene);
+
+    // start() flips to Loading synchronously, before its first await — so the
+    // second caller below observes a startup that is genuinely still running.
+    expect(app.status).toBe(ApplicationStatus.Loading);
+
+    const second = app.start(ConcurrentStartScene);
+
+    await expect(second).resolves.toBe(app);
+
+    // Awaiting the second call must mean startup is done — not merely that the
+    // call returned early while the first one is still mid-navigation.
+    expect(app.status).toBe(ApplicationStatus.Running);
+    expect(app.scenes.currentScene).toBeInstanceOf(ConcurrentStartScene);
+
+    await first;
+    app.destroy();
+  });
+
+  test('a concurrent start() rejects with the in-flight startup failure and leaves the app restartable', async () => {
+    let failNextLoad = true;
+
+    class FlakyStartScene extends Scene {
+      public override load(): void {
+        if (failNextLoad) {
+          failNextLoad = false;
+          throw new Error('load failed');
+        }
+      }
+    }
+
+    const app = new Application({ backend: { type: 'webgl2' }, scenes: { flaky: FlakyStartScene } });
+
+    const first = app.start(FlakyStartScene);
+    const second = app.start(FlakyStartScene);
+
+    await expect(first).rejects.toThrow('load failed');
+    await expect(second).rejects.toThrow('load failed');
+
+    expect(app.status).toBe(ApplicationStatus.Stopped);
+
+    // The failed attempt must not leave a stale in-flight promise behind.
+    await expect(app.start(FlakyStartScene)).resolves.toBe(app);
+    expect(app.scenes.currentScene).toBeInstanceOf(FlakyStartScene);
 
     app.destroy();
   });

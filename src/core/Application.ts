@@ -400,6 +400,13 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   private _frameAlpha = 0;
 
   private _status: ApplicationStatus = ApplicationStatus.Stopped;
+  /**
+   * The startup run that is currently in flight, or `null` while none is.
+   * Held so a second {@link Application.start} call made during the `Loading`
+   * window can await the same run instead of returning a resolved promise
+   * while startup — including its initial scene navigation — is still going.
+   */
+  private _startPromise: Promise<this> | null = null;
   private _frameLoopActive = false;
   private _destroyed = false;
   private _pixelRatio: number = defaultCanvasSettings.pixelRatio;
@@ -772,66 +779,96 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    */
   public async start<K extends RegistryKeyOf<Registry>>(target: K, ...args: ChangeSceneArgs<InferSceneData<Registry[K]>>): Promise<this>;
   public async start<C extends NavigableSceneConstructor<Registry>>(target: C, ...args: ChangeSceneArgs<InferSceneData<C>>): Promise<this>;
+  /**
+   * Concurrency: a call made while an earlier `start()` is still in flight
+   * (status `Loading`) joins that run — it resolves when startup actually
+   * completes, or rejects with its failure, and its own `target`/`args` are
+   * ignored rather than driving a second, overlapping scene navigation
+   * ({@link SceneDirector.change} rejects on overlapping navigation). Check
+   * {@link SceneDirector.currentScene} after such a call if the second
+   * caller's target may differ from the one already starting.
+   */
   public async start(target?: AnySceneConstructor | string, ...args: readonly unknown[]): Promise<this> {
     invariant(!this._destroyed, 'Application.start() was called after destroy(). Construct a new Application instead of reusing a destroyed one.');
 
-    if (this._status === ApplicationStatus.Stopped) {
-      this._status = ApplicationStatus.Loading;
+    if (this._startPromise !== null) {
+      return this._startPromise;
+    }
 
-      // Kick off capability detection in parallel with renderer init — both
-      // are mostly-async startup work, no point serializing them.
-      const capabilitiesPromise = Capabilities.ready;
+    if (this._status !== ApplicationStatus.Stopped) {
+      return this;
+    }
 
-      try {
-        await this.initializeBackend();
+    this._status = ApplicationStatus.Loading;
 
-        if (this.options.hello) {
-          hello({ backend: this._backendType });
-        }
+    // Published before the first await so a `start()` call made from the same
+    // synchronous tick — or any point in the `Loading` window — finds it. The
+    // reset runs in the chained `finally`, i.e. once the run has fully settled
+    // (success or failure), leaving a failed application restartable.
+    const startPromise = this._runStartup(target, args).finally(() => {
+      this._startPromise = null;
+    });
 
-        // The frame loop must be live BEFORE the initial navigation runs —
-        // a frame-driven SceneTransitionSession needs update()/render()
-        // calls to progress, and update()'s gate no longer waits for
-        // `_status === Running`. Started as early as
-        // possible (ahead of the capabilities await, not just the scene
-        // nav) so nothing downstream can observe the loop live and
-        // `_status` already `Running` in the same synchronous tick — a real
-        // RAF callback never fires synchronously anyway, so capabilities
-        // (documented as available only once `start()` resolves) is always
-        // settled well before any frame body actually runs.
-        this._startFrameLoop();
+    this._startPromise = startPromise;
 
-        // Guarantee at least one full microtask turn between the loop going
-        // live and `_status` flipping to `Running` — otherwise, when
-        // `capabilitiesPromise` is already settled (e.g. a later `start()`
-        // call on a second Application reusing the memoized
-        // `Capabilities.ready`), the two awaits below could resolve in the
-        // same synchronous continuation as `_startFrameLoop()`, collapsing
-        // the "loop active, not yet Running" window race-callers (a
-        // frame-driven transition, tests) rely on being able to observe.
-        await Promise.resolve();
+    return startPromise;
+  }
 
-        this._capabilities = await capabilitiesPromise;
+  /** The actual startup work behind {@link Application.start}, run at most once at a time. */
+  private async _runStartup(target: AnySceneConstructor | string | undefined, args: readonly unknown[]): Promise<this> {
+    // Kick off capability detection in parallel with renderer init — both
+    // are mostly-async startup work, no point serializing them.
+    const capabilitiesPromise = Capabilities.ready;
 
-        if (target !== undefined) {
-          // `target`'s implementation-level type is a union (registered key
-          // OR constructor) — TS overload resolution does not distribute
-          // over a union-typed argument, so the cast picks the constructor
-          // overload purely for compile-time dispatch; SceneDirector.change()'s
-          // own single implementation signature already accepts both shapes
-          // and forwards whichever one was actually passed at runtime.
-          await this.scenes.change(
-            target as NavigableSceneConstructor<Registry>,
-            ...(args as ChangeSceneArgs<InferSceneData<NavigableSceneConstructor<Registry>>>),
-          );
-        }
+    try {
+      await this.initializeBackend();
 
-        this._status = ApplicationStatus.Running;
-      } catch (error) {
-        this._stopFrameLoop();
-        this._status = ApplicationStatus.Stopped;
-        throw error;
+      if (this.options.hello) {
+        hello({ backend: this._backendType });
       }
+
+      // The frame loop must be live BEFORE the initial navigation runs —
+      // a frame-driven SceneTransitionSession needs update()/render()
+      // calls to progress, and update()'s gate no longer waits for
+      // `_status === Running`. Started as early as
+      // possible (ahead of the capabilities await, not just the scene
+      // nav) so nothing downstream can observe the loop live and
+      // `_status` already `Running` in the same synchronous tick — a real
+      // RAF callback never fires synchronously anyway, so capabilities
+      // (documented as available only once `start()` resolves) is always
+      // settled well before any frame body actually runs.
+      this._startFrameLoop();
+
+      // Guarantee at least one full microtask turn between the loop going
+      // live and `_status` flipping to `Running` — otherwise, when
+      // `capabilitiesPromise` is already settled (e.g. a later `start()`
+      // call on a second Application reusing the memoized
+      // `Capabilities.ready`), the two awaits below could resolve in the
+      // same synchronous continuation as `_startFrameLoop()`, collapsing
+      // the "loop active, not yet Running" window race-callers (a
+      // frame-driven transition, tests) rely on being able to observe.
+      await Promise.resolve();
+
+      this._capabilities = await capabilitiesPromise;
+
+      if (target !== undefined) {
+        // `target`'s implementation-level type is a union (registered key
+        // OR constructor) — TS overload resolution does not distribute
+        // over a union-typed argument, so the cast picks the constructor
+        // overload purely for compile-time dispatch; SceneDirector.change()'s
+        // own single implementation signature already accepts both shapes
+        // and forwards whichever one was actually passed at runtime.
+        await this.scenes.change(
+          target as NavigableSceneConstructor<Registry>,
+          ...(args as ChangeSceneArgs<InferSceneData<NavigableSceneConstructor<Registry>>>),
+        );
+      }
+
+      this._status = ApplicationStatus.Running;
+    } catch (error) {
+      this._stopFrameLoop();
+      this._status = ApplicationStatus.Stopped;
+      throw error;
     }
 
     return this;
