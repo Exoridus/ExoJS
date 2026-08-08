@@ -267,6 +267,105 @@ describe('audio/audio-context — interaction-gesture unlock lifecycle', () => {
     expect(true).toBe(true);
   });
 
+  it('re-arms interaction listeners and resumes again after a later suspension (iOS interruption / bfcache restore)', async () => {
+    /**
+     * Like {@link UnlockableAudioContext}, but also supports simulating an
+     * externally-driven suspension (i.e. NOT caused by ExoJS calling
+     * `resume()`) — the browser flips `state` back to `'suspended'` on its
+     * own and fires `statechange`, exactly as iOS does on an audio session
+     * interruption or as a bfcache restore can.
+     */
+    class InterruptibleAudioContext {
+      public state: AudioContextState;
+      public currentTime = 0;
+      public sampleRate = 44100;
+      public destination = {};
+      public resumeCallCount = 0;
+      private readonly _listeners = new Map<string, Array<() => void>>();
+
+      public constructor(initialState: AudioContextState = 'suspended') {
+        this.state = initialState;
+      }
+
+      public addEventListener(type: string, cb: () => void): void {
+        const arr = this._listeners.get(type) ?? [];
+        arr.push(cb);
+        this._listeners.set(type, arr);
+      }
+
+      public removeEventListener(type: string, cb: () => void): void {
+        const arr = this._listeners.get(type);
+        if (!arr) return;
+        const index = arr.indexOf(cb);
+        if (index !== -1) arr.splice(index, 1);
+      }
+
+      public resume(): Promise<void> {
+        this.resumeCallCount++;
+        this.state = 'running';
+
+        for (const cb of this._listeners.get('statechange') ?? []) cb();
+
+        return Promise.resolve();
+      }
+
+      public simulateExternalSuspend(): void {
+        this.state = 'suspended';
+
+        for (const cb of this._listeners.get('statechange') ?? []) cb();
+      }
+    }
+
+    Object.defineProperty(globalThis, 'AudioContext', { configurable: true, value: InterruptibleAudioContext });
+    Object.defineProperty(globalThis, 'OfflineAudioContext', { configurable: true, value: class {} });
+
+    const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
+
+    const { getAudioContext, onAudioContextReady } = await import('#audio/audio-context');
+
+    const readyHandler = vi.fn();
+
+    // `add`, not `once` — the second resume below must be observable without
+    // the subscription auto-detaching after the first dispatch.
+    onAudioContextReady.add(readyHandler);
+
+    const ctx = getAudioContext() as unknown as InterruptibleAudioContext;
+
+    // First gesture: unlocks the context and fires the public ready signal.
+    document.dispatchEvent(new MouseEvent('mousedown'));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(ctx.state).toBe('running');
+    expect(ctx.resumeCallCount).toBe(1);
+    expect(readyHandler).toHaveBeenCalledTimes(1);
+
+    const mousedownListenerCountAfterFirstUnlock = addEventListenerSpy.mock.calls.filter(call => call[0] === 'mousedown').length;
+
+    // Simulated interruption: nothing in ExoJS called resume()/suspend() —
+    // the AudioContext itself dropped back to 'suspended' and fired its
+    // native 'statechange' event, which the module already listens to.
+    ctx.simulateExternalSuspend();
+
+    const mousedownListenerCountAfterReArm = addEventListenerSpy.mock.calls.filter(call => call[0] === 'mousedown').length;
+
+    // Regression check: without re-arming, no new 'mousedown' listener is
+    // ever installed, so a second user gesture is silently ignored forever.
+    expect(mousedownListenerCountAfterReArm).toBeGreaterThan(mousedownListenerCountAfterFirstUnlock);
+
+    // Second gesture must actually resume the (now suspended again) context.
+    document.dispatchEvent(new MouseEvent('mousedown'));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(ctx.state).toBe('running');
+    expect(ctx.resumeCallCount).toBe(2);
+
+    // onAudioContextReady is a one-shot "became ready at least once" signal —
+    // it must not re-dispatch on the second resume.
+    expect(readyHandler).toHaveBeenCalledTimes(1);
+  });
+
   it('addInteractionListeners() is a no-op on a context created with `document` already unavailable', async () => {
     Object.defineProperty(globalThis, 'AudioContext', { configurable: true, value: UnlockableAudioContext });
     Object.defineProperty(globalThis, 'OfflineAudioContext', { configurable: true, value: class {} });
