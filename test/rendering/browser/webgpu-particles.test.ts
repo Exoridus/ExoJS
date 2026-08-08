@@ -13,8 +13,11 @@
  * `elapsed` stays at 0 and the particle never expires. This yields fully
  * deterministic, seed-free particle placement across runs.
  *
- * The particle renderer uses inline WGSL (no shader file imports), so no
- * shader mocks are needed here — same as the other WebGPU browser tests.
+ * The renderer itself draws from the render mode's inline WGSL, but the mode's
+ * `Material` pairs that WGSL with the shipped GLSL, which the shader-stub
+ * plugin blanks — and `ShaderSource` rejects empty GLSL. So this spec does
+ * depend on `_glslMocks.ts` restoring the package's `.vert`/`.frag` sources,
+ * even though nothing here compiles them.
  *
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
  * against Mesa lavapipe); `renderScene` only skips when the software adapter

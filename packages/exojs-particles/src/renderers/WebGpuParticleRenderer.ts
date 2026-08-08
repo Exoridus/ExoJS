@@ -128,6 +128,18 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
   private _uniformBuffer: GPUBuffer | null = null;
   private _uniformBindGroup: GPUBindGroup | null = null;
   private readonly _resources = new Map<Material, ParticleModeResources>();
+  /**
+   * Materials this renderer already registered a dispose listener on.
+   *
+   * `Material` has no unsubscribe, and a disconnect clears {@link _resources}
+   * without clearing the material's callback set — so registering on every
+   * resource creation would leave one dead closure per material behind on
+   * every device-loss/reconnect cycle. The listener stays valid across those
+   * cycles (it resolves the entry through the map when it fires), so it is
+   * registered once and this set remembers that. Weak, so a material dropped
+   * without `destroy()` stays collectable.
+   */
+  private readonly _disposeListenerRegistered = new WeakSet<Material>();
 
   public render(system: ParticleSystem): void {
     const backend = this._backend;
@@ -369,18 +381,26 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
 
     this._resources.set(material, created);
 
-    // A destroyed mode takes its GPU resources with it: `ParticleSystem.destroy`
-    // destroys its mode, which destroys the material.
-    material._onDispose(() => {
-      const stored = this._resources.get(material);
+    if (!this._disposeListenerRegistered.has(material)) {
+      this._disposeListenerRegistered.add(material);
 
-      if (stored === undefined) {
-        return;
-      }
+      // A destroyed mode takes its GPU resources with it: `ParticleSystem.destroy`
+      // destroys a mode it owns, which destroys the material.
+      material._onDispose(() => {
+        // `Material.destroy` drops its callbacks after firing them, so this
+        // registration is gone — forget it, and the next creation re-registers.
+        this._disposeListenerRegistered.delete(material);
 
-      this._destroyResources(stored);
-      this._resources.delete(material);
-    });
+        const stored = this._resources.get(material);
+
+        if (stored === undefined) {
+          return;
+        }
+
+        this._destroyResources(stored);
+        this._resources.delete(material);
+      });
+    }
 
     return created;
   }

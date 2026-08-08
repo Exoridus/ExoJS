@@ -12,6 +12,23 @@ import type { ParticleSystem } from '#ParticleSystem';
  *
  * Implementations are fixed at system construction (see
  * `ParticleSystemOptions.render`) and default to `QuadParticles`.
+ *
+ * **Limits of the seam.** The executors are deliberately thin, so a new mode
+ * has to stay inside what they can express:
+ *
+ * - The geometry's `stride` must be a multiple of 4. WebGPU's
+ *   `queue.writeBuffer` validates its copy size against that alignment and
+ *   rejects anything else, so a mode with, say, a 38-byte stride draws on
+ *   WebGL2 and fails validation on WebGPU.
+ * - An **indexed, non-instanced** mode always draws the geometry's fixed
+ *   `indexCount` and ignores {@link count} on both backends. That is right for
+ *   a fixed-topology mode and wrong for one whose element count varies per
+ *   frame; such a mode needs the executors taught to derive an index count
+ *   from {@link count} first. No mode ships in that shape today.
+ * - The **instanced, non-indexed** path draws `geometry.indexCount` vertices
+ *   per instance, which for a geometry without indices is the vertex count its
+ *   placeholder `vertexData` implies. A mode on that path therefore has to
+ *   size `vertexData` to its vertices-per-instance rather than leave it empty.
  */
 export abstract class ParticleRenderMode {
   /** Base geometry: topology, named attributes, buffer usage. */
