@@ -39,6 +39,7 @@ export class AudioStream implements Playable {
 
   private _sourceNode: MediaElementAudioSourceNode | null = null;
   private _activeVoice: AudioStreamVoice | null = null;
+  private _destroyed = false;
 
   public constructor(audioElement: HTMLAudioElement, options?: Partial<PlaybackOptions>) {
     this._audioElement = audioElement;
@@ -63,12 +64,33 @@ export class AudioStream implements Playable {
   }
 
   /**
+   * `true` once {@link AudioStream.destroy} has run. A destroyed stream is not
+   * reusable — playing it throws. Load the asset again to get a fresh stream.
+   */
+  public get destroyed(): boolean {
+    return this._destroyed;
+  }
+
+  /**
    * Implements {@link Playable}. Called by {@link AudioManager.play}.
    *
    * Stops any previously active voice (a stream has a single playhead), then
    * starts a fresh {@link AudioStreamVoice}.
+   *
+   * Throws on a destroyed stream. The check is unconditional, not `__DEV__`-only:
+   * `createMediaElementSource()` may be called exactly once per media element,
+   * and the second call raises `InvalidStateError` in the browser — a hard,
+   * hard-to-trace runtime failure that a production build must not walk into.
    */
   public _createVoice(manager: AudioManager, options: PlayOptions): Voice {
+    if (this._destroyed) {
+      throw new Error(
+        'Cannot play a destroyed AudioStream. `destroy()` releases the MediaElementAudioSourceNode that is ' +
+          'permanently bound to the backing media element, and the Web Audio API allows only one such node per ' +
+          'element — re-sourcing it would throw InvalidStateError. Load the asset again to obtain a fresh stream.',
+      );
+    }
+
     const bus = options.bus ?? manager.music;
     const audioContext = getAudioContext();
 
@@ -111,8 +133,13 @@ export class AudioStream implements Playable {
     return voice;
   }
 
-  /** Stop the active voice and release the media graph. */
+  /**
+   * Stop the active voice and release the media graph. Terminal: the stream
+   * cannot be played again afterwards (see {@link AudioStream.destroyed}).
+   */
   public destroy(): void {
+    if (this._destroyed) return;
+    this._destroyed = true;
     if (this._activeVoice !== null) {
       this._activeVoice.stop();
       this._activeVoice = null;
