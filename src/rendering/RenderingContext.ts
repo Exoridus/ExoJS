@@ -520,7 +520,7 @@ export class RenderingContext implements DrawContext {
     // transforms/tints and flush it immediately.
     this._backend.setView(view);
     mesh.configureBatchSource(batch.geometry, batch.material);
-    this._backend.drawInstanced(mesh, batch._instanceTransforms, batch._instanceTints, batch.count);
+    this._backend.drawInstanced(mesh, batch._instanceTransforms, batch._instanceTints, batch.count, batch._instanceView);
     this._backend.flush();
   }
 

@@ -10,6 +10,7 @@ import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import { dataTextureBytesPerPixel, estimateTextureBytes, GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
 import type { Mesh } from '#rendering/mesh/Mesh';
+import type { InstanceDataView } from '#rendering/RenderBatch';
 import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/RenderCommand';
 import type { ScopeEntry } from '#rendering/plan/RenderScope';
 import {
@@ -600,7 +601,7 @@ export class WebGl2Backend implements RenderBackend {
     return this;
   }
 
-  public drawInstanced(mesh: Mesh, transforms: readonly Matrix[], tints: readonly Color[], count: number): this {
+  public drawInstanced(mesh: Mesh, transforms: readonly Matrix[], tints: readonly Color[], count: number, instances: InstanceDataView | null = null): this {
     if (count <= 0 || mesh.vertexCount === 0) {
       return this;
     }
@@ -627,7 +628,7 @@ export class WebGl2Backend implements RenderBackend {
       this._transformBuffer.push(transforms[i]!, tints[i]!);
     }
 
-    renderer.drawInstancedBatch(mesh, startNodeIndex, count);
+    renderer.drawInstancedBatch(mesh, startNodeIndex, count, instances);
     this._activeDrawCommand = null;
     this._stats.submittedNodes += count;
 

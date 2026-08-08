@@ -4,6 +4,7 @@ import type { Matrix } from '#math/Matrix';
 import type { Rectangle } from '#math/Rectangle';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { Mesh } from '#rendering/mesh/Mesh';
+import type { InstanceDataView } from '#rendering/RenderBatch';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import type { ColorTextureFormat } from '#rendering/types';
@@ -165,7 +166,7 @@ export interface RenderBackend {
    * supplied material must be instancing-compatible (default mesh material, or a
    * custom shader declaring `a_nodeIndex` + `u_transforms`).
    */
-  drawInstanced(mesh: Mesh, transforms: readonly Matrix[], tints: readonly Color[], count: number): this;
+  drawInstanced(mesh: Mesh, transforms: readonly Matrix[], tints: readonly Color[], count: number, instances?: InstanceDataView | null): this;
 
   execute(pass: BackendRenderPass): this;
   flush(): this;

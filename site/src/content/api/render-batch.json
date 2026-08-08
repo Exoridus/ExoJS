@@ -33,7 +33,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(geometry: Geometry, material: MeshMaterial | null): RenderBatch",
+          "signature": "new(geometry: Geometry, material: MeshMaterial | null, options: RenderBatchOptions): RenderBatch",
           "signatureTokens": [
             {
               "text": "new",
@@ -80,6 +80,22 @@
               "kind": "keyword"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderBatchOptions",
+              "kind": "type"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -102,6 +118,11 @@
               "name": "material",
               "type": "MeshMaterial | null",
               "optional": false
+            },
+            {
+              "name": "options",
+              "type": "RenderBatchOptions",
+              "optional": false
             }
           ],
           "returnType": "RenderBatch",
@@ -118,7 +139,7 @@
       "members": [
         {
           "name": "add",
-          "signature": "add(transform: Matrix, tint: Color | null): this",
+          "signature": "add(transform: Matrix, tint: Color | null, data: Readonly<Record<string, InstanceAttributeValue>> | null): this",
           "signatureTokens": [
             {
               "text": "add",
@@ -165,6 +186,62 @@
               "kind": "keyword"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "data",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InstanceAttributeValue",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -187,10 +264,15 @@
               "name": "tint",
               "type": "Color | null",
               "optional": false
+            },
+            {
+              "name": "data",
+              "type": "Readonly<Record<string, InstanceAttributeValue>> | null",
+              "optional": false
             }
           ],
           "returnType": "this",
-          "description": "Append one instance. transform is the instance's world matrix (taken as the raw a,b,c,d,tx,ty), tint modulates the geometry's vertex colors (defaults to white). Both are copied into the batch."
+          "description": "Append one instance. transform is the instance's world matrix (taken as the raw a,b,c,d,tx,ty), tint modulates the geometry's vertex colors (defaults to white). data supplies the free attributes declared via RenderBatchOptions.instanceAttributes, keyed by attribute name. Every declared attribute must be present. All three arguments are **copied** into the batch, so the caller may mutate and reuse them immediately — hoist one scratch object out of the loop rather than allocating a literal per instance, or a steady-state batch stops being allocation-free: ts const data = { a_offset: [0, 0] }; for (const item of items) { data.a_offset[0] = item.x; data.a_offset[1] = item.y; batch.add(item.transform, item.tint, data); } "
         },
         {
           "name": "clear",

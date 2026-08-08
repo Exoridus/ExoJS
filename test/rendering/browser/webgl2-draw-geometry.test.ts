@@ -313,6 +313,48 @@ describe('WebGL2 RenderingContext.drawBatch', () => {
     }
   });
 
+  test('feeds free per-instance attributes to a custom material', async () => {
+    const backend = await createBackend();
+    const context = new RenderingContext(backend);
+    const geometry = coloredQuad(0, 0, 16, 16, [255, 255, 255, 255]);
+    const material = contractMaterial(`
+      in vec2 a_offset;
+
+      out vec4 v_tint;
+
+      void main() {
+        gl_Position = vec4(exoInstanceClipPosition(a_position + a_offset, a_nodeIndex), 0.0, 1.0);
+        v_tint = exoInstanceTint(a_nodeIndex);
+      }`);
+    const batch = new RenderBatch(geometry, material, { instanceAttributes: [{ name: 'a_offset', format: 'float32x2' }] });
+    // One scratch object reused across both adds — the documented pattern, and
+    // proof that `add` copies rather than retaining the caller's arrays.
+    const data = { a_offset: [0, 0] };
+
+    batch.add(new Matrix(), new Color(255, 0, 0), data);
+    data.a_offset[0] = 32;
+    data.a_offset[1] = 32;
+    batch.add(new Matrix(), new Color(0, 255, 0), data);
+
+    try {
+      backend.resetStats();
+      backend.clear(Color.black);
+      context.drawBatch(batch, { view: screenView() });
+
+      // Identical transforms: only the free attribute separates the instances,
+      // so a displaced second quad proves it reached the divisor-1 stream.
+      expect(backend.stats.drawCalls).toBe(1);
+      expectPixelNear(readWebGl2Pixel(backend, 8, 8), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 40, 40), [0, 255, 0, 255]);
+    } finally {
+      batch.destroy();
+      material.destroy();
+      geometry.destroy();
+      context.destroy();
+      backend.destroy();
+    }
+  });
+
   test('rejects a custom material whose shader ignores the instancing contract', async () => {
     const backend = await createBackend();
     const context = new RenderingContext(backend);
