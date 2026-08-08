@@ -1,16 +1,16 @@
 {
   "title": "MeshParticles",
-  "description": "One caller-supplied mesh per particle, drawn as a single instanced draw. The cheap counterpart to `RibbonParticles`: the relationship stays one particle, one instance, and the per-instance data is byte-identical to `QuadParticles`'s — instanceAttributes, filled by the same writer. Only the shape changes. That is what makes this mode **GPU-eligible** without touching the compute pipeline: the pipeline emits precisely that layout, so a system on the GPU path binds its instance buffer directly and never calls build. **The mesh is baked into the shader**, read once at construction. Its vertices become a constant `(x, y, u, v)` table addressed by the vertex index, which is the same thing the quad does with its four corners — from the shader's side a mesh is just a quad with more vertices. Consequences worth knowing: - One `MeshParticles` instance means one compiled program per backend, so share a single instance across the systems that draw the same shape rather than constructing one per system. - Mutating the geometry after construction changes nothing. Construct a new mode instead. - The table is shader source, so a mesh of a few hundred vertices is the sensible ceiling; this mode is for sparks, shards, leaves and petals, not for detailed models. **Atlas frames still work.** The mesh's own UVs are treated exactly like the quad's 0..1 corners: the shader mixes them across the particle's resolved frame (`uv = mix(uvMin, uvMax, meshUV)`), so `system.frames` plus a per-particle `textureIndex` selects a frame the same way. A geometry with **no texcoord attribute** therefore carries UV `(0, 0)` on every vertex and the mix degenerates to `uvMin` — the whole mesh samples the single texel at the frame's top-left corner, which on the default 1×1 white texture is exactly \"untextured, tinted by the particle's `color`\". **Sizing is the mesh's own.** Unlike the quad, which derives its footprint from the texture frame, a mesh particle's footprint is whatever its vertex positions say, in system-local units, multiplied by the per-particle `scaleX`/`scaleY`. The texture only supplies colour.",
+  "description": "One caller-supplied mesh per particle, drawn as a single instanced draw. The cheap counterpart to `RibbonParticles`: the relationship stays one particle, one instance, and the per-instance data is byte-identical to `QuadParticles`'s — instanceAttributes, filled by the same writer. Only the shape changes. That is what makes this mode **GPU-eligible** without touching the compute pipeline: the pipeline emits precisely that layout, so a system on the GPU path binds its instance buffer directly and never calls build. **The mesh rides in its own vertex buffer**, alongside the per-instance one. The shader is fixed and shared, so any number of `MeshParticles` compile one program per backend regardless of how many distinct shapes they draw, and a mesh is limited only by what a vertex buffer holds. **Mutating the mesh works.** Its vertices are read into a normalised `(x, y, u, v)` table — the shader binds fixed names, a caller's geometry may use any — and re-read whenever the geometry's `version` changes. Edit the geometry in place, call `invalidate()` on it, and the next draw picks it up. Changing the vertex *count* is equally fine. **Atlas frames still work.** The mesh's own UVs are treated exactly like the quad's 0..1 corners: the shader mixes them across the particle's resolved frame (`uv = mix(uvMin, uvMax, meshUV)`), so `system.frames` plus a per-particle `textureIndex` selects a frame the same way. A geometry with **no texcoord attribute** therefore carries UV `(0, 0)` on every vertex and the mix degenerates to `uvMin` — the whole mesh samples the single texel at the frame's top-left corner, which on the default 1×1 white texture is exactly \"untextured, tinted by the particle's `color`\". **Sizing is the mesh's own.** Unlike the quad, which derives its footprint from the texture frame, a mesh particle's footprint is whatever its vertex positions say, in system-local units, multiplied by the per-particle `scaleX`/`scaleY`. The texture only supplies colour.",
   "symbol": "MeshParticles",
   "kind": "class",
   "subsystem": "particles",
   "importPath": "@codexo/exojs-particles",
   "tier": "stable",
-  "memberCount": 13,
+  "memberCount": 14,
   "counts": {
     "constructors": 1,
     "methods": 5,
-    "properties": 7,
+    "properties": 8,
     "events": 0
   },
   "sections": [
@@ -21,8 +21,8 @@
       "paragraphs": [
         "One caller-supplied mesh per particle, drawn as a single instanced draw.",
         "The cheap counterpart to `RibbonParticles`: the relationship stays one particle, one instance, and the per-instance data is byte-identical to `QuadParticles`'s — instanceAttributes, filled by the same writer. Only the shape changes. That is what makes this mode **GPU-eligible** without touching the compute pipeline: the pipeline emits precisely that layout, so a system on the GPU path binds its instance buffer directly and never calls build.",
-        "**The mesh is baked into the shader**, read once at construction. Its vertices become a constant `(x, y, u, v)` table addressed by the vertex index, which is the same thing the quad does with its four corners — from the shader's side a mesh is just a quad with more vertices. Consequences worth knowing:",
-        "- One `MeshParticles` instance means one compiled program per backend, so share a single instance across the systems that draw the same shape rather than constructing one per system. - Mutating the geometry after construction changes nothing. Construct a new mode instead. - The table is shader source, so a mesh of a few hundred vertices is the sensible ceiling; this mode is for sparks, shards, leaves and petals, not for detailed models.",
+        "**The mesh rides in its own vertex buffer**, alongside the per-instance one. The shader is fixed and shared, so any number of `MeshParticles` compile one program per backend regardless of how many distinct shapes they draw, and a mesh is limited only by what a vertex buffer holds.",
+        "**Mutating the mesh works.** Its vertices are read into a normalised `(x, y, u, v)` table — the shader binds fixed names, a caller's geometry may use any — and re-read whenever the geometry's `version` changes. Edit the geometry in place, call `invalidate()` on it, and the next draw picks it up. Changing the vertex *count* is equally fine.",
         "**Atlas frames still work.** The mesh's own UVs are treated exactly like the quad's 0..1 corners: the shader mixes them across the particle's resolved frame (`uv = mix(uvMin, uvMax, meshUV)`), so `system.frames` plus a per-particle `textureIndex` selects a frame the same way. A geometry with **no texcoord attribute** therefore carries UV `(0, 0)` on every vertex and the mix degenerates to `uvMin` — the whole mesh samples the single texel at the frame's top-left corner, which on the default 1×1 white texture is exactly \"untextured, tinted by the particle's `color`\".",
         "**Sizing is the mesh's own.** Unlike the quad, which derives its footprint from the texture frame, a mesh particle's footprint is whatever its vertex positions say, in system-local units, multiplied by the per-particle `scaleX`/`scaleY`. The texture only supplies colour."
       ],
@@ -316,11 +316,11 @@
       "title": "Properties",
       "members": [
         {
-          "name": "geometry",
-          "signature": "geometry: Geometry",
+          "name": "dataLayout",
+          "signature": "dataLayout: ParticleBufferLayout",
           "signatureTokens": [
             {
-              "text": "geometry",
+              "text": "dataLayout",
               "kind": "name"
             },
             {
@@ -328,13 +328,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "Geometry",
+              "text": "ParticleBufferLayout",
               "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "The base geometry the executors draw with. It carries the mesh's topology and index buffer — that is what turns the mesh's vertices into triangles — while its attributes describe the per-instance buffer build fills, because that buffer is the only one bound. The placeholder vertexData is sized to the mesh's vertex count so a mesh without indices still draws all of its vertices per instance."
+          "description": "Per-instance layout, byte-identical to the quad's and to the compute output."
         },
         {
           "name": "gpuEligible",
@@ -376,7 +376,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Draw model. true issues an instanced draw against geometry; false a plain draw over the built vertex buffer. Declared here because Geometry carries topology but has no instancing concept."
+          "description": "Draw model. true issues an instanced draw, false a plain draw over the built vertex buffer. Declared here because a layout carries topology but has no instancing concept."
         },
         {
           "name": "mesh",
@@ -398,6 +398,27 @@
           "params": [],
           "returnType": null,
           "description": "The geometry this mode was constructed with — the shape one particle draws. Owned by the caller: destroy leaves it alone, so one mesh can back several modes."
+        },
+        {
+          "name": "vertexGeometry",
+          "signature": "vertexGeometry: Geometry",
+          "signatureTokens": [
+            {
+              "text": "vertexGeometry",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Geometry",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The normalised mesh the executors bind as the per-vertex buffer: the caller's mesh reduced to (x, y, u, v) per vertex, keeping its topology and index list. Owned by this mode and disposed with it."
         },
         {
           "name": "count",

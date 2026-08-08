@@ -9,7 +9,7 @@ describe('QuadParticles', () => {
 
     expect(mode.instanced).toBe(true);
     expect(mode.gpuEligible).toBe(true);
-    expect(mode.geometry.topology).toBe('triangle-list');
+    expect(mode.dataLayout.topology).toBe('triangle-list');
   });
 
   it('builds one 40-byte instance per live particle', () => {

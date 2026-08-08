@@ -26,7 +26,7 @@ describe('default render mode sharing', () => {
 
     expect(second.renderMode).toBe(first.renderMode);
     expect(second.renderMode.material).toBe(first.renderMode.material);
-    expect(second.renderMode.geometry).toBe(first.renderMode.geometry);
+    expect(second.renderMode.dataLayout).toBe(first.renderMode.dataLayout);
   });
 
   it('keeps a supplied mode out of the shared default', () => {
@@ -42,17 +42,14 @@ describe('default render mode sharing', () => {
     const mode = survivor.renderMode;
     const material = mode.material;
     const materialDisposed = vi.fn();
-    const geometryDisposed = vi.fn();
 
     material._onDispose(materialDisposed);
-    mode.geometry._onDispose(geometryDisposed);
 
     destroyed.destroy();
 
     // No dispose fired means no renderer evicted its cached resources, so the
     // survivor still draws through the program that was already compiled.
     expect(materialDisposed).not.toHaveBeenCalled();
-    expect(geometryDisposed).not.toHaveBeenCalled();
     expect(survivor.renderMode.material).toBe(material);
 
     spawnParticle(survivor);

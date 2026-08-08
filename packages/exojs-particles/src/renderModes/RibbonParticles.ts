@@ -1,10 +1,11 @@
 import type { Material } from '@codexo/exojs';
-import { Geometry, ShaderSource } from '@codexo/exojs';
+import { ShaderSource } from '@codexo/exojs';
 
 import type { ParticleSystem } from '#ParticleSystem';
 
 import fragmentSource from './glsl/ribbon.frag';
 import vertexSource from './glsl/ribbon.vert';
+import { ParticleBufferLayout } from './ParticleBufferLayout';
 import { ParticleMaterial } from './ParticleMaterial';
 import { ParticleRenderMode } from './ParticleRenderMode';
 
@@ -27,7 +28,7 @@ export interface RibbonParticlesOptions {
  * WGSL counterpart of `glsl/ribbon.vert` + `glsl/ribbon.frag`. Vertex and
  * fragment entry points share one source per WGSL convention, and the
  * per-vertex attributes bind by `@location`, matching the declaration order and
- * byte offsets of {@link RibbonParticles.geometry}.
+ * byte offsets of {@link RibbonParticles.dataLayout}.
  *
  * The uniform struct is the one the WebGPU particle renderer writes for every
  * mode, so `localBounds` and `uvBounds` are declared but unused here: the strip
@@ -137,18 +138,16 @@ export class RibbonParticles extends ParticleRenderMode {
 
   /**
    * A strip has no fixed vertex count — the draw covers whatever {@link build}
-   * emitted this frame — so the geometry describes only the layout and carries
-   * an empty placeholder. Non-indexed by construction: the strip's own vertex
-   * order is its topology, and an indexed geometry would pin the draw to a fixed
+   * emitted this frame. Non-indexed by construction: the strip's own vertex
+   * order is its topology, and an index list would pin the draw to a fixed
    * index count.
    */
-  public readonly geometry = new Geometry({
+  public readonly dataLayout = new ParticleBufferLayout({
     attributes: [
       { name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 },
       { name: 'a_texcoord', size: 2, type: 'f32', normalized: false, offset: 8 },
       { name: 'a_color', size: 4, type: 'u8', normalized: true, offset: 16 },
     ],
-    vertexData: new ArrayBuffer(0),
     stride: vertexStrideBytes,
     topology: 'triangle-strip',
     usage: 'stream',
@@ -289,7 +288,6 @@ export class RibbonParticles extends ParticleRenderMode {
   public override destroy(): void {
     this._material?.destroy();
     this._material = null;
-    this.geometry.destroy();
   }
 
   protected override _onBufferGrown(data: ArrayBuffer): void {

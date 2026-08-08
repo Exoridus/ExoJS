@@ -11,6 +11,8 @@ export type { ParticleSystemOptions } from './ParticleSystem';
 export { ParticleSystem } from './ParticleSystem';
 export type { MeshParticlesOptions } from './renderModes/MeshParticles';
 export { MeshParticles } from './renderModes/MeshParticles';
+export type { ParticleBufferLayoutOptions } from './renderModes/ParticleBufferLayout';
+export { ParticleBufferLayout } from './renderModes/ParticleBufferLayout';
 export { ParticleMaterial } from './renderModes/ParticleMaterial';
 export { ParticleRenderMode } from './renderModes/ParticleRenderMode';
 export { QuadParticles } from './renderModes/QuadParticles';

@@ -1,4 +1,4 @@
-import type { AttributeType, Geometry, GeometryUsage, Material, Topology } from '@codexo/exojs';
+import type { AttributeType, GeometryUsage, Material, Topology } from '@codexo/exojs';
 import type { BlendModes } from '@codexo/exojs/renderer-sdk';
 import type { Texture } from '@codexo/exojs/renderer-sdk';
 import type { View } from '@codexo/exojs/renderer-sdk';
@@ -11,6 +11,7 @@ import { createWebGl2ShaderProgram } from '@codexo/exojs/renderer-sdk';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from '@codexo/exojs/renderer-sdk';
 
 import type { ParticleSystem } from '#ParticleSystem';
+import { assertVertexGeometryCompatible } from '#renderModes/ParticleBufferLayout';
 import type { ParticleRenderMode } from '#renderModes/ParticleRenderMode';
 
 const resolvePrimitive = (topology: Topology): RenderingPrimitives => {
@@ -65,6 +66,10 @@ interface ParticleModeResources {
   readonly shader: Shader;
   readonly vao: WebGl2VertexArrayObject;
   readonly vertexBuffer: WebGl2RenderBuffer;
+  /** Per-vertex buffer for a mode that supplies its own geometry, else null. */
+  readonly meshBuffer: WebGl2RenderBuffer | null;
+  /** Geometry version last uploaded into {@link meshBuffer}; -1 when there is none. */
+  meshVersion: number;
   readonly indexBuffer: WebGl2RenderBuffer | null;
   readonly stride: number;
   readonly primitive: RenderingPrimitives;
@@ -88,11 +93,15 @@ interface ParticleModeResources {
  * texture) and asks the mode to build its vertex data. The next `flush()`
  * uploads that data and issues the single draw the mode declares.
  *
- * Everything mode-specific is read off the mode's `Geometry`/`Material`, so a
+ * Everything mode-specific is read off the mode's `dataLayout`/`Material`, so a
  * new primitive is a new mode rather than a change here: the vertex array
- * object is wired from the geometry's named attributes, the draw is instanced
- * or plain per `ParticleRenderMode.instanced`, and its primitive comes from the
- * geometry's topology.
+ * object is wired from the layout's named attributes, the draw is instanced or
+ * plain per `ParticleRenderMode.instanced`, and its primitive comes from the
+ * topology.
+ *
+ * A mode declaring a `vertexGeometry` adds a second buffer to that vertex array
+ * object, stepping per vertex (divisor 0) beside the per-instance one, and its
+ * geometry supplies the topology and indices instead.
  */
 export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSystem> {
   /**
@@ -200,6 +209,16 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
 
     resources.shader.sync();
     backend.bindVertexArrayObject(resources.vao);
+
+    // Re-upload the mode's own geometry only when it was mutated since the last
+    // draw. One integer comparison keeps an unchanging mesh off the bus.
+    const meshGeometry = mode.vertexGeometry;
+
+    if (meshGeometry !== null && resources.meshBuffer !== null && resources.meshVersion !== meshGeometry.version) {
+      resources.meshVersion = meshGeometry.version;
+      resources.meshBuffer.upload(meshGeometry.vertexData);
+    }
+
     resources.vertexBuffer.upload(this._resolveUpload(mode, resources));
 
     if (resources.instanced) {
@@ -310,14 +329,23 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
       throw new Error('Particle material shader has no `glsl` source; cannot render through the WebGL2 backend.');
     }
 
-    const geometry: Geometry = mode.geometry;
+    const layout = mode.dataLayout;
+    const meshGeometry = mode.vertexGeometry;
+
+    assertVertexGeometryCompatible(layout, meshGeometry, mode.instanced, mode.constructor.name);
+
     const shader = new Shader(glsl.vertex, glsl.fragment);
 
     shader.connect(createWebGl2ShaderProgram(gl));
     // Force the first finalize so the attribute/uniform maps read below are populated.
     shader.sync();
 
-    const indices = geometry.indices;
+    // A mode with its own per-vertex geometry draws that geometry's topology
+    // and indices; one without derives its vertices in the shader and carries
+    // both on its layout instead.
+    const indices = meshGeometry !== null ? meshGeometry.indices : layout.indices;
+    const topology = meshGeometry !== null ? meshGeometry.topology : layout.topology;
+    const indexCount = meshGeometry !== null ? meshGeometry.indexCount : layout.indexCount;
     const indexBuffer =
       indices !== null
         ? new WebGl2RenderBuffer(BufferTypes.ElementArrayBuffer, indices, BufferUsage.StaticDraw).connect(this._createBufferRuntime(connection))
@@ -328,9 +356,16 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
     // system drawing past the batch size still draws every particle.
     const vertexBuffer = new WebGl2RenderBuffer(
       BufferTypes.ArrayBuffer,
-      new ArrayBuffer(this._batchSize * geometry.stride),
-      usageByGeometryUsage[geometry.usage],
+      new ArrayBuffer(this._batchSize * layout.stride),
+      usageByGeometryUsage[layout.usage],
     ).connect(this._createBufferRuntime(connection));
+
+    const meshBuffer =
+      meshGeometry !== null
+        ? new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, meshGeometry.vertexData, usageByGeometryUsage[meshGeometry.usage]).connect(
+            this._createBufferRuntime(connection),
+          )
+        : null;
 
     const vaoHandle = gl.createVertexArray();
 
@@ -347,17 +382,35 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
       vao.addIndex(indexBuffer);
     }
 
-    for (const attribute of geometry.attributes) {
+    for (const attribute of layout.attributes) {
       vao.addAttribute(
         vertexBuffer,
         shader.getAttribute(attribute.name),
         resolveAttributeType(gl, attribute.type),
         attribute.normalized,
-        geometry.stride,
+        layout.stride,
         attribute.offset,
         !attribute.normalized && integerAttributeTypes.has(attribute.type),
         divisor,
       );
+    }
+
+    // The mesh's own vertices step once per vertex (divisor 0) beside the
+    // per-instance records above, which is what lets one instanced draw expand
+    // a shared shape per particle.
+    if (meshGeometry !== null && meshBuffer !== null) {
+      for (const attribute of meshGeometry.attributes) {
+        vao.addAttribute(
+          meshBuffer,
+          shader.getAttribute(attribute.name),
+          resolveAttributeType(gl, attribute.type),
+          attribute.normalized,
+          meshGeometry.stride,
+          attribute.offset,
+          !attribute.normalized && integerAttributeTypes.has(attribute.type),
+          0,
+        );
+      }
     }
 
     vao.connect(this._createVaoRuntime(connection, vaoHandle, indices instanceof Uint32Array ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT));
@@ -366,11 +419,13 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
       shader,
       vao,
       vertexBuffer,
+      meshBuffer,
+      meshVersion: meshGeometry?.version ?? -1,
       indexBuffer,
-      stride: geometry.stride,
-      primitive: resolvePrimitive(geometry.topology),
+      stride: layout.stride,
+      primitive: resolvePrimitive(topology),
       instanced: mode.instanced,
-      indexCount: geometry.indexCount,
+      indexCount,
       bytes: new Uint8Array(0),
       source: null,
       view: null,
@@ -381,6 +436,7 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
   private _destroyResources(resources: ParticleModeResources): void {
     resources.vao.destroy();
     resources.vertexBuffer.destroy();
+    resources.meshBuffer?.destroy();
     resources.indexBuffer?.destroy();
     resources.shader.destroy();
   }

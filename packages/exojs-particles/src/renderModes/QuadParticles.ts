@@ -1,22 +1,22 @@
 import type { Material } from '@codexo/exojs';
-import { Geometry, ShaderSource } from '@codexo/exojs';
+import { ShaderSource } from '@codexo/exojs';
 
 import type { ParticleSystem } from '#ParticleSystem';
 
 import fragmentSource from '../renderers/glsl/particle.frag';
 import vertexSource from '../renderers/glsl/particle.vert';
+import { ParticleBufferLayout } from './ParticleBufferLayout';
 import { instanceAttributes, instanceStrideBytes, ParticleInstanceWriter } from './ParticleInstanceWriter';
 import { ParticleMaterial } from './ParticleMaterial';
 import { ParticleRenderMode } from './ParticleRenderMode';
 
-const quadVertexCount = 4;
 const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
 
 /**
  * WGSL counterpart of `glsl/particle.vert` + `glsl/particle.frag`. Vertex and
  * fragment entry points share one source per WGSL convention, and the
  * per-instance attributes bind by `@location`, matching the declaration order
- * and byte offsets of {@link QuadParticles.geometry}.
+ * and byte offsets of {@link QuadParticles.dataLayout}.
  *
  * The quad's corner is derived from `vertex_index` exactly as the GLSL derives
  * it from `gl_VertexID`, so both backends need nothing beyond this mode's own
@@ -116,14 +116,12 @@ export class QuadParticles extends ParticleRenderMode {
 
   /**
    * The quad's four corners are derived in the shader — from `gl_VertexID` on
-   * WebGL2 and from `vertex_index` on WebGPU — so this
-   * geometry describes the per-instance layout and carries a zero-filled
-   * placeholder large enough for the four corner slots the index buffer
-   * addresses.
+   * WebGL2 and from `vertex_index` on WebGPU — so this mode declares no
+   * per-vertex geometry and its layout carries the indices that address those
+   * four corner slots.
    */
-  public readonly geometry = new Geometry({
+  public readonly dataLayout = new ParticleBufferLayout({
     attributes: instanceAttributes,
-    vertexData: new ArrayBuffer(quadVertexCount * instanceStrideBytes),
     stride: instanceStrideBytes,
     indices: quadIndices,
     topology: 'triangle-list',
@@ -163,7 +161,6 @@ export class QuadParticles extends ParticleRenderMode {
   public override destroy(): void {
     this._material?.destroy();
     this._material = null;
-    this.geometry.destroy();
   }
 
   protected override _onBufferGrown(data: ArrayBuffer): void {

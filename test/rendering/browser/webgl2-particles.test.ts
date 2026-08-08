@@ -445,3 +445,52 @@ describe('WebGL2 ParticleSystem — mesh', () => {
     }
   });
 });
+
+describe('WebGL2 ParticleSystem — mesh mutation', () => {
+  test('an in-place edit to the mesh reaches the GPU on the next draw', async () => {
+    const backend = await createBackend();
+    const texture = createSolidTexture('#ffffff');
+    const mesh = createTriangleMesh();
+    const root = new Container();
+    const system = new ParticleSystem(texture, { capacity: 4, render: new MeshParticles({ geometry: mesh }) });
+
+    try {
+      const slot = system.spawn();
+
+      system.posX[slot] = 0;
+      system.posY[slot] = 0;
+      system.scaleX[slot] = 1;
+      system.scaleY[slot] = 1;
+      system.rotations[slot] = 0;
+      system.color[slot] = new Color(0, 255, 0).toRgba();
+      system.lifetime[slot] = 1;
+
+      system.setPosition(32, 32);
+      root.addChild(system);
+
+      render(backend, root);
+
+      // The right angle sits top-left, so the near corner is filled and the far
+      // one is past the hypotenuse.
+      expectPixelNear(readWebGl2Pixel(backend, 24, 24), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 44, 44), [0, 0, 0, 255]);
+
+      // Flip the triangle so the right angle sits bottom-right instead. The two
+      // sample points swap roles, which no stale buffer can reproduce.
+      const vertices = mesh.vertexData as Float32Array;
+
+      vertices.set([16, 16, 1, 1, -16, 16, 0, 1, 16, -16, 1, 0]);
+      mesh.invalidate();
+
+      render(backend, root);
+
+      expectPixelNear(readWebGl2Pixel(backend, 44, 44), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 24), [0, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      mesh.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+});

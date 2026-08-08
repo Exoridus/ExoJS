@@ -52,6 +52,9 @@ vi.mock('../../../packages/exojs-particles/src/renderers/glsl/particle.frag', as
 vi.mock('../../../packages/exojs-particles/src/renderers/glsl/particle.vert', async () => ({
   default: (await import('../../../packages/exojs-particles/src/renderers/glsl/particle.vert?raw')).default,
 }));
+vi.mock('../../../packages/exojs-particles/src/renderModes/glsl/mesh.vert', async () => ({
+  default: (await import('../../../packages/exojs-particles/src/renderModes/glsl/mesh.vert?raw')).default,
+}));
 vi.mock('../../../packages/exojs-particles/src/renderModes/glsl/ribbon.frag', async () => ({
   default: (await import('../../../packages/exojs-particles/src/renderModes/glsl/ribbon.frag?raw')).default,
 }));

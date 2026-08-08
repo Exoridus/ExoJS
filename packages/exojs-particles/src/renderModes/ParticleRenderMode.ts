@@ -2,6 +2,8 @@ import type { Geometry, Material } from '@codexo/exojs';
 
 import type { ParticleSystem } from '#ParticleSystem';
 
+import type { ParticleBufferLayout } from './ParticleBufferLayout';
+
 /**
  * Turns a particle system's SoA storage into drawable vertex data.
  *
@@ -25,22 +27,49 @@ import type { ParticleSystem } from '#ParticleSystem';
  *   a fixed-topology mode and wrong for one whose element count varies per
  *   frame; such a mode needs the executors taught to derive an index count
  *   from {@link count} first. No mode ships in that shape today.
- * - The **instanced, non-indexed** path draws `geometry.indexCount` vertices
- *   per instance, which for a geometry without indices is the vertex count its
- *   placeholder `vertexData` implies. A mode on that path therefore has to
- *   size `vertexData` to its vertices-per-instance rather than leave it empty.
+ * - An **instanced** mode that declares no {@link vertexGeometry} has to derive
+ *   its vertices in the shader from the vertex index, and its
+ *   {@link dataLayout} must carry the indices that address them. Without either
+ *   there is nothing to tell the executors how many vertices one instance
+ *   spans.
  */
 export abstract class ParticleRenderMode {
-  /** Base geometry: topology, named attributes, buffer usage. */
-  public abstract readonly geometry: Geometry;
+  /**
+   * Layout of the buffer {@link build} fills each frame: attributes, stride,
+   * upload hint, and — when this mode declares no {@link vertexGeometry} — the
+   * topology and index list the draw uses.
+   *
+   * Named after {@link data}, the buffer it describes. It holds per-instance
+   * records for an instanced mode and per-vertex records otherwise, so a name
+   * fixed to either would be wrong for one of the two draw models.
+   */
+  public abstract readonly dataLayout: ParticleBufferLayout;
+
+  /**
+   * Fixed per-vertex geometry this mode instances, or `null` when it derives
+   * its vertices in the shader from the vertex index — which is what
+   * `QuadParticles` and `RibbonParticles` do.
+   *
+   * When set, it supplies the topology, index list and index count for the draw
+   * in place of {@link dataLayout}'s, and the executors bind its `vertexData`
+   * as a second vertex buffer stepping per vertex beside the per-instance one.
+   * Only meaningful on an instanced mode: without instancing both buffers would
+   * step per vertex and no draw is expressible.
+   *
+   * Attribute names must not collide with {@link dataLayout}'s, since both sets
+   * bind into the same shader. Mutating the geometry is picked up on the next
+   * draw through its `version`, so `invalidate()` after an in-place edit is
+   * enough to reach the GPU.
+   */
+  public readonly vertexGeometry: Geometry | null = null;
 
   /** Shader pair plus uniforms/textures for this mode. */
   public abstract readonly material: Material;
 
   /**
-   * Draw model. `true` issues an instanced draw against {@link geometry};
-   * `false` a plain draw over the built vertex buffer. Declared here because
-   * `Geometry` carries topology but has no instancing concept.
+   * Draw model. `true` issues an instanced draw, `false` a plain draw over the
+   * built vertex buffer. Declared here because a layout carries topology but
+   * has no instancing concept.
    */
   public abstract readonly instanced: boolean;
 
