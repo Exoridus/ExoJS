@@ -178,13 +178,32 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       throw new Error('drawInstancedBatch requires a mesh constructed from a geometry.');
     }
 
-    if (mesh.material !== null) {
-      throw new Error('RenderBatch custom materials are not supported yet (v1 renders with the default mesh material).');
+    const backend = this.getBackend();
+    const material = mesh.material;
+    const shader = material === null ? this._defaultShader : this._getOrCreateCustomShader(material, connection.gl);
+
+    // A batch reads its per-instance transform from the shared buffer via
+    // a_nodeIndex; a shader that does not follow that contract has no other way
+    // to reach it. The node path can quietly fall back to the legacy per-draw
+    // shader here (one node is one draw either way) — a batch cannot, because
+    // the fallback would turn a single instanced draw into `count` draw calls
+    // and only ever surface in a profiler.
+    if (material !== null && !this._isInstancingCompatible(shader)) {
+      throw new Error(`RenderBatch material shader is not instancing-compatible: ${this._describeInstancingGap(shader)}.`);
     }
 
-    const backend = this.getBackend();
-    const shader = this._defaultShader;
-    const blendMode = mesh.blendMode;
+    // Custom-material batches are not recordable: the recorded byte stream
+    // replays through the default shader. If one arrives inside an open capture,
+    // poison it so the group's set never validates and it degrades to entry
+    // replay instead of wrong pixels — mirroring the sprite renderer's
+    // custom-material poison and the dynamic-geometry poison below.
+    if (material !== null && backend._isRetainedCapturing) {
+      backend._poisonRetainedCaptures();
+    }
+
+    // The material owns its blend mode; the mesh's own blendMode overrides it
+    // when set away from the default (Normal) — same rule as the node path.
+    const blendMode = material !== null && mesh.blendMode === BlendModes.Normal ? material.blendMode : mesh.blendMode;
     const texture = mesh.texture ?? Texture.white;
     const cacheEntry = this._getOrCreateStaticGeometryEntry(geometry, mesh, connection);
     const vao = this._getOrCreateStaticGeometryVao(cacheEntry, shader, connection.gl, connection.dynamicNodeIndexBuffer);
@@ -198,7 +217,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       this._nodeIndexData[i] = (startNodeIndex + i) >>> 0;
     }
 
-    this._bindInstancedShaderState(shader, texture, null, backend, maxNodeIndex);
+    this._bindInstancedShaderState(shader, texture, material, backend, maxNodeIndex);
     backend.bindVertexArrayObject(vao);
     connection.dynamicNodeIndexBuffer.upload(this._nodeIndexData.subarray(0, count));
     vao.drawInstanced(cacheEntry.indexCount, 0, count, RenderingPrimitives.Triangles);
@@ -736,6 +755,32 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     this._compatibilityCache.set(shader, compatible);
 
     return compatible;
+  }
+
+  // Cold path: only runs when a batch is about to throw, so it re-derives the
+  // individual conditions of _isInstancingCompatible rather than caching them.
+  // Reflection reports the LINKED program, so a declared-but-unread uniform is
+  // legitimately absent here — such a shader really cannot be instanced.
+  private _describeInstancingGap(shader: Shader): string {
+    const gaps: string[] = [];
+
+    if (!shader.attributes.has('a_nodeIndex')) {
+      gaps.push('missing attribute `a_nodeIndex`');
+    }
+
+    if (!shader.uniforms.has('u_transforms')) {
+      gaps.push('missing uniform `u_transforms`');
+    }
+
+    if (shader.uniforms.has('u_translation')) {
+      gaps.push('declares the single-draw uniform `u_translation`');
+    }
+
+    if (shader.uniforms.has('u_tint')) {
+      gaps.push('declares the single-draw uniform `u_tint`');
+    }
+
+    return `${gaps.join(', ')} — include INSTANCE_TRANSFORM_GLSL and position via exoInstanceClipPosition()`;
   }
 
   private _getOrCreateStaticGeometryEntry(geometry: Geometry, mesh: Mesh, connection: MeshRendererConnection): StaticGeometryCacheEntry {

@@ -44,9 +44,10 @@ export class RenderBatch {
       throw new Error(`RenderBatch requires geometry with usage='static' (got '${geometry.usage}').`);
     }
 
-    // v1 renders batches with the default mesh material; a custom material is not
-    // yet supported on the instanced path. The parameter is accepted (and stored)
-    // for the forthcoming custom-material batch support.
+    // Defensive guard for JS callers; MeshMaterial's `target` is the literal
+    // 'mesh' for TypeScript callers. Whether the material's shader satisfies the
+    // instancing contract can only be decided from the LINKED program, so that
+    // check lives at the first draw, not here.
     if (material !== null && (material.target as string) !== 'mesh') {
       throw new Error(`RenderBatch material must target 'mesh' (got '${String(material.target)}').`);
     }

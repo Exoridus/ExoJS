@@ -760,16 +760,20 @@ describe('RenderingContext.drawBatch', () => {
     geometry.destroy();
   });
 
-  test('rejects a batch carrying a custom material', () => {
-    const { backend, drawInstanced } = createMockBackend();
+  test('forwards a batch carrying a custom material to the backend', () => {
+    const { backend, drawInstanced, instancedDraws } = createMockBackend();
     const context = new RenderingContext(backend);
     const geometry = createStandardGeometry();
-    const batch = new RenderBatch(geometry).add(new Matrix());
-    // Force a custom material onto the batch to exercise the drawBatch guard.
-    (batch as unknown as { material: unknown }).material = minimalMeshMaterial();
+    const material = minimalMeshMaterial();
+    const batch = new RenderBatch(geometry, material).add(new Matrix());
 
-    expect(() => context.drawBatch(batch)).toThrow(/custom materials are not supported/);
-    expect(drawInstanced).not.toHaveBeenCalled();
+    context.drawBatch(batch);
+
+    // drawBatch no longer gates custom materials: whether the material's shader
+    // satisfies the instancing contract can only be decided from the linked
+    // program, so that check belongs to the renderer, not to this seam.
+    expect(drawInstanced).toHaveBeenCalledTimes(1);
+    expect((instancedDraws[0].mesh as Mesh).material).toBe(material);
 
     batch.destroy();
     geometry.destroy();
