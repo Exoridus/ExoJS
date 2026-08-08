@@ -14,6 +14,8 @@ export interface HandlerEntry {
   getIdentityKey?: (config: unknown) => string;
   /** Optional byte-source constructor used by container loading (bypasses fetch). */
   createFromBytes?: (bytes: ArrayBuffer, options?: unknown) => Promise<unknown>;
+  /** Optional per-resource teardown, invoked by `AssetResidency` when a value asset of this type is evicted at refcount 0. */
+  dispose?: (resource: unknown) => void;
   /** Optional per-type IDB namespace for `context.fetchX()` calls made by this binding's handler. */
   storageName?: string;
 }
@@ -123,31 +125,7 @@ export class AssetTypeRegistry {
     // suffix is deliberately NOT a conflict — it simply outranks this binding.
 
     // All validation passed — install atomically.
-    // Localized type-erasure boundary: the internal registry uses a flat config
-    // `{ source, ...fields }`. The public AssetHandler<Result, Options> interface
-    // uses `AssetLoadRequest<Options> = { source, options? }`. This single `toRequest`
-    // helper is the only place where the erased flat config is cast to the typed
-    // request — justified by the `AssetBinding<Result, Options>` contract that
-    // associates this handler's Options with the registered constructor.
-    const toRequest = (config: unknown): AssetLoadRequest<Options> => {
-      const { source, ...rest } = config as { source: string } & Record<string, unknown>;
-
-      if (Object.keys(rest).length === 0) {
-        return { source };
-      }
-
-      return { source, options: rest as Options };
-    };
-
-    const boundIdentityKey = handler.getIdentityKey?.bind(handler);
-    const boundCreateFromBytes = handler.createFromBytes?.bind(handler);
-
-    this._handlerFunctions.set(keys.ctor, {
-      load: (config, ctx) => handler.load(toRequest(config), ctx),
-      ...(boundIdentityKey && { getIdentityKey: (config: unknown) => boundIdentityKey(toRequest(config)) }),
-      ...(boundCreateFromBytes && { createFromBytes: (bytes: ArrayBuffer, options?: unknown) => boundCreateFromBytes(bytes, options as Options) }),
-      ...(keys.storageName !== undefined && { storageName: keys.storageName }),
-    });
+    this._handlerFunctions.set(keys.ctor, this._createHandlerEntry<Result, Options>(handler, keys.storageName));
 
     for (const name of resolvedNames) {
       this._assetTypeMap.set(name, keys.ctor);
@@ -166,6 +144,45 @@ export class AssetTypeRegistry {
     if (keys.seamless !== undefined) {
       this.registerSeamlessAdapter(keys.ctor, keys.seamless);
     }
+  }
+
+  /**
+   * Erase one {@link AssetHandler}'s typed surface into the flat
+   * {@link HandlerEntry} every dispatch path reads. Each optional hook is
+   * carried over only when the handler actually implements it, so a missing
+   * `getIdentityKey`/`createFromBytes`/`dispose` stays `undefined` on the entry
+   * rather than becoming a wrapper that calls nothing.
+   *
+   * This is the single type-erasure boundary of the binding install: the
+   * internal registry uses a flat config `{ source, ...fields }`, while the
+   * public `AssetHandler<Result, Options>` interface uses
+   * `AssetLoadRequest<Options> = { source, options? }`. The `toRequest` helper
+   * below is the only place the erased flat config is cast back to the typed
+   * request — justified by the `AssetBinding<Result, Options>` contract that
+   * associates this handler's `Options` with the registered constructor.
+   */
+  private _createHandlerEntry<Result, Options>(handler: AssetHandler<Result, Options>, storageName: string | undefined): HandlerEntry {
+    const toRequest = (config: unknown): AssetLoadRequest<Options> => {
+      const { source, ...rest } = config as { source: string } & Record<string, unknown>;
+
+      if (Object.keys(rest).length === 0) {
+        return { source };
+      }
+
+      return { source, options: rest as Options };
+    };
+
+    const boundIdentityKey = handler.getIdentityKey?.bind(handler);
+    const boundCreateFromBytes = handler.createFromBytes?.bind(handler);
+    const boundDispose = handler.dispose?.bind(handler);
+
+    return {
+      load: (config, ctx) => handler.load(toRequest(config), ctx),
+      ...(boundIdentityKey && { getIdentityKey: (config: unknown) => boundIdentityKey(toRequest(config)) }),
+      ...(boundCreateFromBytes && { createFromBytes: (bytes: ArrayBuffer, options?: unknown) => boundCreateFromBytes(bytes, options as Options) }),
+      ...(boundDispose && { dispose: (resource: unknown) => boundDispose(resource as Result) }),
+      ...(storageName !== undefined && { storageName }),
+    };
   }
 
   /** Returns true if a handler is already registered for the given constructor. */

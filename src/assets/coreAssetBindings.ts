@@ -31,10 +31,19 @@ import { BinaryAsset, CsvAsset, FontAsset, ImageAsset, Json, SubtitleAsset, SvgA
 // Adapter helpers
 // ---------------------------------------------------------------------------
 
+/**
+ * The slice of `AssetFactory` the two generic handler adapters below drive:
+ * `create`, the optional per-resource `dispose` they forward when the loader
+ * evicts one asset, and the factory-wide `destroy` they forward on teardown.
+ */
+interface FactoryLike<Source, T> {
+  create(raw: Source, options?: unknown): Promise<T>;
+  dispose?(resource: T): void;
+  destroy(): void;
+}
+
 /** Create an AssetHandler backed by a factory that uses fetchArrayBuffer. */
-function binaryFactoryHandler<T>(
-  makeFactory: () => { create(raw: ArrayBuffer, options?: unknown): Promise<T>; destroy(): void },
-): (loader: Loader) => AssetHandler {
+function binaryFactoryHandler<T>(makeFactory: () => FactoryLike<ArrayBuffer, T>): (loader: Loader) => AssetHandler {
   return () => {
     const factory = makeFactory();
     return {
@@ -45,6 +54,9 @@ function binaryFactoryHandler<T>(
       createFromBytes(bytes: ArrayBuffer, options?: unknown): Promise<T> {
         return factory.create(bytes, options);
       },
+      dispose(resource: unknown): void {
+        factory.dispose?.(resource as T);
+      },
       destroy() {
         factory.destroy();
       },
@@ -53,7 +65,7 @@ function binaryFactoryHandler<T>(
 }
 
 /** Create an AssetHandler backed by a factory that uses fetchText. */
-function textFactoryHandler<T>(makeFactory: () => { create(raw: string, options?: unknown): Promise<T>; destroy(): void }): (loader: Loader) => AssetHandler {
+function textFactoryHandler<T>(makeFactory: () => FactoryLike<string, T>): (loader: Loader) => AssetHandler {
   return () => {
     const factory = makeFactory();
     return {
@@ -63,6 +75,9 @@ function textFactoryHandler<T>(makeFactory: () => { create(raw: string, options?
       },
       createFromBytes(bytes: ArrayBuffer, options?: unknown): Promise<T> {
         return factory.create(new TextDecoder().decode(bytes), options);
+      },
+      dispose(resource: unknown): void {
+        factory.dispose?.(resource as T);
       },
       destroy() {
         factory.destroy();

@@ -262,9 +262,13 @@ export class AssetResidency {
     if (this._evicted.has(key)) {
       this._evicted.delete(key);
 
-      // The handle was re-armed to 'loading' during eviction; just re-drive the fetch.
+      // The handle/ref was re-armed to 'loading' during eviction; just re-drive
+      // the fetch. A value key with no ref left (evicted after a bare `load()`)
+      // still refetches: nothing but this would restore its resident payload.
       if (this._typeRegistry.hasSeamlessAdapter(type)) {
         this._startSeamlessFetch(type, source, this._deferred.get(key)?.options);
+      } else {
+        this._startRefFetch(type, source, this._refs.get(key)?.options);
       }
     }
   }
@@ -314,12 +318,15 @@ export class AssetResidency {
    * live consumer handle for the key (drops payload + re-arms each to 'loading'),
    * remove the stored resource, and leave the handles registered in `_deferred`
    * so the next claim heals them all in place. Also drops a not-yet-started
-   * background-queue entry. Seamless payloads only — value-ref
-   * eviction is an accepted gap.
+   * background-queue entry. A value key (no seamless adapter for the type) takes
+   * the twin path in {@link _evictValueKey} instead.
    *
    * Only a payload that has already converged into `_resources` is dropped here.
    * A fetch still in flight (nothing stored yet) is left to the running fetch,
-   * which fills then frees on arrival — evicting mid-flight would race it.
+   * which fills then frees on arrival — evicting mid-flight would race it. The
+   * value path is gated identically: the same race exists there (a claim can be
+   * released while the key's single fetch is still running), and the same rule
+   * resolves it.
    */
   private _evictKey(key: string, type: AssetConstructor, source: string): void {
     const adapter = this._typeRegistry.getSeamlessAdapter(type);
@@ -365,12 +372,57 @@ export class AssetResidency {
       // self-entry identity guard in `_trackInFlight`.
       this._inFlight.delete(key);
     }
+    // A value payload may legitimately BE `null`/`undefined` (a JSON `null`, a
+    // nullish payload from a `bindAsset`-bound custom type), so this asks
+    // `_hasStored` where the seamless branch above can read the value itself —
+    // for a seamless type the stored resource is always the handle object.
+    else if (adapter === undefined && this._hasStored(type, source)) {
+      this._evictValueKey(key, type, source, stored);
+    }
 
     const queued = this._backgroundQueue.findIndex(entry => this._typeRegistry._key(entry.type, entry.alias) === key);
 
     if (queued !== -1) {
       this._backgroundQueue.splice(queued, 1);
     }
+  }
+
+  /**
+   * Value twin of the seamless eviction in {@link _evictKey}: hand the stored
+   * payload to the bound handler's per-resource `dispose` (a factory-backed
+   * handler forwards it to `AssetFactory.dispose`), drop it from `_resources`,
+   * and re-arm every live ref for the key in place — `AssetRef._begin()` is
+   * exactly what `adapter.evict(handle)` is for a seamless handle: payload
+   * dropped, state back to `'loading'`, identity kept, so the next claim heals
+   * every consumer that already holds the ref.
+   *
+   * Re-arming is not cosmetic bookkeeping. A ref left holding its `_value`
+   * would keep handing out the payload this method just disposed, and would pin
+   * it for as long as any consumer holds the ref — the eviction would free
+   * nothing at all.
+   *
+   * `dispose` is optional on the handler: most value types (parsed JSON, text,
+   * a compiled `WebAssembly.Module`) own nothing the garbage collector cannot
+   * reclaim once the last reference drops, so the delete below IS the whole
+   * teardown for them.
+   */
+  private _evictValueKey(key: string, type: AssetConstructor, source: string, stored: unknown): void {
+    this._typeRegistry.getHandler(type)?.dispose?.(stored);
+    this._resources.get(type)?.delete(source);
+
+    const entry = this._refs.get(key);
+
+    if (entry !== undefined) {
+      for (const ref of entry.refs) {
+        ref._begin();
+      }
+    }
+
+    this._evicted.add(key);
+    // Drop a resolved-but-not-yet-cleaned in-flight entry so the reclaim's
+    // re-fetch starts fresh instead of deduping onto it — see the seamless
+    // branch above for the full reasoning; it applies verbatim here.
+    this._inFlight.delete(key);
   }
 
   // -----------------------------------------------------------------------

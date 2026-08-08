@@ -125,6 +125,72 @@ describe('AssetResidency', () => {
       expect(residency._peekResource(TypeA, 'a.png')).toBe(handle);
     });
 
+    test('claim then release at refcount 0 disposes and frees a stored value asset', () => {
+      const { residency, typeRegistry } = createResidency();
+      const dispose = vi.fn();
+      typeRegistry.bindAsset({ ctor: TypeA }, { load: async (request, ctx) => ctx.fetchText(request.source), dispose });
+
+      const scope = Symbol('scope');
+      const key = typeRegistry._key(TypeA, 'a.json');
+      const ref = residency._getRef(TypeA, 'a.json');
+      residency._claim(key, TypeA, 'a.json', scope);
+
+      const resource = { hp: 3 };
+      residency._storeResource(TypeA, 'a.json', resource);
+
+      expect(residency._peekResource(TypeA, 'a.json')).toBe(resource);
+      expect(ref.state).toBe('ready');
+
+      residency._release(key, scope);
+
+      // The bound handler's per-resource teardown ran on the exact payload...
+      expect(dispose).toHaveBeenCalledWith(resource);
+      // ...the payload left the resident store...
+      expect(residency._peekResource(TypeA, 'a.json')).toBeNull();
+      // ...and the ref was re-armed in place, so it neither hands out nor pins
+      // the value that was just disposed.
+      expect(ref.state).toBe('loading');
+      expect(() => ref.value).toThrow("'loading'");
+    });
+
+    test('a value asset whose handler implements no dispose is still freed at refcount 0', () => {
+      const { residency, typeRegistry } = createResidency();
+      typeRegistry.bindAsset({ ctor: TypeA }, { load: async (request, ctx) => ctx.fetchText(request.source) });
+
+      const scope = Symbol('scope');
+      const key = typeRegistry._key(TypeA, 'a.json');
+      residency._claim(key, TypeA, 'a.json', scope);
+      residency._storeResource(TypeA, 'a.json', { hp: 3 });
+
+      expect(() => residency._release(key, scope)).not.toThrow();
+      expect(residency._peekResource(TypeA, 'a.json')).toBeNull();
+    });
+
+    test('claim on an evicted value key re-drives the fetch and heals the same ref', async () => {
+      const { residency, typeRegistry } = createResidency({ cacheStrategy: createFakeStrategy(() => 'decoded') });
+      typeRegistry.bindAsset({ ctor: TypeA }, { load: async (request, ctx) => ctx.fetchText(request.source) });
+
+      const scope = Symbol('scope');
+      const key = typeRegistry._key(TypeA, 'a.json');
+      const ref = residency._getRef(TypeA, 'a.json');
+      residency._claim(key, TypeA, 'a.json', scope);
+
+      await new Promise(r => setTimeout(r, 0));
+      expect(ref.state).toBe('ready');
+
+      residency._release(key, scope);
+      expect(residency._peekResource(TypeA, 'a.json')).toBeNull();
+
+      residency._claim(key, TypeA, 'a.json', scope);
+      await new Promise(r => setTimeout(r, 0));
+
+      // Same ref identity, healed in place from a fresh fetch.
+      expect(residency._getRef(TypeA, 'a.json')).toBe(ref);
+      expect(ref.state).toBe('ready');
+      expect(ref.value).toBe('decoded');
+      expect(residency._peekResource(TypeA, 'a.json')).toBe('decoded');
+    });
+
     test('releaseScope releases every key held under that scope', () => {
       const { residency, typeRegistry } = createResidency();
       const adapter = createFakeSeamlessAdapter();

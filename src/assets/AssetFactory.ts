@@ -28,8 +28,30 @@ export interface AssetFactory<T = unknown> {
   create(source: unknown, options?: unknown): Promise<T>;
 
   /**
-   * Releases all resources held by this factory, including any object URLs
-   * created during asset loading.
+   * Releases the resources held by ONE asset this factory produced — the
+   * per-resource counterpart of {@link destroy}. Called when the loader evicts
+   * that asset at refcount 0; the factory stays alive and keeps serving every
+   * other asset it created.
+   *
+   * Optional, and safe to omit: implement it only when a produced asset owns
+   * something the garbage collector cannot reclaim on its own (a media element
+   * to detach, a `FontFace` registered on `document.fonts`, a GPU buffer, a
+   * worker). A decoded `AudioBuffer`, a parsed JSON object or a compiled
+   * `WebAssembly.Module` needs nothing, so most factories do not implement it.
+   *
+   * Must be synchronous and must tolerate being called for a resource that was
+   * already released. `resource` is never handed back to a consumer afterwards:
+   * the loader drops it from the resident store and re-arms every live ref for
+   * the asset in the same step.
+   */
+  dispose?(resource: T): void;
+
+  /**
+   * Releases everything this factory owns ACROSS ALL the assets it ever
+   * produced — every object URL it created, every media element it still
+   * tracks — and leaves the factory unusable. Called once, when the owning
+   * loader/handler is destroyed, not per asset; use {@link dispose} for the
+   * teardown of a single evicted resource.
    */
   destroy(): void;
 }

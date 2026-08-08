@@ -65,6 +65,19 @@ export interface AssetHandler<Result = unknown, Options = undefined> {
    * @advanced
    */
   createFromBytes?(bytes: ArrayBuffer, options?: Options): Promise<Result>;
+  /**
+   * Releases the resources held by ONE loaded asset, called when the Loader
+   * evicts it at refcount 0 (its last claim was released). The handler stays
+   * alive; only that asset is torn down. A factory-backed handler forwards this
+   * to `AssetFactory.dispose`.
+   *
+   * Optional and safe to omit — implement it only when the produced asset owns
+   * something the garbage collector cannot reclaim on its own (a media element,
+   * a `FontFace` registered on `document.fonts`, a GPU buffer, a worker). Must
+   * be synchronous; use {@link destroy} for handler-wide teardown instead.
+   * @advanced
+   */
+  dispose?(resource: Result): void;
   destroy?(): void;
 }
 
