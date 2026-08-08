@@ -1,3 +1,4 @@
+import { logger, LogSeverity } from '#core/logging';
 import type { System } from '#core/System';
 import { SystemRegistry } from '#core/SystemRegistry';
 import { Time } from '#core/Time';
@@ -112,5 +113,83 @@ describe('SystemRegistry ordering — before/after', () => {
 
     expect(() => tick(registry)).toThrow(/CycleSystemA/);
     expect(() => tick(registry)).toThrow(/CycleSystemB/);
+  });
+});
+
+describe('SystemRegistry.destroy() — a throwing system cannot strand the rest', () => {
+  test('every remaining system is destroyed even when an earlier one throws', () => {
+    const registry = new SystemRegistry();
+    const destroyed: string[] = [];
+
+    // Reverse registration order, so the thrower sits between two survivors.
+    registry.add({ update: (): void => {}, destroy: (): void => void destroyed.push('first') });
+    registry.add({
+      update: (): void => {},
+      destroy: (): never => {
+        throw new Error('extension system blew up');
+      },
+    });
+    registry.add({ update: (): void => {}, destroy: (): void => void destroyed.push('last') });
+
+    registry.destroy();
+
+    expect(destroyed).toEqual(['last', 'first']);
+  });
+
+  test('the clear-and-reset tail still runs, so the registry does not stay live', () => {
+    const registry = new SystemRegistry();
+    const survivor = { update: (): void => {} };
+
+    registry.add({
+      update: (): void => {},
+      destroy: (): never => {
+        throw new Error('extension system blew up');
+      },
+    });
+    registry.add(survivor);
+    registry.onRemove.add(() => {});
+
+    registry.destroy();
+
+    expect(registry.size).toBe(0);
+    expect(registry.has(survivor)).toBe(false);
+    expect(registry.onRemove.count).toBe(0);
+  });
+
+  test('destroy() does not propagate a system failure to its caller', () => {
+    const registry = new SystemRegistry();
+
+    registry.add({
+      update: (): void => {},
+      destroy: (): never => {
+        throw new Error('extension system blew up');
+      },
+    });
+
+    expect(() => registry.destroy()).not.toThrow();
+  });
+  test('the swallowed failure is reported through the logger, not lost', () => {
+    const registry = new SystemRegistry();
+    const reported: string[] = [];
+    const removeSink = logger.addSink(entry => {
+      if (entry.severity === LogSeverity.Error) reported.push(entry.message);
+    });
+
+    registry.add({
+      update: (): void => {},
+      destroy: (): never => {
+        throw new Error('extension system blew up');
+      },
+    });
+
+    try {
+      registry.destroy();
+    } finally {
+      removeSink();
+      logger._resetOnce();
+    }
+
+    expect(reported).toHaveLength(1);
+    expect(reported[0]).toMatch(/SystemRegistry\.destroy\(\)/);
   });
 });
