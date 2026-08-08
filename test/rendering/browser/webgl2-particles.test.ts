@@ -148,6 +148,63 @@ describe('WebGL2 ParticleSystem — solid color', () => {
     }
   });
 
+  test('two systems share one compiled program, and destroying one leaves the other drawing', async () => {
+    const backend = await createBackend();
+    const redTexture = createSolidTexture('#ff0000', 16, 16);
+    const greenTexture = createSolidTexture('#00ff00', 16, 16);
+    const root = new Container();
+    const first = new ParticleSystem(redTexture, { capacity: 4 });
+    const second = new ParticleSystem(greenTexture, { capacity: 4 });
+
+    const place = (system: ParticleSystem, x: number, y: number): void => {
+      const slot = system.spawn();
+
+      system.posX[slot] = 0;
+      system.posY[slot] = 0;
+      system.scaleX[slot] = 1;
+      system.scaleY[slot] = 1;
+      system.color[slot] = 0xffffffff;
+      system.lifetime[slot] = 1;
+      system.setPosition(x, y);
+      root.addChild(system);
+    };
+
+    try {
+      place(first, 16, 16);
+      render(backend, root);
+
+      // Everything the particle path compiles lazily is compiled by now, so any
+      // further program creation belongs to the second system alone.
+      const createProgram = vi.spyOn(backend.context, 'createProgram');
+
+      place(second, 48, 48);
+      render(backend, root);
+
+      // Both systems default to the shared render mode, whose material is what
+      // the renderer caches its program, VAO and buffers against — so the second
+      // system must reuse the first system's program rather than compile its own.
+      expect(createProgram).not.toHaveBeenCalled();
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 48, 48), [0, 255, 0, 255]);
+
+      // The shared mode is not owned by any one system, so destroying the first
+      // must not tear down the resources the second still draws with.
+      first.destroy();
+      render(backend, root);
+
+      expect(createProgram).not.toHaveBeenCalled();
+      expectPixelNear(readWebGl2Pixel(backend, 48, 48), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [0, 0, 0, 255]);
+
+      createProgram.mockRestore();
+    } finally {
+      root.destroy();
+      redTexture.destroy();
+      greenTexture.destroy();
+      backend.destroy();
+    }
+  });
+
   test('particle color channel tints a white texture', async () => {
     const backend = await createBackend();
     const texture = createSolidTexture('#ffffff', 16, 16);

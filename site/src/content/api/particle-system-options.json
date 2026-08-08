@@ -101,7 +101,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "How this system's particles become vertices. Fixed at construction; defaults to QuadParticles. A mode with gpuEligible === false forces the system onto the CPU path — silently, exactly like an update module without a wgsl() implementation, and observable through ParticleSystem.gpuMode."
+          "description": "How this system's particles become vertices. Fixed at construction. A mode with gpuEligible === false forces the system onto the CPU path — silently, exactly like an update module without a wgsl() implementation, and observable through ParticleSystem.gpuMode. **Ownership.** A mode passed here belongs to the system: the system destroys it in ParticleSystem.destroy, which destroys the mode's material and geometry and releases the GPU resources cached against them. Pass one mode instance per system. Handing the same instance to two systems is not supported — destroying either one pulls the material out from under the other, which then silently rebuilds a fresh material and pays for a fresh shader compile mid-life. Two systems that should share one program simply omit this option; the default mode is shared for exactly that reason and is not owned by any system."
         }
       ],
       "paragraphs": [],

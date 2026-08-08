@@ -3487,7 +3487,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The render mode this system's particles are drawn with. Fixed at construction via ParticleSystemOptions.render; the backend renderers read it every draw to learn the vertex layout, shader and draw model."
+          "description": "The render mode this system's particles are drawn with. Fixed at construction via ParticleSystemOptions.render; the backend renderers read it every draw to learn the vertex layout, shader and draw model. Without that option this is the shared default mode — the same instance every other defaulted system draws with, so do not destroy it or mutate its material."
         },
         {
           "name": "rotation",

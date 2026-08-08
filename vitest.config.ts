@@ -161,6 +161,10 @@ export default defineConfig({
         name: 'exojs-particles',
         alias: aliasConfig,
         include: ['packages/exojs-particles/test/**/*.test.ts'],
+        // Same reason as the `exojs` project above: a spec that reaches a render
+        // mode's `Material` needs real GLSL, because `ShaderSource` rejects the
+        // stub's empty string before the material is ever handed to a backend.
+        setupFiles: ['./test/setup-env.vitest.ts', './test/rendering/_particleGlslMocks.ts'],
       }),
       createJsdomTestProject({
         name: 'exojs-tilemap',
