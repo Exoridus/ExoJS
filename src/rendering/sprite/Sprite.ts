@@ -289,8 +289,7 @@ export class Sprite extends Drawable {
 
     this._textureFrame.copy(frame);
     this.flags.push(SpriteFlags.TextureCoords);
-    this.getLocalBounds().set(0, 0, frame.width, frame.height);
-    this._invalidateBoundsCascade();
+    this._setLocalBounds(0, 0, frame.width, frame.height);
 
     if (resetSize) {
       this.width = frame.width;

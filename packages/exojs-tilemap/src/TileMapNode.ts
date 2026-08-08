@@ -1,4 +1,4 @@
-import type { Rectangle } from '@codexo/exojs';
+import type { ReadonlyRectangle } from '@codexo/exojs';
 import { Container } from '@codexo/exojs';
 import { PixelSnapMode } from '@codexo/exojs/renderer-sdk';
 
@@ -132,8 +132,13 @@ export class TileMapNode extends Container {
     return this;
   }
 
-  public override getLocalBounds(): Rectangle {
-    const bounds = super.getLocalBounds();
+  /**
+   * Recomputed lazily on read, so it writes `_localBounds` directly rather than
+   * going through `_setLocalBounds`: an invalidating write inside a getter
+   * would re-dirty the node on every read.
+   */
+  public override getLocalBounds(): ReadonlyRectangle {
+    const bounds = this._localBounds;
 
     // Reading the pixel extents directly (rather than gating on `bounded`)
     // is what narrows them to numbers — `bounded` is a plain boolean getter.

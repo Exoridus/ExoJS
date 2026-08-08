@@ -221,8 +221,7 @@ export class Text extends AbstractText {
       // going empty keeps its old local bounds and bumps no revision, so
       // culling / hit-testing / the retained group aggregate read a stale
       // extent, and any instruction-set cache of the prior geometry stays live.
-      this.getLocalBounds().set(0, 0, 0, 0);
-      this._invalidateBoundsCascade();
+      this._setLocalBounds(0, 0, 0, 0);
       this._updateOrigin();
       this._style.consumeDirty();
       return;
@@ -237,8 +236,7 @@ export class Text extends AbstractText {
     if (placements.length === 0) {
       // Same empty-transition contract as above: no glyphs placed, so reset the
       // extent and content-dirty rather than leaving a stale non-empty bounds.
-      this.getLocalBounds().set(0, 0, 0, 0);
-      this._invalidateBoundsCascade();
+      this._setLocalBounds(0, 0, 0, 0);
       this._updateOrigin();
       this._style.consumeDirty();
       return;
@@ -253,8 +251,7 @@ export class Text extends AbstractText {
       if (py > maxY) maxY = py;
     }
     this._textBounds = { width: maxX, height: maxY };
-    this.getLocalBounds().set(0, 0, maxX, maxY);
-    this._invalidateBoundsCascade();
+    this._setLocalBounds(0, 0, maxX, maxY);
 
     // An anchor is a fraction of the bounds, so a node whose text just changed
     // width has to re-derive its origin — otherwise a centred label drifts left

@@ -1,7 +1,7 @@
 /// <reference types="@webgpu/types" />
 
 import { Matrix } from '#math/Matrix';
-import type { Rectangle } from '#math/Rectangle';
+import type { ReadonlyRectangle } from '#math/Rectangle';
 import { packAffineMat4 } from '#rendering/affinePacking';
 import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import type { Sprite } from '#rendering/sprite/Sprite';
@@ -406,7 +406,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   // boundary snapping now happens in the vertex shader, so this is always the
   // sprite's logical local bounds; the field lets _packInstance read the value
   // resolved once per render() call.
-  private _activeBounds: Rectangle | null = null;
+  private _activeBounds: ReadonlyRectangle | null = null;
 
   protected onConnect(backend: WebGpuBackend): void {
     if (this._device) {
@@ -584,7 +584,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
    * bounds-snap happens here and logical state is never mutated. Consumed
    * synchronously by {@link _packInstance}.
    */
-  private _resolveBounds(sprite: Sprite): Rectangle {
+  private _resolveBounds(sprite: Sprite): ReadonlyRectangle {
     return sprite.getLocalBounds();
   }
 

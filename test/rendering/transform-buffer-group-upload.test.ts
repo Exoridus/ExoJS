@@ -19,7 +19,7 @@ class BoxDrawable extends Drawable {
     tint: Color,
   ) {
     super();
-    this.getLocalBounds().set(0, 0, 16, 16);
+    this._setLocalBounds(0, 0, 16, 16);
     this.setPosition(x, y);
     this.setTint(tint);
   }

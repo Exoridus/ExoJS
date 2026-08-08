@@ -309,7 +309,7 @@ class BoundaryContainer extends Container {
 class LeafDrawable extends Drawable {
   public constructor(public readonly id: string) {
     super();
-    this.getLocalBounds().set(0, 0, 16, 16);
+    this._setLocalBounds(0, 0, 16, 16);
   }
 }
 

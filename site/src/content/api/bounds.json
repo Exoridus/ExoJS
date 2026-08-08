@@ -137,7 +137,7 @@
         },
         {
           "name": "addRect",
-          "signature": "addRect(rectangle: Rectangle, transform?: Matrix): this",
+          "signature": "addRect(rectangle: ReadonlyRectangle, transform?: Matrix): this",
           "signatureTokens": [
             {
               "text": "addRect",
@@ -156,7 +156,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Rectangle",
+              "text": "ReadonlyRectangle",
               "kind": "type"
             },
             {
@@ -195,7 +195,7 @@
           "params": [
             {
               "name": "rectangle",
-              "type": "Rectangle",
+              "type": "ReadonlyRectangle",
               "optional": false
             },
             {

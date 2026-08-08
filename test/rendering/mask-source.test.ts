@@ -17,7 +17,7 @@ class TestDrawable extends Drawable {
   public override updateBounds(): this {
     // Give the drawable a non-zero local extent so getBounds() returns
     // a usable rectangle for the alpha-mask pipeline.
-    this.getLocalBounds().set(0, 0, 64, 48);
+    this._setLocalBounds(0, 0, 64, 48);
 
     return super.updateBounds();
   }

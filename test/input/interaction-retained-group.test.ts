@@ -105,7 +105,7 @@ const createApp = (): {
 const makeSprite = (): Drawable => {
   const sprite = new Drawable();
 
-  sprite.getLocalBounds().set(0, 0, 50, 50);
+  sprite._setLocalBounds(0, 0, 50, 50);
 
   return sprite;
 };

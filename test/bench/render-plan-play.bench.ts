@@ -24,7 +24,7 @@ class TexturedDrawable extends Drawable {
 
   public constructor(x: number, y: number, texture: object) {
     super();
-    this.getLocalBounds().set(0, 0, 16, 16);
+    this._setLocalBounds(0, 0, 16, 16);
     this.setPosition(x, y);
     this.texture = texture;
   }

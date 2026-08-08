@@ -1,16 +1,16 @@
 {
-  "title": "Rectangle",
-  "description": "Mutable axis-aligned rectangle defined by a top-left origin `(x, y)` and dimensions `(width, height)`. Implements ShapeLike with full SAT collision response for rectangles and polygons, and specialised algorithms for circle and ellipse intersections. `Rectangle.temp` is a shared scratch instance. Edge normals are lazily computed and cached; they are invalidated when position or size mutates. See ReadonlyRectangle for the read-only view engine APIs hand out when they return a live internal rectangle.",
-  "symbol": "Rectangle",
-  "kind": "class",
+  "title": "ReadonlyRectangle",
+  "description": "Read-only view of a Rectangle: every accessor and non-mutating query a rectangle offers, with none of its writers. Returned by APIs that hand out a LIVE internal rectangle for zero allocation cost — SceneNode.getLocalBounds being the canonical one. Those rectangles are read on hot per-frame paths, so cloning them defensively would add a per-frame allocation; the view costs nothing at runtime and removes the write at the type level instead. Owners keep a real Rectangle and expose a dedicated writer that also runs whatever invalidation the write implies. Same idea as a `readonly T[]`: the object underneath is still the mutable one, the view just does not offer a way to change it.",
+  "symbol": "ReadonlyRectangle",
+  "kind": "interface",
   "subsystem": "math",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 28,
+  "memberCount": 19,
   "counts": {
-    "constructors": 1,
-    "methods": 15,
-    "properties": 12,
+    "constructors": 0,
+    "methods": 10,
+    "properties": 9,
     "events": 0
   },
   "sections": [
@@ -19,130 +19,11 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Mutable axis-aligned rectangle defined by a top-left origin `(x, y)` and dimensions `(width, height)`. Implements ShapeLike with full SAT collision response for rectangles and polygons, and specialised algorithms for circle and ellipse intersections.",
-        "`Rectangle.temp` is a shared scratch instance. Edge normals are lazily computed and cached; they are invalidated when position or size mutates.",
-        "See ReadonlyRectangle for the read-only view engine APIs hand out when they return a live internal rectangle."
+        "Read-only view of a Rectangle: every accessor and non-mutating query a rectangle offers, with none of its writers.",
+        "Returned by APIs that hand out a LIVE internal rectangle for zero allocation cost — SceneNode.getLocalBounds being the canonical one. Those rectangles are read on hot per-frame paths, so cloning them defensively would add a per-frame allocation; the view costs nothing at runtime and removes the write at the type level instead. Owners keep a real Rectangle and expose a dedicated writer that also runs whatever invalidation the write implies.",
+        "Same idea as a `readonly T[]`: the object underneath is still the mutable one, the view just does not offer a way to change it."
       ],
-      "importLine": "import { Rectangle } from '@codexo/exojs'",
-      "sourceLink": null
-    },
-    {
-      "id": "constructors",
-      "title": "Constructors",
-      "members": [
-        {
-          "name": "new",
-          "signature": "new(x: number, y: number, width: number, height: number): Rectangle",
-          "signatureTokens": [
-            {
-              "text": "new",
-              "kind": "keyword"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "x",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "y",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "width",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "height",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Rectangle",
-              "kind": "type"
-            }
-          ],
-          "params": [
-            {
-              "name": "x",
-              "type": "number",
-              "optional": false
-            },
-            {
-              "name": "y",
-              "type": "number",
-              "optional": false
-            },
-            {
-              "name": "width",
-              "type": "number",
-              "optional": false
-            },
-            {
-              "name": "height",
-              "type": "number",
-              "optional": false
-            }
-          ],
-          "returnType": "Rectangle",
-          "description": ""
-        }
-      ],
-      "paragraphs": [],
-      "importLine": null,
+      "importLine": "import { ReadonlyRectangle } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -151,7 +32,7 @@
       "members": [
         {
           "name": "clone",
-          "signature": "clone(): this",
+          "signature": "clone(): Rectangle",
           "signatureTokens": [
             {
               "text": "clone",
@@ -170,12 +51,12 @@
               "kind": "punctuation"
             },
             {
-              "text": "this",
-              "kind": "keyword"
+              "text": "Rectangle",
+              "kind": "type"
             }
           ],
           "params": [],
-          "returnType": "this",
+          "returnType": "Rectangle",
           "description": ""
         },
         {
@@ -346,14 +227,14 @@
             }
           ],
           "returnType": "boolean",
-          "description": "Return true when rect is entirely within this rectangle (all four edges inside)."
+          "description": ""
         },
         {
-          "name": "copy",
-          "signature": "copy(rectangle: Rectangle): this",
+          "name": "equals",
+          "signature": "equals(rectangle?: Partial<RectangleLike>): boolean",
           "signatureTokens": [
             {
-              "text": "copy",
+              "text": "equals",
               "kind": "name"
             },
             {
@@ -365,80 +246,8 @@
               "kind": "param"
             },
             {
-              "text": ": ",
+              "text": "?",
               "kind": "punctuation"
-            },
-            {
-              "text": "Rectangle",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "rectangle",
-              "type": "Rectangle",
-              "optional": false
-            }
-          ],
-          "returnType": "this",
-          "description": ""
-        },
-        {
-          "name": "destroy",
-          "signature": "destroy(): void",
-          "signatureTokens": [
-            {
-              "text": "destroy",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "void",
-          "description": ""
-        },
-        {
-          "name": "equals",
-          "signature": "equals(__namedParameters: Partial<Rectangle>): boolean",
-          "signatureTokens": [
-            {
-              "text": "equals",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "__namedParameters",
-              "kind": "param"
             },
             {
               "text": ": ",
@@ -453,7 +262,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Rectangle",
+              "text": "RectangleLike",
               "kind": "type"
             },
             {
@@ -475,9 +284,9 @@
           ],
           "params": [
             {
-              "name": "__namedParameters",
-              "type": "Partial<Rectangle>",
-              "optional": false
+              "name": "rectangle",
+              "type": "Partial<RectangleLike>",
+              "optional": true
             }
           ],
           "returnType": "boolean",
@@ -594,7 +403,7 @@
         },
         {
           "name": "project",
-          "signature": "project(axis: Vector, result: Interval): Interval",
+          "signature": "project(axis: Vector, interval?: Interval): Interval",
           "signatureTokens": [
             {
               "text": "project",
@@ -621,8 +430,12 @@
               "kind": "punctuation"
             },
             {
-              "text": "result",
+              "text": "interval",
               "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",
@@ -652,259 +465,13 @@
               "optional": false
             },
             {
-              "name": "result",
+              "name": "interval",
               "type": "Interval",
-              "optional": false
+              "optional": true
             }
           ],
           "returnType": "Interval",
           "description": "Project this shape onto axis and write the scalar min/max into interval. Used internally by the SAT solver."
-        },
-        {
-          "name": "set",
-          "signature": "set(x: number, y: number, width: number, height: number): this",
-          "signatureTokens": [
-            {
-              "text": "set",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "x",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "y",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "width",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "height",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "x",
-              "type": "number",
-              "optional": false
-            },
-            {
-              "name": "y",
-              "type": "number",
-              "optional": false
-            },
-            {
-              "name": "width",
-              "type": "number",
-              "optional": false
-            },
-            {
-              "name": "height",
-              "type": "number",
-              "optional": false
-            }
-          ],
-          "returnType": "this",
-          "description": ""
-        },
-        {
-          "name": "setPosition",
-          "signature": "setPosition(x: number, y: number): this",
-          "signatureTokens": [
-            {
-              "text": "setPosition",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "x",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "y",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "x",
-              "type": "number",
-              "optional": false
-            },
-            {
-              "name": "y",
-              "type": "number",
-              "optional": false
-            }
-          ],
-          "returnType": "this",
-          "description": ""
-        },
-        {
-          "name": "setSize",
-          "signature": "setSize(width: number, height: number): this",
-          "signatureTokens": [
-            {
-              "text": "setSize",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "width",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "height",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "width",
-              "type": "number",
-              "optional": false
-            },
-            {
-              "name": "height",
-              "type": "number",
-              "optional": false
-            }
-          ],
-          "returnType": "this",
-          "description": ""
         },
         {
           "name": "transform",
@@ -972,7 +539,7 @@
             }
           ],
           "returnType": "Rectangle",
-          "description": "Apply a 3×3 affine matrix to all four corners of this rectangle, then return the axis-aligned bounding box of the transformed corners written into result. Defaults to mutating this in place. Returns result."
+          "description": "Unlike Rectangle.transform, result is REQUIRED here: the defaulted overload writes the transformed box back into the receiver, which a read-only view must not offer."
         }
       ],
       "paragraphs": [],
@@ -983,27 +550,6 @@
       "id": "properties",
       "title": "Properties",
       "members": [
-        {
-          "name": "collisionType",
-          "signature": "collisionType: CollisionType",
-          "signatureTokens": [
-            {
-              "text": "collisionType",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "CollisionType",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
         {
           "name": "bottom",
           "signature": "bottom: number",
@@ -1019,6 +565,27 @@
             {
               "text": "number",
               "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "collisionType",
+          "signature": "collisionType: CollisionType",
+          "signatureTokens": [
+            {
+              "text": "collisionType",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CollisionType",
+              "kind": "type"
             }
           ],
           "params": [],
@@ -1068,27 +635,6 @@
           "description": ""
         },
         {
-          "name": "position",
-          "signature": "position: AbstractVector",
-          "signatureTokens": [
-            {
-              "text": "position",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "AbstractVector",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
           "name": "right",
           "signature": "right: number",
           "signatureTokens": [
@@ -1103,27 +649,6 @@
             {
               "text": "number",
               "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "size",
-          "signature": "size: Size",
-          "signatureTokens": [
-            {
-              "text": "size",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Size",
-              "kind": "type"
             }
           ],
           "params": [],
@@ -1208,27 +733,6 @@
             {
               "text": "number",
               "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "temp",
-          "signature": "temp: Rectangle",
-          "signatureTokens": [
-            {
-              "text": "temp",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Rectangle",
-              "kind": "type"
             }
           ],
           "params": [],

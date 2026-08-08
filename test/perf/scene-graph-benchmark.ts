@@ -18,7 +18,7 @@ import { runScenario, writeResults } from './harness';
 
 const makeDrawable = (x = 0, y = 0, size = 16): Drawable => {
   const d = new Drawable();
-  d.getLocalBounds().set(0, 0, size, size);
+  d._setLocalBounds(0, 0, size, size);
   d.setPosition(x, y);
   return d;
 };

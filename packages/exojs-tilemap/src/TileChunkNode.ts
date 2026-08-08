@@ -1,4 +1,4 @@
-import type { Rectangle } from '@codexo/exojs';
+import type { ReadonlyRectangle } from '@codexo/exojs';
 import { Drawable } from '@codexo/exojs/renderer-sdk';
 
 import type { ChunkPage } from './chunkGeometry';
@@ -117,12 +117,13 @@ export class TileChunkNode extends Drawable {
     return this.pages.length === 0;
   }
 
-  public override getLocalBounds(): Rectangle {
-    const bounds = super.getLocalBounds();
-
-    bounds.set(0, 0, this._pixelWidth, this._pixelHeight);
-
-    return bounds;
+  /**
+   * Recomputed lazily on read, so it writes `_localBounds` directly rather than
+   * going through `_setLocalBounds`: an invalidating write inside a getter
+   * would re-dirty the node on every read.
+   */
+  public override getLocalBounds(): ReadonlyRectangle {
+    return this._localBounds.set(0, 0, this._pixelWidth, this._pixelHeight);
   }
 
   public override destroy(): void {

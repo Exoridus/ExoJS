@@ -1,4 +1,4 @@
-﻿import type { Application } from '#core/Application';
+import type { Application } from '#core/Application';
 import { SceneNode } from '#core/SceneNode';
 import type { InteractionHooks, Stage } from '#core/Stage';
 import { FocusController } from '#input/FocusController';
@@ -481,7 +481,7 @@ describe('Container paint-order cache', () => {
 // extent to aggregate.
 class SizedDrawable extends Drawable {
   public override updateBounds(): this {
-    this.getLocalBounds().set(0, 0, 100, 100);
+    this._setLocalBounds(0, 0, 100, 100);
 
     return super.updateBounds();
   }

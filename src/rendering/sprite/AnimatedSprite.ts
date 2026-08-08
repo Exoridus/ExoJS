@@ -464,8 +464,9 @@ export class AnimatedSprite extends Sprite {
     const offset = clip.frameOffsets?.[frameIndex];
 
     if (offset) {
-      this.getLocalBounds().setPosition(offset.x, offset.y);
-      this._invalidateBoundsCascade();
+      const { height, width } = this.getLocalBounds();
+
+      this._setLocalBounds(offset.x, offset.y, width, height);
     }
   }
 }
