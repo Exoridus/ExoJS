@@ -1124,11 +1124,7 @@ export default defineConfig([
 
   // Extension particle renderer / render-mode / GPU hot paths.
   {
-    files: [
-      'packages/exojs-particles/src/renderers/**/*.ts',
-      'packages/exojs-particles/src/renderModes/**/*.ts',
-      'packages/exojs-particles/src/gpu/**/*.ts',
-    ],
+    files: ['packages/exojs-particles/src/renderers/**/*.ts', 'packages/exojs-particles/src/renderModes/**/*.ts', 'packages/exojs-particles/src/gpu/**/*.ts'],
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/no-unnecessary-condition': 'off',
