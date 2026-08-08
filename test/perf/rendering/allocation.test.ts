@@ -69,7 +69,15 @@ const TOLERANCE = 1.15;
  */
 const BASELINE_KB = {
   static: 248,
-  moving: 574,
+  // Ratcheted down from 574 after the scene-graph flag invalidation stopped
+  // allocating: `Flags.has/push/remove` took rest parameters, so every
+  // transform mutation allocated one array per ancestor walked, and this is the
+  // only scene that mutates transforms every frame. Measured on this dev box
+  // (Windows): 425.85 KB/frame median before, 276.66 after — a 35% drop, with
+  // the other four scenes unmoved. Unlike `mesh` below, the sprite scenes track
+  // between this box and CI (static/nested match their baselines here), so the
+  // Windows median is used directly.
+  moving: 277,
   nested: 363,
   // Mesh bundles sync a second per-instance DataTexture (tint) alongside
   // transform every frame — a deliberate, permanent cost of the transform/tint

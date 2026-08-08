@@ -467,23 +467,23 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   }
 
   public getTransform(): Matrix {
-    if (this.flags.has(SceneNodeTransformFlags.Transform)) {
+    if (this.flags.hasMask(SceneNodeTransformFlags.Transform)) {
       this.updateTransform();
-      this.flags.remove(SceneNodeTransformFlags.Transform);
+      this.flags.removeMask(SceneNodeTransformFlags.Transform);
     }
 
     return this._transform;
   }
 
   public updateTransform(): this {
-    if (this.flags.has(SceneNodeTransformFlags.Rotation)) {
+    if (this.flags.hasMask(SceneNodeTransformFlags.Rotation)) {
       const radians = degreesToRadians(this._rotation);
 
       this._cos = Math.cos(radians);
       this._sin = Math.sin(radians);
     }
 
-    if (this.flags.has(SceneNodeTransformFlags.Rotation | SceneNodeTransformFlags.Scaling | SceneNodeTransformFlags.Skew)) {
+    if (this.flags.hasMask(SceneNodeTransformFlags.Rotation | SceneNodeTransformFlags.Scaling | SceneNodeTransformFlags.Skew)) {
       const { x, y } = this._scale;
 
       if (this._skewX !== 0 || this._skewY !== 0) {
@@ -569,9 +569,9 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   public getBounds(): Rectangle {
     this.getGlobalTransform(); // ensures this node's own _globalTransformVersion is current
 
-    if (this.flags.has(SceneNodeTransformFlags.BoundsRect) || this._boundsBuiltAtVersion !== this._globalTransformVersion) {
+    if (this.flags.hasMask(SceneNodeTransformFlags.BoundsRect) || this._boundsBuiltAtVersion !== this._globalTransformVersion) {
       this.updateBounds();
-      this.flags.remove(SceneNodeTransformFlags.BoundsRect);
+      this.flags.removeMask(SceneNodeTransformFlags.BoundsRect);
       this._boundsBuiltAtVersion = this._globalTransformVersion;
     }
 
@@ -635,7 +635,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     const boundary = parent !== null && parent._isTransformGroupBoundary && !this._escapesTransformGroup();
     const parentTransform = parent !== null && !boundary ? parent.getGlobalTransform() : null;
     const parentVersion = parent !== null && !boundary ? parent._globalTransformVersion : NO_PARENT_VERSION;
-    const stale = this.flags.has(SceneNodeTransformFlags.GlobalTransform) || this._combinedParentVersion !== parentVersion;
+    const stale = this.flags.hasMask(SceneNodeTransformFlags.GlobalTransform) || this._combinedParentVersion !== parentVersion;
 
     if (stale) {
       this._globalTransform.copy(this.getTransform());
@@ -645,7 +645,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
       }
 
       this._combinedParentVersion = parentVersion;
-      this.flags.remove(SceneNodeTransformFlags.GlobalTransform);
+      this.flags.removeMask(SceneNodeTransformFlags.GlobalTransform);
       this._globalTransformVersion++;
     }
 
@@ -962,7 +962,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
 
   /** Mark own GlobalTransform + Bounds dirty. Descendants detect staleness lazily via the parent-version compare in getGlobalTransform()/getBounds() — no eager subtree walk. */
   public _invalidateSubtreeTransform(): void {
-    this.flags.push(SceneNodeTransformFlags.GlobalTransform | SceneNodeTransformFlags.BoundsRect);
+    this.flags.addMask(SceneNodeTransformFlags.GlobalTransform | SceneNodeTransformFlags.BoundsRect);
   }
 
   /** Mark own Bounds dirty AND propagate up to Container ancestors' Bounds. */
@@ -988,7 +988,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     // Mark own bounds + notify interaction for THIS node unconditionally —
     // the manager filters to tracked interactive nodes so this call is O(1)
     // for the common case (non-interactive node — fast Set.has miss).
-    this.flags.push(SceneNodeTransformFlags.BoundsRect);
+    this.flags.addMask(SceneNodeTransformFlags.BoundsRect);
     this._stage?.interaction._notifyBoundsInvalidated(this as unknown as RenderNode);
 
     // Walk up, but stop at the first ancestor already flagged dirty: if a parent
@@ -996,8 +996,8 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     // so re-walking it is redundant work.
     let ancestor = this._parentNode;
 
-    while (ancestor !== null && !ancestor.flags.has(SceneNodeTransformFlags.BoundsRect)) {
-      ancestor.flags.push(SceneNodeTransformFlags.BoundsRect);
+    while (ancestor !== null && !ancestor.flags.hasMask(SceneNodeTransformFlags.BoundsRect)) {
+      ancestor.flags.addMask(SceneNodeTransformFlags.BoundsRect);
       ancestor._stage?.interaction._notifyBoundsInvalidated(ancestor);
       ancestor = ancestor.parent;
     }
@@ -1195,31 +1195,31 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   }
 
   private _setPositionDirty(): void {
-    this.flags.push(SceneNodeTransformFlags.Translation);
+    this.flags.addMask(SceneNodeTransformFlags.Translation);
     this._invalidateSubtreeTransform();
     this._markOwnTransformDirty();
   }
 
   private _setRotationDirty(): void {
-    this.flags.push(SceneNodeTransformFlags.Rotation);
+    this.flags.addMask(SceneNodeTransformFlags.Rotation);
     this._invalidateSubtreeTransform();
     this._markOwnTransformDirty();
   }
 
   private _setScalingDirty(): void {
-    this.flags.push(SceneNodeTransformFlags.Scaling);
+    this.flags.addMask(SceneNodeTransformFlags.Scaling);
     this._invalidateSubtreeTransform();
     this._markOwnTransformDirty();
   }
 
   private _setOriginDirty(): void {
-    this.flags.push(SceneNodeTransformFlags.Origin);
+    this.flags.addMask(SceneNodeTransformFlags.Origin);
     this._invalidateSubtreeTransform();
     this._markOwnTransformDirty();
   }
 
   private _setSkewDirty(): void {
-    this.flags.push(SceneNodeTransformFlags.Skew);
+    this.flags.addMask(SceneNodeTransformFlags.Skew);
     this._invalidateSubtreeTransform();
     this._markOwnTransformDirty();
   }

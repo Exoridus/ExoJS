@@ -105,7 +105,7 @@ export class View implements ObservableVectorOwner {
     this._size = new ObservableSize(this._setScalingDirty.bind(this), width, height);
     this._zoomBaseWidth = width;
     this._zoomBaseHeight = height;
-    this._flags.push(ViewFlags.Transform, ViewFlags.TransformInverse, ViewFlags.BoundingBox);
+    this._flags.addMask(ViewFlags.Transform | ViewFlags.TransformInverse | ViewFlags.BoundingBox);
   }
 
   /**
@@ -412,7 +412,7 @@ export class View implements ObservableVectorOwner {
     this._sin = 0;
     this._cos = 1;
 
-    this._flags.push(ViewFlags.Transform);
+    this._flags.addMask(ViewFlags.Transform);
 
     return this;
   }
@@ -422,9 +422,9 @@ export class View implements ObservableVectorOwner {
    * The returned matrix is owned by this view — do not store a reference across frames.
    */
   public getTransform(): Matrix {
-    if (this._flags.has(ViewFlags.Transform)) {
+    if (this._flags.hasMask(ViewFlags.Transform)) {
       this.updateTransform();
-      this._flags.remove(ViewFlags.Transform);
+      this._flags.removeMask(ViewFlags.Transform);
     }
 
     return this._transform;
@@ -436,14 +436,14 @@ export class View implements ObservableVectorOwner {
     const x = 2 / this.width;
     const y = -2 / this.height;
 
-    if (this._flags.has(ViewFlags.Rotation)) {
+    if (this._flags.hasMask(ViewFlags.Rotation)) {
       const radians = degreesToRadians(this._rotation);
 
       this._cos = Math.cos(radians);
       this._sin = Math.sin(radians);
     }
 
-    if (this._flags.has(ViewFlags.Rotation | ViewFlags.Scaling)) {
+    if (this._flags.hasMask(ViewFlags.Rotation | ViewFlags.Scaling)) {
       this._transform.a = x * this._cos;
       this._transform.b = x * this._sin;
 
@@ -462,10 +462,10 @@ export class View implements ObservableVectorOwner {
    * Use this to convert screen-space coordinates (e.g. mouse position) to world space.
    */
   public getInverseTransform(): Matrix {
-    if (this._flags.has(ViewFlags.TransformInverse)) {
+    if (this._flags.hasMask(ViewFlags.TransformInverse)) {
       this.getTransform().getInverse(this._inverseTransform);
 
-      this._flags.remove(ViewFlags.TransformInverse);
+      this._flags.removeMask(ViewFlags.TransformInverse);
     }
 
     return this._inverseTransform;
@@ -582,9 +582,9 @@ export class View implements ObservableVectorOwner {
    * Used for frustum culling by {@link Drawable.render}.
    */
   public getBounds(): Rectangle {
-    if (this._flags.has(ViewFlags.BoundingBox)) {
+    if (this._flags.hasMask(ViewFlags.BoundingBox)) {
       this.updateBounds();
-      this._flags.remove(ViewFlags.BoundingBox);
+      this._flags.removeMask(ViewFlags.BoundingBox);
     }
 
     return this._bounds.getRect();
@@ -655,22 +655,22 @@ export class View implements ObservableVectorOwner {
   }
 
   private _setDirty(): void {
-    this._flags.push(ViewFlags.TransformInverse, ViewFlags.BoundingBox);
+    this._flags.addMask(ViewFlags.TransformInverse | ViewFlags.BoundingBox);
     this._updateId++;
   }
 
   private _setPositionDirty(): void {
-    this._flags.push(ViewFlags.Translation);
+    this._flags.addMask(ViewFlags.Translation);
     this._setDirty();
   }
 
   private _setRotationDirty(): void {
-    this._flags.push(ViewFlags.Rotation);
+    this._flags.addMask(ViewFlags.Rotation);
     this._setDirty();
   }
 
   private _setScalingDirty(): void {
-    this._flags.push(ViewFlags.Scaling);
+    this._flags.addMask(ViewFlags.Scaling);
     this._setDirty();
   }
 

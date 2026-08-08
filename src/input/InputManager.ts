@@ -849,7 +849,7 @@ export class InputManager {
     }
 
     this.keyEvents.push({ channel, pressed: true });
-    this.flags.push(InputManagerFlag.KeyChange);
+    this.flags.addMask(InputManagerFlag.KeyChange);
 
     if (capturedByAggregate || this.capturedKeyChannels.has(channel)) {
       stopEvent(event);
@@ -887,7 +887,7 @@ export class InputManager {
     }
 
     this.keyEvents.push({ channel, pressed: false });
-    this.flags.push(InputManagerFlag.KeyChange);
+    this.flags.addMask(InputManagerFlag.KeyChange);
 
     if (capturedByAggregate || this.capturedKeyChannels.has(channel)) {
       stopEvent(event);
@@ -1088,7 +1088,7 @@ export class InputManager {
     // would be silently lost. `updateEvents` resets this to zero once the
     // accumulated total has been dispatched for the frame.
     this.wheelOffset.add(normalizeWheelDelta(event.deltaX, event.deltaMode), normalizeWheelDelta(event.deltaY, event.deltaMode));
-    this.flags.push(InputManagerFlag.MouseWheel);
+    this.flags.addMask(InputManagerFlag.MouseWheel);
 
     stopEvent(event);
   }
@@ -1124,7 +1124,7 @@ export class InputManager {
         this.channels[channel] = 0;
         this._recordChannelChanges(channel, 1);
         this.keyEvents.push({ channel, pressed: false });
-        this.flags.push(InputManagerFlag.KeyChange);
+        this.flags.addMask(InputManagerFlag.KeyChange);
       }
     }
   }
@@ -1310,7 +1310,7 @@ export class InputManager {
   }
 
   private updateEvents(): this {
-    if (this.flags.pop(InputManagerFlag.KeyChange)) {
+    if (this.flags.popMask(InputManagerFlag.KeyChange)) {
       // In true arrival order — a Shift-up followed by a Tab-down must
       // dispatch in that same order, or FocusController would still see
       // Shift held when Tab's handler runs and misread it as Shift+Tab.
@@ -1325,7 +1325,7 @@ export class InputManager {
       this.keyEvents.length = 0;
     }
 
-    if (this.flags.pop(InputManagerFlag.MouseWheel)) {
+    if (this.flags.popMask(InputManagerFlag.MouseWheel)) {
       this.onMouseWheel.dispatch(this.wheelOffset);
       this.wheelOffset.set(0, 0);
     }

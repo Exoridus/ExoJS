@@ -6,10 +6,10 @@
   "subsystem": "math",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 8,
+  "memberCount": 12,
   "counts": {
     "constructors": 1,
-    "methods": 6,
+    "methods": 10,
     "properties": 1,
     "events": 0
   },
@@ -101,6 +101,53 @@
       "id": "methods",
       "title": "Methods",
       "members": [
+        {
+          "name": "addMask",
+          "signature": "addMask(mask: number): this",
+          "signatureTokens": [
+            {
+              "text": "addMask",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "mask",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "mask",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Set every bit of mask (bitwise OR). Mutates in place and returns this for chaining. Prefer this over push on hot paths: a rest parameter allocates an array on every call, and the scene graph's transform invalidation runs one of these per ancestor per mutation."
+        },
         {
           "name": "clear",
           "signature": "clear(): this",
@@ -208,7 +255,54 @@
             }
           ],
           "returnType": "boolean",
-          "description": "Return true when **any** of the supplied flags are currently set (bitwise OR test)."
+          "description": "Return true when **any** of the supplied flags are currently set (bitwise OR test). Allocates a rest array and a closure per call — use hasMask on hot paths."
+        },
+        {
+          "name": "hasMask",
+          "signature": "hasMask(mask: number): boolean",
+          "signatureTokens": [
+            {
+              "text": "hasMask",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "mask",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "mask",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Return true when **any** bit of mask is currently set. Allocation-free counterpart of has."
         },
         {
           "name": "pop",
@@ -256,6 +350,53 @@
           ],
           "returnType": "boolean",
           "description": "Remove flag and return true if it was active before removal, false otherwise. Useful for one-shot consumption of a flag."
+        },
+        {
+          "name": "popMask",
+          "signature": "popMask(mask: number): boolean",
+          "signatureTokens": [
+            {
+              "text": "popMask",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "mask",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "mask",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Clear every bit of mask and return whether any of them was set before. Allocation-free counterpart of pop."
         },
         {
           "name": "push",
@@ -306,7 +447,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Set one or more flags (bitwise OR). Mutates in place and returns this for chaining."
+          "description": "Set one or more flags (bitwise OR). Mutates in place and returns this for chaining. Allocates a rest array per call — use addMask on hot paths."
         },
         {
           "name": "remove",
@@ -357,7 +498,54 @@
             }
           ],
           "returnType": "this",
-          "description": "Clear one or more flags (bitwise AND NOT). Mutates in place and returns this for chaining."
+          "description": "Clear one or more flags (bitwise AND NOT). Mutates in place and returns this for chaining. Allocates a rest array per call — use removeMask on hot paths."
+        },
+        {
+          "name": "removeMask",
+          "signature": "removeMask(mask: number): this",
+          "signatureTokens": [
+            {
+              "text": "removeMask",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "mask",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "mask",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Clear every bit of mask (bitwise AND NOT). Mutates in place and returns this for chaining. Allocation-free counterpart of remove."
         }
       ],
       "paragraphs": [],

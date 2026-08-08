@@ -64,7 +64,7 @@ export class Sprite extends Drawable {
     super();
 
     // Mark vertices and normals dirty from the start.
-    this.flags.push(SpriteFlags.Vertices | SpriteFlags.Normals);
+    this.flags.addMask(SpriteFlags.Vertices | SpriteFlags.Normals);
 
     if (texture !== null) {
       this.setTexture(texture);
@@ -141,7 +141,7 @@ export class Sprite extends Drawable {
     // which the lazy cascade no longer eagerly flags on this sprite.
     const transform = this.getGlobalTransform();
 
-    if (this.flags.has(SpriteFlags.Vertices) || this._verticesBuiltAtVersion !== this._globalTransformVersion) {
+    if (this.flags.hasMask(SpriteFlags.Vertices) || this._verticesBuiltAtVersion !== this._globalTransformVersion) {
       const { left, top, right, bottom } = this.getLocalBounds();
       const { a, b, x, c, d, y } = transform;
 
@@ -157,7 +157,7 @@ export class Sprite extends Drawable {
       this._vertices[6] = left * a + bottom * b + x;
       this._vertices[7] = left * c + bottom * d + y;
 
-      this.flags.remove(SpriteFlags.Vertices);
+      this.flags.removeMask(SpriteFlags.Vertices);
       this._verticesBuiltAtVersion = this._globalTransformVersion;
     }
 
@@ -175,7 +175,7 @@ export class Sprite extends Drawable {
       throw new Error('texCoords can only be calculated when the sprite has a texture');
     }
 
-    if (this.flags.pop(SpriteFlags.TextureCoords)) {
+    if (this.flags.popMask(SpriteFlags.TextureCoords)) {
       const { width, height } = this._texture;
       const { left, top, right, bottom } = this._textureFrame;
       const minX = ((left / width) * 65535) & 65535;
@@ -288,7 +288,7 @@ export class Sprite extends Drawable {
     const height = this.height;
 
     this._textureFrame.copy(frame);
-    this.flags.push(SpriteFlags.TextureCoords);
+    this.flags.addMask(SpriteFlags.TextureCoords);
     this._setLocalBounds(0, 0, frame.width, frame.height);
 
     if (resetSize) {
@@ -333,7 +333,7 @@ export class Sprite extends Drawable {
     // vertices is a fixed 8-element Float32Array (4 corners).
     const v = this.vertices;
 
-    if (this.flags.has(SpriteFlags.Normals) || this._normalsBuiltAtVersion !== this._globalTransformVersion) {
+    if (this.flags.hasMask(SpriteFlags.Normals) || this._normalsBuiltAtVersion !== this._globalTransformVersion) {
       const x1 = v[0]!;
       const y1 = v[1]!;
       const x2 = v[2]!;
@@ -360,7 +360,7 @@ export class Sprite extends Drawable {
         .rperp()
         .normalize();
 
-      this.flags.remove(SpriteFlags.Normals);
+      this.flags.removeMask(SpriteFlags.Normals);
       this._normalsBuiltAtVersion = this._globalTransformVersion;
     }
 
@@ -426,13 +426,13 @@ export class Sprite extends Drawable {
   /** @internal */
   public override _invalidateSubtreeTransform(): void {
     super._invalidateSubtreeTransform();
-    this.flags.push(SpriteFlags.Vertices | SpriteFlags.Normals);
+    this.flags.addMask(SpriteFlags.Vertices | SpriteFlags.Normals);
   }
 
   /** @internal */
   public override _invalidateBoundsCascade(): void {
     super._invalidateBoundsCascade();
-    this.flags.push(SpriteFlags.Vertices | SpriteFlags.Normals);
+    this.flags.addMask(SpriteFlags.Vertices | SpriteFlags.Normals);
   }
 
   public override destroy(): void {
