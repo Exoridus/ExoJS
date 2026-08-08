@@ -651,10 +651,15 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    *
    * One entry is only synchronous on the surface: {@link SceneDirector}'s
    * teardown is asynchronous, and `destroy()` fire-and-forgets it — a
-   * constructor cannot await. That is sound here and only here, because a
-   * director reached through this path has never navigated: no active scope,
-   * no retained or preloaded scopes, no in-flight teardown to wait on, so its
-   * disposal reduces to destroying its own Signals. It is *not* a substitute
+   * constructor cannot await. In the common case that is sound here, because
+   * a director reached through this path has not navigated: no active scope,
+   * no retained scopes, so its disposal reduces to destroying its own
+   * Signals. That is not an absolute guarantee, though: an extension's
+   * `ApplicationSystemBinding.create(app)` — invoked from
+   * `materializeApplicationSystems`, the last construction step, with the
+   * live `app` — could itself call `app.scenes.preload()` before a later
+   * binding throws, leaving a preloaded scope (and its in-flight `load()`)
+   * for this fire-and-forget teardown to race. It is *not* a substitute
    * for {@link Application._disposeManagedResources}, which awaits
    * `scenes._dispose()` precisely because by then there is scene state to
    * unwind before its dependencies go.

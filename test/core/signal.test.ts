@@ -471,7 +471,7 @@ describe('dispatchIsolated', () => {
     expect(signal.has(thrower)).toBe(true); // isolation does not remove the listener
 
     signal.remove(thrower);
-    expect(signal.has(thrower)).toBe(false); // removal applies immediately — proves _dispatchDepth was decremented back to 0, not left stuck above 0 (which would defer this removal into _pendingRemoves instead)
+    expect(signal.has(thrower)).toBe(false); // removal applies immediately — proves _dispatchDepth was decremented back to 0, not left stuck above 0 (which would defer this removal into _pendingOps instead)
 
     const calls: string[] = [];
 

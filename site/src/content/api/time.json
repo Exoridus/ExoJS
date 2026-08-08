@@ -1,6 +1,6 @@
 {
   "title": "Time",
-  "description": "Time-duration value object stored internally in milliseconds. Provides unit-converted accessors (`seconds`, `minutes`, `hours`) and arithmetic helpers (Time.add, Time.subtract, Time.addTime). Constants on the class hold canonical durations: Time.zero, Time.oneSecond, Time.oneMinute, Time.oneHour, plus the TimeInterval multipliers used by the `factor` parameter. Every one of them is `Object.freeze`d — they are shared process-wide, so a mutating call on one (e.g. `Time.zero.add(1)`) throws instead of silently corrupting the shared instance for every other caller.",
+  "description": "Time-duration value object stored internally in milliseconds. Provides unit-converted accessors (`seconds`, `minutes`, `hours`) and arithmetic helpers (Time.add, Time.subtract, Time.addTime). Constants on the class hold canonical durations: Time.zero, Time.oneMillisecond, Time.oneSecond, Time.oneMinute, Time.oneHour. Each of those is `Object.freeze`d — they are shared process-wide, so a mutating call on one (e.g. `Time.zero.add(1)`) throws instead of silently corrupting the shared instance for every other caller. The TimeInterval multipliers used by the `factor` parameter (`Time.milliseconds`, `Time.seconds`, `Time.minutes`, `Time.hours`) are plain `static readonly` numbers, not frozen.",
   "symbol": "Time",
   "kind": "class",
   "subsystem": "core",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Time-duration value object stored internally in milliseconds. Provides unit-converted accessors (`seconds`, `minutes`, `hours`) and arithmetic helpers (Time.add, Time.subtract, Time.addTime).",
-        "Constants on the class hold canonical durations: Time.zero, Time.oneSecond, Time.oneMinute, Time.oneHour, plus the TimeInterval multipliers used by the `factor` parameter. Every one of them is `Object.freeze`d — they are shared process-wide, so a mutating call on one (e.g. `Time.zero.add(1)`) throws instead of silently corrupting the shared instance for every other caller."
+        "Constants on the class hold canonical durations: Time.zero, Time.oneMillisecond, Time.oneSecond, Time.oneMinute, Time.oneHour. Each of those is `Object.freeze`d — they are shared process-wide, so a mutating call on one (e.g. `Time.zero.add(1)`) throws instead of silently corrupting the shared instance for every other caller. The TimeInterval multipliers used by the `factor` parameter (`Time.milliseconds`, `Time.seconds`, `Time.minutes`, `Time.hours`) are plain `static readonly` numbers, not frozen."
       ],
       "importLine": "import { Time } from '@codexo/exojs'",
       "sourceLink": null

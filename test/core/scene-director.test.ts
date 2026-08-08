@@ -3247,11 +3247,12 @@ describe('SceneDirector._stopAndClearActiveScene()', () => {
     expect(disposeSettled).toBe(true);
   });
 
-  test('a teardown whose owning navigation never awaits it does not surface as an unhandled rejection', async () => {
-    // _trackTeardown attaches its `catch` to a derived promise, so a rejecting
-    // teardown is marked handled even when the navigation that started it was
-    // aborted before reaching _awaitPendingOutgoingTeardown — while still
-    // rejecting for whoever does await it.
+  test('a teardown rejection still surfaces to whoever awaits it, without also firing as an unhandled rejection', async () => {
+    // _trackTeardown attaches its `catch` to a derived promise, not to the
+    // teardown promise itself, so the rejection is marked handled globally
+    // (no unhandledrejection event fires) while the teardown promise itself
+    // still rejects for whoever awaits it — here, this test awaiting
+    // _stopAndClearActiveScene() directly.
     const app = createApplicationStub();
     const TestScene = makeSceneClass();
     const director = new SceneDirector(app, { test: TestScene });

@@ -1074,13 +1074,14 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /**
    * Tear down every owned resource: abort an in-flight transition session,
-   * destroy the active scene, destroy every retained scene, then destroy
-   * all Signals. Fires `_dispose()` (async teardown) and returns immediately
-   * — errors are reported through the app error pipeline rather than
-   * propagated, matching every other synchronous `destroy()` in the engine.
-   * An async shutdown path that needs to know teardown has fully finished
-   * may `await` {@link SceneDirector._dispose} directly instead of calling
-   * this method.
+   * await any scene teardown already in flight, destroy the active scene,
+   * destroy every retained scene, destroy every preloaded-but-never-consumed
+   * scene, then destroy all Signals. Fires `_dispose()` (async teardown) and
+   * returns immediately — errors are reported through the app error pipeline
+   * rather than propagated, matching every other synchronous `destroy()` in
+   * the engine. An async shutdown path that needs to know teardown has fully
+   * finished may `await` {@link SceneDirector._dispose} directly instead of
+   * calling this method.
    */
   public destroy(): void {
     void this._dispose();
@@ -1088,10 +1089,11 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /**
    * @internal Awaited teardown, in order: abort any in-flight transition
-   * session (destroy it, reject its navigation) → await any scene teardown
-   * already in flight (`_pendingOutgoingTeardown` — a committed switch's
-   * outgoing scope, or the scene a fire-and-forget {@link Application.stop}
-   * just cleared, including its own async `unload()`) → destroy the active scope
+   * session (destroy it, reject its navigation) → await every scene teardown
+   * already in flight (drained via {@link SceneDirector._awaitPendingTeardowns}
+   * from the `_pendingTeardowns` set — a committed switch's outgoing scope,
+   * or the scene a fire-and-forget {@link Application.stop} just cleared,
+   * including its own async `unload()`) → destroy the active scope
    * (guarded, errors reported) → destroy every retained scope in reverse
    * insertion order (guarded, errors reported) → destroy every preloaded-
    * but-never-consumed scope in reverse insertion order (each entry marked

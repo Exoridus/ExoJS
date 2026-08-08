@@ -6,11 +6,13 @@ import type { Cloneable, TimeInterval } from './types';
  * helpers ({@link Time.add}, {@link Time.subtract}, {@link Time.addTime}).
  *
  * Constants on the class hold canonical durations: {@link Time.zero},
- * {@link Time.oneSecond}, {@link Time.oneMinute}, {@link Time.oneHour}, plus
- * the {@link TimeInterval} multipliers used by the `factor` parameter. Every
- * one of them is `Object.freeze`d — they are shared process-wide, so a
- * mutating call on one (e.g. `Time.zero.add(1)`) throws instead of silently
- * corrupting the shared instance for every other caller.
+ * {@link Time.oneMillisecond}, {@link Time.oneSecond}, {@link Time.oneMinute},
+ * {@link Time.oneHour}. Each of those is `Object.freeze`d — they are shared
+ * process-wide, so a mutating call on one (e.g. `Time.zero.add(1)`) throws
+ * instead of silently corrupting the shared instance for every other caller.
+ * The {@link TimeInterval} multipliers used by the `factor` parameter
+ * (`Time.milliseconds`, `Time.seconds`, `Time.minutes`, `Time.hours`) are
+ * plain `static readonly` numbers, not frozen.
  */
 export class Time implements Cloneable {
   private _milliseconds: number;
