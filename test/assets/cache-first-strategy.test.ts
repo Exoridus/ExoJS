@@ -205,6 +205,40 @@ describe('CacheFirstStrategy', () => {
       expect(reported).toHaveLength(1);
     });
 
+    test('discarding a corrupt entry is reported even when the eviction succeeds', async () => {
+      const corruptError = new Error('corrupt-cache');
+      const store = makeStore({ load: vi.fn(async () => 'corrupt-source') });
+      const response = { ok: true, status: 200, statusText: 'OK' } as unknown as Response;
+      global.fetch = vi.fn(async () => response) as unknown as typeof fetch;
+
+      const factory = {
+        storageName: 'test',
+        process: vi.fn(async () => 'fresh-source'),
+        create: vi
+          .fn()
+          .mockImplementationOnce(async () => {
+            throw corruptError;
+          })
+          .mockImplementationOnce(async (source: unknown) => `resource:${String(source)}`),
+        destroy: vi.fn(),
+      };
+
+      const strategy = new CacheFirstStrategy();
+      const reported: AssetCacheError[] = [];
+      const reportCacheError = (error: AssetCacheError): void => void reported.push(error);
+
+      await expect(strategy.resolve(makeRequest({ factory, reportCacheError }), [store])).resolves.toBe('resource:fresh-source');
+
+      // A store that reliably serves corrupt entries and deletes them cleanly
+      // was previously invisible — the discard is the evidence of corruption.
+      expect(store.delete).toHaveBeenCalledWith('test', 'alias');
+      expect(reported).toHaveLength(1);
+      expect(reported[0]!.operation).toBe('load');
+      expect(reported[0]!.store).toBe('test');
+      expect(reported[0]!.key).toBe('alias');
+      expect(reported[0]!.cause).toBe(corruptError);
+    });
+
     test('a failing eviction of a corrupt entry is reported and still falls through to the network', async () => {
       const deleteError = new Error('delete failed');
       const store = makeStore({
