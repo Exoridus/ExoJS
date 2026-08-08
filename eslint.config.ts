@@ -1122,21 +1122,27 @@ export default defineConfig([
     },
   },
 
-  // Extension particle renderer / GPU hot paths.
+  // Extension particle renderer / render-mode / GPU hot paths.
   {
-    files: ['packages/exojs-particles/src/renderers/**/*.ts', 'packages/exojs-particles/src/gpu/**/*.ts'],
+    files: [
+      'packages/exojs-particles/src/renderers/**/*.ts',
+      'packages/exojs-particles/src/renderModes/**/*.ts',
+      'packages/exojs-particles/src/gpu/**/*.ts',
+    ],
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/no-unnecessary-condition': 'off',
     },
   },
 
-  // Extension particle modules with intentionally empty lifecycle stubs.
+  // Extension particle modules / render modes with intentionally empty
+  // lifecycle stubs.
   {
     files: [
       'packages/exojs-particles/src/modules/DeathModule.ts',
       'packages/exojs-particles/src/modules/SpawnModule.ts',
       'packages/exojs-particles/src/modules/UpdateModule.ts',
+      'packages/exojs-particles/src/renderModes/ParticleRenderMode.ts',
     ],
     rules: {
       '@typescript-eslint/no-empty-function': 'off',

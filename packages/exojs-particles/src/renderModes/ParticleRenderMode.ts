@@ -1,0 +1,91 @@
+import type { Geometry, Material } from '@codexo/exojs';
+
+import type { ParticleSystem } from '#ParticleSystem';
+
+/**
+ * Turns a particle system's SoA storage into drawable vertex data.
+ *
+ * A mode owns the whole "how": the vertex layout, the shader pair, the draw
+ * model, and the loop that fills the buffer. The backend renderers only upload
+ * what it produces and issue the draw it declares, so a new primitive is a new
+ * mode rather than a renderer change.
+ *
+ * Implementations are fixed at system construction (see
+ * `ParticleSystemOptions.render`) and default to `QuadParticles`.
+ */
+export abstract class ParticleRenderMode {
+  /** Base geometry: topology, named attributes, buffer usage. */
+  public abstract readonly geometry: Geometry;
+
+  /** Shader pair plus uniforms/textures for this mode. */
+  public abstract readonly material: Material;
+
+  /**
+   * Draw model. `true` issues an instanced draw against {@link geometry};
+   * `false` a plain draw over the built vertex buffer. Declared here because
+   * `Geometry` carries topology but has no instancing concept.
+   */
+  public abstract readonly instanced: boolean;
+
+  /**
+   * Whether this mode can run while the system is in GPU compute mode.
+   * Mirrors `UpdateModule.wgsl()`: a mode that cannot forces the whole system
+   * onto the CPU path, silently and observably via `ParticleSystem.gpuMode`.
+   *
+   * A GPU-eligible mode's layout must match what the compute pipeline emits
+   * into `gpuState.instanceBuffer` — today that is `QuadParticles`'s layout,
+   * and it is the only GPU-eligible mode.
+   */
+  public readonly gpuEligible: boolean = false;
+
+  private _data: ArrayBuffer = new ArrayBuffer(0);
+  private _count = 0;
+
+  /**
+   * Element count of the draw call this mode's last {@link build} produced.
+   * Draw-model relative: instance count when {@link instanced}, vertex count
+   * otherwise. Do not assume one meaning.
+   */
+  public get count(): number {
+    return this._count;
+  }
+
+  /** The buffer the renderer uploads. Valid until the next {@link build}. */
+  public get data(): ArrayBuffer {
+    return this._data;
+  }
+
+  /** Fill the scratch buffer from `system`'s current SoA state. */
+  public abstract build(system: ParticleSystem): void;
+
+  /** Optional cleanup, called from `ParticleSystem.destroy`. */
+  public destroy(): void {}
+
+  /** Record the element count produced by a {@link build}. */
+  protected _setCount(count: number): void {
+    this._count = count;
+  }
+
+  /**
+   * Grow the scratch buffer to hold at least `byteLength`. Grow-only: a
+   * shrinking particle count reuses the larger buffer rather than
+   * reallocating, matching the renderers' existing buffer policy.
+   */
+  protected _ensureCapacity(byteLength: number): void {
+    if (this._data.byteLength >= byteLength) {
+      return;
+    }
+
+    let next = Math.max(this._data.byteLength, 1);
+
+    while (next < byteLength) {
+      next *= 2;
+    }
+
+    this._data = new ArrayBuffer(next);
+    this._onBufferGrown(this._data);
+  }
+
+  /** Re-create typed-array views after {@link _ensureCapacity} reallocates. */
+  protected _onBufferGrown(_data: ArrayBuffer): void {}
+}

@@ -295,7 +295,7 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
 
     this._vao = new WebGl2VertexArrayObject()
       .addIndex(this._indexBuffer)
-      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_translation'), gl.FLOAT, false, instanceStrideBytes, 0, false, 1)
+      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_position'), gl.FLOAT, false, instanceStrideBytes, 0, false, 1)
       .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_scale'), gl.FLOAT, false, instanceStrideBytes, 8, false, 1)
       .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_rotation'), gl.FLOAT, false, instanceStrideBytes, 16, false, 1)
       .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, instanceStrideBytes, 20, false, 1)

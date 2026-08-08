@@ -341,7 +341,7 @@
         },
         {
           "name": "target",
-          "signature": "target: \"mesh\" | \"sprite\"",
+          "signature": "target: \"mesh\" | \"sprite\" | \"particle\"",
           "signatureTokens": [
             {
               "text": "target",
@@ -361,6 +361,14 @@
             },
             {
               "text": "\"sprite\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"particle\"",
               "kind": "keyword"
             }
           ],
