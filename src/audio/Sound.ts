@@ -424,7 +424,9 @@ export class Sound implements Playable {
     }
 
     if (this._audioBuffer === null || this._loadState.value === 'loading') {
-      logger.warn('AudioManager.play() called on a sound that is not yet loaded; playing silence. Await sound.loaded or use loader.load().', { source: 'Sound' });
+      logger.warn('AudioManager.play() called on a sound that is not yet loaded; playing silence. Await sound.loaded or use loader.load().', {
+        source: 'Sound',
+      });
       return new NoopVoice(bus);
     }
 
