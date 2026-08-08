@@ -217,6 +217,39 @@ describe('Application.stop() unloads the active scene regardless of an in-flight
     }
   });
 
+  test('destroy() right after a fire-and-forget stop() does not tear down dependencies before the scene unload() settles', async () => {
+    let releaseUnload: (() => void) | null = null;
+
+    class TitleScene extends Scene {
+      public override unload(): Promise<void> {
+        return new Promise<void>(resolve => {
+          releaseUnload = resolve;
+        });
+      }
+    }
+
+    const app = new Application({ backend: { type: 'webgl2' }, scenes: { title: TitleScene } });
+
+    await app.start(TitleScene);
+
+    // The backend stands in for every dependency destroy() releases after
+    // scenes (loader, rendering context, audio manager, backend): none of them
+    // may run while the scene's unload() is still touching them.
+    const backendDestroy = vi.spyOn(app.backend, 'destroy');
+
+    app.stop(); // fire-and-forget scene clear
+    app.destroy();
+    await settle();
+
+    expect(releaseUnload).not.toBeNull();
+    expect(backendDestroy).not.toHaveBeenCalled();
+
+    releaseUnload!();
+    await settle();
+
+    expect(backendDestroy).toHaveBeenCalledTimes(1);
+  });
+
   test('stop() during a transitioned, committed navigation unloads the freshly committed scene', async () => {
     class TitleScene extends Scene {}
     class GameScene extends Scene {}

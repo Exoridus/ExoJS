@@ -932,8 +932,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * (see {@link Application._handleFrameError}'s doc comment); that decision
    * belongs to the caller, and {@link Application.stop} makes it by calling
    * {@link SceneDirector._stopAndClearActiveScene}.
+   *
+   * `reason` is the error the aborted navigation rejects with. `stop()` passes
+   * the same instance it then hands to the stop-and-clear operation, so the
+   * two are one abort with one reason rather than two competing ones.
    */
-  private _stopFrameLoop(): void {
+  private _stopFrameLoop(reason: Error = new SceneNavigationAbortedError()): void {
     if (!this._frameLoopActive) {
       return;
     }
@@ -943,7 +947,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._activeClock.stop();
     this._frameClock.stop();
 
-    this.scenes._abortInFlightNavigation(new SceneNavigationAbortedError());
+    this.scenes._abortInFlightNavigation(reason);
   }
 
   /**
@@ -1162,15 +1166,26 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * session if there is one, and then unloads the
    * active scene unconditionally. Splitting that into "abort" and "clear"
    * steps is what used to let the navigation lock win the race and leave the
-   * scene standing; a `ConcurrentSceneNavigationError` is never a legitimate
-   * outcome of stopping.
+   * scene standing; `stop()` itself never fails with a
+   * {@link ConcurrentSceneNavigationError}.
+   *
+   * That does not make the interrupted navigation's own lock disappear. A
+   * navigation suspended in a `Scene.load()`/`init()` that never settles keeps
+   * `stop()`'s interruption from ever reaching its own `catch`, so it holds
+   * the director's navigation lock indefinitely — and the next
+   * {@link Application.start} or {@link SceneDirector.change} after such a
+   * stop rejects with {@link ConcurrentSceneNavigationError} for as long as
+   * that `load()` stays pending. The stop still unloads the scene; it just
+   * cannot cancel a promise the scene never resolves.
    *
    * Any scene-teardown failure the interruption did not cause — a scene's own
    * `unload()`/`destroy()` throwing — still surfaces through
    * {@link Application.onError}. Scene teardown is asynchronous and
    * fire-and-forget here: `stop()` returns as soon as the loop is halted, so
-   * a scene with an async `unload()` may still be settling afterwards. Use
-   * {@link Application.destroy} when teardown ordering matters.
+   * a scene with an async `unload()` may still be settling afterwards. A
+   * subsequent {@link Application.destroy} still waits for that teardown
+   * before releasing anything the scene depends on; use `destroy()` when
+   * teardown ordering matters.
    */
   public stop(): this {
     if (!this._frameLoopActive) {
@@ -1181,9 +1196,16 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this._status = ApplicationStatus.Halting;
     }
 
-    this._stopFrameLoop();
+    // One reason object for the one abort: `_stopFrameLoop()` performs it (it
+    // has to — halting the loop strands a frame-driven session regardless of
+    // caller), and the same instance is handed to the stop-and-clear operation
+    // so the error the navigation actually rejects with is the error this call
+    // site names.
+    const reason = new SceneNavigationAbortedError();
 
-    void this.scenes._stopAndClearActiveScene(new SceneNavigationAbortedError()).catch((error: unknown) => {
+    this._stopFrameLoop(reason);
+
+    void this.scenes._stopAndClearActiveScene(reason).catch((error: unknown) => {
       logger.error('Application.stop() failed to unload the active scene.', { source: 'Application', ...(error instanceof Error && { error }) });
       this.onError?.dispatch(error instanceof Error ? error : new Error(String(error)));
     });
@@ -1380,6 +1402,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * that would race against `scenes._dispose()`'s own active-scope teardown
    * for ownership of the same scope. `destroy()` instead halts the frame
    * loop directly and lets `scenes._dispose()` own scene teardown entirely.
+   *
+   * `destroy()` called right after a `stop()` is covered by the same
+   * guarantee, not an exception to it: the scene teardown `stop()` fired and
+   * did not await is published on the director, and `scenes._dispose()` waits
+   * for it — including a still-pending `Scene.unload()` — before any
+   * dependency is destroyed.
    */
   public destroy(): void {
     this._destroyed = true;
@@ -1407,10 +1435,11 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /**
    * @internal Awaited teardown, in order: `scenes` fully disposed first
-   * (active + every retained + every preloaded scope, including each one's
-   * own async `unload()`) — then every other owned subsystem, then clocks,
-   * then Signals. See {@link Application.destroy}'s doc comment for why
-   * scenes go first.
+   * (active + every retained + every preloaded scope, plus any teardown a
+   * fire-and-forget {@link Application.stop} left running, including each
+   * one's own async `unload()`) — then every other owned subsystem, then
+   * clocks, then Signals. See {@link Application.destroy}'s doc comment for
+   * why scenes go first.
    */
   private async _disposeManagedResources(): Promise<void> {
     try {

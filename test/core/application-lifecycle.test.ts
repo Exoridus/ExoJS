@@ -1152,7 +1152,6 @@ describe('Application lifecycle / getters / sizing', () => {
       // active. stop() branching on `currentScene` itself is what used to
       // split the stop into two steps racing the navigation lock.
       const { Application, ApplicationStatus, sceneDirector } = await loadHarness();
-      sceneDirector._abortInFlightNavigation.mockReturnValue(true);
       sceneDirector.currentScene = null;
 
       const app = new Application({ backend: { type: 'webgl2' } });
@@ -1185,6 +1184,12 @@ describe('Application lifecycle / getters / sizing', () => {
 
         const [reason] = sceneDirector._stopAndClearActiveScene.mock.calls[0] as [Error];
         expect(reason.name).toBe('SceneNavigationAbortedError');
+
+        // One abort, one reason: the error the aborted navigation actually
+        // rejects with is the same instance stop() hands to the stop-and-clear
+        // operation, not a throwaway constructed alongside it.
+        const [abortReason] = sceneDirector._abortInFlightNavigation.mock.calls[0] as [Error];
+        expect(abortReason).toBe(reason);
       } finally {
         rafSpy.mockRestore();
       }

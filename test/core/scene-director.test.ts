@@ -3166,6 +3166,166 @@ describe('SceneDirector._stopAndClearActiveScene()', () => {
     expect((director as unknown as { _transitionGateOpen: boolean })._transitionGateOpen).toBe(false);
   });
 
+  test('publishes its disposal so _dispose() awaits a still-pending unload() (the fire-and-forget stop() then destroy() sequence)', async () => {
+    // The same guarantee the equivalent _clearScene() test pins: stop() does
+    // not await its scene clear, so the teardown must be reachable through
+    // `_pendingOutgoingTeardown` or `_dispose()` will tear down the loader,
+    // rendering context, audio manager and backend out from under a scene
+    // whose unload() is still running against them.
+    const app = createApplicationStub();
+    let resolveUnload!: () => void;
+    const FirstScene = makeSceneClass({
+      unload: () =>
+        new Promise<void>(resolve => {
+          resolveUnload = resolve;
+        }),
+    });
+    const director = new SceneDirector(app, { first: FirstScene });
+
+    await director.change(FirstScene);
+
+    void director._stopAndClearActiveScene(new SceneNavigationAbortedError());
+
+    const disposePromise = director._dispose();
+    let disposeSettled = false;
+
+    void disposePromise.then(() => {
+      disposeSettled = true;
+    });
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(disposeSettled).toBe(false); // must not resolve while unload() is still pending
+
+    resolveUnload();
+    await disposePromise;
+
+    expect(disposeSettled).toBe(true);
+  });
+
+  test('folds an already-pending outgoing teardown into its own instead of clobbering it', async () => {
+    // A transitioned change() that has crossed its commit boundary while its
+    // session keeps playing is the one navigation shape that leaves
+    // `_pendingOutgoingTeardown` genuinely set at stop time: the outgoing
+    // scope's teardown is backgrounded at commit, and the navigation does not
+    // reach `_awaitPendingOutgoingTeardown` (which claims the handle) until
+    // the session finishes. Overwriting the handle with the new disposal
+    // would drop the outgoing scene's unload() from _dispose()'s wait.
+    const app = createApplicationStub();
+    let resolveOutgoingUnload!: () => void;
+    const First = makeSceneClass({
+      unload: () =>
+        new Promise<void>(resolve => {
+          resolveOutgoingUnload = resolve;
+        }),
+    });
+    const Second = makeSceneClass();
+    const director = new SceneDirector(app, { first: First, second: Second });
+
+    await director.change(First);
+
+    let environmentRef: SceneTransitionEnvironment | null = null;
+    const session = new FakeSession(); // never reports done — still playing after commit
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'none', currentFrame: 'none' };
+      }
+      protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
+        environmentRef = environment;
+
+        return session;
+      }
+    })();
+
+    const navigation = director.change(Second, { transition });
+
+    void navigation.catch(() => undefined);
+
+    environmentRef?.commit();
+    tick(director, app);
+    await settle();
+
+    // Second is live; First's teardown is parked on its pending unload().
+    expect(director.currentScene).toBeInstanceOf(Second);
+    expect((director as unknown as { _pendingOutgoingTeardown: Promise<void> | null })._pendingOutgoingTeardown).not.toBeNull();
+
+    // The disposal this call performs is Second's, which settles promptly —
+    // so it can only stay pending if First's teardown was folded in.
+    const stopAndClear = director._stopAndClearActiveScene(new SceneNavigationAbortedError());
+    let stopSettled = false;
+
+    void stopAndClear.then(() => {
+      stopSettled = true;
+    });
+
+    await settle();
+
+    expect(stopSettled).toBe(false); // still waiting on First's unload()
+
+    resolveOutgoingUnload();
+    await stopAndClear;
+
+    expect(stopSettled).toBe(true);
+    expect(director.currentScene).toBeNull();
+  });
+
+  test('clears the active scene when a transitioned navigation is aborted mid-prepare (session gone, incoming load() still pending)', async () => {
+    // The third affected interleaving: the session HAS started, requested
+    // commit, and `commitSwitch` is suspended in the incoming scene's load().
+    // The abort settles the session, so the navigation lock is still held with
+    // no session left to abort — the same shape as the non-transitioned case.
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    let resolveLoad!: () => void;
+    const SlowLoad = makeSceneClass({
+      load: () =>
+        new Promise<void>(resolve => {
+          resolveLoad = resolve;
+        }),
+    });
+    const director = new SceneDirector(app, { first: First, slow: SlowLoad });
+
+    await director.change(First);
+
+    let environmentRef: SceneTransitionEnvironment | null = null;
+    const session = new FakeSession();
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'none', currentFrame: 'none' };
+      }
+      protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
+        environmentRef = environment;
+
+        return session;
+      }
+    })();
+
+    const navigation = director.change(SlowLoad, { transition });
+
+    void navigation.catch(() => undefined);
+
+    environmentRef?.commit();
+    tick(director, app); // _performSessionCommit -> commitSwitch, now awaiting SlowLoad.load()
+    await Promise.resolve();
+
+    expect(director.currentScene).toBeInstanceOf(First);
+
+    const reason = new SceneNavigationAbortedError();
+
+    await director._stopAndClearActiveScene(reason);
+
+    expect(director.currentScene).toBeNull();
+    await expect(navigation).rejects.toBe(reason);
+
+    // The interrupted commit resumes against both a bumped generation and a
+    // cleared session, and must not activate SlowLoad behind the stop.
+    resolveLoad();
+    await settle();
+
+    expect(director.currentScene).toBeNull();
+  });
+
   test("a failing scope disposal rejects — only the concurrent-navigation rejection was dropped, not a scene's own teardown failure", async () => {
     const app = createApplicationStub();
     const TestScene = makeSceneClass();
