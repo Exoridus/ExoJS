@@ -591,15 +591,35 @@ export class View implements ObservableVectorOwner {
   }
 
   protected updateBounds(): this {
-    const centerX = this._center.x + this._shakeOffsetX;
-    const centerY = this._center.y + this._shakeOffsetY;
-    const offsetX = this.width / 2;
-    const offsetY = this.height / 2;
+    const m = this.getTransform();
+    const determinant = m.a * m.d - m.b * m.c;
+
+    this._bounds.reset();
+
+    if (!Number.isFinite(determinant) || determinant === 0) {
+      // Degenerate projection (a zero-sized view): keep a real rectangle at the
+      // camera centre instead of letting the solve below decay into NaN.
+      return this._bounds.addCoords(this._center.x + this._shakeOffsetX, this._center.y + this._shakeOffsetY), this;
+    }
+
+    // Map the four clip-space corners back to world space and take their AABB.
+    // Deriving the box from centre ± half-size ignores `rotation` entirely, so
+    // a rotated camera got a cull rect strictly smaller than the area it
+    // renders and content popped in at the rotated corners. Going through the
+    // projection keeps rotation, zoom and shake correct by construction.
+    //
+    // Same inlined 2x2 solve as `screenToWorld` — no Matrix allocation on a
+    // path that reruns whenever the camera moves.
+    const dxLeft = -1 - m.x;
+    const dxRight = 1 - m.x;
+    const dyTop = -1 - m.y;
+    const dyBottom = 1 - m.y;
 
     this._bounds
-      .reset()
-      .addCoords(centerX - offsetX, centerY - offsetY)
-      .addCoords(centerX + offsetX, centerY + offsetY);
+      .addCoords((dxLeft * m.d - dyTop * m.b) / determinant, (dyTop * m.a - dxLeft * m.c) / determinant)
+      .addCoords((dxRight * m.d - dyTop * m.b) / determinant, (dyTop * m.a - dxRight * m.c) / determinant)
+      .addCoords((dxRight * m.d - dyBottom * m.b) / determinant, (dyBottom * m.a - dxRight * m.c) / determinant)
+      .addCoords((dxLeft * m.d - dyBottom * m.b) / determinant, (dyBottom * m.a - dxLeft * m.c) / determinant);
 
     return this;
   }
