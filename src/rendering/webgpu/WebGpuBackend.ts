@@ -13,7 +13,6 @@ import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import { dataTextureBytesPerPixel, estimateTextureBytes, GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
 import type { Mesh } from '#rendering/mesh/Mesh';
-import type { InstanceDataView } from '#rendering/RenderBatch';
 import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/RenderCommand';
 import type { ScopeEntry } from '#rendering/plan/RenderScope';
 import {
@@ -25,6 +24,7 @@ import {
 } from '#rendering/plan/RetainedInstructionSet';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
+import type { InstanceDataView } from '#rendering/RenderBatch';
 import type { Renderer } from '#rendering/Renderer';
 import { RendererRegistry } from '#rendering/RendererRegistry';
 import { formatShaderError, RenderError, type RenderErrorCode } from '#rendering/RenderError';
@@ -519,15 +519,6 @@ export class WebGpuBackend implements RenderBackend {
       throw new Error('drawInstanced requires a mesh handled by the WebGPU mesh renderer.');
     }
 
-    // Free per-instance attributes ride a second vertex buffer bound alongside
-    // the node-index stream. The WebGPU instanced pipeline is built for exactly
-    // two buffers with a fixed layout, so carrying a third needs the same
-    // custom-pipeline work that custom materials need here. Reject explicitly
-    // rather than dropping the attributes and rendering something plausible.
-    if (instances !== null) {
-      throw new Error('RenderBatch per-instance attributes are not supported on the WebGPU backend yet.');
-    }
-
     if (this._retainedCaptureFrames.length > 0) {
       this._poisonActiveRetainedCaptures();
     }
@@ -546,7 +537,7 @@ export class WebGpuBackend implements RenderBackend {
       storage.pushValues(transforms[i]!, tints[i]!);
     }
 
-    renderer.drawInstancedBatch(mesh, startNodeIndex, count);
+    renderer.drawInstancedBatch(mesh, startNodeIndex, count, instances);
     this._activeDrawCommand = null;
     this._stats.submittedNodes += count;
 

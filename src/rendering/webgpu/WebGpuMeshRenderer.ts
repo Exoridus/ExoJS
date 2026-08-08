@@ -6,6 +6,7 @@ import type { Geometry } from '#rendering/geometry/Geometry';
 import type { Material } from '#rendering/material/Material';
 import type { Mesh } from '#rendering/mesh/Mesh';
 import type { DrawCommand } from '#rendering/plan/RenderCommand';
+import type { InstanceDataView } from '#rendering/RenderBatch';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import { Texture as TextureClass } from '#rendering/texture/Texture';
@@ -215,6 +216,26 @@ interface InstancedPipelineKey {
  * valid in a pass with the matching attachment, so the two are never
  * interchangeable.
  */
+// Indexed by component count minus one.
+const instanceVertexFormats: readonly GPUVertexFormat[] = ['float32', 'float32x2', 'float32x3', 'float32x4'];
+
+/**
+ * Vertex-buffer layout for a batch's free per-instance attributes. WebGPU binds
+ * vertex inputs by numeric location only, so the layout is driven by each
+ * binding's fixed location rather than by name as on WebGL2.
+ */
+function instanceAttributeBufferLayout(instances: InstanceDataView): GPUVertexBufferLayout {
+  return {
+    arrayStride: instances.strideFloats * Float32Array.BYTES_PER_ELEMENT,
+    stepMode: 'instance',
+    attributes: instances.attributes.map((binding) => ({
+      shaderLocation: binding.location,
+      offset: binding.offsetFloats * Float32Array.BYTES_PER_ELEMENT,
+      format: instanceVertexFormats[binding.componentCount - 1]!,
+    })),
+  };
+}
+
 function meshPipelineCacheKey(blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): string {
   return `${blendMode}:${format}:${stencil ? 's' : 'n'}`;
 }
@@ -243,6 +264,13 @@ interface CustomShaderResources {
   userLayout: GPUBindGroupLayout; // group 2: user UBO + texture/sampler pairs
   pipelineLayout: GPUPipelineLayout;
   pipelines: Map<string, GPURenderPipeline>; // keyed `${blendMode}:${format}:${stencil}`
+  // Instanced (RenderBatch) variant: group 0 is the shared transform storage
+  // rather than the per-draw uniform slot, and the vertex layout carries the
+  // node-index stream plus any free per-instance attributes. Keyed by the
+  // pipeline key AND the batch's instance layout, since that layout is part of
+  // the vertex state.
+  instancedPipelineLayout: GPUPipelineLayout;
+  instancedPipelines: Map<string, GPURenderPipeline>;
   // Vertex/index stream — local-space data, separate from the default path's
   // shared buffers because custom shaders read positions un-baked.
   vertexBuffer: GPUBuffer | null;
@@ -349,6 +377,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   private _instancedUniformBuffer: GPUBuffer | null = null;
   private _instancedUniformBufferCapacity = 0;
   private readonly _instancedUniformScratch = new Float32Array(transformUniformByteLength / Float32Array.BYTES_PER_ELEMENT);
+  private _instancedAttributeBuffer: GPUBuffer | null = null;
+  private _instancedAttributeBufferCapacity = 0;
   private _instancedNodeIndexBuffer: GPUBuffer | null = null;
   private _instancedNodeIndexBufferCapacity = 0;
   private _instancedNodeIndexData: Uint32Array = new Uint32Array(0);
@@ -446,11 +476,13 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
    * immediately in its own render pass. Backs {@link RenderingContext.drawBatch}
    * via {@link WebGpuBackend.drawInstanced}.
    *
-   * v1 uses the default instanced mesh shader; custom materials are not yet
-   * supported on this path.
+   * With a custom material the draw runs through that material's own instanced
+   * pipeline: group 0 stays the shared transform storage (so
+   * `INSTANCE_TRANSFORM_WGSL` resolves), group 1 is the material's mesh texture
+   * and group 2 its user bindings.
    * @internal
    */
-  public drawInstancedBatch(mesh: Mesh, startNodeIndex: number, count: number): void {
+  public drawInstancedBatch(mesh: Mesh, startNodeIndex: number, count: number, instances: InstanceDataView | null = null): void {
     const backend = this._backend;
     const device = this._device;
 
@@ -458,10 +490,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       return;
     }
 
-    if (mesh.material !== null) {
-      throw new Error('RenderBatch custom materials are not supported on the WebGPU backend yet (v1 renders with the default mesh material).');
-    }
-
+    const material = mesh.material;
     const texture = mesh.texture ?? TextureClass.white;
     const premultiplySample = backend.shouldPremultiplyTextureSample(texture);
 
@@ -479,15 +508,37 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       throw new Error('Instanced node-index buffer must be initialized before drawing.');
     }
 
+    const attributeBuffer = instances === null ? null : this._uploadInstanceAttributes(instances, count);
     const renderTargetFormat = backend.renderTargetFormat;
     const stencil = backend._passCoordinator.stencilActive;
+    // The material owns its blend mode; the mesh's own overrides it when set
+    // away from the default — same rule as the node and WebGL2 batch paths.
+    const blendMode = material !== null && mesh.blendMode === BlendModes.Normal ? material.blendMode : mesh.blendMode;
+    const resources = material === null ? null : this._getOrCreateCustomShaderResources(material);
+
+    if (resources !== null) {
+      this._uploadUserUniforms(material!, resources);
+    }
+
     const pass = backend._passCoordinator.acquirePass().pass;
 
-    pass.setPipeline(this._getInstancedPipeline({ blendMode: mesh.blendMode, format: renderTargetFormat, stencil }));
+    if (resources === null) {
+      pass.setPipeline(this._getInstancedPipeline({ blendMode, format: renderTargetFormat, stencil }));
+      pass.setBindGroup(1, this._getTextureBindGroup(backend, texture));
+    } else {
+      pass.setPipeline(this._getOrCreateCustomInstancedPipeline(resources, blendMode, renderTargetFormat, stencil, instances));
+      pass.setBindGroup(1, this._getOrCreateMeshTextureBindGroup(resources, backend, texture));
+      pass.setBindGroup(2, this._getUserBindGroup(backend, material!, resources));
+    }
+
     pass.setBindGroup(0, this._getOrCreateInstancedTransformBindGroup(storage.buffer, storage.tintBuffer), [0]);
-    pass.setBindGroup(1, this._getTextureBindGroup(backend, texture));
     pass.setVertexBuffer(0, staticGeometry.vertexBuffer);
     pass.setVertexBuffer(1, instanceNodeIndexBuffer);
+
+    if (attributeBuffer !== null) {
+      pass.setVertexBuffer(2, attributeBuffer);
+    }
+
     pass.setIndexBuffer(staticGeometry.indexBuffer, 'uint16');
     pass.drawIndexed(staticGeometry.indexCount, count);
 
@@ -987,6 +1038,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     this._uniformBuffer?.destroy();
     this._instancedUniformBuffer?.destroy();
     this._instancedNodeIndexBuffer?.destroy();
+    this._instancedAttributeBuffer?.destroy();
     this._pipelines.clear();
     this._instancedPipelines.clear();
     this._textureBindGroups = new WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView }>();
@@ -1271,6 +1323,100 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     );
 
     return (startNodeIndex + count - 1) >>> 0;
+  }
+
+  /**
+   * Upload a batch's packed free per-instance attributes into the shared
+   * divisor-1 buffer and return it.
+   *
+   * Writes at offset 0, matching {@link _uploadInstancedNodeIndexRange}. Note
+   * that the flush path's {@link _uploadInstancedNodeIndices} instead advances a
+   * per-frame cursor so concurrently-encoded batches cannot alias; if that ever
+   * needs to hold for the immediate batch path too, both uploads must move to a
+   * cursor together, since they index the same draws.
+   */
+  private _uploadInstanceAttributes(instances: InstanceDataView, count: number): GPUBuffer {
+    const device = this._device!;
+    const byteLength = count * instances.strideFloats * Float32Array.BYTES_PER_ELEMENT;
+
+    if (byteLength > this._instancedAttributeBufferCapacity) {
+      this._instancedAttributeBuffer?.destroy();
+      this._instancedAttributeBufferCapacity = Math.max(byteLength, this._instancedAttributeBufferCapacity * 2 || byteLength);
+      this._instancedAttributeBuffer = device.createBuffer({
+        label: 'mesh:instanced-attribute-buffer',
+        size: this._instancedAttributeBufferCapacity,
+        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      });
+    }
+
+    const buffer = this._instancedAttributeBuffer!;
+
+    device.queue.writeBuffer(buffer, 0, instances.data.buffer, instances.data.byteOffset, byteLength);
+
+    return buffer;
+  }
+
+  /**
+   * Instanced pipeline for a custom material: the material's own shader module
+   * against the instanced bind-group layout (shared transform storage at group
+   * 0) and vertex state, including a third buffer when the batch declares free
+   * per-instance attributes. Cached per pipeline key AND instance layout.
+   */
+  private _getOrCreateCustomInstancedPipeline(
+    resources: CustomShaderResources,
+    blendMode: BlendModes,
+    format: GPUTextureFormat,
+    stencil: boolean,
+    instances: InstanceDataView | null,
+  ): GPURenderPipeline {
+    const cacheKey = `${meshPipelineCacheKey(blendMode, format, stencil)}:${instances?.layoutKey ?? ''}`;
+    let pipeline = resources.instancedPipelines.get(cacheKey);
+
+    if (pipeline !== undefined) {
+      return pipeline;
+    }
+
+    const buffers: GPUVertexBufferLayout[] = [
+      {
+        arrayStride: vertexStrideBytes,
+        stepMode: 'vertex',
+        attributes: [
+          { shaderLocation: 0, offset: 0, format: 'float32x2' },
+          { shaderLocation: 1, offset: 8, format: 'float32x2' },
+          { shaderLocation: 2, offset: 16, format: 'unorm8x4' },
+        ],
+      },
+      {
+        arrayStride: Uint32Array.BYTES_PER_ELEMENT,
+        stepMode: 'instance',
+        attributes: [{ shaderLocation: 6, offset: 0, format: 'uint32' }],
+      },
+    ];
+
+    if (instances !== null) {
+      buffers.push(instanceAttributeBufferLayout(instances));
+    }
+
+    const descriptor: GPURenderPipelineDescriptor = {
+      label: 'mesh:material-instanced-render-pipeline',
+      layout: resources.instancedPipelineLayout,
+      vertex: { module: resources.shaderModule, entryPoint: 'vertexMain', buffers },
+      fragment: {
+        module: resources.shaderModule,
+        entryPoint: 'fragmentMain',
+        targets: [{ format, blend: getWebGpuBlendState(blendMode), writeMask: GPUColorWrite.ALL }],
+      },
+      primitive: { topology: 'triangle-list', cullMode: 'none' },
+    };
+
+    if (stencil) {
+      descriptor.depthStencil = stencilContentDepthStencilState();
+    }
+
+    pipeline = this._device!.createRenderPipeline(descriptor);
+    resources.instancedPipelines.set(cacheKey, pipeline);
+
+    return pipeline;
   }
 
   private _ensureInstancedNodeIndexCapacity(instanceCount: number): void {
@@ -1905,6 +2051,11 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       bindGroupLayouts: [meshUniformLayout, meshTextureLayout, userLayout],
     });
 
+    const instancedPipelineLayout = device.createPipelineLayout({
+      label: 'mesh:material-instanced-pipeline-layout',
+      bindGroupLayouts: [this._instancedTransformBindGroupLayout!, meshTextureLayout, userLayout],
+    });
+
     const sampler = device.createSampler({
       label: 'mesh:material-sampler',
       magFilter: 'linear',
@@ -1924,6 +2075,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       userLayout,
       pipelineLayout,
       pipelines: new Map(),
+      instancedPipelineLayout,
+      instancedPipelines: new Map(),
       vertexBuffer: null,
       indexBuffer: null,
       vertexBufferCapacity: 0,
@@ -2238,6 +2391,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     resources.meshUniformBuffer?.destroy();
     resources.userUniformBuffer?.destroy();
     resources.pipelines.clear();
+    resources.instancedPipelines.clear();
     resources.meshTextureBindGroups = new WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView }>();
     resources.vertexBuffer = null;
     resources.indexBuffer = null;

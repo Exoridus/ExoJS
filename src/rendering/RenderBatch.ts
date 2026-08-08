@@ -15,12 +15,26 @@ const instanceFormatComponents = {
 export type InstanceAttributeFormat = keyof typeof instanceFormatComponents;
 
 /**
- * One free per-instance attribute of a {@link RenderBatch}, matched to the
- * material's shader by `name`.
+ * First vertex-attribute location available to free per-instance attributes.
+ * Locations 0..2 carry the geometry (position, texcoord, color) and 6 carries
+ * `a_nodeIndex`.
+ * @stable
+ */
+export const FIRST_INSTANCE_ATTRIBUTE_LOCATION = 7;
+
+/**
+ * One free per-instance attribute of a {@link RenderBatch}.
+ *
+ * WebGL2 binds it by `name` through shader reflection. WebGPU has no
+ * name-based vertex binding, so the **declaration order** fixes the location:
+ * the Nth declared attribute is
+ * `@location(FIRST_INSTANCE_ATTRIBUTE_LOCATION + N)` and a WGSL shader must
+ * declare it there. Keeping one ordered list rather than a per-backend location
+ * field means the same declaration drives both.
  * @stable
  */
 export interface InstanceAttribute {
-  /** Attribute name as declared in the material's shader. */
+  /** Attribute name as declared in the material's GLSL shader. */
   readonly name: string;
   /** Component count and type of the value written per instance. */
   readonly format: InstanceAttributeFormat;
@@ -44,6 +58,8 @@ export interface InstanceAttributeBinding {
   readonly name: string;
   readonly componentCount: number;
   readonly offsetFloats: number;
+  /** Fixed vertex-attribute location, for backends without name-based binding. */
+  readonly location: number;
 }
 
 /** The packed per-instance attribute stream handed to a backend. @internal */
@@ -124,7 +140,12 @@ export class RenderBatch {
       }
 
       seen.add(attribute.name);
-      bindings.push({ name: attribute.name, componentCount, offsetFloats });
+      bindings.push({
+        name: attribute.name,
+        componentCount,
+        offsetFloats,
+        location: FIRST_INSTANCE_ATTRIBUTE_LOCATION + bindings.length,
+      });
       offsetFloats += componentCount;
     }
 
