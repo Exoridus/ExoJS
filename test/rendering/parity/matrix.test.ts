@@ -18,6 +18,7 @@ import { graphicsScenes } from './scenes/graphics';
 import { meshScenes } from './scenes/mesh';
 import { nineSliceScenes } from './scenes/nineSlice';
 import { particleScenes } from './scenes/particles';
+import { renderBatchScenes } from './scenes/renderBatch';
 import { repeatingSpriteScenes } from './scenes/repeatingSprite';
 import { spriteScenes } from './scenes/sprite';
 import { spriteCanvasScenes } from './scenes/spriteCanvas';
@@ -32,6 +33,7 @@ const scenes: readonly Scene[] = [
   ...nineSliceScenes,
   ...repeatingSpriteScenes,
   ...meshScenes,
+  ...renderBatchScenes,
   ...transformScenes,
   ...graphicsScenes,
   ...colourScenes,

@@ -256,6 +256,60 @@ describe('WebGPU RenderingContext.drawGeometry', () => {
     }
   });
 
+  test('two drawBatch calls in one frame each read their own node indices', async ctx => {
+    const backend = await setupBackend();
+    const context = new RenderingContext(backend);
+    const geometry = coloredQuad(0, 0, 16, 16, [255, 255, 255, 255]);
+    // Two batches take DISTINCT ranges of the shared transform buffer, but both
+    // upload their node indices at byte offset 0 of the one shared index buffer
+    // (unlike the flush path, which advances a per-frame cursor for exactly this
+    // reason). That is safe only because drawBatch submits per call, so each
+    // write lands on the queue timeline ahead of its own draw. If that ever
+    // stops holding, the first batch renders the second's transforms and this
+    // test goes red.
+    const first = new RenderBatch(geometry).add(new Matrix(1, 0, 0, 0, 1, 0), new Color(255, 0, 0));
+    const second = new RenderBatch(geometry).add(new Matrix(1, 0, 40, 0, 1, 40), new Color(0, 255, 0));
+
+    try {
+      const device = getBackendDevice(backend);
+
+      device.pushErrorScope('validation');
+
+      let validationError: GPUError | null;
+
+      try {
+        backend.resetStats();
+        backend.clear(Color.black);
+        context.drawBatch(first, { view: screenView() });
+        context.drawBatch(second, { view: screenView() });
+        validationError = await device.popErrorScope();
+      } catch (error) {
+        if (isDeviceLoss(error)) {
+          // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+          ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+          return;
+        }
+
+        throw error;
+      }
+
+      expect(validationError).toBeNull();
+      expect(backend.stats.drawCalls).toBe(2);
+
+      const readPixel = readWebGpuPixels(backend, canvasSize);
+
+      expectPixelNear(readPixel(8, 8), [255, 0, 0, 255]); // first batch kept its own transform
+      expectPixelNear(readPixel(48, 48), [0, 255, 0, 255]); // second batch drew at its own
+    } finally {
+      first.destroy();
+      second.destroy();
+      geometry.destroy();
+      context.destroy();
+      backend.destroy();
+    }
+  });
+
   test('drawBatch renders a custom material with free per-instance attributes', async ctx => {
     const backend = await setupBackend();
     const context = new RenderingContext(backend);
