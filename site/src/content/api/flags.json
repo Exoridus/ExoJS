@@ -1,6 +1,6 @@
 {
   "title": "Flags",
-  "description": "Type-safe bitfield utility for managing sets of numeric enum flags. `T` should be a numeric const-enum or a type whose values are `number`. Internally stores the combined flags as a single 32-bit integer.",
+  "description": "Type-safe bitfield utility for managing sets of numeric enum flags. `T` should be a numeric const-enum or a type whose values are `number`. Internally stores the combined flags as a single 32-bit integer. Pass the enum TYPE as `T`, not `typeof MyEnum` — the reverse mapping of a numeric enum object carries string values and does not satisfy the constraint. Rest-argument methods (push, remove, has) allocate an array per call. On hot paths use the mask forms (addMask, removeMask, hasMask, popMask) with a pre-combined mask instead.",
   "symbol": "Flags",
   "kind": "class",
   "subsystem": "math",
@@ -20,7 +20,9 @@
       "members": [],
       "paragraphs": [
         "Type-safe bitfield utility for managing sets of numeric enum flags.",
-        "`T` should be a numeric const-enum or a type whose values are `number`. Internally stores the combined flags as a single 32-bit integer."
+        "`T` should be a numeric const-enum or a type whose values are `number`. Internally stores the combined flags as a single 32-bit integer.",
+        "Pass the enum TYPE as `T`, not `typeof MyEnum` — the reverse mapping of a numeric enum object carries string values and does not satisfy the constraint.",
+        "Rest-argument methods (push, remove, has) allocate an array per call. On hot paths use the mask forms (addMask, removeMask, hasMask, popMask) with a pre-combined mask instead."
       ],
       "importLine": "import { Flags } from '@codexo/exojs'",
       "sourceLink": null

@@ -7,7 +7,12 @@ import { View } from '#rendering/View';
  * in play, and independent of how the projection composes them.
  */
 const visibleAreaFromCorners = (view: View): { left: number; top: number; right: number; bottom: number } => {
-  const corners = [view.screenToWorld(0, 0), view.screenToWorld(view.width, 0), view.screenToWorld(view.width, view.height), view.screenToWorld(0, view.height)];
+  const corners = [
+    view.screenToWorld(0, 0),
+    view.screenToWorld(view.width, 0),
+    view.screenToWorld(view.width, view.height),
+    view.screenToWorld(0, view.height),
+  ];
   const xs = corners.map(corner => corner.x);
   const ys = corners.map(corner => corner.y);
 

@@ -599,7 +599,9 @@ export class View implements ObservableVectorOwner {
     if (!Number.isFinite(determinant) || determinant === 0) {
       // Degenerate projection (a zero-sized view): keep a real rectangle at the
       // camera centre instead of letting the solve below decay into NaN.
-      return this._bounds.addCoords(this._center.x + this._shakeOffsetX, this._center.y + this._shakeOffsetY), this;
+      this._bounds.addCoords(this._center.x + this._shakeOffsetX, this._center.y + this._shakeOffsetY);
+
+      return this;
     }
 
     // Map the four clip-space corners back to world space and take their AABB.

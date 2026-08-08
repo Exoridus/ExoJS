@@ -6,12 +6,25 @@ import type { TypedEnum } from '#core/types';
  * `T` should be a numeric const-enum or a type whose values are `number`.
  * Internally stores the combined flags as a single 32-bit integer.
  *
+ * Pass the enum TYPE as `T`, not `typeof MyEnum` — the reverse mapping of a
+ * numeric enum object carries string values and does not satisfy the
+ * constraint.
+ *
+ * Rest-argument methods ({@link push}, {@link remove}, {@link has}) allocate an
+ * array per call. On hot paths use the mask forms ({@link addMask},
+ * {@link removeMask}, {@link hasMask}, {@link popMask}) with a pre-combined
+ * mask instead.
+ *
  * @example
  * ```ts
- * const flags = new Flags<typeof MyEnum>(MyEnum.A, MyEnum.B);
+ * const flags = new Flags<MyEnum>(MyEnum.A, MyEnum.B);
  * flags.has(MyEnum.A); // true
  * flags.remove(MyEnum.A);
  * flags.push(MyEnum.C);
+ *
+ * // Hot path: no rest array.
+ * flags.addMask(MyEnum.A | MyEnum.C);
+ * flags.hasMask(MyEnum.A | MyEnum.B); // true when EITHER is set
  * ```
  */
 export class Flags<T extends TypedEnum<T, number>> {

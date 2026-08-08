@@ -1,6 +1,6 @@
 import { Flags } from '#math/Flags';
 
-const enum TestFlags {
+enum TestFlags {
   None = 0x00,
   A = 0x01,
   B = 0x02,
@@ -10,7 +10,7 @@ const enum TestFlags {
 
 describe('Flags mask API', () => {
   test('hasMask answers "any bit of the mask is set"', () => {
-    const flags = new Flags<typeof TestFlags>(TestFlags.A, TestFlags.C);
+    const flags = new Flags<TestFlags>(TestFlags.A, TestFlags.C);
 
     expect(flags.hasMask(TestFlags.A)).toBe(true);
     expect(flags.hasMask(TestFlags.B)).toBe(false);
@@ -20,7 +20,7 @@ describe('Flags mask API', () => {
   });
 
   test('addMask sets every bit of the mask and returns this', () => {
-    const flags = new Flags<typeof TestFlags>();
+    const flags = new Flags<TestFlags>();
 
     expect(flags.addMask(TestFlags.A | TestFlags.B)).toBe(flags);
     expect(flags.value).toBe(TestFlags.A | TestFlags.B);
@@ -31,7 +31,7 @@ describe('Flags mask API', () => {
   });
 
   test('removeMask clears every bit of the mask and returns this', () => {
-    const flags = new Flags<typeof TestFlags>(TestFlags.A, TestFlags.B, TestFlags.C);
+    const flags = new Flags<TestFlags>(TestFlags.A, TestFlags.B, TestFlags.C);
 
     expect(flags.removeMask(TestFlags.A | TestFlags.C)).toBe(flags);
     expect(flags.value).toBe(TestFlags.B);
@@ -42,8 +42,8 @@ describe('Flags mask API', () => {
   });
 
   test('the mask forms agree with the rest-argument forms', () => {
-    const viaRest = new Flags<typeof TestFlags>().push(TestFlags.A, TestFlags.C);
-    const viaMask = new Flags<typeof TestFlags>().addMask(TestFlags.A | TestFlags.C);
+    const viaRest = new Flags<TestFlags>().push(TestFlags.A, TestFlags.C);
+    const viaMask = new Flags<TestFlags>().addMask(TestFlags.A | TestFlags.C);
 
     expect(viaMask.value).toBe(viaRest.value);
     expect(viaMask.hasMask(TestFlags.A | TestFlags.B)).toBe(viaRest.has(TestFlags.A, TestFlags.B));
@@ -51,7 +51,7 @@ describe('Flags mask API', () => {
   });
 
   test('popMask reports and clears in one step', () => {
-    const flags = new Flags<typeof TestFlags>(TestFlags.A);
+    const flags = new Flags<TestFlags>(TestFlags.A);
 
     expect(flags.popMask(TestFlags.A)).toBe(true);
     expect(flags.hasMask(TestFlags.A)).toBe(false);
