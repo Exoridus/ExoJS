@@ -168,7 +168,14 @@ describe('Signal', () => {
     expect(signal.count).toBe(0);
   });
 
-  it('a nested dispatch() combined with once() during dispatch flushes the self-removal exactly once, after the outermost dispatch', () => {
+  it('a nested dispatch() combined with once() during dispatch still fires the handler at most once', () => {
+    // Regression: the once wrapper stays in `_handlers` for both the nested
+    // and the outer pass (its self-removal is deferred while depth > 0, same
+    // as the plain `remove()` case above), so without an internal "already
+    // fired" latch the wrapper itself would run twice and call `handler`
+    // twice — quietly breaking the "once" contract instead of the old code's
+    // loud crash. The latch inside the wrapper must make the second
+    // invocation a no-op.
     const signal = new Signal();
     const calls: string[] = [];
     let nested = false;
@@ -188,15 +195,11 @@ describe('Signal', () => {
     signal.once(onceHandler);
     signal.dispatch();
 
-    // The once wrapper is still present in `_handlers` for both the nested
-    // and the outer pass (its self-removal is deferred while depth > 0), so
-    // it fires from both — the same "outer dispatch still sees the listener
-    // set it started with" guarantee as the plain `remove()` case.
-    expect(calls).toEqual(['a', 'a', 'once', 'once']);
-    expect(onceHandler).toHaveBeenCalledTimes(2);
-    // Despite firing twice, the wrapper's self-removal only ever lands once
-    // in `_handlers` — a repeated `indexOf` after the first splice is a
-    // guaranteed no-op, so the depth-0 flush leaves exactly `a` behind.
+    // `a` still runs twice (nested + outer pass, same as every other test in
+    // this block), but `handler` itself only ever runs once.
+    expect(calls).toEqual(['a', 'a', 'once']);
+    expect(onceHandler).toHaveBeenCalledTimes(1);
+    // The wrapper's self-removal lands exactly once, leaving only `a` behind.
     expect(signal.count).toBe(1);
   });
 
@@ -223,6 +226,63 @@ describe('Signal', () => {
     expect(calls).toEqual(['a', 'a', 'b', 'b']);
     expect(signal.has(b)).toBe(false);
     expect(signal.count).toBe(1);
+  });
+
+  it('add() during dispatch defers registration to the next dispatch — not even a nested dispatch of the same Signal sees it early', () => {
+    const signal = new Signal();
+    const calls: string[] = [];
+    let nested = false;
+
+    const c = (): void => calls.push('c');
+    const a = (): void => {
+      calls.push('a');
+
+      if (!nested) {
+        nested = true;
+        signal.add(c);
+        signal.dispatch(); // nested dispatch — `c` must not fire here either
+      }
+    };
+
+    signal.add(a);
+    signal.dispatch();
+
+    // Neither the nested dispatch nor the rest of the outer dispatch invoke
+    // `c` — it was added mid-dispatch, so it only takes effect once this
+    // outermost dispatch has fully returned.
+    expect(calls).toEqual(['a', 'a']);
+    // The add itself did land, just deferred — `c` is registered now...
+    expect(signal.has(c)).toBe(true);
+
+    calls.length = 0;
+    signal.dispatch();
+    // ...and fires starting with the very next dispatch.
+    expect(calls).toEqual(['a', 'c']);
+  });
+
+  it('add() of the same handler twice during dispatch is still idempotent', () => {
+    const signal = new Signal();
+    const calls: string[] = [];
+    const b = (): void => calls.push('b');
+    let addCount = 0;
+
+    const a = (): void => {
+      calls.push('a');
+      addCount++;
+
+      if (addCount <= 2) {
+        signal.add(b);
+      }
+    };
+
+    signal.add(a);
+    signal.dispatch(); // `a` calls add(b) once while depth > 0 — must not queue duplicate pending adds
+
+    expect(signal.count).toBe(2);
+
+    calls.length = 0;
+    signal.dispatch();
+    expect(calls).toEqual(['a', 'b']); // `b` present exactly once, not duplicated
   });
 });
 
@@ -275,7 +335,7 @@ describe('dispatchIsolated', () => {
     expect(calls).toEqual(['a', 'b']);
   });
 
-  it('_dispatching is always cleared via finally, even after a throw — remove()/add() work normally afterward', () => {
+  it('_dispatchDepth is always cleared via finally, even after a throw — remove()/add() work normally afterward', () => {
     const signal = new Signal();
     const thrower = (): void => {
       throw new Error('boom');
@@ -287,7 +347,7 @@ describe('dispatchIsolated', () => {
     expect(signal.has(thrower)).toBe(true); // isolation does not remove the listener
 
     signal.remove(thrower);
-    expect(signal.has(thrower)).toBe(false); // removal applies immediately — proves _dispatching was cleared, not left stuck true (which would defer this removal into _pendingRemoves instead)
+    expect(signal.has(thrower)).toBe(false); // removal applies immediately — proves _dispatchDepth was decremented back to 0, not left stuck above 0 (which would defer this removal into _pendingRemoves instead)
 
     const calls: string[] = [];
 
