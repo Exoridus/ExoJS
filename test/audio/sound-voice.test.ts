@@ -11,6 +11,11 @@ import type { SoundVoice } from '#audio/SoundVoice';
 
 const createAudioBufferStub = (duration = 2): AudioBuffer => ({ duration }) as AudioBuffer;
 
+/** Move the shared mock context's clock. `currentTime` is readonly on the real type. */
+const setCurrentTime = (seconds: number): void => {
+  (getAudioContext() as unknown as { currentTime: number }).currentTime = seconds;
+};
+
 const makeParam = (value = 0) => ({
   value,
   setValueAtTime: vi.fn(),
@@ -398,7 +403,6 @@ describe('SoundVoice — capabilities', () => {
     const manager = new AudioManager();
     const sound = new Sound(createAudioBufferStub(10));
     sound.defineSprite('hit', { start: 2, end: 3, loop: true });
-    const ctx = getAudioContext();
 
     const voice = sound._createSpriteVoice(manager, 'hit') as SoundVoice;
     const source = factory.sources[0];
@@ -406,7 +410,7 @@ describe('SoundVoice — capabilities', () => {
     // A looping start passes no duration, so nothing bounds the source yet.
     expect(source.start).toHaveBeenCalledWith(0, 2);
 
-    ctx.currentTime = 0.25; // a quarter into the 1s clip
+    setCurrentTime(0.25); // a quarter into the 1s clip
 
     voice.loop = false;
 
@@ -415,7 +419,7 @@ describe('SoundVoice — capabilities', () => {
     // otherwise the next sprite in the atlas would bleed in.
     expect(source.stop).toHaveBeenCalledWith(1);
 
-    ctx.currentTime = 0;
+    setCurrentTime(0);
     factory.restore();
     sound.destroy();
   });
@@ -425,19 +429,18 @@ describe('SoundVoice — capabilities', () => {
     const manager = new AudioManager();
     const sound = new Sound(createAudioBufferStub(10));
     sound.defineSprite('hit', { start: 2, end: 3, loop: true });
-    const ctx = getAudioContext();
 
     const voice = sound._createSpriteVoice(manager, 'hit', { playbackRate: 2 }) as SoundVoice;
     const source = factory.sources[0];
 
-    ctx.currentTime = 0.25; // 0.5s of buffer time consumed at rate 2
+    setCurrentTime(0.25); // 0.5s of buffer time consumed at rate 2
 
     voice.loop = false;
 
     // 0.5s of clip left, played at rate 2 => 0.25s of wall-clock time.
     expect(source.stop).toHaveBeenCalledWith(0.5);
 
-    ctx.currentTime = 0;
+    setCurrentTime(0);
     factory.restore();
     sound.destroy();
   });
