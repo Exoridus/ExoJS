@@ -19,14 +19,15 @@ type SignalHandler<Args extends unknown[]> = (...params: Args) => void;
  * and the listener signature `(n: number, s: string) => …`.
  *
  * Handlers are stored as direct function references (no wrapper objects).
- * `dispatch` uses a guard flag instead of a snapshot copy, so no allocation
- * occurs per dispatch. Handlers added or removed during dispatch take effect
- * on the next call; a `remove` mid-dispatch defers the splice until after the
- * current iteration finishes.
+ * `dispatch` tracks re-entrancy with a depth counter instead of a snapshot
+ * copy, so no allocation occurs per dispatch and a listener that dispatches
+ * this same Signal again nests safely. Handlers added or removed during
+ * dispatch take effect on the next call; a `remove` mid-dispatch defers the
+ * splice until after the outermost dispatch finishes.
  */
 export class Signal<Args extends unknown[] = []> {
   private readonly _handlers: Array<SignalHandler<Args>> = [];
-  private _dispatching = false;
+  private _dispatchDepth = 0;
   private _pendingRemoves: Array<SignalHandler<Args>> | null = null;
 
   /** Number of currently registered listeners. */
@@ -71,7 +72,7 @@ export class Signal<Args extends unknown[] = []> {
 
   /** Remove a previously registered handler. No-op if absent. */
   public remove(handler: SignalHandler<Args>): this {
-    if (this._dispatching) {
+    if (this._dispatchDepth > 0) {
       (this._pendingRemoves ??= []).push(handler);
     } else {
       const index = this._handlers.indexOf(handler);
@@ -86,7 +87,7 @@ export class Signal<Args extends unknown[] = []> {
 
   /** Remove every listener. */
   public clear(): this {
-    if (this._dispatching) {
+    if (this._dispatchDepth > 0) {
       this._pendingRemoves = [...this._handlers];
     } else {
       this._handlers.length = 0;
@@ -107,7 +108,7 @@ export class Signal<Args extends unknown[] = []> {
       return this;
     }
 
-    this._dispatching = true;
+    this._dispatchDepth++;
 
     try {
       for (let i = 0; i < length; i++) {
@@ -116,10 +117,15 @@ export class Signal<Args extends unknown[] = []> {
     } finally {
       // A normal dispatch deliberately propagates listener exceptions, but
       // the emitter's own bookkeeping must never remain stuck in its
-      // mid-dispatch state when that happens.
-      this._dispatching = false;
+      // mid-dispatch state when that happens. A listener that dispatches
+      // this same Signal again nests another call here — the depth counter
+      // (rather than a boolean) ensures the outer dispatch, still mid-loop
+      // above it on the stack, keeps seeing itself as "dispatching" until
+      // that outer frame's own `finally` runs, so pending removals flush
+      // exactly once, after the outermost dispatch completes.
+      this._dispatchDepth--;
 
-      if (this._pendingRemoves !== null) {
+      if (this._dispatchDepth === 0 && this._pendingRemoves !== null) {
         for (const handler of this._pendingRemoves) {
           const index = this._handlers.indexOf(handler);
 
@@ -147,10 +153,12 @@ export class Signal<Args extends unknown[] = []> {
    * A throwing listener is reported to `onError` (itself guarded — a
    * throwing `onError` callback never propagates back into this dispatch)
    * and dispatch continues to the remaining listeners.
-   * `_dispatching`/pending-removes bookkeeping is guaranteed via `finally`,
+   * `_dispatchDepth`/pending-removes bookkeeping is guaranteed via `finally`,
    * so a throw here can never corrupt a later `dispatch()`/`add()`/`remove()`
    * call on this Signal the way an unguarded throw inside
-   * {@link Signal.dispatch} would.
+   * {@link Signal.dispatch} would. `dispatch` and `dispatchIsolated` share the
+   * same depth counter, so nesting either variant inside the other still
+   * defers removals correctly until the outermost call finishes.
    */
   public dispatchIsolated(onError: (error: unknown) => void, ...params: Args): this {
     const length = this._handlers.length;
@@ -159,7 +167,7 @@ export class Signal<Args extends unknown[] = []> {
       return this;
     }
 
-    this._dispatching = true;
+    this._dispatchDepth++;
 
     try {
       for (let i = 0; i < length; i++) {
@@ -175,9 +183,9 @@ export class Signal<Args extends unknown[] = []> {
         }
       }
     } finally {
-      this._dispatching = false;
+      this._dispatchDepth--;
 
-      if (this._pendingRemoves !== null) {
+      if (this._dispatchDepth === 0 && this._pendingRemoves !== null) {
         for (const handler of this._pendingRemoves) {
           const index = this._handlers.indexOf(handler);
 

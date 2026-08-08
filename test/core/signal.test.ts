@@ -103,6 +103,127 @@ describe('Signal', () => {
     expect(() => signal.dispatch()).not.toThrow();
     expect(survivor).toHaveBeenCalledTimes(1);
   });
+
+  it('a nested dispatch() on the same Signal does not flush the outer dispatch early', () => {
+    // Regression: a boolean re-entrancy guard would have the inner
+    // dispatch's `finally` clear the flag as it returns, so the still-running
+    // outer loop below would see the guard cleared and flush pending
+    // removals mid-iteration instead of after the outer dispatch completes.
+    const signal = new Signal();
+    const calls: string[] = [];
+    let nested = false;
+
+    const b = (): void => calls.push('b');
+    const a = (): void => {
+      calls.push('a');
+
+      if (!nested) {
+        nested = true;
+        signal.remove(b);
+        signal.dispatch(); // nested dispatch — must not flush `b`'s removal yet
+      }
+    };
+
+    signal.add(a);
+    signal.add(b);
+    signal.dispatch();
+
+    // Neither the nested dispatch nor the outer dispatch mutate `_handlers`
+    // itself while depth > 0, so both loops still walk the full [a, b] they
+    // started with: the nested dispatch reaches `b` once, then the outer
+    // loop's own iteration (resumed after `a` returns) reaches it again —
+    // proving the outer dispatch still sees the listener set it started
+    // with instead of a set truncated by an early flush.
+    expect(calls).toEqual(['a', 'a', 'b', 'b']);
+    // The removal itself still lands exactly once, only after the
+    // outermost dispatch's `finally` runs.
+    expect(signal.has(b)).toBe(false);
+    expect(signal.count).toBe(1);
+  });
+
+  it('a nested dispatch() combined with clear() during dispatch defers the clear to the outermost dispatch', () => {
+    const signal = new Signal();
+    const calls: string[] = [];
+    let nested = false;
+
+    const b = (): void => calls.push('b');
+    const a = (): void => {
+      calls.push('a');
+
+      if (!nested) {
+        nested = true;
+        signal.clear();
+        signal.dispatch();
+      }
+    };
+
+    signal.add(a);
+    signal.add(b);
+    signal.dispatch();
+
+    // Same reasoning as the `remove()` case above: `clear()` only snapshots
+    // pending removals while depth > 0, it does not touch `_handlers`, so
+    // both the nested and the outer loop still run over [a, b] in full.
+    expect(calls).toEqual(['a', 'a', 'b', 'b']);
+    expect(signal.count).toBe(0);
+  });
+
+  it('a nested dispatch() combined with once() during dispatch flushes the self-removal exactly once, after the outermost dispatch', () => {
+    const signal = new Signal();
+    const calls: string[] = [];
+    let nested = false;
+
+    const onceHandler = vi.fn(() => calls.push('once'));
+
+    const a = (): void => {
+      calls.push('a');
+
+      if (!nested) {
+        nested = true;
+        signal.dispatch(); // nested dispatch — triggers the once wrapper before the outer loop reaches it too
+      }
+    };
+
+    signal.add(a);
+    signal.once(onceHandler);
+    signal.dispatch();
+
+    // The once wrapper is still present in `_handlers` for both the nested
+    // and the outer pass (its self-removal is deferred while depth > 0), so
+    // it fires from both — the same "outer dispatch still sees the listener
+    // set it started with" guarantee as the plain `remove()` case.
+    expect(calls).toEqual(['a', 'a', 'once', 'once']);
+    expect(onceHandler).toHaveBeenCalledTimes(2);
+    // Despite firing twice, the wrapper's self-removal only ever lands once
+    // in `_handlers` — a repeated `indexOf` after the first splice is a
+    // guaranteed no-op, so the depth-0 flush leaves exactly `a` behind.
+    expect(signal.count).toBe(1);
+  });
+
+  it('mixing dispatch() and dispatchIsolated() nesting shares the same depth counter', () => {
+    const signal = new Signal();
+    const calls: string[] = [];
+    let nested = false;
+
+    const b = (): void => calls.push('b');
+    const a = (): void => {
+      calls.push('a');
+
+      if (!nested) {
+        nested = true;
+        signal.remove(b);
+        signal.dispatchIsolated(() => {}); // nested isolated dispatch inside a normal dispatch
+      }
+    };
+
+    signal.add(a);
+    signal.add(b);
+    signal.dispatch();
+
+    expect(calls).toEqual(['a', 'a', 'b', 'b']);
+    expect(signal.has(b)).toBe(false);
+    expect(signal.count).toBe(1);
+  });
 });
 
 describe('dispatchIsolated', () => {
