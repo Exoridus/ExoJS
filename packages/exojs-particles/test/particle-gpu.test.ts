@@ -19,6 +19,7 @@ import { SpawnOnDeath } from '../src/modules/SpawnOnDeath';
 import { Turbulence } from '../src/modules/Turbulence';
 import { UpdateModule } from '../src/modules/UpdateModule';
 import { ParticleSystem } from '../src/ParticleSystem';
+import { QuadParticles } from '../src/renderModes/QuadParticles';
 
 const makeTexture = (): Texture => {
   const canvas = document.createElement('canvas');
@@ -794,6 +795,65 @@ describe('ParticleGpuState frame-UV packing (_writeFrames)', () => {
     expect(view[1]).toBe(1);
     expect(view[2]).toBe(1);
     expect(view[3]).toBe(0);
+  });
+});
+
+describe('Out-of-range textureIndex', () => {
+  let restoreGlobals: () => void;
+
+  beforeEach(() => {
+    restoreGlobals = installGlobals();
+  });
+
+  afterEach(() => {
+    restoreGlobals();
+  });
+
+  test('shows frame 0 on the CPU packer and in the generated compute shader alike', () => {
+    const env = makeMockDevice();
+    const tex = makeTexture(); // 16x16
+    const frames = [new Rectangle(0, 0, 8, 8), new Rectangle(8, 0, 8, 8)];
+    const system = new ParticleSystem(tex, frames, { capacity: 4, device: env.device });
+
+    system.addUpdateModule(new ApplyForce(0, 0));
+
+    const inRange = system.spawn();
+    const outOfRange = system.spawn();
+    const neverSet = system.spawn();
+
+    for (const slot of [inRange, outOfRange, neverSet]) {
+      system.lifetime[slot] = 10;
+    }
+
+    system.textureIndex[inRange] = 1;
+    system.textureIndex[outOfRange] = 7;
+    // `neverSet` keeps the zero-initialised default.
+
+    system.update(tick(0.016));
+
+    expect(system.gpuMode).toBe(true);
+
+    // GPU side: the pack step selects frame 0 for an index past the declared
+    // count, rather than clamping it to the last frame.
+    const shaderSource = env.shaderSources[0]!;
+
+    expect(shaderSource).toContain('select(0u, rawFrameIndex, rawFrameIndex < 2u)');
+    expect(shaderSource).not.toContain('min(textureIndex[idx]');
+
+    // CPU side: the same three particles packed through the render mode.
+    const mode = new QuadParticles();
+
+    mode.build(system);
+
+    const floats = new Float32Array(mode.data);
+    const uvMinU = (instance: number): number => floats[instance * 10 + 6]!;
+
+    // Frame 1 spans u 0.5..1 on a 16x16 texture, frame 0 spans u 0..0.5.
+    expect(uvMinU(0)).toBeCloseTo(0.5);
+    expect(uvMinU(1)).toBeCloseTo(0);
+    // An index that was never set and one that is out of range are the same
+    // particle as far as the atlas is concerned.
+    expect(uvMinU(1)).toBe(uvMinU(2));
   });
 });
 

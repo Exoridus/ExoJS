@@ -534,8 +534,13 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     // Module bodies (in registration order).
 ${moduleBodies}
 
-    // Resolve frame UVs.
-    let frameIndex = min(textureIndex[idx], ${frameCountConst}u - 1u);
+    // Resolve frame UVs. Anything that is not a valid explicit index shows
+    // frame 0, which is what the CPU packer does and what a slot whose index
+    // was never set already shows — \`textureIndex\` is zero-initialised.
+    // Clamping to the last frame instead would be animation-hold semantics,
+    // and this is a frame selector rather than an animation cursor.
+    let rawFrameIndex = textureIndex[idx];
+    let frameIndex = select(0u, rawFrameIndex, rawFrameIndex < ${frameCountConst}u);
     let frameUvBounds = frameUv.frames[frameIndex];
 
     // Pack interleaved instance data (10 u32s per particle):

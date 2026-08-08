@@ -66,6 +66,9 @@ export class ParticleInstanceWriter {
     // to the system.textureFrame when no atlas is declared.
     const { uvMins, uvMaxs } = this._computeFrameUvs(system);
     const frameCount = uvMins.length / 2;
+    // Anything that is not a valid explicit index shows frame 0, matching both
+    // the zero-initialised default and the compute pipeline. See
+    // `ParticleSystem.textureIndex`.
     const fallbackFrame = 0;
 
     let writeIndex = 0;
