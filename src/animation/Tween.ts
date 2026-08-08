@@ -16,9 +16,10 @@ type NumericKeys<T> = {
  * ({@link Tween.onStart}, {@link Tween.onUpdate}, {@link Tween.onComplete},
  * {@link Tween.onRepeat}).
  *
- * Tweens are typically created via {@link TweenManager.create}, which attaches
- * them to the manager so they advance once per frame. Stand-alone usage is
- * supported by calling {@link Tween.update} manually with a frame delta.
+ * Tweens are typically created via {@link TweenManager.create}, which binds
+ * them to that manager; {@link Tween.start} then enters them into its update
+ * loop so they advance once per frame. Stand-alone usage is supported by
+ * calling {@link Tween.update} manually with a frame delta.
  *
  * Start values are captured lazily on the first update after {@link Tween.start},
  * so target properties may be mutated between configuration and start without
@@ -210,10 +211,10 @@ export class Tween<T extends object = object> {
    * Start or restart the tween. Resets all elapsed time, the start-value
    * snapshot, playback direction, and repeat counter.
    *
-   * If this tween was previously owned by a manager but was evicted after
-   * natural completion or {@link Tween.stop}, it is automatically
-   * re-registered so it continues to receive frame updates. Stand-alone
-   * tweens (no manager) are unaffected.
+   * Registers the tween with its manager, if one is assigned — both for the
+   * first start and after an eviction caused by natural completion or
+   * {@link Tween.stop}, so it (re)starts receiving frame updates either way.
+   * Stand-alone tweens (no manager) are unaffected.
    */
   public start(): this {
     this._state = TweenState.Active;
@@ -249,13 +250,16 @@ export class Tween<T extends object = object> {
   /**
    * Stop the tween without finishing. Target properties stay at their
    * current interpolated values. onComplete does NOT fire. The tween is
-   * removed from its manager if one is assigned.
+   * removed from its manager if one is assigned — in every state, so an
+   * idle or already-finished tween that was handed to a manager explicitly
+   * is released too.
    */
   public stop(): this {
     if (this._state === TweenState.Active || this._state === TweenState.Paused) {
       this._state = TweenState.Stopped;
-      this._manager?.remove(this);
     }
+
+    this._manager?.remove(this);
 
     return this;
   }

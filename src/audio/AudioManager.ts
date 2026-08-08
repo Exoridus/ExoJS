@@ -1,3 +1,4 @@
+import { logger } from '#core/logging';
 import { Signal } from '#core/Signal';
 import type { Time } from '#core/Time';
 
@@ -46,7 +47,15 @@ export class AudioManager {
 
   private readonly _registered = new Map<string, AudioBus>();
   private readonly _spatial = new Set<SpatialVoice>();
+  /**
+   * Every voice created against this manager that has not ended yet — the
+   * registry {@link AudioManager.destroy} needs in order to actually silence
+   * playback. `_spatial` only ever holds the subset that is being panned per
+   * frame, which is why it cannot serve this purpose.
+   */
+  private readonly _voices = new Set<Voice>();
   private _muteOnHidden = false;
+  private _destroyed = false;
 
   public constructor() {
     this.master = new AudioBus('master', { parent: null });
@@ -113,6 +122,8 @@ export class AudioManager {
    * voice.stop();
    * ```
    *
+   * Throws once the manager has been destroyed — see {@link AudioManager.destroy}.
+   *
    * @param source - Any {@link Playable} asset (Sound, AudioStream, AudioGenerator).
    * @param options - Per-play overrides (bus, volume, loop, playbackRate, detune, time, muted).
    * @returns A {@link Voice} handle for the new instance.
@@ -120,6 +131,7 @@ export class AudioManager {
   public play(source: Sound, options?: SoundPlayOptions): Voice;
   public play(source: Playable, options?: PlayOptions): Voice;
   public play(source: Playable, options?: PlayOptions): Voice {
+    this._assertLive('play');
     return source._createVoice(this, options ?? {});
   }
 
@@ -136,6 +148,8 @@ export class AudioManager {
    * ```
    */
   public open(input: AudioInput): InputVoice {
+    this._assertLive('open');
+
     const audioContext = getAudioContext();
     const sourceNode = audioContext.createMediaStreamSource(input.stream);
     const output = audioContext.createGain();
@@ -175,6 +189,20 @@ export class AudioManager {
   /** Internal: stop ticking a voice that returned to a direct graph. */
   public _unregisterSpatial(voice: SpatialVoice): void {
     this._spatial.delete(voice);
+  }
+
+  /**
+   * Internal: track a live voice so {@link AudioManager.destroy} can stop it.
+   * Called from the voice's own constructor, which covers every creation path —
+   * `play()`, `open()`, sprite playback, and pooled replays alike.
+   */
+  public _registerVoice(voice: Voice): void {
+    this._voices.add(voice);
+  }
+
+  /** Internal: drop a voice that has ended. Called from the voice's own teardown. */
+  public _unregisterVoice(voice: Voice): void {
+    this._voices.delete(voice);
   }
 
   /** Internal: called by Application when visibility changes. */
@@ -230,7 +258,42 @@ export class AudioManager {
     return this._registered.has(name);
   }
 
+  /**
+   * Tear the mix down: stop every voice still playing, then the listener and
+   * every bus. Terminal — {@link AudioManager.play} and
+   * {@link AudioManager.open} throw afterwards.
+   */
   public destroy(): void {
+    // Set before the drain so nothing can start new playback from an `onEnd`
+    // handler, which is also what bounds the loop below.
+    this._destroyed = true;
+
+    const failures: unknown[] = [];
+
+    // Voices first: tearing down the buses only detaches nodes from the graph,
+    // it does not stop a source. An `<audio>` element in particular keeps
+    // decoding and a buffer source keeps rendering until its voice is stopped,
+    // so an unstopped voice would outlive the application it belonged to.
+    //
+    // Drained rather than iterated over a snapshot: a voice's `onEnd` handler
+    // may register another voice, which a copy taken up front would miss and
+    // the clear below would then drop while it is still playing. A Set
+    // iterator visits values added after the current position, and removing
+    // each entry before stopping it keeps the loop making progress.
+    for (const voice of this._voices) {
+      this._voices.delete(voice);
+      try {
+        voice.stop();
+      } catch (error) {
+        // A voice whose construction failed part-way through can throw out of
+        // its own teardown. That must not abort the rest of the shutdown, so
+        // failures are collected and reported once the tail has run — the same
+        // shape as `SystemRegistry.destroy()`.
+        failures.push(error);
+      }
+    }
+
+    this._voices.clear();
     this.listener.destroy();
     this._spatial.clear();
     for (const bus of this._registered.values()) {
@@ -238,5 +301,22 @@ export class AudioManager {
       bus.destroy();
     }
     this._registered.clear();
+
+    for (const error of failures) {
+      logger.error('AudioManager.destroy(): a voice threw while being stopped.', {
+        source: 'AudioManager',
+        ...(error instanceof Error && { error }),
+      });
+    }
+  }
+
+  private _assertLive(method: string): void {
+    if (this._destroyed) {
+      throw new Error(
+        `AudioManager.${method}() was called on a destroyed AudioManager. Its buses and listener are gone and it no ` +
+          'longer tracks what it starts, so the voice would render into a dead graph with nothing left to stop it. ' +
+          'Check the teardown order — the owning Application has already been destroyed.',
+      );
+    }
   }
 }

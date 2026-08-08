@@ -157,6 +157,16 @@ export class AudioBus {
     const index = this._effects.indexOf(effect);
     if (index !== -1) {
       this._effects.splice(index, 1);
+      // Detach the removed effect's output from the graph before rewiring: the
+      // rebuild below only touches the effects still in the chain, so an
+      // outgoing edge left live would keep feeding the pan stage and let a
+      // delay/reverb tail bleed through after removal. Its internal input
+      // wiring is deliberately left intact so the caller can reuse the effect
+      // (same contract as `BaseVoice.removeEffect`). Skipped for an effect
+      // whose own nodes have not been created yet — it was never wired in.
+      if (_isEffectReady(effect)) {
+        effect.outputNode.disconnect();
+      }
       this._rebuildEffectChain();
     }
     return this;

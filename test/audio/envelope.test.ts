@@ -18,6 +18,16 @@ const makeMockAudioParam = (): Mocked<AudioParam> =>
     minValue: -3.4028234663852886e38,
   }) as unknown as Mocked<AudioParam>;
 
+/**
+ * An `AudioParam` from a browser that does not implement
+ * `cancelAndHoldAtTime` — Firefox to this day.
+ */
+const makeLegacyAudioParam = (): Mocked<AudioParam> => {
+  const param = makeMockAudioParam() as unknown as Record<string, unknown>;
+  delete param.cancelAndHoldAtTime;
+  return param as unknown as Mocked<AudioParam>;
+};
+
 describe('Envelope', () => {
   test('default values match spec', () => {
     const env = new Envelope();
@@ -101,15 +111,74 @@ describe('Envelope', () => {
     expect(callOrder).toEqual(['cancel', 'setValue', 'ramp', 'ramp']);
   });
 
-  test('release() calls cancelScheduledValues then setTargetAtTime(0)', () => {
+  test('release() holds the running value via cancelAndHoldAtTime, then ramps to 0', () => {
     const env = new Envelope({ releaseMs: 300 });
     const param = makeMockAudioParam();
     const atTime = 2.0;
 
     env.release(param, atTime);
 
-    expect(param.cancelScheduledValues).toHaveBeenCalledWith(atTime);
+    expect(param.cancelAndHoldAtTime).toHaveBeenCalledWith(atTime);
+    // cancelScheduledValues would discard the in-flight ramp and snap the param
+    // back to the previous event's value — an audible click mid-attack.
+    expect(param.cancelScheduledValues).not.toHaveBeenCalled();
     expect(param.setTargetAtTime).toHaveBeenCalledWith(0, atTime, expect.any(Number));
+  });
+
+  // Firefox still ships no cancelAndHoldAtTime, so the analytical fallback is
+  // the path that actually runs there — not an optional extra.
+  describe('release() without cancelAndHoldAtTime (browser fallback)', () => {
+    test('releasing mid-attack holds the interpolated attack value', () => {
+      const env = new Envelope({ attackMs: 100, decayMs: 100, sustainLevel: 0.5 });
+      const param = makeLegacyAudioParam();
+
+      env.trigger(param, 0);
+      env.release(param, 0.05); // halfway through the 100ms attack
+
+      expect(param.cancelScheduledValues).toHaveBeenCalledWith(0.05);
+      expect(param.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(0.5, 6), 0.05);
+      expect(param.setTargetAtTime).toHaveBeenCalledWith(0, 0.05, expect.any(Number));
+    });
+
+    test('releasing mid-decay holds the interpolated decay value', () => {
+      const env = new Envelope({ attackMs: 100, decayMs: 100, sustainLevel: 0.5 });
+      const param = makeLegacyAudioParam();
+
+      env.trigger(param, 0);
+      env.release(param, 0.15); // halfway through the decay: 1 -> 0.5
+
+      expect(param.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(0.75, 6), 0.15);
+    });
+
+    test('releasing during sustain holds the sustain level', () => {
+      const env = new Envelope({ attackMs: 100, decayMs: 100, sustainLevel: 0.5 });
+      const param = makeLegacyAudioParam();
+
+      env.trigger(param, 0);
+      env.release(param, 1);
+
+      expect(param.setValueAtTime).toHaveBeenCalledWith(0.5, 1);
+    });
+
+    test('releasing an envelope that was never triggered holds the live param value', () => {
+      const env = new Envelope({ attackMs: 100, decayMs: 100, sustainLevel: 0.5 });
+      const param = makeLegacyAudioParam();
+      param.value = 0.3;
+
+      env.release(param, 1);
+
+      expect(param.setValueAtTime).toHaveBeenCalledWith(0.3, 1);
+    });
+
+    test('a zero-length attack and decay hold the sustain level immediately', () => {
+      const env = new Envelope({ attackMs: 0, decayMs: 0, sustainLevel: 0.4 });
+      const param = makeLegacyAudioParam();
+
+      env.trigger(param, 0);
+      env.release(param, 0);
+
+      expect(param.setValueAtTime).toHaveBeenCalledWith(0.4, 0);
+    });
   });
 
   test('release() uses tau = releaseMs / 3 / 1000', () => {

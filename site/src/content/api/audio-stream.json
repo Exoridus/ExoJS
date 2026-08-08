@@ -6,11 +6,11 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 9,
+  "memberCount": 10,
   "counts": {
     "constructors": 1,
     "methods": 2,
-    "properties": 6,
+    "properties": 7,
     "events": 0
   },
   "sections": [
@@ -190,7 +190,7 @@
             }
           ],
           "returnType": "Voice",
-          "description": "Implements Playable. Called by AudioManager.play. Stops any previously active voice (a stream has a single playhead), then starts a fresh AudioStreamVoice."
+          "description": "Implements Playable. Called by AudioManager.play. Stops any previously active voice (a stream has a single playhead), then starts a fresh AudioStreamVoice. Throws on a destroyed stream. The check is unconditional, not __DEV__-only: createMediaElementSource() may be called exactly once per media element, and the second call raises InvalidStateError in the browser — a hard, hard-to-trace runtime failure that a production build must not walk into."
         },
         {
           "name": "destroy",
@@ -219,7 +219,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Stop the active voice and release the media graph."
+          "description": "Stop the active voice and release the media graph. Terminal: the stream cannot be played again afterwards (see AudioStream.destroyed)."
         }
       ],
       "paragraphs": [],
@@ -334,6 +334,27 @@
           "params": [],
           "returnType": null,
           "description": "The backing HTMLAudioElement."
+        },
+        {
+          "name": "destroyed",
+          "signature": "destroyed: boolean",
+          "signatureTokens": [
+            {
+              "text": "destroyed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true once AudioStream.destroy has run. A destroyed stream is not reusable — playing it throws. Load the asset again to get a fresh stream."
         },
         {
           "name": "duration",

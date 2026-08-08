@@ -29,6 +29,15 @@ export class Envelope {
   public sustainLevel: number;
   public releaseMs: number;
 
+  /**
+   * The time each currently-scheduled param was triggered at, so
+   * {@link Envelope.release} can reconstruct the running envelope value on
+   * browsers without `cancelAndHoldAtTime`. Keyed per param rather than stored
+   * once, because a single Envelope is shared across every voice of an
+   * {@link AudioGenerator} and those voices trigger at different times.
+   */
+  private readonly _triggeredAt = new WeakMap<AudioParam, number>();
+
   public constructor(options: EnvelopeOptions = {}) {
     this.attackMs = Math.max(0, options.attackMs ?? 10);
     this.decayMs = Math.max(0, options.decayMs ?? 100);
@@ -49,19 +58,57 @@ export class Envelope {
     gainParam.linearRampToValueAtTime(1, attackEnd);
     gainParam.linearRampToValueAtTime(this.sustainLevel, decayEnd);
     // Sustain held at sustainLevel until release()
+
+    this._triggeredAt.set(gainParam, atTime);
   }
 
   /**
    * Schedule release → 0 starting at `atTime`. Call this when the note
    * should stop (e.g., key release, sound dismissed).
+   *
+   * The release starts from wherever the envelope actually is, including
+   * mid-attack and mid-decay. A bare `cancelScheduledValues` would drop the
+   * in-flight ramp and snap the parameter back to the previous event's value
+   * (0 during attack) — an audible click.
    */
   public release(gainParam: AudioParam, atTime: number): void {
-    const releaseEnd = atTime + this.releaseMs / 1000;
-    void releaseEnd; // computed for documentation purposes; setTargetAtTime handles the curve
-    gainParam.cancelScheduledValues(atTime);
-    // Don't snap to current value; assume gainParam.value is at sustain.
+    // `cancelAndHoldAtTime` freezes the automation at its current value in one
+    // step. Firefox still does not implement it, hence the analytical fallback:
+    // reconstruct the value from the attack/decay geometry and pin it there
+    // before the release ramp starts.
+    if (typeof gainParam.cancelAndHoldAtTime === 'function') {
+      gainParam.cancelAndHoldAtTime(atTime);
+    } else {
+      const held = this._valueAt(gainParam, atTime);
+      gainParam.cancelScheduledValues(atTime);
+      gainParam.setValueAtTime(held, atTime);
+    }
+
+    this._triggeredAt.delete(gainParam);
+
     gainParam.setTargetAtTime(0, atTime, this.releaseMs / 1000 / 3);
     // setTargetAtTime is exponential; tau = releaseMs/3 reaches ~95% of target in releaseMs.
+  }
+
+  /**
+   * The envelope value this schedule reaches at `time`, derived from the
+   * attack/decay geometry recorded by {@link Envelope.trigger}. Falls back to
+   * the parameter's live value when this envelope never scheduled it (or has
+   * already released it), which is the best available reading.
+   */
+  private _valueAt(gainParam: AudioParam, time: number): number {
+    const triggeredAt = this._triggeredAt.get(gainParam);
+
+    if (triggeredAt === undefined) return gainParam.value;
+
+    const attackEnd = triggeredAt + this.attackMs / 1000;
+    const decayEnd = attackEnd + this.decayMs / 1000;
+
+    if (time >= decayEnd) return this.sustainLevel;
+    if (time >= attackEnd) return 1 + (this.sustainLevel - 1) * ((time - attackEnd) / (decayEnd - attackEnd));
+    if (time <= triggeredAt) return 0;
+
+    return (time - triggeredAt) / (attackEnd - triggeredAt);
   }
 
   /** Total time from trigger to fully-released (attack + decay + release). */

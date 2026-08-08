@@ -6,10 +6,10 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 21,
+  "memberCount": 23,
   "counts": {
     "constructors": 1,
-    "methods": 12,
+    "methods": 14,
     "properties": 7,
     "events": 1
   },
@@ -162,6 +162,53 @@
           "description": "Internal: register a spatial voice for per-frame position updates. Called by a Voice the first time it is spatialized (position set or follow)."
         },
         {
+          "name": "_registerVoice",
+          "signature": "_registerVoice(voice: Voice): void",
+          "signatureTokens": [
+            {
+              "text": "_registerVoice",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "voice",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Voice",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "voice",
+              "type": "Voice",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Internal: track a live voice so AudioManager.destroy can stop it. Called from the voice's own constructor, which covers every creation path — play(), open(), sprite playback, and pooled replays alike."
+        },
+        {
           "name": "_unregisterSpatial",
           "signature": "_unregisterSpatial(voice: SpatialVoice): void",
           "signatureTokens": [
@@ -209,6 +256,53 @@
           "description": "Internal: stop ticking a voice that returned to a direct graph."
         },
         {
+          "name": "_unregisterVoice",
+          "signature": "_unregisterVoice(voice: Voice): void",
+          "signatureTokens": [
+            {
+              "text": "_unregisterVoice",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "voice",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Voice",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "voice",
+              "type": "Voice",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Internal: drop a voice that has ended. Called from the voice's own teardown."
+        },
+        {
           "name": "destroy",
           "signature": "destroy(): void",
           "signatureTokens": [
@@ -235,7 +329,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": ""
+          "description": "Tear the mix down: stop every voice still playing, then the listener and every bus. Terminal — AudioManager.play and AudioManager.open throw afterwards."
         },
         {
           "name": "getBus",

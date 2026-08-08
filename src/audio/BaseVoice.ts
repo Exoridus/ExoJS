@@ -124,6 +124,11 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
     if (init.autoConnect !== false) {
       this._connectOutput();
     }
+
+    // Registered here rather than in `AudioManager.play` so that every voice is
+    // covered regardless of how it was constructed — `open()`, sprite playback
+    // and pooled replays all go through this constructor. `_finish` deregisters.
+    this._manager._registerVoice(this);
   }
 
   // -------------------------------------------------------------------------
@@ -723,6 +728,8 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
       this._spatialRegistered = false;
       this._manager._unregisterSpatial(this);
     }
+
+    this._manager._unregisterVoice(this);
 
     this.onEnd.dispatch();
     this.onEnd.destroy();

@@ -2,7 +2,12 @@
 
 import { getAudioContext } from '#audio/audio-context';
 import { AudioBus } from '#audio/AudioBus';
+import type { AudioInput } from '#audio/AudioInput';
 import { AudioManager } from '#audio/AudioManager';
+import { AudioStream } from '#audio/AudioStream';
+import type { Voice } from '#audio/Playable';
+import { Sound } from '#audio/Sound';
+import { logger } from '#core/logging';
 import { Signal } from '#core/Signal';
 
 // ---------------------------------------------------------------------------
@@ -58,6 +63,21 @@ const makeFakeAudioContext = (): AudioContext =>
         pan: makeFakeParam(),
       }) as unknown as StereoPannerNode,
   }) as unknown as AudioContext;
+
+const createAudioBufferStub = (duration = 2): AudioBuffer => ({ duration }) as AudioBuffer;
+
+const createAudioElementStub = (): HTMLAudioElement => {
+  const el = document.createElement('audio');
+  Object.defineProperty(el, 'duration', { configurable: true, value: 30 });
+  Object.defineProperty(el, 'currentTime', { configurable: true, writable: true, value: 0 });
+  Object.defineProperty(el, 'loop', { configurable: true, writable: true, value: false });
+  Object.defineProperty(el, 'playbackRate', { configurable: true, writable: true, value: 1 });
+  Object.defineProperty(el, 'paused', { configurable: true, writable: true, value: true });
+  return el;
+};
+
+/** Size of the manager's internal live-voice registry. */
+const liveVoiceCount = (manager: AudioManager): number => (manager as unknown as { _voices: Set<unknown> })._voices.size;
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -263,5 +283,144 @@ describe('AudioManager', () => {
     await Promise.resolve(); // the already-running dispatch is deferred one microtask
 
     expect(onUnlock).toHaveBeenCalledTimes(1);
+  });
+
+  // ---- live-voice registry ----
+
+  test('play() registers the new voice with the manager', () => {
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+
+    expect(liveVoiceCount(manager)).toBe(0);
+    manager.play(sound);
+    expect(liveVoiceCount(manager)).toBe(1);
+
+    sound.destroy();
+  });
+
+  test('a voice that ends deregisters itself from the manager', () => {
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+    const voice = manager.play(sound);
+
+    voice.stop();
+
+    expect(voice.ended).toBe(true);
+    expect(liveVoiceCount(manager)).toBe(0);
+
+    sound.destroy();
+  });
+
+  test('destroy() stops every voice that is still playing', () => {
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+    const first = manager.play(sound);
+    const second = manager.play(sound);
+
+    expect(first.ended).toBe(false);
+    expect(second.ended).toBe(false);
+
+    manager.destroy();
+
+    expect(first.ended).toBe(true);
+    expect(second.ended).toBe(true);
+    expect(liveVoiceCount(manager)).toBe(0);
+
+    sound.destroy();
+  });
+
+  test('destroy() stops a stream voice so its media element stops decoding', () => {
+    const manager = new AudioManager();
+    const el = createAudioElementStub();
+    const stream = new AudioStream(el);
+    const voice = manager.play(stream);
+    const pauseSpy = vi.spyOn(el, 'pause');
+
+    manager.destroy();
+
+    expect(voice.ended).toBe(true);
+    expect(pauseSpy).toHaveBeenCalled();
+
+    stream.destroy();
+  });
+
+  test('destroy() stops an input voice opened through open()', () => {
+    const manager = new AudioManager();
+    const input = { stream: {} as MediaStream } as AudioInput;
+    const voice = manager.open(input);
+
+    expect(voice.ended).toBe(false);
+
+    manager.destroy();
+
+    expect(voice.ended).toBe(true);
+  });
+
+  // ---- teardown hardening ----
+
+  test('destroy() also drains a voice registered while the teardown is running', () => {
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+    const first = manager.play(sound);
+
+    // A voice appearing after the drain started. Reproduced through the
+    // internal registration hook because `play()` is refused once destroyed;
+    // an iteration over a snapshot would drop this one still running.
+    const late = { ended: false, stop: vi.fn() };
+    first.onEnd.add((): void => {
+      manager._registerVoice(late as unknown as Voice);
+    });
+
+    manager.destroy();
+
+    expect(late.stop).toHaveBeenCalledTimes(1);
+    expect(liveVoiceCount(manager)).toBe(0);
+
+    sound.destroy();
+  });
+
+  test('destroy() completes the teardown even when a voice throws while stopping', () => {
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+    const errorSpy = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
+
+    // Registered first so the throw happens before the healthy voice is reached.
+    const broken = {
+      ended: false,
+      stop: vi.fn(() => {
+        throw new Error('half-built voice');
+      }),
+    };
+    manager._registerVoice(broken as unknown as Voice);
+    const healthy = manager.play(sound);
+
+    expect(() => manager.destroy()).not.toThrow();
+
+    // The loop carried on past the throw...
+    expect(healthy.ended).toBe(true);
+    // ...and the tail (listener + buses) still ran.
+    expect(manager.hasBus('master')).toBe(false);
+    expect(errorSpy).toHaveBeenCalled();
+
+    sound.destroy();
+  });
+
+  test('play() after destroy() throws instead of registering an untracked voice', () => {
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+
+    manager.destroy();
+
+    expect(() => manager.play(sound)).toThrow(/destroyed AudioManager/);
+    expect(liveVoiceCount(manager)).toBe(0);
+
+    sound.destroy();
+  });
+
+  test('open() after destroy() throws', () => {
+    const manager = new AudioManager();
+    manager.destroy();
+
+    expect(() => manager.open({ stream: {} as MediaStream } as AudioInput)).toThrow(/destroyed AudioManager/);
   });
 });

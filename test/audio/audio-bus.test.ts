@@ -795,4 +795,62 @@ describe('AudioBus', () => {
 
     bus.destroy();
   });
+
+  // A removed effect is no longer part of the chain, so the rebuild never
+  // touches it — leaving its outgoing edge live would let a delay/reverb tail
+  // keep bleeding into the pan stage after the effect was taken out.
+  test('removeEffect() cuts the removed effect outgoing edge', () => {
+    const bus = new AudioBus('remove-effect-edge');
+    const filter = new WiredFilter();
+
+    bus.addEffect(filter);
+    filter.outputDisconnect.mockClear();
+
+    bus.removeEffect(filter);
+
+    expect(filter.outputDisconnect).toHaveBeenCalled();
+    // The caller still owns the effect, so its internal wiring stays intact.
+    expect(filter.inputDisconnect).not.toHaveBeenCalled();
+
+    bus.destroy();
+  });
+
+  test('removeEffect() cuts the outgoing edge of an effect removed from the middle of the chain', () => {
+    const bus = new AudioBus('remove-effect-middle');
+    const first = new WiredFilter();
+    const middle = new WiredFilter();
+    const last = new WiredFilter();
+
+    bus.addEffect(first);
+    bus.addEffect(middle);
+    bus.addEffect(last);
+    middle.outputDisconnect.mockClear();
+
+    bus.removeEffect(middle);
+
+    expect(middle.outputDisconnect).toHaveBeenCalled();
+    expect(middle.inputDisconnect).not.toHaveBeenCalled();
+
+    bus.destroy();
+  });
+
+  test('removeEffect() tolerates an effect whose nodes are not ready yet', () => {
+    const bus = new AudioBus('remove-effect-unready');
+    const unready = {
+      get inputNode(): AudioNode {
+        throw new Error('not yet initialized');
+      },
+      get outputNode(): AudioNode {
+        throw new Error('not yet initialized');
+      },
+      ready: Promise.resolve(),
+      destroy: (): void => undefined,
+    } as unknown as AudioEffect;
+
+    bus.addEffect(unready);
+
+    expect(() => bus.removeEffect(unready)).not.toThrow();
+
+    bus.destroy();
+  });
 });

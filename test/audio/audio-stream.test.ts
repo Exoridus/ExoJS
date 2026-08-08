@@ -411,4 +411,43 @@ describe('AudioStream', () => {
 
     stream.destroy();
   });
+
+  // ---- destroyed streams are not reusable ----
+
+  test('destroyed is false while the stream is live and true after destroy()', () => {
+    const stream = new AudioStream(createAudioElementStub());
+
+    expect(stream.destroyed).toBe(false);
+    stream.destroy();
+    expect(stream.destroyed).toBe(true);
+  });
+
+  test('playing a destroyed stream throws instead of re-sourcing the media element', () => {
+    const manager = new AudioManager();
+    const el = createAudioElementStub();
+    const stream = new AudioStream(el);
+    const ctx = getAudioContext();
+
+    manager.play(stream);
+    stream.destroy();
+
+    const sourceSpy = vi.spyOn(ctx, 'createMediaElementSource');
+
+    expect(() => manager.play(stream)).toThrow(/destroyed AudioStream/);
+    // A second createMediaElementSource() on the same element is exactly the
+    // InvalidStateError this guard exists to prevent.
+    expect(sourceSpy).not.toHaveBeenCalled();
+
+    sourceSpy.mockRestore();
+  });
+
+  test('destroy() is idempotent', () => {
+    const manager = new AudioManager();
+    const stream = new AudioStream(createAudioElementStub());
+    manager.play(stream);
+
+    stream.destroy();
+    expect(() => stream.destroy()).not.toThrow();
+    expect(stream.destroyed).toBe(true);
+  });
 });
