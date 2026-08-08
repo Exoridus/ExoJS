@@ -1,6 +1,6 @@
-import { Application, Scene as ExoScene } from '@codexo/exojs';
+import { Application, ApplicationStatus, Scene as ExoScene } from '@codexo/exojs';
 import { render, waitFor } from '@testing-library/react';
-import { type DependencyList, type ReactElement, type ReactNode } from 'react';
+import { type DependencyList, type ReactElement, type ReactNode, StrictMode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ExoContext } from '../src/ExoContext';
@@ -11,12 +11,14 @@ import { MockApplication } from './support/mock-application';
 // above this file's imports (top-level bindings are not initialised yet).
 vi.mock('@codexo/exojs', async importActual => {
   const actual = await importActual<typeof import('@codexo/exojs')>();
-  const { MockApplication: MockApp, configureApplicationStatus } = await import('./support/mock-application');
+  const { MockApplication: MockApp, configureApplicationStatus, configureConcurrentNavigationError } = await import('./support/mock-application');
   configureApplicationStatus(actual.ApplicationStatus);
+  configureConcurrentNavigationError(actual.ConcurrentSceneNavigationError);
   return { ...actual, Application: MockApp };
 });
 
 class LevelScene extends ExoScene {}
+class MenuScene extends ExoScene {}
 
 function SceneProbe({ sceneClass, deps }: { sceneClass: new () => ExoScene; deps?: DependencyList }): ReactElement {
   const scene = useScene(sceneClass, deps);
@@ -112,6 +114,74 @@ describe('useScene', () => {
     render(provide(app, <SceneProbe sceneClass={LevelScene} />));
 
     await waitFor(() => expect(onError).toHaveBeenCalledWith(new Error('start failed as a plain string')));
+  });
+
+  it('survives the StrictMode double effect mount without a concurrent-navigation error', async () => {
+    const app = makeApp();
+    const errors: Error[] = [];
+    app.onError.add(error => errors.push(error));
+
+    // StrictMode double-invokes effects in development: mount, cleanup, mount
+    // again — synchronously, within the same commit. The second mount runs
+    // while the first mount's app.start() is still mid-navigation.
+    const { findByText } = render(
+      <StrictMode>
+        <ExoContext.Provider value={app as unknown as Application}>
+          <SceneProbe sceneClass={LevelScene} />
+        </ExoContext.Provider>
+      </StrictMode>,
+    );
+
+    await waitFor(() => expect(app.status).toBe(ApplicationStatus.Running));
+
+    // The second mount must join the in-flight start() rather than racing a
+    // scenes.change() against its navigation.
+    expect(errors).toEqual([]);
+    expect(app.scenes.change).not.toHaveBeenCalled();
+    expect(app.start).toHaveBeenCalledTimes(2);
+
+    // Activated exactly once, and the surviving effect reports the live scene.
+    expect(app.activations).toHaveLength(1);
+    expect(await findByText('LevelScene')).toBeTruthy();
+  });
+
+  it('activates its own target after joining a start() that was already loading another scene', async () => {
+    const app = makeApp();
+    const onError = vi.fn();
+    app.onError.add(onError);
+
+    // Startup is already in flight for a different scene when the hook mounts.
+    const starting = app.start(MenuScene);
+    const { findByText } = render(provide(app, <SceneProbe sceneClass={LevelScene} />));
+
+    await starting;
+
+    expect(await findByText('LevelScene')).toBeTruthy();
+    expect(app.scenes.change).toHaveBeenCalledTimes(1);
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it('does not report a rejected activation from an effect that was already superseded', async () => {
+    const app = makeApp();
+    const onError = vi.fn();
+    app.onError.add(onError);
+    let rejectStart!: (error: Error) => void;
+    app.start.mockImplementationOnce(
+      () =>
+        new Promise<MockApplication>((_resolve, reject) => {
+          rejectStart = reject;
+        }),
+    );
+
+    const view = render(provide(app, <SceneProbe sceneClass={LevelScene} />));
+
+    // Cleanup has run by the time the pending start() rejects — the failure
+    // belongs to a run nothing is listening to any more.
+    view.unmount();
+    rejectStart(new Error('start failed after unmount'));
+
+    await Promise.resolve().then(() => Promise.resolve());
+    expect(onError).not.toHaveBeenCalled();
   });
 
   it('does not install the scene when the component unmounts before app.start() resolves', async () => {
