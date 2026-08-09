@@ -49,7 +49,11 @@ export class FixedTimestep {
 
     // Capped: drop the whole-step backlog, keep only the sub-step remainder so
     // alpha stays in [0, 1) and the next frame does not replay the lost time.
-    if (this._accumulatorMs > this._stepMs) {
+    // The comparison is `>=`, not `>`: a backlog that is an exact multiple of
+    // the step would otherwise be left untouched at exactly one whole step and
+    // report `alpha === 1`. The uncapped path never reaches here — the loop
+    // only exits below `stepMs - epsilon` unless `maxSteps` stopped it.
+    if (this._accumulatorMs >= this._stepMs) {
       this._accumulatorMs %= this._stepMs;
     }
 
