@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LdtkData } from '../src/LdtkData';
 import { LdtkMap } from '../src/LdtkMap';
 import { loadLdtkMap } from '../src/loadLdtkMap';
+import { LdtkFormatError } from '../src/validate';
 
 // ── Fixture loading ───────────────────────────────────────────────────────────
 
@@ -585,16 +586,49 @@ describe('loadLdtkMap — relative-source URL resolution', () => {
   });
 });
 
-describe('loadLdtkMap — no structural validation (characterization)', () => {
-  // loadLdtkMap casts fetched JSON straight to LdtkData with no schema check, so
-  // malformed input surfaces as a raw runtime error during conversion rather than
-  // a typed format error.
+describe('loadLdtkMap — structural validation', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
 
-  it('throws a raw error (not a typed format error) for an empty document', async () => {
+  it('throws a typed LdtkFormatError for an empty document', async () => {
     const { context } = makeContext({ [ABS_SOURCE]: {} });
-    await expect(loadLdtkMap(ABS_SOURCE, context)).rejects.toThrow();
+    await expect(loadLdtkMap(ABS_SOURCE, context)).rejects.toThrow(LdtkFormatError);
+  });
+
+  it('names the source and the offending property path', async () => {
+    const broken = JSON.parse(JSON.stringify(loadFixture('world.ldtk'))) as any;
+    broken.levels[0].layerInstances[0].gridTiles[0].t = 'first';
+    const { context } = makeContext({ [ABS_SOURCE]: broken });
+    await expect(loadLdtkMap(ABS_SOURCE, context)).rejects.toThrow(
+      /world\.ldtk" at levels\[0\]\.layerInstances\[0\]\.gridTiles\[0\]\.t/,
+    );
+  });
+
+  it('does not fetch tileset images for a document that fails validation', async () => {
+    const { context, loaderLoad } = makeContext({ [ABS_SOURCE]: { jsonVersion: '1.5.3', defs: {}, levels: [] } });
+    await expect(loadLdtkMap(ABS_SOURCE, context)).rejects.toThrow(LdtkFormatError);
+    expect(loaderLoad).not.toHaveBeenCalled();
+  });
+
+  it('validates an external .ldtkl payload against the external file as source', async () => {
+    const root: LdtkData = {
+      jsonVersion: '1.5.3',
+      defaultGridSize: 16,
+      defs: { tilesets: [], layers: [] },
+      levels: [{
+        identifier: 'Level_0', uid: 1, iid: 'iid-1', worldX: 0, worldY: 0, pxWid: 16, pxHei: 16,
+        layerInstances: null, externalRelPath: 'levels/Level_0.ldtkl',
+      }],
+    };
+    const external = { identifier: 'Level_0', uid: 1, iid: 'iid-1', worldX: 0, worldY: 0, pxWid: 16, pxHei: 'tall', layerInstances: [] };
+    const { context } = makeContext({
+      [ABS_SOURCE]: root,
+      'https://example.com/maps/levels/Level_0.ldtkl': external,
+    });
+
+    await expect(loadLdtkMap(ABS_SOURCE, context)).rejects.toThrow(
+      /levels\/Level_0\.ldtkl" at pxHei/,
+    );
   });
 });
