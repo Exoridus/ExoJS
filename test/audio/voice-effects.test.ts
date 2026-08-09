@@ -14,6 +14,19 @@ const makeStubEffect = (): AudioEffect => {
   return { inputNode, outputNode, destroy: vi.fn(), ready: Promise.resolve() } as unknown as AudioEffect;
 };
 
+/** An effect whose own node setup has not finished yet — `inputNode`/`outputNode` throw, as every built-in effect does pre-setup. */
+const makeUnreadyEffect = (): AudioEffect =>
+  ({
+    get inputNode(): AudioNode {
+      throw new Error('not yet initialized');
+    },
+    get outputNode(): AudioNode {
+      throw new Error('not yet initialized');
+    },
+    ready: Promise.resolve(),
+    destroy: vi.fn(),
+  }) as unknown as AudioEffect;
+
 interface CapturedGain {
   connect: MockInstance;
   disconnect: MockInstance;
@@ -118,6 +131,42 @@ describe('Voice — per-voice effects', () => {
 
     sound.destroy();
     fx.destroy();
+  });
+
+  // ---- an effect still mid-setup must not make detaching throw (NEU-E3) ----
+  //
+  // `AudioBus.removeEffect`/`destroy` probe `outputNode` readiness before
+  // touching it (a built-in effect throws when accessed pre-setup); these
+  // exercise the same guard on `BaseVoice.removeEffect`/`_finish`. The effect
+  // is spliced straight into the internal list (rather than via `addEffect`,
+  // which would itself throw synchronously touching the same unready node)
+  // to isolate the detach-path guard under test.
+
+  test('removeEffect() tolerates an effect whose nodes are not ready yet', () => {
+    const manager = new AudioManager();
+    const sound = new Sound(makeBufferStub());
+    const voice = manager.play(sound);
+    const unready = makeUnreadyEffect();
+
+    (voice as unknown as { _effects: AudioEffect[] })._effects.push(unready);
+
+    expect(() => voice.removeEffect(unready)).not.toThrow();
+
+    sound.destroy();
+  });
+
+  test('stopping the voice tolerates an effect whose nodes are not ready yet', () => {
+    const manager = new AudioManager();
+    const sound = new Sound(makeBufferStub());
+    const voice = manager.play(sound);
+    const unready = makeUnreadyEffect();
+
+    (voice as unknown as { _effects: AudioEffect[] })._effects.push(unready);
+
+    expect(() => voice.stop()).not.toThrow();
+    expect(voice.ended).toBe(true);
+
+    sound.destroy();
   });
 
   test('stopping the voice detaches its effects', () => {

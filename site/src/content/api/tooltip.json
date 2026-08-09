@@ -1,6 +1,6 @@
 {
   "title": "Tooltip",
-  "description": "Hover tooltip attached to a RenderNode. Shows a small text label near the pointer after a short delay when the pointer enters `target`, and hides it immediately on pointer-out. The tooltip node is parented to the nearest UIRoot ancestor of `target`, so it always renders in screen space above other content. The target must have `interactive = true` for the hover signals to fire.",
+  "description": "Hover tooltip attached to a RenderNode. Shows a small text label near the pointer after a short delay when the pointer enters `target`, and hides it immediately on pointer-out. The tooltip node is parented to the nearest UIRoot ancestor of `target`, so it always renders in screen space above other content. The target must have `interactive = true` for the hover signals to fire. The show delay is driven by the target's app's Application.onFrame rather than a wall-clock timer, so it freezes while `app.scenes.pause()` is active instead of finishing in the background — and only starts counting once the target is attached to a live app.",
   "symbol": "Tooltip",
   "kind": "class",
   "subsystem": "ui",
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Hover tooltip attached to a RenderNode. Shows a small text label near the pointer after a short delay when the pointer enters `target`, and hides it immediately on pointer-out.",
         "The tooltip node is parented to the nearest UIRoot ancestor of `target`, so it always renders in screen space above other content.",
-        "The target must have `interactive = true` for the hover signals to fire."
+        "The target must have `interactive = true` for the hover signals to fire. The show delay is driven by the target's app's Application.onFrame rather than a wall-clock timer, so it freezes while `app.scenes.pause()` is active instead of finishing in the background — and only starts counting once the target is attached to a live app."
       ],
       "importLine": "import { Tooltip } from '@codexo/exojs'",
       "sourceLink": null

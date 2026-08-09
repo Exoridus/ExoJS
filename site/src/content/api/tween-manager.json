@@ -189,7 +189,7 @@
           ],
           "params": [],
           "returnType": "this",
-          "description": "Remove all tweens and tickers immediately. No callbacks fire. The tweens' states are left as-is; they are simply evicted from the list."
+          "description": "Remove all tweens and tickers immediately. No callbacks fire. Each tracked tween is Tween.stopped first, so tween.state reflects the eviction instead of staying Active/Paused on a tween the manager no longer drives — a Stopped tween's own manager binding survives, so a later Tween.start re-enters it as usual."
         },
         {
           "name": "create",

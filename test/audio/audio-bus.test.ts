@@ -517,6 +517,33 @@ describe('AudioBus', () => {
     expect(() => bus.destroy()).not.toThrow();
   });
 
+  // ---- addEffect() after destroy() must not leak onto a dead bus (NEU-E2) ----
+
+  test('addEffect() after destroy() is a no-op — the effect list does not grow on a dead bus', () => {
+    const spy = spyOnBusCreation();
+    const bus = new AudioBus('add-effect-after-destroy');
+
+    bus.destroy();
+    bus.addEffect(new StubFilter());
+    bus.addEffect(new StubFilter());
+
+    expect((bus as unknown as { _effects: AudioEffect[] })._effects.length).toBe(0);
+
+    spy.restore();
+  });
+
+  test('addEffect() after destroy() returns the bus for chaining without throwing', () => {
+    const spy = spyOnBusCreation();
+    const bus = new AudioBus('add-effect-after-destroy-chain');
+
+    bus.destroy();
+
+    expect(() => bus.addEffect(new StubFilter())).not.toThrow();
+    expect(bus.addEffect(new StubFilter())).toBe(bus);
+
+    spy.restore();
+  });
+
   test('fadeIn schedules a ramp to 0 (not the raw volume) when the bus is muted', () => {
     const spy = spyOnBusCreation();
     const ctx = getAudioContext();

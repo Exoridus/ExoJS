@@ -180,6 +180,50 @@ describe('TweenManager', () => {
     expect(onComplete).not.toHaveBeenCalled();
   });
 
+  // ---- clear()/destroy() must not leave an evicted tween's state lying about Active (NEU-E4) ----
+
+  test('clear() transitions every evicted tween to Stopped — state no longer claims Active', () => {
+    const manager = new TweenManager();
+    const active = manager.create(makeTarget()).to({ x: 100 }, 1.0).start();
+    const paused = manager.create(makeTarget()).to({ x: 100 }, 1.0).start().pause();
+
+    manager.clear();
+
+    expect(active.state).toBe(TweenState.Stopped);
+    expect(paused.state).toBe(TweenState.Stopped);
+  });
+
+  test('clear() leaves the manager binding intact — a later start() re-enters the tween', () => {
+    const manager = new TweenManager();
+    const target = makeTarget();
+    const tween = manager.create(target).to({ x: 100 }, 1.0).start();
+
+    manager.clear();
+    expect(trackedCount(manager)).toBe(0);
+
+    tween.start();
+    expect(tween.state).toBe(TweenState.Active);
+    expect(trackedCount(manager)).toBe(1);
+
+    manager.preUpdate(sec(0.5));
+    expect(target.x).toBeCloseTo(50, 5);
+  });
+
+  test('resume() on a tween orphaned by clear() stays inert — resume() alone does not re-track it', () => {
+    const manager = new TweenManager();
+    const target = makeTarget();
+    const tween = manager.create(target).to({ x: 100 }, 1.0).start().pause();
+
+    manager.clear();
+    tween.resume(); // Stopped — resume() only acts on Paused, so this is a no-op.
+
+    expect(tween.state).toBe(TweenState.Stopped);
+    expect(trackedCount(manager)).toBe(0);
+
+    manager.preUpdate(sec(1.0));
+    expect(target.x).toBe(0); // never advanced — genuinely not running
+  });
+
   test('destroy() makes subsequent update() calls no-ops', () => {
     const manager = new TweenManager();
     const target = makeTarget();
@@ -188,6 +232,15 @@ describe('TweenManager', () => {
     manager.destroy();
     manager.preUpdate(sec(1.0));
     expect(target.x).toBe(0); // never advanced
+  });
+
+  test('destroy() transitions every tracked tween to Stopped', () => {
+    const manager = new TweenManager();
+    const tween = manager.create(makeTarget()).to({ x: 100 }, 1.0).start();
+
+    manager.destroy();
+
+    expect(tween.state).toBe(TweenState.Stopped);
   });
 
   test('iteration snapshot: onComplete callback may add new tweens without crashing', () => {

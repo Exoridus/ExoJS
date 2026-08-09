@@ -17,3 +17,21 @@ export abstract class AudioEffect {
   /** Disconnects all audio nodes and releases resources. Must be called when the effect is no longer needed. */
   public abstract destroy(): void;
 }
+
+/**
+ * Probe whether `effect` has finished creating its underlying node(s). Every
+ * built-in {@link AudioEffect} throws a descriptive error from `inputNode`/
+ * `outputNode` when accessed before its own (possibly deferred) setup has
+ * run — this reads that as a plain boolean instead of letting a caller that
+ * disconnects/reconnects effects (`AudioBus`, `BaseVoice`) throw on one still
+ * mid-setup.
+ */
+export function isEffectReady(effect: AudioEffect): boolean {
+  try {
+    void effect.inputNode;
+    void effect.outputNode;
+    return true;
+  } catch {
+    return false;
+  }
+}

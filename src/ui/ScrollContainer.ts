@@ -1,4 +1,5 @@
 import type { Stage } from '#core/Stage';
+import { Rectangle } from '#math/Rectangle';
 import type { Vector } from '#math/Vector';
 import { Container } from '#rendering/Container';
 
@@ -45,6 +46,8 @@ export class ScrollContainer extends Widget {
   private readonly _direction: ScrollDirection;
   private _scrollX = 0;
   private _scrollY = 0;
+  /** Scratch rect reused by {@link ScrollContainer.updateBounds} — avoids an allocation on every bounds rebuild. */
+  private readonly _viewportRect = new Rectangle();
 
   private readonly _onWheel = (delta: Vector): void => {
     const pos = this._stage?.app?.input.getPrimaryPointerPosition();
@@ -116,6 +119,37 @@ export class ScrollContainer extends Widget {
   protected override _relayout(): void {
     // Re-clamp scroll in case the widget was resized.
     this.scrollTo(this._scrollX, this._scrollY);
+    // uiWidth/uiHeight just changed — the viewport rect `updateBounds` builds
+    // from them is now stale.
+    this._invalidateBoundsCascade();
+  }
+
+  /**
+   * Bounds this widget to its declared viewport — `(0, 0, uiWidth, uiHeight)`
+   * in world space — instead of {@link Container.updateBounds}'s default
+   * union of `content`'s (scrolled, often far larger) child extent.
+   *
+   * This is what {@link ScrollContainer.clip} clips descendants to (a `null`
+   * `clipShape` clips to `getBounds()`) and what mouse-wheel routing gates
+   * on, so both now agree with what is actually visible instead of the full,
+   * unclipped content extent.
+   */
+  public override updateBounds(): this {
+    this._viewportRect.set(0, 0, this._uiWidth, this._uiHeight);
+    this._bounds.reset().addRect(this._viewportRect, this.getGlobalTransform());
+
+    return this;
+  }
+
+  /**
+   * A point only hits this widget when it both falls within the viewport
+   * AND lands on a visible child ({@link Container.contains}'s child-union
+   * check) — a scrolled-out child's own geometry no longer makes the
+   * `ScrollContainer` itself claim a point far outside what is actually
+   * rendered.
+   */
+  public override contains(x: number, y: number): boolean {
+    return this.getBounds().contains(x, y) && super.contains(x, y);
   }
 
   /** @internal — subscribe to the app's wheel signal when entering the scene tree. */
@@ -133,6 +167,7 @@ export class ScrollContainer extends Widget {
 
   public override destroy(): void {
     this._stage?.app?.input.onMouseWheel.remove(this._onWheel);
+    this._viewportRect.destroy();
     super.destroy();
   }
 }

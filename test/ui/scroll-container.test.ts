@@ -46,9 +46,14 @@ const makeStage = (pointerPos: { x: number; y: number } | null | undefined = nul
   return { stage: { interaction, focus, app }, onMouseWheel };
 };
 
-/** Stub both the widget's own bounds and its content bounds for deterministic wheel-routing tests. */
-const stubBounds = (scroll: ScrollContainer, ownBounds: Rectangle, contentBounds: Rectangle): void => {
-  vi.spyOn(scroll, 'getBounds').mockReturnValue(ownBounds);
+/**
+ * Stub `content`'s bounds for deterministic wheel-routing tests. The widget's
+ * OWN bounds are deliberately left real (not stubbed) — they now derive from
+ * `uiWidth`/`uiHeight` (see ME-58), and a wheel-routing test that stubs them
+ * back to an arbitrary rect would mask exactly the viewport-vs-content bug
+ * these tests guard against.
+ */
+const stubContentBounds = (scroll: ScrollContainer, contentBounds: Rectangle): void => {
   vi.spyOn(scroll.content, 'getBounds').mockReturnValue(contentBounds);
 };
 
@@ -153,7 +158,7 @@ describe('ScrollContainer mouse-wheel routing', () => {
     const { stage, onMouseWheel } = makeStage(null);
     const scroll = new ScrollContainer({ width: 100, height: 100 });
 
-    stubBounds(scroll, new Rectangle(0, 0, 100, 100), new Rectangle(0, 0, 500, 500));
+    stubContentBounds(scroll, new Rectangle(0, 0, 500, 500));
     scroll._setStage(stage);
 
     onMouseWheel.dispatch(new Vector(0, 50));
@@ -165,7 +170,7 @@ describe('ScrollContainer mouse-wheel routing', () => {
     const { stage, onMouseWheel } = makeStage({ x: 500, y: 500 });
     const scroll = new ScrollContainer({ width: 100, height: 100 });
 
-    stubBounds(scroll, new Rectangle(0, 0, 100, 100), new Rectangle(0, 0, 500, 500));
+    stubContentBounds(scroll, new Rectangle(0, 0, 500, 500));
     scroll._setStage(stage);
 
     onMouseWheel.dispatch(new Vector(0, 50));
@@ -177,7 +182,7 @@ describe('ScrollContainer mouse-wheel routing', () => {
     const { stage, onMouseWheel } = makeStage({ x: 50, y: 50 });
     const scroll = new ScrollContainer({ width: 100, height: 100 });
 
-    stubBounds(scroll, new Rectangle(0, 0, 100, 100), new Rectangle(0, 0, 500, 500));
+    stubContentBounds(scroll, new Rectangle(0, 0, 500, 500));
     scroll._setStage(stage);
 
     onMouseWheel.dispatch(new Vector(30, 20));
@@ -190,7 +195,7 @@ describe('ScrollContainer mouse-wheel routing', () => {
     const { stage, onMouseWheel } = makeStage({ x: 50, y: 50 });
     const scroll = new ScrollContainer({ width: 100, height: 100, direction: 'horizontal' });
 
-    stubBounds(scroll, new Rectangle(0, 0, 100, 100), new Rectangle(0, 0, 500, 500));
+    stubContentBounds(scroll, new Rectangle(0, 0, 500, 500));
     scroll._setStage(stage);
 
     onMouseWheel.dispatch(new Vector(30, 20));
@@ -203,13 +208,75 @@ describe('ScrollContainer mouse-wheel routing', () => {
     const { stage, onMouseWheel } = makeStage({ x: 50, y: 50 });
     const scroll = new ScrollContainer({ width: 100, height: 100, direction: 'both' });
 
-    stubBounds(scroll, new Rectangle(0, 0, 100, 100), new Rectangle(0, 0, 500, 500));
+    stubContentBounds(scroll, new Rectangle(0, 0, 500, 500));
     scroll._setStage(stage);
 
     onMouseWheel.dispatch(new Vector(30, 20));
 
     expect(scroll.scrollX).toBe(30);
     expect(scroll.scrollY).toBe(20);
+  });
+});
+
+describe('ScrollContainer viewport bounds (ME-58)', () => {
+  test('getBounds() reflects the declared viewport, not the (possibly much larger) content extent', () => {
+    const scroll = new ScrollContainer({ width: 100, height: 100 });
+
+    stubContentBounds(scroll, new Rectangle(0, 0, 5000, 5000));
+
+    const bounds = scroll.getBounds();
+
+    expect(bounds.width).toBe(100);
+    expect(bounds.height).toBe(100);
+  });
+
+  test('getBounds() tracks setSize() — a resized viewport is reflected without a stale cache', () => {
+    const scroll = new ScrollContainer({ width: 100, height: 100 });
+
+    expect(scroll.getBounds().width).toBe(100);
+
+    scroll.setSize(250, 180);
+
+    expect(scroll.getBounds().width).toBe(250);
+    expect(scroll.getBounds().height).toBe(180);
+  });
+
+  test('a wheel event over content that scrolled past the viewport is ignored — content bounds no longer widen the hit area', () => {
+    const { stage, onMouseWheel } = makeStage({ x: 150, y: 150 });
+    const scroll = new ScrollContainer({ width: 100, height: 100 });
+
+    // The content is far bigger than the 100x100 viewport; before ME-58,
+    // wheel routing gated on this union instead of the viewport, so a point
+    // at (150, 150) — inside the content extent, outside the viewport —
+    // would have wrongly been accepted.
+    stubContentBounds(scroll, new Rectangle(0, 0, 5000, 5000));
+    scroll._setStage(stage);
+
+    onMouseWheel.dispatch(new Vector(0, 50));
+
+    expect(scroll.scrollY).toBe(0);
+  });
+
+  test('contains() rejects a point outside the viewport even when a scrolled child would otherwise claim it', () => {
+    const scroll = new ScrollContainer({ width: 100, height: 100 });
+    const child = new Container();
+
+    scroll.content.addChild(child);
+    // Simulate a child whose own geometry claims every point — isolates the
+    // viewport gate under test from needing real drawn geometry.
+    vi.spyOn(child, 'contains').mockReturnValue(true);
+
+    // Outside the 100x100 viewport — must be rejected regardless of the child.
+    expect(scroll.contains(500, 500)).toBe(false);
+    // Inside the viewport, with a child that claims the point — accepted.
+    expect(scroll.contains(50, 50)).toBe(true);
+  });
+
+  test('contains() still requires an actual child hit inside the viewport (delegation semantics unchanged)', () => {
+    const scroll = new ScrollContainer({ width: 100, height: 100 });
+
+    // No children at all — nothing to hit, even squarely inside the viewport.
+    expect(scroll.contains(50, 50)).toBe(false);
   });
 });
 
