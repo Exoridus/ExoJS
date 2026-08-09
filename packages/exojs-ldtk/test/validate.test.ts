@@ -186,6 +186,80 @@ describe('validateLdtkData — rejects malformed documents', () => {
       root.levels[0].fieldInstances = [{ __type: 'String', __value: 'x' }];
     }), SOURCE)).toThrow(/fieldInstances\[0\]\.__identifier/);
   });
+});
+
+describe('validateLdtkData — field instance __value shapes', () => {
+  const withField = (field: Record<string, unknown>): unknown =>
+    withRoot(root => {
+      root.levels[0].fieldInstances = [field];
+    });
+
+  it('accepts a null value for any type (LDtk\'s "not set")', () => {
+    expect(() => validateLdtkData(withField({ __identifier: 'spawn', __type: 'Point', __value: null }), SOURCE)).not.toThrow();
+  });
+
+  it('accepts a well-formed Point', () => {
+    expect(() =>
+      validateLdtkData(withField({ __identifier: 'spawn', __type: 'Point', __value: { cx: 3, cy: 4 } }), SOURCE),
+    ).not.toThrow();
+  });
+
+  it('rejects a Point whose value is not an object', () => {
+    expect(() => validateLdtkData(withField({ __identifier: 'spawn', __type: 'Point', __value: 5 }), SOURCE)).toThrow(
+      /fieldInstances\[0\]\.__value/,
+    );
+  });
+
+  it('rejects a Point carrying x/y instead of cx/cy', () => {
+    expect(() =>
+      validateLdtkData(withField({ __identifier: 'spawn', __type: 'Point', __value: { x: 3, y: 4 } }), SOURCE),
+    ).toThrow(/fieldInstances\[0\]\.__value\.cx/);
+  });
+
+  it('rejects a numeric value on a String field', () => {
+    expect(() => validateLdtkData(withField({ __identifier: 'name', __type: 'String', __value: 7 }), SOURCE)).toThrow(
+      /fieldInstances\[0\]\.__value.*expected a string/,
+    );
+  });
+
+  it('rejects a non-integer Int field', () => {
+    expect(() => validateLdtkData(withField({ __identifier: 'hp', __type: 'Int', __value: 1.5 }), SOURCE)).toThrow(
+      /fieldInstances\[0\]\.__value.*expected an integer/,
+    );
+  });
+
+  it('rejects an EntityRef missing one of its iids', () => {
+    expect(() =>
+      validateLdtkData(
+        withField({ __identifier: 'target', __type: 'EntityRef', __value: { entityIid: 'a', layerIid: 'b', levelIid: 'c' } }),
+        SOURCE,
+      ),
+    ).toThrow(/fieldInstances\[0\]\.__value\.worldIid/);
+  });
+
+  it('rejects a Tile with a non-numeric rect', () => {
+    expect(() =>
+      validateLdtkData(
+        withField({ __identifier: 'icon', __type: 'Tile', __value: { tilesetUid: 1, x: 0, y: 0, w: '16', h: 16 } }),
+        SOURCE,
+      ),
+    ).toThrow(/fieldInstances\[0\]\.__value\.w/);
+  });
+
+  it('validates every element of an Array<T> field and points at the bad index', () => {
+    expect(() =>
+      validateLdtkData(
+        withField({ __identifier: 'waypoints', __type: 'Array<Point>', __value: [{ cx: 0, cy: 0 }, { cx: 1 }] }),
+        SOURCE,
+      ),
+    ).toThrow(/fieldInstances\[0\]\.__value\[1\]\.cy/);
+  });
+
+  it('leaves a field type this package does not model unchecked', () => {
+    expect(() =>
+      validateLdtkData(withField({ __identifier: 'future', __type: 'SomeFutureType', __value: { anything: true } }), SOURCE),
+    ).not.toThrow();
+  });
 
   it('rejects a world entry that is not an object', () => {
     expect(() => validateLdtkData(withRoot(root => {
