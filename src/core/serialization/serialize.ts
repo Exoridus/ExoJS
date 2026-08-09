@@ -10,7 +10,7 @@ import { registerCoreSerializers } from './coreSerializers';
 import type { DeserializeContext, SerializeContext } from './NodeSerializer';
 import { asObject, asSerializedNode } from './read';
 import { defaultSerializationRegistry, type SerializationRegistry } from './SerializationRegistry';
-import { SERIALIZATION_VERSION, type SerializedNode, type SerializedScene } from './types';
+import { SERIALIZATION_VERSION, type SerializedNode, type SerializedPrefab, type SerializedScene } from './types';
 
 // Core serializers register lazily (not as an import side effect) so they
 // survive `sideEffects: false` tree-shaking: the registration is reachable
@@ -220,4 +220,40 @@ export function migrate(data: unknown): SerializedScene {
   const ui = asSerializedNode(scene.ui);
 
   return ui !== null ? { version, root, ui } : { version, root };
+}
+
+/**
+ * Validate and migrate a serialized prefab document to the current
+ * {@link SERIALIZATION_VERSION}, returning a structurally-sound
+ * {@link SerializedPrefab}.
+ *
+ * The prefab counterpart to {@link migrate}, and the same untrusted boundary:
+ * {@link Prefab.fromJSON} accepts whatever came off disk or the network. Throws
+ * on a non-object document, a version newer than supported, or a missing/invalid
+ * root.
+ *
+ * The migration chain is empty at v1, exactly as for scenes; a future version
+ * bump registers its version→version+1 transform in both places.
+ * @internal
+ */
+export function migratePrefab(data: unknown): SerializedPrefab {
+  const document = asObject(data);
+
+  if (document === null) {
+    throw new Error('Cannot deserialize prefab: the document is not an object.');
+  }
+
+  const version = typeof document.version === 'number' ? document.version : 0;
+
+  if (version > SERIALIZATION_VERSION) {
+    throw new Error(`Cannot deserialize prefab: data version ${version} is newer than the supported version ${SERIALIZATION_VERSION}.`);
+  }
+
+  const root = asSerializedNode(document.root);
+
+  if (root === null) {
+    throw new Error('Cannot deserialize prefab: the document has no valid root node.');
+  }
+
+  return { version, root };
 }

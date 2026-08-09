@@ -39,6 +39,21 @@ export interface SerializedScene {
 }
 
 /**
+ * Top-level serialized form of a {@link Prefab} produced by
+ * {@link Prefab.toJSON} and consumed by {@link Prefab.fromJSON}.
+ *
+ * Carries the same `version` field as {@link SerializedScene} and for the same
+ * reason: a prefab is documented as persistable to disk or over the network, so
+ * a document has to outlive the code that wrote it.
+ */
+export interface SerializedPrefab {
+  /** Format version this document was written with ({@link SERIALIZATION_VERSION}). */
+  version: number;
+  /** The captured subtree root. */
+  root: SerializedNode;
+}
+
+/**
  * Serialized reference to a loaded asset (e.g. a {@link Texture}).
  *
  * Stores the loader **source key** the asset was loaded under, not the asset

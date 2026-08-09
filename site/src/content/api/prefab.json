@@ -112,7 +112,7 @@
         },
         {
           "name": "toJSON",
-          "signature": "toJSON(): SerializedNode",
+          "signature": "toJSON(): SerializedPrefab",
           "signatureTokens": [
             {
               "text": "toJSON",
@@ -131,13 +131,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "SerializedNode",
+              "text": "SerializedPrefab",
               "kind": "type"
             }
           ],
           "params": [],
-          "returnType": "SerializedNode",
-          "description": "The underlying JSON descriptor (JSON-serialisable). Treat as read-only. The standard JSON.stringify(prefab) hook."
+          "returnType": "SerializedPrefab",
+          "description": "The prefab as a versioned, JSON-serialisable document — the standard JSON.stringify(prefab) hook. Treat the returned object as read-only; the root is the live internal descriptor, not a copy."
         },
         {
           "name": "from",
@@ -242,7 +242,7 @@
         },
         {
           "name": "fromJSON",
-          "signature": "fromJSON(descriptor: SerializedNode): Prefab",
+          "signature": "fromJSON(document: unknown): Prefab",
           "signatureTokens": [
             {
               "text": "fromJSON",
@@ -253,7 +253,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "descriptor",
+              "text": "document",
               "kind": "param"
             },
             {
@@ -261,8 +261,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "SerializedNode",
-              "kind": "type"
+              "text": "unknown",
+              "kind": "keyword"
             },
             {
               "text": ")",
@@ -279,13 +279,13 @@
           ],
           "params": [
             {
-              "name": "descriptor",
-              "type": "SerializedNode",
+              "name": "document",
+              "type": "unknown",
               "optional": false
             }
           ],
           "returnType": "Prefab",
-          "description": "Build a prefab from a previously serialized descriptor — e.g. one produced by toJSON and persisted to disk or fetched over the network."
+          "description": "Build a prefab from a previously serialized document — e.g. one produced by toJSON and persisted to disk or fetched over the network. Like Scene.deserialize this is an untrusted boundary, so the parameter is unknown: the document's version frame and root node are validated here. Throws when the document is not an object, carries a version newer than this build supports, or has no valid root."
         }
       ],
       "paragraphs": [],
