@@ -85,6 +85,14 @@ interface ManagedWebGpuTextureState {
    * Invalidated whenever the backing scratch is replaced.
    */
   partialUploadView: Float32Array | Uint8Array | null;
+  /**
+   * Cached exact-length view over the texture's own buffer for the last
+   * full-width dirty region. Full-width rows need no packing at all (see
+   * `_syncTexture`'s partial branch), so this view replaces the scratch
+   * entirely; caching it keeps a steady-state band — the transform/tint pair's
+   * usual shape — allocation-free.
+   */
+  contiguousUploadView: Float32Array | Uint8Array | null;
 }
 
 interface PixelClipBoundsState {
@@ -2045,6 +2053,7 @@ export class WebGpuBackend implements RenderBackend {
         accountedBytes: 0,
         partialUploadScratch: null,
         partialUploadView: null,
+        contiguousUploadView: null,
       };
 
       state.accountedBytes = this._accountant.reallocate(0, this._estimateTextureBytes(texture, mipLevelCount));
@@ -2198,6 +2207,49 @@ export class WebGpuBackend implements RenderBackend {
     return view;
   }
 
+  /**
+   * Return an exact-length view over `source` covering `length` elements from
+   * `start`, for a dirty region whose rows span the full texture width and are
+   * therefore already contiguous in the row-major buffer.
+   *
+   * `writeTexture` copies out of whatever `ArrayBufferView` it is handed, so a
+   * contiguous region needs no packing step at all — the packing scratch would
+   * only add a full memcpy of the region per sync. The view is exact-length
+   * rather than the whole buffer plus a `dataLayout.offset`, so validation
+   * never has to lean on the spec's `offset + requiredBytesInCopy <=
+   * byteLength` upper bound.
+   *
+   * The view is cached the same way the scratch's is: a band of the same size
+   * at the same offset — a scrolling ring buffer's steady state — then
+   * allocates nothing. Identity is re-checked against the source, so a texture
+   * whose region moves or resizes simply mints a new view.
+   */
+  private _acquireContiguousUploadView(
+    state: ManagedWebGpuTextureState,
+    source: Float32Array | Uint8Array,
+    start: number,
+    length: number,
+  ): Float32Array | Uint8Array {
+    const view = state.contiguousUploadView;
+    const byteOffset = source.byteOffset + start * source.BYTES_PER_ELEMENT;
+
+    if (
+      view !== null &&
+      view.length === length &&
+      view.byteOffset === byteOffset &&
+      view.buffer === source.buffer &&
+      view instanceof Float32Array === source instanceof Float32Array
+    ) {
+      return view;
+    }
+
+    const fresh = source.subarray(start, start + length);
+
+    state.contiguousUploadView = fresh;
+
+    return fresh;
+  }
+
   private _syncTexture(texture: Texture | RenderTexture): ManagedWebGpuTextureState {
     assertLiveTexture(texture);
 
@@ -2257,21 +2309,35 @@ export class WebGpuBackend implements RenderBackend {
           );
           this._accountant.recordTextureUpload(texture.width * texture.height * formatInfo.bytesPerPixel);
         } else {
-          // Partial upload: pack the dirty region into a reusable scratch view
-          // (grown once, never reallocated per call — see
-          // `_acquirePartialUploadScratch`) that `writeTexture` can read.
-          // `queue.writeTexture` snapshots the bytes at call time, so the same
-          // buffer is free to be repacked on the very next sync.
+          // Partial upload. `queue.writeTexture` reads a tightly packed block,
+          // so unless the dirty rows span the full texture width they have to
+          // be lifted out of the row-major buffer first — into a reusable
+          // scratch view (grown once, never reallocated per call — see
+          // `_acquirePartialUploadScratch`). `queue.writeTexture` snapshots the
+          // bytes at call time, so the same buffer is free to be repacked on
+          // the very next sync.
           const channels = formatInfo.channels;
           const bytesPerPixel = formatInfo.bytesPerPixel;
-          const subBuffer = this._acquirePartialUploadScratch(state, texture.buffer, region.width * region.height * channels);
           const rowChannels = texture.width * channels;
           const subRowChannels = region.width * channels;
+          const length = region.width * region.height * channels;
+          let subBuffer: Float32Array | Uint8Array;
 
-          for (let row = 0; row < region.height; row++) {
-            const sourceStart = (region.y + row) * rowChannels + region.x * channels;
-            const targetStart = row * subRowChannels;
-            subBuffer.set(texture.buffer.subarray(sourceStart, sourceStart + subRowChannels), targetStart);
+          if (region.x === 0 && region.width === texture.width) {
+            // Full-width rows are already contiguous and tightly packed — hand
+            // `writeTexture` a view straight onto the texture buffer and skip
+            // the packing copy entirely. This is the shape every ring-buffer
+            // style upload takes (transform/tint rows, scrolling spectrograms),
+            // so it is the common case rather than a corner one.
+            subBuffer = this._acquireContiguousUploadView(state, texture.buffer, region.y * rowChannels, length);
+          } else {
+            subBuffer = this._acquirePartialUploadScratch(state, texture.buffer, length);
+
+            for (let row = 0; row < region.height; row++) {
+              const sourceStart = (region.y + row) * rowChannels + region.x * channels;
+              const targetStart = row * subRowChannels;
+              subBuffer.set(texture.buffer.subarray(sourceStart, sourceStart + subRowChannels), targetStart);
+            }
           }
 
           this.device.queue.writeTexture(
