@@ -147,7 +147,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Visual drawing offset in pixels applied to every tile of this set. Defaults to 0."
+          "description": "Visual drawing offset in pixels applied to every tile of this set drawn by a tile layer. Defaults to 0."
         },
         {
           "name": "offsetY",
@@ -172,7 +172,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Visual drawing offset in pixels applied to every tile of this set. Defaults to 0."
+          "description": "Visual drawing offset in pixels applied to every tile of this set drawn by a tile layer. Defaults to 0."
         },
         {
           "name": "spacing",

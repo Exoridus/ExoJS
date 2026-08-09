@@ -600,6 +600,42 @@ describe('TiledMap.toTileMap() — object layers', () => {
     expect(crate.rotation).toBe(45);
   });
 
+  it('keeps the tileset tileoffset out of a tile object position, but reachable through its tileset', async () => {
+    const { context: offsetContext } = makeContext({
+      'tileoffset-object.tmj': {
+        type: 'map', version: '1.10', orientation: 'orthogonal',
+        width: 4, height: 4, tilewidth: 16, tileheight: 16, infinite: false,
+        layers: [
+          {
+            id: 1, name: 'Spawns', type: 'objectgroup', visible: true, opacity: 1, x: 0, y: 0,
+            objects: [
+              { id: 1, name: 'crate', type: '', gid: 1, x: 32, y: 48, width: 16, height: 16, rotation: 0, visible: true },
+            ],
+          },
+        ],
+        tilesets: [{
+          firstgid: 1, name: 'tiles', image: 'tiles-a.png', imagewidth: 64, imageheight: 32,
+          tilewidth: 16, tileheight: 16, columns: 4, tilecount: 8,
+          tileoffset: { x: 4, y: -8 },
+        }],
+      },
+    });
+
+    const runtime = (await loadTiledMap('tileoffset-object.tmj', offsetContext)).toTileMap();
+    const crate = runtime.getObjectLayer('Spawns')!.getObjectByName('crate')!;
+
+    // Object layers are data-only: nothing here draws a tile object, so the
+    // offset is carried on the tileset rather than baked into x/y.
+    expect(crate.x).toBe(32);
+    expect(crate.y).toBe(32);
+
+    expect(crate.kind).toBe('tile');
+
+    if (crate.kind === 'tile') {
+      expect(crate.tile.tileset.offsetX).toBe(4);
+      expect(crate.tile.tileset.offsetY).toBe(-8);
+    }
+  });
 
   it('query selects objects by class/type', async () => {
     const runtime = (await loadTiledMap('orthogonal-rich.tmj', context)).toTileMap();

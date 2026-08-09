@@ -26,9 +26,9 @@ export interface TileSetOptions {
   readonly margin?: number;
   /** Tileset class/type string (Tiled `class`). Defaults to `''`. */
   readonly class?: string;
-  /** Visual drawing offset in pixels applied to every tile of this set. Defaults to 0. */
+  /** Visual drawing offset in pixels applied to every tile of this set drawn by a tile layer. Defaults to 0. */
   readonly offsetX?: number;
-  /** Visual drawing offset in pixels applied to every tile of this set. Defaults to 0. */
+  /** Visual drawing offset in pixels applied to every tile of this set drawn by a tile layer. Defaults to 0. */
   readonly offsetY?: number;
 }
 
@@ -70,9 +70,17 @@ export class TileSet {
 
   /** Tileset class/type string (Tiled `class`; may be empty). */
   public readonly class: string;
-  /** Visual drawing offset X in pixels, applied to every tile of this set. */
+  /**
+   * Visual drawing offset X in pixels (Tiled `tileoffset`).
+   *
+   * Applied by the tile-layer geometry builder and by the tile-collision
+   * helpers — i.e. wherever this package places a tile on a grid. It is **not**
+   * folded into a {@link TileObject}'s `x`/`y`: object layers are data-only, so
+   * code that draws a tile object itself has to add this offset the way a tile
+   * layer would.
+   */
   public readonly offsetX: number;
-  /** Visual drawing offset Y in pixels, applied to every tile of this set. */
+  /** Visual drawing offset Y in pixels (Tiled `tileoffset`) — see {@link offsetX} for where it applies. */
   public readonly offsetY: number;
 
   private readonly _definitions: ReadonlyMap<number, TileDefinition>;
