@@ -256,6 +256,78 @@ describe('AudioStream', () => {
     expect(playSpy).not.toHaveBeenCalled();
   });
 
+  test('the loop setter is a no-op once the voice has ended', () => {
+    const manager = new AudioManager();
+    const el = createAudioElementStub();
+    const stream = new AudioStream(el, { loop: false });
+    const voice = manager.play(stream) as AudioStreamVoice;
+
+    voice.stop();
+    expect(voice.ended).toBe(true);
+
+    voice.loop = true;
+    expect(el.loop).toBe(false);
+
+    stream.destroy();
+  });
+
+  test('an ended voice cannot retarget the loop flag of the next voice on the same element', () => {
+    const manager = new AudioManager();
+    const el = createAudioElementStub();
+    const stream = new AudioStream(el, { loop: false });
+    const first = manager.play(stream) as AudioStreamVoice;
+
+    // Starting a second voice stops the first — both share one `<audio>` element.
+    const second = manager.play(stream) as AudioStreamVoice;
+    expect(first.ended).toBe(true);
+    expect(second.ended).toBe(false);
+
+    first.loop = true;
+
+    expect(el.loop).toBe(false);
+    expect(second.loop).toBe(false);
+
+    stream.destroy();
+  });
+
+  test('the playbackRate setter is a no-op once the voice has ended', () => {
+    const manager = new AudioManager();
+    const el = createAudioElementStub();
+    const stream = new AudioStream(el, { playbackRate: 1 });
+    const voice = manager.play(stream) as AudioStreamVoice;
+
+    voice.stop();
+    expect(voice.ended).toBe(true);
+
+    voice.playbackRate = 3;
+
+    expect(el.playbackRate).toBe(1);
+    // The cached base rate is not updated either — reporting a rate the voice
+    // never applied would be a lie, and `seek`/`pause`/`resume`/`loop` are all
+    // whole-setter no-ops after the end too.
+    expect(voice.playbackRate).toBe(1);
+
+    stream.destroy();
+  });
+
+  test('an ended voice cannot retarget the playback rate of the next voice on the same element', () => {
+    const manager = new AudioManager();
+    const el = createAudioElementStub();
+    const stream = new AudioStream(el, { playbackRate: 1 });
+    const first = manager.play(stream) as AudioStreamVoice;
+
+    const second = manager.play(stream) as AudioStreamVoice;
+    expect(first.ended).toBe(true);
+    expect(second.ended).toBe(false);
+
+    first.playbackRate = 3;
+
+    expect(el.playbackRate).toBe(1);
+    expect(second.playbackRate).toBe(1);
+
+    stream.destroy();
+  });
+
   test('construction while the audio context is not ready defers playback until unlock', () => {
     const ctx = getAudioContext();
     const originalState = ctx.state;

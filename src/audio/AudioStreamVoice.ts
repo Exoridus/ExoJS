@@ -21,6 +21,13 @@ export interface AudioStreamVoiceInit extends BaseVoiceInit {
  * element owns a single playhead, a stream has one active voice at a time —
  * starting a new voice stops the previous one.
  *
+ * The element outlives every individual voice and is handed on to the next
+ * one, so **every member that writes to it is a no-op once this voice has
+ * ended**: {@link AudioStreamVoice.seek}/`time`, {@link AudioStreamVoice.pause},
+ * {@link AudioStreamVoice.resume}, `loop` and `playbackRate`. Without that
+ * guard a stale handle could retarget playback it no longer owns. `detune` is
+ * voice-local state and therefore unguarded.
+ *
  * Mixes in {@link Seekable}, {@link Pausable}, {@link Loopable},
  * {@link RatePitched} (playback rate; `detune` is stored but inert — an
  * `HTMLMediaElement` has no detune control), and (via {@link BaseVoice})
@@ -107,6 +114,7 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
   }
 
   public set loop(value: boolean) {
+    if (this._ended) return;
     this._element.loop = value;
   }
 
@@ -119,6 +127,7 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
   }
 
   public set playbackRate(value: number) {
+    if (this._ended) return;
     this._basePlaybackRate = clamp(value, 0.1, 20);
     this._element.playbackRate = this._basePlaybackRate;
   }

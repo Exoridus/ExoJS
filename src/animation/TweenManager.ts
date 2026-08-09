@@ -2,6 +2,7 @@ import type { Time } from '#core/Time';
 
 import { Tween } from './Tween';
 import { TweenSequencer } from './TweenSequencer';
+import { TweenState } from './types';
 
 /** Any object that can be driven each frame by a delta in seconds. @internal */
 interface Ticker {
@@ -10,10 +11,10 @@ interface Ticker {
 
 /**
  * Owns and advances a collection of {@link Tween} instances, driving them
- * once per frame from {@link Application.update}. A tween created here enters
- * the update list when {@link Tween.start} is called and leaves it again on
- * completion or {@link Tween.stop}, so the manager only ever holds tweens that
- * are running or paused. Manually constructed tweens can be opted in via
+ * once per frame from {@link Application.update}. A tween enters the update
+ * list when {@link Tween.start} is called and leaves it again on completion or
+ * {@link Tween.stop}, so the manager only ever holds tweens that are running
+ * or paused — regardless of whether it was created here or handed over via
  * {@link TweenManager.add}.
  *
  * Custom updatables (such as {@link TweenSequencer}) can be registered via
@@ -105,13 +106,24 @@ export class TweenManager {
   }
 
   /**
-   * Explicitly add a stand-alone Tween (created via `new Tween(target)`)
-   * to this manager so it participates in the update loop.
+   * Take ownership of a stand-alone Tween (created via `new Tween(target)`, or
+   * previously bound to a different manager) so it participates in this update
+   * loop: from here on, {@link Tween.start} enters it and completion or
+   * {@link Tween.stop} evicts it again.
+   *
+   * Binding and entering are two separate steps. A tween that is already
+   * running or paused is live — nothing will call `start()` on it again to
+   * enter it — so it goes into the update list right away. An idle, completed
+   * or stopped tween is bound only: retaining it would pin it, and through it
+   * its target, in this manager for the lifetime of the application while the
+   * update loop has nothing to do with it.
    */
   public add(tween: Tween): this {
     tween._attachManager(this);
 
-    if (!this._tweens.includes(tween)) {
+    const isLive = tween.state === TweenState.Active || tween.state === TweenState.Paused;
+
+    if (isLive && !this._tweens.includes(tween)) {
       this._tweens.push(tween);
     }
 

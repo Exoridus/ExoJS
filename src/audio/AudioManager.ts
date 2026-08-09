@@ -229,6 +229,9 @@ export class AudioManager {
    * Unregister and {@link AudioBus.destroy} a previously registered bus.
    * Throws if you attempt to unregister one of the three built-ins
    * (`master`, `music`, `sound`). No-op if the bus is unknown.
+   *
+   * Effects attached to that bus are only detached, never destroyed — they
+   * belong to whoever created them (see {@link AudioBus.addEffect}).
    */
   public unregisterBus(bus: AudioBus): this {
     if (bus === this.master || bus === this.music || bus === this.sound) {
@@ -262,6 +265,10 @@ export class AudioManager {
    * Tear the mix down: stop every voice still playing, then the listener and
    * every bus. Terminal — {@link AudioManager.play} and
    * {@link AudioManager.open} throw afterwards.
+   *
+   * Effects you attached to a bus or a voice are detached but not destroyed —
+   * they are yours (see {@link AudioBus.addEffect}), so `destroy()` each one
+   * yourself as part of your own teardown.
    */
   public destroy(): void {
     // Set before the drain so nothing can start new playback from an `onEnd`

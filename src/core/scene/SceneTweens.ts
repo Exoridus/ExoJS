@@ -166,8 +166,10 @@ export class SceneTweens implements Destroyable {
    * activation flushing whatever was created while `Ready` (or a still-cold
    * `Suspended` registration), or a retention restore reinstating whatever
    * {@link SceneTweens.suspend} paused. Both converge on the same
-   * operation: attach every cold tween/sequencer to the app-wide manager
-   * (in whatever state it's currently in), then resume exactly the set
+   * operation: hand every cold tween/sequencer over to the app-wide manager
+   * (in whatever state it's currently in — one already running or paused
+   * while dormant is entered into the update list, one still idle is bound
+   * only and enters on its own `start()`), then resume exactly the set
    * `suspend()` paused and exactly the set `add()` paused while dormant —
    * each only if still in the exact state this facade left it in.
    * @internal

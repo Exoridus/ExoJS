@@ -329,7 +329,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Tear the mix down: stop every voice still playing, then the listener and every bus. Terminal — AudioManager.play and AudioManager.open throw afterwards."
+          "description": "Tear the mix down: stop every voice still playing, then the listener and every bus. Terminal — AudioManager.play and AudioManager.open throw afterwards. Effects you attached to a bus or a voice are detached but not destroyed — they are yours (see AudioBus.addEffect), so destroy() each one yourself as part of your own teardown."
         },
         {
           "name": "getBus",
@@ -755,7 +755,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Unregister and AudioBus.destroy a previously registered bus. Throws if you attempt to unregister one of the three built-ins (master, music, sound). No-op if the bus is unknown."
+          "description": "Unregister and AudioBus.destroy a previously registered bus. Throws if you attempt to unregister one of the three built-ins (master, music, sound). No-op if the bus is unknown. Effects attached to that bus are only detached, never destroyed — they belong to whoever created them (see AudioBus.addEffect)."
         }
       ],
       "paragraphs": [],

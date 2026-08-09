@@ -292,8 +292,10 @@ export class TweenSequencer {
     if (stage.type === 'tweens') {
       for (const tween of stage.tweens) {
         if (this._manager !== null) {
-          // Register with manager so the manager ticks it each frame.
-          this._manager.add(tween);
+          // Bind only — a stage tween may have been built stand-alone and know
+          // no manager yet. The `start()` below is what enters it into the
+          // update list, so the manager ticks it each frame.
+          tween._attachManager(this._manager);
         }
         tween.start();
       }

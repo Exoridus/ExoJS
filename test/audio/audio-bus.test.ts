@@ -298,19 +298,53 @@ describe('AudioBus', () => {
     bus.destroy();
   });
 
-  // 8. destroy disconnects nodes and clears filters
-  test('destroy disconnects all nodes and destroys filters', () => {
+  // 8. destroy disconnects nodes and detaches (but does not destroy) effects
+  test('destroy disconnects all nodes and detaches its effects without destroying them', () => {
+    // Built before the spy so it gets real nodes — while `spyOnBusCreation` is
+    // active every `createGain()` returns one of the two bus mocks.
+    const filter = new WiredFilter();
     const spy = spyOnBusCreation();
     const bus = new AudioBus('destroy-test');
-    const filter = new StubFilter();
     bus.addEffect(filter);
+    filter.outputDisconnect.mockClear();
+    filter.inputDisconnect.mockClear();
 
     bus.destroy();
 
     expect(spy.inputNode.disconnect).toHaveBeenCalled();
     expect(spy.outputNode.disconnect).toHaveBeenCalled();
     expect(spy.panNode.disconnect).toHaveBeenCalled();
-    expect(filter.destroyed).toBe(true);
+
+    // Same contract as `removeEffect` and `BaseVoice._finish`: cut the outgoing
+    // edge, leave the effect's own internal wiring alone, and leave ownership
+    // (and therefore `destroy()`) with the caller.
+    expect(filter.outputDisconnect).toHaveBeenCalled();
+    expect(filter.inputDisconnect).not.toHaveBeenCalled();
+    expect(filter.destroyed).toBe(false);
+
+    spy.restore();
+    filter.destroy();
+  });
+
+  test('destroy tolerates an effect whose own nodes were never created', () => {
+    const spy = spyOnBusCreation();
+    const bus = new AudioBus('destroy-unready');
+    const destroySpy = vi.fn();
+    const unready = {
+      get inputNode(): AudioNode {
+        throw new Error('not yet initialized');
+      },
+      get outputNode(): AudioNode {
+        throw new Error('not yet initialized');
+      },
+      ready: Promise.resolve(),
+      destroy: destroySpy,
+    } as unknown as AudioEffect;
+
+    bus.addEffect(unready);
+
+    expect(() => bus.destroy()).not.toThrow();
+    expect(destroySpy).not.toHaveBeenCalled();
 
     spy.restore();
   });

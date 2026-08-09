@@ -145,6 +145,10 @@ export class AudioBus {
    * Append a effect to the end of the chain (before the pan stage). The
    * chain is rebuilt in place; existing audio routes through the new
    * effect on the next frame.
+   *
+   * Attaching does not transfer ownership: the caller keeps it and must
+   * `destroy()` the effect once it is no longer used anywhere. Neither
+   * {@link AudioBus.removeEffect} nor {@link AudioBus.destroy} destroys it.
    */
   public addEffect(effect: AudioEffect): this {
     this._effects.push(effect);
@@ -152,7 +156,11 @@ export class AudioBus {
     return this;
   }
 
-  /** Remove `effect` from the chain. No-op if not present. Caller still owns + must `destroy()` it. */
+  /**
+   * Remove `effect` from the chain. No-op if not present. The caller still
+   * owns it and must `destroy()` it — the same contract {@link AudioBus.destroy}
+   * follows for whatever is still attached when the bus goes away.
+   */
   public removeEffect(effect: AudioEffect): this {
     const index = this._effects.indexOf(effect);
     if (index !== -1) {
@@ -217,6 +225,15 @@ export class AudioBus {
     return this;
   }
 
+  /**
+   * Tear the bus down: drop pending setup work, detach every attached effect
+   * and disconnect this bus's own nodes from the graph.
+   *
+   * Attached effects are detached, **not** destroyed — a bus never owns them
+   * (see {@link AudioBus.addEffect}), and the same instance may still be in
+   * use on a voice or another bus. Destroy each effect yourself once it is no
+   * longer needed anywhere.
+   */
   public destroy(): void {
     onAudioContextReady.remove(this._onAudioContextReady);
     this._parentSetupDispose?.();
@@ -225,8 +242,16 @@ export class AudioBus {
     // linger after teardown (AU3).
     this._pendingSetup = null;
     this._clearScheduledStop();
+    // Detach, never destroy: a bus does not own the effects handed to it. The
+    // same instance may also sit on a voice or on another bus, and destroying
+    // it here would pull it out from under them. Mirrors
+    // {@link AudioBus.removeEffect} and `BaseVoice._finish` — cut the outgoing
+    // edge, leave the effect's own internal wiring intact, skip an effect whose
+    // nodes were never created.
     for (const effect of this._effects) {
-      effect.destroy();
+      if (_isEffectReady(effect)) {
+        effect.outputNode.disconnect();
+      }
     }
     this._effects.length = 0;
     if (this._setup) {

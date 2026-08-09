@@ -43,6 +43,10 @@ application.audio.master.removeEffect(reverb);
 
 Filters are reusable — move one from bus to bus by removing it from the old bus and adding it to the new one. Destroy a filter with `filter.destroy()` when it's no longer needed anywhere.
 
+<Callout type="warning" title="You own every effect you create">
+Attaching an effect never transfers ownership. `removeEffect`, `bus.destroy()`, `unregisterBus` and `app.audio.destroy()` all only *detach* it — none of them calls `destroy()` on your effect, because the same instance may still be attached to a voice or to another bus. Call `filter.destroy()` yourself once it is no longer used anywhere.
+</Callout>
+
 <Callout type="info" title="Effect order is the order you add them">
 `addEffect` always appends to the end of the chain, so the sequence you add effects in is the sequence audio flows through — a compressor added before a reverb sounds different from one added after. To slot an effect in earlier, `removeEffect` the later ones and add them back in the order you want.
 </Callout>
