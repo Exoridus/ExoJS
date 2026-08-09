@@ -234,11 +234,11 @@ describe('DebugOverlay — lifecycle', () => {
     window.dispatchEvent(claimed);
     expect(claimed.defaultPrevented).toBe(true);
 
-    input.preUpdate();
+    input.preUpdate(0 as never);
     expect(debug.layers.hitTest.visible).toBe(true);
 
     window.dispatchEvent(new KeyboardEvent('keyup', { code: 'F3' }));
-    input.preUpdate();
+    input.preUpdate(0 as never);
     debug.destroy();
 
     const released = new KeyboardEvent('keydown', { code: 'F3', cancelable: true });
