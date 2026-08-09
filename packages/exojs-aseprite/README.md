@@ -19,7 +19,8 @@ npm install @codexo/exojs @codexo/exojs-aseprite
 - `AsepriteSheet` — parsed sprite sheet; the result of
   `loader.load(Asset.type('asepriteSheet', url))`. Exposes
   the underlying `spritesheet`, a `clips` map (one `AnimatedSpriteClipDefinition` per frame tag),
-  and `createAnimatedSprite()` for a ready-to-play `AnimatedSprite`
+  the `slices` and `layers` metadata maps, and `createAnimatedSprite()` for a ready-to-play
+  `AnimatedSprite`
 - `asepriteExtension` — extension descriptor registering the Aseprite asset binding
 - `asepriteBinding` — the underlying `AssetBinding` (advanced/custom wiring)
 - `AsepriteFormatError` — typed error thrown on malformed Aseprite JSON

@@ -1,16 +1,16 @@
 {
   "title": "AsepriteSheet",
-  "description": "Parsed representation of an Aseprite JSON sprite sheet export. `AsepriteSheet.parse(data, texture)` converts the raw JSON document into: - A Spritesheet whose frames correspond to the Aseprite frame array (keyed by zero-based index string: `\"0\"`, `\"1\"`, …). - A `clips` map of AnimatedSpriteClipDefinition entries built from `meta.frameTags`, one per named tag. Call createAnimatedSprite to obtain a ready-to-use AnimatedSprite with all clips pre-registered.",
+  "description": "Parsed representation of an Aseprite JSON sprite sheet export. `AsepriteSheet.parse(data, texture)` converts the raw JSON document into: - A Spritesheet whose frames correspond to the Aseprite frame array (keyed by zero-based index string: `\"0\"`, `\"1\"`, …). - A `clips` map of AnimatedSpriteClipDefinition entries built from `meta.frameTags`, one per named tag. - The `slices` and `layers` metadata maps, carried through verbatim. Call createAnimatedSprite to obtain a ready-to-use AnimatedSprite with all clips pre-registered.",
   "symbol": "AsepriteSheet",
   "kind": "class",
   "subsystem": "aseprite",
   "importPath": "@codexo/exojs-aseprite",
   "tier": "stable",
-  "memberCount": 6,
+  "memberCount": 7,
   "counts": {
     "constructors": 0,
     "methods": 3,
-    "properties": 3,
+    "properties": 4,
     "events": 0
   },
   "sections": [
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Parsed representation of an Aseprite JSON sprite sheet export.",
-        "`AsepriteSheet.parse(data, texture)` converts the raw JSON document into: - A Spritesheet whose frames correspond to the Aseprite frame array (keyed by zero-based index string: `\"0\"`, `\"1\"`, …). - A `clips` map of AnimatedSpriteClipDefinition entries built from `meta.frameTags`, one per named tag.",
+        "`AsepriteSheet.parse(data, texture)` converts the raw JSON document into: - A Spritesheet whose frames correspond to the Aseprite frame array (keyed by zero-based index string: `\"0\"`, `\"1\"`, …). - A `clips` map of AnimatedSpriteClipDefinition entries built from `meta.frameTags`, one per named tag. - The `slices` and `layers` metadata maps, carried through verbatim.",
         "Call createAnimatedSprite to obtain a ready-to-use AnimatedSprite with all clips pre-registered."
       ],
       "importLine": "import { AsepriteSheet } from '@codexo/exojs-aseprite'",
@@ -205,6 +205,47 @@
           "params": [],
           "returnType": null,
           "description": "Animation clips derived from the Aseprite frameTags metadata. Each clip's frames are live references into spritesheet.frames; they are cloned automatically when passed to AnimatedSprite.defineClip."
+        },
+        {
+          "name": "layers",
+          "signature": "layers: ReadonlyMap<string, AsepriteLayer>",
+          "signatureTokens": [
+            {
+              "text": "layers",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyMap",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AsepriteLayer",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Layers from the Aseprite meta.layers metadata, keyed by layer name and in export order (bottom-most first). Aseprite packs the sheet already composited, so these are descriptive rather than renderable: they tell a consumer which layers went into a frame and how — opacity, blend mode, editor user data — and AsepriteLayer.group names the enclosing group layer, so the flat map still encodes the layer tree. Empty when the export carries no meta.layers block. Layer names are unique within an Aseprite document, so keying by name loses nothing."
         },
         {
           "name": "slices",

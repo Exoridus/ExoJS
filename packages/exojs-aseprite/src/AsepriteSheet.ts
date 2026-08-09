@@ -1,6 +1,6 @@
 import { AnimatedSprite, type AnimatedSpriteClipDefinition, Spritesheet, type Texture } from '@codexo/exojs';
 
-import { type AsepriteData, type AsepriteFrameData, type AsepriteFrameTag, type AsepriteSlice,isAsepriteArrayData } from './AsepriteData';
+import { type AsepriteData, type AsepriteFrameData, type AsepriteFrameTag, type AsepriteLayer, type AsepriteSlice,isAsepriteArrayData } from './AsepriteData';
 
 /**
  * Normalises an {@link AsepriteData} document into an ordered array of
@@ -115,6 +115,7 @@ function resolveTaggedFrames(frameArray: AsepriteFrameData[], indices: number[])
  *   (keyed by zero-based index string: `"0"`, `"1"`, …).
  * - A `clips` map of {@link AnimatedSpriteClipDefinition} entries built from
  *   `meta.frameTags`, one per named tag.
+ * - The `slices` and `layers` metadata maps, carried through verbatim.
  *
  * Call {@link createAnimatedSprite} to obtain a ready-to-use
  * {@link AnimatedSprite} with all clips pre-registered.
@@ -150,14 +151,33 @@ export class AsepriteSheet {
   public readonly slices: ReadonlyMap<string, AsepriteSlice>;
 
   /**
+   * Layers from the Aseprite `meta.layers` metadata, keyed by layer name and
+   * in export order (bottom-most first). Aseprite packs the sheet already
+   * composited, so these are descriptive rather than renderable: they tell a
+   * consumer which layers went into a frame and how — opacity, blend mode,
+   * editor user data — and {@link AsepriteLayer.group} names the enclosing
+   * group layer, so the flat map still encodes the layer tree.
+   *
+   * Empty when the export carries no `meta.layers` block. Layer names are
+   * unique within an Aseprite document, so keying by name loses nothing.
+   */
+  public readonly layers: ReadonlyMap<string, AsepriteLayer>;
+
+  /**
    * @internal — use {@link AsepriteSheet.parse} to create instances.
    * The public modifier is required for the Loader's `AssetConstructor` token
    * contract; users should call `parse()` instead of constructing directly.
    */
-  public constructor(spritesheet: Spritesheet, clips: ReadonlyMap<string, AnimatedSpriteClipDefinition>, slices: ReadonlyMap<string, AsepriteSlice>) {
+  public constructor(
+    spritesheet: Spritesheet,
+    clips: ReadonlyMap<string, AnimatedSpriteClipDefinition>,
+    slices: ReadonlyMap<string, AsepriteSlice>,
+    layers: ReadonlyMap<string, AsepriteLayer> = new Map(),
+  ) {
     this.spritesheet = spritesheet;
     this.clips = clips;
     this.slices = slices;
+    this.layers = layers;
   }
 
   /**
@@ -256,7 +276,15 @@ export class AsepriteSheet {
       slices.set(slice.name, slice);
     }
 
-    return new AsepriteSheet(spritesheet, clips, slices);
+    // Same for meta.layers — insertion order is the export order, so the map
+    // doubles as the ordered layer list.
+    const layers = new Map<string, AsepriteLayer>();
+
+    for (const layer of data.meta.layers ?? []) {
+      layers.set(layer.name, layer);
+    }
+
+    return new AsepriteSheet(spritesheet, clips, slices, layers);
   }
 
   /**

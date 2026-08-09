@@ -428,6 +428,53 @@ describe('AsepriteSheet.parse — slices', () => {
   });
 });
 
+// ── AsepriteSheet.parse — layers ─────────────────────────────────────────────
+
+describe('AsepriteSheet.parse — layers', () => {
+  const layerData = loadFixture('hero.layers.json');
+
+  it('populates the layers map keyed by layer name', () => {
+    const sheet = AsepriteSheet.parse(layerData, newTexture());
+
+    expect([...sheet.layers.keys()]).toEqual(['Background', 'Body', 'Torso', 'Head']);
+  });
+
+  it('preserves opacity and blend mode', () => {
+    const sheet = AsepriteSheet.parse(layerData, newTexture());
+    const torso = sheet.layers.get('Torso')!;
+
+    expect(torso.opacity).toBe(128);
+    expect(torso.blendMode).toBe('multiply');
+  });
+
+  it('preserves the group relation and editor user data', () => {
+    const sheet = AsepriteSheet.parse(layerData, newTexture());
+
+    expect(sheet.layers.get('Background')!.group).toBeUndefined();
+    expect(sheet.layers.get('Torso')!.group).toBe('Body');
+
+    const head = sheet.layers.get('Head')!;
+
+    expect(head.group).toBe('Body');
+    expect(head.color).toBe('#ff0000ff');
+    expect(head.data).toBe('hitbox=head');
+  });
+
+  it('accepts a group layer entry that carries only a name', () => {
+    const sheet = AsepriteSheet.parse(layerData, newTexture());
+    const body = sheet.layers.get('Body')!;
+
+    expect(body.opacity).toBeUndefined();
+    expect(body.blendMode).toBeUndefined();
+  });
+
+  it('produces an empty layers map when meta.layers is absent', () => {
+    const sheet = AsepriteSheet.parse(arrayData, newTexture());
+
+    expect(sheet.layers.size).toBe(0);
+  });
+});
+
 // ── AsepriteSheet.parse — fps averaging and fallbacks ──────────────────────────
 
 describe('AsepriteSheet.parse — fps derivation', () => {
