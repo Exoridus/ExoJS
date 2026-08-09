@@ -207,6 +207,35 @@
           "description": ""
         },
         {
+          "name": "clearShake",
+          "signature": "clearShake(): this",
+          "signatureTokens": [
+            {
+              "text": "clearShake",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": ""
+        },
+        {
           "name": "destroy",
           "signature": "destroy(): void",
           "signatureTokens": [
@@ -1275,36 +1304,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Start a procedural camera shake effect. The shake applies a sinusoidal offset to the view's center position, then stops automatically when durationMs elapses. Call stopShake to cancel early."
-        },
-        {
-          "name": "stopShake",
-          "signature": "stopShake(): this",
-          "signatureTokens": [
-            {
-              "text": "stopShake",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "this",
-          "description": ""
+          "description": "Start a procedural camera shake effect. The shake applies a sinusoidal offset to the view's center position, then stops automatically when durationMs elapses. Call clearShake to cancel early."
         },
         {
           "name": "update",
