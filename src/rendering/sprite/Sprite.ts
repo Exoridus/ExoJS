@@ -60,7 +60,13 @@ export class Sprite extends Drawable {
   private _verticesBuiltAtVersion = -1;
   private _normalsBuiltAtVersion = -1;
 
-  public constructor(texture: Texture | RenderTexture | null) {
+  /**
+   * Create a sprite for `texture`, or an empty one when the argument is omitted
+   * or `null` — a textureless sprite draws nothing until {@link setTexture} is
+   * called, which is the intended way to build a sprite whose texture is still
+   * loading.
+   */
+  public constructor(texture: Texture | RenderTexture | null = null) {
     super();
 
     // Mark vertices and normals dirty from the start.

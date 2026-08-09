@@ -198,7 +198,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Clear the active render target to color. Routes through the pass coordinator so it respects the clear-vs-load policy and never leaks the clear onto another target. Falls back to a raw backend clear when no coordinator is present (test stubs)."
+          "description": "Clear the active render target to color. Routes through the pass coordinator so it respects the clear-vs-load policy and never leaks the clear onto another target. Falls back to a raw backend clear when no coordinator is present (test stubs). clear here is the graphics-API verb (as in gl.clear) — it overwrites the target's pixels. It is deliberately **not** the collection clear() used elsewhere in the engine, which empties a container; nothing is released or reset by this call."
         },
         {
           "name": "drawBatch",
