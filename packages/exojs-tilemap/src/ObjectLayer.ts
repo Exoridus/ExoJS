@@ -88,7 +88,17 @@ export interface PolylineObject<P extends TileProperties = TileProperties> exten
   readonly points: readonly ObjectPoint[];
 }
 
-/** A tile (GID) object carrying a resolved tile reference. */
+/**
+ * A tile (GID) object carrying a resolved tile reference.
+ *
+ * `x`/`y` are the top-left corner of the bounding box, the same convention as
+ * every other object kind. Source formats that anchor a tile object elsewhere
+ * normalise to the corner on import: Tiled stores the position at the
+ * tileset's `objectalignment` point (bottom-left by default on an orthogonal
+ * map, bottom-centre on an isometric one) and rotates the tile image about
+ * that point, so a non-zero {@link TileMapObjectBase.rotation} on a tile
+ * object still pivots about the source anchor rather than about `(x, y)`.
+ */
 export interface TileObject<P extends TileProperties = TileProperties> extends TileMapObjectBase<P> {
   readonly kind: typeof ObjectKind.Tile;
   readonly tile: ResolvedTile;

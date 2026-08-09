@@ -428,7 +428,7 @@
         },
         {
           "name": "objectAlignment",
-          "signature": "objectAlignment?: string",
+          "signature": "objectAlignment?: TiledObjectAlignment",
           "signatureTokens": [
             {
               "text": "objectAlignment",
@@ -443,13 +443,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
-              "kind": "keyword"
+              "text": "TiledObjectAlignment",
+              "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Where a tile object's stored position sits within its bounding box. undefined (and 'unspecified') means Tiled's orientation-dependent default — resolve it with import('./objectAlignment').resolveTiledObjectAlignment."
         },
         {
           "name": "properties",

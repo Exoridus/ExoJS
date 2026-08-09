@@ -9,6 +9,7 @@ import {
   TILED_FLIPPED_HORIZONTALLY_FLAG,
   TILED_FLIPPED_VERTICALLY_FLAG,
 } from './gid';
+import { resolveTiledObjectAlignment, tiledObjectAnchorOffset } from './objectAlignment';
 import { createTiledLayer, TiledGroupLayer, TiledImageLayer, type TiledLayer,TiledObjectLayer, TiledTileLayer } from './TiledLayer';
 import type { TiledObject } from './TiledObject';
 import type { TiledTileset } from './TiledTileset';
@@ -240,7 +241,7 @@ export class TiledMap {
           runtimeLayers.push(rLayer);
           order.push(layer.id);
         } else if (layer instanceof TiledObjectLayer) {
-          runtimeObjectLayers.push(convertObjectLayer(layer, this.tilesets, indexToRuntime));
+          runtimeObjectLayers.push(convertObjectLayer(layer, this.tilesets, indexToRuntime, this.orientation));
         } else if (layer instanceof TiledImageLayer) {
           runtimeImageLayers.push(new ImageLayer({
             id: layer.id,
@@ -311,6 +312,20 @@ export class TiledMap {
 }
 
 /**
+ * Index of the tileset owning `baseGid` (flip flags already masked off), or
+ * `-1` when none covers it: the rightmost entry with `firstGid <= baseGid`,
+ * relying on `tilesets` being sorted ascending.
+ */
+function findTilesetIndexForGid(baseGid: number, tiledTilesets: readonly TiledTileset[]): number {
+  for (let t = tiledTilesets.length - 1; t >= 0; t--) {
+    const candidate = tiledTilesets[t];
+    if (candidate && baseGid >= candidate.firstGid) return t;
+  }
+
+  return -1;
+}
+
+/**
  * Resolve a raw (flag-bearing) Tiled GID to a runtime {@link ResolvedTile}, or
  * `null` for an empty cell or a GID no tileset covers.
  */
@@ -326,12 +341,7 @@ function resolveGid(
     flipY: (rawGid >>> 0 & TILED_FLIPPED_VERTICALLY_FLAG) !== 0,
     diagonal: (rawGid >>> 0 & TILED_FLIPPED_DIAGONALLY_FLAG) !== 0,
   };
-  // Find owning tileset: rightmost with firstGid <= baseGid (tilesets sorted asc).
-  let tsIdx = -1;
-  for (let t = tiledTilesets.length - 1; t >= 0; t--) {
-    const candidate = tiledTilesets[t];
-    if (candidate && baseGid >= candidate.firstGid) { tsIdx = t; break; }
-  }
+  const tsIdx = findTilesetIndexForGid(baseGid, tiledTilesets);
   if (tsIdx === -1) return null;
   const owningTs = tiledTilesets[tsIdx];
   const runtimeTs = indexToRuntime[tsIdx];
@@ -470,10 +480,11 @@ function convertObjectLayer(
   layer: TiledObjectLayer,
   tiledTilesets: readonly TiledTileset[],
   indexToRuntime: ReadonlyArray<TileSet | null>,
+  orientation: TiledOrientation,
 ): ObjectLayer {
   const objects: TileMapObject[] = [];
   for (const object of layer.objects) {
-    const converted = convertObject(object, tiledTilesets, indexToRuntime);
+    const converted = convertObject(object, tiledTilesets, indexToRuntime, orientation);
     if (converted) objects.push(converted);
   }
   return new ObjectLayer({
@@ -493,11 +504,20 @@ function convertObjectLayer(
 /**
  * Convert one `TiledObject` to a `TileMapObject`. A tile object whose GID
  * resolves to no tileset is dropped — returns `null`.
+ *
+ * Tiled stores a **tile object**'s `x`/`y` at the tileset's object-alignment
+ * anchor (bottom-left by default in an orthogonal map, bottom-centre in an
+ * isometric one), while every other object kind stores the top-left corner of
+ * its bounding box. The anchor is converted to the corner here so that
+ * `TileMapObject.x`/`y` means the same thing for every kind — see
+ * {@link import('@codexo/exojs-tilemap').TileObject} for the resulting
+ * convention.
  */
 function convertObject(
   object: TiledObject,
   tiledTilesets: readonly TiledTileset[],
   indexToRuntime: ReadonlyArray<TileSet | null>,
+  orientation: TiledOrientation,
 ): TileMapObject | null {
   const base = {
     id: object.id,
@@ -534,7 +554,8 @@ function convertObject(
   if (object.gid !== undefined) {
     const tile = resolveGid(object.gid, tiledTilesets, indexToRuntime);
     if (!tile) return null;
-    return { ...base, kind: 'tile', tile };
+    const anchor = tileObjectAnchorOffset(object.gid, object.width, object.height, tiledTilesets, orientation);
+    return { ...base, x: base.x - anchor.x, y: base.y - anchor.y, kind: 'tile', tile };
   }
   if (object.point) {
     return { ...base, kind: 'point' };
@@ -552,6 +573,30 @@ function convertObject(
 }
 
 const toPoints = (points: ReadonlyArray<{ x: number; y: number }>): ObjectPoint[] => points.map(p => ({ x: p.x, y: p.y }));
+
+/** Shared zero offset for a tile object whose GID belongs to no tileset. */
+const ORIGIN_OFFSET = { x: 0, y: 0 } as const;
+
+/**
+ * Offset from a tile object's stored anchor to the top-left corner of its
+ * bounding box, using the owning tileset's `objectalignment` (or Tiled's
+ * orientation-dependent default). Falls back to no offset when `gid` belongs
+ * to no tileset — such an object is dropped by the caller anyway.
+ */
+function tileObjectAnchorOffset(
+  gid: number,
+  width: number,
+  height: number,
+  tiledTilesets: readonly TiledTileset[],
+  orientation: TiledOrientation,
+): { readonly x: number; readonly y: number } {
+  const owningTs = tiledTilesets[findTilesetIndexForGid(maskTiledGid(gid), tiledTilesets)];
+  if (!owningTs) return ORIGIN_OFFSET;
+
+  const alignment = resolveTiledObjectAlignment(owningTs.objectAlignment, orientation);
+
+  return tiledObjectAnchorOffset(alignment, width, height);
+}
 
 /**
  * Parse a Tiled colour string (`#RRGGBB` or `#AARRGGBB`) into a `0xRRGGBB`

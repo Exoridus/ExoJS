@@ -6,11 +6,11 @@
   "subsystem": "tiled",
   "importPath": "@codexo/exojs-tiled",
   "tier": "stable",
-  "memberCount": 6,
+  "memberCount": 9,
   "counts": {
     "constructors": 0,
-    "methods": 2,
-    "properties": 4,
+    "methods": 4,
+    "properties": 5,
     "events": 0
   },
   "sections": [
@@ -74,6 +74,203 @@
           ],
           "returnType": "TiledLayer",
           "description": "Constructs the appropriate TiledLayer subclass for data.type."
+        },
+        {
+          "name": "resolveTiledObjectAlignment",
+          "signature": "resolveTiledObjectAlignment(alignment: TiledObjectAlignment | undefined, orientation: TiledOrientation): TiledResolvedObjectAlignment",
+          "signatureTokens": [
+            {
+              "text": "resolveTiledObjectAlignment",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "alignment",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TiledObjectAlignment",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "orientation",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TiledOrientation",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TiledResolvedObjectAlignment",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "alignment",
+              "type": "TiledObjectAlignment | undefined",
+              "optional": false
+            },
+            {
+              "name": "orientation",
+              "type": "TiledOrientation",
+              "optional": false
+            }
+          ],
+          "returnType": "TiledResolvedObjectAlignment",
+          "description": "Resolve a tileset's objectalignment into a concrete alignment for tile objects on a map of the given orientation. Tiled's default ('unspecified', and an absent field) is orientation dependent: 'bottom' on an isometric map and 'bottomleft' on every other orientation, including staggered and hexagonal."
+        },
+        {
+          "name": "tiledObjectAnchorOffset",
+          "signature": "tiledObjectAnchorOffset(alignment: TiledResolvedObjectAlignment, width: number, height: number): { x: number; y: number }",
+          "signatureTokens": [
+            {
+              "text": "tiledObjectAnchorOffset",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "alignment",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TiledResolvedObjectAlignment",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "width",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "height",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "alignment",
+              "type": "TiledResolvedObjectAlignment",
+              "optional": false
+            },
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "{ x: number; y: number }",
+          "description": "Offset of a tile object's stored x/y anchor from the top-left corner of its width × height bounding box, for an already-resolved alignment. Subtract this from the stored position to obtain the corner: cornerX = object.x - offset.x."
         },
         {
           "name": "tiledWangSetToWangSet",
@@ -160,6 +357,39 @@
       "id": "constants",
       "title": "Constants",
       "members": [
+        {
+          "name": "TILED_OBJECT_ALIGNMENTS",
+          "signature": "TILED_OBJECT_ALIGNMENTS: readonly TiledObjectAlignment[]",
+          "signatureTokens": [
+            {
+              "text": "TILED_OBJECT_ALIGNMENTS",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TiledObjectAlignment",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Every value Tiled accepts for a tileset's objectalignment."
+        },
         {
           "name": "tiledBuildInfo",
           "signature": "tiledBuildInfo: TiledBuildInfo",
