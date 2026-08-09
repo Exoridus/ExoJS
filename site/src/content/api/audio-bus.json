@@ -227,7 +227,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Append a effect to the end of the chain (before the pan stage). The chain is rebuilt in place; existing audio routes through the new effect on the next frame."
+          "description": "Append a effect to the end of the chain (before the pan stage). The chain is rebuilt in place; existing audio routes through the new effect on the next frame. Attaching does not transfer ownership: the caller keeps it and must destroy() the effect once it is no longer used anywhere. Neither AudioBus.removeEffect nor AudioBus.destroy destroys it."
         },
         {
           "name": "destroy",
@@ -256,7 +256,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": ""
+          "description": "Tear the bus down: drop pending setup work, detach every attached effect and disconnect this bus's own nodes from the graph. Attached effects are detached, **not** destroyed — a bus never owns them (see AudioBus.addEffect), and the same instance may still be in use on a voice or another bus. Destroy each effect yourself once it is no longer needed anywhere."
         },
         {
           "name": "fadeIn",
@@ -501,7 +501,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Remove effect from the chain. No-op if not present. Caller still owns + must destroy() it."
+          "description": "Remove effect from the chain. No-op if not present. The caller still owns it and must destroy() it — the same contract AudioBus.destroy follows for whatever is still attached when the bus goes away."
         }
       ],
       "paragraphs": [],

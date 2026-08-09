@@ -1,6 +1,7 @@
 import type { MockInstance } from 'vitest';
 
 import { getAudioContext } from '#audio/audio-context';
+import { AudioBus } from '#audio/AudioBus';
 import type { AudioEffect } from '#audio/AudioEffect';
 import { AudioManager } from '#audio/AudioManager';
 import { Sound } from '#audio/Sound';
@@ -96,6 +97,27 @@ describe('Voice — per-voice effects', () => {
     expect((fx.outputNode as unknown as { disconnect: MockInstance }).disconnect).toHaveBeenCalled();
 
     sound.destroy();
+  });
+
+  test('an effect shared with a bus survives that bus being destroyed', () => {
+    const manager = new AudioManager();
+    const sound = new Sound(makeBufferStub());
+    const voice = manager.play(sound);
+    const fx = makeStubEffect();
+    const bus = new AudioBus('shared-effect-bus');
+
+    voice.addEffect(fx);
+    bus.addEffect(fx);
+
+    bus.destroy();
+
+    // A bus never owns the effects handed to it — destroying them here would
+    // pull the effect out from under the still-playing voice that also holds it.
+    expect(fx.destroy).not.toHaveBeenCalled();
+    expect(voice.ended).toBe(false);
+
+    sound.destroy();
+    fx.destroy();
   });
 
   test('stopping the voice detaches its effects', () => {
