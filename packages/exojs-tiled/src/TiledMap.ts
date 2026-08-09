@@ -115,8 +115,9 @@ export class TiledMap {
    * {@link TileMap} from `@codexo/exojs-tilemap`.
    *
    * Only orthogonal maps with atlas tilesets are supported. A non-orthogonal
-   * map, or a collection-of-images tileset, throws {@link TiledFormatError}
-   * rather than silently producing wrong (misplaced) or empty geometry. Tile
+   * map, a collection-of-images tileset, or a tileset with no image at all
+   * throws {@link TiledFormatError} rather than silently producing wrong
+   * (misplaced) or empty geometry. Tile
    * layers become renderable `TileLayer`s, object groups become data-only
    * `ObjectLayer`s, and image layers become data-only `ImageLayer`s; group
    * layer children are flattened in document order.
@@ -143,12 +144,14 @@ export class TiledMap {
       );
     }
 
-    // Build runtime tilesets. Tilesets with a per-tile image collection are
-    // not yet supported; collection-of-images tilesets throw TiledFormatError.
-    // Tilesets with no image at all (no texture, no tileTextures) are silently
-    // skipped — their cells appear as empty in the runtime layer.
+    // Build runtime tilesets. Every tileset must resolve to an atlas texture:
+    // a collection-of-images tileset is not supported yet, and a tileset with
+    // no image at all is unusable. Both throw TiledFormatError rather than
+    // dropping the tileset — a skipped tileset makes every cell and tile object
+    // that references it disappear from the runtime map without a diagnostic.
     const runtimeTilesets: TileSet[] = [];
-    // indexToRuntime[i] = runtime TileSet for tilesets[i], or null if skipped.
+    // indexToRuntime[i] = runtime TileSet for tilesets[i], or null for a hole in
+    // the (caller-supplied) tilesets array.
     const indexToRuntime: Array<TileSet | null> = [];
     for (let i = 0; i < this.tilesets.length; i++) {
       const tiledTs = this.tilesets[i];
@@ -165,9 +168,12 @@ export class TiledMap {
             `toTileMap() requires atlas tilesets in this release`,
           );
         }
-        // No atlas image and no per-tile images → skip; cells become empty.
-        indexToRuntime.push(null);
-        continue;
+        throw new TiledFormatError(
+          this.source,
+          `tilesets/${tiledTs.name}`,
+          `tileset "${tiledTs.name}" has no image; an atlas tileset needs an ` +
+          `"image" that resolves to a loaded texture`,
+        );
       }
       const tw = tiledTs.imageWidth ?? tiledTs.texture.width;
       const th = tiledTs.imageHeight ?? tiledTs.texture.height;
@@ -306,7 +312,7 @@ export class TiledMap {
 
 /**
  * Resolve a raw (flag-bearing) Tiled GID to a runtime {@link ResolvedTile}, or
- * `null` for an empty cell or a GID whose tileset was skipped (no atlas image).
+ * `null` for an empty cell or a GID no tileset covers.
  */
 function resolveGid(
   rawGid: number,
@@ -329,7 +335,7 @@ function resolveGid(
   if (tsIdx === -1) return null;
   const owningTs = tiledTilesets[tsIdx];
   const runtimeTs = indexToRuntime[tsIdx];
-  if (!owningTs || !runtimeTs) return null; // tileset was skipped (no atlas image)
+  if (!owningTs || !runtimeTs) return null; // hole in the tilesets array
   return {
     tileset: runtimeTs,
     localTileId: baseGid - owningTs.firstGid,
@@ -444,7 +450,7 @@ function buildTiledChunkSource(
               if (rawGid === undefined || rawGid === 0) continue; // sparse hole, or empty cell
 
               const resolved = resolveGid(rawGid, tiledTilesets, indexToRuntime);
-              if (!resolved) continue; // empty cell, or tileset was skipped (no atlas image)
+              if (!resolved) continue; // empty cell, or a GID no tileset covers
 
               out ??= new Uint32Array(chunkWidth * chunkHeight);
               const tilesetIndex = runtimeLayer.tilesets.indexOf(resolved.tileset);
@@ -485,8 +491,8 @@ function convertObjectLayer(
 }
 
 /**
- * Convert one `TiledObject` to a `TileMapObject`. Tile objects whose tileset
- * was skipped are dropped — returns `null`.
+ * Convert one `TiledObject` to a `TileMapObject`. A tile object whose GID
+ * resolves to no tileset is dropped — returns `null`.
  */
 function convertObject(
   object: TiledObject,

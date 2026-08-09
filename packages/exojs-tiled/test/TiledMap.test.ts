@@ -449,6 +449,14 @@ describe('TiledMap.toTileMap — error cases', () => {
     expect(() => map.toTileMap()).toThrow(TiledFormatError);
     expect(() => map.toTileMap()).toThrow(/collection-of-images/);
   });
+
+  it('throws TiledFormatError for a tileset that carries no image at all', () => {
+    // Silently skipping such a tileset made every cell and tile object that
+    // referenced it vanish from the runtime map with no diagnostic at all.
+    const map = makeMap();
+    expect(() => map.toTileMap()).toThrow(TiledFormatError);
+    expect(() => map.toTileMap()).toThrow(/tileset "tiles" has no image/);
+  });
 });
 
 // ── Object-kind conversion breadth (ellipse/polygon/polyline/dropped-tile) ──────
@@ -486,7 +494,7 @@ describe('TiledMap.toTileMap — object kind conversion', () => {
     if (obj.kind === 'polyline') expect(obj.points).toEqual(points);
   });
 
-  it('drops a tile object whose tileset has no atlas image (skipped at conversion)', () => {
+  it('throws instead of dropping a tile object whose tileset has no image at all', () => {
     const noImageTs = new TiledTileset({ name: 'no-image', tilewidth: 16, tileheight: 16, tilecount: 1, columns: 1 }, 1);
     const data = validateTiledMapData({
       type: 'map', version: '1.10', orientation: 'orthogonal', renderorder: 'right-down',
@@ -497,8 +505,10 @@ describe('TiledMap.toTileMap — object kind conversion', () => {
       }],
       tilesets: [{ firstgid: 1, name: 'no-image', tilewidth: 16, tileheight: 16, tilecount: 1, columns: 1 }],
     }, 'noimg.tmj');
-    const tm = new TiledMap('noimg.tmj', data, [noImageTs]).toTileMap();
-    expect(tm.objectLayers[0]!.objects).toHaveLength(0);
+    const map = new TiledMap('noimg.tmj', data, [noImageTs]);
+    expect(() => map.toTileMap()).toThrow(TiledFormatError);
+    expect(() => map.toTileMap()).toThrow(/no image/);
+    expect(() => map.toTileMap()).toThrow(/no-image/);
   });
 });
 
@@ -702,11 +712,11 @@ function makeBareMapData(overrides: Partial<TiledMapData> & { layers: TiledMapDa
 describe('TiledMap — defensive coverage of otherwise-unreachable branches', () => {
   it('tolerates an explicit undefined entry in the tilesets array (sort() never invokes the comparator on it)', () => {
     const data = validateTiledMapData({ ...RAW_MINIMAL, layers: [] }, 'holetilesets.tmj');
-    const map = new TiledMap('holetilesets.tmj', data, [TILESET, undefined as unknown as TiledTileset]);
+    const map = new TiledMap('holetilesets.tmj', data, [ATLAS_TILESET, undefined as unknown as TiledTileset]);
     expect(map.tilesets).toHaveLength(2);
     const tm = map.toTileMap();
-    // TILESET has no texture (skipped) and the hole is skipped too → no runtime tilesets.
-    expect(tm.tilesets).toHaveLength(0);
+    // The hole contributes no runtime tileset; the real one still converts.
+    expect(tm.tilesets).toHaveLength(1);
   });
 
   it('resolveGid returns null when no tileset covers the masked gid (requires clearing tilesets after construction, since valid construction always guarantees coverage)', () => {

@@ -114,9 +114,12 @@ describe('tiledRuntimeMapBinding.getIdentityKey', () => {
 });
 
 // ── Integration tests — minimal map ─────────────────────────────────────────
+//
+// `minimal.tmj` declares a tileset without an image, which `toTileMap()`
+// rejects — these runtime-binding tests convert, so they use the atlas fixture.
 
 describe('tiledRuntimeMapBinding.load — minimal map', () => {
-  const { context } = makeContext({ 'minimal.tmj': loadFixture('minimal.tmj') });
+  const { context } = makeContext({ 'minimal.tmj': loadFixture('with-tileset-image.tmj') });
 
   beforeEach(() => { vi.clearAllMocks(); });
 
@@ -129,8 +132,8 @@ describe('tiledRuntimeMapBinding.load — minimal map', () => {
   it('preserves map dimensions', async () => {
     const handler = tiledRuntimeMapBinding.create(context.loader);
     const result = await handler.load({ source: 'minimal.tmj' }, context);
-    expect(result.width).toBe(4);
-    expect(result.height).toBe(4);
+    expect(result.width).toBe(2);
+    expect(result.height).toBe(2);
     expect(result.tileWidth).toBe(16);
     expect(result.tileHeight).toBe(16);
   });
@@ -139,6 +142,12 @@ describe('tiledRuntimeMapBinding.load — minimal map', () => {
     const handler = tiledRuntimeMapBinding.create(context.loader);
     await handler.load({ source: 'minimal.tmj' }, context);
     expect(context.loader.load).toHaveBeenCalledWith(Asset.type('tiledMap', 'minimal.tmj'));
+  });
+
+  it('rejects a map whose tileset carries no image', async () => {
+    const { context: bare } = makeContext({ 'no-image.tmj': loadFixture('minimal.tmj') });
+    const handler = tiledRuntimeMapBinding.create(bare.loader);
+    await expect(handler.load({ source: 'no-image.tmj' }, bare)).rejects.toThrow(/has no image/);
   });
 });
 
@@ -191,7 +200,7 @@ describe('tiledRuntimeMapBinding.load — external tileset (.tsj)', () => {
 // ── Options passthrough ──────────────────────────────────────────────────────
 
 describe('tiledRuntimeMapBinding.load — options passthrough', () => {
-  const { context, loaderLoad } = makeContext({ 'world.tmj': loadFixture('minimal.tmj') });
+  const { context, loaderLoad } = makeContext({ 'world.tmj': loadFixture('with-tileset-image.tmj') });
 
   beforeEach(() => { vi.clearAllMocks(); });
 
