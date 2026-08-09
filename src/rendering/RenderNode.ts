@@ -275,6 +275,10 @@ export abstract class RenderNode extends SceneNode {
    * while any of its descendants holds focus (key events bubble up the
    * parent chain like pointer {@link InteractionEvent}s do).
    *
+   * A {@link Widget} additionally has to be enabled: disabling one takes it
+   * out of the Tab order and rejects programmatic focus, without touching
+   * this flag.
+   *
    * @default false
    */
   public focusable = false;

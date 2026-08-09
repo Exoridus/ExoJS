@@ -363,9 +363,10 @@ export class InteractionManager implements InteractionHooks {
   }
 
   /**
-   * Move keyboard focus to `node`. No-op when `node` is already focused or is
-   * not {@link RenderNode.focusable}. Fires `onBlur` on the previously focused
-   * node, then `onFocus` on `node`.
+   * Move keyboard focus to `node`. No-op when `node` is already focused, is
+   * not {@link RenderNode.focusable}, or is a {@link Widget} that is currently
+   * disabled. Fires `onBlur` on the previously focused node, then `onFocus` on
+   * `node`.
    */
   public focus(node: RenderNode): void {
     this._focus.focus(node);

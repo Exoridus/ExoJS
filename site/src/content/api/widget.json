@@ -2590,7 +2590,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "When true, this node can receive keyboard focus — via focus, Tab traversal, or app.interaction.focus(node) — and is delivered key events through onKeyDown / onKeyUp while focused, or while any of its descendants holds focus (key events bubble up the parent chain like pointer InteractionEvents do)."
+          "description": "When true, this node can receive keyboard focus — via focus, Tab traversal, or app.interaction.focus(node) — and is delivered key events through onKeyDown / onKeyUp while focused, or while any of its descendants holds focus (key events bubble up the parent chain like pointer InteractionEvents do). A Widget additionally has to be enabled: disabling one takes it out of the Tab order and rejects programmatic focus, without touching this flag."
         },
         {
           "name": "name",
@@ -2886,7 +2886,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Whether the widget responds to input. Disabled widgets typically dim and ignore clicks."
+          "description": "Whether the widget responds to input. Disabled widgets typically dim and ignore clicks, and are skipped by keyboard focus — they drop out of the Tab order and reject programmatic focus while disabled. Only the widget's own flag counts; disabling a container does not disable its children."
         },
         {
           "name": "filters",

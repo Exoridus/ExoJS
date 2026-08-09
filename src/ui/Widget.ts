@@ -73,7 +73,12 @@ export abstract class Widget extends Container {
     return this;
   }
 
-  /** Whether the widget responds to input. Disabled widgets typically dim and ignore clicks. */
+  /**
+   * Whether the widget responds to input. Disabled widgets typically dim and
+   * ignore clicks, and are skipped by keyboard focus — they drop out of the
+   * Tab order and reject programmatic focus while disabled. Only the widget's
+   * own flag counts; disabling a container does not disable its children.
+   */
   public get enabled(): boolean {
     return this._enabled;
   }
