@@ -191,3 +191,119 @@ describe('WebGPU partial DataTexture upload: packing scratch reuse', () => {
     expect(Array.from(packed!)).toEqual([5, 6, 9, 10]);
   });
 });
+
+/**
+ * A dirty region spanning the full texture width is already contiguous and
+ * tightly packed in the row-major buffer, so packing it into the scratch is a
+ * pure memcpy with no effect on the bytes `writeTexture` reads. WebGL2 has
+ * recognised this since the partial path was introduced; WebGPU packed every
+ * region alike, which made a scrolling ring-buffer upload — the shape the
+ * transform/tint rows and a spectrogram both take — pay a full copy of the
+ * band per sync for nothing.
+ */
+describe('WebGPU partial DataTexture upload: full-width fast path', () => {
+  let environment: MockWebGpuEnvironment;
+  let backend: WebGpuBackend;
+
+  beforeEach(async () => {
+    environment = createMockWebGpuEnvironment();
+    backend = await createMockBackend(environment);
+  });
+
+  afterEach(() => {
+    backend.destroy();
+    environment.restore();
+  });
+
+  test('a full-width band is uploaded straight from the texture buffer, without packing', () => {
+    const texture = new DataTexture({ width: 8, height: 8, format: TextureFormat.R32F });
+
+    syncTexture(backend, texture);
+
+    const fullUploadCount = environment.writeTextureData().length;
+
+    texture.commitRect(0, 3, 8, 2);
+    syncTexture(backend, texture);
+
+    const [band] = environment.writeTextureData().slice(fullUploadCount);
+
+    expect(band).toBeDefined();
+    expect(band!.buffer).toBe(texture.buffer.buffer);
+    expect(band!.byteOffset).toBe(3 * 8 * Float32Array.BYTES_PER_ELEMENT);
+    expect(band!.byteLength).toBe(2 * 8 * Float32Array.BYTES_PER_ELEMENT);
+  });
+
+  test('the uploaded band carries exactly the rows it covers', () => {
+    const texture = new DataTexture({ width: 4, height: 4, format: TextureFormat.R8 });
+
+    for (let index = 0; index < texture.buffer.length; index++) {
+      texture.buffer[index] = index;
+    }
+
+    syncTexture(backend, texture);
+
+    const fullUploadCount = environment.writeTextureData().length;
+
+    // Rows 1..2 in full → source indices 4..11.
+    texture.commitRect(0, 1, 4, 2);
+    syncTexture(backend, texture);
+
+    const band = environment.writeTextureData()[fullUploadCount] as Uint8Array | undefined;
+
+    expect(band).toBeDefined();
+    expect(Array.from(band!)).toEqual([4, 5, 6, 7, 8, 9, 10, 11]);
+  });
+
+  test('a band that keeps its position and size reuses one view object', () => {
+    const texture = new DataTexture({ width: 8, height: 8, format: TextureFormat.Rgba32F });
+
+    syncTexture(backend, texture);
+
+    const fullUploadCount = environment.writeTextureData().length;
+
+    for (let pass = 0; pass < 4; pass++) {
+      texture.commitRect(0, 2, 8, 1);
+      syncTexture(backend, texture);
+    }
+
+    const bands = environment.writeTextureData().slice(fullUploadCount);
+
+    expect(bands).toHaveLength(4);
+    expect(new Set(bands).size).toBe(1);
+  });
+
+  test('a band that moves mints a view at the new offset', () => {
+    const texture = new DataTexture({ width: 8, height: 8, format: TextureFormat.R32F });
+
+    syncTexture(backend, texture);
+
+    const fullUploadCount = environment.writeTextureData().length;
+
+    texture.commitRect(0, 1, 8, 1);
+    syncTexture(backend, texture);
+    texture.commitRect(0, 5, 8, 1);
+    syncTexture(backend, texture);
+
+    const [first, second] = environment.writeTextureData().slice(fullUploadCount);
+
+    expect(first!.byteOffset).toBe(1 * 8 * Float32Array.BYTES_PER_ELEMENT);
+    expect(second!.byteOffset).toBe(5 * 8 * Float32Array.BYTES_PER_ELEMENT);
+  });
+
+  test('a region narrower than the texture still goes through the packing scratch', () => {
+    const texture = new DataTexture({ width: 8, height: 8, format: TextureFormat.R32F });
+
+    syncTexture(backend, texture);
+
+    const fullUploadCount = environment.writeTextureData().length;
+
+    // Full-height but one column short — the rows are no longer contiguous.
+    texture.commitRect(0, 0, 7, 8);
+    syncTexture(backend, texture);
+
+    const [packed] = environment.writeTextureData().slice(fullUploadCount);
+
+    expect(packed).toBeDefined();
+    expect(packed!.buffer).not.toBe(texture.buffer.buffer);
+  });
+});

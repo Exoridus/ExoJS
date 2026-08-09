@@ -13,6 +13,8 @@ export type {
   InferLoadedEntry,
   KindByPath,
 } from './AssetDefinitions';
+export type { AssetNetworkErrorOptions } from './AssetNetworkError';
+export { AssetNetworkError } from './AssetNetworkError';
 export { AssetRef } from './AssetRef';
 export type { AssetInspection } from './AssetResidency';
 export type { AnyAssets, InferAssetsEntries } from './Assets';

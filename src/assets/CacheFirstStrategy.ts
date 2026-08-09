@@ -1,6 +1,7 @@
 import { AssetCacheError, type AssetCacheOperation } from './AssetCacheError';
 import type { CacheStore } from './CacheStore';
 import type { CacheRequest, CacheStrategy } from './CacheStrategy';
+import { fetchAsset } from './fetchAsset';
 
 /**
  * {@link CacheStrategy} that checks every provided {@link CacheStore} before
@@ -22,6 +23,11 @@ import type { CacheRequest, CacheStrategy } from './CacheStrategy';
  *
  * Stateless and free to share between loaders: diagnostics travel with the
  * request, so nothing is retained per caller.
+ *
+ * The network fallback is the one leg that can fail the load: it rejects with
+ * an {@link AssetNetworkError} carrying the URL, the HTTP status (when one
+ * arrived) and the original rejection as `cause`. A cancelled load still
+ * rejects with the platform `AbortError`.
  *
  * Returns the fully constructed resource — callers do not need to call
  * `request.factory.create` again.
@@ -63,12 +69,7 @@ export class CacheFirstStrategy implements CacheStrategy {
       }
     }
 
-    const response = await fetch(url, requestOptions);
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch "${url}" (${response.status} ${response.statusText}).`);
-    }
-
+    const response = await fetchAsset(url, requestOptions);
     const source = await factory.process(response);
     const resource = await factory.create(source, options);
 
