@@ -249,6 +249,12 @@ export class InputManager {
   public readonly onPointerSwipe = new Signal<[pointer: Pointer, x: number, y: number]>();
   public readonly onPointerCancel = new Signal<[pointer: Pointer, x: number, y: number]>();
   public readonly onMouseWheel = new Signal<[Vector]>();
+  /**
+   * Fires once per physical key press with the key's channel. OS auto-repeat
+   * while a key is held does not fire again, so this matches the down
+   * transition an action's `pressed` reports rather than diverging from it.
+   * Read the channel buffer (or an action) to know a key is still held.
+   */
   public readonly onKeyDown = new Signal<[number]>();
   public readonly onKeyUp = new Signal<[number]>();
   /**
@@ -824,6 +830,13 @@ export class InputManager {
    * {@link keyboardModifierChannelInfo}. `keyEvents`/`onKeyDown` only ever see
    * the side channel: the aggregate is buffer state an action reads, not a
    * signal of its own, keeping one physical event equal to one dispatch.
+   *
+   * An OS auto-repeat (`KeyboardEvent.repeat`) is not a physical down
+   * transition and produces no channel write and no `onKeyDown` dispatch —
+   * `onKeyDown` means exactly what `ButtonAction.pressed` means, one dispatch
+   * per real press. A captured key is still consumed on every repeat, since a
+   * held key whose browser default is suppressed on the first event must stay
+   * suppressed while it is held.
    */
   private handleKeyDown(event: KeyboardEvent): void {
     if (!this.canvasFocusedValue) {
@@ -836,24 +849,27 @@ export class InputManager {
       return;
     }
 
-    this.channels[channel] = 1;
-    this._recordChannelChanges(channel, 1);
-
     const modifier = keyboardModifierChannelInfo(channel);
-    let capturedByAggregate = false;
-
-    if (modifier !== undefined) {
-      this.channels[modifier.aggregate] = 1;
-      this._recordChannelChanges(modifier.aggregate, 1);
-      capturedByAggregate = this.capturedKeyChannels.has(modifier.aggregate);
-    }
-
-    this.keyEvents.push({ channel, pressed: true });
-    this.flags.addMask(InputManagerFlag.KeyChange);
+    const capturedByAggregate = modifier !== undefined && this.capturedKeyChannels.has(modifier.aggregate);
 
     if (capturedByAggregate || this.capturedKeyChannels.has(channel)) {
       stopEvent(event);
     }
+
+    if (event.repeat) {
+      return;
+    }
+
+    this.channels[channel] = 1;
+    this._recordChannelChanges(channel, 1);
+
+    if (modifier !== undefined) {
+      this.channels[modifier.aggregate] = 1;
+      this._recordChannelChanges(modifier.aggregate, 1);
+    }
+
+    this.keyEvents.push({ channel, pressed: true });
+    this.flags.addMask(InputManagerFlag.KeyChange);
   }
 
   /**

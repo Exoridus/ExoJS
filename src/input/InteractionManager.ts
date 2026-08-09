@@ -123,6 +123,26 @@ interface IndexedNode {
   node: RenderNode;
 }
 
+/**
+ * Whether `node` is `root` itself or sits anywhere beneath it. Walks up from
+ * `node` rather than down from `root`: the caller already holds the deep node
+ * and the chain up is bounded by the scene's depth, while a downward walk
+ * would visit the whole subtree.
+ */
+function isSelfOrDescendant(node: RenderNode, root: RenderNode): boolean {
+  let current: RenderNode | null = node;
+
+  while (current !== null) {
+    if (current === root) {
+      return true;
+    }
+
+    current = current.parent;
+  }
+
+  return false;
+}
+
 // ---------------------------------------------------------------------------
 
 /**
@@ -289,6 +309,34 @@ export class InteractionManager implements InteractionHooks {
 
   /** Whether any pointer enqueued events since the last update(). */
   private _dirty = false;
+
+  /**
+   * Whether the SCENE changed since the last flush in a way that can change
+   * what sits under a stationary pointer — an interactive node moved, was
+   * added, was removed, or flipped its `interactive` flag. Hover is a fact
+   * about the pointer AND the scene, so tracking it off pointer events alone
+   * (the `_dirty` gate) let a node slide out from under a resting cursor, or
+   * slide under one, with no `pointerover`/`pointerout` ever dispatched.
+   * Cleared by the same flush that acts on it, exactly like {@link _dirty}.
+   */
+  private _hoverDirty = false;
+
+  /**
+   * Every pointer with at least one live phase, kept so the scene-driven
+   * hover pass ({@link _hoverDirty}) has something to re-resolve on a frame
+   * with no pointer events of its own. Entries are dropped when a pointer's
+   * own Cancel/Leave retires it, which is the same moment `InputManager`
+   * stops tracking it.
+   */
+  private readonly _livePointers = new Map<number, Pointer>();
+
+  /**
+   * Pointer ids this flush's journal drain already settled hover for —
+   * resolved, or deliberately left alone because the pointer exited. Read by
+   * the scene-driven pass so it only visits the pointers the drain did not
+   * account for. Scoped to a single flush.
+   */
+  private readonly _hoverSettled = new Set<number>();
 
   private readonly _onPointerDownHandler: (pointer: Pointer, x: number, y: number) => void;
   private readonly _onPointerMoveHandler: (pointer: Pointer, x: number, y: number) => void;
@@ -462,7 +510,10 @@ export class InteractionManager implements InteractionHooks {
     this._anchoredNodes.clear();
     this._groupWorldDescendants.clear();
     this._nodeBoundaryGroup.clear();
+    this._livePointers.clear();
+    this._hoverSettled.clear();
     this._dirty = false;
+    this._hoverDirty = false;
 
     if (this._tree !== null) {
       this._tree.destroy();
@@ -477,9 +528,11 @@ export class InteractionManager implements InteractionHooks {
    * queued here) and before game-state updates so that user listeners on
    * `onPointerDown` etc. fire before per-frame logic mutates state.
    *
-   * The dirty flag ensures this is a no-op on frames with no pointer
-   * activity; every signal handler that enqueues an event sets `_dirty =
-   * true`, and `update()` clears it at the top before draining the queue.
+   * The dirty flags ensure this is a no-op on frames with nothing to do:
+   * every signal handler that enqueues an event sets `_dirty = true`, and
+   * every scene change that can move a node under or out from under a
+   * stationary pointer sets `_hoverDirty = true` (see that field's doc
+   * comment). Both are cleared at the top, before the queue drains.
    *
    * Gated by the active scope's {@link SceneState} (only `Active` dispatches
    * — pause does not gate interaction; `Preparing`/`Suspended`/`Destroying`/
@@ -489,12 +542,14 @@ export class InteractionManager implements InteractionHooks {
    * replays once it clears.
    */
   private _dispatchFrame(): void {
-    if (!this._dirty) return;
+    if (!this._dirty && !this._hoverDirty) return;
 
     const state = this._app.scenes.state;
     const gated = (state !== null && state !== SceneState.Active) || this._app.scenes._transitionGateOpen;
+    const hoverDirty = this._hoverDirty;
 
     this._dirty = false;
+    this._hoverDirty = false;
 
     if (gated) {
       this._journal.length = 0;
@@ -504,6 +559,22 @@ export class InteractionManager implements InteractionHooks {
 
     this._flushStaleEntries();
     this._drainJournal();
+
+    // The scene-driven half of hover: pointers that sent nothing this flush
+    // but may still have had the node under them change out from beneath
+    // them. Runs after the drain so it sees this flush's final capture and
+    // press state, and skips whatever the drain already settled.
+    if (hoverDirty) {
+      for (const pointer of this._livePointers.values()) {
+        if (this._hoverSettled.has(pointer.id)) {
+          continue;
+        }
+
+        this._refreshHover(pointer);
+      }
+    }
+
+    this._hoverSettled.clear();
     this._updateCursor();
   }
 
@@ -646,6 +717,7 @@ export class InteractionManager implements InteractionHooks {
     for (const n of this._iterateSubtree(node)) {
       if (n.interactive) {
         this._registerNode(n);
+        this._hoverDirty = true;
       }
     }
 
@@ -654,11 +726,15 @@ export class InteractionManager implements InteractionHooks {
 
   /**
    * Called when a subtree rooted at `node` is about to be removed from the
-   * scene. Walks the subtree and unregisters any interactive nodes found.
+   * scene. Retires the hover of any pointer resting inside the subtree
+   * BEFORE anything is unregistered — see {@link _retireHoverInSubtree} —
+   * then walks the subtree and unregisters any interactive nodes found.
    *
    * @internal
    */
   public _notifyNodeRemoved(node: RenderNode): void {
+    this._retireHoverInSubtree(node);
+
     for (const n of this._iterateSubtree(node)) {
       if (this._interactiveNodes.has(n)) {
         this._unregisterNode(n);
@@ -667,14 +743,18 @@ export class InteractionManager implements InteractionHooks {
   }
 
   /**
-   * Called when a node's `interactive` property changes.
+   * Called when a node's `interactive` property changes. A node that stops
+   * being interactive stops being hoverable with it, so it retires its hover
+   * exactly like a removed one does.
    *
    * @internal
    */
   public _notifyInteractiveChanged(node: RenderNode, becameInteractive: boolean): void {
     if (becameInteractive) {
       this._registerNode(node);
+      this._hoverDirty = true;
     } else {
+      this._retireHoverInSubtree(node);
       this._unregisterNode(node);
     }
   }
@@ -682,13 +762,16 @@ export class InteractionManager implements InteractionHooks {
   /**
    * Called when a node's world transform / bounds are invalidated. If the
    * node is currently tracked as interactive, mark it stale so its tree
-   * entry is refreshed on the next query.
+   * entry is refreshed on the next query, and mark hover for recomputation —
+   * a node that moves can move out from under a resting pointer, or under
+   * one, with no pointer event of its own to notice it.
    *
    * @internal
    */
   public _notifyBoundsInvalidated(node: RenderNode): void {
     if (this._interactiveNodes.has(node)) {
       this._staleNodes.add(node);
+      this._hoverDirty = true;
     }
   }
 
@@ -711,6 +794,7 @@ export class InteractionManager implements InteractionHooks {
 
     for (const node of descendants) {
       this._staleNodes.add(node);
+      this._hoverDirty = true;
     }
   }
 
@@ -801,6 +885,12 @@ export class InteractionManager implements InteractionHooks {
    */
   private _enqueuePhase(pointer: Pointer, kind: InteractionPhaseKind, x: number, y: number): void {
     const journal = this._journal;
+
+    // Every phase, Cancel/Leave included — those are dropped again only once
+    // the drain has processed them, so a pointer stays visible to the
+    // scene-driven hover pass for exactly as long as it is really there.
+    this._livePointers.set(pointer.id, pointer);
+
     const lastIndex = journal.length - 1;
     const last = journal[lastIndex];
 
@@ -845,17 +935,19 @@ export class InteractionManager implements InteractionHooks {
    * Hover tracking is the one exception to per-entry processing: it
    * deliberately follows each pointer's live, end-of-flush position — "what
    * is currently hovered" has no per-entry meaning — so, for every DISTINCT
-   * pointer that had at least one entry this flush, it runs once, after every
-   * entry (for every pointer, and every context-menu request) has been
-   * processed, reflecting this flush's true final state per pointer (skipped
-   * for a pointer whose OWN entries ended in a Cancel/Leave, which dispatches
-   * its own `pointerout` fallback instead, or while a drag is active, since
-   * the dragged node stays "hovered" by definition). Deferring every
-   * pointer's hover step to after the FULL journal drains, rather than right
-   * after that pointer's own last entry, is behaviorally identical — hover
-   * state is keyed per pointer id and nothing about it is retroactively
-   * changed by a DIFFERENT pointer's entries processing in between — while
-   * keeping the drain itself a single, flat, strictly-ordered pass.
+   * pointer that had at least one entry this flush, {@link _refreshHover}
+   * runs once, after every entry (for every pointer, and every context-menu
+   * request) has been processed, reflecting this flush's true final state per
+   * pointer (skipped for a pointer whose OWN entries ended in a Cancel/Leave,
+   * which dispatches its own `pointerout` fallback instead, or while a drag
+   * is active, since the dragged node stays "hovered" by definition).
+   * Deferring every pointer's hover step to after the FULL journal drains,
+   * rather than right after that pointer's own last entry, is behaviorally
+   * identical — hover state is keyed per pointer id and nothing about it is
+   * retroactively changed by a DIFFERENT pointer's entries processing in
+   * between — while keeping the drain itself a single, flat, strictly-ordered
+   * pass. Pointers that sent NO entry at all are not this method's business:
+   * {@link _dispatchFrame} runs the scene-driven half of hover for them.
    */
   private _drainJournal(): void {
     // Capture the complete failed batch up front. If a user handler throws,
@@ -904,6 +996,11 @@ export class InteractionManager implements InteractionHooks {
     const journal = this._journal;
     const touchedOrder: Pointer[] = [];
     const sawExit = new Map<number, boolean>();
+
+    // Opened here rather than trusted to be empty: a throwing handler skips
+    // the clear at the end of `_dispatchFrame`, and a leftover id would make
+    // the NEXT flush's scene-driven pass skip a pointer it has to visit.
+    this._hoverSettled.clear();
 
     for (const entry of journal) {
       const { pointer, x: phaseX, y: phaseY } = entry;
@@ -1043,6 +1140,7 @@ export class InteractionManager implements InteractionHooks {
 
           this._lastHit.delete(id);
           this._pressTargets.delete(id);
+          this._livePointers.delete(id);
           break;
         }
 
@@ -1056,31 +1154,61 @@ export class InteractionManager implements InteractionHooks {
     for (const pointer of touchedOrder) {
       const { id } = pointer;
 
-      if ((sawExit.get(id) ?? false) || this._currentCapture(id) !== null) {
+      // Recorded whether or not hover actually re-resolves below, so the
+      // scene-driven pass in `_dispatchFrame` never revisits a pointer this
+      // drain already had its say about — least of all one that just exited.
+      this._hoverSettled.add(id);
+
+      if (sawExit.get(id) ?? false) {
         continue;
       }
 
-      const { node: hit, x, y } = this._resolvePhase(pointer.x, pointer.y, null);
-      const last = this._lastHit.get(id) ?? null;
-
-      if (hit !== last) {
-        if (last !== null && this._isLive(last)) {
-          this._dispatchBubble(new InteractionEvent('pointerout', last, pointer, x, y));
-        }
-
-        // The pointerout handler just run on `last` may have destroyed or
-        // detached `hit` (a different node) before it gets its own dispatch.
-        if (hit !== null && this._isLive(hit)) {
-          this._dispatchBubble(new InteractionEvent('pointerover', hit, pointer, x, y));
-        }
-
-        // Either dispatch just above — pointerout on `last`, or `hit`'s own
-        // pointerover handler removing/destroying itself — may have left
-        // `hit` no longer live; re-checked one final time immediately before
-        // it is ever recorded, so no stale hover entry survives either case.
-        this._setLastHit(id, hit !== null && this._isLive(hit) ? hit : null);
-      }
+      this._refreshHover(pointer);
     }
+  }
+
+  /**
+   * Re-resolve what `pointer` is over right now and reconcile it with the
+   * recorded hover, dispatching `pointerout` on the node being left and
+   * `pointerover` on the node being entered. Deliberately follows the
+   * pointer's LIVE position rather than any one phase's coordinates — "what
+   * is currently hovered" has no per-entry meaning — and no-ops while the
+   * pointer is captured, since the dragged node stays hovered by definition.
+   *
+   * Called from two places, for the two independent reasons hover can go
+   * stale: once per pointer that had journal entries this flush (the pointer
+   * moved), and once per remaining live pointer when the scene itself changed
+   * under a pointer that did not move (see {@link _hoverDirty}).
+   */
+  private _refreshHover(pointer: Pointer): void {
+    const { id } = pointer;
+
+    if (this._currentCapture(id) !== null) {
+      return;
+    }
+
+    const { node: hit, x, y } = this._resolvePhase(pointer.x, pointer.y, null);
+    const last = this._lastHit.get(id) ?? null;
+
+    if (hit === last) {
+      return;
+    }
+
+    if (last !== null && this._isLive(last)) {
+      this._dispatchBubble(new InteractionEvent('pointerout', last, pointer, x, y));
+    }
+
+    // The pointerout handler just run on `last` may have destroyed or
+    // detached `hit` (a different node) before it gets its own dispatch.
+    if (hit !== null && this._isLive(hit)) {
+      this._dispatchBubble(new InteractionEvent('pointerover', hit, pointer, x, y));
+    }
+
+    // Either dispatch just above — pointerout on `last`, or `hit`'s own
+    // pointerover handler removing/destroying itself — may have left
+    // `hit` no longer live; re-checked one final time immediately before
+    // it is ever recorded, so no stale hover entry survives either case.
+    this._setLastHit(id, hit !== null && this._isLive(hit) ? hit : null);
   }
 
   /**
@@ -1759,6 +1887,10 @@ export class InteractionManager implements InteractionHooks {
     this._staleNodes.delete(node);
     this._anchoredNodes.delete(node);
     this._clearGroupMembership(node);
+    // Whatever this node was covering is exposed now, so the next flush has
+    // to re-resolve hover even if no pointer moves — the `pointerover` half
+    // of the exchange `_retireHoverInSubtree` opened.
+    this._hoverDirty = true;
 
     const proxy = this._proxies.get(node);
 
@@ -1794,6 +1926,49 @@ export class InteractionManager implements InteractionHooks {
       if (drag.node === node) {
         this._endDrag(pointerId);
       }
+    }
+  }
+
+  /**
+   * Close out the hover of every pointer resting on `root` or anything under
+   * it, because that subtree is about to stop being hoverable (removed from
+   * the scene, or no longer interactive). Without this the enter/leave
+   * bookkeeping simply does not balance: the node received `pointerover` and
+   * would never receive the matching `pointerout`, which a pooled node
+   * notices immediately — it comes back from the pool believing it is still
+   * hovered.
+   *
+   * Runs BEFORE the caller unregisters anything, while the subtree is still
+   * live enough to dispatch on: `Container.removeChildAt` clears the child's
+   * parent before it notifies, but leaves the stage installed until after,
+   * so `pointerout` reaches the node and bubbles through whatever is left of
+   * its chain. Only the exit is dispatched here; the matching `pointerover`
+   * for whatever the pointer is over instead belongs to the next flush's
+   * hover pass, which `_unregisterNode` arms via {@link _hoverDirty} — the
+   * scene is mid-mutation right now and a hit-test would be answering about
+   * a half-updated tree.
+   */
+  private _retireHoverInSubtree(root: RenderNode): void {
+    if (this._lastHit.size === 0) {
+      return;
+    }
+
+    for (const [pointerId, hit] of [...this._lastHit]) {
+      if (!isSelfOrDescendant(hit, root)) {
+        continue;
+      }
+
+      const pointer = this._livePointers.get(pointerId) ?? null;
+
+      this._lastHit.delete(pointerId);
+
+      if (pointer === null || !this._isLive(hit)) {
+        continue;
+      }
+
+      const { x, y } = this._designToLayerSpace(pointer.x, pointer.y, this._isUINode(hit));
+
+      this._dispatchBubble(new InteractionEvent('pointerout', hit, pointer, x, y));
     }
   }
 

@@ -53,20 +53,20 @@ export class SteamDeckGamepadMapping extends GamepadMapping {
       ],
       [
         // Sticks — direction-split (0..1).
-        new GamepadAxis(0, GamepadAxis.LeftStickLeft, { invert: true }),
-        new GamepadAxis(0, GamepadAxis.LeftStickRight),
-        new GamepadAxis(1, GamepadAxis.LeftStickUp, { invert: true }),
-        new GamepadAxis(1, GamepadAxis.LeftStickDown),
-        new GamepadAxis(2, GamepadAxis.RightStickLeft, { invert: true }),
-        new GamepadAxis(2, GamepadAxis.RightStickRight),
-        new GamepadAxis(3, GamepadAxis.RightStickUp, { invert: true }),
-        new GamepadAxis(3, GamepadAxis.RightStickDown),
+        new GamepadAxis(0, GamepadAxis.LeftStickLeft, { invert: true, pair: 1 }),
+        new GamepadAxis(0, GamepadAxis.LeftStickRight, { pair: 1 }),
+        new GamepadAxis(1, GamepadAxis.LeftStickUp, { invert: true, pair: 0 }),
+        new GamepadAxis(1, GamepadAxis.LeftStickDown, { pair: 0 }),
+        new GamepadAxis(2, GamepadAxis.RightStickLeft, { invert: true, pair: 3 }),
+        new GamepadAxis(2, GamepadAxis.RightStickRight, { pair: 3 }),
+        new GamepadAxis(3, GamepadAxis.RightStickUp, { invert: true, pair: 2 }),
+        new GamepadAxis(3, GamepadAxis.RightStickDown, { pair: 2 }),
 
         // Sticks — aggregate signed (-1..1).
-        new GamepadAxis(0, GamepadAxis.LeftStickX, { bipolar: true }),
-        new GamepadAxis(1, GamepadAxis.LeftStickY, { bipolar: true }),
-        new GamepadAxis(2, GamepadAxis.RightStickX, { bipolar: true }),
-        new GamepadAxis(3, GamepadAxis.RightStickY, { bipolar: true }),
+        new GamepadAxis(0, GamepadAxis.LeftStickX, { bipolar: true, pair: 1 }),
+        new GamepadAxis(1, GamepadAxis.LeftStickY, { bipolar: true, pair: 0 }),
+        new GamepadAxis(2, GamepadAxis.RightStickX, { bipolar: true, pair: 3 }),
+        new GamepadAxis(3, GamepadAxis.RightStickY, { bipolar: true, pair: 2 }),
 
         // Triggers as analog axes (Steam Deck reports them as a8/a9, not
         // buttons 6/7 the way a W3C-standard-mapped device would — raw

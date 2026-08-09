@@ -1590,7 +1590,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Fires once per physical key press with the key's channel. OS auto-repeat while a key is held does not fire again, so this matches the down transition an action's pressed reports rather than diverging from it. Read the channel buffer (or an action) to know a key is still held."
         },
         {
           "name": "onKeyUp",

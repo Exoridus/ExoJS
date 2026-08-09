@@ -1,5 +1,6 @@
 import type { Application } from '#core/Application';
 import type { Time } from '#core/Time';
+import type { InputBinding } from '#input/InputBinding';
 import { Keyboard } from '#input/types';
 import { View } from '#rendering/View';
 
@@ -45,6 +46,13 @@ export interface DebugLayers {
  * F5 is deliberately left unbound: browsers reload the page on it, which
  * would tear down the very session being inspected.
  *
+ * Each key is claimed through a real {@link InputBinding} rather than the
+ * `onKeyDown` signal, so the overlay's shortcuts also suppress the browser's
+ * own default for those keys while it exists — F1 opening a help window and
+ * F3 opening the find bar are otherwise triggered right alongside the panel
+ * they were meant to toggle. Binding registration is what marks a key
+ * consumed; a signal subscription runs a frame too late to prevent anything.
+ *
  * The master `visible` switch suppresses all layer rendering when false
  * without changing individual layer visibility flags.
  */
@@ -58,8 +66,9 @@ export class DebugOverlay {
   private readonly _app: Application;
   private readonly _view: View;
   private readonly _onFrameHandler: (delta: Time) => void;
-  private readonly _onKeyDownHandler: (channel: number) => void;
   private readonly _onResizeHandler: (width: number, height: number) => void;
+  /** One per keybinding — held so `destroy()` can release the keys it claimed. */
+  private readonly _keyBindings: readonly InputBinding[];
 
   public constructor(app: Application) {
     this._app = app;
@@ -74,12 +83,19 @@ export class DebugOverlay {
     };
 
     this._onFrameHandler = this._onFrame.bind(this);
-    this._onKeyDownHandler = this._onKeyDown.bind(this);
     this._onResizeHandler = this._onResize.bind(this);
 
     app.onFrame.add(this._onFrameHandler);
-    app.input.onKeyDown.add(this._onKeyDownHandler);
     app.onResize.add(this._onResizeHandler);
+
+    this._keyBindings = [
+      app.input.onStart(Keyboard.F1, () => this._toggle(this.layers.performance)),
+      app.input.onStart(Keyboard.F2, () => this._toggle(this.layers.boundingBoxes)),
+      app.input.onStart(Keyboard.F3, () => this._toggle(this.layers.hitTest)),
+      app.input.onStart(Keyboard.F4, () => this._toggle(this.layers.pointerStack)),
+      // F5 is skipped on purpose — see the keybinding note on the class.
+      app.input.onStart(Keyboard.F6, () => this._toggle(this.layers.renderPassInspector)),
+    ];
   }
 
   /**
@@ -89,8 +105,11 @@ export class DebugOverlay {
    */
   public destroy(): void {
     this._app.onFrame.remove(this._onFrameHandler);
-    this._app.input.onKeyDown.remove(this._onKeyDownHandler);
     this._app.onResize.remove(this._onResizeHandler);
+
+    for (const binding of this._keyBindings) {
+      binding.unbind();
+    }
 
     for (const layer of Object.values(this.layers) as DebugLayer[]) {
       layer.destroy();
@@ -140,24 +159,7 @@ export class DebugOverlay {
     }
   }
 
-  private _onKeyDown(channel: number): void {
-    switch (channel) {
-      case Keyboard.F1:
-        this.layers.performance.visible = !this.layers.performance.visible;
-        break;
-      case Keyboard.F2:
-        this.layers.boundingBoxes.visible = !this.layers.boundingBoxes.visible;
-        break;
-      case Keyboard.F3:
-        this.layers.hitTest.visible = !this.layers.hitTest.visible;
-        break;
-      case Keyboard.F4:
-        this.layers.pointerStack.visible = !this.layers.pointerStack.visible;
-        break;
-      // F5 is skipped on purpose — see the keybinding note on the class.
-      case Keyboard.F6:
-        this.layers.renderPassInspector.visible = !this.layers.renderPassInspector.visible;
-        break;
-    }
+  private _toggle(layer: DebugLayer): void {
+    layer.visible = !layer.visible;
   }
 }

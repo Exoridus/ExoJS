@@ -41,6 +41,8 @@ The overlay subscribes to `app.onFrame` and renders each visible layer. World-sp
 
 F5 is deliberately unbound — browsers reload the page on it, which would tear down the very session you are inspecting.
 
+While the overlay exists it claims these keys as engine input, so the browser's own defaults for them (F1's help window, F3's find bar) stay suppressed. `debug.destroy()` releases them again.
+
 ## Performance layer
 
 The [`PerformanceLayer`](/ExoJS/en/api/performance-layer/) shows four real-time metrics in a compact panel (top-left):

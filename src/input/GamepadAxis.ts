@@ -70,8 +70,9 @@ export interface GamepadAxisOptions {
    */
   normalize?: boolean;
   /**
-   * Activation threshold (deadzone). After the invert/normalize pipeline,
-   * any value at or below this reads as 0. Default 0.2.
+   * Deadzone radius, 0..1. Input at or below it reads as 0; input past it is
+   * rescaled so the channel still ramps from 0 to full travel rather than
+   * jumping straight to the deadzone magnitude. Default 0.2.
    */
   threshold?: number;
   /**
@@ -83,6 +84,15 @@ export interface GamepadAxisOptions {
    * Default `false`.
    */
   bipolar?: boolean;
+  /**
+   * Raw `Gamepad.axes[]` index of the axis this one forms a 2D stick with —
+   * the Y index on an X axis and vice versa. Set on both halves of a stick so
+   * the deadzone is evaluated on the pair's radius instead of each axis on its
+   * own; see {@link GamepadAxis.transformValue}. Leave unset for a control
+   * with no second dimension (a trigger reported through `axes[]`, a
+   * standalone auxiliary axis).
+   */
+  pair?: number;
 }
 
 /**
@@ -113,6 +123,8 @@ export class GamepadAxis {
   public readonly normalize: boolean;
   public readonly threshold: number;
   public readonly bipolar: boolean;
+  /** Raw axis index of this axis's stick partner, or `null` for a one-dimensional control. See {@link GamepadAxisOptions.pair}. */
+  public readonly pair: number | null;
 
   public constructor(index: number, channel: GamepadAxisChannel | GamepadButtonChannel, options: GamepadAxisOptions = {}) {
     this.index = index;
@@ -121,19 +133,43 @@ export class GamepadAxis {
     this.normalize = options.normalize ?? false;
     this.threshold = clamp(options.threshold ?? 0.2, 0, 1);
     this.bipolar = options.bipolar ?? false;
+    this.pair = options.pair ?? null;
   }
 
   /**
-   * Apply the axis transform pipeline to a raw browser axis value
-   * (typically `Gamepad.axes[i]`, in -1..1).
+   * Apply the axis transform pipeline to a raw browser axis value (typically
+   * `Gamepad.axes[i]`, in -1..1). `pairValue` is the raw value of the axis at
+   * {@link pair} for the same poll, and is ignored when this axis has no
+   * partner.
    *
-   * Pipeline: clamp to [-1, 1] → optional invert → optional normalize to
-   * [0, 1] → deadzone. `bipolar` picks a symmetric, sign-preserving deadzone
-   * (returns 0 when the absolute value is at or below `threshold`); otherwise
-   * a one-sided check is used (returns 0 unless the value exceeds `threshold`).
+   * The deadzone is radial, never per-axis: a stick's two raw components are
+   * judged together on their radius, and everything past that radius is
+   * rescaled so the channel ramps from 0 at the deadzone edge to full travel
+   * at the rim. Per-axis deadzones are what produce the two artefacts this
+   * avoids — a jump to `threshold`'s magnitude the instant the stick leaves
+   * the deadzone, and a square response curve where a diagonal reads further
+   * than a cardinal push of the same physical deflection. The scaled radius is
+   * capped at 1, so hardware that reports a square gate (`x = y = 1`) still
+   * lands on the unit circle with its direction intact rather than
+   * overshooting.
+   *
+   * A one-dimensional control (a trigger reported through `axes[]`, a
+   * standalone auxiliary axis) gets the same rescaled deadzone applied to its
+   * own magnitude, in the channel's own domain — i.e. after {@link normalize}
+   * has moved a trigger's rest position from -1 to 0, so the deadzone covers
+   * the bottom of the pull rather than the middle of it.
+   *
+   * Pipeline: clamp to [-1, 1] → radial deadzone (paired axes) → optional
+   * invert → optional normalize to [0, 1] → scalar deadzone (unpaired axes) →
+   * range clamp. A `bipolar` channel keeps the full [-1, +1] range; every
+   * other channel is unipolar and clamps to [0, 1].
    */
-  public transformValue(value: number): number {
+  public transformValue(value: number, pairValue = 0): number {
     let result = clamp(value, -1, 1);
+
+    if (this.pair !== null) {
+      result = applyDeadzone(result, Math.hypot(result, clamp(pairValue, -1, 1)), this.threshold);
+    }
 
     if (this.invert) {
       result *= -1;
@@ -143,12 +179,32 @@ export class GamepadAxis {
       result = (result + 1) / 2;
     }
 
-    if (this.bipolar) {
-      return Math.abs(result) > this.threshold ? result : 0;
+    if (this.pair === null) {
+      result = applyDeadzone(result, Math.abs(result), this.threshold);
     }
 
-    return result > this.threshold ? result : 0;
+    return this.bipolar ? clamp(result, -1, 1) : clamp(result, 0, 1);
   }
+}
+
+/**
+ * Scale `component` by the deadzone response of `magnitude` — the radius of
+ * the whole control the component belongs to, which for a stick spans both of
+ * its axes and for a one-dimensional control is just `|component|`. Returns 0
+ * inside the deadzone; outside it, remaps `(threshold, 1]` onto `(0, 1]` so
+ * there is no step at the edge, capping the radius at 1 so a magnitude beyond
+ * the rim shortens to the unit circle instead of amplifying the component.
+ */
+function applyDeadzone(component: number, magnitude: number, threshold: number): number {
+  // Capped before the comparison, not after: a square-gated stick reports a
+  // radius up to sqrt(2), and `threshold` may itself be 1 (nothing passes).
+  const radius = Math.min(magnitude, 1);
+
+  if (radius <= threshold) {
+    return 0;
+  }
+
+  return (component / magnitude) * ((radius - threshold) / (1 - threshold));
 }
 
 const axis = (offset: number): GamepadAxisChannel => (ChannelOffset.Gamepads + offset) as GamepadAxisChannel;

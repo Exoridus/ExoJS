@@ -24,7 +24,8 @@ describe('GamepadAxis.transformValue', () => {
 
     expect(axis.transformValue(0.1)).toBe(0);
     expect(axis.transformValue(-0.1)).toBe(0);
-    expect(axis.transformValue(-0.5)).toBeCloseTo(-0.5);
+    // Rescaled: the remaining 0.3 of travel past the deadzone spans 0.8.
+    expect(axis.transformValue(-0.5)).toBeCloseTo(-0.375);
   });
 
   test('non-bipolar mode clamps negative-or-below-threshold values to 0', () => {
@@ -32,7 +33,50 @@ describe('GamepadAxis.transformValue', () => {
 
     expect(axis.transformValue(0.1)).toBe(0);
     expect(axis.transformValue(-0.5)).toBe(0);
-    expect(axis.transformValue(0.5)).toBeCloseTo(0.5);
+    expect(axis.transformValue(0.5)).toBeCloseTo(0.375);
+  });
+
+  test('the deadzone ramps from 0 instead of jumping to the threshold magnitude', () => {
+    const axis = new GamepadAxis(0, GamepadAxis.LeftStickX, { bipolar: true, threshold: 0.2 });
+
+    expect(axis.transformValue(0.2)).toBe(0);
+    // Just past the edge the channel must still read ~0, not ~0.2.
+    expect(axis.transformValue(0.201)).toBeCloseTo(0, 2);
+    expect(axis.transformValue(1)).toBeCloseTo(1);
+  });
+
+  test('a paired axis is deadzoned on the stick radius, not on its own component', () => {
+    const x = new GamepadAxis(0, GamepadAxis.LeftStickX, { bipolar: true, threshold: 0.2, pair: 1 });
+
+    // Each component alone sits inside the deadzone, but the stick is pushed
+    // 0.212 out along the diagonal — past it.
+    expect(x.transformValue(0.15, 0.15)).toBeGreaterThan(0);
+    // Without a partner value the same component reads as fully dead.
+    expect(x.transformValue(0.15, 0)).toBe(0);
+  });
+
+  test('a paired axis keeps a full diagonal on the unit circle instead of squaring it', () => {
+    const x = new GamepadAxis(0, GamepadAxis.LeftStickX, { bipolar: true, threshold: 0.2, pair: 1 });
+    const y = new GamepadAxis(1, GamepadAxis.LeftStickY, { bipolar: true, threshold: 0.2, pair: 0 });
+
+    const dx = x.transformValue(1, 1);
+    const dy = y.transformValue(1, 1);
+
+    expect(Math.hypot(dx, dy)).toBeCloseTo(1);
+    expect(dx).toBeCloseTo(Math.SQRT1_2);
+    expect(dy).toBeCloseTo(Math.SQRT1_2);
+    // A cardinal push of the same physical deflection reads the same magnitude.
+    expect(x.transformValue(1, 0)).toBeCloseTo(1);
+  });
+
+  test('a paired direction-split channel reports only its own half of the axis', () => {
+    const left = new GamepadAxis(0, GamepadAxis.LeftStickLeft, { invert: true, threshold: 0.2, pair: 1 });
+    const right = new GamepadAxis(0, GamepadAxis.LeftStickRight, { threshold: 0.2, pair: 1 });
+
+    expect(right.transformValue(1, 0)).toBeCloseTo(1);
+    expect(left.transformValue(1, 0)).toBe(0);
+    expect(left.transformValue(-1, 0)).toBeCloseTo(1);
+    expect(right.transformValue(-1, 0)).toBe(0);
   });
 });
 

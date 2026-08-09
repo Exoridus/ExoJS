@@ -6,11 +6,11 @@
   "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 4,
+  "memberCount": 5,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 4,
+    "properties": 5,
     "events": 0
   },
   "sections": [
@@ -104,6 +104,31 @@
           "description": "Convert from bipolar [-1, +1] to unipolar [0, 1] via (v + 1) / 2. Used for direction-split channels where each direction reads 0..1. Default false."
         },
         {
+          "name": "pair",
+          "signature": "pair?: number",
+          "signatureTokens": [
+            {
+              "text": "pair",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Raw Gamepad.axes[] index of the axis this one forms a 2D stick with — the Y index on an X axis and vice versa. Set on both halves of a stick so the deadzone is evaluated on the pair's radius instead of each axis on its own; see GamepadAxis.transformValue. Leave unset for a control with no second dimension (a trigger reported through axes[], a standalone auxiliary axis)."
+        },
+        {
           "name": "threshold",
           "signature": "threshold?: number",
           "signatureTokens": [
@@ -126,7 +151,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Activation threshold (deadzone). After the invert/normalize pipeline, any value at or below this reads as 0. Default 0.2."
+          "description": "Deadzone radius, 0..1. Input at or below it reads as 0; input past it is rescaled so the channel still ramps from 0 to full travel rather than jumping straight to the deadzone magnitude. Default 0.2."
         }
       ],
       "paragraphs": [],

@@ -6,11 +6,11 @@
   "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 32,
+  "memberCount": 33,
   "counts": {
     "constructors": 1,
     "methods": 1,
-    "properties": 6,
+    "properties": 7,
     "events": 0
   },
   "sections": [
@@ -139,7 +139,7 @@
       "members": [
         {
           "name": "transformValue",
-          "signature": "transformValue(value: number): number",
+          "signature": "transformValue(value: number, pairValue: number): number",
           "signatureTokens": [
             {
               "text": "transformValue",
@@ -151,6 +151,22 @@
             },
             {
               "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "pairValue",
               "kind": "param"
             },
             {
@@ -179,10 +195,15 @@
               "name": "value",
               "type": "number",
               "optional": false
+            },
+            {
+              "name": "pairValue",
+              "type": "number",
+              "optional": false
             }
           ],
           "returnType": "number",
-          "description": "Apply the axis transform pipeline to a raw browser axis value (typically Gamepad.axes[i], in -1..1). Pipeline: clamp to [-1, 1] → optional invert → optional normalize to [0, 1] → deadzone. bipolar picks a symmetric, sign-preserving deadzone (returns 0 when the absolute value is at or below threshold); otherwise a one-sided check is used (returns 0 unless the value exceeds threshold)."
+          "description": "Apply the axis transform pipeline to a raw browser axis value (typically Gamepad.axes[i], in -1..1). pairValue is the raw value of the axis at pair for the same poll, and is ignored when this axis has no partner. The deadzone is radial, never per-axis: a stick's two raw components are judged together on their radius, and everything past that radius is rescaled so the channel ramps from 0 at the deadzone edge to full travel at the rim. Per-axis deadzones are what produce the two artefacts this avoids — a jump to threshold's magnitude the instant the stick leaves the deadzone, and a square response curve where a diagonal reads further than a cardinal push of the same physical deflection. The scaled radius is capped at 1, so hardware that reports a square gate (x = y = 1) still lands on the unit circle with its direction intact rather than overshooting. A one-dimensional control (a trigger reported through axes[], a standalone auxiliary axis) gets the same rescaled deadzone applied to its own magnitude, in the channel's own domain — i.e. after normalize has moved a trigger's rest position from -1 to 0, so the deadzone covers the bottom of the pull rather than the middle of it. Pipeline: clamp to [-1, 1] → radial deadzone (paired axes) → optional invert → optional normalize to [0, 1] → scalar deadzone (unpaired axes) → range clamp. A bipolar channel keeps the full [-1, +1] range; every other channel is unipolar and clamps to [0, 1]."
         }
       ],
       "paragraphs": [],
@@ -305,6 +326,35 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "pair",
+          "signature": "pair: number | null",
+          "signatureTokens": [
+            {
+              "text": "pair",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Raw axis index of this axis's stick partner, or null for a one-dimensional control. See GamepadAxisOptions.pair."
         },
         {
           "name": "threshold",

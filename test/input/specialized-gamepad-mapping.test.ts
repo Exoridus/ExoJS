@@ -96,9 +96,22 @@ describe('specialized gamepad mappings', () => {
     const rightTriggerOffset = Gamepad.resolveChannelOffset(0, GamepadButton.RightTrigger);
     const leftTriggerOffset = Gamepad.resolveChannelOffset(0, GamepadButton.LeftTrigger);
 
-    // normalize: true maps raw -1..1 to 0..1, so 0.6 -> 0.8 and -0.2 -> 0.4.
-    expect(channels[rightTriggerOffset]).toBeCloseTo(0.8);
-    expect(channels[leftTriggerOffset]).toBeCloseTo(0.4);
+    // normalize: true maps raw -1..1 to 0..1, so 0.6 -> 0.8 and -0.2 -> 0.4;
+    // the 0.2 deadzone then rescales the remaining pull over 0..1.
+    expect(channels[rightTriggerOffset]).toBeCloseTo(0.75);
+    expect(channels[leftTriggerOffset]).toBeCloseTo(0.25);
+  });
+
+  test('a Steam Deck trigger at rest reads 0 and fully pulled reads 1', () => {
+    const channels = new Float32Array(ChannelSize.Container);
+    const pad = new Gamepad(0, channels);
+    const axes = [0, 0, 0, 0, 0, 0, 0, 0, -1, 1];
+
+    pad._bind(createSteamDeckNativeGamepad(axes), steamDeckDefinition());
+    pad.update();
+
+    expect(channels[Gamepad.resolveChannelOffset(0, GamepadButton.RightTrigger)]).toBe(0);
+    expect(channels[Gamepad.resolveChannelOffset(0, GamepadButton.LeftTrigger)]).toBeCloseTo(1);
   });
 
   test('resolves Steam Deck PID 28de:1205 to SteamDeckGamepadMapping', () => {
