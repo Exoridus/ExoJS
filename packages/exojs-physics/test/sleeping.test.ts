@@ -154,6 +154,58 @@ describe('sleeping', () => {
     expect(box.y).toBeGreaterThan(restingY + 32);
   });
 
+  it('a slow kinematic platform driven by velocity wakes and carries its sleeping passenger', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
+    const platform = addPlatform(world, 300);
+    const box = addBox(world, 0, 300 - 16 - 2);
+
+    advance(world, 2);
+    expect(box.isSleeping).toBe(true);
+
+    const restingY = box.y;
+
+    // 2 px/s is below the 5 px/s sleep threshold, so nothing about the platform's
+    // own motion looks "fast" to the sleep pass — yet it must not drive through
+    // the passenger.
+    platform.linearVelocityY = -2;
+    advance(world, 2);
+
+    expect(box.isSleeping).toBe(false);
+    expect(box.y).toBeCloseTo(restingY - 4, 0);
+  });
+
+  it('a slow kinematic platform driven by setTransform wakes and carries its sleeping passenger', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
+    const platform = addPlatform(world, 300);
+    const box = addBox(world, 0, 300 - 16 - 2);
+
+    advance(world, 2);
+    expect(box.isSleeping).toBe(true);
+
+    const restingY = box.y;
+
+    // A teleported platform carries no velocity at all — the only trace of its
+    // motion is the transform write itself.
+    for (let frame = 0; frame < 120; frame++) {
+      platform.setTransform({ x: platform.x, y: platform.y - 2 * FRAME });
+      world.step(FRAME);
+    }
+
+    expect(box.isSleeping).toBe(false);
+    expect(box.y).toBeLessThan(restingY - 3);
+  });
+
+  it('an idle kinematic platform still lets its passenger sleep', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
+
+    addPlatform(world, 300);
+    const box = addBox(world, 0, 300 - 16 - 2);
+
+    advance(world, 2);
+
+    expect(box.isSleeping).toBe(true);
+  });
+
   it('destroying a dynamic body wakes the sleeping stack it supported', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     addFloor(world, 300);

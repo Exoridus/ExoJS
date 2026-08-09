@@ -32,6 +32,17 @@ const ccdEmbed = 0.05;
 const ccdRestitutionThreshold = 1;
 
 /**
+ * `true` when a static/kinematic body — an island boundary, never an island
+ * member — is being driven this step, either through its velocity or by a
+ * {@link PhysicsBody.setTransform} teleport. Speed is deliberately not compared
+ * against the sleep thresholds: a platform creeping along at 1 px/s still has to
+ * push its passengers, and it is exactly that sub-threshold case where nothing
+ * else would keep them awake.
+ */
+const isMovingBoundary = (body: PhysicsBody): boolean =>
+  body._teleported || body.linearVelocityX !== 0 || body.linearVelocityY !== 0 || body.angularVelocity !== 0;
+
+/**
  * {@link PhysicsWorld.attach}'s default `position`: `node`'s current WORLD
  * translation, duck-typed the same way `AudioListener` reads a follow target —
  * real {@link SceneNode}s expose `getWorldTransform()`, test doubles that omit
@@ -700,8 +711,10 @@ export class PhysicsWorld implements BodyOwner {
    * kinematic bodies are boundaries, not nodes); it sleeps once every member has
    * stayed below the sleep thresholds for `timeToSleep`, and wakes the instant
    * any member does (e.g. an awake body merges into it via a new contact).
-   * Deterministic: union-find roots break ties by lower index and the contact
-   * set is id-sorted.
+   * A boundary that is itself moving resets the sleep timer of every dynamic
+   * body it touches, so a platform keeps its passengers awake however slowly it
+   * travels. Deterministic: union-find roots break ties by lower index and the
+   * contact set is id-sorted.
    */
   private _updateSleeping(dt: number): void {
     const bodies = this._bodies;
@@ -726,13 +739,23 @@ export class PhysicsWorld implements BodyOwner {
     parent.length = count;
     minSleep.length = count;
 
-    // Union dynamic↔dynamic solid contacts into islands.
+    // Union dynamic↔dynamic solid contacts into islands. A dynamic body touching
+    // a MOVING static/kinematic body has its sleep timer reset instead: those
+    // types are island boundaries, not members, so nothing else would keep the
+    // passenger of a slow-moving platform awake — and the solver skips a contact
+    // whose dynamic side is asleep, letting the platform drive straight through it.
     for (const contact of this._backend.contactGraph.solidContacts) {
       const bodyA = contact.a.body;
       const bodyB = contact.b.body;
+      const dynamicA = bodyA.type === 'dynamic';
+      const dynamicB = bodyB.type === 'dynamic';
 
-      if (bodyA.type === 'dynamic' && bodyB.type === 'dynamic') {
+      if (dynamicA && dynamicB) {
         this._union(bodyA._islandIndex, bodyB._islandIndex);
+      } else if (dynamicA && isMovingBoundary(bodyB)) {
+        bodyA._sleepTime = 0;
+      } else if (dynamicB && isMovingBoundary(bodyA)) {
+        bodyB._sleepTime = 0;
       }
     }
 
