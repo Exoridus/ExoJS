@@ -432,7 +432,7 @@ export class SystemRegistry implements Destroyable {
    * throwing `destroy()` the case to expect rather than a remote one.
    *
    * Failures are logged, never propagated — including in development, where
-   * {@link DisposalScope.destroy} rethrows an `AggregateError` instead. The
+   * {@link DestroyScope.destroy} rethrows an `AggregateError` instead. The
    * difference is the caller: `Application._disposeManagedResources` invokes
    * this method unguarded, part-way through an ordered teardown, so a throw
    * here would strand the rendering context, audio, input, backend, platform

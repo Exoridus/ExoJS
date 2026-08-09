@@ -1,9 +1,9 @@
-import { DisposalScope } from '#core/DisposalScope';
+import { DestroyScope } from '#core/DestroyScope';
 import { Scene } from '#core/Scene';
 import type { Destroyable } from '#core/types';
 
 // A Destroyable that records the order in which it is torn down. `__DEV__` is
-// `true` under vitest (see vitest.config.ts `define`), so DisposalScope rethrows
+// `true` under vitest (see vitest.config.ts `define`), so DestroyScope rethrows
 // collected destroy errors as an AggregateError.
 
 class Tracker implements Destroyable {
@@ -25,9 +25,9 @@ class Tracker implements Destroyable {
   }
 }
 
-describe('DisposalScope', () => {
+describe('DestroyScope', () => {
   test('track returns its argument and is idempotent', () => {
-    const scope = new DisposalScope();
+    const scope = new DestroyScope();
     const log: string[] = [];
     const a = new Tracker('a', log);
 
@@ -42,7 +42,7 @@ describe('DisposalScope', () => {
   });
 
   test('destroy tears down in reverse registration order', () => {
-    const scope = new DisposalScope();
+    const scope = new DestroyScope();
     const log: string[] = [];
     scope.track(new Tracker('a', log));
     scope.track(new Tracker('b', log));
@@ -54,7 +54,7 @@ describe('DisposalScope', () => {
   });
 
   test('destroy is idempotent', () => {
-    const scope = new DisposalScope();
+    const scope = new DestroyScope();
     const log: string[] = [];
     scope.track(new Tracker('a', log));
 
@@ -62,12 +62,12 @@ describe('DisposalScope', () => {
     scope.destroy();
 
     expect(log).toEqual(['a']);
-    expect(scope.disposed).toBe(true);
+    expect(scope.destroyed).toBe(true);
     expect(scope.size).toBe(0);
   });
 
   test('untrack removes an item so it is not destroyed', () => {
-    const scope = new DisposalScope();
+    const scope = new DestroyScope();
     const log: string[] = [];
     const a = new Tracker('a', log);
     const b = new Tracker('b', log);
@@ -86,7 +86,7 @@ describe('DisposalScope', () => {
   });
 
   test('track after dispose is a no-op', () => {
-    const scope = new DisposalScope();
+    const scope = new DestroyScope();
     const log: string[] = [];
     scope.destroy();
 
@@ -97,7 +97,7 @@ describe('DisposalScope', () => {
   });
 
   test('destroy attempts every item even when one throws, then rethrows in dev', () => {
-    const scope = new DisposalScope();
+    const scope = new DestroyScope();
     const log: string[] = [];
     const a = new Tracker('a', log);
     const b = new Tracker('b', log, true); // throws on destroy

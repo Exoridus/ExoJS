@@ -19,7 +19,7 @@ export { Clock } from './Clock';
 export type { DecompressFormat } from './Codec';
 export { Codec } from './Codec';
 export { Color } from './Color';
-export { DisposalScope } from './DisposalScope';
+export { DestroyScope } from './DestroyScope';
 export type { LoadStateValue } from './LoadState';
 export type { LogEntry, LogOptions, LogSink } from './logging';
 export { Logger, logger, LogSeverity } from './logging';
@@ -77,7 +77,7 @@ export type { DeserializeContext, NodeSerializer, SerializeContext } from './ser
 export { Prefab } from './serialization/Prefab';
 export type { SceneNodeConstructor } from './serialization/SerializationRegistry';
 export { registerSerializer, SerializationRegistry } from './serialization/SerializationRegistry';
-export type { SerializedAssetRef, SerializedNode, SerializedScene } from './serialization/types';
+export type { SerializedAssetRef, SerializedNode, SerializedPrefab, SerializedScene } from './serialization/types';
 export { SERIALIZATION_VERSION } from './serialization/types';
 export { Signal } from './Signal';
 export type { System, SystemMethods } from './System';

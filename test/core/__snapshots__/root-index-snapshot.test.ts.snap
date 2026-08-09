@@ -59,7 +59,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "CsvAsset",
   "CsvFactory",
   "DataTexture",
-  "DisposalScope",
+  "DestroyScope",
   "Drawable",
   "DuplicateSceneRegistrationError",
   "DynamicAabbTree",

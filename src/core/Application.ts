@@ -28,9 +28,9 @@ import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 import { Capabilities } from './capabilities';
 import { Clock } from './Clock';
 import { Color } from './Color';
+import { DestroyScope } from './DestroyScope';
 import { assert, invariant } from './dev';
 import { showDevErrorOverlay } from './devErrorOverlay';
-import { DisposalScope } from './DisposalScope';
 import { FixedTimestep } from './FixedTimestep';
 import { computeLetterboxLayout } from './letterbox';
 import { hello, logger } from './logging';
@@ -502,7 +502,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     // `_rendering` after construction, so a retained scope would hold two
     // destroyed instances and miss the live ones. It records what construction
     // built, which is exactly as long as it is needed.
-    const constructed = new DisposalScope();
+    const constructed = new DestroyScope();
 
     try {
       // Inside the boundary because `_applySizingMode` is the first step that
@@ -653,7 +653,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * teardown is asynchronous, and `destroy()` fire-and-forgets it — a
    * constructor cannot await. In the common case that is sound here, because
    * a director reached through this path has not navigated: no active scope,
-   * no retained scopes, so its disposal reduces to destroying its own
+   * no retained scopes, so its teardown reduces to destroying its own
    * Signals. That is not an absolute guarantee, though: an extension's
    * `ApplicationSystemBinding.create(app)` — invoked from
    * `materializeApplicationSystems`, the last construction step, with the
@@ -670,14 +670,14 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * is precisely the case to expect — and under a single `try` it would abort
    * the rollback before `constructed.destroy()` ever ran, reinstating the very
    * leak this method exists to close. It is the same contract
-   * {@link DisposalScope.destroy} keeps for its own items: attempt all of
+   * {@link DestroyScope.destroy} keeps for its own items: attempt all of
    * them, collect the failures, report at the end.
    *
    * Teardown failures are logged, never propagated: the error that aborted
    * construction is the one the caller must see, and the scope rethrows an
    * `AggregateError` in development builds, which would replace it.
    */
-  private _rollbackConstruction(constructed: DisposalScope): void {
+  private _rollbackConstruction(constructed: DestroyScope): void {
     // A binding that ran before the failing one holds a reference to this
     // half-built application. Marking it destroyed makes a later `start()` on
     // that reference fail loudly instead of running on torn-down subsystems.

@@ -1,3 +1,5 @@
+import type { Destroyable } from '#core/types';
+
 /** Options for {@link AudioInput.open} — forwarded to `getUserMedia` audio constraints. */
 export interface AudioInputOptions {
   /** Specific input device id (from `enumerateDevices`). */
@@ -21,10 +23,14 @@ export interface AudioInputOptions {
  * const input = app.audio.open(mic);
  * new AudioAnalyser({ source: input });  // visualise / beat-detect (no feedback)
  * const clip = await input.record(2000); // capture 2s -> Sound
- * mic.close();                           // release the device
+ * mic.destroy();                         // release the device
  * ```
+ *
+ * {@link open} is a static factory, so it has no `close()` counterpart: teardown
+ * goes through {@link destroy} like every other owned resource in the engine,
+ * which also makes an `AudioInput` trackable by a {@link DestroyScope}.
  */
-export class AudioInput {
+export class AudioInput implements Destroyable {
   private readonly _stream: MediaStream;
 
   private constructor(stream: MediaStream) {
@@ -55,8 +61,8 @@ export class AudioInput {
     return new AudioInput(stream);
   }
 
-  /** Stop every track in the stream, releasing the input device. */
-  public close(): void {
+  /** Stop every track in the stream, releasing the input device. Idempotent. */
+  public destroy(): void {
     for (const track of this._stream.getTracks()) {
       track.stop();
     }
