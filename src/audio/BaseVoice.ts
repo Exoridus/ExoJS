@@ -5,6 +5,7 @@ import { Vector } from '#math/Vector';
 
 import type { AudioBus } from './AudioBus';
 import type { AudioEffect } from './AudioEffect';
+import { isEffectReady } from './AudioEffect';
 import type { AudioManager } from './AudioManager';
 import type { DistanceModel, Spatializable, Voice } from './Playable';
 import {
@@ -182,8 +183,12 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
       this._effects.splice(index, 1);
       // Detach the removed effect's output from the graph (its internal input
       // wiring is left intact so the caller can reuse it). The rebuild below
-      // only touches the effects still in the chain.
-      effect.outputNode.disconnect();
+      // only touches the effects still in the chain. Skipped for an effect
+      // whose own nodes have not been created yet — same probe `AudioBus`
+      // uses, since `outputNode` throws on an effect still mid-setup.
+      if (isEffectReady(effect)) {
+        effect.outputNode.disconnect();
+      }
       this._rebuildEffectChain();
     }
     return this;
@@ -709,8 +714,13 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
     this._output.disconnect();
 
     // Detach per-voice effects from the chain (the caller still owns them).
+    // Skipped for an effect whose own nodes have not been created yet — same
+    // probe `AudioBus.destroy` uses, since `outputNode` throws on an effect
+    // still mid-setup.
     for (const effect of this._effects) {
-      effect.outputNode.disconnect();
+      if (isEffectReady(effect)) {
+        effect.outputNode.disconnect();
+      }
     }
     this._effects.length = 0;
 

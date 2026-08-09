@@ -2,6 +2,7 @@ import { clamp } from '#math/utils';
 
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audio-context';
 import type { AudioEffect } from './AudioEffect';
+import { isEffectReady } from './AudioEffect';
 
 /** Construction options for {@link AudioBus}. */
 export interface AudioBusOptions {
@@ -17,22 +18,6 @@ interface AudioBusSetup {
   readonly inputNode: GainNode; // bus input — sounds connect here
   readonly outputNode: GainNode; // bus output — connects to parent's input or destination
   readonly panNode: StereoPannerNode;
-}
-
-/**
- * Probe whether `effect` has finished creating its underlying node(s). Every
- * built-in `AudioEffect` throws a descriptive error from `inputNode`/`outputNode`
- * when accessed before its own (possibly deferred) setup has run — this reads
- * that as a plain boolean instead of letting `_rebuildEffectChain` throw.
- */
-function _isEffectReady(effect: AudioEffect): boolean {
-  try {
-    void effect.inputNode;
-    void effect.outputNode;
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 /**
@@ -172,7 +157,7 @@ export class AudioBus {
       // wiring is deliberately left intact so the caller can reuse the effect
       // (same contract as `BaseVoice.removeEffect`). Skipped for an effect
       // whose own nodes have not been created yet — it was never wired in.
-      if (_isEffectReady(effect)) {
+      if (isEffectReady(effect)) {
         effect.outputNode.disconnect();
       }
       this._rebuildEffectChain();
@@ -249,7 +234,7 @@ export class AudioBus {
     // edge, leave the effect's own internal wiring intact, skip an effect whose
     // nodes were never created.
     for (const effect of this._effects) {
-      if (_isEffectReady(effect)) {
+      if (isEffectReady(effect)) {
         effect.outputNode.disconnect();
       }
     }
@@ -362,7 +347,7 @@ export class AudioBus {
     // already run. An effect still not ready after the retry is a genuine
     // caller error (e.g. a custom effect that never wires itself up) and is
     // left to throw naturally instead of retrying forever.
-    if (!retried && this._effects.some(effect => !_isEffectReady(effect))) {
+    if (!retried && this._effects.some(effect => !isEffectReady(effect))) {
       queueMicrotask(() => this._rebuildEffectChain(true));
       return;
     }
