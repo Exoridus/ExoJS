@@ -48,6 +48,7 @@ export class AudioBus {
   private _pan: number;
   private readonly _effects: AudioEffect[] = [];
   private _setup: AudioBusSetup | null = null;
+  private _destroyed = false;
   private _scheduledStopId: ReturnType<typeof setTimeout> | null = null;
   /**
    * Callbacks queued via {@link AudioBus.onceSetup} while the context is still
@@ -134,8 +135,13 @@ export class AudioBus {
    * Attaching does not transfer ownership: the caller keeps it and must
    * `destroy()` the effect once it is no longer used anywhere. Neither
    * {@link AudioBus.removeEffect} nor {@link AudioBus.destroy} destroys it.
+   *
+   * A no-op once the bus has been {@link AudioBus.destroy}ed — without this
+   * guard the effect would silently accumulate in the (otherwise unused)
+   * internal list forever.
    */
   public addEffect(effect: AudioEffect): this {
+    if (this._destroyed) return this;
     this._effects.push(effect);
     this._rebuildEffectChain();
     return this;
@@ -220,6 +226,7 @@ export class AudioBus {
    * longer needed anywhere.
    */
   public destroy(): void {
+    this._destroyed = true;
     onAudioContextReady.remove(this._onAudioContextReady);
     this._parentSetupDispose?.();
     this._parentSetupDispose = null;
