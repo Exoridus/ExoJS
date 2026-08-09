@@ -47,7 +47,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "When true the audio or video loops. Defaults to false."
         },
         {
           "name": "muted",
@@ -68,7 +68,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "When true the audio or video is muted. Defaults to false."
         },
         {
           "name": "playbackRate",
@@ -89,7 +89,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Playback speed multiplier, clamped to 0.1..20. 1 is normal speed. Defaults to 1."
         },
         {
           "name": "time",
@@ -110,7 +110,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Seek position in seconds from the start. Defaults to 0."
         },
         {
           "name": "volume",
@@ -131,7 +131,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Volume level in 0..1. Defaults to 1."
         }
       ],
       "paragraphs": [],

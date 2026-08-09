@@ -206,8 +206,10 @@ export interface PlayOptions {
  * returned by `_createVoice`; the manager is injected at play time, so assets
  * never reach for a global.
  *
- * @internal - `_createVoice` is a low-level hook; consumers should call
- * `audioManager.play(asset)` instead of calling `_createVoice` directly.
+ * `_createVoice` is a low-level hook meant for asset implementations;
+ * consumers should call `audioManager.play(asset)` instead of invoking it
+ * directly.
+ * @advanced
  */
 export interface Playable {
   /**

@@ -1,6 +1,6 @@
 {
   "title": "RenderToOptions",
-  "description": "Caller-owned, per-frame off-screen render target. Unlike RenderingContext.capture, the RenderTexture is supplied by the caller and reused across frames (no per-call allocation).",
+  "description": "Options for DrawContext.renderTo: a caller-owned, per-frame off-screen RenderTexture target, reused across frames (no per-call allocation). Unlike RenderingContext.capture, the texture is supplied by the caller.",
   "symbol": "RenderToOptions",
   "kind": "interface",
   "subsystem": "rendering",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Caller-owned, per-frame off-screen render target. Unlike RenderingContext.capture, the RenderTexture is supplied by the caller and reused across frames (no per-call allocation)."
+        "Options for DrawContext.renderTo: a caller-owned, per-frame off-screen RenderTexture target, reused across frames (no per-call allocation). Unlike RenderingContext.capture, the texture is supplied by the caller."
       ],
       "importLine": "import { RenderToOptions } from '@codexo/exojs'",
       "sourceLink": null

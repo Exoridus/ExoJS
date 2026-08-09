@@ -374,7 +374,7 @@ export class WebGl2ShaderFilter extends Filter {
 
   /**
    * Marshal a non-texture uniform value to a TypedArray suitable for
-   * {@link ShaderUniform#setValue}.
+   * {@link ShaderUniform.setValue}.
    */
   private _marshalValue(value: Exclude<ShaderFilterUniformValue, Texture>): Float32Array | Int32Array {
     if (value instanceof Float32Array || value instanceof Int32Array) {

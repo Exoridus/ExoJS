@@ -6,10 +6,10 @@
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 110,
+  "memberCount": 108,
   "counts": {
     "constructors": 1,
-    "methods": 52,
+    "methods": 50,
     "properties": 43,
     "events": 14
   },
@@ -151,64 +151,6 @@
           ],
           "returnType": "void",
           "description": ""
-        },
-        {
-          "name": "_invalidateBoundsCascade",
-          "signature": "_invalidateBoundsCascade(): void",
-          "signatureTokens": [
-            {
-              "text": "_invalidateBoundsCascade",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "void",
-          "description": "Mark own Bounds dirty AND propagate up to Container ancestors' Bounds."
-        },
-        {
-          "name": "_invalidateSubtreeTransform",
-          "signature": "_invalidateSubtreeTransform(): void",
-          "signatureTokens": [
-            {
-              "text": "_invalidateSubtreeTransform",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "void",
-          "description": "Mark own GlobalTransform + Bounds dirty. Descendants detect staleness lazily via the parent-version compare in getGlobalTransform()/getBounds() — no eager subtree walk."
         },
         {
           "name": "_onEnabledChanged",
