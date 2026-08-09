@@ -101,27 +101,18 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - name: Typecheck
-        run: pnpm typecheck
-
-      - name: Typecheck guides
-        run: pnpm typecheck:guides
-
-      # Keep this job's typecheck set 1:1 with the local verify:quick pre-push
-      # hook, which also typechecks examples (strict config) and the
-      # standalone type-tests project — a required-CI gate weaker than the
-      # local hook lets a class of error merge that then blocks every
-      # contributor's next push.
-      - name: Typecheck examples
-        run: pnpm typecheck:examples
-
-      - name: Typecheck type-tests
-        run: pnpm typecheck:type-tests
-
-      # Root `pnpm typecheck` only covers src/**; the extension packages own a
-      # separate tsconfig each, so typecheck them explicitly.
-      - name: Typecheck extension packages
-        run: pnpm --filter "@codexo/exojs-particles" --filter "@codexo/exojs-tilemap" --filter "@codexo/exojs-tiled" --filter "@codexo/exojs-physics" --filter "@codexo/exojs-audio-fx" --filter "@codexo/exojs-aseprite" --filter "@codexo/exojs-ldtk" --filter "@codexo/exojs-react" typecheck
+      # The gate list lives in scripts/ci/gates.ts, which the local verify:quick
+      # pre-push hook runs in full. Spelling the commands out here again is what
+      # let this job drift below the hook: it claimed parity in a comment while
+      # omitting typecheck:site and typecheck:test. Add a gate there, not here.
+      #
+      # This group covers src/** plus the sets root `pnpm typecheck` does not
+      # reach: guides, examples (strict config), the standalone type-tests
+      # project, the extension packages (own tsconfig each), and the test
+      # sources. typecheck:site is deliberately NOT here — it needs the built
+      # dist, so it runs as the `site` group in the site-build job.
+      - name: Typecheck gates
+        run: pnpm gates typecheck
 
   # Validates the published-manifest shape (exports map, files allowlist,
   # peer/dev-dependency split, no `workspace:` leaks, ...) of every official
@@ -185,15 +176,50 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - name: Lint
-        run: pnpm lint:all
-
+      # lint:all + format:check, from the shared list in scripts/ci/gates.ts.
+      #
       # Prettier is enforced by the pre-push hook (verify:release), but hooks can
       # be bypassed (--no-verify) and merged PRs were never format-gated, so
       # formatting drifted across the v0.13 PRs and blocked the v0.13.0 tag push.
       # This is the CI backstop. Auto-fixable: a failure means `pnpm format`.
-      - name: Format check
-        run: pnpm format:check
+      - name: Lint gates
+        run: pnpm gates lint
+
+  # Generated-artifact sync gates: the committed API docs and the committed
+  # example .js files must match a fresh generation from source. Both regenerate
+  # from src/ and examples/ without needing the built dist, so this stays ungated
+  # (like typecheck/lint/package-policy) instead of waiting on the `build` job —
+  # `docs:api:check` previously sat in `package-verify` behind that wait.
+  sync-checks:
+    name: Sync Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ inputs.pnpm-version }}
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ inputs.node-version }}
+          check-latest: true
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # Both are dry-run checks that leave the working tree unchanged.
+      - name: Sync gates
+        run: pnpm gates sync
 
   unit-tests:
     name: Unit Tests (Coverage)
@@ -748,11 +774,6 @@ jobs:
       - name: Validate published package manifests (publint)
         run: pnpm verify:publint
 
-      # Verify commit-tracked API docs match a fresh generation from source.
-      # (dry-run check that leaves the working tree unchanged.)
-      - name: Check API doc sync
-        run: pnpm docs:api:check
-
   release-dry-run:
     name: Release dry run
     # PR-only shift-left of the build-once release `prepare` (pack -> attw ->
@@ -849,6 +870,14 @@ jobs:
         with:
           name: dist
 
+      # `astro check` + `tsc --noEmit` over the site sources. This is the one
+      # verify:quick gate that cannot run in the ungated typecheck job: the site
+      # consumes @codexo/exojs as a workspace package whose `types` resolve to
+      # dist/esm/index.d.ts, which only exists after the `build` job. Runs before
+      # the build so a type error reports as a typecheck failure, not a build one.
+      - name: Site typecheck gate
+        run: pnpm gates site
+
       # Site build = vendor:sync + examples:sync + astro build.
       - name: Build site
         env:
@@ -865,6 +894,7 @@ jobs:
         changes,
         typecheck,
         lint,
+        sync-checks,
         package-policy,
         unit-tests,
         browser-tests,
@@ -888,6 +918,7 @@ jobs:
           CHANGES_RESULT: ${{ needs.changes.result }}
           TYPECHECK_RESULT: ${{ needs.typecheck.result }}
           LINT_RESULT: ${{ needs.lint.result }}
+          SYNC_CHECKS_RESULT: ${{ needs['sync-checks'].result }}
           PACKAGE_POLICY_RESULT: ${{ needs['package-policy'].result }}
           UNIT_TESTS_RESULT: ${{ needs['unit-tests'].result }}
           BROWSER_TESTS_RESULT: ${{ needs['browser-tests'].result }}
@@ -903,6 +934,7 @@ jobs:
           echo "changes: $CHANGES_RESULT"
           echo "typecheck: $TYPECHECK_RESULT"
           echo "lint: $LINT_RESULT"
+          echo "sync-checks: $SYNC_CHECKS_RESULT"
           echo "package-policy: $PACKAGE_POLICY_RESULT"
           echo "unit-tests: $UNIT_TESTS_RESULT"
           echo "browser-tests: $BROWSER_TESTS_RESULT"
@@ -931,6 +963,7 @@ jobs:
           for entry in \
             "typecheck=$TYPECHECK_RESULT" \
             "lint=$LINT_RESULT" \
+            "sync-checks=$SYNC_CHECKS_RESULT" \
             "package-policy=$PACKAGE_POLICY_RESULT" \
             "unit-tests=$UNIT_TESTS_RESULT" \
             "browser-tests=$BROWSER_TESTS_RESULT" \

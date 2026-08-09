@@ -58,6 +58,12 @@ const mockContext2d = {
 // Guarded on `HTMLCanvasElement` so the file is inert under the `node`
 // environment (see the MouseEvent note above).
 if (typeof HTMLCanvasElement !== 'undefined') {
+  // This answers EVERY context id with the 2d stub, `'webgl2'` included — which
+  // is why capability probing reports webgl2: true across the whole jsdom lane.
+  // Suites that need the opposite answer redefine this property locally; it is
+  // `configurable: true` for exactly that reason (see the webgl2: false case in
+  // test/core/capabilities.test.ts, which also has to clear the memoized
+  // `Capabilities.ready`).
   Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
     configurable: true,
     value: () => mockContext2d,

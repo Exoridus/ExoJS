@@ -59,6 +59,35 @@ describe('Capabilities', () => {
     expect(caps.maxTouchPoints).toBeGreaterThanOrEqual(0);
   });
 
+  test('reports webgl2: false when the canvas yields no webgl2 context', async () => {
+    // The shared test setup replaces `HTMLCanvasElement.prototype.getContext`
+    // with a 2d stub that answers every context id, so the whole jsdom lane
+    // reports webgl2: true and the negative branch of `probeWebGl2` never ran.
+    // Both things standing in the way are reversible: the setup's override is
+    // `configurable: true`, and the detection is memoized rather than frozen.
+    // Restore both afterwards so the suite stays order-independent.
+    const originalGetContext = HTMLCanvasElement.prototype.getContext;
+    const originalReady = Reflect.get(Capabilities, '_readyPromise');
+
+    Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+      configurable: true,
+      value: (contextId: string) => (contextId === 'webgl2' ? null : {}),
+    });
+    Reflect.set(Capabilities, '_readyPromise', null);
+
+    try {
+      const caps = await Capabilities.ready;
+
+      expect(caps.webgl2).toBe(false);
+    } finally {
+      Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+        configurable: true,
+        value: originalGetContext,
+      });
+      Reflect.set(Capabilities, '_readyPromise', originalReady);
+    }
+  });
+
   test('Capabilities cannot be constructed externally via the public API', () => {
     // The constructor is TS-private. Compile-time, `new Capabilities(...)`
     // is rejected. Runtime, TS-private is not enforced, so a cast can
