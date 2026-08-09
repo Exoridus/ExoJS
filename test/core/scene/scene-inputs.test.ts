@@ -9,11 +9,12 @@ import type { ActionSample, ChannelEventBatch } from '#input/actions/types';
 import type { InputBinding } from '#input/InputBinding';
 import { ChannelSize, Keyboard } from '#input/types';
 
-/** A zeroed sample with a mutable `frameId`, for tests that only need a valid shape. */
+/** A zeroed sample with a mutable `frameId`/`timestamp`, for tests that only need a valid shape. */
 const createEmptySample = (): ActionSample => ({
   values: new Float32Array(ChannelSize.Container),
   batches: [],
   frameId: 1,
+  timestamp: 0,
 });
 
 /**

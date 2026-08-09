@@ -238,7 +238,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "How far the pattern has advanced, as completedSteps / totalSteps — in [0, (n-1)/n] for n steps, and never 1: the same update that accepts the final step also sets triggered and resets progress back to 0, so a caller polling both together never observes progress at its nominal maximum. maxGap/timeout expiry is evaluated only when the NEXT tracked channel event arrives (see _update's _expire call) — not on a timer, and not once per idle frame. A half-completed pattern can therefore hold a stale, non-zero progress for an arbitrarily long real-world gap if nothing else touches a bound channel in the meantime; it only snaps back to 0 once a relevant event finally arrives and is found to be expired."
+          "description": "How far the pattern has advanced, as completedSteps / totalSteps — in [0, (n-1)/n] for n steps, and never 1: the same update that accepts the final step also sets triggered and resets progress back to 0, so a caller polling both together never observes progress at its nominal maximum. maxGap/timeout expiry is evaluated once per frame against ActionSample.timestamp as well as against each arriving batch, so a half-completed pattern that goes quiet snaps back to 0 on the frame its window actually elapses — no event has to arrive first. It is still not a timer: expiry is observed on the frames the owning ActionMap is updated, so a map that is detached or unavailable holds its progress until it is fed again."
         },
         {
           "name": "triggered",

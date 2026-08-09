@@ -36,7 +36,7 @@ const createSample = (): {
 } => {
   const values = new Float32Array(ChannelSize.Container);
   const batches: Array<{ channels: ChannelEvent[]; sequence: number; timestamp: number }> = [];
-  const sample: ActionSample = { values, batches, frameId: 1 };
+  const sample: ActionSample = { values, batches, frameId: 1, timestamp: 0 };
   let sequence = 0;
 
   return {
