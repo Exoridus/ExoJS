@@ -2,7 +2,7 @@
  * Canvas-native DebugOverlay tests (0.6.17+).
  *
  * Exercises tree-shake architecture (debug not in root), subscription
- * lifecycle, visibility toggling, F1 keybinding, and render path.
+ * lifecycle, visibility toggling, the F-key bindings, and render path.
  */
 
 import { Signal } from '#core/Signal';
@@ -10,7 +10,9 @@ import { DebugOverlay } from '#debug/DebugOverlay';
 import * as debugExports from '#debug/index';
 import { RenderPassInspectorLayer } from '#debug/RenderPassInspectorLayer';
 import * as rootExports from '#index';
+import { InputManager } from '#input/InputManager';
 import { Keyboard } from '#input/types';
+import { BrowserPlatform } from '#platform/BrowserPlatform';
 import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 
@@ -84,22 +86,84 @@ const makeSceneDirector = () => ({
 });
 
 const makeOnFrame = () => new Signal<[import('#core/Time').Time]>();
-const makeOnKeyDown = () => new Signal<[number]>();
 const makeOnResize = () => new Signal<[number, number, unknown]>();
+
+/**
+ * Stand-in for the binding side of `InputManager`. The overlay claims its
+ * keys through `onStart` — registering a binding is what marks a key consumed
+ * so its browser default is suppressed — so the mock records the callbacks
+ * per channel and lets `pressKey` fire one.
+ */
+const makeInput = () => {
+  const bound = new Map<number, (value: number) => void>();
+
+  return {
+    bound,
+    onStart: (channel: number, callback: (value: number) => void) => {
+      bound.set(channel, callback);
+
+      return {
+        unbind: (): void => {
+          bound.delete(channel);
+        },
+      };
+    },
+  };
+};
+
+type MockInput = ReturnType<typeof makeInput>;
+
+const mockInput = (app: import('#core/Application').Application): MockInput => app.input as unknown as MockInput;
+
+/** Fire the overlay's binding for `channel`, if it claimed one. */
+const pressKey = (app: import('#core/Application').Application, channel: number): void => {
+  mockInput(app).bound.get(channel)?.(1);
+};
 
 const makeApp = () => {
   const onFrame = makeOnFrame();
-  const onKeyDown = makeOnKeyDown();
   const onResize = makeOnResize();
 
   return {
     canvas: { width: 800, height: 600 },
     backend: makeBackend(),
     scenes: makeSceneDirector(),
-    input: { onKeyDown },
+    input: makeInput(),
     onFrame,
     onResize,
   } as unknown as import('#core/Application').Application;
+};
+
+/**
+ * Same mock, but with a REAL {@link InputManager} on a real canvas — the only
+ * way to observe what the overlay's keybindings do to the actual DOM event,
+ * which is the whole point of claiming them through bindings.
+ */
+const makeAppWithRealInput = (): { app: import('#core/Application').Application; canvas: HTMLCanvasElement; input: InputManager } => {
+  const canvas = document.createElement('canvas');
+
+  canvas.width = 800;
+  canvas.height = 600;
+
+  const app = {
+    canvas,
+    platform: new BrowserPlatform(canvas),
+    width: 800,
+    height: 600,
+    pixelRatio: 1,
+    options: { input: { gamepadDefinitions: [], pointerDistanceThreshold: 10 } },
+    _backingStoreToDesign: (x: number, y: number): { x: number; y: number } => ({ x, y }),
+    backend: makeBackend(),
+    scenes: makeSceneDirector(),
+    onFrame: makeOnFrame(),
+    onResize: makeOnResize(),
+  } as unknown as import('#core/Application').Application;
+
+  const input = new InputManager(app);
+
+  (app as { input: InputManager }).input = input;
+
+  return { app, canvas, input };
 };
 
 // ---------------------------------------------------------------------------
@@ -143,16 +207,63 @@ describe('DebugOverlay — lifecycle', () => {
     debug.destroy();
   });
 
-  test('constructor subscribes to input.onKeyDown', () => {
+  test('constructor claims each shortcut through an input binding, not the onKeyDown signal', () => {
     const app = makeApp();
 
-    expect(app.input.onKeyDown.count).toBe(0);
+    expect(mockInput(app).bound.size).toBe(0);
 
     const debug = new DebugOverlay(app);
 
-    expect(app.input.onKeyDown.count).toBe(1);
+    // A binding is what marks a key consumed, so the browser's own F1 help
+    // window / F3 find bar stay shut while the overlay owns those keys. A
+    // plain `onKeyDown` subscription runs a frame late and prevents nothing.
+    expect([...mockInput(app).bound.keys()].sort((a, b) => a - b)).toEqual([Keyboard.F1, Keyboard.F2, Keyboard.F3, Keyboard.F4, Keyboard.F6]);
 
     debug.destroy();
+  });
+
+  test('a real keydown on a shortcut key is consumed, toggles its layer, and is released on destroy', () => {
+    const { app, canvas, input } = makeAppWithRealInput();
+    const debug = new DebugOverlay(app);
+
+    canvas.dispatchEvent(new FocusEvent('focus'));
+
+    // F3 opens the browser's find bar by default — the overlay owns it now.
+    const claimed = new KeyboardEvent('keydown', { code: 'F3', cancelable: true });
+
+    window.dispatchEvent(claimed);
+    expect(claimed.defaultPrevented).toBe(true);
+
+    input.preUpdate();
+    expect(debug.layers.hitTest.visible).toBe(true);
+
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'F3' }));
+    input.preUpdate();
+    debug.destroy();
+
+    const released = new KeyboardEvent('keydown', { code: 'F3', cancelable: true });
+
+    window.dispatchEvent(released);
+    expect(released.defaultPrevented).toBe(false);
+
+    input.destroy();
+  });
+
+  test('a key the overlay does not claim keeps its browser default', () => {
+    const { app, canvas, input } = makeAppWithRealInput();
+    const debug = new DebugOverlay(app);
+
+    canvas.dispatchEvent(new FocusEvent('focus'));
+
+    // F5 is deliberately unbound, so the browser still reloads on it.
+    const unclaimed = new KeyboardEvent('keydown', { code: 'F5', cancelable: true });
+
+    window.dispatchEvent(unclaimed);
+
+    expect(unclaimed.defaultPrevented).toBe(false);
+
+    debug.destroy();
+    input.destroy();
   });
 
   test('layers.performance.visible defaults to false', () => {
@@ -164,17 +275,18 @@ describe('DebugOverlay — lifecycle', () => {
     debug.destroy();
   });
 
-  test('destroy() removes onFrame and onKeyDown subscriptions', () => {
+  test('destroy() drops the frame subscription and releases every claimed key', () => {
     const app = makeApp();
     const debug = new DebugOverlay(app);
 
     expect(app.onFrame.count).toBe(1);
-    expect(app.input.onKeyDown.count).toBe(1);
+    expect(mockInput(app).bound.size).toBe(5);
 
     debug.destroy();
 
     expect(app.onFrame.count).toBe(0);
-    expect(app.input.onKeyDown.count).toBe(0);
+    // Released, so the browser gets its own F1/F3 behavior back.
+    expect(mockInput(app).bound.size).toBe(0);
   });
 });
 
@@ -232,7 +344,7 @@ describe('DebugOverlay — F1 keybinding', () => {
 
     expect(debug.layers.performance.visible).toBe(false);
 
-    app.input.onKeyDown.dispatch(Keyboard.F1);
+    pressKey(app, Keyboard.F1);
 
     expect(debug.layers.performance.visible).toBe(true);
 
@@ -243,10 +355,10 @@ describe('DebugOverlay — F1 keybinding', () => {
     const app = makeApp();
     const debug = new DebugOverlay(app);
 
-    app.input.onKeyDown.dispatch(Keyboard.F1);
+    pressKey(app, Keyboard.F1);
     expect(debug.layers.performance.visible).toBe(true);
 
-    app.input.onKeyDown.dispatch(Keyboard.F1);
+    pressKey(app, Keyboard.F1);
     expect(debug.layers.performance.visible).toBe(false);
 
     debug.destroy();
@@ -256,9 +368,9 @@ describe('DebugOverlay — F1 keybinding', () => {
     const app = makeApp();
     const debug = new DebugOverlay(app);
 
-    app.input.onKeyDown.dispatch(Keyboard.F2);
-    app.input.onKeyDown.dispatch(Keyboard.Space);
-    app.input.onKeyDown.dispatch(Keyboard.A);
+    pressKey(app, Keyboard.F2);
+    pressKey(app, Keyboard.Space);
+    pressKey(app, Keyboard.A);
 
     expect(debug.layers.performance.visible).toBe(false);
 
@@ -273,10 +385,10 @@ describe('DebugOverlay — F2/F3/F4 keybindings', () => {
 
     expect(debug.layers.boundingBoxes.visible).toBe(false);
 
-    app.input.onKeyDown.dispatch(Keyboard.F2);
+    pressKey(app, Keyboard.F2);
     expect(debug.layers.boundingBoxes.visible).toBe(true);
 
-    app.input.onKeyDown.dispatch(Keyboard.F2);
+    pressKey(app, Keyboard.F2);
     expect(debug.layers.boundingBoxes.visible).toBe(false);
 
     debug.destroy();
@@ -288,10 +400,10 @@ describe('DebugOverlay — F2/F3/F4 keybindings', () => {
 
     expect(debug.layers.hitTest.visible).toBe(false);
 
-    app.input.onKeyDown.dispatch(Keyboard.F3);
+    pressKey(app, Keyboard.F3);
     expect(debug.layers.hitTest.visible).toBe(true);
 
-    app.input.onKeyDown.dispatch(Keyboard.F3);
+    pressKey(app, Keyboard.F3);
     expect(debug.layers.hitTest.visible).toBe(false);
 
     debug.destroy();
@@ -303,10 +415,10 @@ describe('DebugOverlay — F2/F3/F4 keybindings', () => {
 
     expect(debug.layers.pointerStack.visible).toBe(false);
 
-    app.input.onKeyDown.dispatch(Keyboard.F4);
+    pressKey(app, Keyboard.F4);
     expect(debug.layers.pointerStack.visible).toBe(true);
 
-    app.input.onKeyDown.dispatch(Keyboard.F4);
+    pressKey(app, Keyboard.F4);
     expect(debug.layers.pointerStack.visible).toBe(false);
 
     debug.destroy();
@@ -316,7 +428,7 @@ describe('DebugOverlay — F2/F3/F4 keybindings', () => {
     const app = makeApp();
     const debug = new DebugOverlay(app);
 
-    app.input.onKeyDown.dispatch(Keyboard.F1);
+    pressKey(app, Keyboard.F1);
 
     expect(debug.layers.boundingBoxes.visible).toBe(false);
     expect(debug.layers.hitTest.visible).toBe(false);
@@ -342,10 +454,10 @@ describe('DebugOverlay — render-pass inspector layer', () => {
     const app = makeApp();
     const debug = new DebugOverlay(app);
 
-    app.input.onKeyDown.dispatch(Keyboard.F6);
+    pressKey(app, Keyboard.F6);
     expect(debug.layers.renderPassInspector.visible).toBe(true);
 
-    app.input.onKeyDown.dispatch(Keyboard.F6);
+    pressKey(app, Keyboard.F6);
     expect(debug.layers.renderPassInspector.visible).toBe(false);
 
     debug.destroy();
@@ -355,7 +467,7 @@ describe('DebugOverlay — render-pass inspector layer', () => {
     const app = makeApp();
     const debug = new DebugOverlay(app);
 
-    app.input.onKeyDown.dispatch(Keyboard.F5);
+    pressKey(app, Keyboard.F5);
 
     for (const layer of Object.values(debug.layers)) {
       expect(layer.visible).toBe(false);
