@@ -1,4 +1,3 @@
-import { GameCubeGamepadMapping } from '#input/GameCubeGamepadMapping';
 import { GamepadAxis } from '#input/GamepadAxis';
 import { GamepadButton } from '#input/GamepadButton';
 import { GamepadMappingFamily } from '#input/GamepadMapping';
@@ -8,15 +7,6 @@ import { JoyConRightGamepadMapping } from '#input/JoyConRightGamepadMapping';
 import { SteamControllerGamepadMapping } from '#input/SteamControllerGamepadMapping';
 
 describe('trivial device-family mappings', () => {
-  test('GameCubeGamepadMapping inherits the generic dual-analog layout under its own family tag', () => {
-    const mapping = new GameCubeGamepadMapping();
-    const generic = new GenericDualAnalogGamepadMapping();
-
-    expect(mapping.family).toBe(GamepadMappingFamily.GameCube);
-    expect(mapping.buttons).toHaveLength(generic.buttons.length);
-    expect(mapping.axes).toHaveLength(generic.axes.length);
-  });
-
   test('SteamControllerGamepadMapping inherits the generic dual-analog layout under its own family tag', () => {
     const mapping = new SteamControllerGamepadMapping();
     const generic = new GenericDualAnalogGamepadMapping();

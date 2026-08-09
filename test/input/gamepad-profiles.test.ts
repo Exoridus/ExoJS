@@ -1,5 +1,4 @@
 import { ArcadeStickGamepadMapping } from '#input/ArcadeStickGamepadMapping';
-import { GameCubeGamepadMapping } from '#input/GameCubeGamepadMapping';
 import { builtInGamepadDefinitions, parseGamepadDescriptor, resolveGamepadDefinition } from '#input/GamepadDefinitions';
 import { GamepadMappingFamily } from '#input/GamepadMapping';
 import { GenericDualAnalogGamepadMapping } from '#input/GenericDualAnalogGamepadMapping';
@@ -107,14 +106,12 @@ describe('GamepadDefinitions', () => {
       ['Vendor: 054c Product: 0268', PlayStationGamepadMapping, GamepadMappingFamily.PlayStation], // PlayStation 3 Controller
       ['Vendor: 054c Product: 05c4', PlayStationGamepadMapping, GamepadMappingFamily.PlayStation], // DualShock 4 Controller
       ['Vendor: 054c Product: 0df2', PlayStationGamepadMapping, GamepadMappingFamily.PlayStation], // DualSense Edge Controller
-      ['Vendor: 057e Product: 0337', GameCubeGamepadMapping, GamepadMappingFamily.GameCube], // GameCube Controller Adapter
       ['Vendor: 057e Product: 2006', JoyConLeftGamepadMapping, GamepadMappingFamily.JoyConLeft], // Joy-Con (L)
       ['Vendor: 057e Product: 2007', JoyConRightGamepadMapping, GamepadMappingFamily.JoyConRight], // Joy-Con (R)
       ['Vendor: 057e Product: 200e', SwitchProGamepadMapping, GamepadMappingFamily.SwitchPro], // Joy-Con Charging Grip
       ['Vendor: 057e Product: 2066', JoyConLeftGamepadMapping, GamepadMappingFamily.JoyConLeft], // Joy-Con 2 (L)
       ['Vendor: 057e Product: 2067', JoyConRightGamepadMapping, GamepadMappingFamily.JoyConRight], // Joy-Con 2 (R)
       ['Vendor: 057e Product: 2069', SwitchProGamepadMapping, GamepadMappingFamily.SwitchPro], // Switch 2 Pro Controller
-      ['Vendor: 057e Product: 2073', GameCubeGamepadMapping, GamepadMappingFamily.GameCube], // Switch 2 GameCube Controller
       ['Vendor: 28de Product: 1102', SteamControllerGamepadMapping, GamepadMappingFamily.SteamController], // Steam Controller
       ['Vendor: 046d Product: c216', GenericDualAnalogGamepadMapping, GamepadMappingFamily.GenericDualAnalog], // F310 Gamepad
       ['Vendor: 046d Product: c219', GenericDualAnalogGamepadMapping, GamepadMappingFamily.GenericDualAnalog], // F710 Gamepad
@@ -141,6 +138,20 @@ describe('GamepadDefinitions', () => {
 
       expect(resolved.mapping).toBeInstanceOf(ctor);
       expect(resolved.mapping.family).toBe(family);
+    }
+  });
+
+  test('GameCube adapter product IDs carry no built-in definition and fall through to the generic catch-all', () => {
+    // Chromium's Nintendo device tables do not normalise 057e:0337 (the WUP-028
+    // adapter) or 057e:2073 at all, and the official adapter does not present as
+    // an HID gamepad on Windows without a third-party driver — so there is
+    // nothing device-specific to claim about either.
+    for (const id of ['Vendor: 057e Product: 0337', 'Vendor: 057e Product: 2073']) {
+      const resolved = resolveGamepadDefinition(createGamepad(id));
+
+      expect(resolved.name).toBe('Generic Gamepad');
+      expect(resolved.mapping).toBeInstanceOf(GenericDualAnalogGamepadMapping);
+      expect(resolved.mapping.family).toBe(GamepadMappingFamily.GenericDualAnalog);
     }
   });
 

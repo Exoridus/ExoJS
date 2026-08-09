@@ -6,7 +6,7 @@
   "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 10,
+  "memberCount": 9,
   "counts": {
     "constructors": 0,
     "methods": 0,
@@ -34,19 +34,6 @@
           "signatureTokens": [
             {
               "text": "ArcadeStick",
-              "kind": "name"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "GameCube",
-          "signature": "GameCube",
-          "signatureTokens": [
-            {
-              "text": "GameCube",
               "kind": "name"
             }
           ],
