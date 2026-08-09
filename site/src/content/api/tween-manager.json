@@ -1,6 +1,6 @@
 {
   "title": "TweenManager",
-  "description": "Owns and advances a collection of Tween instances, driving them once per frame from Application.update. A tween created here enters the update list when Tween.start is called and leaves it again on completion or Tween.stop, so the manager only ever holds tweens that are running or paused. Manually constructed tweens can be opted in via TweenManager.add. Custom updatables (such as TweenSequencer) can be registered via TweenManager.addTicker so they share the same frame tick. Update iteration uses a snapshot so callbacks may freely add or remove tweens during the same frame without corrupting the loop. Completed and stopped tweens are evicted automatically.",
+  "description": "Owns and advances a collection of Tween instances, driving them once per frame from Application.update. A tween enters the update list when Tween.start is called and leaves it again on completion or Tween.stop, so the manager only ever holds tweens that are running or paused — regardless of whether it was created here or handed over via TweenManager.add. Custom updatables (such as TweenSequencer) can be registered via TweenManager.addTicker so they share the same frame tick. Update iteration uses a snapshot so callbacks may freely add or remove tweens during the same frame without corrupting the loop. Completed and stopped tweens are evicted automatically.",
   "symbol": "TweenManager",
   "kind": "class",
   "subsystem": "animation",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Owns and advances a collection of Tween instances, driving them once per frame from Application.update. A tween created here enters the update list when Tween.start is called and leaves it again on completion or Tween.stop, so the manager only ever holds tweens that are running or paused. Manually constructed tweens can be opted in via TweenManager.add.",
+        "Owns and advances a collection of Tween instances, driving them once per frame from Application.update. A tween enters the update list when Tween.start is called and leaves it again on completion or Tween.stop, so the manager only ever holds tweens that are running or paused — regardless of whether it was created here or handed over via TweenManager.add.",
         "Custom updatables (such as TweenSequencer) can be registered via TweenManager.addTicker so they share the same frame tick.",
         "Update iteration uses a snapshot so callbacks may freely add or remove tweens during the same frame without corrupting the loop. Completed and stopped tweens are evicted automatically."
       ],
@@ -113,7 +113,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Explicitly add a stand-alone Tween (created via new Tween(target)) to this manager so it participates in the update loop."
+          "description": "Take ownership of a stand-alone Tween (created via new Tween(target), or previously bound to a different manager) so it participates in this update loop: from here on, Tween.start enters it and completion or Tween.stop evicts it again. Binding and entering are two separate steps. A tween that is already running or paused is live — nothing will call start() on it again to enter it — so it goes into the update list right away. An idle, completed or stopped tween is bound only: retaining it would pin it, and through it its target, in this manager for the lifetime of the application while the update loop has nothing to do with it."
         },
         {
           "name": "addTicker",

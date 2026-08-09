@@ -229,11 +229,10 @@ describe('TweenManager', () => {
     expect(tween.state).toBe(TweenState.Active);
   });
 
-  test('stop() evicts a tween that was added but never started', () => {
+  test('stop() evicts a running tween', () => {
     const manager = new TweenManager();
-    const tween = new Tween(makeTarget()).to({ x: 100 }, 1.0);
+    const tween = manager.create(makeTarget()).to({ x: 100 }, 1.0).start();
 
-    manager.add(tween);
     expect(trackedCount(manager)).toBe(1);
 
     tween.stop();
@@ -241,18 +240,69 @@ describe('TweenManager', () => {
     expect(trackedCount(manager)).toBe(0);
   });
 
-  test('stop() evicts an already-completed tween that was re-added', () => {
+  // ---- add() binds ownership; only a live tween occupies the update list ----
+
+  test('add() binds an idle tween without retaining it', () => {
+    const manager = new TweenManager();
+    const target = makeTarget();
+    const tween = new Tween(target).to({ x: 100 }, 1.0);
+
+    manager.add(tween);
+
+    // Ownership was transferred (the tween now knows this manager), but an
+    // unstarted tween must not pin itself — and its target — in the
+    // application-wide manager.
+    expect(trackedCount(manager)).toBe(0);
+
+    tween.start();
+
+    expect(trackedCount(manager)).toBe(1);
+    manager.preUpdate(sec(0.5));
+    expect(target.x).toBeCloseTo(50, 5);
+  });
+
+  test('add() does not retain an already-completed tween', () => {
     const manager = new TweenManager();
     const tween = manager.create(makeTarget()).to({ x: 100 }, 1.0).start();
 
     manager.preUpdate(sec(1.0));
     expect(tween.state).toBe(TweenState.Complete);
+    expect(trackedCount(manager)).toBe(0);
 
     manager.add(tween);
-    expect(trackedCount(manager)).toBe(1);
-
-    tween.stop();
 
     expect(trackedCount(manager)).toBe(0);
+  });
+
+  test('add() does not retain a stopped tween', () => {
+    const manager = new TweenManager();
+    const tween = new Tween(makeTarget()).to({ x: 100 }, 1.0).start().stop();
+
+    manager.add(tween);
+
+    expect(trackedCount(manager)).toBe(0);
+  });
+
+  test('add() enters an already-running tween immediately', () => {
+    const manager = new TweenManager();
+    const tween = new Tween(makeTarget()).to({ x: 100 }, 1.0).start();
+
+    manager.add(tween);
+
+    expect(trackedCount(manager)).toBe(1);
+  });
+
+  test('add() enters a paused tween — it is live and must resume on the frame tick', () => {
+    const manager = new TweenManager();
+    const target = makeTarget();
+    const tween = new Tween(target).to({ x: 100 }, 1.0).start().pause();
+
+    manager.add(tween);
+
+    expect(trackedCount(manager)).toBe(1);
+
+    tween.resume();
+    manager.preUpdate(sec(0.5));
+    expect(target.x).toBeCloseTo(50, 5);
   });
 });

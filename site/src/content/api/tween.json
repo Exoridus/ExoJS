@@ -589,7 +589,7 @@
           ],
           "params": [],
           "returnType": "this",
-          "description": "Stop the tween without finishing. Target properties stay at their current interpolated values. onComplete does NOT fire. The tween is removed from its manager if one is assigned — in every state, so an idle or already-finished tween that was handed to a manager explicitly is released too."
+          "description": "Stop the tween without finishing. Target properties stay at their current interpolated values. onComplete does NOT fire. The tween is removed from its manager if one is assigned — unconditionally rather than state-gated, which for anything the manager does not hold (an idle or already-finished tween) is simply a no-op. The manager binding itself survives, so a later Tween.start re-enters the update list."
         },
         {
           "name": "to",

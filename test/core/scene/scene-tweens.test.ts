@@ -1,9 +1,12 @@
 import { Tween } from '#animation/Tween';
+import { TweenManager } from '#animation/TweenManager';
 import { TweenSequencer } from '#animation/TweenSequencer';
+import { TweenState } from '#animation/types';
 import type { Application } from '#core/Application';
 import { SceneTweens } from '#core/scene/SceneTweens';
 import { SceneAvailability } from '#core/SceneAvailability';
 import { SceneState } from '#core/SceneState';
+import { Time } from '#core/Time';
 
 const createAppStub = (createResult: unknown, sequencerResult?: unknown): Application =>
   ({
@@ -347,5 +350,71 @@ describe('SceneTweens — dormancy (create/add/createSequencer while not Active)
 
     expect(app.tweens.create).toHaveBeenCalledTimes(1);
     expect(app.tweens.createSequencer).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('SceneTweens — activation against a real TweenManager', () => {
+  const sec = (seconds: number): Time => new Time(seconds, Time.seconds);
+  const trackedCount = (manager: TweenManager): number => (manager as unknown as { _tweens: unknown[] })._tweens.length;
+  const createRealApp = (manager: TweenManager): Application => ({ tweens: manager }) as unknown as Application;
+
+  test('a cold tween started while dormant is entered into the update list on activate()', () => {
+    const manager = new TweenManager();
+    let state: SceneState = SceneState.Ready;
+    const tweens = new SceneTweens(createRealApp(manager), () => state);
+    const target = { x: 0 };
+
+    const tween = tweens.create(target).to({ x: 100 }, 1).start();
+
+    // Started while dormant — the app-wide manager must not drive it yet.
+    manager.preUpdate(sec(0.5));
+    expect(target.x).toBe(0);
+
+    state = SceneState.Active;
+    tweens.activate();
+
+    // Activation must hand a live tween over completely, not merely bind it:
+    // it never gets another `start()` call to enter it into the update list.
+    expect(trackedCount(manager)).toBe(1);
+    manager.preUpdate(sec(0.5));
+    expect(target.x).toBeCloseTo(50, 5);
+    expect(tween.state).toBe(TweenState.Active);
+  });
+
+  test('a cold tween that was never started is bound but not retained on activate()', () => {
+    const manager = new TweenManager();
+    let state: SceneState = SceneState.Ready;
+    const tweens = new SceneTweens(createRealApp(manager), () => state);
+    const target = { x: 0 };
+
+    const tween = tweens.create(target).to({ x: 100 }, 1);
+
+    state = SceneState.Active;
+    tweens.activate();
+
+    expect(trackedCount(manager)).toBe(0);
+
+    // The binding survived, so a later start() still reaches the manager.
+    tween.start();
+    expect(trackedCount(manager)).toBe(1);
+    manager.preUpdate(sec(0.5));
+    expect(target.x).toBeCloseTo(50, 5);
+  });
+
+  test('a cold tween paused by suspend() is restored into the update list', () => {
+    const manager = new TweenManager();
+    let state: SceneState = SceneState.Ready;
+    const tweens = new SceneTweens(createRealApp(manager), () => state);
+    const target = { x: 0 };
+
+    tweens.create(target).to({ x: 100 }, 1).start();
+    tweens.suspend();
+
+    state = SceneState.Active;
+    tweens.restore();
+
+    expect(trackedCount(manager)).toBe(1);
+    manager.preUpdate(sec(0.5));
+    expect(target.x).toBeCloseTo(50, 5);
   });
 });

@@ -250,9 +250,10 @@ export class Tween<T extends object = object> {
   /**
    * Stop the tween without finishing. Target properties stay at their
    * current interpolated values. onComplete does NOT fire. The tween is
-   * removed from its manager if one is assigned — in every state, so an
-   * idle or already-finished tween that was handed to a manager explicitly
-   * is released too.
+   * removed from its manager if one is assigned — unconditionally rather
+   * than state-gated, which for anything the manager does not hold (an idle
+   * or already-finished tween) is simply a no-op. The manager binding itself
+   * survives, so a later {@link Tween.start} re-enters the update list.
    */
   public stop(): this {
     if (this._state === TweenState.Active || this._state === TweenState.Paused) {
@@ -277,8 +278,10 @@ export class Tween<T extends object = object> {
   }
 
   /**
-   * Attach this tween to a manager. Called by TweenManager.create() and
-   * TweenManager.add(). Not part of the public fluent API.
+   * Bind this tween to a manager, without entering it into that manager's
+   * update list — {@link Tween.start} does the entering. Called by
+   * TweenManager.create(), TweenManager.sequence(), TweenManager.add() and
+   * TweenSequencer. Not part of the public fluent API.
    * @internal
    */
   public _attachManager(manager: TweenManager): void {
