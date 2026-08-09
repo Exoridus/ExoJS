@@ -195,9 +195,17 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   public readonly onUpdateScene = new Signal<[Scene]>();
   /** Fires just before a scene is unloaded (`unload` then `destroy`). */
   public readonly onStopScene = new Signal<[Scene]>();
-  /** Fires after `pause()` actually sets the active scene's `paused` flag. */
+  /**
+   * Fires after `pause()` actually sets the active scene's `paused` flag.
+   * Pure observation: a throwing listener is reported through
+   * {@link Application.onError} and never propagates back out of `pause()`,
+   * which has already applied the pause policy by then.
+   */
   public readonly onPause = new Signal<[Scene]>();
-  /** Fires after `resume()` actually clears the active scene's `paused` flag. */
+  /**
+   * Fires after `resume()` actually clears the active scene's `paused` flag.
+   * Same error contract as {@link SceneDirector.onPause}.
+   */
   public readonly onResume = new Signal<[Scene]>();
   /**
    * Fires whenever a scene's {@link SceneState} changes, as
@@ -878,7 +886,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     const changed = scope.pause();
 
     if (changed) {
-      this.onPause.dispatch(scope.scene as Scene);
+      this.onPause.dispatchIsolated(error => this._reportLifecycleError(error), scope.scene as Scene);
     }
 
     return changed;
@@ -898,7 +906,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     const changed = scope.resume();
 
     if (changed) {
-      this.onResume.dispatch(scope.scene as Scene);
+      this.onResume.dispatchIsolated(error => this._reportLifecycleError(error), scope.scene as Scene);
     }
 
     return changed;

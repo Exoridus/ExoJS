@@ -9,7 +9,7 @@ import Callout from '../../../components/Callout.astro';
 
 # Debugging & inspection
 
-ExoJS ships five diagnostic layers in the `@codexo/exojs/debug` optional entrypoint. Four are managed by `DebugOverlay` (performance, bounding boxes, hit-test, pointer stack), and `RenderPassInspectorLayer` is a standalone layer covered below. These tools render as overlays on top of your running scene — no scene-logic changes, no special draw-call instrumentation, no build flags.
+ExoJS ships five diagnostic layers in the `@codexo/exojs/debug` optional entrypoint, all managed by `DebugOverlay`: performance, bounding boxes, hit-test, pointer stack, and the render-pass inspector covered below. These tools render as overlays on top of your running scene — no scene-logic changes, no special draw-call instrumentation, no build flags.
 
 ## DebugOverlay
 
@@ -26,10 +26,20 @@ const debug = new DebugOverlay(app);
 debug.layers.performance.visible = true;
 debug.layers.boundingBoxes.visible = true;
 
-// Toggle with keyboard shortcuts (F1–F4 while canvas has focus)
+// Toggle with keyboard shortcuts (F1–F4 and F6, while canvas has focus)
 ```
 
-The overlay subscribes to `app.onFrame` and renders each visible layer. World-space layers (`boundingBoxes`, `hitTest`) render first under screen-space panels (`performance`, `pointerStack`). The overlay's `visible` flag suppresses all layers without changing individual visibility.
+The overlay subscribes to `app.onFrame` and renders each visible layer. World-space layers (`boundingBoxes`, `hitTest`) render first under screen-space panels (`performance`, `pointerStack`, `renderPassInspector`). The overlay's `visible` flag suppresses all layers without changing individual visibility.
+
+| Layer | Property | Shortcut |
+|-------|----------|----------|
+| Performance | `layers.performance` | F1 |
+| Bounding boxes | `layers.boundingBoxes` | F2 |
+| Hit-test | `layers.hitTest` | F3 |
+| Pointer stack | `layers.pointerStack` | F4 |
+| Render-pass inspector | `layers.renderPassInspector` | F6 |
+
+F5 is deliberately unbound — browsers reload the page on it, which would tear down the very session you are inspecting.
 
 ## Performance layer
 
@@ -154,9 +164,20 @@ The panel does not show drawables with zero filters — they are invisible to th
 
 ### Enabling the layer
 
-`RenderPassInspectorLayer` extends `DebugLayer` and is designed to be driven via `app.onFrame` — the same pattern used by `DebugOverlay` for the other debug layers. It is not added to the scene graph. The inspector walks `app.scenes.currentScene?.root` each frame, so it sees whichever scene is currently active.
+`DebugOverlay` manages the inspector alongside the other layers, so the usual route is a flag or the F6 shortcut:
 
-Import from the debug entrypoint, construct against the application, subscribe to `app.onFrame`, and toggle visibility:
+```ts
+import { DebugOverlay } from '@codexo/exojs/debug';
+
+declare const debug: DebugOverlay;
+debug.layers.renderPassInspector.visible = true;  // or F6
+```
+
+The inspector walks `app.scenes.currentScene?.root` each frame, so it sees whichever scene is currently active. It is never added to the scene graph.
+
+### Driving the layer without the overlay
+
+`RenderPassInspectorLayer` extends `DebugLayer` and can also be driven directly from `app.onFrame` — useful when you want the inspector without constructing an overlay, or when you need it on a view of your own. Import it from the debug entrypoint, construct it against the application, and render it yourself:
 
 ```ts
 import { Scene, View } from '@codexo/exojs';

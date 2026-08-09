@@ -1,6 +1,6 @@
 {
   "title": "DebugOverlay",
-  "description": "Canvas-native debug overlay. Instantiate AFTER Application is constructed: import { DebugOverlay } from '@codexo/exojs/debug'; const debug = new DebugOverlay(app); debug.layers.performance.visible = true; // or press F1 The overlay subscribes to `app.onFrame` and renders its visible layers. World-space layers render first (under text panels) in the scene view; screen-space layers then render in the overlay's pixel-space view. Keybindings (while canvas has focus): F1 — toggle Performance layer F2 — toggle BoundingBoxes layer F3 — toggle HitTest layer F4 — toggle PointerStack layer NOTE: F-keys only fire while the canvas has focus (engine convention). The master `visible` switch suppresses all layer rendering when false without changing individual layer visibility flags.",
+  "description": "Canvas-native debug overlay. Instantiate AFTER Application is constructed: import { DebugOverlay } from '@codexo/exojs/debug'; const debug = new DebugOverlay(app); debug.layers.performance.visible = true; // or press F1 The overlay subscribes to `app.onFrame` and renders its visible layers. World-space layers render first (under text panels) in the scene view; screen-space layers then render in the overlay's pixel-space view. Keybindings (while canvas has focus): F1 — toggle Performance layer F2 — toggle BoundingBoxes layer F3 — toggle HitTest layer F4 — toggle PointerStack layer F6 — toggle RenderPassInspector layer NOTE: F-keys only fire while the canvas has focus (engine convention). F5 is deliberately left unbound: browsers reload the page on it, which would tear down the very session being inspected. The master `visible` switch suppresses all layer rendering when false without changing individual layer visibility flags.",
   "symbol": "DebugOverlay",
   "kind": "class",
   "subsystem": "debug",
@@ -22,8 +22,8 @@
         "Canvas-native debug overlay. Instantiate AFTER Application is constructed:",
         "import { DebugOverlay } from '@codexo/exojs/debug'; const debug = new DebugOverlay(app); debug.layers.performance.visible = true; // or press F1",
         "The overlay subscribes to `app.onFrame` and renders its visible layers. World-space layers render first (under text panels) in the scene view; screen-space layers then render in the overlay's pixel-space view.",
-        "Keybindings (while canvas has focus): F1 — toggle Performance layer F2 — toggle BoundingBoxes layer F3 — toggle HitTest layer F4 — toggle PointerStack layer",
-        "NOTE: F-keys only fire while the canvas has focus (engine convention).",
+        "Keybindings (while canvas has focus): F1 — toggle Performance layer F2 — toggle BoundingBoxes layer F3 — toggle HitTest layer F4 — toggle PointerStack layer F6 — toggle RenderPassInspector layer",
+        "NOTE: F-keys only fire while the canvas has focus (engine convention). F5 is deliberately left unbound: browsers reload the page on it, which would tear down the very session being inspected.",
         "The master `visible` switch suppresses all layer rendering when false without changing individual layer visibility flags."
       ],
       "importLine": "import { DebugOverlay } from '@codexo/exojs/debug'",
@@ -146,7 +146,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The four built-in diagnostic layers. Toggle each layer's visible flag or use the F1–F4 keybindings."
+          "description": "The built-in diagnostic layers. Toggle each layer's visible flag or use the F1–F4/F6 keybindings."
         },
         {
           "name": "visible",

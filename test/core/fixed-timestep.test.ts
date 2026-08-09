@@ -49,6 +49,24 @@ describe('FixedTimestep', () => {
     expect(fixed.advance(STEP * 0.1)).toBeLessThanOrEqual(1); // no replay of the dropped backlog
   });
 
+  it('keeps alpha below 1 when capping leaves an exact whole-step remainder', () => {
+    // A step size that is exactly representable in binary floating point, and a
+    // delta that is an exact multiple of it, so the capped accumulator lands on
+    // precisely one whole step rather than a rounding-error away from it.
+    const fixed = new FixedTimestep(10, 2);
+
+    expect(fixed.advance(30)).toBe(2); // capped: 3 steps of backlog, 2 allowed
+    expect(fixed.alpha).toBeGreaterThanOrEqual(0);
+    expect(fixed.alpha).toBeLessThan(1);
+  });
+
+  it('keeps alpha below 1 when maxSteps is exhausted by an exact multi-step backlog', () => {
+    const fixed = new FixedTimestep(10, 1);
+
+    expect(fixed.advance(40)).toBe(1);
+    expect(fixed.alpha).toBeLessThan(1);
+  });
+
   it('reset() clears the accumulator', () => {
     const fixed = new FixedTimestep(STEP, 5);
 

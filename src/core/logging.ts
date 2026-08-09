@@ -11,9 +11,15 @@ export enum LogSeverity {
  * - `source` renders as `[ExoJS][source]` in the default console sink (omit
  *   it for a bare `[ExoJS]` prefix).
  * - `once` deduplicates by key: the second and later calls sharing the same
- *   key are dropped before severity filtering or sink dispatch, so pass a
- *   stable per-callsite key (e.g. `` `bitmaptext:${fontId}:${codepoint}` ``)
- *   to avoid per-frame spam.
+ *   key are dropped before sink dispatch, so pass a stable per-callsite key
+ *   (e.g. `` `bitmaptext:${fontId}:${codepoint}` ``) to avoid per-frame spam.
+ *   A key is claimed only by a call that survives severity filtering, so the
+ *   `Debug`/`Info`/`Warning` calls a production build strips cost nothing and
+ *   never shadow a later `error()` that reuses the key. The set of claimed
+ *   keys is retained for the lifetime of the {@link Logger} and never
+ *   evicted — that permanence is the guarantee `once` exists to provide, so
+ *   keep keys drawn from a bounded, per-callsite vocabulary rather than from
+ *   unbounded runtime data.
  */
 export interface LogOptions {
   source?: string;
@@ -45,16 +51,21 @@ export class Logger {
   private readonly _seenOnce = new Set<string>();
 
   private _log(severity: LogSeverity, message: string, options?: LogOptions): void {
+    // Severity filtering comes first so a call that production drops never
+    // touches the dedup set: keys are recorded only for entries that are
+    // actually dispatched, which keeps `_seenOnce` from growing without bound
+    // in shipped builds and stops a stripped low-severity call from consuming
+    // the key a later `error()` needs.
+    if (!__DEV__ && severity < LogSeverity.Error) {
+      return;
+    }
+
     if (options?.once !== undefined) {
       if (this._seenOnce.has(options.once)) {
         return;
       }
 
       this._seenOnce.add(options.once);
-    }
-
-    if (!__DEV__ && severity < LogSeverity.Error) {
-      return;
     }
 
     const entry: LogEntry = {

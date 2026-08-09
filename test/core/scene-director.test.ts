@@ -614,6 +614,43 @@ describe('SceneDirector', () => {
     expect(update).toHaveBeenCalledTimes(1);
   });
 
+  test('a throwing onPause listener is reported through the app error pipeline and does not propagate out of pause()', async () => {
+    const app = createApplicationStub();
+    const TestScene = makeSceneClass();
+    const director = new SceneDirector(app, { test: TestScene });
+    const errorSpy = vi.fn();
+
+    await director.change(TestScene);
+
+    app.onError.add(errorSpy);
+    director.onPause.add(() => {
+      throw new Error('onPause listener failed');
+    });
+
+    expect(director.pause()).toBe(true);
+    expect(director.paused).toBe(true);
+    expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({ message: 'onPause listener failed' }));
+  });
+
+  test('a throwing onResume listener is reported through the app error pipeline and does not propagate out of resume()', async () => {
+    const app = createApplicationStub();
+    const TestScene = makeSceneClass();
+    const director = new SceneDirector(app, { test: TestScene });
+    const errorSpy = vi.fn();
+
+    await director.change(TestScene);
+    director.pause();
+
+    app.onError.add(errorSpy);
+    director.onResume.add(() => {
+      throw new Error('onResume listener failed');
+    });
+
+    expect(director.resume()).toBe(true);
+    expect(director.paused).toBe(false);
+    expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({ message: 'onResume listener failed' }));
+  });
+
   test('resume() is a no-op when the active scene is not paused', async () => {
     const app = createApplicationStub();
     const TestScene = makeSceneClass();

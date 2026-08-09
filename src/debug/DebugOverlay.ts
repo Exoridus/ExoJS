@@ -8,9 +8,10 @@ import type { DebugLayer } from './DebugLayer';
 import { HitTestLayer } from './HitTestLayer';
 import { PerformanceLayer } from './PerformanceLayer';
 import { PointerStackLayer } from './PointerStackLayer';
+import { RenderPassInspectorLayer } from './RenderPassInspectorLayer';
 
 /**
- * Typed map of the four built-in diagnostic layers managed by
+ * Typed map of the built-in diagnostic layers managed by
  * {@link DebugOverlay}. Access individual layers to toggle visibility or
  * interact with layer-specific state.
  */
@@ -19,6 +20,7 @@ export interface DebugLayers {
   readonly boundingBoxes: BoundingBoxesLayer;
   readonly hitTest: HitTestLayer;
   readonly pointerStack: PointerStackLayer;
+  readonly renderPassInspector: RenderPassInspectorLayer;
 }
 
 /**
@@ -37,8 +39,11 @@ export interface DebugLayers {
  *   F2 — toggle BoundingBoxes layer
  *   F3 — toggle HitTest layer
  *   F4 — toggle PointerStack layer
+ *   F6 — toggle RenderPassInspector layer
  *
  * NOTE: F-keys only fire while the canvas has focus (engine convention).
+ * F5 is deliberately left unbound: browsers reload the page on it, which
+ * would tear down the very session being inspected.
  *
  * The master `visible` switch suppresses all layer rendering when false
  * without changing individual layer visibility flags.
@@ -47,7 +52,7 @@ export class DebugOverlay {
   /** Master visibility switch. When false, no layers render regardless of their individual flags. */
   public visible = true;
 
-  /** The four built-in diagnostic layers. Toggle each layer's `visible` flag or use the F1–F4 keybindings. */
+  /** The built-in diagnostic layers. Toggle each layer's `visible` flag or use the F1–F4/F6 keybindings. */
   public readonly layers: DebugLayers;
 
   private readonly _app: Application;
@@ -65,6 +70,7 @@ export class DebugOverlay {
       boundingBoxes: new BoundingBoxesLayer(app),
       hitTest: new HitTestLayer(app),
       pointerStack: new PointerStackLayer(app),
+      renderPassInspector: new RenderPassInspectorLayer(app),
     };
 
     this._onFrameHandler = this._onFrame.bind(this);
@@ -147,6 +153,10 @@ export class DebugOverlay {
         break;
       case Keyboard.F4:
         this.layers.pointerStack.visible = !this.layers.pointerStack.visible;
+        break;
+      // F5 is skipped on purpose — see the keybinding note on the class.
+      case Keyboard.F6:
+        this.layers.renderPassInspector.visible = !this.layers.renderPassInspector.visible;
         break;
     }
   }
