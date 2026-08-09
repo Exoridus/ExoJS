@@ -217,6 +217,71 @@ describe('InputManager — keyboard', () => {
     im.destroy();
   });
 
+  test('an OS auto-repeat keydown dispatches no second onKeyDown', () => {
+    const { im, canvas } = createInputManager();
+    const onKeyDown = vi.fn();
+
+    im.onKeyDown.add(onKeyDown);
+    canvas.dispatchEvent(new FocusEvent('focus'));
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
+    im.preUpdate();
+
+    expect(onKeyDown).toHaveBeenCalledTimes(1);
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', repeat: true }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', repeat: true }));
+    im.preUpdate();
+
+    // The key is still held — only the extra down dispatches are suppressed.
+    expect(onKeyDown).toHaveBeenCalledTimes(1);
+    expect(ch(im, Keyboard.Space)).toBe(1);
+
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space' }));
+    im.preUpdate();
+
+    expect(ch(im, Keyboard.Space)).toBe(0);
+
+    im.destroy();
+  });
+
+  test('an auto-repeat keydown on a modifier leaves the aggregate channel set without a second dispatch', () => {
+    const { im, canvas } = createInputManager();
+    const onKeyDown = vi.fn();
+
+    im.onKeyDown.add(onKeyDown);
+    canvas.dispatchEvent(new FocusEvent('focus'));
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'ShiftLeft' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'ShiftLeft', repeat: true }));
+    im.preUpdate();
+
+    expect(onKeyDown).toHaveBeenCalledTimes(1);
+    expect(onKeyDown).toHaveBeenCalledWith(Keyboard.ShiftLeft);
+    expect(ch(im, Keyboard.ShiftLeft)).toBe(1);
+    expect(ch(im, Keyboard.Shift)).toBe(1);
+
+    im.destroy();
+  });
+
+  test('a captured key still suppresses its browser default on every auto-repeat', () => {
+    const { im, canvas } = createInputManager();
+
+    canvas.dispatchEvent(new FocusEvent('focus'));
+    const binding = im.onStart(Keyboard.Space, () => {});
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', cancelable: true }));
+
+    const repeatEvent = new KeyboardEvent('keydown', { code: 'Space', cancelable: true, repeat: true });
+
+    window.dispatchEvent(repeatEvent);
+
+    expect(repeatEvent.defaultPrevented).toBe(true);
+
+    binding.unbind();
+    im.destroy();
+  });
+
   test('keyup while focused clears channel and dispatches onKeyUp on update()', () => {
     const { im, canvas } = createInputManager();
     const onKeyUp = vi.fn();
