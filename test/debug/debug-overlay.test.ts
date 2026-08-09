@@ -8,6 +8,7 @@
 import { Signal } from '#core/Signal';
 import { DebugOverlay } from '#debug/DebugOverlay';
 import * as debugExports from '#debug/index';
+import { RenderPassInspectorLayer } from '#debug/RenderPassInspectorLayer';
 import * as rootExports from '#index';
 import { Keyboard } from '#input/types';
 import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
@@ -322,6 +323,70 @@ describe('DebugOverlay — F2/F3/F4 keybindings', () => {
     expect(debug.layers.pointerStack.visible).toBe(false);
 
     debug.destroy();
+  });
+});
+
+describe('DebugOverlay — render-pass inspector layer', () => {
+  test('layers.renderPassInspector is a managed RenderPassInspectorLayer', () => {
+    const app = makeApp();
+    const debug = new DebugOverlay(app);
+
+    expect(debug.layers.renderPassInspector).toBeInstanceOf(RenderPassInspectorLayer);
+    expect(debug.layers.renderPassInspector.visible).toBe(false);
+    expect(debug.layers.renderPassInspector.viewMode).toBe('screen');
+
+    debug.destroy();
+  });
+
+  test('F6 toggles the renderPassInspector layer', () => {
+    const app = makeApp();
+    const debug = new DebugOverlay(app);
+
+    app.input.onKeyDown.dispatch(Keyboard.F6);
+    expect(debug.layers.renderPassInspector.visible).toBe(true);
+
+    app.input.onKeyDown.dispatch(Keyboard.F6);
+    expect(debug.layers.renderPassInspector.visible).toBe(false);
+
+    debug.destroy();
+  });
+
+  test('F5 is deliberately unbound — it reloads the page in every browser', () => {
+    const app = makeApp();
+    const debug = new DebugOverlay(app);
+
+    app.input.onKeyDown.dispatch(Keyboard.F5);
+
+    for (const layer of Object.values(debug.layers)) {
+      expect(layer.visible).toBe(false);
+    }
+
+    debug.destroy();
+  });
+
+  test('the visible inspector renders through the screen-space view swap', () => {
+    const app = makeApp();
+    const debug = new DebugOverlay(app);
+
+    debug.layers.renderPassInspector.visible = true;
+
+    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
+
+    app.onFrame.dispatch(fakeTime);
+
+    expect(app.backend.setView).toHaveBeenCalledTimes(2);
+
+    debug.destroy();
+  });
+
+  test('destroy() tears the inspector down along with the other layers', () => {
+    const app = makeApp();
+    const debug = new DebugOverlay(app);
+    const spy = vi.spyOn(debug.layers.renderPassInspector, 'destroy');
+
+    debug.destroy();
+
+    expect(spy).toHaveBeenCalledTimes(1);
   });
 });
 
