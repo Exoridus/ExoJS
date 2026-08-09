@@ -1,6 +1,6 @@
 {
   "title": "SerializationRegistry",
-  "description": "Bidirectional name ↔ constructor ↔ NodeSerializer registry backing the scene serializer. Serialize resolves a node to its serializer by walking the constructor's prototype chain (so a subclass without its own registration inherits the nearest registered base serializer); deserialize resolves by type name. Core registers the built-in node types; extensions contribute their own via the Extension.serializers binding.",
+  "description": "Bidirectional name ↔ constructor ↔ NodeSerializer registry backing the scene serializer. Serialize resolves a node to its serializer by walking the constructor's prototype chain (so a subclass without its own registration inherits the nearest registered base serializer — nearest across this registry *and* its fallback, never the nearest one this registry happens to know); deserialize resolves by type name. Core registers the built-in node types; extensions contribute their own via the Extension.serializers binding.",
   "symbol": "SerializationRegistry",
   "kind": "class",
   "subsystem": "core",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Bidirectional name ↔ constructor ↔ NodeSerializer registry backing the scene serializer.",
-        "Serialize resolves a node to its serializer by walking the constructor's prototype chain (so a subclass without its own registration inherits the nearest registered base serializer); deserialize resolves by type name. Core registers the built-in node types; extensions contribute their own via the Extension.serializers binding."
+        "Serialize resolves a node to its serializer by walking the constructor's prototype chain (so a subclass without its own registration inherits the nearest registered base serializer — nearest across this registry *and* its fallback, never the nearest one this registry happens to know); deserialize resolves by type name. Core registers the built-in node types; extensions contribute their own via the Extension.serializers binding."
       ],
       "importLine": "import { SerializationRegistry } from '@codexo/exojs'",
       "sourceLink": null
