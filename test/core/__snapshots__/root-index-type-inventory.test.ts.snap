@@ -158,7 +158,6 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "FontFormat: type alias",
   "FontRegistry: interface",
   "FontWeight: type alias",
-  "GameCubeGamepadMapping: class",
   "Gamepad: class",
   "GamepadAxis: class",
   "GamepadAxisOptions: interface",

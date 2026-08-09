@@ -1,7 +1,6 @@
 export * from './actions';
 export * from './ArcadeStickGamepadMapping';
 export type { ContextMenuRequest } from './ContextMenuRequest';
-export * from './GameCubeGamepadMapping';
 export * from './Gamepad';
 export type { GamepadAxisOptions } from './GamepadAxis';
 export { GamepadAxis } from './GamepadAxis';

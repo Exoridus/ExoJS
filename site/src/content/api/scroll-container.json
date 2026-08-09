@@ -6,11 +6,11 @@
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 110,
+  "memberCount": 111,
   "counts": {
     "constructors": 1,
     "methods": 52,
-    "properties": 43,
+    "properties": 44,
     "events": 14
   },
   "sections": [
@@ -2766,7 +2766,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "When true, this node can receive keyboard focus — via focus, Tab traversal, or app.interaction.focus(node) — and is delivered key events through onKeyDown / onKeyUp while focused, or while any of its descendants holds focus (key events bubble up the parent chain like pointer InteractionEvents do)."
+          "description": "When true, this node can receive keyboard focus — via focus, Tab traversal, or app.interaction.focus(node) — and is delivered key events through onKeyDown / onKeyUp while focused, or while any of its descendants holds focus (key events bubble up the parent chain like pointer InteractionEvents do). A Widget additionally has to be enabled: disabling one takes it out of the Tab order and rejects programmatic focus, without touching this flag."
         },
         {
           "name": "name",
@@ -3044,6 +3044,27 @@
           "description": "true once destroy has run on this node. A destroyed node has released its pooled resources (transform/bounds), has been unlinked from its parent, renders nothing, and must not be reused or re-attached. The render plan skips a destroyed node, so even one handed straight to a renderer as a detached root contributes nothing."
         },
         {
+          "name": "direction",
+          "signature": "direction: ScrollDirection",
+          "signatureTokens": [
+            {
+              "text": "direction",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ScrollDirection",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The axis (or axes) this container scrolls along. Fixed at construction."
+        },
+        {
           "name": "enabled",
           "signature": "enabled: boolean",
           "signatureTokens": [
@@ -3062,7 +3083,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Whether the widget responds to input. Disabled widgets typically dim and ignore clicks."
+          "description": "Whether the widget responds to input. Disabled widgets typically dim and ignore clicks, and are skipped by keyboard focus — they drop out of the Tab order and reject programmatic focus while disabled. Only the widget's own flag counts; disabling a container does not disable its children."
         },
         {
           "name": "filters",

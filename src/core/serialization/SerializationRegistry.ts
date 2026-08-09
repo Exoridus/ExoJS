@@ -33,7 +33,9 @@ const walkPrototype = (ctor: SceneNodeConstructor): SceneNodeConstructor | null 
  *
  * Serialize resolves a node to its serializer by walking the constructor's
  * prototype chain (so a subclass without its own registration inherits the
- * nearest registered base serializer); deserialize resolves by type name.
+ * nearest registered base serializer — nearest across this registry *and* its
+ * fallback, never the nearest one this registry happens to know);
+ * deserialize resolves by type name.
  * Core registers the built-in node types; extensions contribute their own via
  * the {@link Extension.serializers} binding.
  *
@@ -41,7 +43,10 @@ const walkPrototype = (ctor: SceneNodeConstructor): SceneNodeConstructor | null 
  * {@link defaultSerializationRegistry}.
  */
 export class SerializationRegistry {
-  private readonly _byCtor = new Registry<SceneNodeConstructor, SerializerEntry>({ walk: walkPrototype });
+  // Exact-match store: the prototype-chain walk lives in `resolveByNode`, which
+  // has to interleave it with the fallback chain rather than exhaust either one
+  // first. See that method's doc comment.
+  private readonly _byCtor = new Registry<SceneNodeConstructor, SerializerEntry>();
   private readonly _byName = new Map<string, SerializerEntry>();
 
   /**
@@ -74,10 +79,36 @@ export class SerializationRegistry {
   /**
    * Resolve the serializer for `node` by walking its constructor's prototype
    * chain. Returns `undefined` if no registration matches.
+   *
+   * Own and inherited registrations are ranked together by how specific the
+   * registered constructor is, one prototype level at a time: the exact
+   * constructor first, then its base, and so on, each level checked across the
+   * whole fallback chain before moving up. Exhausting this registry's own
+   * chain first would let a locally registered base class beat an exact match
+   * that only the fallback knows about — an application that registers part of
+   * a hierarchy would then silently serialize its subclasses as the base type.
+   * Registries closer to this one still win ties at equal specificity.
    * @internal
    */
   public resolveByNode(node: SceneNode): SerializerEntry | undefined {
-    return this._byCtor.resolve(node.constructor as SceneNodeConstructor) ?? this._fallback?.resolveByNode(node);
+    let ctor: SceneNodeConstructor | null = node.constructor as SceneNodeConstructor;
+
+    while (ctor !== null) {
+      const entry = this._resolveExactCtor(ctor);
+
+      if (entry !== undefined) {
+        return entry;
+      }
+
+      ctor = walkPrototype(ctor);
+    }
+
+    return undefined;
+  }
+
+  /** The entry registered for exactly `ctor` — no prototype walk — searching this registry, then its fallback chain. */
+  private _resolveExactCtor(ctor: SceneNodeConstructor): SerializerEntry | undefined {
+    return this._byCtor.resolve(ctor) ?? this._fallback?._resolveExactCtor(ctor);
   }
 
   /**

@@ -14,7 +14,6 @@ export enum GamepadMappingFamily {
   SwitchPro = 'switchPro',
   JoyConLeft = 'joyConLeft',
   JoyConRight = 'joyConRight',
-  GameCube = 'gameCube',
   SteamController = 'steamController',
   SteamDeck = 'steamDeck',
   ArcadeStick = 'arcadeStick',

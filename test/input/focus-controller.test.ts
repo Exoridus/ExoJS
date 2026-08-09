@@ -9,9 +9,13 @@ import { createScopeToken } from '#input/ScopeToken';
 import { Keyboard } from '#input/types';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
+import { Widget } from '#ui/Widget';
 
 /** Minimal concrete non-Container leaf RenderNode, for exercising Tab-collection through a leaf. */
 class LeafNode extends Drawable {}
+
+/** Minimal concrete Widget, for exercising the `enabled` filter without pulling in Text/glyph-atlas mocks. */
+class TestWidget extends Widget {}
 
 const noopInteraction: InteractionHooks = {
   _notifyNodeAdded() {},
@@ -61,6 +65,15 @@ const focusable = (tabIndex = 0): Container => {
   node.tabIndex = tabIndex;
 
   return node;
+};
+
+const focusableWidget = (tabIndex = 0): Widget => {
+  const widget = new TestWidget();
+
+  widget.focusable = true;
+  widget.tabIndex = tabIndex;
+
+  return widget;
 };
 
 describe('FocusController', () => {
@@ -602,6 +615,59 @@ describe('FocusController — ownership hardening', () => {
     onKeyDown.dispatch(Keyboard.Tab);
     // Wraps back to `a` — the sole surviving candidate — `b` is never a stop.
     expect(focus.focused).toBe(a);
+  });
+
+  test('a disabled widget is excluded from Tab order and cannot be focused programmatically', () => {
+    const { scene, focus, onKeyDown } = createFocusApp();
+    const enabled = focusableWidget();
+    const disabled = focusableWidget();
+
+    disabled.enabled = false;
+    scene.root.addChild(enabled).addChild(disabled);
+
+    focus.focus(disabled);
+    expect(focus.focused).toBeNull();
+
+    onKeyDown.dispatch(Keyboard.Tab);
+    expect(focus.focused).toBe(enabled);
+
+    // Wraps straight back to `enabled` — `disabled` is never a stop along the way.
+    onKeyDown.dispatch(Keyboard.Tab);
+    expect(focus.focused).toBe(enabled);
+  });
+
+  test('re-enabling a widget makes it focusable again', () => {
+    const { scene, focus } = createFocusApp();
+    const widget = focusableWidget();
+
+    widget.enabled = false;
+    scene.root.addChild(widget);
+
+    focus.focus(widget);
+    expect(focus.focused).toBeNull();
+
+    widget.enabled = true;
+    focus.focus(widget);
+
+    expect(focus.focused).toBe(widget);
+  });
+
+  test('a scope pop does not restore focus to a widget that was disabled meanwhile', () => {
+    const { scene, focus } = createFocusApp();
+    const widget = focusableWidget();
+    const modal = new Container();
+
+    scene.root.addChild(widget).addChild(modal);
+    focus.focus(widget);
+    expect(focus.focused).toBe(widget);
+
+    const token = createScopeToken();
+
+    focus.pushScope(token, modal);
+    widget.enabled = false;
+    focus.popScope(token);
+
+    expect(focus.focused).toBeNull();
   });
 
   test('focus() rejects a scope-confined target once the scope root itself has been destroyed', () => {

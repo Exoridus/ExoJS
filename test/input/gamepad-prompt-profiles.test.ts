@@ -31,7 +31,7 @@ describe('GamepadPromptLayouts', () => {
 
   test('getControlLabels falls back to the generic label map for an unregistered family', () => {
     const fallback = GamepadPromptLayouts.getControlLabels('notARealFamily' as never);
-    const generic = GamepadPromptLayouts.getControlLabels(GamepadMappingFamily.GameCube);
+    const generic = GamepadPromptLayouts.getControlLabels(GamepadMappingFamily.SteamController);
 
     expect(fallback).toBe(generic);
     expect(fallback.get('ButtonSouth')).toBe('South');

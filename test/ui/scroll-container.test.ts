@@ -80,11 +80,10 @@ describe('ScrollContainer construction', () => {
     expect(scroll.interactive).toBe(true);
   });
 
-  test('accepts an explicit direction option', () => {
-    const scroll = new ScrollContainer({ width: 100, height: 100, direction: 'horizontal' });
-
-    // No public getter for direction; verified indirectly via wheel routing below.
-    expect(scroll).toBeInstanceOf(ScrollContainer);
+  test('accepts an explicit direction option and exposes it', () => {
+    expect(new ScrollContainer({ width: 100, height: 100 }).direction).toBe('vertical');
+    expect(new ScrollContainer({ width: 100, height: 100, direction: 'horizontal' }).direction).toBe('horizontal');
+    expect(new ScrollContainer({ width: 100, height: 100, direction: 'both' }).direction).toBe('both');
   });
 });
 

@@ -74,6 +74,11 @@ export class ScrollContainer extends Widget {
     this.setSize(options.width, options.height);
   }
 
+  /** The axis (or axes) this container scrolls along. Fixed at construction. */
+  public get direction(): ScrollDirection {
+    return this._direction;
+  }
+
   /** Current horizontal scroll position in pixels. */
   public get scrollX(): number {
     return this._scrollX;

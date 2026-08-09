@@ -8,6 +8,11 @@ import { Container } from '#rendering/Container';
 class GlobalNode extends Container {}
 class AppNode extends Container {}
 
+// A three-level hierarchy for the specificity-ranking tests below.
+class BaseNode extends Container {}
+class MiddleNode extends BaseNode {}
+class LeafNode extends MiddleNode {}
+
 const stub = <T extends Container>(): NodeSerializer<T> => ({
   write: () => ({}),
   read: () => new Container() as unknown as T,
@@ -50,5 +55,60 @@ describe('SerializationRegistry fallback chain (app-scoped serializers)', () => 
 
     expect(appA.hasType('AppNode')).toBe(true);
     expect(appB.hasType('AppNode')).toBe(false);
+  });
+});
+
+/**
+ * Constructor resolution ranks the whole chain — own registrations and
+ * inherited ones together — by how specific the registered constructor is.
+ * Consulting the local registry to exhaustion first would let a local base-class
+ * registration beat an exact inherited one.
+ */
+describe('SerializationRegistry constructor resolution (specificity ranking)', () => {
+  it('prefers an inherited exact match over a locally registered ancestor', () => {
+    const global = new SerializationRegistry();
+    global.register('LeafNode', LeafNode, stub<LeafNode>());
+
+    const app = new SerializationRegistry(global);
+    app.register('BaseNode', BaseNode, stub<BaseNode>());
+
+    expect(app.resolveByNode(new LeafNode())?.typeName).toBe('LeafNode');
+  });
+
+  it('prefers an inherited nearer ancestor over a locally registered farther one', () => {
+    const global = new SerializationRegistry();
+    global.register('MiddleNode', MiddleNode, stub<MiddleNode>());
+
+    const app = new SerializationRegistry(global);
+    app.register('BaseNode', BaseNode, stub<BaseNode>());
+
+    expect(app.resolveByNode(new LeafNode())?.typeName).toBe('MiddleNode');
+  });
+
+  it('prefers a local registration over an inherited one at the same specificity', () => {
+    const global = new SerializationRegistry();
+    global.register('GlobalLeaf', LeafNode, stub<LeafNode>());
+
+    const app = new SerializationRegistry(global);
+    // A different type name for the same constructor is only legal across
+    // registries — `register` rejects it within one.
+    app.register('AppLeaf', LeafNode, stub<LeafNode>());
+
+    expect(app.resolveByNode(new LeafNode())?.typeName).toBe('AppLeaf');
+  });
+
+  it('still falls back to an ancestor when nothing registers the exact constructor', () => {
+    const global = new SerializationRegistry();
+    global.register('BaseNode', BaseNode, stub<BaseNode>());
+
+    const app = new SerializationRegistry(global);
+
+    expect(app.resolveByNode(new LeafNode())?.typeName).toBe('BaseNode');
+  });
+
+  it('returns undefined when neither registry covers the constructor chain', () => {
+    const app = new SerializationRegistry(new SerializationRegistry());
+
+    expect(app.resolveByNode(new LeafNode())).toBeUndefined();
   });
 });

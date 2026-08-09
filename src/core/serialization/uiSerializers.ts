@@ -3,6 +3,7 @@ import { Button } from '#ui/Button';
 import { Label } from '#ui/Label';
 import { Panel } from '#ui/Panel';
 import { ProgressBar } from '#ui/ProgressBar';
+import { ScrollContainer, type ScrollDirection } from '#ui/ScrollContainer';
 import { Stack } from '#ui/Stack';
 import { UIRoot } from '#ui/UIRoot';
 
@@ -14,10 +15,12 @@ import { arrayToColor, colorToArray, compact, deserializeStyleOptions, serialize
 const num = (value: unknown): number | undefined => (typeof value === 'number' && Number.isFinite(value) ? value : undefined);
 
 // Widget composition note: widgets own internal children (a Label's Text, a
-// Panel's background Graphics, etc.) that their constructors rebuild — those are
-// never serialized. Only user-added children of the container widgets (Panel,
-// Stack, UIRoot) round-trip. Anchoring (anchorIn) references a UIRoot and is not
-// serialized; the resolved position still round-trips via the common fields.
+// Panel's background Graphics, a ScrollContainer's content Container, etc.) that
+// their constructors rebuild — those are never serialized. Only user-added
+// children of the container widgets (Panel, ScrollContainer, Stack, UIRoot)
+// round-trip; for ScrollContainer those live one level down, inside `content`.
+// Anchoring (anchorIn) references a UIRoot and is not serialized; the resolved
+// position still round-trips via the common fields.
 
 // ── Label ────────────────────────────────────────────────────────────────────
 
@@ -164,6 +167,55 @@ const progressBarSerializer: NodeSerializer<ProgressBar> = {
   },
 };
 
+// ── ScrollContainer ──────────────────────────────────────────────────────────
+
+const isScrollDirection = (value: unknown): value is ScrollDirection => value === 'vertical' || value === 'horizontal' || value === 'both';
+
+const scrollContainerSerializer: NodeSerializer<ScrollContainer> = {
+  write(node, ctx) {
+    const out: Record<string, unknown> = {
+      width: node.uiWidth,
+      height: node.uiHeight,
+      direction: node.direction,
+      scrollX: node.scrollX,
+      scrollY: node.scrollY,
+    };
+
+    if (!node.enabled) out.enabled = false;
+
+    // `content` is an internal child the constructor rebuilds; its children are
+    // the user's, so they round-trip one level flatter than the live tree.
+    if (node.content.children.length > 0) out.children = node.content.children.map(child => ctx.writeNode(child));
+
+    return out;
+  },
+  read(data, ctx) {
+    const scroll = new ScrollContainer(
+      compact({
+        width: num(data.width) ?? 0,
+        height: num(data.height) ?? 0,
+        direction: isScrollDirection(data.direction) ? data.direction : undefined,
+      }),
+    );
+
+    if (data.enabled === false) scroll.enabled = false;
+
+    const children = data.children;
+    if (Array.isArray(children)) {
+      for (const child of children) {
+        const childNode = asSerializedNode(child);
+        if (childNode !== null) scroll.content.addChild(ctx.readNode(childNode) as RenderNode);
+      }
+    }
+
+    // After the content exists, so the stored offset clamps against the real
+    // content range instead of a still-empty one.
+    scroll.scrollTo(num(data.scrollX) ?? 0, num(data.scrollY) ?? 0);
+
+    return scroll;
+  },
+};
+
 // ── Stack ────────────────────────────────────────────────────────────────────
 
 const stackSerializer: NodeSerializer<Stack> = {
@@ -234,6 +286,7 @@ export function registerUiSerializers(registry: SerializationRegistry): void {
   registry.register('Panel', Panel, panelSerializer);
   registry.register('Button', Button, buttonSerializer);
   registry.register('ProgressBar', ProgressBar, progressBarSerializer);
+  registry.register('ScrollContainer', ScrollContainer, scrollContainerSerializer);
   registry.register('Stack', Stack, stackSerializer);
   registry.register('UIRoot', UIRoot, uiRootSerializer);
 }

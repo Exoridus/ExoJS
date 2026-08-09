@@ -2,6 +2,7 @@ import type { Application } from '#core/Application';
 import type { FocusHooks, Stage } from '#core/Stage';
 import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
+import { Widget } from '#ui/Widget';
 
 import { KeyEvent } from './KeyEvent';
 import type { ScopeToken } from './ScopeToken';
@@ -63,7 +64,7 @@ export class FocusController implements FocusHooks {
 
   /**
    * Move keyboard focus to `node`. No-op when `node` is already focused, is
-   * not {@link RenderNode.focusable}, does not belong to this
+   * not {@link _isFocusEligible eligible for focus}, does not belong to this
    * {@link Application} (a different Application's node, one never attached
    * to any stage, or one already removed — see {@link _isOwned}'s doc
    * comment), or — while a scope is active — sits outside that scope's
@@ -72,7 +73,7 @@ export class FocusController implements FocusHooks {
    * on the previously focused node, then `onFocus` on `node`.
    */
   public focus(node: RenderNode): void {
-    if (node === this._focused || !node.focusable || !this._isOwned(node)) {
+    if (node === this._focused || !this._isFocusEligible(node) || !this._isOwned(node)) {
       return;
     }
 
@@ -138,6 +139,20 @@ export class FocusController implements FocusHooks {
     if (previousFocus !== null && this._isOwned(root) && !this._isInsideScope(previousFocus, root)) {
       this.blur();
     }
+  }
+
+  /**
+   * Whether `node` may hold keyboard focus at all: {@link RenderNode.focusable}
+   * must be set, and a {@link Widget} must additionally be
+   * {@link Widget.enabled}. A disabled widget stops responding to input the
+   * moment it is disabled, so leaving it in the Tab order would strand focus
+   * on something that swallows every key it receives.
+   *
+   * Only the widget's OWN `enabled` flag is consulted — a disabled ancestor
+   * does not (yet) disable its children.
+   */
+  private _isFocusEligible(node: RenderNode): boolean {
+    return node.focusable && (!(node instanceof Widget) || node.enabled);
   }
 
   /**
@@ -415,8 +430,8 @@ export class FocusController implements FocusHooks {
 
   /**
    * Restore whatever was focused before the just-popped scope activated —
-   * provided it is still focusable and, if another scope is now active
-   * underneath, still inside that one. Blurs otherwise: guessing at a
+   * provided it is still {@link _isFocusEligible eligible} and, if another
+   * scope is now active underneath, still inside that one. Blurs otherwise: guessing at a
    * different node to focus instead would be surprising, and leaving focus
    * on a node the newly-active scope doesn't own would break its trap.
    */
@@ -425,7 +440,7 @@ export class FocusController implements FocusHooks {
     const canRestore =
       previousFocus !== null &&
       this._isOwned(previousFocus) &&
-      previousFocus.focusable &&
+      this._isFocusEligible(previousFocus) &&
       (activeScope === null || this._isInsideScope(previousFocus, activeScope));
 
     if (canRestore && previousFocus !== null) {
@@ -497,19 +512,24 @@ export class FocusController implements FocusHooks {
   }
 
   /**
-   * Recursively collect focusable, owned descendants of `node` (inclusive)
-   * into `out`. `this._isOwned(node)` gates collection the same way it gates
-   * {@link focus} itself — a node killed via a bare `destroy()` (no prior
-   * `removeChild()`, so it is still structurally reachable by this walk) or
-   * belonging to a different Application must not be Tab-reachable just
-   * because the tree walk still finds it.
+   * Recursively collect focus-eligible, owned descendants of `node`
+   * (inclusive) into `out`. {@link _isFocusEligible} and {@link _isOwned} gate
+   * collection the same way they gate {@link focus} itself — a disabled
+   * widget, a node killed via a bare `destroy()` (no prior `removeChild()`, so
+   * it is still structurally reachable by this walk) or one belonging to a
+   * different Application must not be Tab-reachable just because the tree walk
+   * still finds it.
+   *
+   * A disabled widget is skipped as a Tab STOP but its subtree is still
+   * walked: only the widget's own `enabled` flag is local to it, so an
+   * enabled control nested inside a disabled container stays reachable.
    */
   private _collectInto(node: RenderNode, out: RenderNode[]): void {
     if (!node.visible) {
       return;
     }
 
-    if (node.focusable && this._isOwned(node)) {
+    if (this._isFocusEligible(node) && this._isOwned(node)) {
       out.push(node);
     }
 

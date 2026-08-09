@@ -30,7 +30,7 @@ export interface InteractionHooks {
 export interface FocusHooks {
   /** The node that currently holds keyboard focus, or `null`. */
   readonly focused: RenderNode | null;
-  /** Move keyboard focus to `node` (a no-op when `node.focusable` is `false`). */
+  /** Move keyboard focus to `node` (a no-op when `node.focusable` is `false`, or when `node` is a disabled widget). */
   focus(node: RenderNode): void;
   /** Clear focus, or only clear it when `node` currently holds it. */
   blur(node?: RenderNode): void;

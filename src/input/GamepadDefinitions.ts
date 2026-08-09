@@ -1,5 +1,4 @@
 import { ArcadeStickGamepadMapping } from './ArcadeStickGamepadMapping';
-import { GameCubeGamepadMapping } from './GameCubeGamepadMapping';
 import type { GamepadMapping } from './GamepadMapping';
 import { GenericDualAnalogGamepadMapping } from './GenericDualAnalogGamepadMapping';
 import { JoyConLeftGamepadMapping } from './JoyConLeftGamepadMapping';
@@ -258,15 +257,17 @@ const exactDeviceDefinitions: GamepadDefinition[] = [
   createStaticGamepadDefinition('DualShock 4 Controller', () => new PlayStationGamepadMapping(), ['054c:05c4', '054c:09cc', '054c:0ba0']),
   createStaticGamepadDefinition('DualSense Controller', () => new PlayStationGamepadMapping(), '054c:0ce6'),
   createStaticGamepadDefinition('DualSense Edge Controller', () => new PlayStationGamepadMapping(), '054c:0df2'),
-  createStaticGamepadDefinition('GameCube Controller Adapter', () => new GameCubeGamepadMapping(), '057e:0337'),
   createStaticGamepadDefinition('Joy-Con (L)', () => new JoyConLeftGamepadMapping(), '057e:2006'),
   createStaticGamepadDefinition('Joy-Con (R)', () => new JoyConRightGamepadMapping(), '057e:2007'),
   createStaticGamepadDefinition('Joy-Con Charging Grip', () => new SwitchProGamepadMapping(), '057e:200e'),
   createStaticGamepadDefinition('Switch Pro Controller', () => new SwitchProGamepadMapping(), '057e:2009'),
+  // Switch 2 product IDs: unverified against real hardware, and absent from
+  // Chromium's Nintendo device tables, so the browser does not normalise them
+  // to the standard layout either. The mappings below are the plausible
+  // Switch 1 analogues, not confirmed layouts.
   createStaticGamepadDefinition('Joy-Con 2 (L)', () => new JoyConLeftGamepadMapping(), '057e:2066'),
   createStaticGamepadDefinition('Joy-Con 2 (R)', () => new JoyConRightGamepadMapping(), '057e:2067'),
   createStaticGamepadDefinition('Switch 2 Pro Controller', () => new SwitchProGamepadMapping(), '057e:2069'),
-  createStaticGamepadDefinition('Switch 2 GameCube Controller', () => new GameCubeGamepadMapping(), '057e:2073'),
   createStaticGamepadDefinition('Steam Controller', () => new SteamControllerGamepadMapping(), ['28de:1102', '28de:1142']),
   createStaticGamepadDefinition('Steam Virtual Gamepad', () => new GenericDualAnalogGamepadMapping(), '28de:11ff'),
   createStaticGamepadDefinition('Steam Deck', () => new SteamDeckGamepadMapping(), '28de:1205'),

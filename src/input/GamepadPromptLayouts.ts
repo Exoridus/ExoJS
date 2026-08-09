@@ -136,7 +136,6 @@ const promptLabelsByFamily = new Map<GamepadMappingFamily, ReadonlyMap<GamepadPr
   [GamepadMappingFamily.SwitchPro, switchLabels],
   [GamepadMappingFamily.JoyConLeft, switchLabels],
   [GamepadMappingFamily.JoyConRight, switchLabels],
-  [GamepadMappingFamily.GameCube, genericLabels],
   [GamepadMappingFamily.SteamController, genericLabels],
   [GamepadMappingFamily.SteamDeck, genericLabels],
   [GamepadMappingFamily.ArcadeStick, genericLabels],

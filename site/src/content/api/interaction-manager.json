@@ -213,7 +213,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Move keyboard focus to node. No-op when node is already focused or is not RenderNode.focusable. Fires onBlur on the previously focused node, then onFocus on node."
+          "description": "Move keyboard focus to node. No-op when node is already focused, is not RenderNode.focusable, or is a Widget that is currently disabled. Fires onBlur on the previously focused node, then onFocus on node."
         },
         {
           "name": "focusNext",

@@ -70,7 +70,6 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "Flags",
   "FontAsset",
   "FontFactory",
-  "GameCubeGamepadMapping",
   "Gamepad",
   "GamepadAxis",
   "GamepadButton",
