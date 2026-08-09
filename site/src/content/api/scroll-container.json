@@ -6,11 +6,11 @@
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 110,
+  "memberCount": 111,
   "counts": {
     "constructors": 1,
     "methods": 52,
-    "properties": 43,
+    "properties": 44,
     "events": 14
   },
   "sections": [
@@ -3042,6 +3042,27 @@
           "params": [],
           "returnType": null,
           "description": "true once destroy has run on this node. A destroyed node has released its pooled resources (transform/bounds), has been unlinked from its parent, renders nothing, and must not be reused or re-attached. The render plan skips a destroyed node, so even one handed straight to a renderer as a detached root contributes nothing."
+        },
+        {
+          "name": "direction",
+          "signature": "direction: ScrollDirection",
+          "signatureTokens": [
+            {
+              "text": "direction",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ScrollDirection",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The axis (or axes) this container scrolls along. Fixed at construction."
         },
         {
           "name": "enabled",

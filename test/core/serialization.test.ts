@@ -30,6 +30,7 @@ import { Button } from '#ui/Button';
 import { Label } from '#ui/Label';
 import { Panel } from '#ui/Panel';
 import { ProgressBar } from '#ui/ProgressBar';
+import { ScrollContainer } from '#ui/ScrollContainer';
 import { Stack } from '#ui/Stack';
 
 /** Build a canvas-backed texture with known dimensions (matches the unit-test convention). */
@@ -770,6 +771,59 @@ describe('serialization — UI widgets', () => {
     expect(restored.direction).toBe('row');
     expect(restored.padding).toBe(4);
     expect(restored.children).toHaveLength(2);
+  });
+
+  it('round-trips a ScrollContainer (viewport, direction, scroll offsets, enabled) with its content children', () => {
+    const scroll = new ScrollContainer({ width: 300, height: 200, direction: 'both' });
+    // A Panel gives the content a real measurable extent, so the scroll offsets
+    // survive the read-side clamp against the content range.
+    const item = new Panel({ width: 800, height: 900 });
+
+    item.name = 'sheet';
+    scroll.content.addChild(item);
+    scroll.enabled = false;
+    scroll.scrollTo(120, 340);
+
+    const data = serializeTree(scroll);
+    expect(data.type).toBe('ScrollContainer');
+    expect(data.width).toBe(300);
+    expect(data.height).toBe(200);
+    expect(data.direction).toBe('both');
+    expect(data.scrollX).toBe(120);
+    expect(data.scrollY).toBe(340);
+    expect(data.enabled).toBe(false);
+    // The internal content Container is not an entry of its own — only what the user put inside it.
+    expect(data.children).toHaveLength(1);
+    expect((data.children as SerializedNode[])[0]?.type).toBe('Panel');
+
+    const restored = deserializeTree(data) as ScrollContainer;
+    expect(restored).toBeInstanceOf(ScrollContainer);
+    expect(restored.uiWidth).toBe(300);
+    expect(restored.uiHeight).toBe(200);
+    expect(restored.direction).toBe('both');
+    expect(restored.enabled).toBe(false);
+    expect(restored.scrollX).toBe(120);
+    expect(restored.scrollY).toBe(340);
+    expect(restored.children).not.toContain(restored.content.children[0]);
+    expect(restored.content.children).toHaveLength(1);
+    expect(restored.content.children[0]?.name).toBe('sheet');
+  });
+
+  it('clamps a restored ScrollContainer offset to the restored content range', () => {
+    const scroll = new ScrollContainer({ width: 100, height: 100, direction: 'both' });
+
+    vi.spyOn(scroll.content, 'getBounds').mockReturnValue(new Rectangle(0, 0, 500, 500));
+    scroll.scrollTo(400, 400);
+    expect(scroll.scrollX).toBe(400);
+
+    // The stored offset was valid for a 500×500 content extent; the restored tree
+    // has no content at all, so it must clamp rather than park the content
+    // outside its own range.
+    const restored = deserializeTree(serializeTree(scroll)) as ScrollContainer;
+
+    expect(restored.scrollX).toBe(0);
+    expect(restored.scrollY).toBe(0);
+    expect(restored.content.position.x).toBe(0);
   });
 });
 
