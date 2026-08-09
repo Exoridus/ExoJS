@@ -403,6 +403,41 @@ describe('continuous collision (swept shape, not just the centre)', () => {
     }
     expect(world._ccdSweepTests).toBeGreaterThan(0);
   });
+
+  it('the CCD candidate set comes from the broad phase, so it does not grow with the world', () => {
+    /**
+     * One bullet, one wall it hits, and `distantColliderCount` static boxes
+     * parked far off its path. A pass that iterates the world's collider array
+     * looks at every one of them per bullet collider per step; a pass that asks
+     * the broad phase looks only at what is near the swept AABB.
+     */
+    const candidatesFor = (distantColliderCount: number): number => {
+      const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+
+      world.add(new PhysicsBody({ type: 'static', position: { x: 200, y: 0 }, colliders: [{ shape: new BoxShape(4, 400) }] }));
+
+      for (let i = 0; i < distantColliderCount; i++) {
+        world.add(new PhysicsBody({ type: 'static', position: { x: 10_000 + i * 100, y: 10_000 }, colliders: [{ shape: new BoxShape(40, 40) }] }));
+      }
+
+      const ball = new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new CircleShape(6) }] });
+      ball.isBullet = true;
+      world.add(ball);
+      ball.linearVelocityX = 6000;
+
+      for (let frame = 0; frame < 10; frame++) {
+        world.step(FRAME);
+      }
+
+      return world._ccdBroadPhaseCandidates;
+    };
+
+    const few = candidatesFor(40);
+    const many = candidatesFor(400);
+
+    expect(few).toBeGreaterThan(0);
+    expect(many).toBe(few);
+  });
 });
 
 describe('swept SAT — exact tangency is not a blocking hit', () => {
