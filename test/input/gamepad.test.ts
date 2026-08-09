@@ -334,7 +334,34 @@ describe('Gamepad', () => {
 
     expect(onAxisChange).toHaveBeenCalled();
     const aggregateXCall = onAxisChange.mock.calls.find(call => (call[0] as { channel: number }).channel === GamepadAxis.LeftStickX);
-    expect(aggregateXCall?.[1]).toBeCloseTo(0.9);
+    // Rescaled past the 0.2 deadzone: (0.9 - 0.2) / 0.8.
+    expect(aggregateXCall?.[1]).toBeCloseTo(0.875);
+  });
+
+  test('a stick pushed diagonally is deadzoned on its radius, across both raw axes', () => {
+    const channels = new Float32Array(ChannelSize.Container);
+    const pad = new Gamepad(0, channels);
+    const native = createNativeGamepad('generic', 0, [], [0, 0, 0, 0]);
+
+    pad._bind(native, buildDefinition());
+
+    const xOffset = pad.resolveChannelOffset(GamepadAxis.LeftStickX);
+    const yOffset = pad.resolveChannelOffset(GamepadAxis.LeftStickY);
+
+    // Each component is inside the 0.2 deadzone on its own; the radius is not.
+    (native.axes as number[])[0] = 0.15;
+    (native.axes as number[])[1] = 0.15;
+    pad.update();
+
+    expect(channels[xOffset]).toBeGreaterThan(0);
+    expect(channels[yOffset]).toBeGreaterThan(0);
+
+    // A full diagonal stays on the unit circle rather than reading sqrt(2).
+    (native.axes as number[])[0] = 1;
+    (native.axes as number[])[1] = 1;
+    pad.update();
+
+    expect(Math.hypot(channels[xOffset]!, channels[yOffset]!)).toBeCloseTo(1);
   });
 
   test('_silentUnbind is a no-op when already disconnected', () => {

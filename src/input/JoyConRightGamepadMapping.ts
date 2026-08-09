@@ -33,12 +33,12 @@ export class JoyConRightGamepadMapping extends GamepadMapping {
         new GamepadButton(16, GamepadButton.Guide), // Home
       ],
       [
-        new GamepadAxis(0, GamepadAxis.LeftStickLeft, { invert: true }),
-        new GamepadAxis(0, GamepadAxis.LeftStickRight),
-        new GamepadAxis(1, GamepadAxis.LeftStickUp, { invert: true }),
-        new GamepadAxis(1, GamepadAxis.LeftStickDown),
-        new GamepadAxis(0, GamepadAxis.LeftStickX, { bipolar: true }),
-        new GamepadAxis(1, GamepadAxis.LeftStickY, { bipolar: true }),
+        new GamepadAxis(0, GamepadAxis.LeftStickLeft, { invert: true, pair: 1 }),
+        new GamepadAxis(0, GamepadAxis.LeftStickRight, { pair: 1 }),
+        new GamepadAxis(1, GamepadAxis.LeftStickUp, { invert: true, pair: 0 }),
+        new GamepadAxis(1, GamepadAxis.LeftStickDown, { pair: 0 }),
+        new GamepadAxis(0, GamepadAxis.LeftStickX, { bipolar: true, pair: 1 }),
+        new GamepadAxis(1, GamepadAxis.LeftStickY, { bipolar: true, pair: 0 }),
       ],
     );
   }

@@ -383,7 +383,11 @@ export class Gamepad {
 
       const offset = this._resolveOffset(axis.channel);
       const previous = channels[offset];
-      const value = axis.transformValue(rawAxis) || 0;
+      // A stick axis is deadzoned on its pair's radius, so its partner's raw
+      // value from THIS same poll has to travel with it — see
+      // `GamepadAxis.transformValue`. A partner index the hardware does not
+      // report degrades to 0, i.e. to the axis's own magnitude.
+      const value = axis.transformValue(rawAxis, axis.pair === null ? 0 : (rawAxes[axis.pair] ?? 0)) || 0;
 
       if (previous === value) {
         continue;

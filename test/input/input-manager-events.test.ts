@@ -1132,7 +1132,8 @@ describe('InputManager — gamepad edge cases', () => {
       const [pad, , value] = onAxisChange.mock.calls[onAxisChange.mock.calls.length - 1] as [Gamepad, unknown, number];
 
       expect(pad).toBe(im.gamepads[0]);
-      expect(value).toBeCloseTo(0.75, 2);
+      // Rescaled past the 0.2 deadzone: (0.75 - 0.2) / 0.8.
+      expect(value).toBeCloseTo(0.6875, 2);
     });
 
     im.destroy();
