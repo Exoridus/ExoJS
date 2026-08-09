@@ -6,7 +6,7 @@ import type { TiledChunkData, TiledLayerData, TiledMapData, TiledObjectData, Til
 import { TiledTileLayer } from '../src/TiledLayer';
 import { TiledMap } from '../src/TiledMap';
 import { TiledTileset } from '../src/TiledTileset';
-import { TiledFormatError, validateTiledMapData } from '../src/validate';
+import { TiledFormatError, validateTiledMapData, validateTiledTilesetFileData } from '../src/validate';
 
 // Raw fixture data (matches test/fixtures/minimal.tmj)
 const RAW_MINIMAL = {
@@ -449,6 +449,14 @@ describe('TiledMap.toTileMap — error cases', () => {
     expect(() => map.toTileMap()).toThrow(TiledFormatError);
     expect(() => map.toTileMap()).toThrow(/collection-of-images/);
   });
+
+  it('throws TiledFormatError for a tileset that carries no image at all', () => {
+    // Silently skipping such a tileset made every cell and tile object that
+    // referenced it vanish from the runtime map with no diagnostic at all.
+    const map = makeMap();
+    expect(() => map.toTileMap()).toThrow(TiledFormatError);
+    expect(() => map.toTileMap()).toThrow(/tileset "tiles" has no image/);
+  });
 });
 
 // ── Object-kind conversion breadth (ellipse/polygon/polyline/dropped-tile) ──────
@@ -486,7 +494,7 @@ describe('TiledMap.toTileMap — object kind conversion', () => {
     if (obj.kind === 'polyline') expect(obj.points).toEqual(points);
   });
 
-  it('drops a tile object whose tileset has no atlas image (skipped at conversion)', () => {
+  it('throws instead of dropping a tile object whose tileset has no image at all', () => {
     const noImageTs = new TiledTileset({ name: 'no-image', tilewidth: 16, tileheight: 16, tilecount: 1, columns: 1 }, 1);
     const data = validateTiledMapData({
       type: 'map', version: '1.10', orientation: 'orthogonal', renderorder: 'right-down',
@@ -497,8 +505,82 @@ describe('TiledMap.toTileMap — object kind conversion', () => {
       }],
       tilesets: [{ firstgid: 1, name: 'no-image', tilewidth: 16, tileheight: 16, tilecount: 1, columns: 1 }],
     }, 'noimg.tmj');
-    const tm = new TiledMap('noimg.tmj', data, [noImageTs]).toTileMap();
-    expect(tm.objectLayers[0]!.objects).toHaveLength(0);
+    const map = new TiledMap('noimg.tmj', data, [noImageTs]);
+    expect(() => map.toTileMap()).toThrow(TiledFormatError);
+    expect(() => map.toTileMap()).toThrow(/no image/);
+    expect(() => map.toTileMap()).toThrow(/no-image/);
+  });
+});
+
+// ── Tile-object anchor / objectalignment ────────────────────────────────────────
+
+describe('TiledMap.toTileMap — tile object anchoring (objectalignment)', () => {
+  // Tiled stores a tile object's x/y at its tileset alignment anchor, not at the
+  // bounding box's top-left corner. The converted TileMapObject must expose the
+  // corner, like every other object kind.
+  function makeTileObjectMap(objectAlignment?: string): TileMap {
+    const tilesetData = {
+      firstgid: 1, name: 'tiles', tilewidth: 16, tileheight: 16, tilecount: 4, columns: 2,
+      spacing: 0, margin: 0, imagewidth: 32, imageheight: 32,
+      ...(objectAlignment !== undefined && { objectalignment: objectAlignment }),
+    };
+    const ts = new TiledTileset(
+      validateTiledTilesetFileData(tilesetData, 'tiles.tsj'),
+      1,
+      { imageUrl: 'tiles.png', texture: makeTexture(32, 32) },
+    );
+    const data = validateTiledMapData({
+      type: 'map', version: '1.10', orientation: 'orthogonal', renderorder: 'right-down',
+      width: 4, height: 4, tilewidth: 16, tileheight: 16, infinite: false,
+      layers: [{
+        id: 1, name: 'Objects', type: 'objectgroup', visible: true, x: 0, y: 0, opacity: 1,
+        objects: [
+          { id: 1, name: 'chest', type: '', x: 32, y: 48, width: 16, height: 24, rotation: 0, visible: true, gid: 1 },
+          { id: 2, name: 'zone', type: '', x: 32, y: 48, width: 16, height: 24, rotation: 0, visible: true },
+        ],
+      }],
+      tilesets: [tilesetData],
+    }, 'align.tmj');
+    return new TiledMap('align.tmj', data, [ts]).toTileMap();
+  }
+
+  it('anchors a tile object bottom-left by default on an orthogonal map', () => {
+    const chest = makeTileObjectMap().objectLayers[0]!.getObjectByName('chest')!;
+    expect(chest.x).toBe(32);
+    expect(chest.y).toBe(48 - 24);
+  });
+
+  it('honours an explicit topleft alignment (position is already the corner)', () => {
+    const chest = makeTileObjectMap('topleft').objectLayers[0]!.getObjectByName('chest')!;
+    expect(chest.x).toBe(32);
+    expect(chest.y).toBe(48);
+  });
+
+  it('honours an explicit center alignment', () => {
+    const chest = makeTileObjectMap('center').objectLayers[0]!.getObjectByName('chest')!;
+    expect(chest.x).toBe(32 - 8);
+    expect(chest.y).toBe(48 - 12);
+  });
+
+  it('honours an explicit bottomright alignment', () => {
+    const chest = makeTileObjectMap('bottomright').objectLayers[0]!.getObjectByName('chest')!;
+    expect(chest.x).toBe(32 - 16);
+    expect(chest.y).toBe(48 - 24);
+  });
+
+  it('leaves a non-tile object at its stored position', () => {
+    const zone = makeTileObjectMap().objectLayers[0]!.getObjectByName('zone')!;
+    expect(zone.x).toBe(32);
+    expect(zone.y).toBe(48);
+  });
+
+  it('rejects an unknown objectalignment value at validation time', () => {
+    expect(() => validateTiledMapData({
+      type: 'map', version: '1.10', orientation: 'orthogonal', renderorder: 'right-down',
+      width: 1, height: 1, tilewidth: 16, tileheight: 16, infinite: false,
+      layers: [],
+      tilesets: [{ firstgid: 1, name: 't', tilewidth: 16, tileheight: 16, tilecount: 1, columns: 1, objectalignment: 'middle' }],
+    }, 'bad.tmj')).toThrow(/unknown object alignment "middle"/);
   });
 });
 
@@ -702,11 +784,11 @@ function makeBareMapData(overrides: Partial<TiledMapData> & { layers: TiledMapDa
 describe('TiledMap — defensive coverage of otherwise-unreachable branches', () => {
   it('tolerates an explicit undefined entry in the tilesets array (sort() never invokes the comparator on it)', () => {
     const data = validateTiledMapData({ ...RAW_MINIMAL, layers: [] }, 'holetilesets.tmj');
-    const map = new TiledMap('holetilesets.tmj', data, [TILESET, undefined as unknown as TiledTileset]);
+    const map = new TiledMap('holetilesets.tmj', data, [ATLAS_TILESET, undefined as unknown as TiledTileset]);
     expect(map.tilesets).toHaveLength(2);
     const tm = map.toTileMap();
-    // TILESET has no texture (skipped) and the hole is skipped too → no runtime tilesets.
-    expect(tm.tilesets).toHaveLength(0);
+    // The hole contributes no runtime tileset; the real one still converts.
+    expect(tm.tilesets).toHaveLength(1);
   });
 
   it('resolveGid returns null when no tileset covers the masked gid (requires clearing tilesets after construction, since valid construction always guarantees coverage)', () => {

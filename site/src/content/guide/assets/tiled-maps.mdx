@@ -165,6 +165,52 @@ Before this conversion existed, `object`- and `class`-typed properties were indi
 a plain number or silently dropped; both are now tagged (`TilePropertyObjectRef`) or preserved
 (nested `TileProperties`) so you can tell them apart from real scalars at runtime.
 
+## Tile objects and the anchor convention
+
+An object placed with Tiled's *insert tile* tool converts to a `TileObject` — `kind` is `'tile'`
+and `tile` carries the resolved `ResolvedTile` (tileset, local tile id, flip flags):
+
+```ts no-check
+import { ObjectKind } from '@codexo/exojs-tilemap';
+
+const tileMap = map.toTileMap();
+const [propLayer] = tileMap.objectLayers;
+const [chest] = propLayer.byKind(ObjectKind.Tile);
+
+chest.tile.tileset;     // the runtime TileSet the tile came from
+chest.tile.localTileId; // index within that tileset
+chest.tile.transform;   // { flipX, flipY, diagonal }
+```
+
+Tiled does **not** store a tile object's position the way it stores every other object's. A
+rectangle, ellipse, point, polygon, or text object records the top-left corner of its bounding
+box; a tile object records its *alignment anchor* instead — by default the bottom-left corner in
+an orthogonal map and the bottom-centre in an isometric one. A tileset can override that with its
+`objectalignment` property (`topleft`, `top`, `topright`, `left`, `center`, `right`, `bottomleft`,
+`bottom`, `bottomright`).
+
+`toTileMap()` resolves that alignment and converts the anchor to the top-left corner, so
+`x`/`y` mean the same thing on every `TileMapObject` kind:
+
+```ts no-check
+// A 16×24 tile object stored at (32, 48) in a default orthogonal map
+// (bottom-left anchor) converts to a corner at (32, 24).
+chest.x; // 32
+chest.y; // 24
+```
+
+<Callout type="pitfall" title="Rotation still pivots about the Tiled anchor">
+Tiled rotates a tile object's image about its alignment anchor, not about the bounding box
+corner. A tile object with a non-zero `rotation` therefore pivots about the anchor even though
+`x`/`y` now report the corner — recover the anchor with `tiledObjectAnchorOffset` if you need the
+exact pivot.
+</Callout>
+
+The two helpers behind this are exported for when you work with the parsed source model directly:
+`resolveTiledObjectAlignment(tileset.objectAlignment, map.orientation)` applies Tiled's
+orientation-dependent default, and `tiledObjectAnchorOffset(alignment, width, height)` returns the
+anchor's offset from the corner.
+
 ## Text objects
 
 An object drawn with Tiled's text tool converts to a `TextObject` — a `TileMapObject` whose

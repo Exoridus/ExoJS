@@ -555,6 +555,20 @@ describe('TiledMap.toTileMap() — object layers', () => {
     }
   });
 
+  it('reports a tile object at its bounding-box corner, not at the Tiled anchor', async () => {
+    const runtime = (await loadTiledMap('orthogonal-rich.tmj', context)).toTileMap();
+    const chest = runtime.getObjectLayer('Spawns')?.getObjectByName('chest');
+
+    // The fixture stores chest at (32, 0) with a 16×16 body and no
+    // objectalignment on its tileset. Tiled draws that tile *above* y = 0
+    // (bottom-left anchor), so the corner is (32, -16).
+    expect(chest?.x).toBe(32);
+    expect(chest?.y).toBe(-16);
+
+    // A point object in the same layer keeps its stored position.
+    expect(runtime.getObjectLayer('Spawns')?.getObjectByName('hero')?.y).toBe(16);
+  });
+
   it('query selects objects by class/type', async () => {
     const runtime = (await loadTiledMap('orthogonal-rich.tmj', context)).toTileMap();
     const layer = runtime.getObjectLayer('Spawns');

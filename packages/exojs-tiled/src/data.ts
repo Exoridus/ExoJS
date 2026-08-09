@@ -128,6 +128,25 @@ export interface TiledWangSetData {
 // ── Tileset ──────────────────────────────────────────────────────────────────
 
 /**
+ * Where a tile object's stored `x`/`y` sits within the tile's bounding box
+ * ({@link TiledTilesetData.objectalignment}).
+ *
+ * `'unspecified'` is Tiled's own default and is orientation-dependent — see
+ * {@link import('./objectAlignment').resolveTiledObjectAlignment}.
+ */
+export type TiledObjectAlignment =
+  | 'unspecified'
+  | 'topleft'
+  | 'top'
+  | 'topright'
+  | 'left'
+  | 'center'
+  | 'right'
+  | 'bottomleft'
+  | 'bottom'
+  | 'bottomright';
+
+/**
  * A Tiled tileset, as the root of a standalone `.tsj` file or (minus
  * `firstgid`) embedded inline in a map's `tilesets` array.
  */
@@ -145,7 +164,8 @@ export interface TiledTilesetData {
   readonly imagewidth?: number | undefined;
   readonly imageheight?: number | undefined;
   readonly tileoffset?: TiledPointData | undefined;
-  readonly objectalignment?: string | undefined;
+  /** Alignment of a tile object's stored position within its bounding box. Absent means `'unspecified'`. */
+  readonly objectalignment?: TiledObjectAlignment | undefined;
   readonly tiles?: readonly TiledTileData[] | undefined;
   readonly wangsets?: readonly TiledWangSetData[] | undefined;
   readonly properties?: readonly TiledPropertyData[] | undefined;

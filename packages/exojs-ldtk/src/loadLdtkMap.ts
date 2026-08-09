@@ -7,6 +7,7 @@ import { getLdtkLevelEntries } from './ldtkLevelEntries';
 import type { LdtkMap } from './LdtkMap';
 import { ldtkToTileMap } from './ldtkToTileMap';
 import { resolveLdtkUrl } from './url';
+import { validateLdtkData, validateLdtkLevelData } from './validate';
 
 // ── Tileset loading ───────────────────────────────────────────────────────────
 
@@ -83,10 +84,10 @@ async function loadExternalLevel(
   }
 
   const externalUrl = resolveLdtkUrl(level.externalRelPath, ldtkSource);
-  // Typed without deep validation (fetchJson<T> is an unvalidated assertion,
-  // matching the root document's fetch below) — structural errors surface as
-  // runtime exceptions during conversion.
-  const external = await context.fetchJson<LdtkLevel>(externalUrl);
+  // Validated against the same level shape as an inlined level, with the
+  // `.ldtkl` file itself as the error source — a malformed external payload
+  // must fail as loudly as a malformed root document.
+  const external = validateLdtkLevelData(await context.fetchJson(externalUrl), externalUrl);
   const fieldInstances = external.fieldInstances ?? level.fieldInstances;
 
   return {
@@ -129,6 +130,11 @@ function withResolvedLevels(data: LdtkData, resolvedLevels: readonly LdtkLevel[]
  * externalized (`.ldtkl`) levels, and return a fully assembled {@link LdtkMap}
  * with one runtime {@link import('@codexo/exojs-tilemap').TileMap} per level.
  *
+ * The fetched document — and every external `.ldtkl` payload — is validated
+ * before use; a structural problem throws
+ * {@link import('./validate').LdtkFormatError} naming the file and the
+ * offending property path.
+ *
  * Tilesets without an atlas image (`relPath = null`) are silently skipped;
  * their tiles will not appear in the rendered output.
  * @internal
@@ -137,10 +143,7 @@ export async function loadLdtkMap(
   source: string,
   context: AssetLoaderContext,
 ): Promise<LdtkMap> {
-  const raw = await context.fetchJson(source);
-  // Cast without deep validation — structural errors surface as runtime
-  // exceptions when we access fields during conversion.
-  const data = raw as LdtkData;
+  const data = validateLdtkData(await context.fetchJson(source), source);
 
   // Load all referenced tilesets and resolve externalized levels concurrently.
   // Iterate the flattened level list (not raw data.levels) so multi-world

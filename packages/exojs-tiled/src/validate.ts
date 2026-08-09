@@ -15,6 +15,7 @@ import type {
   TiledLayerData,
   TiledLayerDataBase,
   TiledMapData,
+  TiledObjectAlignment,
   TiledObjectData,
   TiledObjectLayerData,
   TiledOrientation,
@@ -31,6 +32,7 @@ import type {
   TiledWangSetData,
   TiledWangTileData,
 } from './data';
+import { TILED_OBJECT_ALIGNMENTS } from './objectAlignment';
 
 /**
  * Thrown when a Tiled JSON document does not match the expected shape.
@@ -548,6 +550,19 @@ function validateTiledVersion(value: unknown, source: string, path: string): str
   return value;
 }
 
+function validateTiledObjectAlignment(obj: Record<string, unknown>, source: string, path: string): TiledObjectAlignment | undefined {
+  const value = obj.objectalignment;
+  if (value === undefined) return undefined;
+
+  const alignmentPath = joinPath(path, 'objectalignment');
+  const name = expectString(value, source, alignmentPath);
+  if (!TILED_OBJECT_ALIGNMENTS.includes(name as TiledObjectAlignment)) {
+    throw new TiledFormatError(source, alignmentPath, `unknown object alignment "${name}" (expected one of ${TILED_OBJECT_ALIGNMENTS.join(', ')})`);
+  }
+
+  return name as TiledObjectAlignment;
+}
+
 /** @internal */
 export function validateTiledTilesetData(obj: Record<string, unknown>, source: string, path: string): TiledTilesetData {
   return {
@@ -563,7 +578,7 @@ export function validateTiledTilesetData(obj: Record<string, unknown>, source: s
     imagewidth: optionalNonNegativeInteger(obj, 'imagewidth', source, path),
     imageheight: optionalNonNegativeInteger(obj, 'imageheight', source, path),
     tileoffset: obj.tileoffset === undefined ? undefined : validateTiledPointData(obj.tileoffset, source, joinPath(path, 'tileoffset')),
-    objectalignment: optionalString(obj, 'objectalignment', source, path),
+    objectalignment: validateTiledObjectAlignment(obj, source, path),
     tiles: optionalMapArray(obj.tiles, source, joinPath(path, 'tiles'), (item, itemPath) => validateTiledTileData(item, source, itemPath)),
     wangsets: validateTiledWangSets(obj.wangsets, source, joinPath(path, 'wangsets')),
     properties: validateTiledPropertiesArray(obj.properties, source, joinPath(path, 'properties')),

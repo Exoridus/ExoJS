@@ -105,7 +105,7 @@
         },
         {
           "name": "halign",
-          "signature": "halign?: \"center\" | \"right\" | \"justify\" | \"left\"",
+          "signature": "halign?: \"left\" | \"center\" | \"right\" | \"justify\"",
           "signatureTokens": [
             {
               "text": "halign",
@@ -117,6 +117,14 @@
             },
             {
               "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"left\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
               "kind": "punctuation"
             },
             {
@@ -137,14 +145,6 @@
             },
             {
               "text": "\"justify\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"left\"",
               "kind": "keyword"
             }
           ],
@@ -300,7 +300,7 @@
         },
         {
           "name": "valign",
-          "signature": "valign?: \"center\" | \"bottom\" | \"top\"",
+          "signature": "valign?: \"top\" | \"center\" | \"bottom\"",
           "signatureTokens": [
             {
               "text": "valign",
@@ -315,6 +315,14 @@
               "kind": "punctuation"
             },
             {
+              "text": "\"top\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
               "text": "\"center\"",
               "kind": "keyword"
             },
@@ -324,14 +332,6 @@
             },
             {
               "text": "\"bottom\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"top\"",
               "kind": "keyword"
             }
           ],

@@ -68,6 +68,7 @@ export type {
   TiledLayerData,
   TiledLayerDataBase,
   TiledMapData,
+  TiledObjectAlignment,
   TiledObjectData,
   TiledObjectLayerData,
   TiledOrientation,
@@ -99,6 +100,10 @@ export { TiledMap } from './TiledMap';
 export { TiledObject } from './TiledObject';
 export type { TiledTilesetResources } from './TiledTileset';
 export { TiledTileset } from './TiledTileset';
+
+// ── Tile-object anchoring ─────────────────────────────────────────────────────
+export type { TiledResolvedObjectAlignment } from './objectAlignment';
+export { resolveTiledObjectAlignment, TILED_OBJECT_ALIGNMENTS, tiledObjectAnchorOffset } from './objectAlignment';
 
 // ── Wangset conversion ────────────────────────────────────────────────────────
 export { tiledWangSetToWangSet } from './wangSets';

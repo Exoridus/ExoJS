@@ -1,6 +1,6 @@
 import type { Texture } from '@codexo/exojs';
 
-import type { TiledPointData, TiledPropertyData, TiledTileData, TiledTilesetData, TiledWangSetData } from './data';
+import type { TiledObjectAlignment, TiledPointData, TiledPropertyData, TiledTileData, TiledTilesetData, TiledWangSetData } from './data';
 
 /**
  * Loader-resolved resources for a {@link TiledTileset}: the absolute image
@@ -47,7 +47,13 @@ export class TiledTileset {
   /** Texture loaded for {@link imageUrl}. Loader-owned; not destroyed by {@link TiledMap.destroy}. */
   public readonly texture?: Texture | undefined;
   public readonly tileOffset: TiledPointData;
-  public readonly objectAlignment?: string | undefined;
+  /**
+   * Where a tile object's stored position sits within its bounding box.
+   * `undefined` (and `'unspecified'`) means Tiled's orientation-dependent
+   * default — resolve it with
+   * {@link import('./objectAlignment').resolveTiledObjectAlignment}.
+   */
+  public readonly objectAlignment?: TiledObjectAlignment | undefined;
   public readonly tiles: readonly TiledTileData[];
   /** Wang sets (terrain/auto-tile definitions) declared on this tileset. Empty when none are defined. */
   public readonly wangSets: readonly TiledWangSetData[];

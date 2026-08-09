@@ -197,7 +197,7 @@
         },
         {
           "name": "objectalignment",
-          "signature": "objectalignment?: string",
+          "signature": "objectalignment?: TiledObjectAlignment",
           "signatureTokens": [
             {
               "text": "objectalignment",
@@ -212,13 +212,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
-              "kind": "keyword"
+              "text": "TiledObjectAlignment",
+              "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Alignment of a tile object's stored position within its bounding box. Absent means 'unspecified'."
         },
         {
           "name": "properties",

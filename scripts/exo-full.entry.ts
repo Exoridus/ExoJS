@@ -48,4 +48,14 @@ export {
 
 // ── LDtk ──────────────────────────────────────────────────────────────────────
 // Unique value exports only — tilemap runtime classes already exported above.
-export { LDTK_FLIP_NONE, LDTK_FLIP_X, LDTK_FLIP_XY, LDTK_FLIP_Y, ldtkExtension, ldtkMapBinding, LdtkMap, ldtkToTileMap } from '@codexo/exojs-ldtk';
+export {
+  LDTK_FLIP_NONE,
+  LDTK_FLIP_X,
+  LDTK_FLIP_XY,
+  LDTK_FLIP_Y,
+  ldtkExtension,
+  LdtkFormatError,
+  ldtkMapBinding,
+  LdtkMap,
+  ldtkToTileMap,
+} from '@codexo/exojs-ldtk';
