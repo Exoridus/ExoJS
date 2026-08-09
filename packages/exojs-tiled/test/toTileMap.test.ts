@@ -742,3 +742,152 @@ describe('TiledMap.toTileMap() — parallax forwarding', () => {
     expect(layer.parallaxY).toBe(1);
   });
 });
+
+// ── Group layer style ────────────────────────────────────────────────────────
+
+describe('TiledMap.toTileMap() — group layer style is folded into the flattened children', () => {
+  const baseTileset = {
+    firstgid: 1, name: 'tiles', image: 'tiles-a.png', imagewidth: 64, imageheight: 32,
+    tilewidth: 16, tileheight: 16, columns: 4, tilecount: 8,
+  };
+
+  const tileLayer = (id: number, name: string, extra: Record<string, unknown> = {}): Record<string, unknown> => ({
+    id, name, type: 'tilelayer', visible: true, opacity: 1, x: 0, y: 0,
+    width: 2, height: 1, data: [1, 1], ...extra,
+  });
+
+  const groupLayer = (id: number, name: string, layers: unknown[], extra: Record<string, unknown> = {}): Record<string, unknown> => ({
+    id, name, type: 'group', visible: true, opacity: 1, x: 0, y: 0, layers, ...extra,
+  });
+
+  const convert = async (layers: unknown[]): Promise<TileMap> => {
+    const { context } = makeContext({
+      'groups.tmj': {
+        type: 'map', version: '1.10', orientation: 'orthogonal',
+        width: 2, height: 1, tilewidth: 16, tileheight: 16, infinite: false,
+        layers,
+        tilesets: [baseTileset],
+      },
+    });
+
+    return (await loadTiledMap('groups.tmj', context)).toTileMap();
+  };
+
+  it('a hidden group hides its children', async () => {
+    const runtime = await convert([groupLayer(1, 'Hidden', [tileLayer(2, 'Ground')], { visible: false })]);
+
+    expect(runtime.getTileLayer('Ground')!.visible).toBe(false);
+  });
+
+  it('group and child opacity multiply', async () => {
+    const runtime = await convert([groupLayer(1, 'Faded', [tileLayer(2, 'Ground', { opacity: 0.5 })], { opacity: 0.4 })]);
+
+    expect(runtime.getTileLayer('Ground')!.opacity).toBeCloseTo(0.2, 10);
+  });
+
+  it('group and child offsets add', async () => {
+    const runtime = await convert([
+      groupLayer(1, 'Shifted', [tileLayer(2, 'Ground', { offsetx: 3, offsety: -4 })], { offsetx: 10, offsety: 20 }),
+    ]);
+
+    const layer = runtime.getTileLayer('Ground')!;
+
+    expect(layer.offsetX).toBe(13);
+    expect(layer.offsetY).toBe(16);
+  });
+
+  it('group and child parallax factors multiply', async () => {
+    const runtime = await convert([
+      groupLayer(1, 'Far', [tileLayer(2, 'Ground', { parallaxx: 0.5, parallaxy: 0.25 })], { parallaxx: 0.5, parallaxy: 2 }),
+    ]);
+
+    const layer = runtime.getTileLayer('Ground')!;
+
+    expect(layer.parallaxX).toBeCloseTo(0.25, 10);
+    expect(layer.parallaxY).toBeCloseTo(0.5, 10);
+  });
+
+  it('group and child tint colours multiply per channel', async () => {
+    const runtime = await convert([
+      groupLayer(1, 'Tinted', [tileLayer(2, 'Ground', { tintcolor: '#ff8040' })], { tintcolor: '#808080' }),
+    ]);
+
+    // 0xff·0x80/255 = 0x80, 0x80·0x80/255 = 0x40, 0x40·0x80/255 = 0x20.
+    expect(runtime.getTileLayer('Ground')!.tintColor).toBe(0x804020);
+  });
+
+  it('an untinted group leaves its child tint untouched', async () => {
+    const runtime = await convert([groupLayer(1, 'Plain', [tileLayer(2, 'Ground', { tintcolor: '#123456' })])]);
+
+    expect(runtime.getTileLayer('Ground')!.tintColor).toBe(0x123456);
+  });
+
+  it('nested groups compose all the way down', async () => {
+    const runtime = await convert([
+      groupLayer(1, 'Outer', [groupLayer(2, 'Inner', [tileLayer(3, 'Ground')], { opacity: 0.5, offsetx: 5 })], {
+        opacity: 0.5, offsetx: 5,
+      }),
+    ]);
+
+    const layer = runtime.getTileLayer('Ground')!;
+
+    expect(layer.opacity).toBeCloseTo(0.25, 10);
+    expect(layer.offsetX).toBe(10);
+  });
+
+  it('a hidden outer group wins over a visible inner one', async () => {
+    const runtime = await convert([
+      groupLayer(1, 'Outer', [groupLayer(2, 'Inner', [tileLayer(3, 'Ground')])], { visible: false }),
+    ]);
+
+    expect(runtime.getTileLayer('Ground')!.visible).toBe(false);
+  });
+
+  it('image layers inside a group inherit the group style too', async () => {
+    const runtime = await convert([
+      groupLayer(
+        1,
+        'Wrapper',
+        [{ id: 2, name: 'Background', type: 'imagelayer', visible: true, opacity: 0.5, x: 0, y: 0, image: 'bg.png', offsetx: 4 }],
+        { visible: false, opacity: 0.5, offsetx: 6, parallaxx: 0.5, tintcolor: '#808080' },
+      ),
+    ]);
+
+    const layer = runtime.imageLayers[0]!;
+
+    expect(layer.visible).toBe(false);
+    expect(layer.opacity).toBeCloseTo(0.25, 10);
+    expect(layer.offsetX).toBe(10);
+    expect(layer.parallaxX).toBeCloseTo(0.5, 10);
+    expect(layer.tintColor).toBe(0x808080);
+  });
+
+  it('object layers inside a group inherit visibility, opacity and offset', async () => {
+    const runtime = await convert([
+      groupLayer(
+        1,
+        'Wrapper',
+        [{ id: 2, name: 'Spawns', type: 'objectgroup', visible: true, opacity: 0.5, x: 0, y: 0, offsetx: 4, objects: [] }],
+        { visible: false, opacity: 0.5, offsetx: 6 },
+      ),
+    ]);
+
+    const layer = runtime.getObjectLayer('Spawns')!;
+
+    expect(layer.visible).toBe(false);
+    expect(layer.opacity).toBeCloseTo(0.25, 10);
+    expect(layer.offsetX).toBe(10);
+  });
+
+  it('a layer outside any group keeps its own style verbatim', async () => {
+    const runtime = await convert([tileLayer(1, 'Ground', { opacity: 0.5, offsetx: 3, parallaxx: 0.5, tintcolor: '#123456' })]);
+
+    const layer = runtime.getTileLayer('Ground')!;
+
+    expect(layer.visible).toBe(true);
+    expect(layer.opacity).toBe(0.5);
+    expect(layer.offsetX).toBe(3);
+    expect(layer.parallaxX).toBe(0.5);
+    expect(layer.tintColor).toBe(0x123456);
+  });
+});

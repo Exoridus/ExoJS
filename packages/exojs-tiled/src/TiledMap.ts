@@ -123,6 +123,13 @@ export class TiledMap {
    * `ObjectLayer`s, and image layers become data-only `ImageLayer`s; group
    * layer children are flattened in document order.
    *
+   * The runtime map has no group node, so each group's own style is baked into
+   * its children as Tiled composes it: `visible` ANDs, `opacity` and the
+   * parallax factors multiply, the offsets add, and tint colours multiply per
+   * colour channel. Object layers take the visibility, opacity and offset the
+   * same way — `ObjectLayer` carries no parallax or tint of its own, so a
+   * group's contribution to those two is dropped for object layers only.
+   *
    * An `infinite: true` (chunked) tile layer converts to an **unbounded**
    * runtime `TileLayer` with no tiles populated eagerly — its data streams in
    * on demand via the {@link ChunkSource} built for it, retrievable with
@@ -207,14 +214,20 @@ export class TiledMap {
     // `order` records each converted renderable (tile or image) layer's id in
     // document (flattened, walk) order — object layers are excluded, matching
     // TileMap.documentOrder's contract.
+    //
+    // The runtime map has no group node, so each enclosing group's own style has
+    // to be folded into its children as they are converted (`group`), or it would
+    // simply be dropped: a hidden group would render, a half-transparent one
+    // would render opaque, and an offset/parallax/tint group would place and
+    // shade its children as if it were at the identity.
     const runtimeLayers: TileLayer[] = [];
     const runtimeObjectLayers: ObjectLayer[] = [];
     const runtimeImageLayers: ImageLayer[] = [];
     const order: number[] = [];
-    const convertLayers = (layers: readonly TiledLayer[]): void => {
+    const convertLayers = (layers: readonly TiledLayer[], group: TiledGroupStyle): void => {
       for (const layer of layers) {
         if (layer instanceof TiledGroupLayer) {
-          convertLayers(layer.layers);
+          convertLayers(layer.layers, composeGroupStyle(group, layer));
         } else if (layer instanceof TiledTileLayer) {
           const chunked = layer.chunks !== undefined;
           const rLayer = new TileLayer({
@@ -224,14 +237,14 @@ export class TiledMap {
             tilesets: runtimeTilesets,
             tileWidth: this.tileWidth,
             tileHeight: this.tileHeight,
-            visible: layer.visible,
-            opacity: layer.opacity,
-            offsetX: layer.offsetX,
-            offsetY: layer.offsetY,
-            parallaxX: layer.parallaxX,
-            parallaxY: layer.parallaxY,
+            visible: group.visible && layer.visible,
+            opacity: group.opacity * layer.opacity,
+            offsetX: group.offsetX + layer.offsetX,
+            offsetY: group.offsetY + layer.offsetY,
+            parallaxX: group.parallaxX * layer.parallaxX,
+            parallaxY: group.parallaxY * layer.parallaxY,
             class: layer.class,
-            tintColor: parseTiledColor(layer.tintColor),
+            tintColor: multiplyTiledTint(group.tintColor, parseTiledColor(layer.tintColor)),
           });
           if (layer.data) {
             populateTileLayer(rLayer, layer.data, this.tilesets, indexToRuntime, layer.width);
@@ -241,7 +254,7 @@ export class TiledMap {
           runtimeLayers.push(rLayer);
           order.push(layer.id);
         } else if (layer instanceof TiledObjectLayer) {
-          runtimeObjectLayers.push(convertObjectLayer(layer, this.tilesets, indexToRuntime, this.orientation));
+          runtimeObjectLayers.push(convertObjectLayer(layer, this.tilesets, indexToRuntime, this.orientation, group));
         } else if (layer instanceof TiledImageLayer) {
           runtimeImageLayers.push(new ImageLayer({
             id: layer.id,
@@ -249,13 +262,13 @@ export class TiledMap {
             class: layer.class,
             image: resolveTiledUrl(layer.image, this.source),
             texture: this._imageTextures.get(layer.id) ?? null,
-            visible: layer.visible,
-            opacity: layer.opacity,
-            offsetX: layer.offsetX,
-            offsetY: layer.offsetY,
-            parallaxX: layer.parallaxX,
-            parallaxY: layer.parallaxY,
-            tintColor: parseTiledColor(layer.tintColor),
+            visible: group.visible && layer.visible,
+            opacity: group.opacity * layer.opacity,
+            offsetX: group.offsetX + layer.offsetX,
+            offsetY: group.offsetY + layer.offsetY,
+            parallaxX: group.parallaxX * layer.parallaxX,
+            parallaxY: group.parallaxY * layer.parallaxY,
+            tintColor: multiplyTiledTint(group.tintColor, parseTiledColor(layer.tintColor)),
             repeatX: layer.repeatX,
             repeatY: layer.repeatY,
             properties: convertProperties(layer.properties),
@@ -264,7 +277,7 @@ export class TiledMap {
         }
       }
     };
-    convertLayers(this.layers);
+    convertLayers(this.layers, rootGroupStyle);
 
     return new TileMap({
       name: this.source,
@@ -481,6 +494,7 @@ function convertObjectLayer(
   tiledTilesets: readonly TiledTileset[],
   indexToRuntime: ReadonlyArray<TileSet | null>,
   orientation: TiledOrientation,
+  group: TiledGroupStyle,
 ): ObjectLayer {
   const objects: TileMapObject[] = [];
   for (const object of layer.objects) {
@@ -491,10 +505,12 @@ function convertObjectLayer(
     id: layer.id,
     name: layer.name,
     class: layer.class,
-    visible: layer.visible,
-    opacity: layer.opacity,
-    offsetX: layer.offsetX,
-    offsetY: layer.offsetY,
+    // `ObjectLayer` carries no parallax or tint, so the enclosing group's
+    // contribution to those two has nowhere to go — the rest folds in.
+    visible: group.visible && layer.visible,
+    opacity: group.opacity * layer.opacity,
+    offsetX: group.offsetX + layer.offsetX,
+    offsetY: group.offsetY + layer.offsetY,
     drawOrder: layer.drawOrder,
     objects,
     properties: convertProperties(layer.properties),
@@ -596,6 +612,65 @@ function tileObjectAnchorOffset(
   const alignment = resolveTiledObjectAlignment(owningTs.objectAlignment, orientation);
 
   return tiledObjectAnchorOffset(alignment, width, height);
+}
+
+/**
+ * The accumulated style of the Tiled group layers enclosing a layer. The runtime
+ * map is flat, so this is what a group contributes to each of its descendants.
+ */
+interface TiledGroupStyle {
+  readonly visible: boolean;
+  readonly opacity: number;
+  readonly offsetX: number;
+  readonly offsetY: number;
+  readonly parallaxX: number;
+  readonly parallaxY: number;
+  readonly tintColor: number | null;
+}
+
+/** The identity style: what a layer at the top level of the document inherits. */
+const rootGroupStyle: TiledGroupStyle = {
+  visible: true,
+  opacity: 1,
+  offsetX: 0,
+  offsetY: 0,
+  parallaxX: 1,
+  parallaxY: 1,
+  tintColor: null,
+};
+
+/**
+ * Fold `group`'s own style into the style its children inherit, composing each
+ * channel the way Tiled derives a nested layer's effective value: visibility
+ * ANDs, opacity and parallax multiply, offsets add, and tints multiply per
+ * colour channel.
+ */
+function composeGroupStyle(parent: TiledGroupStyle, group: TiledGroupLayer): TiledGroupStyle {
+  return {
+    visible: parent.visible && group.visible,
+    opacity: parent.opacity * group.opacity,
+    offsetX: parent.offsetX + group.offsetX,
+    offsetY: parent.offsetY + group.offsetY,
+    parallaxX: parent.parallaxX * group.parallaxX,
+    parallaxY: parent.parallaxY * group.parallaxY,
+    tintColor: multiplyTiledTint(parent.tintColor, parseTiledColor(group.tintColor)),
+  };
+}
+
+/**
+ * Multiply two `0xRRGGBB` tints channel-wise (Tiled's own composition rule).
+ * `null` means "no tint" and acts as the identity, so an untinted group leaves
+ * its children's tints untouched — and vice versa.
+ */
+function multiplyTiledTint(a: number | null, b: number | null): number | null {
+  if (a === null) return b;
+  if (b === null) return a;
+
+  const red = Math.round((((a >> 16) & 0xff) * ((b >> 16) & 0xff)) / 255);
+  const green = Math.round((((a >> 8) & 0xff) * ((b >> 8) & 0xff)) / 255);
+  const blue = Math.round(((a & 0xff) * (b & 0xff)) / 255);
+
+  return (red << 16) | (green << 8) | blue;
 }
 
 /**
