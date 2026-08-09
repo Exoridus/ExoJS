@@ -542,7 +542,7 @@
             }
           ],
           "returnType": "Voice",
-          "description": "Play a Playable asset and return a Voice handle. Each call creates an independent playback instance. Call play() again to start another concurrent voice. The returned Voice lets you control this specific instance (stop(), volume, fade(), capabilities)."
+          "description": "Play a Playable asset and return a Voice handle. Each call creates an independent playback instance. Call play() again to start another concurrent voice. The returned Voice lets you control this specific instance (stop(), volume, fade(), capabilities). When source is a Sound, options widens to SoundPlayOptions and additionally accepts replace: true, which stops all currently-playing instances of that sound before the new one starts (singleton-replace mode)."
         },
         {
           "name": "play",
@@ -614,7 +614,7 @@
             }
           ],
           "returnType": "Voice",
-          "description": "Play a Playable asset and return a Voice handle. Each call creates an independent playback instance. Call play() again to start another concurrent voice. The returned Voice lets you control this specific instance (stop(), volume, fade(), capabilities)."
+          "description": "Play a Playable asset and return a Voice handle. Each call creates an independent playback instance. Call play() again to start another concurrent voice. The returned Voice lets you control this specific instance (stop(), volume, fade(), capabilities). When source is a Sound, options widens to SoundPlayOptions and additionally accepts replace: true, which stops all currently-playing instances of that sound before the new one starts (singleton-replace mode)."
         },
         {
           "name": "preUpdate",

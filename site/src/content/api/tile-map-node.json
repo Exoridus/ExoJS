@@ -6,10 +6,10 @@
   "subsystem": "tilemap",
   "importPath": "@codexo/exojs-tilemap",
   "tier": "advanced",
-  "memberCount": 102,
+  "memberCount": 100,
   "counts": {
     "constructors": 1,
-    "methods": 47,
+    "methods": 45,
     "properties": 40,
     "events": 14
   },
@@ -112,64 +112,6 @@
       "id": "methods",
       "title": "Methods",
       "members": [
-        {
-          "name": "_invalidateBoundsCascade",
-          "signature": "_invalidateBoundsCascade(): void",
-          "signatureTokens": [
-            {
-              "text": "_invalidateBoundsCascade",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "void",
-          "description": "Mark own Bounds dirty AND propagate up to Container ancestors' Bounds."
-        },
-        {
-          "name": "_invalidateSubtreeTransform",
-          "signature": "_invalidateSubtreeTransform(): void",
-          "signatureTokens": [
-            {
-              "text": "_invalidateSubtreeTransform",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "void",
-          "description": "Mark own GlobalTransform + Bounds dirty. Descendants detect staleness lazily via the parent-version compare in getGlobalTransform()/getBounds() — no eager subtree walk."
-        },
         {
           "name": "_updateOrigin",
           "signature": "_updateOrigin(): void",

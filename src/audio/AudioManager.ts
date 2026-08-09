@@ -115,6 +115,11 @@ export class AudioManager {
    * to start another concurrent voice. The returned Voice lets you control
    * this specific instance (`stop()`, `volume`, `fade()`, capabilities).
    *
+   * When `source` is a {@link Sound}, `options` widens to
+   * {@link SoundPlayOptions} and additionally accepts `replace: true`, which
+   * stops all currently-playing instances of that sound before the new one
+   * starts (singleton-replace mode).
+   *
    * @example
    * ```ts
    * const voice = app.audio.play(shootSfx);
@@ -125,7 +130,8 @@ export class AudioManager {
    * Throws once the manager has been destroyed — see {@link AudioManager.destroy}.
    *
    * @param source - Any {@link Playable} asset (Sound, AudioStream, AudioGenerator).
-   * @param options - Per-play overrides (bus, volume, loop, playbackRate, detune, time, muted).
+   * @param options - Per-play overrides (bus, volume, loop, playbackRate, detune,
+   * time, muted, plus `position` and the spatial attenuation fields).
    * @returns A {@link Voice} handle for the new instance.
    */
   public play(source: Sound, options?: SoundPlayOptions): Voice;

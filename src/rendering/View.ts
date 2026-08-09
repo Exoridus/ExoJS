@@ -357,6 +357,7 @@ export class View implements ObservableVectorOwner {
    *
    * @param intensity  - Maximum pixel displacement at peak amplitude.
    * @param durationMs - How long the shake lasts in milliseconds.
+   * @param options    - Shake behaviour overrides ({@link ViewShakeOptions}).
    */
   public shake(intensity: number, durationMs: number, options: ViewShakeOptions = {}): this {
     this._shakeIntensity = Math.max(0, intensity);

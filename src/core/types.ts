@@ -62,10 +62,15 @@ export type TextureSource = HTMLImageElement | HTMLCanvasElement | HTMLVideoElem
 
 /** Common playback configuration for {@link Sound} and {@link AudioStream}. */
 export interface PlaybackOptions {
+  /** Volume level in `0..1`. Defaults to `1`. */
   volume: number;
+  /** Playback speed multiplier, clamped to `0.1..20`. `1` is normal speed. Defaults to `1`. */
   playbackRate: number;
+  /** When `true` the audio or video loops. Defaults to `false`. */
   loop: boolean;
+  /** When `true` the audio or video is muted. Defaults to `false`. */
   muted: boolean;
+  /** Seek position in seconds from the start. Defaults to `0`. */
   time: number;
 }
 

@@ -960,12 +960,20 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     }
   }
 
-  /** Mark own GlobalTransform + Bounds dirty. Descendants detect staleness lazily via the parent-version compare in getGlobalTransform()/getBounds() — no eager subtree walk. */
+  /**
+   * Mark own GlobalTransform + Bounds dirty. Descendants detect staleness
+   * lazily via the parent-version compare in getGlobalTransform()/getBounds()
+   * — no eager subtree walk.
+   * @internal
+   */
   public _invalidateSubtreeTransform(): void {
     this.flags.addMask(SceneNodeTransformFlags.GlobalTransform | SceneNodeTransformFlags.BoundsRect);
   }
 
-  /** Mark own Bounds dirty AND propagate up to Container ancestors' Bounds. */
+  /**
+   * Mark own Bounds dirty AND propagate up to Container ancestors' Bounds.
+   * @internal
+   */
   public _invalidateBoundsCascade(): void {
     // A bounds change means this node's rendered extent changed, which makes any
     // retained draw slot captured for it (screen-space AABB + material key) stale.

@@ -10,9 +10,10 @@ import type { RenderNode } from './RenderNode';
 import type { View } from './View';
 
 /**
- * Caller-owned, per-frame off-screen render target. Unlike
- * {@link RenderingContext.capture}, the {@link RenderTexture} is supplied by the
- * caller and reused across frames (no per-call allocation).
+ * Options for {@link DrawContext.renderTo}: a caller-owned, per-frame
+ * off-screen {@link RenderTexture} target, reused across frames (no per-call
+ * allocation). Unlike {@link RenderingContext.capture}, the texture is
+ * supplied by the caller.
  */
 export interface RenderToOptions {
   /** Destination texture, owned and kept stable by the caller. */
