@@ -53,7 +53,11 @@ interface TileMapObjectBase<P extends TileProperties = TileProperties> {
   readonly width: number;
   /** Bounding height in px (0 for points). */
   readonly height: number;
-  /** Rotation in degrees, clockwise, about the object origin. */
+  /**
+   * Rotation in degrees, clockwise, about `(x, y)` — except on a
+   * {@link TileObject}, whose pivot stays at the source format's own anchor and
+   * is generally not `(x, y)`. See {@link TileObject} for why.
+   */
   readonly rotation: number;
   /** Whether the object is marked visible. */
   readonly visible: boolean;

@@ -569,6 +569,38 @@ describe('TiledMap.toTileMap() — object layers', () => {
     expect(runtime.getObjectLayer('Spawns')?.getObjectByName('hero')?.y).toBe(16);
   });
 
+  it('leaves a rotated tile object pivoting about the Tiled anchor, not about (x, y)', async () => {
+    const { context: rotatedContext } = makeContext({
+      'rotated-tile-object.tmj': {
+        type: 'map', version: '1.10', orientation: 'orthogonal',
+        width: 4, height: 4, tilewidth: 16, tileheight: 16, infinite: false,
+        layers: [
+          {
+            id: 1, name: 'Spawns', type: 'objectgroup', visible: true, opacity: 1, x: 0, y: 0,
+            objects: [
+              { id: 1, name: 'crate', type: '', gid: 1, x: 32, y: 48, width: 16, height: 16, rotation: 45, visible: true },
+            ],
+          },
+        ],
+        tilesets: [{
+          firstgid: 1, name: 'tiles', image: 'tiles-a.png', imagewidth: 64, imageheight: 32,
+          tilewidth: 16, tileheight: 16, columns: 4, tilecount: 8,
+        }],
+      },
+    });
+
+    const runtime = (await loadTiledMap('rotated-tile-object.tmj', rotatedContext)).toTileMap();
+    const crate = runtime.getObjectLayer('Spawns')!.getObjectByName('crate')!;
+
+    // The corner is derived from the UNROTATED anchor offset, and `rotation` is
+    // passed through verbatim — so the pivot is still Tiled's bottom-left
+    // anchor at (32, 48), which is (x, y + height), not (x, y).
+    expect(crate.x).toBe(32);
+    expect(crate.y).toBe(32);
+    expect(crate.rotation).toBe(45);
+  });
+
+
   it('query selects objects by class/type', async () => {
     const runtime = (await loadTiledMap('orthogonal-rich.tmj', context)).toTileMap();
     const layer = runtime.getObjectLayer('Spawns');
