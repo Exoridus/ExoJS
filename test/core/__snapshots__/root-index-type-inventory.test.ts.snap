@@ -33,6 +33,8 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "AssetInspection: interface",
   "AssetLoadRequest: interface",
   "AssetLoaderContext: interface",
+  "AssetNetworkError: class",
+  "AssetNetworkErrorOptions: interface",
   "AssetRef: class",
   "AssetStatus: interface",
   "Assets: type alias",
