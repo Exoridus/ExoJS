@@ -51,7 +51,7 @@ for (let i = 0; i < 10; i++) {
 }
 ```
 
-`prefab.toJSON()` and `Prefab.fromJSON(descriptor)` round-trip a prefab through disk or the network.
+`prefab.toJSON()` and `Prefab.fromJSON(document)` round-trip a prefab through disk or the network. `toJSON()` writes a versioned document — `{ version, root }`, the same frame a serialized scene carries — and `fromJSON()` validates it, so a prefab written today can still be read by a later build.
 
 ## Persisting saves
 

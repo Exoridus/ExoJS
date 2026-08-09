@@ -100,7 +100,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Maximum source-event gap between completed steps, in milliseconds. Checked against ChannelEventBatch.timestamp when the next relevant event arrives — see SequenceAction.progress's doc comment for what that means for a pattern with no further input. Default 600."
+          "description": "Maximum source-event gap between completed steps, in milliseconds. Checked against ChannelEventBatch.timestamp for arriving events and against ActionSample.timestamp once per frame, so it also elapses while no input arrives at all. Default 600."
         },
         {
           "name": "resetOnMismatch",

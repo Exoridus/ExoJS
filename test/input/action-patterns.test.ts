@@ -9,13 +9,14 @@ import { ChannelSize, Keyboard, resolveGamepadSlotChannel } from '#input/types';
 interface SampleDriver {
   readonly sample: ActionSample;
   batch(timestamp: number, writes: ReadonlyArray<readonly [channel: number, value: number]>): void;
-  frame(): void;
+  /** Close the frame. Pass `now` to advance the frame clock without any input — see {@link ActionSample.timestamp}. */
+  frame(now?: number): void;
 }
 
 function createSample(): SampleDriver {
   const values = new Float32Array(ChannelSize.Container);
   const batches: Array<{ channels: ChannelEvent[]; sequence: number; timestamp: number }> = [];
-  const sample: ActionSample = { values, batches, frameId: 1 };
+  const sample: ActionSample = { values, batches, frameId: 1, timestamp: 0 };
   let sequence = 0;
 
   return {
@@ -28,10 +29,13 @@ function createSample(): SampleDriver {
         channels.push({ channel, value });
       }
       if (channels.length > 0) batches.push({ channels, sequence: ++sequence, timestamp });
+      // A real frame is sampled no earlier than the events it carries.
+      sample.timestamp = Math.max(sample.timestamp, timestamp);
     },
-    frame(): void {
+    frame(now): void {
       batches.length = 0;
       sample.frameId++;
+      if (now !== undefined) sample.timestamp = now;
     },
   };
 }
@@ -426,6 +430,61 @@ describe('SequenceAction', () => {
     timeoutDriver.batch(161, [[Keyboard.C, 1]]);
     timeout._update(timeoutDriver.sample);
     expect(timeout.triggered).toBe(false);
+  });
+
+  test('maxGap expires progress on an idle frame, without waiting for another event', () => {
+    const driver = createSample();
+    const action = new SequenceAction('A>B>C', { maxGap: 100 });
+
+    driver.batch(10, [[Keyboard.A, 1]]);
+    action._update(driver.sample);
+    expect(action.progress).toBeCloseTo(1 / 3);
+
+    // Frames pass with no input at all. Progress has to go once the gap
+    // elapses, not linger until some unrelated event happens to arrive.
+    driver.frame(80);
+    action._update(driver.sample);
+    expect(action.progress).toBeCloseTo(1 / 3);
+
+    driver.frame(120);
+    action._update(driver.sample);
+    expect(action.progress).toBe(0);
+  });
+
+  test('timeout expires progress on an idle frame as well', () => {
+    const driver = createSample();
+    const action = new SequenceAction('A>B>C', { maxGap: 10_000, timeout: 150 });
+
+    driver.batch(10, [[Keyboard.A, 1]]);
+    driver.batch(20, [[Keyboard.A, 0]]);
+    driver.batch(30, [[Keyboard.B, 1]]);
+    action._update(driver.sample);
+    expect(action.progress).toBeCloseTo(2 / 3);
+
+    driver.frame(200);
+    action._update(driver.sample);
+    expect(action.progress).toBe(0);
+  });
+
+  test('an expired pattern restarts cleanly from its first step', () => {
+    const driver = createSample();
+    const action = new SequenceAction('A>B', { maxGap: 100 });
+
+    driver.batch(10, [[Keyboard.A, 1]]);
+    action._update(driver.sample);
+
+    driver.frame(500);
+    action._update(driver.sample);
+    expect(action.progress).toBe(0);
+
+    // A fresh press-release-press cycle completes the pattern normally.
+    driver.frame();
+    driver.batch(510, [[Keyboard.A, 0]]);
+    driver.batch(520, [[Keyboard.A, 1]]);
+    driver.batch(530, [[Keyboard.B, 1]]);
+    action._update(driver.sample);
+
+    expect(action.triggered).toBe(true);
   });
 
   test('resets on an unrelated tracked entry and can restart on a later first step', () => {

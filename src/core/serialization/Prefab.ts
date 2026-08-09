@@ -2,8 +2,8 @@ import type { Loader } from '#assets/Loader';
 import type { SceneNode } from '#core/SceneNode';
 
 import type { SerializationRegistry } from './SerializationRegistry';
-import { deserializeTree, serializeTree } from './serialize';
-import type { SerializedNode } from './types';
+import { deserializeTree, migratePrefab, serializeTree } from './serialize';
+import { SERIALIZATION_VERSION, type SerializedNode, type SerializedPrefab } from './types';
 
 /**
  * A reusable, data-driven template captured from a configured scene-graph
@@ -38,11 +38,16 @@ export class Prefab {
   }
 
   /**
-   * Build a prefab from a previously serialized descriptor — e.g. one produced
-   * by {@link toJSON} and persisted to disk or fetched over the network.
+   * Build a prefab from a previously serialized document — e.g. one produced by
+   * {@link toJSON} and persisted to disk or fetched over the network.
+   *
+   * Like {@link Scene.deserialize} this is an untrusted boundary, so the
+   * parameter is `unknown`: the document's `version` frame and root node are
+   * validated here. Throws when the document is not an object, carries a version
+   * newer than this build supports, or has no valid root.
    */
-  public static fromJSON(descriptor: SerializedNode): Prefab {
-    return new Prefab(descriptor);
+  public static fromJSON(document: unknown): Prefab {
+    return new Prefab(migratePrefab(document).root);
   }
 
   /**
@@ -55,8 +60,12 @@ export class Prefab {
     return deserializeTree(this._descriptor, loader, registry);
   }
 
-  /** The underlying JSON descriptor (JSON-serialisable). Treat as read-only. The standard `JSON.stringify(prefab)` hook. */
-  public toJSON(): SerializedNode {
-    return this._descriptor;
+  /**
+   * The prefab as a versioned, JSON-serialisable document — the standard
+   * `JSON.stringify(prefab)` hook. Treat the returned object as read-only; the
+   * `root` is the live internal descriptor, not a copy.
+   */
+  public toJSON(): SerializedPrefab {
+    return { version: SERIALIZATION_VERSION, root: this._descriptor };
   }
 }

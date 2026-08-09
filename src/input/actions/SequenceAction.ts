@@ -12,9 +12,9 @@ export type SequenceBinding = string | InputSequence;
 export interface SequenceActionOptions extends ActionOptions {
   /**
    * Maximum source-event gap between completed steps, in milliseconds.
-   * Checked against {@link ChannelEventBatch.timestamp} when the next relevant
-   * event arrives — see {@link SequenceAction.progress}'s doc comment for what
-   * that means for a pattern with no further input. Default `600`.
+   * Checked against {@link ChannelEventBatch.timestamp} for arriving events and
+   * against {@link ActionSample.timestamp} once per frame, so it also elapses
+   * while no input arrives at all. Default `600`.
    */
   readonly maxGap?: number;
   /** Maximum source-event duration from first to final step, in milliseconds. Default `3000`. */
@@ -122,12 +122,13 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
    * `0`, so a caller polling both together never observes `progress` at its
    * nominal maximum.
    *
-   * `maxGap`/`timeout` expiry is evaluated only when the NEXT tracked channel
-   * event arrives (see `_update`'s `_expire` call) — not on a timer, and not
-   * once per idle frame. A half-completed pattern can therefore hold a stale,
-   * non-zero `progress` for an arbitrarily long real-world gap if nothing
-   * else touches a bound channel in the meantime; it only snaps back to `0`
-   * once a relevant event finally arrives and is found to be expired.
+   * `maxGap`/`timeout` expiry is evaluated once per frame against
+   * {@link ActionSample.timestamp} as well as against each arriving batch, so a
+   * half-completed pattern that goes quiet snaps back to `0` on the frame its
+   * window actually elapses — no event has to arrive first. It is still not a
+   * timer: expiry is observed on the frames the owning {@link ActionMap} is
+   * updated, so a map that is detached or unavailable holds its progress until
+   * it is fed again.
    */
   public get progress(): number {
     return this._step / this._steps.length;
@@ -187,6 +188,13 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
         if (batchBelongsToFirst && !firstBefore && firstAfter) this._acceptStep(now);
       }
     }
+
+    // Expire against the frame's own clock, after the batches. Without this a
+    // half-completed pattern that simply went quiet would hold its progress
+    // until some unrelated tracked channel finally arrived and carried a
+    // timestamp in — `maxGap`/`timeout` would be enforced on the next event
+    // rather than when they actually elapse.
+    this._expire(sample.timestamp);
   }
 
   public _reset(): void {

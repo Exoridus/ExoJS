@@ -78,7 +78,7 @@ class BossIntroCinematicScene extends Scene {
         // Wipe any in-flight tweens and reset the visible state to frame zero.
         app.tweens.clear();
         this.view.reset(width * 0.42, height / 2, width, height);
-        this.view.stopShake();
+        this.view.clearShake();
         this.barSize.v = 0;
         this.titleState.count = 0;
         this.title.text = '';

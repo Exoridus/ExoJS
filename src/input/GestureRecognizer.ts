@@ -3,6 +3,13 @@ import type { Pointer } from './Pointer';
 /** Long-press threshold in milliseconds. */
 const longPressMs = 500;
 
+/**
+ * Distance from the focal point below which a pointer has no usable angle, in
+ * pixels. Only guards the degenerate case of a pointer sitting on the focal
+ * point (two coincident touches, or a middle finger at the exact centre).
+ */
+const angleEpsilon = 0.0001;
+
 /** Immutable gesture occurrence queued onto InputManager's frame journal. @internal */
 export type GestureJournalEvent =
   | { readonly kind: 'pinch'; readonly scale: number; readonly x: number; readonly y: number }
@@ -19,10 +26,22 @@ interface LongPressEntry {
 
 /**
  * Internal multi-touch gesture recognizer used by {@link InputManager}.
- * Tracks active touch pointers, derives pinch/rotate deltas from the two
- * primary touches, and reports a long-press occurrence when a single pointer
- * is held still for {@link longPressMs} (500 ms). Long-press cancels if the
- * pointer moves beyond `distanceThreshold` pixels from the down position.
+ * Tracks active touch pointers, derives pinch/rotate deltas from **all** of
+ * them, and reports a long-press occurrence when a single pointer is held still
+ * for {@link longPressMs} (500 ms). Long-press cancels if the pointer moves
+ * beyond `distanceThreshold` pixels from the down position.
+ *
+ * Pinch and rotate are averaged over every active touch around their common
+ * focal point, the way the platform gesture recognizers do — a third or fourth
+ * finger widens the measurement instead of being ignored. See
+ * {@link _processGestures} for the exact quantities.
+ *
+ * The gesture stays alive as long as at least two touches are down, across
+ * changes to *which* touches those are. Every down/up/leave/cancel drops the
+ * baseline, so the frame after a change re-seeds instead of emitting a delta:
+ * adding two fingers and lifting the original two hands the gesture over
+ * without a jump in `scale` or `angleDelta`. There is no start/end event —
+ * deltas simply stop arriving below two touches and resume above it.
  *
  * Every occurrence (pinch, rotate, long-press) is handed to the `_enqueue`
  * callback supplied at construction rather than dispatched here — that
@@ -34,15 +53,19 @@ interface LongPressEntry {
  * @internal
  */
 export class GestureRecognizer {
-  // Active touch pointers (only touch type; index in order of arrival).
+  // Active touch pointers (only touch type; insertion order is arrival order).
   private readonly touchPointers = new Map<number, Pointer>();
 
   // Long-press state per pointer.
   private readonly longPressEntries = new Map<number, LongPressEntry>();
 
-  // Previous two-touch distance and angle for incremental deltas.
-  private prevDistance = -1;
-  private prevAngle = 0;
+  // Previous spread (see _processGestures) for incremental pinch deltas.
+  private prevSpread = -1;
+
+  // Previous angle of each pointer around the focal point, for incremental
+  // rotate deltas. Keyed by pointer id, cleared whenever the pointer set
+  // changes so a new set never produces a delta against a stale baseline.
+  private readonly prevAngles = new Map<number, number>();
 
   public constructor(
     _distanceThreshold: number,
@@ -52,7 +75,7 @@ export class GestureRecognizer {
   public onPointerDown(pointer: Pointer): void {
     if (pointer.type === 'touch') {
       this.touchPointers.set(pointer.id, pointer);
-      this._resetTwoTouchBaseline();
+      this._resetGestureBaseline();
     }
 
     // Start long-press timer for every pointer type.
@@ -94,7 +117,7 @@ export class GestureRecognizer {
       return;
     }
 
-    this._processTwoTouchGestures();
+    this._processGestures();
   }
 
   public onPointerUp(pointer: Pointer): void {
@@ -102,7 +125,7 @@ export class GestureRecognizer {
 
     if (pointer.type === 'touch') {
       this.touchPointers.delete(pointer.id);
-      this._resetTwoTouchBaseline();
+      this._resetGestureBaseline();
     }
   }
 
@@ -111,7 +134,7 @@ export class GestureRecognizer {
 
     if (pointer.type === 'touch') {
       this.touchPointers.delete(pointer.id);
-      this._resetTwoTouchBaseline();
+      this._resetGestureBaseline();
     }
   }
 
@@ -120,7 +143,7 @@ export class GestureRecognizer {
 
     if (pointer.type === 'touch') {
       this.touchPointers.delete(pointer.id);
-      this._resetTwoTouchBaseline();
+      this._resetGestureBaseline();
     }
   }
 
@@ -142,46 +165,94 @@ export class GestureRecognizer {
     }
   }
 
-  private _resetTwoTouchBaseline(): void {
-    this.prevDistance = -1;
-    this.prevAngle = 0;
+  private _resetGestureBaseline(): void {
+    this.prevSpread = -1;
+    this.prevAngles.clear();
   }
 
-  private _processTwoTouchGestures(): void {
-    const iter = this.touchPointers.values();
-    const pA = iter.next().value!;
-    const pB = iter.next().value!;
+  /**
+   * Derive pinch and rotate deltas from **every** active touch pointer.
+   *
+   * The focal point is the arithmetic mean of the pointer positions, and the
+   * spread is twice their mean distance from it. For two pointers those reduce
+   * to the midpoint and the distance between them, so the two-finger case is the
+   * same computation it has always been — three or more fingers simply widen the
+   * average instead of being ignored.
+   *
+   * Rotation is the mean of the per-pointer angle deltas around the focal point.
+   * A pointer sitting exactly on the focal point has no defined angle and is
+   * left out of that mean; a pointer without a baseline angle (the frame after
+   * the set changed) contributes nothing either.
+   */
+  private _processGestures(): void {
+    const pointers = [...this.touchPointers.values()];
+    let focusX = 0;
+    let focusY = 0;
 
-    const dx = pB.x - pA.x;
-    const dy = pB.y - pA.y;
-    const currentDistance = Math.sqrt(dx * dx + dy * dy);
-    const currentAngle = Math.atan2(dy, dx);
+    for (const pointer of pointers) {
+      focusX += pointer.x;
+      focusY += pointer.y;
+    }
 
-    const centerX = (pA.x + pB.x) / 2;
-    const centerY = (pA.y + pB.y) / 2;
+    focusX /= pointers.length;
+    focusY /= pointers.length;
 
-    if (this.prevDistance > 0) {
-      const scale = currentDistance / this.prevDistance;
+    let deviationSum = 0;
+    let angleDeltaSum = 0;
+    let angleSamples = 0;
 
-      // Only fire if there's a meaningful distance change.
+    for (const pointer of pointers) {
+      const dx = pointer.x - focusX;
+      const dy = pointer.y - focusY;
+      const deviation = Math.sqrt(dx * dx + dy * dy);
+
+      deviationSum += deviation;
+
+      if (deviation <= angleEpsilon) {
+        // On the focal point: no defined angle, so it cannot contribute a delta
+        // and must not seed one for the next frame either.
+        this.prevAngles.delete(pointer.id);
+        continue;
+      }
+
+      const angle = Math.atan2(dy, dx);
+      const previous = this.prevAngles.get(pointer.id);
+
+      if (previous !== undefined) {
+        let delta = angle - previous;
+
+        if (delta > Math.PI) {
+          delta -= Math.PI * 2;
+        } else if (delta < -Math.PI) {
+          delta += Math.PI * 2;
+        }
+
+        angleDeltaSum += delta;
+        angleSamples++;
+      }
+
+      this.prevAngles.set(pointer.id, angle);
+    }
+
+    const spread = (2 * deviationSum) / pointers.length;
+
+    if (this.prevSpread > 0) {
+      const scale = spread / this.prevSpread;
+
+      // Only fire if there's a meaningful spread change.
       if (Math.abs(scale - 1) > 0.0001) {
-        this._enqueue({ kind: 'pinch', scale, x: centerX, y: centerY });
+        this._enqueue({ kind: 'pinch', scale, x: focusX, y: focusY });
       }
 
-      let angleDelta = currentAngle - this.prevAngle;
+      if (angleSamples > 0) {
+        const angleDelta = angleDeltaSum / angleSamples;
 
-      if (angleDelta > Math.PI) {
-        angleDelta -= Math.PI * 2;
-      } else if (angleDelta < -Math.PI) {
-        angleDelta += Math.PI * 2;
-      }
-
-      if (Math.abs(angleDelta) > 0.0001) {
-        this._enqueue({ kind: 'rotate', angleDelta, x: centerX, y: centerY });
+        if (Math.abs(angleDelta) > 0.0001) {
+          this._enqueue({ kind: 'rotate', angleDelta, x: focusX, y: focusY });
+        }
       }
     }
 
-    this.prevDistance = currentDistance;
-    this.prevAngle = currentAngle;
+    this.prevSpread = spread;
   }
 }

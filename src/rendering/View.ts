@@ -352,7 +352,7 @@ export class View implements ObservableVectorOwner {
   /**
    * Start a procedural camera shake effect.
    * The shake applies a sinusoidal offset to the view's center position, then
-   * stops automatically when `durationMs` elapses. Call {@link stopShake} to
+   * stops automatically when `durationMs` elapses. Call {@link clearShake} to
    * cancel early.
    *
    * @param intensity  - Maximum pixel displacement at peak amplitude.
@@ -373,7 +373,7 @@ export class View implements ObservableVectorOwner {
     return this;
   }
 
-  public stopShake(): this {
+  public clearShake(): this {
     this._shakeIntensity = 0;
     this._shakeDurationMs = 0;
     this._shakeElapsedMs = 0;
@@ -647,7 +647,7 @@ export class View implements ObservableVectorOwner {
     }
 
     this._isDestroyed = true;
-    this.stopShake();
+    this.clearShake();
     this.clearFollow();
 
     if (this._boundsConstraint) {
@@ -758,7 +758,7 @@ export class View implements ObservableVectorOwner {
     }
 
     if (this._shakeElapsedMs >= this._shakeDurationMs) {
-      this.stopShake();
+      this.clearShake();
     }
   }
 }

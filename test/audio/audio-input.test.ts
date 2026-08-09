@@ -74,12 +74,12 @@ describe('AudioInput / InputVoice', () => {
     expect(input.stream).toBe(stream);
   });
 
-  test('AudioInput.close stops every track', async () => {
+  test('AudioInput.destroy stops every track', async () => {
     const stream = makeStream();
     stubGetUserMedia(stream);
 
     const input = await AudioInput.open();
-    input.close();
+    input.destroy();
 
     for (const track of stream.getTracks()) {
       expect(track.stop).toHaveBeenCalled();

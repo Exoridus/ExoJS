@@ -102,6 +102,19 @@ export interface ActionSample {
   readonly values: Float32Array;
   readonly batches: readonly ChannelEventBatch[];
   frameId: number;
+  /**
+   * Monotonic (`performance.now()`-based) time this frame was sampled, on the
+   * same clock as {@link ChannelEventBatch.timestamp} — set once per real frame
+   * by the owning {@link InputManager} alongside `frameId`.
+   *
+   * `batches` alone cannot express "time passed and nothing happened", which is
+   * exactly the state a timing-dependent action has to notice: a
+   * {@link SequenceAction} whose pattern half-completed and then went quiet must
+   * expire on `maxGap`/`timeout` without waiting for an unrelated event to
+   * arrive and carry a timestamp in for it. Actions that only react to
+   * transitions can ignore this field.
+   */
+  timestamp: number;
 }
 
 /**
@@ -200,7 +213,7 @@ export class ActionOwnership {
 
     this._baselineValues = null;
 
-    return values === null ? null : { values, batches: [], frameId: sample.frameId };
+    return values === null ? null : { values, batches: [], frameId: sample.frameId, timestamp: sample.timestamp };
   }
 
   /**
@@ -218,7 +231,7 @@ export class ActionOwnership {
       return sample;
     }
 
-    return { values: sample.values, batches: filtered, frameId: sample.frameId };
+    return { values: sample.values, batches: filtered, frameId: sample.frameId, timestamp: sample.timestamp };
   }
 
   /** Forget the current owner, as if this map had never been sampled. */

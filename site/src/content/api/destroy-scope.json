@@ -1,7 +1,7 @@
 {
-  "title": "DisposalScope",
-  "description": "Ownership container for Destroyable resources. Items registered with track are destroyed in reverse registration order when the scope itself is destroyed — the spine of ExoJS's ownership-driven cleanup. A Scene owns one for its whole lifetime, exposed as `Scene.track`. An `Application` does not: it creates one for the duration of its constructor, to release the subsystems already built if a later construction step throws (the caller never receives an instance, so `destroy()` is unreachable). Its own `Application.destroy()` runs an explicit ordered teardown instead, because the WebGPU→WebGL2 backend fallback replaces subsystems after construction, which a long-lived scope would not follow. `track` is idempotent and returns its argument for fluent capture: ```ts const world = scope.track(new PhysicsWorld()); ``` destroy is idempotent and tolerant: every tracked item's `destroy()` is attempted even if an earlier one throws, so a single failure cannot leak the rest. In development the collected errors are rethrown as an `AggregateError` once teardown completes; in production they are swallowed. A `DisposalScope` is itself Destroyable, so scopes can nest.",
-  "symbol": "DisposalScope",
+  "title": "DestroyScope",
+  "description": "Ownership container for Destroyable resources. Items registered with track are destroyed in reverse registration order when the scope itself is destroyed — the spine of ExoJS's ownership-driven cleanup. A Scene owns one for its whole lifetime, exposed as `Scene.track`. An `Application` does not: it creates one for the duration of its constructor, to release the subsystems already built if a later construction step throws (the caller never receives an instance, so `destroy()` is unreachable). Its own `Application.destroy()` runs an explicit ordered teardown instead, because the WebGPU→WebGL2 backend fallback replaces subsystems after construction, which a long-lived scope would not follow. `track` is idempotent and returns its argument for fluent capture: ```ts const world = scope.track(new PhysicsWorld()); ``` destroy is idempotent and tolerant: every tracked item's `destroy()` is attempted even if an earlier one throws, so a single failure cannot leak the rest. In development the collected errors are rethrown as an `AggregateError` once teardown completes; in production they are swallowed. A `DestroyScope` is itself Destroyable, so scopes can nest.",
+  "symbol": "DestroyScope",
   "kind": "class",
   "subsystem": "core",
   "importPath": "@codexo/exojs",
@@ -24,9 +24,9 @@
         "`track` is idempotent and returns its argument for fluent capture:",
         "```ts const world = scope.track(new PhysicsWorld()); ```",
         "destroy is idempotent and tolerant: every tracked item's `destroy()` is attempted even if an earlier one throws, so a single failure cannot leak the rest. In development the collected errors are rethrown as an `AggregateError` once teardown completes; in production they are swallowed.",
-        "A `DisposalScope` is itself Destroyable, so scopes can nest."
+        "A `DestroyScope` is itself Destroyable, so scopes can nest."
       ],
-      "importLine": "import { DisposalScope } from '@codexo/exojs'",
+      "importLine": "import { DestroyScope } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -35,7 +35,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(): DisposalScope",
+          "signature": "new(): DestroyScope",
           "signatureTokens": [
             {
               "text": "new",
@@ -54,12 +54,12 @@
               "kind": "punctuation"
             },
             {
-              "text": "DisposalScope",
+              "text": "DestroyScope",
               "kind": "type"
             }
           ],
           "params": [],
-          "returnType": "DisposalScope",
+          "returnType": "DestroyScope",
           "description": ""
         }
       ],
@@ -192,7 +192,7 @@
             }
           ],
           "returnType": "T",
-          "description": "Register item for destruction with this scope. No-op when item is already tracked or the scope is already disposed. Returns item so it can be captured inline: const x = scope.track(new Thing())."
+          "description": "Register item for destruction with this scope. No-op when item is already tracked or the scope is already destroyed. Returns item so it can be captured inline: const x = scope.track(new Thing())."
         },
         {
           "name": "untrack",
@@ -239,7 +239,7 @@
             }
           ],
           "returnType": "boolean",
-          "description": "Stop tracking item without destroying it (ownership returns to the caller). Returns true if it was tracked. No-op after the scope is disposed."
+          "description": "Stop tracking item without destroying it (ownership returns to the caller). Returns true if it was tracked. No-op after the scope is destroyed."
         }
       ],
       "paragraphs": [],
@@ -251,11 +251,11 @@
       "title": "Properties",
       "members": [
         {
-          "name": "disposed",
-          "signature": "disposed: boolean",
+          "name": "destroyed",
+          "signature": "destroyed: boolean",
           "signatureTokens": [
             {
-              "text": "disposed",
+              "text": "destroyed",
               "kind": "name"
             },
             {
@@ -269,7 +269,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Whether destroy has already run. A disposed scope tracks nothing further."
+          "description": "Whether destroy has already run. A destroyed scope tracks nothing further."
         },
         {
           "name": "size",
@@ -304,11 +304,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/core/DisposalScope.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/DisposalScope.ts"
+        "label": "src/core/DestroyScope.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/DestroyScope.ts"
       }
     }
   ],
-  "sourcePath": "src/core/DisposalScope.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/DisposalScope.ts"
+  "sourcePath": "src/core/DestroyScope.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/DestroyScope.ts"
 }

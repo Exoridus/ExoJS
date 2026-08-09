@@ -690,6 +690,25 @@ describe('serialization — Prefab', () => {
 
     expect((rebuilt.instantiate() as Container).name).toBe('enemy');
   });
+
+  it('writes the format version alongside the captured root', () => {
+    const document = Prefab.from(new Container()).toJSON();
+
+    expect(document.version).toBe(SERIALIZATION_VERSION);
+    expect(document.root.type).toBe('Container');
+  });
+
+  it('rejects a document written by a newer format version', () => {
+    const document = Prefab.from(new Container()).toJSON();
+
+    expect(() => Prefab.fromJSON({ ...document, version: SERIALIZATION_VERSION + 1 })).toThrow(/newer than the supported version/);
+  });
+
+  it('rejects a document that is not a valid prefab frame', () => {
+    // The pre-version bare-descriptor form is no longer accepted: it has no root.
+    expect(() => Prefab.fromJSON({ type: 'Container' })).toThrow(/no valid root node/);
+    expect(() => Prefab.fromJSON(null)).toThrow(/not an object/);
+  });
 });
 
 describe('serialization — UI widgets', () => {

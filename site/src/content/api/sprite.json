@@ -91,7 +91,7 @@
             }
           ],
           "returnType": "Sprite",
-          "description": ""
+          "description": "Create a sprite for texture, or an empty one when the argument is omitted or null — a textureless sprite draws nothing until setTexture is called, which is the intended way to build a sprite whose texture is still loading."
         }
       ],
       "paragraphs": [],

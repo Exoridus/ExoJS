@@ -310,6 +310,11 @@ export class RenderingContext implements DrawContext {
    * coordinator so it respects the clear-vs-load policy and never leaks the
    * clear onto another target. Falls back to a raw backend clear when no
    * coordinator is present (test stubs).
+   *
+   * `clear` here is the graphics-API verb (as in `gl.clear`) — it overwrites the
+   * target's pixels. It is deliberately **not** the collection `clear()` used
+   * elsewhere in the engine, which empties a container; nothing is released or
+   * reset by this call.
    */
   public clear(color: Color): void {
     const coordinator = (this._backend as RenderBackend & Partial<RenderPassCoordinatorHost>)._passCoordinator;

@@ -45,6 +45,9 @@ const pinches = (events: GestureJournalEvent[]): PinchEvent[] => events.filter((
 const rotates = (events: GestureJournalEvent[]): RotateEvent[] => events.filter((e): e is RotateEvent => e.kind === 'rotate');
 const longPresses = (events: GestureJournalEvent[]): LongPressEvent[] => events.filter((e): e is LongPressEvent => e.kind === 'longpress');
 
+const toDeg = (radians: number): number => radians * (180 / Math.PI);
+const toRad = (degrees: number): number => degrees * (Math.PI / 180);
+
 beforeEach(() => {
   vi.useFakeTimers();
 });
@@ -356,9 +359,6 @@ describe('GestureRecognizer — two-touch gestures', () => {
 // ---------------------------------------------------------------------------
 
 describe('GestureRecognizer — rotation shortest-signed-arc normalization', () => {
-  const toDeg = (radians: number): number => radians * (180 / Math.PI);
-  const toRad = (degrees: number): number => degrees * (Math.PI / 180);
-
   test('+179° -> -179° reports ≈ +2°, not the naive -358°', () => {
     const { recognizer, events } = createHarness();
 
@@ -400,6 +400,157 @@ describe('GestureRecognizer — rotation shortest-signed-arc normalization', () 
     expect(pinches(events)).toHaveLength(0);
     expect(rotates(events)).toHaveLength(1);
     expect(toDeg(rotates(events)[0]!.angleDelta)).toBeCloseTo(-2, 5);
+
+    recognizer.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Three or more touches
+// ---------------------------------------------------------------------------
+
+/**
+ * Pinch/rotate are averaged over every active touch around their common focal
+ * point, so a third or fourth finger participates instead of being ignored.
+ *
+ * These tests mutate all pointer positions and then issue a single
+ * `onPointerMove`. That is sound because the recognizer stores the live pointer
+ * objects and recomputes the whole set on each move — production sends one move
+ * per pointer, which would only split the same total delta across several
+ * events.
+ */
+describe('GestureRecognizer — three or more touches', () => {
+  // Equilateral triangle around (0, 0) at the given radius.
+  const triangle = (radius: number): FakePointer[] => [
+    { id: 1, x: radius, y: 0, type: 'touch' },
+    { id: 2, x: radius * Math.cos(toRad(120)), y: radius * Math.sin(toRad(120)), type: 'touch' },
+    { id: 3, x: radius * Math.cos(toRad(240)), y: radius * Math.sin(toRad(240)), type: 'touch' },
+  ];
+
+  const rotateAround = (pointers: FakePointer[], degrees: number): void => {
+    const radians = toRad(degrees);
+
+    for (const pointer of pointers) {
+      const x = pointer.x;
+      const y = pointer.y;
+
+      pointer.x = x * Math.cos(radians) - y * Math.sin(radians);
+      pointer.y = x * Math.sin(radians) + y * Math.cos(radians);
+    }
+  };
+
+  test('three touches spreading outwards enqueue a pinch scaled by the spread, with no rotate', () => {
+    const { recognizer, events } = createHarness();
+    const pointers = triangle(10);
+
+    for (const pointer of pointers) recognizer.onPointerDown(asPointer(pointer));
+    recognizer.onPointerMove(asPointer(pointers[0]!), distanceThreshold); // baseline: spread = 2 * 10
+
+    for (const pointer of pointers) {
+      pointer.x *= 3;
+      pointer.y *= 3;
+    }
+
+    recognizer.onPointerMove(asPointer(pointers[0]!), distanceThreshold);
+
+    expect(pinches(events)).toHaveLength(1);
+    expect(pinches(events)[0]!.scale).toBeCloseTo(3, 5);
+    expect(pinches(events)[0]!.x).toBeCloseTo(0, 5);
+    expect(pinches(events)[0]!.y).toBeCloseTo(0, 5);
+    expect(rotates(events)).toHaveLength(0);
+
+    recognizer.destroy();
+  });
+
+  test('three touches rotating around the focal point enqueue that rotation, with no pinch', () => {
+    const { recognizer, events } = createHarness();
+    const pointers = triangle(50);
+
+    for (const pointer of pointers) recognizer.onPointerDown(asPointer(pointer));
+    recognizer.onPointerMove(asPointer(pointers[0]!), distanceThreshold);
+
+    rotateAround(pointers, 90);
+    recognizer.onPointerMove(asPointer(pointers[0]!), distanceThreshold);
+
+    expect(rotates(events)).toHaveLength(1);
+    expect(toDeg(rotates(events)[0]!.angleDelta)).toBeCloseTo(90, 5);
+    expect(pinches(events)).toHaveLength(0);
+
+    recognizer.destroy();
+  });
+
+  test('a third touch moving contributes to the gesture instead of being ignored', () => {
+    const { recognizer, events } = createHarness();
+    const pA = { id: 1, x: -10, y: 0, type: 'touch' };
+    const pB = { id: 2, x: 10, y: 0, type: 'touch' };
+    const pC = { id: 3, x: 0, y: 10, type: 'touch' };
+
+    for (const pointer of [pA, pB, pC]) recognizer.onPointerDown(asPointer(pointer));
+    recognizer.onPointerMove(asPointer(pC), distanceThreshold);
+
+    // Only the third finger moves; the other two are perfectly still.
+    pC.y = 200;
+    recognizer.onPointerMove(asPointer(pC), distanceThreshold);
+
+    expect(pinches(events)).toHaveLength(1);
+    expect(pinches(events)[0]!.scale).toBeGreaterThan(1);
+
+    recognizer.destroy();
+  });
+
+  test('a touch sitting on the focal point is left out of the rotation average', () => {
+    const { recognizer, events } = createHarness();
+    // Outer pair around (0, 0) plus a third touch exactly at the focal point.
+    const pA = { id: 1, x: -50, y: 0, type: 'touch' };
+    const pB = { id: 2, x: 50, y: 0, type: 'touch' };
+    const pCentre = { id: 3, x: 0, y: 0, type: 'touch' };
+
+    for (const pointer of [pA, pB, pCentre]) recognizer.onPointerDown(asPointer(pointer));
+    recognizer.onPointerMove(asPointer(pA), distanceThreshold);
+
+    rotateAround([pA, pB], 90);
+    recognizer.onPointerMove(asPointer(pA), distanceThreshold);
+
+    // Averaged over the two touches that have an angle — not diluted to 60° by
+    // counting the centre touch as a zero delta.
+    expect(rotates(events)).toHaveLength(1);
+    expect(toDeg(rotates(events)[0]!.angleDelta)).toBeCloseTo(90, 5);
+
+    recognizer.destroy();
+  });
+
+  test('handing the gesture from one pair of fingers to another produces no jump', () => {
+    const { recognizer, events } = createHarness();
+    const pA = { id: 1, x: 0, y: 0, type: 'touch' };
+    const pB = { id: 2, x: 10, y: 0, type: 'touch' };
+    const pC = { id: 3, x: 0, y: 100, type: 'touch' };
+    const pD = { id: 4, x: 10, y: 100, type: 'touch' };
+
+    recognizer.onPointerDown(asPointer(pA));
+    recognizer.onPointerDown(asPointer(pB));
+    recognizer.onPointerMove(asPointer(pB), distanceThreshold);
+
+    // Second hand joins: the pointer set changed, so this move only re-seeds.
+    recognizer.onPointerDown(asPointer(pC));
+    recognizer.onPointerDown(asPointer(pD));
+    recognizer.onPointerMove(asPointer(pD), distanceThreshold);
+
+    // First hand lifts: again a set change, again only a re-seed.
+    recognizer.onPointerUp(asPointer(pA));
+    recognizer.onPointerUp(asPointer(pB));
+    recognizer.onPointerMove(asPointer(pD), distanceThreshold);
+
+    // Nothing was emitted while the set was changing — no jump from the
+    // four-finger spread down to the remaining pair.
+    expect(pinches(events)).toHaveLength(0);
+    expect(rotates(events)).toHaveLength(0);
+
+    // The gesture is still live on the second hand alone.
+    pD.x = 40;
+    recognizer.onPointerMove(asPointer(pD), distanceThreshold);
+
+    expect(pinches(events)).toHaveLength(1);
+    expect(pinches(events)[0]!.scale).toBeCloseTo(4, 5);
 
     recognizer.destroy();
   });

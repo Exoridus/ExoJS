@@ -24,16 +24,16 @@ import type { Destroyable } from './types';
  * the rest. In development the collected errors are rethrown as an
  * `AggregateError` once teardown completes; in production they are swallowed.
  *
- * A `DisposalScope` is itself {@link Destroyable}, so scopes can nest.
+ * A `DestroyScope` is itself {@link Destroyable}, so scopes can nest.
  */
-export class DisposalScope implements Destroyable {
+export class DestroyScope implements Destroyable {
   private readonly _items = new Set<Destroyable>();
   private readonly _order: Destroyable[] = [];
-  private _disposed = false;
+  private _destroyed = false;
 
-  /** Whether {@link destroy} has already run. A disposed scope tracks nothing further. */
-  public get disposed(): boolean {
-    return this._disposed;
+  /** Whether {@link destroy} has already run. A destroyed scope tracks nothing further. */
+  public get destroyed(): boolean {
+    return this._destroyed;
   }
 
   /** Number of items currently tracked. */
@@ -43,11 +43,11 @@ export class DisposalScope implements Destroyable {
 
   /**
    * Register `item` for destruction with this scope. No-op when `item` is
-   * already tracked or the scope is already disposed. Returns `item` so it can
+   * already tracked or the scope is already destroyed. Returns `item` so it can
    * be captured inline: `const x = scope.track(new Thing())`.
    */
   public track<T extends Destroyable>(item: T): T {
-    if (!this._disposed && !this._items.has(item)) {
+    if (!this._destroyed && !this._items.has(item)) {
       this._items.add(item);
       this._order.push(item);
     }
@@ -62,10 +62,10 @@ export class DisposalScope implements Destroyable {
 
   /**
    * Stop tracking `item` without destroying it (ownership returns to the
-   * caller). Returns `true` if it was tracked. No-op after the scope is disposed.
+   * caller). Returns `true` if it was tracked. No-op after the scope is destroyed.
    */
   public untrack(item: Destroyable): boolean {
-    if (this._disposed || !this._items.delete(item)) {
+    if (this._destroyed || !this._items.delete(item)) {
       return false;
     }
 
@@ -84,11 +84,11 @@ export class DisposalScope implements Destroyable {
    * collected errors are rethrown as an `AggregateError` after teardown.
    */
   public destroy(): void {
-    if (this._disposed) {
+    if (this._destroyed) {
       return;
     }
 
-    this._disposed = true;
+    this._destroyed = true;
 
     const errors: unknown[] = [];
 
@@ -104,7 +104,7 @@ export class DisposalScope implements Destroyable {
     this._order.length = 0;
 
     if (__DEV__ && errors.length > 0) {
-      throw new AggregateError(errors, `[ExoJS] DisposalScope.destroy(): ${errors.length} tracked item(s) threw during destroy.`);
+      throw new AggregateError(errors, `[ExoJS] DestroyScope.destroy(): ${errors.length} tracked item(s) threw during destroy.`);
     }
   }
 }

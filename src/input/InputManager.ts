@@ -3,6 +3,7 @@ import { Signal } from '#core/Signal';
 import type { Time } from '#core/Time';
 import { getPreciseTime, stopEvent } from '#core/utils';
 import { Flags } from '#math/Flags';
+import type { PointLike } from '#math/PointLike';
 import { Vector } from '#math/Vector';
 import type { PlatformAdapter, PlatformSubscription } from '#platform/PlatformAdapter';
 
@@ -331,6 +332,7 @@ export class InputManager {
       values: this.channels,
       batches: this.frameBatches,
       frameId: 0,
+      timestamp: 0,
     };
     this.gestureRecognizer = new GestureRecognizer(pointerDistanceThreshold, event => this.journal.push(event));
 
@@ -353,7 +355,7 @@ export class InputManager {
    * or the first non-cancelled pointer if no primary is found. Returns null when
    * no active pointer is present. Used by debug layers to show cursor info.
    */
-  public getPrimaryPointerPosition(): { x: number; y: number } | null {
+  public getPrimaryPointerPosition(): PointLike | null {
     for (const pointer of this.pointers.values()) {
       if (pointer.isPrimary && pointer.currentState !== PointerState.Cancelled) {
         return { x: pointer.x, y: pointer.y };
@@ -623,8 +625,11 @@ export class InputManager {
     }
 
     // A fresh id per real frame — the guard an action shared by two attached
-    // maps uses to sample itself only once, however many owners reach it.
+    // maps uses to sample itself only once, however many owners reach it. The
+    // timestamp travels with it so a timing-dependent action can notice that
+    // time passed with no events at all (see ActionSample.timestamp).
     this.actionSample.frameId = ++this._actionFrameId;
+    this.actionSample.timestamp = getPreciseTime();
 
     for (const map of this.actionMaps) {
       map._update(this.actionSample);

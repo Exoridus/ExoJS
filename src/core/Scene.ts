@@ -4,7 +4,7 @@ import type { RenderNode } from '#rendering/RenderNode';
 import { UIRoot } from '#ui/UIRoot';
 
 import type { Application } from './Application';
-import { DisposalScope } from './DisposalScope';
+import { DestroyScope } from './DestroyScope';
 import type { SceneAudio } from './scene/SceneAudio';
 import type { SceneInputs } from './scene/SceneInputs';
 import type { SceneInteraction } from './scene/SceneInteraction';
@@ -104,7 +104,7 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
   public readonly onResume = new Signal();
 
   private _scope: SceneScope<Data> | null = null;
-  private readonly _disposal = new DisposalScope();
+  private readonly _destroyScope = new DestroyScope();
 
   /**
    * The {@link Application} this scene is attached to. The framework attaches a
@@ -245,7 +245,7 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * for fluent capture: `const world = this.track(new PhysicsWorld())`.
    */
   public track<T extends Destroyable>(item: T): T {
-    return this._disposal.track(item);
+    return this._destroyScope.track(item);
   }
 
   private _ui: UIRoot | null = null;
@@ -262,7 +262,7 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    */
   public get ui(): UIRoot {
     if (this._ui === null) {
-      this._ui = this._disposal.track(new UIRoot());
+      this._ui = this._destroyScope.track(new UIRoot());
 
       // If the scene is already active (its root carries a stage), bind the UI
       // layer now; otherwise the director attaches it when the scene activates.
@@ -478,7 +478,7 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
 
   /**
    * Tear down engine-owned scene internals that are not part of the user
-   * `destroy()` hook: the tracked-resource disposal scope (which also
+   * `destroy()` hook: the tracked-resource {@link DestroyScope} (which also
    * destroys a materialized {@link Scene.ui}), the lifecycle signals, the
    * structural root, and the attachment to `app`/`scope`. Called once by
    * `SceneScope` immediately after `scene.destroy()`, on both the normal
@@ -486,7 +486,7 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * @internal
    */
   public _teardownInternals(): void {
-    this._disposal.destroy();
+    this._destroyScope.destroy();
     this.onActivate.destroy();
     this.onSuspend.destroy();
     this.onPause.destroy();
