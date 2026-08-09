@@ -57,12 +57,16 @@ export class BindingRegistry {
   private readonly _bindings = new Map<PhysicsBody, PhysicsBinding>();
 
   /**
-   * Link `body` to `node`. Rejects nodes with non-zero skew; runtime scale is
-   * ignored. In dev builds, warns when the node is not world-space-rooted
-   * (moved ancestor or transform-group boundary above it) — see
-   * {@link PhysicsBinding} for the local==world contract.
+   * Link `body` to `node`. Rejects destroyed nodes and nodes with non-zero
+   * skew; runtime scale is ignored. In dev builds, warns when the node is not
+   * world-space-rooted (moved ancestor or transform-group boundary above it) —
+   * see {@link PhysicsBinding} for the local==world contract.
    */
   public bind(body: PhysicsBody, node: SceneNode): PhysicsBinding {
+    if (node.destroyed) {
+      throw new Error('PhysicsBinding: cannot bind a destroyed node — its pooled transform has already been released.');
+    }
+
     if (node.skewX !== 0 || node.skewY !== 0) {
       throw new Error(`PhysicsBinding: the bound node has non-zero skew (${node.skewX}°, ${node.skewY}°); skewed nodes are not supported.`);
     }
@@ -84,9 +88,23 @@ export class BindingRegistry {
     this._bindings.delete(body);
   }
 
-  /** Write every bound node's transform from its body. */
+  /**
+   * Write every bound node's transform from its body, dropping links whose node
+   * has been destroyed.
+   *
+   * `SceneNode.destroy()` returns the node's position/rotation state to a shared
+   * pool, so a `sync()` that kept writing would not merely update a dead node —
+   * it would write through recycled state into whichever live node next takes
+   * that slot. Pruning here (rather than only on an explicit `unbind`) is what
+   * makes destroying a bound node safe without a physics-side teardown call.
+   */
   public sync(): void {
-    for (const binding of this._bindings.values()) {
+    for (const [body, binding] of this._bindings) {
+      if (binding.node.destroyed) {
+        this._bindings.delete(body);
+        continue;
+      }
+
       binding.sync();
     }
   }

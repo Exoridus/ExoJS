@@ -565,7 +565,14 @@ export class PhysicsWorld implements BodyOwner {
 
   // ── binding ────────────────────────────────────────────────────────────
 
-  /** Link a body to a scene node; the node tracks the body after each step. */
+  /**
+   * Link a body to a scene node; the node tracks the body after each step.
+   * Destroying the node is enough to end the link — the next step drops it
+   * rather than writing into the node's released transform, so an explicit
+   * {@link unbind} is only needed to stop tracking a node that stays alive.
+   *
+   * @throws if `node` is already destroyed.
+   */
   public bind(body: PhysicsBody, node: SceneNode): PhysicsBinding {
     return this._bindings.bind(body, node);
   }

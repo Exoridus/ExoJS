@@ -191,6 +191,71 @@ describe('BindingRegistry', () => {
     registry.clear();
     expect(registry.size).toBe(0);
   });
+
+  it('drops a binding whose node was destroyed instead of writing into its released transform', () => {
+    const registry = new BindingRegistry();
+    const body = new PhysicsBody({ type: 'kinematic', position: { x: 1, y: 2 }, colliders: [{ shape: new BoxShape(10, 10) }] });
+    const node = new Drawable();
+
+    registry.bind(body, node);
+    expect(registry.size).toBe(1);
+
+    const setPosition = vi.spyOn(node, 'setPosition');
+    const setRotation = vi.spyOn(node, 'setRotation');
+
+    node.destroy();
+    registry.sync();
+
+    expect(setPosition).not.toHaveBeenCalled();
+    expect(setRotation).not.toHaveBeenCalled();
+    expect(registry.size).toBe(0);
+  });
+
+  it('keeps syncing the surviving bindings when one node is destroyed', () => {
+    const registry = new BindingRegistry();
+    const deadBody = new PhysicsBody({ type: 'kinematic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(10, 10) }] });
+    const liveBody = new PhysicsBody({ type: 'kinematic', position: { x: 5, y: 6 }, colliders: [{ shape: new BoxShape(10, 10) }] });
+    const deadNode = new Drawable();
+    const liveNode = fakeNode();
+
+    registry.bind(deadBody, deadNode);
+    registry.bind(liveBody, liveNode as unknown as SceneNode);
+
+    deadNode.destroy();
+    liveBody.setTransform({ x: 40, y: 50 });
+    registry.sync();
+
+    expect(registry.size).toBe(1);
+    expect(liveNode.x).toBe(40);
+    expect(liveNode.y).toBe(50);
+  });
+
+  it('rejects binding a node that is already destroyed', () => {
+    const registry = new BindingRegistry();
+    const body = new PhysicsBody({ type: 'kinematic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(10, 10) }] });
+    const node = new Drawable();
+
+    node.destroy();
+
+    expect(() => registry.bind(body, node)).toThrow(/destroyed node/);
+    expect(registry.size).toBe(0);
+  });
+
+  it('a world step stops writing into a destroyed bound node', () => {
+    const world = new PhysicsWorld();
+    const body = world.add(new PhysicsBody({ type: 'kinematic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(10, 10) }] }));
+    const node = new Drawable();
+
+    world.bind(body, node);
+    node.destroy();
+
+    const setPosition = vi.spyOn(node, 'setPosition');
+
+    body.setTransform({ x: 77, y: 88 });
+    world.step(1 / 60);
+
+    expect(setPosition).not.toHaveBeenCalled();
+  });
 });
 
 describe('NativePhysicsBackend', () => {

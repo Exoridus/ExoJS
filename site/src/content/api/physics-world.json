@@ -390,7 +390,7 @@
             }
           ],
           "returnType": "PhysicsBinding",
-          "description": "Link a body to a scene node; the node tracks the body after each step."
+          "description": "Link a body to a scene node; the node tracks the body after each step. Destroying the node is enough to end the link — the next step drops it rather than writing into the node's released transform, so an explicit unbind is only needed to stop tracking a node that stays alive."
         },
         {
           "name": "destroy",
