@@ -29,6 +29,11 @@ class TestSprite extends Drawable {
     this._top = top;
     this._width = width;
     this._height = height;
+    // What a real node does whenever its geometry changes: cascade the bounds
+    // invalidation, so the interaction manager learns the node has to be
+    // re-indexed — and that whatever sits under a resting pointer may have
+    // changed with it.
+    this._invalidateBoundsCascade();
 
     return this;
   }
@@ -629,6 +634,312 @@ describe('InteractionManager — pointerover / pointerout on move', () => {
     expect(im.getHoveredNode()).toBeNull();
 
     im.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 6a. Hover follows the scene, not only the pointer
+// ---------------------------------------------------------------------------
+
+describe('InteractionManager — hover tracks scene changes under a stationary pointer', () => {
+  test('a hovered node moving away from a resting pointer fires pointerout', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+    const sprite = new TestSprite().setBounds(0, 0, 50, 50);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    const outHandler = vi.fn();
+
+    sprite.onPointerOut.add(outHandler);
+
+    dispatchPointer(signals.onPointerMove, { x: 25, y: 25 });
+    flushInteractions(im);
+    expect(im.getHoveredNode()).toBe(sprite);
+
+    // The pointer never moves — the node does.
+    sprite.setBounds(200, 200, 50, 50);
+    flushInteractions(im);
+
+    expect(outHandler).toHaveBeenCalledTimes(1);
+    expect(im.getHoveredNode()).toBeNull();
+
+    im.destroy();
+    sprite.destroy();
+  });
+
+  test('a node moving under a resting pointer fires pointerover', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+    const sprite = new TestSprite().setBounds(200, 200, 50, 50);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    const overHandler = vi.fn();
+
+    sprite.onPointerOver.add(overHandler);
+
+    dispatchPointer(signals.onPointerMove, { x: 25, y: 25 });
+    flushInteractions(im);
+    expect(im.getHoveredNode()).toBeNull();
+
+    sprite.setBounds(0, 0, 50, 50);
+    flushInteractions(im);
+
+    expect(overHandler).toHaveBeenCalledTimes(1);
+    expect(im.getHoveredNode()).toBe(sprite);
+
+    im.destroy();
+    sprite.destroy();
+  });
+
+  test('a frame with neither pointer activity nor a scene change dispatches nothing', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+    const sprite = new TestSprite().setBounds(0, 0, 50, 50);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    const overHandler = vi.fn();
+    const outHandler = vi.fn();
+
+    sprite.onPointerOver.add(overHandler);
+    sprite.onPointerOut.add(outHandler);
+
+    dispatchPointer(signals.onPointerMove, { x: 25, y: 25 });
+    flushInteractions(im);
+    expect(overHandler).toHaveBeenCalledTimes(1);
+
+    flushInteractions(im);
+    flushInteractions(im);
+
+    expect(overHandler).toHaveBeenCalledTimes(1);
+    expect(outHandler).not.toHaveBeenCalled();
+
+    im.destroy();
+    sprite.destroy();
+  });
+
+  test('a node moving under a dragging pointer does not steal hover from the dragged node', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+    const dragged = new TestSprite().setBounds(0, 0, 50, 50);
+    const other = new TestSprite().setBounds(400, 400, 50, 50);
+
+    dragged.interactive = true;
+    dragged.draggable = true;
+    other.interactive = true;
+    scene.addChild(dragged);
+    scene.addChild(other);
+
+    const otherOver = vi.fn();
+
+    other.onPointerOver.add(otherOver);
+
+    dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
+    flushInteractions(im);
+    dispatchPointer(signals.onPointerMove, { x: 25 + pastThreshold, y: 25, travelled: pastThreshold });
+    flushInteractions(im);
+
+    other.setBounds(0, 0, 200, 200);
+    flushInteractions(im);
+
+    expect(otherOver).not.toHaveBeenCalled();
+    expect(im.getHoveredNode()).toBe(dragged);
+
+    im.destroy();
+    dragged.destroy();
+    other.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 6b. A hovered node that stops being hoverable
+// ---------------------------------------------------------------------------
+
+describe('InteractionManager — removing or disabling a hovered node balances enter/leave', () => {
+  test('removing a hovered node from the scene fires pointerout on it', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+    const sprite = new TestSprite().setBounds(0, 0, 50, 50);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    const events: string[] = [];
+
+    sprite.onPointerOver.add(() => events.push('over'));
+    sprite.onPointerOut.add(() => events.push('out'));
+
+    dispatchPointer(signals.onPointerMove, { x: 25, y: 25 });
+    flushInteractions(im);
+
+    scene.removeChild(sprite);
+    flushInteractions(im);
+
+    expect(events).toEqual(['over', 'out']);
+    expect(im.getHoveredNode()).toBeNull();
+
+    im.destroy();
+    sprite.destroy();
+  });
+
+  test('destroying a hovered node clears the hover without dispatching on the dead node', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+    const sprite = new TestSprite().setBounds(0, 0, 50, 50);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    const outHandler = vi.fn();
+
+    sprite.onPointerOut.add(outHandler);
+
+    dispatchPointer(signals.onPointerMove, { x: 25, y: 25 });
+    flushInteractions(im);
+
+    sprite.destroy();
+    flushInteractions(im);
+
+    // `destroy()` raises the destroyed flag before it unlinks, so detach-time
+    // observers see a node that is going away rather than one being
+    // reparented — focus suppresses `onBlur` the same way. A node coming back
+    // from a pool is removed, not destroyed, and does get its `pointerout`.
+    expect(outHandler).not.toHaveBeenCalled();
+    expect(im.getHoveredNode()).toBeNull();
+
+    im.destroy();
+  });
+
+  test('removing a hovered node dispatches pointerout up its own subtree chain', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+    const group = new Container();
+    const child = new TestSprite().setBounds(0, 0, 50, 50);
+
+    child.interactive = true;
+    group.addChild(child);
+    scene.addChild(group);
+
+    const events: string[] = [];
+
+    child.onPointerOut.add(() => events.push('child'));
+    group.onPointerOut.add(() => events.push('group'));
+
+    dispatchPointer(signals.onPointerMove, { x: 25, y: 25 });
+    flushInteractions(im);
+    expect(im.getHoveredNode()).toBe(child);
+
+    scene.removeChild(group);
+    flushInteractions(im);
+
+    expect(events).toEqual(['child', 'group']);
+
+    im.destroy();
+    group.destroy();
+  });
+
+  test('the node exposed by removing the one above it receives pointerover on the next flush', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+    const below = new TestSprite().setBounds(0, 0, 50, 50);
+    const above = new TestSprite().setBounds(0, 0, 50, 50);
+
+    below.interactive = true;
+    above.interactive = true;
+    scene.addChild(below);
+    scene.addChild(above);
+
+    const belowOver = vi.fn();
+
+    below.onPointerOver.add(belowOver);
+
+    dispatchPointer(signals.onPointerMove, { x: 25, y: 25 });
+    flushInteractions(im);
+    expect(im.getHoveredNode()).toBe(above);
+    expect(belowOver).not.toHaveBeenCalled();
+
+    scene.removeChild(above);
+    flushInteractions(im);
+
+    expect(belowOver).toHaveBeenCalledTimes(1);
+    expect(im.getHoveredNode()).toBe(below);
+
+    im.destroy();
+    above.destroy();
+    below.destroy();
+  });
+
+  test('turning a hovered node non-interactive fires pointerout on it', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+    const sprite = new TestSprite().setBounds(0, 0, 50, 50);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    const outHandler = vi.fn();
+
+    sprite.onPointerOut.add(outHandler);
+
+    dispatchPointer(signals.onPointerMove, { x: 25, y: 25 });
+    flushInteractions(im);
+
+    sprite.interactive = false;
+    flushInteractions(im);
+
+    expect(outHandler).toHaveBeenCalledTimes(1);
+    expect(im.getHoveredNode()).toBeNull();
+
+    im.destroy();
+    sprite.destroy();
+  });
+
+  test('a pooled node recycled under a resting pointer balances every enter against a leave', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+    const sprite = new TestSprite().setBounds(0, 0, 50, 50);
+
+    sprite.interactive = true;
+
+    let enters = 0;
+    let leaves = 0;
+
+    sprite.onPointerOver.add(() => enters++);
+    sprite.onPointerOut.add(() => leaves++);
+
+    scene.addChild(sprite);
+    dispatchPointer(signals.onPointerMove, { x: 25, y: 25 });
+    flushInteractions(im);
+
+    // Three pool cycles, all with the pointer sitting perfectly still.
+    for (let i = 0; i < 3; i++) {
+      scene.removeChild(sprite);
+      flushInteractions(im);
+      scene.addChild(sprite);
+      flushInteractions(im);
+    }
+
+    expect(enters).toBe(4);
+    expect(leaves).toBe(3);
+    expect(im.getHoveredNode()).toBe(sprite);
+
+    im.destroy();
+    sprite.destroy();
   });
 });
 
