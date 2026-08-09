@@ -405,7 +405,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Visual drawing offset X in pixels, applied to every tile of this set."
+          "description": "Visual drawing offset X in pixels (Tiled tileoffset). Applied by the tile-layer geometry builder and by the tile-collision helpers — i.e. wherever this package places a tile on a grid. It is **not** folded into a TileObject's x/y: object layers are data-only, so code that draws a tile object itself has to add this offset the way a tile layer would."
         },
         {
           "name": "offsetY",
@@ -426,7 +426,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Visual drawing offset Y in pixels, applied to every tile of this set."
+          "description": "Visual drawing offset Y in pixels (Tiled tileoffset) — see offsetX for where it applies."
         },
         {
           "name": "rows",

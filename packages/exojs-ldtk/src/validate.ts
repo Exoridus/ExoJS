@@ -5,9 +5,10 @@
 //
 // Deliberately leaner than the Tiled adapter's `validate.ts`: it checks the
 // fields declared as required by this package's `LdtkData` model plus the
-// optional ones the adapter actually reads, and nothing else. Field values on
-// entity/level instances (`__value`) stay unchecked — their per-type shape is
-// mapped defensively at conversion time.
+// optional ones the adapter actually reads, and nothing else. Field-instance
+// `__value`s are checked against the shape their `__type` declares, because the
+// conversion pass casts rather than probes; a `__type` this package does not
+// model is left alone so a future LDtk field type still loads.
 //
 // Unlike the Tiled validator, this one asserts in place and hands the caller
 // back the very object it was given rather than rebuilding a normalised copy.
@@ -211,16 +212,94 @@ function validateDefs(raw: unknown, source: string, path: string): void {
 // ── Instances ────────────────────────────────────────────────────────────────
 
 /**
- * A field instance is validated down to its identifier and declared type only.
- * `__value` is intentionally left alone: its shape varies per LDtk field type
- * and the conversion pass already maps every unrecognised or `null` value to
- * "property absent" rather than trusting it.
+ * Validate one field-instance `__value` against the shape its `__type` declares.
+ *
+ * `null` is LDtk's "not set" and always passes — the conversion drops the
+ * property. Everything else is checked here because the conversion pass casts
+ * rather than probes: a `Point` whose value is not `{cx, cy}` used to reach the
+ * runtime as a point with `undefined` coordinates, indistinguishable from a
+ * genuine one until something read it.
+ *
+ * A `__type` this package does not model (a future LDtk field type, or an
+ * `Array<T>` element type of one) is left unchecked: forward compatibility
+ * matters more than rejecting a value the conversion already skips.
+ */
+function validateFieldValue(typeName: string, value: unknown, source: string, path: string): void {
+  if (value === null || value === undefined) return;
+
+  switch (typeName) {
+    case 'Int':
+      expectInteger(value, source, path);
+      return;
+
+    case 'Float':
+      expectNumber(value, source, path);
+      return;
+
+    case 'Bool':
+      expectBoolean(value, source, path);
+      return;
+
+    case 'String':
+    case 'Multilines':
+    case 'Color':
+    case 'FilePath':
+    case 'Enum':
+      expectString(value, source, path);
+      return;
+
+    case 'Point': {
+      const point = expectObject(value, source, path);
+
+      expectNumber(point.cx, source, joinPath(path, 'cx'));
+      expectNumber(point.cy, source, joinPath(path, 'cy'));
+
+      return;
+    }
+
+    case 'EntityRef': {
+      const ref = expectObject(value, source, path);
+
+      for (const key of ['entityIid', 'layerIid', 'levelIid', 'worldIid'] as const) {
+        expectString(ref[key], source, joinPath(path, key));
+      }
+
+      return;
+    }
+
+    case 'Tile': {
+      const tile = expectObject(value, source, path);
+
+      expectInteger(tile.tilesetUid, source, joinPath(path, 'tilesetUid'));
+
+      for (const key of ['x', 'y', 'w', 'h'] as const) {
+        expectNumber(tile[key], source, joinPath(path, key));
+      }
+
+      return;
+    }
+
+    default:
+      if (typeName.startsWith('Array<') && typeName.endsWith('>')) {
+        const elementType = typeName.slice('Array<'.length, -1);
+
+        eachEntry(value, source, path, (item, itemPath) => validateFieldValue(elementType, item, source, itemPath));
+      }
+  }
+}
+
+/**
+ * A field instance is validated down to its identifier, declared type and the
+ * shape of `__value` that type implies — see {@link validateFieldValue}.
  */
 function validateFieldInstance(raw: unknown, source: string, path: string): void {
   const field = expectObject(raw, source, path);
 
   expectString(field.__identifier, source, joinPath(path, '__identifier'));
-  expectString(field.__type, source, joinPath(path, '__type'));
+
+  const typeName = expectString(field.__type, source, joinPath(path, '__type'));
+
+  validateFieldValue(typeName, field.__value, source, joinPath(path, '__value'));
 }
 
 function validateFieldInstances(value: unknown, source: string, path: string): void {

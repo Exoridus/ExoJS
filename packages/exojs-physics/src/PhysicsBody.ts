@@ -97,6 +97,13 @@ export class PhysicsBody {
   public _sleepTime = 0;
   /** @internal — dense union-find index assigned by the world's island pass each step. */
   public _islandIndex = 0;
+  /**
+   * @internal — raised by {@link setTransform}, cleared once the fixed step that
+   * saw it completes. A static/kinematic body driven by teleporting carries no
+   * velocity, so this is the world's only signal that such a body moved and its
+   * sleeping contact partners must be woken.
+   */
+  public _teleported = false;
   /** @internal — world-space centre of mass at the start of the current fixed step (CCD swept-test origin). */
   public _ccdPrevX = 0;
   /** @internal — see {@link _ccdPrevX}. */
@@ -244,6 +251,8 @@ export class PhysicsBody {
     }
 
     this.wake();
+
+    this._teleported = true;
 
     setTransform(this._transform, position.x, position.y, angle);
 
@@ -423,6 +432,7 @@ export class PhysicsBody {
     this._forceX = 0;
     this._forceY = 0;
     this._torque = 0;
+    this._teleported = false;
 
     if (this.type === 'static' || (this._deltaPosX === 0 && this._deltaPosY === 0 && this._deltaAngle === 0)) {
       this._resetDelta();

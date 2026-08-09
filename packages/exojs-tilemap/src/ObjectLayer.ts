@@ -53,7 +53,11 @@ interface TileMapObjectBase<P extends TileProperties = TileProperties> {
   readonly width: number;
   /** Bounding height in px (0 for points). */
   readonly height: number;
-  /** Rotation in degrees, clockwise, about the object origin. */
+  /**
+   * Rotation in degrees, clockwise, about `(x, y)` — except on a
+   * {@link TileObject}, whose pivot stays at the source format's own anchor and
+   * is generally not `(x, y)`. See {@link TileObject} for why.
+   */
   readonly rotation: number;
   /** Whether the object is marked visible. */
   readonly visible: boolean;
@@ -98,6 +102,12 @@ export interface PolylineObject<P extends TileProperties = TileProperties> exten
  * map, bottom-centre on an isometric one) and rotates the tile image about
  * that point, so a non-zero {@link TileMapObjectBase.rotation} on a tile
  * object still pivots about the source anchor rather than about `(x, y)`.
+ *
+ * The owning tileset's drawing offset (Tiled `tileoffset`, reachable as
+ * `tile.tileset.offsetX`/`offsetY`) is likewise **not** folded into `x`/`y`.
+ * Object layers are data-only, so nothing in this package draws a tile object;
+ * code that does has to add that offset itself to match how a tile layer
+ * places the same tile.
  */
 export interface TileObject<P extends TileProperties = TileProperties> extends TileMapObjectBase<P> {
   readonly kind: typeof ObjectKind.Tile;

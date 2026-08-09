@@ -50,11 +50,26 @@ export interface AsepriteFrameTag {
   readonly repeat?: string;
 }
 
-/** A single layer entry in the Aseprite JSON metadata. */
+/**
+ * A single layer entry in the Aseprite JSON metadata (`meta.layers`).
+ *
+ * Only `name` is guaranteed. `opacity` and `blendMode` describe an image
+ * layer's compositing and can both be absent (a group layer has neither), and
+ * `color`/`data` carry the layer's editor user data when it was set. `group`
+ * names the enclosing group layer and is absent at the top level, so the flat
+ * array encodes the layer tree by parent name.
+ */
 export interface AsepriteLayer {
-  readonly blendMode: string;
+  readonly blendMode?: string;
+  /** Layer colour tag from the editor, as `#RRGGBBAA`. */
+  readonly color?: string;
+  /** Free-form user data attached to the layer in the editor. */
+  readonly data?: string;
+  /** Name of the enclosing group layer; absent for a top-level layer. */
+  readonly group?: string;
   readonly name: string;
-  readonly opacity: number;
+  /** Layer opacity in `[0, 255]` (Aseprite's own scale, not `[0, 1]`). */
+  readonly opacity?: number;
 }
 
 /** Bounds of a named slice at a specific frame. */

@@ -1,5 +1,5 @@
 import { Asset } from '@codexo/exojs';
-import { type AssetLoaderContext, TextureRegion } from '@codexo/exojs';
+import { type AssetLoaderContext, logger, TextureRegion } from '@codexo/exojs';
 import { TileSet } from '@codexo/exojs-tilemap';
 
 import type { LdtkData, LdtkLevel, LdtkTilesetDef } from './LdtkData';
@@ -7,22 +7,37 @@ import { getLdtkLevelEntries } from './ldtkLevelEntries';
 import type { LdtkMap } from './LdtkMap';
 import { ldtkToTileMap } from './ldtkToTileMap';
 import { resolveLdtkUrl } from './url';
-import { validateLdtkData, validateLdtkLevelData } from './validate';
+import { LdtkFormatError, validateLdtkData, validateLdtkLevelData } from './validate';
 
 // ── Tileset loading ───────────────────────────────────────────────────────────
 
 /**
  * Load one LDtk tileset definition into a runtime {@link TileSet}.
- * Returns `null` when the tileset has no atlas image (`relPath` is null or
- * empty) — those entries are silently skipped and their tiles will not render.
+ *
+ * Returns `null` only for an embed-atlas tileset (`relPath` null or empty),
+ * whose image ships with the LDtk editor and cannot be resolved from the
+ * document — that case warns rather than passing unnoticed, because every tile
+ * drawn from it is missing from the runtime map.
+ *
+ * @throws {LdtkFormatError} when the tileset names an atlas that cannot yield a
+ * single tile (its declared size is smaller than one padded tile). Dropping it
+ * would make every cell and entity referencing it vanish without a diagnostic.
  */
 async function loadLdtkTileset(
   def: LdtkTilesetDef,
   ldtkSource: string,
   context: AssetLoaderContext,
 ): Promise<TileSet | null> {
-  // No atlas image (null or empty relPath): skip — tiles cannot render.
-  if (def.relPath === null || def.relPath === '') return null;
+  if (def.relPath === null || def.relPath === '') {
+    logger.warn(
+      `LDtk: tileset "${def.identifier}" in "${ldtkSource}" has no atlas image (relPath is null) — it is an ` +
+        'embed-atlas tileset whose image lives inside the LDtk editor. Every tile drawn from it is omitted ' +
+        'from the runtime map. Re-export the tileset as a regular image atlas to render it.',
+      { source: 'ldtk' },
+    );
+
+    return null;
+  }
 
   const imageUrl = resolveLdtkUrl(def.relPath, ldtkSource);
   const texture = await context.loader.load(Asset.type('texture', imageUrl));
@@ -37,7 +52,14 @@ async function loadLdtkTileset(
   const columns = Math.floor((innerWidth + spacing) / (tileSize + spacing));
   const rows = Math.floor((innerHeight + spacing) / (tileSize + spacing));
 
-  if (columns <= 0 || rows <= 0) return null;
+  if (columns <= 0 || rows <= 0) {
+    throw new LdtkFormatError(
+      ldtkSource,
+      `defs.tilesets/${def.identifier}`,
+      `tileset "${def.identifier}" declares a ${def.pxWid}×${def.pxHei}px atlas with ` +
+        `tileGridSize ${tileSize}, spacing ${spacing} and padding ${margin}, which does not fit a single tile`,
+    );
+  }
 
   const tileCount = columns * rows;
   const region = new TextureRegion(texture, {
@@ -135,8 +157,11 @@ function withResolvedLevels(data: LdtkData, resolvedLevels: readonly LdtkLevel[]
  * {@link import('./validate').LdtkFormatError} naming the file and the
  * offending property path.
  *
- * Tilesets without an atlas image (`relPath = null`) are silently skipped;
- * their tiles will not appear in the rendered output.
+ * A tileset whose declared atlas cannot hold a single tile is a
+ * {@link import('./validate').LdtkFormatError} too — dropping it would make
+ * every cell referencing it disappear without a diagnostic. An embed-atlas
+ * tileset (`relPath = null`) is the one case that is skipped rather than
+ * rejected, since its image lives inside the LDtk editor; that skip warns.
  * @internal
  */
 export async function loadLdtkMap(

@@ -32,6 +32,17 @@ const ccdEmbed = 0.05;
 const ccdRestitutionThreshold = 1;
 
 /**
+ * `true` when a static/kinematic body — an island boundary, never an island
+ * member — is being driven this step, either through its velocity or by a
+ * {@link PhysicsBody.setTransform} teleport. Speed is deliberately not compared
+ * against the sleep thresholds: a platform creeping along at 1 px/s still has to
+ * push its passengers, and it is exactly that sub-threshold case where nothing
+ * else would keep them awake.
+ */
+const isMovingBoundary = (body: PhysicsBody): boolean =>
+  body._teleported || body.linearVelocityX !== 0 || body.linearVelocityY !== 0 || body.angularVelocity !== 0;
+
+/**
  * {@link PhysicsWorld.attach}'s default `position`: `node`'s current WORLD
  * translation, duck-typed the same way `AudioListener` reads a follow target —
  * real {@link SceneNode}s expose `getWorldTransform()`, test doubles that omit
@@ -226,6 +237,8 @@ export class PhysicsWorld implements BodyOwner {
   private readonly _ccdSweepHit: SweepHit = { t: 0, normalX: 0, normalY: 0 };
   private readonly _ccdBestHit: SweepHit = { t: 0, normalX: 0, normalY: 0 };
   private readonly _ccdSweptAabb: Aabb = createAabb();
+  /** Pooled result buffer for the CCD pass's broad-phase query (refilled per bullet collider). */
+  private readonly _ccdCandidates: Collider[] = [];
 
   /**
    * Narrow-phase sweep tests run by the CCD pass since world creation. Pairs
@@ -235,6 +248,18 @@ export class PhysicsWorld implements BodyOwner {
    * @internal — test/diagnostic hook.
    */
   public _ccdSweepTests = 0;
+
+  /**
+   * Colliders the CCD pass pulled out of the broad phase since world creation —
+   * the size of the candidate set the swept-AABB prune and the narrow-phase
+   * sweep then work on. Counted separately from {@link _ccdSweepTests} because
+   * the two measure different halves: this is what the pass looks at, that is
+   * what it actually sweeps. Stays proportional to the geometry near the
+   * bullets, not to the world's collider count.
+   *
+   * @internal — test/diagnostic hook.
+   */
+  public _ccdBroadPhaseCandidates = 0;
 
   private _nextBodyId = 1;
   private _nextColliderId = 1;
@@ -565,7 +590,14 @@ export class PhysicsWorld implements BodyOwner {
 
   // ── binding ────────────────────────────────────────────────────────────
 
-  /** Link a body to a scene node; the node tracks the body after each step. */
+  /**
+   * Link a body to a scene node; the node tracks the body after each step.
+   * Destroying the node is enough to end the link — the next step drops it
+   * rather than writing into the node's released transform, so an explicit
+   * {@link unbind} is only needed to stop tracking a node that stays alive.
+   *
+   * @throws if `node` is already destroyed.
+   */
   public bind(body: PhysicsBody, node: SceneNode): PhysicsBinding {
     return this._bindings.bind(body, node);
   }
@@ -693,8 +725,10 @@ export class PhysicsWorld implements BodyOwner {
    * kinematic bodies are boundaries, not nodes); it sleeps once every member has
    * stayed below the sleep thresholds for `timeToSleep`, and wakes the instant
    * any member does (e.g. an awake body merges into it via a new contact).
-   * Deterministic: union-find roots break ties by lower index and the contact
-   * set is id-sorted.
+   * A boundary that is itself moving resets the sleep timer of every dynamic
+   * body it touches, so a platform keeps its passengers awake however slowly it
+   * travels. Deterministic: union-find roots break ties by lower index and the
+   * contact set is id-sorted.
    */
   private _updateSleeping(dt: number): void {
     const bodies = this._bodies;
@@ -719,13 +753,23 @@ export class PhysicsWorld implements BodyOwner {
     parent.length = count;
     minSleep.length = count;
 
-    // Union dynamic↔dynamic solid contacts into islands.
+    // Union dynamic↔dynamic solid contacts into islands. A dynamic body touching
+    // a MOVING static/kinematic body has its sleep timer reset instead: those
+    // types are island boundaries, not members, so nothing else would keep the
+    // passenger of a slow-moving platform awake — and the solver skips a contact
+    // whose dynamic side is asleep, letting the platform drive straight through it.
     for (const contact of this._backend.contactGraph.solidContacts) {
       const bodyA = contact.a.body;
       const bodyB = contact.b.body;
+      const dynamicA = bodyA.type === 'dynamic';
+      const dynamicB = bodyB.type === 'dynamic';
 
-      if (bodyA.type === 'dynamic' && bodyB.type === 'dynamic') {
+      if (dynamicA && dynamicB) {
         this._union(bodyA._islandIndex, bodyB._islandIndex);
+      } else if (dynamicA && isMovingBoundary(bodyB)) {
+        bodyA._sleepTime = 0;
+      } else if (dynamicB && isMovingBoundary(bodyA)) {
+        bodyB._sleepTime = 0;
       }
     }
 
@@ -845,6 +889,11 @@ export class PhysicsWorld implements BodyOwner {
    * Filters and sensors behave exactly as in the discrete narrow phase.
    */
   private _advanceBullets(): void {
+    // `_finalizePosition` moved collider geometry after this step's detection
+    // pass, so the index's leaves are stale for the sweep queries below. A leaf
+    // whose tight AABB is still inside its fat one costs nothing to re-sync.
+    this._backend.spatialIndex?.sync(this._colliders);
+
     for (const body of this._bodies) {
       if (!body.isBullet || body.type !== 'dynamic' || body.isSleeping) {
         continue;
@@ -879,6 +928,10 @@ export class PhysicsWorld implements BodyOwner {
         this._ccdClampPosition.x = body.x + dx * pullBack;
         this._ccdClampPosition.y = body.y + dy * pullBack;
         body.setTransform(this._ccdClampPosition, body.angle);
+
+        // The clamp pulled this body back behind the pose the index was synced
+        // from; refresh just its own leaves so a later bullet's query still sees it.
+        this._backend.spatialIndex?.sync(body.colliders);
       }
 
       // Reflect about the true surface normal: a slide for a non-bouncy body
@@ -897,15 +950,18 @@ export class PhysicsWorld implements BodyOwner {
   }
 
   /**
-   * Find the earliest impact across all (bullet collider × world collider)
-   * pairs for a bullet whose colliders translated by `(dx, dy)` this step.
-   * Returns the blocking collider (with the impact written into
-   * {@link _ccdBestHit}), or `null` when nothing blocks the motion.
+   * Find the earliest impact for a bullet whose colliders translated by
+   * `(dx, dy)` this step. Each of the bullet's colliders queries the broad
+   * phase with its swept AABB, so the pass costs what the geometry around the
+   * bullet's path costs — not one iteration per collider in the world. Returns
+   * the blocking collider (with the impact written into {@link _ccdBestHit}),
+   * or `null` when nothing blocks the motion.
    */
   private _sweepBulletColliders(body: PhysicsBody, dx: number, dy: number): Collider | null {
     const hit = this._ccdSweepHit;
     const best = this._ccdBestHit;
     const swept = this._ccdSweptAabb;
+    const spatialIndex = this._backend.spatialIndex;
     let blocked: Collider | null = null;
 
     best.t = Infinity;
@@ -915,8 +971,8 @@ export class PhysicsWorld implements BodyOwner {
         continue; // Sensors never block — not even their own body's motion.
       }
 
-      // Cheap path: the collider's end-pose AABB unioned with its start pose;
-      // anything outside it cannot be hit, so no narrow-phase sweep runs.
+      // The collider's end-pose AABB unioned with its start pose; anything
+      // outside it cannot be hit, so no narrow-phase sweep runs.
       const aabb = collider.aabb;
 
       swept.minX = dx > 0 ? aabb.minX - dx : aabb.minX;
@@ -924,7 +980,14 @@ export class PhysicsWorld implements BodyOwner {
       swept.minY = dy > 0 ? aabb.minY - dy : aabb.minY;
       swept.maxY = dy < 0 ? aabb.maxY - dy : aabb.maxY;
 
-      for (const other of this._colliders) {
+      // Tree hits are keyed on the leaves' fat AABBs, so the candidate set is a
+      // conservative superset — the exact `aabbOverlap` below still decides.
+      // A backend without a spatial index falls back to the full collider list.
+      const candidates = spatialIndex === undefined ? this._colliders : spatialIndex.queryAabb(swept, this._ccdCandidates);
+
+      this._ccdBroadPhaseCandidates += candidates.length;
+
+      for (const other of candidates) {
         // Sweep against every other body (static, kinematic, dynamic) under the
         // discrete narrow phase's rules: sensors never block, filtered pairs never collide.
         if (other.isSensor || other.body === body || !shouldCollide(collider.filter, other.filter)) {
