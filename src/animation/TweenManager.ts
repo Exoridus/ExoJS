@@ -193,9 +193,19 @@ export class TweenManager {
 
   /**
    * Remove all tweens and tickers immediately. No callbacks fire.
-   * The tweens' states are left as-is; they are simply evicted from the list.
+   * Each tracked tween is {@link Tween.stop}ped first, so `tween.state`
+   * reflects the eviction instead of staying `Active`/`Paused` on a tween the
+   * manager no longer drives — a `Stopped` tween's own manager binding
+   * survives, so a later {@link Tween.start} re-enters it as usual.
    */
   public clear(): this {
+    // Snapshot first: `stop()` calls back into `remove()`, which splices the
+    // live `_tweens` array — iterating that array directly while it shrinks
+    // under us would skip entries.
+    for (const tween of [...this._tweens]) {
+      tween.stop();
+    }
+
     this._tweens = [];
     this._tickers = [];
 
