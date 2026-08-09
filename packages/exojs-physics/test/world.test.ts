@@ -158,6 +158,28 @@ describe('PhysicsWorld lifecycle and mass model', () => {
     expect(() => world.destroy()).not.toThrow();
   });
 
+  it('destroy marks every contained collider destroyed and clears the collider list', () => {
+    const world = new PhysicsWorld();
+    const collider = new Collider({ shape: new BoxShape(10, 10) });
+    const second = new Collider({ shape: new CircleShape(4) });
+    const body = world.add(new PhysicsBody({ type: 'dynamic', colliders: [collider, second] }));
+
+    expect(world.colliders).toHaveLength(2);
+
+    world.destroy();
+
+    // A collider must never outlive its body's destroyed flag: reporting
+    // `destroyed === false` while `body.destroyed === true` makes a released
+    // collider look usable.
+    expect(collider.destroyed).toBe(true);
+    expect(second.destroyed).toBe(true);
+    expect(body.destroyed).toBe(true);
+    expect(world.colliders).toHaveLength(0);
+    // Broad-phase teardown must have released their proxies as well.
+    expect(collider._treeProxy).toBe(-1);
+    expect(second._treeProxy).toBe(-1);
+  });
+
   it('rejects an invalid subStepCount (non-integer or below 1)', () => {
     expect(() => new PhysicsWorld({ subStepCount: 2.5 })).toThrow(RangeError);
     expect(() => new PhysicsWorld({ subStepCount: 0 })).toThrow(RangeError);

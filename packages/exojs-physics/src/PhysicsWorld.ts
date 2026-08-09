@@ -615,7 +615,17 @@ export class PhysicsWorld implements BodyOwner {
 
     this._destroyed = true;
 
+    // Mark colliders before their bodies: a collider that still reported
+    // `destroyed === false` while `collider.body.destroyed === true` would look
+    // usable after the world that owned it is gone. Walk each body's own list
+    // rather than `this._colliders`, so colliders whose deferred registration
+    // never ran are covered too. `_backend.destroy()` below releases their
+    // broad-phase proxies.
     for (const body of this._bodies) {
+      for (const collider of body.colliders) {
+        collider._markDestroyed();
+      }
+
       body._markDestroyed();
     }
 
