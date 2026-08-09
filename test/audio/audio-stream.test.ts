@@ -256,6 +256,40 @@ describe('AudioStream', () => {
     expect(playSpy).not.toHaveBeenCalled();
   });
 
+  test('the loop setter is a no-op once the voice has ended', () => {
+    const manager = new AudioManager();
+    const el = createAudioElementStub();
+    const stream = new AudioStream(el, { loop: false });
+    const voice = manager.play(stream) as AudioStreamVoice;
+
+    voice.stop();
+    expect(voice.ended).toBe(true);
+
+    voice.loop = true;
+    expect(el.loop).toBe(false);
+
+    stream.destroy();
+  });
+
+  test('an ended voice cannot retarget the loop flag of the next voice on the same element', () => {
+    const manager = new AudioManager();
+    const el = createAudioElementStub();
+    const stream = new AudioStream(el, { loop: false });
+    const first = manager.play(stream) as AudioStreamVoice;
+
+    // Starting a second voice stops the first — both share one `<audio>` element.
+    const second = manager.play(stream) as AudioStreamVoice;
+    expect(first.ended).toBe(true);
+    expect(second.ended).toBe(false);
+
+    first.loop = true;
+
+    expect(el.loop).toBe(false);
+    expect(second.loop).toBe(false);
+
+    stream.destroy();
+  });
+
   test('construction while the audio context is not ready defers playback until unlock', () => {
     const ctx = getAudioContext();
     const originalState = ctx.state;

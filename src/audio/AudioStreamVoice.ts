@@ -107,6 +107,10 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
   }
 
   public set loop(value: boolean) {
+    // Guarded like `seek`/`pause`/`resume`: the `<audio>` element is shared by
+    // every voice of this stream, so an ended voice writing here would retarget
+    // the loop behaviour of whichever voice currently owns the element.
+    if (this._ended) return;
     this._element.loop = value;
   }
 
