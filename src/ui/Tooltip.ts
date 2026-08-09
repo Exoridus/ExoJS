@@ -1,4 +1,6 @@
+import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
+import type { Time } from '#core/Time';
 import type { InteractionEvent } from '#input/InteractionEvent';
 import { Container } from '#rendering/Container';
 import { Graphics } from '#rendering/primitives/Graphics';
@@ -36,6 +38,10 @@ export interface TooltipOptions {
  * `target`, so it always renders in screen space above other content.
  *
  * The target must have `interactive = true` for the hover signals to fire.
+ * The show delay is driven by the target's app's {@link Application.onFrame}
+ * rather than a wall-clock timer, so it freezes while `app.scenes.pause()`
+ * is active instead of finishing in the background — and only starts
+ * counting once the target is attached to a live app.
  *
  * @example
  * ```ts
@@ -49,7 +55,7 @@ export class Tooltip {
   private readonly _target: RenderNode;
   private readonly _offsetX: number;
   private readonly _offsetY: number;
-  private readonly _delayMs: number;
+  private readonly _delaySeconds: number;
   private readonly _background: number;
   private readonly _textColor: number;
   private readonly _padding: number;
@@ -57,16 +63,42 @@ export class Tooltip {
   private readonly _text: string;
 
   private _node: Container | null = null;
-  private _timer: ReturnType<typeof setTimeout> | null = null;
+  /** The app whose {@link Application.onFrame} is currently driving the pending show delay, or `null` while idle. */
+  private _scheduledApp: Application | null = null;
+  private _elapsedSeconds = 0;
+  private _pendingX = 0;
+  private _pendingY = 0;
+
+  /**
+   * Advances the pending show delay by real elapsed time, but only while the
+   * target's current scene is not paused — so `app.scenes.pause()` freezes a
+   * tooltip about to appear exactly like it freezes everything else, instead
+   * of the delay quietly finishing in the background.
+   */
+  private readonly _onFrame = (time: Time): void => {
+    if (this._scheduledApp?.scenes.currentScene?.paused === true) {
+      return;
+    }
+
+    this._elapsedSeconds += time.seconds;
+
+    if (this._elapsedSeconds >= this._delaySeconds) {
+      const x = this._pendingX;
+      const y = this._pendingY;
+
+      this._cancelTimer();
+      this._show(x, y);
+    }
+  };
 
   private readonly _onPointerOver = (event: InteractionEvent): void => {
-    // `event.x`/`event.y` are in `target`'s own layer space (see
-    // InteractionEvent.x's doc) — this tooltip node is always parented to the
-    // UI layer (screen space), so positioning it directly from a WORLD-tree
-    // target's coordinates drifts once the camera pans, zooms, or rotates.
-    // Correct for a plain screen-fixed UI target; a follow-up is needed to
-    // route a world target's coordinates through `view.worldToScreen` first.
-    this._scheduleShow(event.x, event.y);
+    // `Pointer.x`/`Pointer.y` are raw design-pixel screen coordinates,
+    // independent of camera pan/zoom/rotate (see InteractionEvent.x's doc,
+    // which contrasts the two) — the same space this tooltip's node is
+    // positioned in, since it is always parented to the screen-space UI
+    // layer. `event.x`/`event.y` read in `target`'s own layer space instead,
+    // which for a world-tree target would drift under a moved camera.
+    this._scheduleShow(event.pointer.x, event.pointer.y);
   };
 
   private readonly _onPointerOut = (): void => {
@@ -78,7 +110,7 @@ export class Tooltip {
     this._text = options.text;
     this._offsetX = options.offsetX ?? 12;
     this._offsetY = options.offsetY ?? -28;
-    this._delayMs = (options.delay ?? 0.3) * 1000;
+    this._delaySeconds = options.delay ?? 0.3;
     this._background = options.background ?? 0x222222;
     this._textColor = options.textColor ?? 0xffffff;
     this._padding = options.padding ?? 6;
@@ -97,9 +129,20 @@ export class Tooltip {
 
   private _scheduleShow(x: number, y: number): void {
     this._cancelTimer();
-    this._timer = setTimeout(() => {
-      this._show(x, y);
-    }, this._delayMs);
+
+    // Not attached to a live app — nothing to drive the delay (and, per
+    // `_findUIRoot`, nothing that could show a tooltip either way).
+    const app = this._target._getStage()?.app;
+
+    if (app === undefined) {
+      return;
+    }
+
+    this._pendingX = x;
+    this._pendingY = y;
+    this._elapsedSeconds = 0;
+    this._scheduledApp = app;
+    app.onFrame.add(this._onFrame);
   }
 
   private _show(x: number, y: number): void {
@@ -147,12 +190,17 @@ export class Tooltip {
     this._removeNode();
   }
 
+  /**
+   * Destroys (not just detaches) the current tooltip node — `destroy()`
+   * unlinks it from its parent itself (see `SceneNode.destroy`'s doc) and
+   * recursively tears down its `Graphics`/`Text` children, so a hidden
+   * tooltip's GPU-backed resources and signal listeners don't leak. Safe to
+   * call when the node was already detached (or destroyed) externally.
+   */
   private _removeNode(): void {
     if (this._node !== null) {
-      const p = this._node.parent;
-
-      if (p !== null) {
-        p.removeChild(this._node);
+      if (!this._node.destroyed) {
+        this._node.destroy();
       }
 
       this._node = null;
@@ -160,9 +208,9 @@ export class Tooltip {
   }
 
   private _cancelTimer(): void {
-    if (this._timer !== null) {
-      clearTimeout(this._timer);
-      this._timer = null;
+    if (this._scheduledApp !== null) {
+      this._scheduledApp.onFrame.remove(this._onFrame);
+      this._scheduledApp = null;
     }
   }
 
