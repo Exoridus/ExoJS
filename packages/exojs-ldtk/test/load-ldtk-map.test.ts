@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
-import { Asset, type AssetLoaderContext, type Texture } from '@codexo/exojs';
+import { Asset, type AssetLoaderContext, logger, type Texture } from '@codexo/exojs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { LdtkData } from '../src/LdtkData';
@@ -426,7 +426,8 @@ describe('loadLdtkMap — external level omits fieldInstances entirely', () => {
 });
 
 describe('loadLdtkMap — tilesets without an atlas image', () => {
-  // relPath: null → the tileset is skipped entirely; tiles cannot render.
+  // relPath: null → an embed-atlas tileset whose image lives in the LDtk
+  // editor. It is skipped, but the skip is announced.
   const fixture: LdtkData = {
     jsonVersion: '1.5.3',
     defaultGridSize: 16,
@@ -473,16 +474,33 @@ describe('loadLdtkMap — tilesets without an atlas image', () => {
 
   it('does not call the loader and leaves tile layers empty', async () => {
     const { context, loaderLoad } = makeContext({ [ABS_SOURCE]: fixture });
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
     const map = await loadLdtkMap(ABS_SOURCE, context);
 
     expect(loaderLoad).not.toHaveBeenCalled();
     const tilesLayer = map.levels[0]!.layers[0]!;
     expect(tilesLayer.countNonEmptyTiles()).toBe(0);
+
+    warnSpy.mockRestore();
+  });
+
+  it('warns instead of dropping the tileset silently', async () => {
+    const { context } = makeContext({ [ABS_SOURCE]: fixture });
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+
+    await loadLdtkMap(ABS_SOURCE, context);
+
+    const messages = warnSpy.mock.calls.map(call => String(call[0]));
+
+    expect(messages.some(message => message.includes('NoImage') && message.includes('relPath is null'))).toBe(true);
+
+    warnSpy.mockRestore();
   });
 });
 
 describe('loadLdtkMap — atlas too small for any tile', () => {
-  // pxWid (8) < tileGridSize (16) → columns computes to 0 → tileset is dropped.
+  // pxWid (8) < tileGridSize (16) → columns computes to 0. Dropping the tileset
+  // would make every cell referencing it vanish, so this is a format error.
   const fixture: LdtkData = {
     jsonVersion: '1.5.3',
     defaultGridSize: 16,
@@ -527,13 +545,19 @@ describe('loadLdtkMap — atlas too small for any tile', () => {
     ],
   };
 
-  it('still loads the texture but drops the tileset (no tiles placed)', async () => {
+  it('throws LdtkFormatError naming the tileset instead of dropping it', async () => {
     const { context, loaderLoad } = makeContext({ [ABS_SOURCE]: fixture });
-    const map = await loadLdtkMap(ABS_SOURCE, context);
 
-    // The texture load happens before the column check, so it IS requested.
+    await expect(loadLdtkMap(ABS_SOURCE, context)).rejects.toThrow(LdtkFormatError);
+
+    // The texture load happens before the geometry check, so it IS requested.
     expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', 'https://example.com/maps/tiny.png'));
-    expect(map.levels[0]!.layers[0]!.countNonEmptyTiles()).toBe(0);
+  });
+
+  it('names the offending tileset and its geometry in the message', async () => {
+    const { context } = makeContext({ [ABS_SOURCE]: fixture });
+
+    await expect(loadLdtkMap(ABS_SOURCE, context)).rejects.toThrow(/Tiny.*8×8.*tileGridSize 16/s);
   });
 });
 
