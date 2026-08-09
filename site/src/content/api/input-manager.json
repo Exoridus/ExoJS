@@ -259,7 +259,7 @@
         },
         {
           "name": "getPrimaryPointerPosition",
-          "signature": "getPrimaryPointerPosition(): { x: number; y: number } | null",
+          "signature": "getPrimaryPointerPosition(): PointLike | null",
           "signatureTokens": [
             {
               "text": "getPrimaryPointerPosition",
@@ -278,40 +278,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "{ ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "x",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": "; ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "y",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": " }",
-              "kind": "punctuation"
+              "text": "PointLike",
+              "kind": "type"
             },
             {
               "text": " | ",
@@ -323,7 +291,7 @@
             }
           ],
           "params": [],
-          "returnType": "{ x: number; y: number } | null",
+          "returnType": "PointLike | null",
           "description": "Returns the canvas-relative position of the primary pointer (isPrimary = true), or the first non-cancelled pointer if no primary is found. Returns null when no active pointer is present. Used by debug layers to show cursor info."
         },
         {
