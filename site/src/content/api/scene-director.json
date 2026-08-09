@@ -1300,7 +1300,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fires after pause() actually sets the active scene's paused flag."
+          "description": "Fires after pause() actually sets the active scene's paused flag. Pure observation: a throwing listener is reported through Application.onError and never propagates back out of pause(), which has already applied the pause policy by then."
         },
         {
           "name": "onResume",
@@ -1373,7 +1373,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fires after resume() actually clears the active scene's paused flag."
+          "description": "Fires after resume() actually clears the active scene's paused flag. Same error contract as SceneDirector.onPause."
         },
         {
           "name": "onStartScene",

@@ -1070,7 +1070,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Dispatched after this scene's Scene.paused flag is set. Same event as SceneDirector.onPause, exposed directly on the scene for convenience."
+          "description": "Dispatched after this scene's Scene.paused flag is set. Same event as SceneDirector.onPause, exposed directly on the scene for convenience, and the same exception-isolation contract as Scene.onActivate."
         },
         {
           "name": "onResume",
@@ -1107,7 +1107,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Dispatched after this scene's Scene.paused flag is cleared. Same event as SceneDirector.onResume, exposed directly on the scene for convenience."
+          "description": "Dispatched after this scene's Scene.paused flag is cleared. Same event as SceneDirector.onResume, exposed directly on the scene for convenience, and the same exception-isolation contract as Scene.onActivate."
         },
         {
           "name": "onSuspend",

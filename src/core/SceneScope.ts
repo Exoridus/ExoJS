@@ -144,8 +144,10 @@ export class SceneScope<Data = unknown> {
   /**
    * Pause this scope: freezes `fixedUpdate`/`update` while `Active`, applies
    * the `when` pause policy to tweens/audio (see {@link SceneTweens.pause}/
-   * {@link SceneAudio.pause}), and dispatches {@link Scene.onPause}. Returns
-   * whether the flag actually changed.
+   * {@link SceneAudio.pause}), and dispatches {@link Scene.onPause}. Every
+   * stage is individually guarded and a throwing listener is reported through
+   * the application error pipeline rather than thrown, so the pause policy is
+   * never left half-applied. Returns whether the flag actually changed.
    */
   public pause(): boolean {
     if (this._state !== SceneState.Active || this._paused) {
@@ -158,10 +160,9 @@ export class SceneScope<Data = unknown> {
 
     this._guard(errors, () => this.tweens.pause());
     this._guard(errors, () => this.audio.pause());
+    this._guard(errors, () => this.scene.onPause.dispatchIsolated(error => this._reportError(error)));
 
     this._reportErrors(errors);
-
-    this.scene.onPause.dispatch();
 
     return true;
   }
@@ -169,8 +170,9 @@ export class SceneScope<Data = unknown> {
   /**
    * Resume this scope: undoes {@link SceneScope.pause} — including the
    * tweens/audio `when` policy (see {@link SceneTweens.resume}/
-   * {@link SceneAudio.resume}) — and dispatches {@link Scene.onResume}.
-   * Returns whether the flag actually changed.
+   * {@link SceneAudio.resume}) — and dispatches {@link Scene.onResume}. Same
+   * error-guarding contract as {@link SceneScope.pause}. Returns whether the
+   * flag actually changed.
    */
   public resume(): boolean {
     if (this._state !== SceneState.Active || !this._paused) {
@@ -183,10 +185,9 @@ export class SceneScope<Data = unknown> {
 
     this._guard(errors, () => this.tweens.resume());
     this._guard(errors, () => this.audio.resume());
+    this._guard(errors, () => this.scene.onResume.dispatchIsolated(error => this._reportError(error)));
 
     this._reportErrors(errors);
-
-    this.scene.onResume.dispatch();
 
     return true;
   }

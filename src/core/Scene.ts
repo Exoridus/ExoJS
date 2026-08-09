@@ -88,9 +88,19 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * {@link Scene.onActivate}.
    */
   public readonly onSuspend = new Signal();
-  /** Dispatched after this scene's {@link Scene.paused} flag is set. Same event as {@link SceneDirector.onPause}, exposed directly on the scene for convenience. */
+  /**
+   * Dispatched after this scene's {@link Scene.paused} flag is set. Same
+   * event as {@link SceneDirector.onPause}, exposed directly on the scene for
+   * convenience, and the same exception-isolation contract as
+   * {@link Scene.onActivate}.
+   */
   public readonly onPause = new Signal();
-  /** Dispatched after this scene's {@link Scene.paused} flag is cleared. Same event as {@link SceneDirector.onResume}, exposed directly on the scene for convenience. */
+  /**
+   * Dispatched after this scene's {@link Scene.paused} flag is cleared. Same
+   * event as {@link SceneDirector.onResume}, exposed directly on the scene
+   * for convenience, and the same exception-isolation contract as
+   * {@link Scene.onActivate}.
+   */
   public readonly onResume = new Signal();
 
   private _scope: SceneScope<Data> | null = null;

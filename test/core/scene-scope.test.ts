@@ -681,6 +681,42 @@ describe('SceneScope', () => {
       expect(onResume).toHaveBeenCalledTimes(1);
     });
 
+    test('a throwing Scene.onPause listener is reported through the app error pipeline and does not propagate', async () => {
+      const app = createAppStub();
+      const scene = new Scene();
+      const scope = await activate(app, scene);
+      const errorSpy = vi.fn();
+
+      app.onError.add(errorSpy);
+      scene.onPause.add(() => {
+        throw new Error('onPause listener failed');
+      });
+
+      expect(() => scope.pause()).not.toThrow();
+
+      expect(scope.paused).toBe(true);
+      expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({ message: 'onPause listener failed' }));
+    });
+
+    test('a throwing Scene.onResume listener is reported through the app error pipeline and does not propagate', async () => {
+      const app = createAppStub();
+      const scene = new Scene();
+      const scope = await activate(app, scene);
+      const errorSpy = vi.fn();
+
+      scope.pause();
+
+      app.onError.add(errorSpy);
+      scene.onResume.add(() => {
+        throw new Error('onResume listener failed');
+      });
+
+      expect(() => scope.resume()).not.toThrow();
+
+      expect(scope.paused).toBe(false);
+      expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({ message: 'onResume listener failed' }));
+    });
+
     test('resume() is a no-op when not currently paused', async () => {
       const app = createAppStub();
       const scene = new Scene();
