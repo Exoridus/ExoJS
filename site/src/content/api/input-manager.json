@@ -844,7 +844,7 @@
         },
         {
           "name": "preUpdate",
-          "signature": "preUpdate(_delta: Time): void",
+          "signature": "preUpdate(delta: Time): void",
           "signatureTokens": [
             {
               "text": "preUpdate",
@@ -855,7 +855,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "_delta",
+              "text": "delta",
               "kind": "param"
             },
             {
@@ -881,13 +881,13 @@
           ],
           "params": [
             {
-              "name": "_delta",
+              "name": "delta",
               "type": "Time",
               "optional": false
             }
           ],
           "returnType": "void",
-          "description": "SystemMethods.preUpdate phase, registered on app.systems by the Application at SystemOrder.CoreInput — ahead of every other core system, so this frame's snapshot is current before anything simulates. Polls the gamepad API, drains queued keyboard/pointer/wheel deltas into the channel buffer, fires the corresponding Signals, then evaluates each registered binding."
+          "description": "SystemMethods.preUpdate phase, registered on app.systems by the Application at SystemOrder.CoreInput — ahead of every other core system, so this frame's snapshot is current before anything simulates. Polls the gamepad API, drains queued keyboard/pointer/wheel deltas into the channel buffer, fires the corresponding Signals, then evaluates each registered binding. delta is also the clock a pending long-press matures on — see GestureRecognizer.update."
         }
       ],
       "paragraphs": [],
@@ -1640,7 +1640,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fires when a pointer has been held without significant movement for ≥ 500 ms."
+          "description": "Fires when a pointer has been held without significant movement for ≥ 500 ms of ENGINE time — frame deltas summed across the frames this manager actually ran, not wall-clock time. A hold therefore freezes while the active scene is paused and while the application is stopped, and resumes from where it left off; it never completes in the background."
         },
         {
           "name": "onMouseWheel",

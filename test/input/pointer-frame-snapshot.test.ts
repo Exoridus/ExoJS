@@ -40,6 +40,9 @@ const createMockApp = (canvas: HTMLCanvasElement): Application =>
     height: canvas.height,
     pixelRatio: 1,
     options: { input: { gamepadDefinitions: [], pointerDistanceThreshold: 10 } },
+    // `InputManager` reads `scenes.paused` to decide whether a long-press hold
+    // advances this frame.
+    scenes: { paused: false },
     _backingStoreToDesign: (x: number, y: number): { x: number; y: number } => ({ x, y }),
   }) as unknown as Application;
 
@@ -460,6 +463,7 @@ describe('context menu policy', () => {
       height: c.height,
       pixelRatio: 1,
       options: { input: { gamepadDefinitions: [], pointerDistanceThreshold: 10, ...input } },
+      scenes: { paused: false },
       _backingStoreToDesign: (x: number, y: number): { x: number; y: number } => ({ x, y }),
     } as unknown as Application;
 

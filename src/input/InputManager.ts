@@ -305,7 +305,13 @@ export class InputManager {
   public readonly onPinch = new Signal<[scale: number, center: Vector]>();
   /** Fires on every two-touch-pointer move where the angle between them changed. `angleDelta` is in radians. */
   public readonly onRotate = new Signal<[angleDelta: number, center: Vector]>();
-  /** Fires when a pointer has been held without significant movement for ≥ 500 ms. */
+  /**
+   * Fires when a pointer has been held without significant movement for
+   * ≥ 500 ms of ENGINE time — frame deltas summed across the frames this
+   * manager actually ran, not wall-clock time. A hold therefore freezes while
+   * the active scene is paused and while the application is stopped, and
+   * resumes from where it left off; it never completes in the background.
+   */
   public readonly onLongPress = new Signal<[pointer: Pointer]>();
 
   public constructor(app: Application) {
@@ -611,8 +617,11 @@ export class InputManager {
    * simulates. Polls the gamepad API, drains queued keyboard/pointer/wheel
    * deltas into the channel buffer, fires the corresponding Signals, then
    * evaluates each registered binding.
+   *
+   * `delta` is also the clock a pending long-press matures on — see
+   * {@link GestureRecognizer.update}.
    */
-  public preUpdate(_delta: Time): void {
+  public preUpdate(delta: Time): void {
     for (const pointer of this.pointers.values()) {
       pointer._beginFrame();
     }
@@ -633,6 +642,17 @@ export class InputManager {
 
     for (const map of this.actionMaps) {
       map._update(this.actionSample);
+    }
+
+    // Mature a pending long-press on ENGINE time, before the journal drains,
+    // so an occurrence that comes due this frame dispatches with it rather
+    // than waiting for the next one. A paused scene freezes the hold instead
+    // of letting it finish behind the pause: a finger resting on the screen
+    // while a pause menu is up must not fire a long-press into the scene under
+    // it. Nothing is held on the overwhelming majority of frames, so the
+    // pending check comes first and keeps the common path free.
+    if (this.gestureRecognizer.hasPendingLongPress && !this._app.scenes.paused) {
+      this.gestureRecognizer.update(delta);
     }
 
     if (this.flags.value !== InputManagerFlag.None || this.journal.length > 0) {

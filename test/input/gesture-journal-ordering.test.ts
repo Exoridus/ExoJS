@@ -8,14 +8,20 @@
  * Covers the hardening this file's tests were written against: a gesture
  * derived from a pointer-move used to dispatch synchronously, out of band
  * with the journal — losing its true position relative to the pointer phase
- * that produced it, and firing before the frame boundary a long-press timer
- * elapsed mid-frame instead of waiting for the next `update()`. Queuing both
+ * that produced it, and firing before the frame boundary a long-press hold
+ * completed mid-frame instead of waiting for the next `update()`. Queuing both
  * onto the same journal `GestureRecognizer` reports into fixes both: a
  * gesture now dispatches in the exact slot it arrived in (right after the
  * pointer-move phase that produced it), and only on the next `update()`.
+ *
+ * The long-press hold is measured in engine time, so it is driven here by
+ * feeding frame deltas to `preUpdate()` — never by a fake wall clock. That is
+ * also what makes it stop with `app.scenes.pause()`, which the mock app below
+ * models with a writable `paused` flag.
  */
 
 import type { Application } from '#core/Application';
+import { Time } from '#core/Time';
 import { InputManager } from '#input/InputManager';
 import type { Vector } from '#math/Vector';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
@@ -45,13 +51,19 @@ const createCanvas = (width = 800, height = 600): HTMLCanvasElement => {
   return canvas;
 };
 
-const createMockApp = (canvas: HTMLCanvasElement): Application =>
+/** Stand-in for `app.scenes`, holding the one flag `InputManager` reads off it. */
+interface MockScenes {
+  paused: boolean;
+}
+
+const createMockApp = (canvas: HTMLCanvasElement, scenes: MockScenes): Application =>
   ({
     canvas,
     platform: new BrowserPlatform(canvas),
     width: canvas.width,
     height: canvas.height,
     pixelRatio: 1,
+    scenes,
     options: {
       input: {
         gamepadDefinitions: [],
@@ -61,10 +73,32 @@ const createMockApp = (canvas: HTMLCanvasElement): Application =>
     _backingStoreToDesign: (backingStoreX: number, backingStoreY: number): { x: number; y: number } => ({ x: backingStoreX, y: backingStoreY }),
   }) as unknown as Application;
 
-const createInputManager = (canvas?: HTMLCanvasElement): { im: InputManager; canvas: HTMLCanvasElement } => {
+const createInputManager = (canvas?: HTMLCanvasElement): { im: InputManager; canvas: HTMLCanvasElement; scenes: MockScenes } => {
   const c = canvas ?? createCanvas();
+  const scenes: MockScenes = { paused: false };
 
-  return { im: new InputManager(createMockApp(c)), canvas: c };
+  return { im: new InputManager(createMockApp(c, scenes)), canvas: c, scenes };
+};
+
+/** One frame boundary with no engine time elapsed — drains the journal without advancing any hold. */
+const drainFrame = (im: InputManager): void => {
+  im.preUpdate(Time.zero);
+};
+
+/**
+ * Run `milliseconds` of engine time through the manager in 16 ms frames, the
+ * way the application's frame loop would. Long-press is measured in exactly
+ * this time, so this is the only clock that can mature one.
+ */
+const advanceFrames = (im: InputManager, milliseconds: number): void => {
+  const frame = new Time(16);
+  let remaining = milliseconds;
+
+  while (remaining > 0) {
+    frame.milliseconds = Math.min(16, remaining);
+    im.preUpdate(frame);
+    remaining -= frame.milliseconds;
+  }
 };
 
 const fire = (canvas: HTMLCanvasElement, type: string, init: PointerEventInit): PointerEvent => {
@@ -82,16 +116,8 @@ const settleTwoTouchBaseline = (im: InputManager, canvas: HTMLCanvasElement, bx:
   fire(canvas, 'pointerover', { pointerId: 2, pointerType: 'touch', clientX: bx, clientY: by, isPrimary: false });
   fire(canvas, 'pointerdown', { pointerId: 2, pointerType: 'touch', clientX: bx, clientY: by, isPrimary: false });
   fire(canvas, 'pointermove', { pointerId: 2, pointerType: 'touch', clientX: bx, clientY: by, isPrimary: false });
-  im.preUpdate();
+  drainFrame(im);
 };
-
-beforeEach(() => {
-  vi.useFakeTimers();
-});
-
-afterEach(() => {
-  vi.useRealTimers();
-});
 
 // ---------------------------------------------------------------------------
 // Pointer Move precedes the gesture it produced, in the public frame order
@@ -111,7 +137,7 @@ describe('InputManager — gesture journal ordering', () => {
     // Spread the touches apart — distance changes (angle does not), so only
     // onPinch fires alongside the move, all within this one frame.
     fire(canvas, 'pointermove', { pointerId: 2, pointerType: 'touch', clientX: 40, clientY: 0, isPrimary: false });
-    im.preUpdate();
+    drainFrame(im);
 
     expect(calls).toEqual(['move', 'pinch']);
 
@@ -130,7 +156,7 @@ describe('InputManager — gesture journal ordering', () => {
 
     // Rotate the pair around the midpoint — distance unchanged, angle changes.
     fire(canvas, 'pointermove', { pointerId: 2, pointerType: 'touch', clientX: 0, clientY: 40, isPrimary: false });
-    im.preUpdate();
+    drainFrame(im);
 
     expect(calls).toEqual(['move', 'rotate']);
 
@@ -143,7 +169,7 @@ describe('InputManager — gesture journal ordering', () => {
 // ---------------------------------------------------------------------------
 
 describe('InputManager — long-press queuing', () => {
-  test('a long-press timer elapsing mid-frame does not dispatch until the next update()', () => {
+  test('a hold that completes dispatches on the frame it completes on, exactly once', () => {
     const { im, canvas } = createInputManager();
     const spy = vi.fn();
 
@@ -152,20 +178,22 @@ describe('InputManager — long-press queuing', () => {
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
     fire(canvas, 'pointerdown', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
 
-    vi.advanceTimersByTime(500);
-
-    // The timer callback only enqueues onto the journal — it must not have
-    // dispatched the signal yet.
+    // One frame short of the threshold: the hold is queued but not due.
+    advanceFrames(im, 496);
     expect(spy).not.toHaveBeenCalled();
 
-    im.preUpdate();
+    // The frame that crosses 500 ms both matures the hold and drains it.
+    advanceFrames(im, 16);
+    expect(spy).toHaveBeenCalledTimes(1);
 
+    // Holding on does not repeat it — the entry is consumed.
+    advanceFrames(im, 500);
     expect(spy).toHaveBeenCalledTimes(1);
 
     im.destroy();
   });
 
-  test('onPointerUp before the timer elapses prevents the long-press from ever being queued or dispatched', () => {
+  test('onPointerUp before the hold completes prevents the long-press from ever being queued or dispatched', () => {
     const { im, canvas } = createInputManager();
     const spy = vi.fn();
 
@@ -174,17 +202,17 @@ describe('InputManager — long-press queuing', () => {
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
     fire(canvas, 'pointerdown', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
     fire(canvas, 'pointerup', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
-    im.preUpdate();
+    drainFrame(im);
 
-    vi.advanceTimersByTime(600);
-    im.preUpdate();
+    advanceFrames(im, 600);
+    drainFrame(im);
 
     expect(spy).not.toHaveBeenCalled();
 
     im.destroy();
   });
 
-  test('onPointerCancel before the timer elapses prevents the long-press', () => {
+  test('onPointerCancel before the hold completes prevents the long-press', () => {
     const { im, canvas } = createInputManager();
     const spy = vi.fn();
 
@@ -193,17 +221,17 @@ describe('InputManager — long-press queuing', () => {
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
     fire(canvas, 'pointerdown', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
     fire(canvas, 'pointercancel', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
-    im.preUpdate();
+    drainFrame(im);
 
-    vi.advanceTimersByTime(600);
-    im.preUpdate();
+    advanceFrames(im, 600);
+    drainFrame(im);
 
     expect(spy).not.toHaveBeenCalled();
 
     im.destroy();
   });
 
-  test('onPointerLeave before the timer elapses prevents the long-press', () => {
+  test('onPointerLeave before the hold completes prevents the long-press', () => {
     const { im, canvas } = createInputManager();
     const spy = vi.fn();
 
@@ -212,11 +240,11 @@ describe('InputManager — long-press queuing', () => {
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
     fire(canvas, 'pointerdown', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
     fire(canvas, 'pointerleave', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
-    im.preUpdate();
+    drainFrame(im);
     im._finishInteractionFrame();
 
-    vi.advanceTimersByTime(600);
-    im.preUpdate();
+    advanceFrames(im, 600);
+    drainFrame(im);
 
     expect(spy).not.toHaveBeenCalled();
 
@@ -225,12 +253,80 @@ describe('InputManager — long-press queuing', () => {
 });
 
 // ---------------------------------------------------------------------------
-// destroy(): timers and queued state are cleared safely
+// Long-press runs on engine time, and a paused scene stops that time
 // ---------------------------------------------------------------------------
 
-describe('InputManager — destroy clears gesture timers and queued state', () => {
-  test('destroy() before a pending long-press timer elapses leaves it permanently unfired', () => {
+describe('InputManager — long-press and the scene pause', () => {
+  test('a finger held through a paused scene never completes its long-press, however long the pause lasts', () => {
+    const { im, canvas, scenes } = createInputManager();
+    const spy = vi.fn();
+
+    im.onLongPress.add(spy);
+
+    fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
+    fire(canvas, 'pointerdown', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
+
+    scenes.paused = true;
+    advanceFrames(im, 5000);
+
+    expect(spy).not.toHaveBeenCalled();
+
+    im.destroy();
+  });
+
+  test('the hold resumes from where the pause froze it, rather than restarting or catching up', () => {
+    const { im, canvas, scenes } = createInputManager();
+    const spy = vi.fn();
+
+    im.onLongPress.add(spy);
+
+    fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
+    fire(canvas, 'pointerdown', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
+
+    advanceFrames(im, 400);
+
+    scenes.paused = true;
+    advanceFrames(im, 5000);
+    expect(spy).not.toHaveBeenCalled();
+
+    scenes.paused = false;
+
+    // The 400 ms banked before the pause still count, so 96 ms is one frame
+    // short and 112 ms crosses the threshold — the pause neither reset the
+    // hold nor credited it the frozen frames.
+    advanceFrames(im, 96);
+    expect(spy).not.toHaveBeenCalled();
+
+    advanceFrames(im, 16);
+    expect(spy).toHaveBeenCalledTimes(1);
+
+    im.destroy();
+  });
+
+  test('an unpaused scene fires the long-press after the equivalent amount of engine time', () => {
     const { im, canvas } = createInputManager();
+    const spy = vi.fn();
+
+    im.onLongPress.add(spy);
+
+    fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
+    fire(canvas, 'pointerdown', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
+
+    advanceFrames(im, 5000);
+
+    expect(spy).toHaveBeenCalledTimes(1);
+
+    im.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// destroy(): pending holds and queued state are cleared safely
+// ---------------------------------------------------------------------------
+
+describe('InputManager — destroy clears gesture holds and queued state', () => {
+  test('destroy() before a pending long-press completes leaves it permanently unfired', () => {
+    const { im, canvas, scenes } = createInputManager();
     const spy = vi.fn();
 
     im.onLongPress.add(spy);
@@ -240,7 +336,10 @@ describe('InputManager — destroy clears gesture timers and queued state', () =
 
     im.destroy();
 
-    expect(() => vi.advanceTimersByTime(600)).not.toThrow();
+    // A destroyed manager is not driven any more; even if something still
+    // ticked it, the pending hold is gone.
+    expect(scenes.paused).toBe(false);
+    expect(() => advanceFrames(im, 600)).not.toThrow();
     expect(spy).not.toHaveBeenCalled();
   });
 
@@ -282,7 +381,7 @@ describe('InputManager — gesture center coordinates across multiple queued ges
     // center (20,0) then center (50,0).
     fire(canvas, 'pointermove', { pointerId: 2, pointerType: 'touch', clientX: 40, clientY: 0, isPrimary: false }); // distance=40, center=(20,0)
     fire(canvas, 'pointermove', { pointerId: 2, pointerType: 'touch', clientX: 100, clientY: 0, isPrimary: false }); // distance=100, center=(50,0)
-    im.preUpdate();
+    drainFrame(im);
 
     expect(seenCenters).toEqual([
       { x: 20, y: 0 },
