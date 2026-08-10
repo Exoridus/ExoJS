@@ -473,7 +473,7 @@ describe('Application.update() — loop timing', () => {
 
       try {
         forceRunning(uncleared);
-        vi.spyOn(uncleared.input, 'preUpdate').mockReturnValue(uncleared.input);
+        vi.spyOn(uncleared.input, 'preUpdate').mockImplementation(() => undefined);
         vi.spyOn(uncleared.interaction, 'preUpdate').mockImplementation(() => undefined);
         mockFrameElapsed(uncleared, 16);
 
