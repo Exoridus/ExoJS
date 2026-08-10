@@ -7,7 +7,7 @@ import type { LayoutOptions } from './LayoutOptions';
 import { emptyTextLayout, layoutText } from './TextLayout';
 import type { StyleChangeHint, TextStyleOptions } from './TextStyle';
 import { TextStyle } from './TextStyle';
-import type { TextLayoutResult, TextPageQuads } from './types';
+import type { TextLayoutResult, TextPageQuads, TextSize } from './types';
 
 export type { TextPageQuads };
 
@@ -74,6 +74,34 @@ export class Text extends AbstractText {
 
     const face = this._extractFace(options);
     if (face !== null) void this._loadFace(face);
+  }
+
+  /**
+   * Advance extent `text` would occupy under `options`, without constructing
+   * a node. Takes the same options as the constructor and gives the same
+   * answer as the resulting node's `textBounds` — it runs the identical
+   * layout pass against the identical shared atlas, so the two cannot drift.
+   *
+   * Rasterizes any glyph not yet in that atlas: measuring an unseen string is
+   * not free, and it does claim atlas space.
+   *
+   * ```ts
+   * const { width } = Text.measure('Continue', { fontSize: 24 });
+   * button.width = width + 32;
+   * ```
+   * @stable
+   */
+  public static measure(text: string, options: TextOptions = {}): TextSize {
+    if (text.length === 0) return { width: 0, height: 0 };
+
+    const style = new TextStyle(options);
+
+    return layoutText(text, style, options, Text._acquireAtlas(style, options.colorGlyphs ?? false, options.sdfRadius ?? SDF_RADIUS)).advance;
+  }
+
+  /** The one place a Text resolves its atlas, so a measurement cannot pick a different one. */
+  private static _acquireAtlas(style: TextStyle, colorGlyphs: boolean, sdfRadius: number): GlyphAtlas {
+    return getDefaultGlyphAtlasPool().getAtlas(style.fontFamily, style.fontStyle, style.fontWeight, colorGlyphs ? 'color' : 'sdf', sdfRadius);
   }
 
   public get style(): TextStyle {
@@ -160,8 +188,7 @@ export class Text extends AbstractText {
 
     if (this._destroyed || version !== this._faceLoadVersion) return;
 
-    const pool = getDefaultGlyphAtlasPool();
-    pool.getAtlas(this._style.fontFamily, this._style.fontStyle, this._style.fontWeight, this.atlasMode, this._sdfRadius).clear();
+    Text._acquireAtlas(this._style, this._colorGlyphs, this._sdfRadius).clear();
     this._markDirty('font');
   }
 
@@ -172,10 +199,7 @@ export class Text extends AbstractText {
 
     // Only a 'font' change can invalidate which atlas this node draws from;
     // a re-flow reuses the one already resolved.
-    const atlas =
-      hint === 'font' || this._atlas === null
-        ? getDefaultGlyphAtlasPool().getAtlas(this._style.fontFamily, this._style.fontStyle, this._style.fontWeight, this.atlasMode, this._sdfRadius)
-        : this._atlas;
+    const atlas = hint === 'font' || this._atlas === null ? Text._acquireAtlas(this._style, this._colorGlyphs, this._sdfRadius) : this._atlas;
 
     this._atlas = atlas;
 

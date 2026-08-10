@@ -103,7 +103,7 @@ Text flow and overflow come from [`LayoutOptions`](/ExoJS/en/api/layout-options/
 | `breakWords` | `boolean` | `false` | Break words wider than `maxWidth` at character boundaries |
 | `whiteSpace` | `'normal' \| 'pre' \| 'pre-line'` | `'pre-line'` | Whitespace handling |
 
-Layout options stay reachable as `text.layout`. Unlike `style`, this is a plain options object with no change tracking: assigning a new one rebuilds the geometry, mutating the existing one in place does not.
+Layout options stay reachable as `text.layout`. Unlike `style`, this is a plain options object with no change tracking, and the node holds its own copy of it: assign a new one to re-flow the text — mutating the object you passed in, or the one the getter hands back, changes nothing.
 
 Glyphs are rasterized white into the shared SDF atlas and coloured at draw time, so `fillColor`, `outlineColor`, the shadow, and the gradient are shader work only — changing them never touches the atlas.
 
@@ -190,6 +190,19 @@ this.backdrop = new Panel({
 ```
 
 Both reads resolve a pending layout pass first, so the number you get always reflects the changes you have made — including a style mutation on the line above.
+
+To measure without a node at all — sizing a button before you have anything to put in it, deciding whether a caption fits — use the static counterpart. It takes the same options as the constructor and runs the same layout pass against the same shared atlas, so it answers exactly what the node's `textBounds` would:
+
+```ts
+import { BitmapText, Text, type BmFont } from '@codexo/exojs';
+
+declare const font: BmFont;
+
+const { width } = Text.measure('Continue', { fontSize: 24 });
+const { height } = BitmapText.measure('Continue', font, { scale: 2 });
+```
+
+`Text.measure` rasterizes any glyph the shared atlas has not seen yet, so measuring an unfamiliar string is not free and does claim atlas space. `BitmapText.measure` reads a pre-built atlas and costs nothing beyond the layout.
 
 ## Text constraints
 

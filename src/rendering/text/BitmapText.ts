@@ -9,7 +9,7 @@ import type { LayoutOptions } from './LayoutOptions';
 import { emptyTextLayout, layoutText } from './TextLayout';
 import type { TextStyleOptions } from './TextStyle';
 import { TextStyle } from './TextStyle';
-import type { GlyphInfo, GlyphProvider, TextLayoutResult, TextLayoutStyle } from './types';
+import type { GlyphInfo, GlyphProvider, TextLayoutResult, TextLayoutStyle, TextSize } from './types';
 
 export type { BmFontChar, BmFontData } from './BmFont';
 
@@ -166,6 +166,44 @@ export class BitmapText extends AbstractText {
     this._adapter = new BmFontAdapter(font.fontData, font.textures, this._fontScale);
   }
 
+  /**
+   * Advance extent `text` would occupy in `font` under `options`, without
+   * constructing a node. Takes the same arguments as the constructor and gives
+   * the same answer as the resulting node's `textBounds` — it runs the
+   * identical layout pass against an adapter built the same way, so the two
+   * cannot drift.
+   *
+   * Unlike {@link Text.measure} this costs nothing beyond the layout itself:
+   * a BMFont atlas is pre-built, so there is no glyph to rasterize.
+   * @stable
+   */
+  public static measure(text: string, font: BmFont, options: BitmapTextOptions = {}): TextSize {
+    if (text.length === 0) return { width: 0, height: 0 };
+
+    const scale = options.scale ?? 1;
+    const style = new TextStyle(options);
+    const adapter = new BmFontAdapter(font.fontData, font.textures, scale);
+
+    return layoutText(text, BitmapText._layoutStyle(font, scale, style), options.layout ?? {}, adapter).advance;
+  }
+
+  /**
+   * The BMFont descriptor rendered as a {@link TextLayoutStyle}.
+   *
+   * Setting `fontSize` to `lineHeight * scale` makes the layout engine's
+   * computed line height equal the font's native one multiplied by
+   * `style.lineHeight`. Shared with {@link measure} so a measurement cannot
+   * derive it differently from a node.
+   */
+  private static _layoutStyle(font: BmFont, scale: number, style: TextStyle): TextLayoutStyle {
+    return {
+      fontSize: font.fontData.lineHeight * scale,
+      lineHeight: style.lineHeight,
+      leading: style.leading,
+      align: style.align,
+    };
+  }
+
   // ── Style ─────────────────────────────────────────────────────────────────
 
   /** Visual style — `align`, `leading`, `fillColor`, `outlineColor` etc. */
@@ -220,16 +258,6 @@ export class BitmapText extends AbstractText {
   protected override _runLayout(): TextLayoutResult {
     if (this._text.length === 0) return emptyTextLayout();
 
-    // Derive a TextLayoutStyle from the BMFont descriptor + scale.
-    // Setting fontSize = fontData.lineHeight * scale makes computedLineHeight
-    // equal to the BMFont's native line height multiplied by style.lineHeight.
-    const layoutStyle: TextLayoutStyle = {
-      fontSize: this._font.fontData.lineHeight * this._fontScale,
-      lineHeight: this._style.lineHeight,
-      leading: this._style.leading,
-      align: this._style.align,
-    };
-
-    return layoutText(this._text, layoutStyle, this._layout, this._adapter);
+    return layoutText(this._text, BitmapText._layoutStyle(this._font, this._fontScale, this._style), this._layout, this._adapter);
   }
 }

@@ -6,10 +6,10 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 99,
+  "memberCount": 100,
   "counts": {
     "constructors": 1,
-    "methods": 42,
+    "methods": 43,
     "properties": 42,
     "events": 14
   },
@@ -1903,6 +1903,95 @@
           "params": [],
           "returnType": "this",
           "description": ""
+        },
+        {
+          "name": "measure",
+          "signature": "measure(text: string, font: BmFont, options: BitmapTextOptions): TextSize",
+          "signatureTokens": [
+            {
+              "text": "measure",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "text",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "font",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BmFont",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BitmapTextOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextSize",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "text",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "font",
+              "type": "BmFont",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "BitmapTextOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "TextSize",
+          "description": "Advance extent text would occupy in font under options, without constructing a node. Takes the same arguments as the constructor and gives the same answer as the resulting node's textBounds — it runs the identical layout pass against an adapter built the same way, so the two cannot drift. Unlike Text.measure this costs nothing beyond the layout itself: a BMFont atlas is pre-built, so there is no glyph to rasterize."
         },
         {
           "name": "setInternalSpriteFactory",
