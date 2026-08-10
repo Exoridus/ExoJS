@@ -10,6 +10,7 @@
  * Text now extends Drawable (via AbstractText) rather than Container.
  * It stores geometry internally as TextPageQuads instead of Mesh children.
  */
+import { Color } from '#core/Color';
 import { Drawable } from '#rendering/Drawable';
 import type { GlyphAtlas } from '#rendering/text/GlyphAtlas';
 import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
@@ -412,6 +413,23 @@ describe('Text', () => {
     assigned.letterSpacing = 40;
 
     expect(text.textBounds.width).toBe(widthBefore);
+  });
+
+  test('layout reports only layout keys, not the style half of the flat options bag', () => {
+    const text = new Text('Hi', { fontSize: 16, fillColor: Color.red, maxWidth: 80, breakWords: true });
+
+    expect(text.layout).toEqual({ maxWidth: 80, breakWords: true });
+  });
+
+  test('the layout setter filters style keys out too', () => {
+    const text = new Text('Hi');
+
+    // A caller re-using the constructor's flat options bag is the realistic
+    // way a style key reaches this setter.
+    text.layout = { letterSpacing: 4, fontSize: 99, fillColor: Color.red } as typeof text.layout;
+
+    expect(text.layout).toEqual({ letterSpacing: 4 });
+    expect(text.style.fontSize).not.toBe(99);
   });
 
   test('colorGlyphs flag is accessible', () => {

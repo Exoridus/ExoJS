@@ -145,6 +145,29 @@ const DIRECTIONS = ['ltr', 'rtl'] as const satisfies ReadonlyArray<NonNullable<L
 const WHITE_SPACES = ['normal', 'pre', 'pre-line'] as const satisfies ReadonlyArray<NonNullable<LayoutOptions['whiteSpace']>>;
 
 /**
+ * Every {@link LayoutOptions} key, paired with the validating reader that
+ * rebuilds it from untrusted JSON.
+ *
+ * This map is the single definition of what counts as a layout option:
+ * {@link readLayoutOptions} runs the readers, {@link pickLayoutOptions} uses
+ * only the keys. The mapped type makes a missing or misspelled entry a compile
+ * error, so the two cannot drift apart or fall behind the interface.
+ */
+const LAYOUT_READERS: {
+  [K in keyof Required<LayoutOptions>]: (source: Record<string, unknown>, key: K) => LayoutOptions[K];
+} = {
+  maxWidth: readNumber,
+  maxHeight: readNumber,
+  overflow: (source, key) => readEnum(source, key, OVERFLOWS),
+  letterSpacing: readNumber,
+  direction: (source, key) => readEnum(source, key, DIRECTIONS),
+  breakWords: readBoolean,
+  whiteSpace: (source, key) => readEnum(source, key, WHITE_SPACES),
+};
+
+const LAYOUT_KEYS = Object.keys(LAYOUT_READERS) as ReadonlyArray<keyof LayoutOptions>;
+
+/**
  * Rebuild {@link LayoutOptions} from a serialized layout object, dropping
  * unknown or mistyped fields. Returns `undefined` when nothing valid remains,
  * so a corrupt `layout` value degrades to the node's constructor defaults.
@@ -155,28 +178,39 @@ export function readLayoutOptions(value: unknown): LayoutOptions | undefined {
   }
 
   const source = value as Record<string, unknown>;
-  const out: LayoutOptions = {};
+  const out: Record<string, unknown> = {};
 
-  const maxWidth = readNumber(source, 'maxWidth');
-  if (maxWidth !== undefined) out.maxWidth = maxWidth;
+  for (const key of LAYOUT_KEYS) {
+    const read = LAYOUT_READERS[key] as (source: Record<string, unknown>, key: string) => unknown;
+    const parsed = read(source, key);
 
-  const maxHeight = readNumber(source, 'maxHeight');
-  if (maxHeight !== undefined) out.maxHeight = maxHeight;
-
-  const overflow = readEnum(source, 'overflow', OVERFLOWS);
-  if (overflow !== undefined) out.overflow = overflow;
-
-  const letterSpacing = readNumber(source, 'letterSpacing');
-  if (letterSpacing !== undefined) out.letterSpacing = letterSpacing;
-
-  const direction = readEnum(source, 'direction', DIRECTIONS);
-  if (direction !== undefined) out.direction = direction;
-
-  const breakWords = readBoolean(source, 'breakWords');
-  if (breakWords !== undefined) out.breakWords = breakWords;
-
-  const whiteSpace = readEnum(source, 'whiteSpace', WHITE_SPACES);
-  if (whiteSpace !== undefined) out.whiteSpace = whiteSpace;
+    if (parsed !== undefined) out[key] = parsed;
+  }
 
   return Object.keys(out).length > 0 ? out : undefined;
+}
+
+/**
+ * Copy only the layout keys out of an options bag, dropping everything else.
+ *
+ * `TextOptions` is a flat merge of style and layout options, so a text node
+ * handed that bag verbatim would keep the style keys in its layout copy and
+ * then hand them back out through `node.layout` — and through every serialized
+ * document written from it.
+ *
+ * Unlike {@link readLayoutOptions} this trusts its input's static type: it
+ * filters keys, it does not validate values. `undefined`-valued keys are
+ * omitted so the result stays a faithful "which options were actually set".
+ */
+export function pickLayoutOptions(source: Readonly<LayoutOptions>): LayoutOptions {
+  const bag = source as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+
+  for (const key of LAYOUT_KEYS) {
+    const value = bag[key];
+
+    if (value !== undefined) out[key] = value;
+  }
+
+  return out;
 }
