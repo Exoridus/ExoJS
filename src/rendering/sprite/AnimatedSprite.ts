@@ -544,6 +544,14 @@ export class AnimatedSprite extends Sprite {
       const { height, width } = this.getLocalBounds();
 
       this._setLocalBounds(offset.x, offset.y, width, height);
+
+      // The write above moved the local rectangle's ORIGIN, which the origin
+      // pass inside setTextureFrame ran too early to see. An anchored sprite
+      // has to re-derive here, or every frame keeps the origin of a rectangle
+      // starting at (0, 0) and per-frame offsets never reach it.
+      if (this.anchor.x !== 0 || this.anchor.y !== 0) {
+        this._updateOrigin();
+      }
     }
   }
 }

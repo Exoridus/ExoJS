@@ -1240,11 +1240,16 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    * Subclasses whose local bounds change after construction (e.g. a sprite
    * switching to a texture sub-frame) must call this to keep an anchored
    * node anchored.
+   *
+   * The origin includes the bounds ORIGIN, not just its extent: a node whose
+   * local rectangle does not start at `(0, 0)` — a mesh built around its own
+   * centre, an Aseprite frame carrying an offset — still rotates and scales
+   * about its own middle at `anchor = (0.5, 0.5)`.
    */
   protected _updateOrigin(): void {
     const { x, y } = this._anchor;
-    const { width, height } = this.getLocalBounds();
+    const bounds = this.getLocalBounds();
 
-    this.setOrigin(width * x, height * y);
+    this.setOrigin(bounds.x + bounds.width * x, bounds.y + bounds.height * y);
   }
 }

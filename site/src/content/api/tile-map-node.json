@@ -139,7 +139,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Re-derive origin from the fractional anchor and the CURRENT local bounds. Uses local (untransformed) bounds on purpose: the transform multiplies the origin by scale itself, so deriving from world bounds would double-apply scale whenever the anchor is set after scaling. Subclasses whose local bounds change after construction (e.g. a sprite switching to a texture sub-frame) must call this to keep an anchored node anchored."
+          "description": "Re-derive origin from the fractional anchor and the CURRENT local bounds. Uses local (untransformed) bounds on purpose: the transform multiplies the origin by scale itself, so deriving from world bounds would double-apply scale whenever the anchor is set after scaling. Subclasses whose local bounds change after construction (e.g. a sprite switching to a texture sub-frame) must call this to keep an anchored node anchored. The origin includes the bounds ORIGIN, not just its extent: a node whose local rectangle does not start at (0, 0) — a mesh built around its own centre, an Aseprite frame carrying an offset — still rotates and scales about its own middle at anchor = (0.5, 0.5)."
         },
         {
           "name": "[iterator]",
