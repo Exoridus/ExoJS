@@ -987,6 +987,23 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   }
 
   /**
+   * Write the local extent and refresh the bounds flags WITHOUT a revision
+   * stamp — the {@link _setLocalBounds} counterpart for a node that already
+   * stamped itself content-dirty when the change was requested.
+   *
+   * A node that lays its content out lazily has to stamp at mutation time,
+   * because a retained subtree decides whether to replay from the revision
+   * alone and never visits a node it skipped. Stamping a second time when the
+   * deferred pass finally writes the extent would move the goalposts one frame
+   * on and keep the subtree re-capturing instead of recording.
+   * @internal
+   */
+  protected _setLocalBoundsUnstamped(x: number, y: number, width: number, height: number): void {
+    this._localBounds.set(x, y, width, height);
+    this._invalidateBoundsFlags();
+  }
+
+  /**
    * Flag-only bounds invalidation: own BoundsRect + ancestor walk, WITHOUT a
    * revision stamp. Used by transform-group boundaries whose own moves must
    * refresh ancestor world bounds but must NOT invalidate retained fragments.

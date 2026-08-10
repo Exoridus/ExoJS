@@ -459,6 +459,82 @@ describe('WebGPU Text retained-batch record/replay', () => {
     }
   });
 
+  // The vertex shader normalizes the gradient ramp against this rectangle
+  // (`v_gradUV = clamp((a_position - box.xy) / box.zw)`), so uploading the
+  // advance extent instead of the ink runs the ramp against a box the glyph
+  // quads do not sit in: its origin is (0, 0) while the SDF quads start at a
+  // negative offset, and the clamp eats the overhang.
+  test('the gradient box uploaded per node is the ink extent, not the advance', async () => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const backend = await createBackend(environment);
+      const root = new Container();
+      const group = new RetainedContainer();
+      const text = new Text('Hi', { fontSize: 16, gradientColors: [Color.red, Color.blue] });
+
+      group.addChild(text);
+      root.addChild(group);
+
+      renderFrame(backend, root); // F1: capture
+      renderFrame(backend, root); // F2: record
+      renderFrame(backend, root); // F3: replay — uploads the node-data rows
+
+      const upload = environment
+        .writes()
+        .filter(write => write.label === nodeDataLabel)
+        .at(-1);
+
+      expect(upload).toBeDefined();
+
+      const row = new Float32Array(upload!.bytes.slice().buffer);
+      const ink = text.getLocalBounds();
+
+      expect([row[36], row[37], row[38], row[39]]).toEqual([ink.x, ink.y, ink.width, ink.height]);
+
+      // The two measures have to actually differ here, or the assertion above
+      // would hold for the advance box too and prove nothing.
+      expect(ink.x).toBeLessThan(0);
+      expect(ink.width).not.toBe(text.textBounds.width);
+
+      root.destroy();
+      backend.destroy();
+    } finally {
+      environment.restore();
+    }
+  });
+
+  test('an in-place style mutation forces a full re-record', async () => {
+    // The layout pass itself is deferred to the next read, but a replaying
+    // group never reads the node — so the content stamp has to land when the
+    // style is mutated, not when the pass eventually runs.
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const backend = await createBackend(environment);
+      const { root, group, text } = buildTextGroup();
+
+      renderFrame(backend, root); // F1: capture
+      renderFrame(backend, root); // F2: record
+
+      expect(fragmentOf(group).instructions?.hasRecording).toBe(true);
+
+      text.style.fontSize = 32;
+      renderFrame(backend, root); // F3: content-dirty — drops the recording
+
+      expect(fragmentOf(group).instructions?.hasRecording).not.toBe(true);
+
+      renderFrame(backend, root); // F4: re-record against the new content
+
+      expect(fragmentOf(group).instructions?.hasRecording).toBe(true);
+
+      root.destroy();
+      backend.destroy();
+    } finally {
+      environment.restore();
+    }
+  });
+
   test('a flush producing more than one (shaderType, atlasTexture) batch poisons the capture instead of recording it', async () => {
     const environment = createMockWebGpuEnvironment();
     // Force the multi-batch branch deterministically (getting real content to

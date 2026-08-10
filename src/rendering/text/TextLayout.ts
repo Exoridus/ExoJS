@@ -1,5 +1,5 @@
 import type { LayoutOptions } from './LayoutOptions';
-import type { GlyphInfo, GlyphPlacement, GlyphProvider, TextLayoutStyle, TextPageQuads, TextSize } from './types';
+import type { GlyphInfo, GlyphPlacement, GlyphProvider, TextLayoutResult, TextLayoutStyle, TextPageQuads } from './types';
 
 interface LinePlacement {
   placements: Array<{ info: GlyphInfo; x: number; y: number; char: string }>;
@@ -8,26 +8,13 @@ interface LinePlacement {
 }
 
 /**
- * Compute the bounding pixel dimensions of `text` without allocating quad
- * placements. Returns `{ width: 0, height: 0 }` for empty text.
+ * Result for text that places no glyph at all: no quads, no advance, no ink.
+ * Exported so a node can answer for an empty string without having to acquire
+ * a glyph provider it would not use.
+ * @internal
  */
-export function measureText(text: string, style: TextLayoutStyle, provider: GlyphProvider): TextSize {
-  if (text.length === 0) return { width: 0, height: 0 };
-
-  const { fontSize, lineHeight, leading } = style;
-  const computedLineHeight = fontSize * lineHeight + leading;
-  const lines = text.split('\n');
-  let maxLineWidth = 0;
-
-  for (const line of lines) {
-    let lineWidth = 0;
-    for (const char of line) {
-      lineWidth += provider.getGlyph(char, fontSize).advance;
-    }
-    if (lineWidth > maxLineWidth) maxLineWidth = lineWidth;
-  }
-
-  return { width: maxLineWidth, height: lines.length * computedLineHeight };
+export function emptyTextLayout(): TextLayoutResult {
+  return { placements: [], advance: { width: 0, height: 0 }, ink: { x: 0, y: 0, width: 0, height: 0 } };
 }
 
 /**
@@ -44,10 +31,12 @@ export function measureText(text: string, style: TextLayoutStyle, provider: Glyp
  * shaping, and ligature shaping are out of scope; Unicode/diacritics are
  * delegated to the browser's canvas engine.
  *
- * Returns an empty array for empty text.
+ * Returns the placements alongside both extents the callers need — see
+ * {@link TextLayoutResult} for why the advance and the ink are different
+ * numbers. Text that places no glyph yields zeroes for both.
  */
-export function layoutText(text: string, style: TextLayoutStyle, layout: LayoutOptions, provider: GlyphProvider): readonly GlyphPlacement[] {
-  if (text.length === 0) return [];
+export function layoutText(text: string, style: TextLayoutStyle, layout: LayoutOptions, provider: GlyphProvider): TextLayoutResult {
+  if (text.length === 0) return emptyTextLayout();
 
   const { fontSize, lineHeight, leading, align } = style;
   const computedLineHeight = fontSize * lineHeight + leading;
@@ -133,8 +122,26 @@ export function layoutText(text: string, style: TextLayoutStyle, layout: LayoutO
   }
 
   // Pass 2: apply alignment offset and build final GlyphPlacement array.
+  //
+  // The ink extent accumulates here rather than in a follow-up sweep: every
+  // quad is already in hand, and the minimum is genuinely open — in SDF mode
+  // the first glyph starts at a negative x/y because the atlas hands out
+  // bearings that pull the padded tile back around the cursor.
   const result: GlyphPlacement[] = [];
   const lastLineIndex = linePlacements.length - 1;
+  let inkMinX = Infinity;
+  let inkMinY = Infinity;
+  let inkMaxX = -Infinity;
+  let inkMaxY = -Infinity;
+
+  const place = (placement: GlyphPlacement): void => {
+    result.push(placement);
+
+    if (placement.x < inkMinX) inkMinX = placement.x;
+    if (placement.y < inkMinY) inkMinY = placement.y;
+    if (placement.x + placement.width > inkMaxX) inkMaxX = placement.x + placement.width;
+    if (placement.y + placement.height > inkMaxY) inkMaxY = placement.y + placement.height;
+  };
 
   for (let li = 0; li < linePlacements.length; li++) {
     // In-bounds: li < linePlacements.length.
@@ -160,7 +167,7 @@ export function layoutText(text: string, style: TextLayoutStyle, layout: LayoutO
           prevWasSpace = true;
         }
 
-        result.push({
+        place({
           x: entry.x + offsetX + wordIdx * extraPerGap + (entry.info.xBearing ?? 0),
           y: entry.y + (entry.info.yBearing ?? 0),
           width: entry.info.width,
@@ -176,7 +183,7 @@ export function layoutText(text: string, style: TextLayoutStyle, layout: LayoutO
     }
 
     for (const { info, x, y } of line.placements) {
-      result.push({
+      place({
         x: x + offsetX + (info.xBearing ?? 0),
         y: y + (info.yBearing ?? 0),
         width: info.width,
@@ -190,7 +197,13 @@ export function layoutText(text: string, style: TextLayoutStyle, layout: LayoutO
     }
   }
 
-  return result;
+  if (result.length === 0) return emptyTextLayout();
+
+  return {
+    placements: result,
+    advance: { width: maxLineWidth, height: allLines.length * computedLineHeight },
+    ink: { x: inkMinX, y: inkMinY, width: inkMaxX - inkMinX, height: inkMaxY - inkMinY },
+  };
 }
 
 /**

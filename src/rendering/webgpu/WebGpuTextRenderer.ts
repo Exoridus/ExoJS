@@ -868,11 +868,14 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       arr[base + 32] = arr[base + 33] = arr[base + 34] = arr[base + 35] = 0;
     }
 
-    const bounds = node.textBounds;
-    arr[base + 36] = 0;
-    arr[base + 37] = 0;
-    arr[base + 38] = bounds.width;
-    arr[base + 39] = bounds.height;
+    // The gradient UV is normalized against the rectangle the glyph quads
+    // actually cover, not the advance extent — the SDF quads start at a
+    // negative offset, so an origin of (0, 0) would skew the ramp.
+    const ink = node.getLocalBounds();
+    arr[base + 36] = ink.x;
+    arr[base + 37] = ink.y;
+    arr[base + 38] = ink.width;
+    arr[base + 39] = ink.height;
   }
 
   // ── GPU resource helpers ─────────────────────────────────────────────────

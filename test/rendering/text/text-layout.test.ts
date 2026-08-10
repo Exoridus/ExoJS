@@ -1,15 +1,13 @@
 ﻿/**
- * Tests for the TextLayout module: layoutText(), measureText(), and
- * buildTextPageQuads().
+ * Tests for the TextLayout module: layoutText() and buildTextPageQuads().
  *
- * We use a minimal mock GlyphAtlas (for layoutText) and a bare-bones fake
- * GlyphProvider with a fixed advance per char (for measureText) so we can
- * assert exact placement/measurement math without depending on a real
- * canvas 2D context.
+ * We use a minimal mock GlyphAtlas and a bare-bones fake GlyphProvider with a
+ * fixed advance per char so we can assert exact placement/measurement math
+ * without depending on a real canvas 2D context.
  */
 
 import type { GlyphAtlas } from '#rendering/text/GlyphAtlas';
-import { buildTextPageQuads, layoutText, measureText } from '#rendering/text/TextLayout';
+import { buildTextPageQuads, layoutText } from '#rendering/text/TextLayout';
 import { TextStyle } from '#rendering/text/TextStyle';
 import type { GlyphInfo, GlyphPlacement, GlyphProvider } from '#rendering/text/types';
 
@@ -65,11 +63,11 @@ function makeProvider(advance = 10): GlyphProvider {
 // ---------------------------------------------------------------------------
 
 describe('layoutText', () => {
-  test('empty text returns an empty array', () => {
+  test('empty text returns no placements', () => {
     const atlas = makeAtlas();
     const style = new TextStyle({ fontSize: 16, align: 'left' });
 
-    expect(layoutText('', style, {}, atlas)).toEqual([]);
+    expect(layoutText('', style, {}, atlas).placements).toEqual([]);
   });
 
   test('single line "Hello" — 5 placements with increasing x', () => {
@@ -77,7 +75,7 @@ describe('layoutText', () => {
     const atlas = makeAtlas(advance);
     const style = new TextStyle({ fontSize: 16, align: 'left' });
 
-    const placements = layoutText('Hello', style, {}, atlas);
+    const placements = layoutText('Hello', style, {}, atlas).placements;
 
     expect(placements).toHaveLength(5);
 
@@ -94,7 +92,7 @@ describe('layoutText', () => {
     const atlas = makeAtlas(advance);
     const style = new TextStyle({ fontSize, lineHeight, align: 'left' });
 
-    const placements = layoutText('Hi\nThere', style, {}, atlas);
+    const placements = layoutText('Hi\nThere', style, {}, atlas).placements;
 
     expect(placements).toHaveLength(7);
 
@@ -112,7 +110,7 @@ describe('layoutText', () => {
     const atlas = makeAtlas(advance);
     const style = new TextStyle({ fontSize: 16, align: 'left' });
 
-    const placements = layoutText('AB\nC', style, {}, atlas);
+    const placements = layoutText('AB\nC', style, {}, atlas).placements;
 
     expect(placements[0].x).toBe(0);
     expect(placements[1].x).toBe(10);
@@ -124,7 +122,7 @@ describe('layoutText', () => {
     const atlas = makeAtlas(advance);
     const style = new TextStyle({ fontSize: 16, align: 'right' });
 
-    const placements = layoutText('AB\nC', style, {}, atlas);
+    const placements = layoutText('AB\nC', style, {}, atlas).placements;
 
     expect(placements).toHaveLength(3);
     expect(placements[0].x).toBe(0);
@@ -137,7 +135,7 @@ describe('layoutText', () => {
     const atlas = makeAtlas(advance);
     const style = new TextStyle({ fontSize: 16, align: 'center' });
 
-    const placements = layoutText('AB\nC', style, {}, atlas);
+    const placements = layoutText('AB\nC', style, {}, atlas).placements;
 
     expect(placements).toHaveLength(3);
     expect(placements[2].x).toBeCloseTo(5);
@@ -147,7 +145,7 @@ describe('layoutText', () => {
     const atlas = makeAtlas(5);
     const style = new TextStyle({ fontSize: 16, align: 'left' });
 
-    const placements = layoutText(' ', style, {}, atlas);
+    const placements = layoutText(' ', style, {}, atlas).placements;
 
     expect(placements).toHaveLength(1);
     expect(placements[0].x).toBe(0);
@@ -174,7 +172,7 @@ describe('layoutText', () => {
     } as unknown as GlyphAtlas;
 
     const style = new TextStyle({ fontSize: 16, align: 'left' });
-    const placements = layoutText('X', style, {}, atlas);
+    const placements = layoutText('X', style, {}, atlas).placements;
 
     expect(placements[0].uvLeft).toBe(glyphInfo.uvLeft);
     expect(placements[0].uvTop).toBe(glyphInfo.uvTop);
@@ -190,7 +188,7 @@ describe('layoutText', () => {
     const atlas = makeAtlas(advance);
     const style = new TextStyle({ fontSize: 16 });
 
-    const placements = layoutText('ABC', style, { letterSpacing: 5 }, atlas);
+    const placements = layoutText('ABC', style, { letterSpacing: 5 }, atlas).placements;
 
     expect(placements).toHaveLength(3);
     expect(placements[0].x).toBe(0);
@@ -206,7 +204,7 @@ describe('layoutText', () => {
     // "Hello World" with advance=10 per char, space width=10
     // "Hello" = 50px, "World" = 50px, with space = 110px total
     // maxWidth = 60 → wrap before "World"
-    const placements = layoutText('Hello World', style, { maxWidth: 60 }, atlas);
+    const placements = layoutText('Hello World', style, { maxWidth: 60 }, atlas).placements;
 
     // "Hello" on line 0 at y=0, "World" on line 1 at y=lineHeight
     expect(placements.length).toBe(10); // 5 + 5 chars
@@ -220,7 +218,7 @@ describe('layoutText', () => {
     const atlas = makeAtlas(advance);
     const style = new TextStyle({ fontSize: 16, align: 'left' });
 
-    const placements = layoutText('the quick brown fox', style, {}, atlas);
+    const placements = layoutText('the quick brown fox', style, {}, atlas).placements;
 
     // Without a wrap width every glyph stays on line 0 and x increases
     // monotonically — the canonical "no wrap" behaviour.
@@ -238,7 +236,7 @@ describe('layoutText', () => {
     const style = new TextStyle({ fontSize: 16, align: 'left' });
 
     // 12-char token at advance 10 → 120px; maxWidth 50 → ~5 chars per line.
-    const placements = layoutText('ABCDEFGHIJKL', style, { maxWidth: 50, breakWords: true }, atlas);
+    const placements = layoutText('ABCDEFGHIJKL', style, { maxWidth: 50, breakWords: true }, atlas).placements;
 
     const lineYs = [...new Set(placements.map(placement => placement.y))];
     expect(lineYs.length).toBeGreaterThanOrEqual(2); // wrapped onto multiple lines
@@ -251,7 +249,7 @@ describe('layoutText', () => {
     const style = new TextStyle({ fontSize: 16, align: 'left' });
 
     // No spaces to break on and breakWords off → a single overflowing line.
-    const placements = layoutText('ABCDEFGHIJKL', style, { maxWidth: 50 }, atlas);
+    const placements = layoutText('ABCDEFGHIJKL', style, { maxWidth: 50 }, atlas).placements;
 
     const lineYs = [...new Set(placements.map(placement => placement.y))];
     expect(lineYs).toEqual([0]);
@@ -263,7 +261,7 @@ describe('layoutText', () => {
     const style = new TextStyle({ fontSize: 16, align: 'left' });
 
     // "A B" = 10 + 10(space) + 10 = 30px. maxWidth = 100 → both words fit on line 0.
-    const placements = layoutText('A B', style, { maxWidth: 100 }, atlas);
+    const placements = layoutText('A B', style, { maxWidth: 100 }, atlas).placements;
 
     const lineYs = [...new Set(placements.map(placement => placement.y))];
     expect(lineYs).toEqual([0]);
@@ -277,7 +275,7 @@ describe('layoutText', () => {
 
     // "Hi" (20px) fits on line 0 first; the following 12-char token (120px)
     // cannot join it and must be flushed + char-split across further lines.
-    const placements = layoutText('Hi ABCDEFGHIJKL', style, { maxWidth: 50, breakWords: true }, atlas);
+    const placements = layoutText('Hi ABCDEFGHIJKL', style, { maxWidth: 50, breakWords: true }, atlas).placements;
 
     const lineYs = [...new Set(placements.map(placement => placement.y))];
     expect(lineYs.length).toBeGreaterThanOrEqual(3); // "Hi" line + at least 2 char-split lines
@@ -307,7 +305,7 @@ describe('layoutText', () => {
     // _wrapLine (maxWidth 30): "A B" (25px) fits on line 0; "CCCCC" (50px,
     // over budget but unbreakable without breakWords) becomes line 1 — the
     // widest realized line, so line 0 has slack to distribute.
-    const placements = layoutText('A B CCCCC', style, { maxWidth: 30 }, atlas);
+    const placements = layoutText('A B CCCCC', style, { maxWidth: 30 }, atlas).placements;
 
     const lineYs = [...new Set(placements.map(p => p.y))];
     expect(lineYs).toHaveLength(2);
@@ -331,7 +329,7 @@ describe('layoutText', () => {
     // _wrapLine (maxWidth 30): "A B" (30px) fits on line 0; "CCCCC" (50px,
     // over budget but unbreakable without breakWords) becomes line 1 — the
     // widest realized line, so line 0 has slack to distribute.
-    const placements = layoutText('A B CCCCC', style, { maxWidth: 30 }, atlas);
+    const placements = layoutText('A B CCCCC', style, { maxWidth: 30 }, atlas).placements;
 
     const lineYs = [...new Set(placements.map(p => p.y))];
     expect(lineYs).toHaveLength(2);
@@ -351,7 +349,7 @@ describe('layoutText', () => {
 
     // Single line (no wrap) — justify must behave like left-align since this
     // is simultaneously the first and last line.
-    const placements = layoutText('A B', style, {}, atlas);
+    const placements = layoutText('A B', style, {}, atlas).placements;
 
     expect(placements[0]?.x).toBe(0);
     expect(placements[2]?.x).toBe(2 * advance);
@@ -362,8 +360,8 @@ describe('layoutText', () => {
     const atlas = makeAtlas(advance);
     const style = new TextStyle({ fontSize: 16, align: 'left' });
 
-    const normalized = layoutText('A\nB   C', style, { whiteSpace: 'normal' }, atlas);
-    const preLine = layoutText('A\nB   C', style, { whiteSpace: 'pre-line' }, atlas);
+    const normalized = layoutText('A\nB   C', style, { whiteSpace: 'normal' }, atlas).placements;
+    const preLine = layoutText('A\nB   C', style, { whiteSpace: 'pre-line' }, atlas).placements;
 
     // 'normal' turns the whole string into one line: "A B C" (5 chars incl. spaces).
     const normalLineYs = [...new Set(normalized.map(p => p.y))];
@@ -380,7 +378,7 @@ describe('layoutText', () => {
     const atlas = makeAtlas(advance);
     const style = new TextStyle({ fontSize: 16, align: 'left' });
 
-    const placements = layoutText('A   B', style, { whiteSpace: 'pre' }, atlas);
+    const placements = layoutText('A   B', style, { whiteSpace: 'pre' }, atlas).placements;
 
     expect(placements).toHaveLength(5); // 'A', ' ', ' ', ' ', 'B' — no collapsing
   });
@@ -399,14 +397,14 @@ describe('layoutText vertical overflow', () => {
   }
 
   test('maxHeight without overflow keeps every line visible', () => {
-    const placements = layoutText('A\nB\nC', overflowStyle(), { maxHeight: twoLineMaxHeight }, makeAtlas());
+    const placements = layoutText('A\nB\nC', overflowStyle(), { maxHeight: twoLineMaxHeight }, makeAtlas()).placements;
 
     expect(placements).toHaveLength(3);
     expect(placements[2].y).toBeCloseTo(38.4);
   });
 
   test('overflow "clip" drops lines that do not fit maxHeight', () => {
-    const placements = layoutText('A\nB\nC', overflowStyle(), { maxHeight: twoLineMaxHeight, overflow: 'clip' }, makeAtlas());
+    const placements = layoutText('A\nB\nC', overflowStyle(), { maxHeight: twoLineMaxHeight, overflow: 'clip' }, makeAtlas()).placements;
 
     expect(placements).toHaveLength(2);
     expect(placements[0].y).toBe(0);
@@ -414,7 +412,7 @@ describe('layoutText vertical overflow', () => {
   });
 
   test('overflow "ellipsis" clips and appends an ellipsis to the last visible line', () => {
-    const placements = layoutText('A\nB\nC', overflowStyle(), { maxHeight: twoLineMaxHeight, overflow: 'ellipsis' }, makeAtlas());
+    const placements = layoutText('A\nB\nC', overflowStyle(), { maxHeight: twoLineMaxHeight, overflow: 'ellipsis' }, makeAtlas()).placements;
 
     // 'A' on line 0, then 'B' + the ellipsis glyph on line 1.
     expect(placements).toHaveLength(3);
@@ -424,13 +422,13 @@ describe('layoutText vertical overflow', () => {
   });
 
   test('overflow without maxHeight leaves the text untouched', () => {
-    const placements = layoutText('A\nB\nC', overflowStyle(), { overflow: 'clip' }, makeAtlas());
+    const placements = layoutText('A\nB\nC', overflowStyle(), { overflow: 'clip' }, makeAtlas()).placements;
 
     expect(placements).toHaveLength(3);
   });
 
   test('maxHeight smaller than a single line clips everything away', () => {
-    const placements = layoutText('A\nB', overflowStyle(), { maxHeight: 5, overflow: 'clip' }, makeAtlas());
+    const placements = layoutText('A\nB', overflowStyle(), { maxHeight: 5, overflow: 'clip' }, makeAtlas()).placements;
 
     expect(placements).toHaveLength(0);
   });
@@ -438,7 +436,7 @@ describe('layoutText vertical overflow', () => {
   test('overflow "ellipsis" drops trailing characters so the line still fits maxWidth', () => {
     // advance 10, maxWidth 30 → three glyph slots. 'ABC' already fills them,
     // so the ellipsis has to displace a character rather than overflow.
-    const placements = layoutText('ABC\nD', overflowStyle(), { maxWidth: 30, maxHeight: 19.2, overflow: 'ellipsis' }, makeAtlas());
+    const placements = layoutText('ABC\nD', overflowStyle(), { maxWidth: 30, maxHeight: 19.2, overflow: 'ellipsis' }, makeAtlas()).placements;
 
     expect(placements).toHaveLength(3);
     for (const p of placements) expect(p.y).toBe(0);
@@ -477,7 +475,7 @@ describe('layoutText direction', () => {
     const provider = makeCharProvider({ A: 10, B: 20 });
     const style = new TextStyle({ fontSize: 16, align: 'left' });
 
-    const placements = layoutText('AB', style, { direction: 'ltr' }, provider);
+    const placements = layoutText('AB', style, { direction: 'ltr' }, provider).placements;
 
     expect(placements[0].width).toBe(10); // 'A' first
     expect(placements[0].x).toBe(0);
@@ -489,7 +487,7 @@ describe('layoutText direction', () => {
     const provider = makeCharProvider({ A: 10, B: 20 });
     const style = new TextStyle({ fontSize: 16, align: 'left' });
 
-    const placements = layoutText('AB', style, { direction: 'rtl' }, provider);
+    const placements = layoutText('AB', style, { direction: 'rtl' }, provider).placements;
 
     expect(placements[0].width).toBe(20); // 'B' now leads visually
     expect(placements[0].x).toBe(0);
@@ -501,7 +499,7 @@ describe('layoutText direction', () => {
     const provider = makeCharProvider({ A: 10, B: 20, C: 30, D: 40 });
     const style = new TextStyle({ fontSize: 16, lineHeight: 1.2, align: 'left' });
 
-    const placements = layoutText('AB\nCD', style, { direction: 'rtl' }, provider);
+    const placements = layoutText('AB\nCD', style, { direction: 'rtl' }, provider).placements;
 
     expect(placements[0].width).toBe(20); // line 0 → 'B', 'A'
     expect(placements[1].width).toBe(10);
@@ -511,15 +509,19 @@ describe('layoutText direction', () => {
 });
 
 // ---------------------------------------------------------------------------
-// measureText()
+// layoutText() — the advance extent
 // ---------------------------------------------------------------------------
 
-describe('measureText', () => {
-  test('empty text returns zero width and height', () => {
+describe('layoutText advance', () => {
+  test('empty text has neither advance nor ink', () => {
     const provider = makeProvider();
     const style = new TextStyle({ fontSize: 16 });
 
-    expect(measureText('', style, provider)).toEqual({ width: 0, height: 0 });
+    expect(layoutText('', style, {}, provider)).toEqual({
+      placements: [],
+      advance: { width: 0, height: 0 },
+      ink: { x: 0, y: 0, width: 0, height: 0 },
+    });
   });
 
   test('single-line width is the sum of glyph advances', () => {
@@ -527,7 +529,7 @@ describe('measureText', () => {
     const provider = makeProvider(advance);
     const style = new TextStyle({ fontSize: 16, lineHeight: 1, leading: 0 });
 
-    const size = measureText('Hello', style, provider);
+    const size = layoutText('Hello', style, {}, provider).advance;
 
     expect(size.width).toBe(5 * advance);
   });
@@ -538,7 +540,7 @@ describe('measureText', () => {
     const lineHeight = 2; // multiplier
     const style = new TextStyle({ fontSize, lineHeight, leading: 0 });
 
-    const size = measureText('X', style, provider);
+    const size = layoutText('X', style, {}, provider).advance;
 
     // computedLineHeight = fontSize * lineHeight + leading = 20 * 2 + 0 = 40
     expect(size.height).toBe(40);
@@ -548,7 +550,7 @@ describe('measureText', () => {
     const provider = makeProvider(10);
     const style = new TextStyle({ fontSize: 10, lineHeight: 1, leading: 4 });
 
-    const size = measureText('X', style, provider);
+    const size = layoutText('X', style, {}, provider).advance;
 
     // computedLineHeight = 10 * 1 + 4 = 14
     expect(size.height).toBe(14);
@@ -561,7 +563,7 @@ describe('measureText', () => {
     const leading = 3;
     const style = new TextStyle({ fontSize, lineHeight, leading });
 
-    const size = measureText('one\ntwo\nthree', style, provider);
+    const size = layoutText('one\ntwo\nthree', style, {}, provider).advance;
 
     const computedLineHeight = fontSize * lineHeight + leading;
     expect(size.height).toBe(3 * computedLineHeight);
@@ -572,7 +574,7 @@ describe('measureText', () => {
     const style = new TextStyle({ fontSize: 16 });
 
     // Line widths: 'Hi' = 20, 'Hello' = 50, 'Yo' = 20 → widest is 50.
-    const size = measureText('Hi\nHello\nYo', style, provider);
+    const size = layoutText('Hi\nHello\nYo', style, {}, provider).advance;
 
     expect(size.width).toBe(50);
   });
@@ -581,10 +583,95 @@ describe('measureText', () => {
     const provider = makeProvider(10);
     const style = new TextStyle({ fontSize: 20, lineHeight: 1, leading: 0 });
 
-    const size = measureText('A\n', style, provider);
+    const size = layoutText('A\n', style, {}, provider).advance;
 
     expect(size.width).toBe(10); // widest line is 'A'
     expect(size.height).toBe(2 * 20); // 2 lines: 'A' and ''
+  });
+
+  test('letterSpacing widens the advance but not by a trailing gap', () => {
+    const provider = makeProvider(10);
+    const style = new TextStyle({ fontSize: 16, lineHeight: 1, leading: 0 });
+
+    const size = layoutText('ABC', style, { letterSpacing: 5 }, provider).advance;
+
+    // 3 advances of 10 plus the 2 INTERIOR gaps — the gap after the last
+    // glyph is not part of the extent.
+    expect(size.width).toBe(3 * 10 + 2 * 5);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// layoutText() — the ink extent
+// ---------------------------------------------------------------------------
+
+describe('layoutText ink', () => {
+  /**
+   * Provider standing in for the SDF path, where the atlas pads every glyph
+   * and hands back negative bearings to pull the padded tile back around the
+   * cursor. The ink therefore starts left of and above the layout origin.
+   */
+  function makePaddedProvider(buffer: number, advance = 10, glyph = 8): GlyphProvider {
+    return {
+      getGlyph: (): GlyphInfo => ({
+        x: 0,
+        y: 0,
+        width: glyph + 2 * buffer,
+        height: glyph + 2 * buffer,
+        advance,
+        ascent: glyph,
+        page: 0,
+        uvLeft: 0,
+        uvTop: 0,
+        uvRight: 1,
+        uvBottom: 1,
+        xBearing: -buffer,
+        yBearing: -buffer,
+      }),
+    };
+  }
+
+  test('ink starts in the negative when the provider pads its glyphs', () => {
+    const buffer = 3;
+    const provider = makePaddedProvider(buffer);
+    const style = new TextStyle({ fontSize: 16, lineHeight: 1, leading: 0, align: 'left' });
+
+    const { advance, ink } = layoutText('AB', style, {}, provider);
+
+    // Clamping the ink minimum to zero would report x = 0 here and cut the
+    // outline reach off the left edge of every SDF label.
+    expect(ink.x).toBe(-buffer);
+    expect(ink.y).toBe(-buffer);
+
+    // Two glyphs: quads span from -3 to (advance of 'A' = 10) + 8 + 3 = 21.
+    expect(ink.width).toBe(21 - -buffer);
+    expect(ink.height).toBe(8 + buffer - -buffer);
+
+    // The advance is untouched by the padding.
+    expect(advance.width).toBe(20);
+    expect(advance.height).toBe(16);
+  });
+
+  test('ink is wider and taller than the advance in the padded case', () => {
+    const provider = makePaddedProvider(3);
+    const style = new TextStyle({ fontSize: 16, lineHeight: 1, leading: 0 });
+
+    const { advance, ink } = layoutText('A', style, {}, provider);
+
+    expect(ink.width).toBeGreaterThan(advance.width);
+    expect(ink.x).toBeLessThan(0);
+  });
+
+  test('unpadded glyphs put the ink at the layout origin', () => {
+    const provider = makeProvider(10);
+    const style = new TextStyle({ fontSize: 16, lineHeight: 1, leading: 0 });
+
+    const { ink } = layoutText('AB', style, {}, provider);
+
+    expect(ink.x).toBe(0);
+    expect(ink.y).toBe(0);
+    expect(ink.width).toBe(20);
+    expect(ink.height).toBe(16);
   });
 });
 

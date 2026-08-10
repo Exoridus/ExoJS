@@ -13,7 +13,12 @@ export type GradientAxis = 'vertical' | 'horizontal';
  */
 export type StyleChangeHint = 'tint' | 'layout' | 'font';
 
-function mergeHint(a: StyleChangeHint, b: StyleChangeHint): StyleChangeHint {
+/**
+ * Accumulate two hints to the heavier of the two, so a pending rebuild is
+ * never downgraded by a cheaper change arriving after it.
+ * @internal
+ */
+export function mergeHint(a: StyleChangeHint, b: StyleChangeHint): StyleChangeHint {
   if (a === 'font' || b === 'font') return 'font';
   if (a === 'layout' || b === 'layout') return 'layout';
   return 'tint';

@@ -407,13 +407,15 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       arr[base + 32] = arr[base + 33] = arr[base + 34] = arr[base + 35] = 0;
     }
 
-    // Text block bounds (texel 9): (minX, minY, width, height)
-    // Vertex shader uses these to compute normalized gradient UV.
-    const bounds = node.textBounds;
-    arr[base + 36] = 0;
-    arr[base + 37] = 0;
-    arr[base + 38] = bounds.width;
-    arr[base + 39] = bounds.height;
+    // Text ink bounds (texel 9): (minX, minY, width, height)
+    // Vertex shader uses these to compute normalized gradient UV, so it needs
+    // the rectangle the glyph quads actually cover — not the advance extent,
+    // whose origin is (0, 0) while the SDF quads start at a negative offset.
+    const ink = node.getLocalBounds();
+    arr[base + 36] = ink.x;
+    arr[base + 37] = ink.y;
+    arr[base + 38] = ink.width;
+    arr[base + 39] = ink.height;
   }
 
   // ── Flush ────────────────────────────────────────────────────────────────

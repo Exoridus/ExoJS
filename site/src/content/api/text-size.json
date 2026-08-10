@@ -1,6 +1,6 @@
 {
   "title": "TextSize",
-  "description": "Pixel dimensions of a laid-out text string returned by measureText.",
+  "description": "Advance extent of a laid-out text string in pixels — where the cursor ends up, not how far the glyphs reach. See TextLayoutResult for the difference between the two measures.",
   "symbol": "TextSize",
   "kind": "interface",
   "subsystem": "rendering",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Pixel dimensions of a laid-out text string returned by measureText."
+        "Advance extent of a laid-out text string in pixels — where the cursor ends up, not how far the glyphs reach. See TextLayoutResult for the difference between the two measures."
       ],
       "importLine": "import { TextSize } from '@codexo/exojs'",
       "sourceLink": null

@@ -6,10 +6,10 @@ import { AbstractText } from './AbstractText';
 import type { BmFontData } from './BmFont';
 import { type BmFont } from './BmFont';
 import type { LayoutOptions } from './LayoutOptions';
-import { buildTextPageQuads, layoutText } from './TextLayout';
+import { emptyTextLayout, layoutText } from './TextLayout';
 import type { TextStyleOptions } from './TextStyle';
 import { TextStyle } from './TextStyle';
-import type { GlyphInfo, GlyphProvider, TextLayoutStyle, TextPageQuads, TextSize } from './types';
+import type { GlyphInfo, GlyphProvider, TextLayoutResult, TextLayoutStyle } from './types';
 
 export type { BmFontChar, BmFontData } from './BmFont';
 
@@ -144,61 +144,29 @@ export class BmFontAdapter implements GlyphProvider {
  * const label = new BitmapText('Score: 0', font, { msdf: true });
  * scene.addChild(label);
  *
- * label.text         = 'Score: 42';  // instant geometry rebuild
- * label.style.align  = 'center';     // immediate rebuild
+ * label.text         = 'Score: 42';  // cheap — marks the geometry stale
+ * label.style.align  = 'center';     // cheap — same pending pass
  * ```
+ *
+ * Mutating any number of properties in the same frame is cheap; the geometry
+ * is rebuilt at most once, on demand.
  * @stable
  */
 export class BitmapText extends AbstractText {
   private _font: BmFont;
   private _fontScale: number;
   private _msdf: boolean;
-  private _style: TextStyle;
-  private _layout: LayoutOptions;
-
-  /** Per-page quad geometry consumed by the text renderer. */
-  private _pageQuads: TextPageQuads[] = [];
-  private _textBounds: TextSize = { width: 0, height: 0 };
   private _adapter: BmFontAdapter;
 
-  /**
-   * Rebuilds on any style mutation. Bound once so it can be detached again
-   * when the style is replaced or the node is destroyed.
-   */
-  private readonly _onStyleChange = (): void => {
-    // TextStyle latches its dirty flag until something consumes it, and only
-    // dispatches onChange on the clean-to-dirty edge. Draining it here is what
-    // keeps the second and every later mutation notifying instead of just the
-    // first. BitmapText rebuilds eagerly, so there is no deferred hint to keep.
-    this._style.consumeDirty();
-    this._rebuild();
-  };
-
   public constructor(text: string, font: BmFont, options: BitmapTextOptions = {}) {
-    super(text);
+    super(text, new TextStyle(options), options.layout ?? {});
     this._font = font;
     this._fontScale = options.scale ?? 1;
     this._msdf = options.msdf ?? false;
-    this._style = new TextStyle(options);
-    this._layout = options.layout ?? {};
     this._adapter = new BmFontAdapter(font.fontData, font.textures, this._fontScale);
-    this._attachStyle();
-    this._rebuild();
   }
 
-  // ── Text ──────────────────────────────────────────────────────────────────
-
-  public override get text(): string {
-    return this._text;
-  }
-
-  public override set text(v: string) {
-    if (this._text === v) return;
-    this._text = v;
-    this._rebuild();
-  }
-
-  // ── Style & layout ────────────────────────────────────────────────────────
+  // ── Style ─────────────────────────────────────────────────────────────────
 
   /** Visual style — `align`, `leading`, `fillColor`, `outlineColor` etc. */
   public get style(): TextStyle {
@@ -206,20 +174,7 @@ export class BitmapText extends AbstractText {
   }
 
   public set style(v: TextStyle | TextStyleOptions) {
-    this._style.onChange.remove(this._onStyleChange);
-    this._style = v instanceof TextStyle ? v : new TextStyle(v);
-    this._attachStyle();
-    this._rebuild();
-  }
-
-  /** Flow-control options — `maxWidth`, `letterSpacing`, `whiteSpace` etc. */
-  public get layout(): LayoutOptions {
-    return this._layout;
-  }
-
-  public set layout(v: LayoutOptions) {
-    this._layout = v;
-    this._rebuild();
+    this._replaceStyle(v instanceof TextStyle ? v : new TextStyle(v));
   }
 
   /** Scale factor applied to all glyph metrics from the font descriptor. */
@@ -231,7 +186,7 @@ export class BitmapText extends AbstractText {
     if (this._fontScale === v) return;
     this._fontScale = v;
     this._adapter = new BmFontAdapter(this._font.fontData, this._font.textures, v);
-    this._rebuild();
+    this._markDirty('font');
   }
 
   // ── Read-only state ───────────────────────────────────────────────────────
@@ -246,15 +201,6 @@ export class BitmapText extends AbstractText {
     return this._font;
   }
 
-  /** Per-page quad data consumed by the text renderer. */
-  public get pageQuads(): readonly TextPageQuads[] {
-    return this._pageQuads;
-  }
-
-  public override get textBounds(): TextSize {
-    return this._textBounds;
-  }
-
   /** The page textures this node draws from. */
   public get textures(): readonly Texture[] {
     return this._font.textures;
@@ -262,41 +208,17 @@ export class BitmapText extends AbstractText {
 
   // ── Font replacement ──────────────────────────────────────────────────────
 
-  /** Replace the font and rebuild the geometry. */
+  /** Replace the font and mark the geometry stale. */
   public setFont(font: BmFont): void {
     this._font = font;
     this._adapter = new BmFontAdapter(font.fontData, font.textures, this._fontScale);
-    this._rebuild();
-  }
-
-  public override destroy(): void {
-    this._style.onChange.remove(this._onStyleChange);
-    this._pageQuads = [];
-    super.destroy();
+    this._markDirty('font');
   }
 
   // ── Private ──────────────────────────────────────────────────────────────
 
-  private _attachStyle(): void {
-    // A freshly constructed style starts dirty. The caller rebuilds right
-    // after attaching, so drain that initial flag — otherwise the style never
-    // reaches the clean state its next mutation needs in order to dispatch.
-    this._style.consumeDirty();
-    this._style.onChange.add(this._onStyleChange);
-  }
-
-  private _rebuild(): void {
-    this._pageQuads = [];
-    this._textBounds = { width: 0, height: 0 };
-    if (this._text.length === 0) {
-      // Empty transition: reset the extent and route through the content-dirty
-      // contract like the non-empty path below, so a BitmapText going empty
-      // does not leave a stale local bounds / un-dirtied revision behind for
-      // culling, hit-testing, or an instruction-set cache of prior geometry.
-      this._setLocalBounds(0, 0, 0, 0);
-      this._updateOrigin();
-      return;
-    }
+  protected override _runLayout(): TextLayoutResult {
+    if (this._text.length === 0) return emptyTextLayout();
 
     // Derive a TextLayoutStyle from the BMFont descriptor + scale.
     // Setting fontSize = fontData.lineHeight * scale makes computedLineHeight
@@ -308,24 +230,6 @@ export class BitmapText extends AbstractText {
       align: this._style.align,
     };
 
-    const placements = layoutText(this._text, layoutStyle, this._layout, this._adapter);
-
-    let maxX = 0,
-      maxY = 0;
-    for (const p of placements) {
-      const px = p.x + p.width;
-      const py = p.y + p.height;
-      if (px > maxX) maxX = px;
-      if (py > maxY) maxY = py;
-    }
-    this._textBounds = { width: maxX, height: maxY };
-    this._setLocalBounds(0, 0, maxX, maxY);
-
-    // An anchor is a fraction of the bounds, so a node whose text just changed
-    // width has to re-derive its origin — otherwise a centred label drifts left
-    // as it grows. Mirrors what Sprite does when it switches sub-frame.
-    this._updateOrigin();
-
-    this._pageQuads = buildTextPageQuads(placements);
+    return layoutText(this._text, layoutStyle, this._layout, this._adapter);
   }
 }
