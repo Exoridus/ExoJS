@@ -45,7 +45,6 @@ class LoadingProgressWithShaderScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear(new Color(14, 18, 28));
         context.render(this.ring);
         context.render(this.label);
     }
@@ -59,7 +58,7 @@ const app = new Application({
         mount: document.body,
         sizingMode: 'fit',
     },
-    clearColor: Color.black,
+    clearColor: new Color(14, 18, 28),
     loader: {
         basePath: 'assets/',
     },

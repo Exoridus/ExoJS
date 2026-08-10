@@ -55,7 +55,6 @@ class VinylRecordScene extends Scene {
         const cx = width / 2;
         const cy = height / 2;
         const spectrum = this.analyser.getSpectrum();
-        context.backend.clear(new Color(16, 18, 26));
         this.disc.clear();
         this.disc.fillColor = new Color(28, 28, 30);
         this.disc.drawCircle(cx, cy, 150);
@@ -98,6 +97,6 @@ const app = new Application({
         mount: document.body,
         sizingMode: 'fit',
     },
-    clearColor: Color.black,
+    clearColor: new Color(16, 18, 26),
 });
 app.start(VinylRecordScene);

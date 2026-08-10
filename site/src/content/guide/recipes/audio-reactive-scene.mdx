@@ -37,7 +37,6 @@ class AudioReactiveScene extends Scene {
     private particleTexture!: Texture;
     private analyser!: AudioAnalyser;
     private detector!: BeatDetector;
-    private _bg!: Color;
     private particles!: ParticleSystem;
     private burst!: BurstSpawn;
     private view!: View;
@@ -57,7 +56,10 @@ class AudioReactiveScene extends Scene {
         // Analysis — both taps read the music bus the track plays through.
         this.analyser = new AudioAnalyser({ source: this.app.audio.music, fftSize: 512 });
         this.detector = new BeatDetector({ source: this.app.audio.music });
-        this._bg = new Color(20, 24, 40, 1);
+
+        // The engine clears to `app.clearColor` before `draw` runs, and that is
+        // the backend's live instance — mutating it animates the background.
+        this.app.clearColor.set(20, 24, 40, 1);
 
         // Particles — burst on beat
         this.particles = new ParticleSystem(this.particleTexture, { capacity: 5000 });
@@ -86,7 +88,7 @@ class AudioReactiveScene extends Scene {
 
         // Continuous frequency → background tint
         const { low } = this.analyser.getLowMidHigh();
-        this._bg.set(
+        this.app.clearColor.set(
             20 + low * 26,
             24 + low * 15,
             40 + low * 52,
@@ -95,7 +97,6 @@ class AudioReactiveScene extends Scene {
     }
 
     draw(context: RenderingContext) {
-        context.backend.clear(this._bg);
         context.render(this.particles, { view: this.view });
     }
 }

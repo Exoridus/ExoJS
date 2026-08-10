@@ -49,7 +49,6 @@ class MouseParallaxScene extends Scene {
         const width = app.width;
         const height = app.height;
 
-        context.backend.clear(new Color(18, 22, 34));
         for (let i = 0; i < this.layers.length; i++) {
             const layer = this.layers[i];
             layer.setPosition((width / 2 - this.pointer.x) * scales[i], (height / 2 - this.pointer.y) * scales[i]);
@@ -66,7 +65,7 @@ const app = new Application({
         mount: document.body,
         sizingMode: 'fit',
     },
-    clearColor: Color.black,
+    clearColor: new Color(18, 22, 34),
     loader: {
         basePath: 'assets/',
     },

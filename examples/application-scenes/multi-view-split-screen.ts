@@ -102,7 +102,6 @@ class SplitScreenScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.clear(Color.black);
         context.render(this.leftPlayer, { view: this.leftView });
         context.render(this.rightPlayer, { view: this.leftView });
         context.render(this.leftPlayer, { view: this.rightView });

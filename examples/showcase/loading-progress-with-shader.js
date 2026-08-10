@@ -38,7 +38,6 @@ class LoadingProgressWithShaderScene extends Scene {
         this.label.text = `${(this.progress.v * 100) | 0}%`;
     }
     draw(context) {
-        context.backend.clear(new Color(14, 18, 28));
         context.render(this.ring);
         context.render(this.label);
     }
@@ -51,7 +50,7 @@ const app = new Application({
         mount: document.body,
         sizingMode: 'fit',
     },
-    clearColor: Color.black,
+    clearColor: new Color(14, 18, 28),
     loader: {
         basePath: 'assets/',
     },

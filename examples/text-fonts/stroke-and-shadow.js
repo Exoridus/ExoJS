@@ -20,7 +20,6 @@ class StrokeAndShadowScene extends Scene {
         this.title.setPosition(width / 2, height / 2);
     }
     draw(context) {
-        context.backend.clear(new Color(24, 28, 42));
         context.render(this.title);
     }
 }
@@ -32,7 +31,7 @@ const app = new Application({
         mount: document.body,
         sizingMode: 'fit',
     },
-    clearColor: Color.black,
+    clearColor: new Color(24, 28, 42),
     loader: {
         basePath: 'assets/',
     },

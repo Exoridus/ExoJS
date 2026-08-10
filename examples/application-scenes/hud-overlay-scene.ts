@@ -37,7 +37,6 @@ class GameScene extends Scene {
         const app = this.app;
         const { width, height } = app;
 
-        context.backend.clear(new Color(20, 32, 58));
         this.ring.clear();
         this.ring.lineWidth = 20;
         this.ring.lineColor = new Color(90, 180, 255);
@@ -56,7 +55,7 @@ const app = new Application({
         mount: document.body,
         sizingMode: 'fit',
     },
-    clearColor: Color.black,
+    clearColor: new Color(20, 32, 58),
 });
 
 void app.start(GameScene);

@@ -70,7 +70,6 @@ class CameraViewScene extends Scene {
         this.camera.setZoom(Math.max(0.25, this.camera.zoomLevel + this.zoom * 0.75 * delta.seconds));
     }
     draw(context) {
-        context.clear(Color.black);
         context.render(this.world, { view: this.camera });
         context.render(this.overlay, { view: context.screenView });
     }

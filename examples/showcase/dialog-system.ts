@@ -132,7 +132,6 @@ class DialogSystemScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear(new Color(20, 24, 34));
         context.render(this.portrait);
         context.render(this.namePlate);
         context.render(this.box);
@@ -150,7 +149,7 @@ const app = new Application({
         mount: document.body,
         sizingMode: 'fit',
     },
-    clearColor: Color.black,
+    clearColor: new Color(20, 24, 34),
 });
 
 app.start(DialogSystemScene);

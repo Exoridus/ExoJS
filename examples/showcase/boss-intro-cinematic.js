@@ -111,7 +111,6 @@ class BossIntroCinematicScene extends Scene {
     draw(context) {
         const app = this.app;
         const { width, height } = this;
-        context.backend.clear(new Color(16, 16, 24));
         this.bg.clear();
         this.bg.fillColor = new Color(36, 42, 70);
         // Span well past the view edges so the push-in never reveals a seam.
@@ -139,6 +138,6 @@ const app = new Application({
         mount: document.body,
         sizingMode: 'fit',
     },
-    clearColor: Color.black,
+    clearColor: new Color(16, 16, 24),
 });
 app.start(BossIntroCinematicScene);

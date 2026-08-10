@@ -26,6 +26,9 @@ class BootScene extends Scene {
     // #region guide:boot-signals
     init() {
         const app = this.app;
+        // Per-scene background. `init` runs once per activation, so navigating
+        // back here from the play scene repaints the frame in this colour.
+        app.clearColor.set(12, 16, 24);
         this.bar = new Graphics();
         this.label = new Text('', { fillColor: Color.white, fontSize: 20, align: 'center' });
         this.label.setAnchor(0.5, 0);
@@ -80,7 +83,6 @@ class BootScene extends Scene {
     draw(context) {
         const app = this.app;
         const { width, height } = app;
-        context.backend.clear(new Color(12, 16, 24));
         const barWidth = width * 0.5;
         const barX = (width - barWidth) / 2;
         const barY = height / 2;
@@ -103,6 +105,7 @@ class PlayScene extends Scene {
     init() {
         const app = this.app;
         const { width, height } = app;
+        app.clearColor.set(16, 26, 22);
         // Already resident: BootScene claimed the catalog on the application
         // loader, so reading the same handles here costs nothing.
         this.ship = new Sprite(GameAssets.ship).setAnchor(0.5).setPosition(width / 2, height / 2);
@@ -118,7 +121,6 @@ class PlayScene extends Scene {
         });
     }
     draw(context) {
-        context.backend.clear(new Color(16, 26, 22));
         context.render(this.ship);
         context.render(this.label);
     }

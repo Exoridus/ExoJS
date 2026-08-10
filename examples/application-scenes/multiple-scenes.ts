@@ -8,6 +8,10 @@ class MenuScene extends Scene {
         const app = this.app;
         const { width, height } = app;
 
+        // Each scene owns its background: `init` runs once per activation, so
+        // navigating back and forth repaints the frame in this scene's colour.
+        app.clearColor.set(18, 38, 72, 1);
+
         this.label = new Text('MENU\nClick to Start', { align: 'center', fillColor: Color.white, fontSize: 34, fontWeight: 'bold' });
         this.label.setAnchor(0.5);
         this.label.setPosition(width / 2, height / 2);
@@ -23,7 +27,6 @@ class MenuScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear(new Color(18, 38, 72, 1));
         context.render(this.label);
     }
 
@@ -41,6 +44,8 @@ class GameScene extends Scene {
         const app = this.app;
         const { width, height } = app;
 
+        app.clearColor.set(24, 72, 42, 1);
+
         this.label = new Text('GAME\nEsc to Menu', { align: 'center', fillColor: Color.white, fontSize: 34, fontWeight: 'bold' });
         this.label.setAnchor(0.5);
         this.label.setPosition(width / 2, height / 2);
@@ -51,7 +56,6 @@ class GameScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear(new Color(24, 72, 42, 1));
         context.render(this.label);
     }
 }

@@ -91,7 +91,6 @@ class SplitScreenScene extends Scene {
         this.rightView.setCenter(this.rightPlayer.position.x, this.rightPlayer.position.y);
     }
     draw(context) {
-        context.clear(Color.black);
         context.render(this.leftPlayer, { view: this.leftView });
         context.render(this.rightPlayer, { view: this.leftView });
         context.render(this.leftPlayer, { view: this.rightView });

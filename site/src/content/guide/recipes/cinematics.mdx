@@ -46,6 +46,9 @@ class CinematicScene extends Scene {
     }
 
     override init(): void {
+        // Background — the engine clears to this before every `draw`.
+        this.app.clearColor.set(16, 16, 24);
+
         // Camera — pans from title position to boss reveal
         this.view = new View(220, 300, 800, 600);
 
@@ -95,8 +98,6 @@ class CinematicScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear(new Color(16, 16, 24));
-
         context.render(this.boss, { view: this.view });
 
         context.render(this.titleText);

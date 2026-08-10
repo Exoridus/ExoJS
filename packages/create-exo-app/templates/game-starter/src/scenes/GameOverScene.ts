@@ -12,6 +12,8 @@ export class GameOverScene extends Scene<GameOverData> {
   public override init(data: Readonly<GameOverData>): void {
     const { width, height } = this.app!.canvas;
 
+    this.app!.clearColor.set(48, 10, 10);
+
     this._label = new Text(
       `Game Over\nScore: ${data.score}\n\nPress Space to restart`,
       { align: 'center', fillColor: Color.white, fontSize: 26 },
@@ -27,7 +29,6 @@ export class GameOverScene extends Scene<GameOverData> {
   }
 
   public override draw(context: RenderingContext): void {
-    context.backend.clear(new Color(48, 10, 10));
     context.render(this.root);
   }
 }

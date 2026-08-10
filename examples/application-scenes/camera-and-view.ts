@@ -75,7 +75,6 @@ class CameraViewScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.clear(Color.black);
         context.render(this.world, { view: this.camera });
         context.render(this.overlay, { view: context.screenView });
     }
