@@ -10,6 +10,28 @@ import { BmFont } from '#rendering/text/BmFont';
 import type { Texture } from '#rendering/texture/Texture';
 
 // ---------------------------------------------------------------------------
+// Layout-pass counter — "at most one pass per change" is only observable by
+// counting; comparing geometry cannot tell one pass from three.
+// ---------------------------------------------------------------------------
+
+const layoutCounter = vi.hoisted(() => ({ passes: 0 }));
+
+vi.mock('#rendering/text/TextLayout', async importOriginal => {
+  const actual = await importOriginal<typeof import('#rendering/text/TextLayout')>();
+
+  return {
+    ...actual,
+    layoutText: (...args: Parameters<typeof actual.layoutText>) => {
+      layoutCounter.passes++;
+
+      return actual.layoutText(...args);
+    },
+  };
+});
+
+const layoutPasses = (): number => layoutCounter.passes;
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -138,10 +160,10 @@ describe('BitmapText', () => {
     expect(text.pageQuads[0]).not.toBe(first);
   });
 
-  test('mutating a style property in place triggers an immediate rebuild', () => {
+  test('mutating a style property in place reaches the next layout pass', () => {
     // Line 0 ("A") is narrower than line 1 ("AB"), so right-alignment has to
-    // shift line 0's glyph to the right — a rebuild that skipped would leave
-    // it at x = 0.
+    // shift line 0's glyph to the right — a pass that skipped would leave it
+    // at x = 0.
     const text = new BitmapText('A\nAB', makeFont());
     const first = text.pageQuads[0];
     const firstX = first.vertices[0];
@@ -152,9 +174,9 @@ describe('BitmapText', () => {
     expect(text.pageQuads[0].vertices[0]).toBeGreaterThan(firstX);
   });
 
-  test('consecutive in-place style mutations each trigger a rebuild', () => {
+  test('consecutive in-place style mutations each reach a layout pass', () => {
     // Guards the dirty-latch failure mode: a style that stays dirty after the
-    // first notification would silently swallow every later mutation.
+    // first read would silently swallow every later mutation.
     const text = new BitmapText('AB', makeFont());
 
     text.style.leading = 4;
@@ -162,6 +184,72 @@ describe('BitmapText', () => {
     text.style.leading = 8;
 
     expect(text.pageQuads[0]).not.toBe(afterFirst);
+  });
+
+  // NEU-K3 / ME-60: BitmapText used to lay text out inside every setter and in
+  // its style-change signal handler, so a burst of edits paid for a full pass
+  // each. It now shares the deferred model with Text.
+  test('a run of mutations costs exactly one layout pass', () => {
+    const text = new BitmapText('AB', makeFont());
+
+    text.syncDirty();
+    const passesBefore = layoutPasses();
+
+    text.text = 'A';
+    text.text = 'B';
+    text.style.align = 'center';
+    text.style.leading = 6;
+    text.layout = { letterSpacing: 2 };
+    text.fontScale = 2;
+
+    expect(layoutPasses()).toBe(passesBefore);
+
+    expect(text.pageQuads.length).toBeGreaterThan(0);
+
+    expect(layoutPasses()).toBe(passesBefore + 1);
+  });
+
+  test('an in-place style mutation defers its pass until the node is read', () => {
+    const text = new BitmapText('AB', makeFont());
+
+    text.syncDirty();
+    const passesBefore = layoutPasses();
+
+    text.style.align = 'right';
+
+    expect(layoutPasses()).toBe(passesBefore);
+
+    text.syncDirty();
+
+    expect(layoutPasses()).toBe(passesBefore + 1);
+  });
+
+  test('getLocalBounds() resolves a pending layout without an explicit sync', () => {
+    const text = new BitmapText('A', makeFont());
+    const shortWidth = text.getLocalBounds().width;
+
+    text.text = 'AAAAA';
+
+    expect(text.getLocalBounds().width).toBeGreaterThan(shortWidth);
+  });
+
+  test('textBounds is the advance, getLocalBounds() the glyph ink', () => {
+    // 'A' and 'B' advance 10 each; the glyph quads are 8 wide, so the ink
+    // stops short of the cursor while the advance does not.
+    const text = new BitmapText('AB', makeFont());
+
+    expect(text.textBounds.width).toBe(19); // 10 + 10, less the 1px A→B kerning
+    expect(text.getLocalBounds().width).toBe(17); // last quad ends 8 past its x
+  });
+
+  test('mutating the layout object after construction does not re-flow the node', () => {
+    const layout = { letterSpacing: 0 };
+    const text = new BitmapText('AB', makeFont(), { layout });
+    const widthBefore = text.textBounds.width;
+
+    layout.letterSpacing = 40;
+
+    expect(text.textBounds.width).toBe(widthBefore);
   });
 
   test('replacing the style detaches the previous one from rebuilds', () => {
@@ -332,13 +420,14 @@ describe('BmFontAdapter missing-glyph warnings', () => {
     spy.mockRestore();
   });
 
-  test('BitmapText rebuild does not re-trigger warning for already-seen missing glyph', () => {
+  test('a second layout pass does not re-warn about an already-seen missing glyph', () => {
     const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const font = makeFont(); // font has A, B, space — not Z
     const text = new BitmapText('AZB', font);
 
-    // Force a rebuild by changing the text (triggers _rebuild internally)
-    text.text = 'AZB';
+    text.syncDirty();
+    text.text = 'BZA'; // a different string still missing the same glyph
+    text.syncDirty();
 
     expect(spy).toHaveBeenCalledTimes(1); // Z warned exactly once across both layouts
     spy.mockRestore();

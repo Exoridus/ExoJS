@@ -1,15 +1,15 @@
 {
   "title": "BitmapText",
-  "description": "Text node that renders from an offline-generated atlas — either a BMFont (AngelCode .fnt + .png) or an MSDF atlas (msdf-atlas-gen + .json). The atlas is pre-built so there is no runtime Canvas 2D rasterisation. All layout features (alignment, word-wrap, justify, leading, breakWords, whiteSpace, letterSpacing) and kerning pairs from the descriptor are fully supported. Outline effects are handled as shader uniforms — no extra draw calls, no atlas rebuilds. ## Usage ```ts const font = await loader.load(Asset.type('bmFont', 'fonts/ui.fnt')); // BmFont, no setup needed const label = new BitmapText('Score: 0', font, { msdf: true }); scene.addChild(label); label.text = 'Score: 42'; // instant geometry rebuild label.style.align = 'center'; // immediate rebuild ```",
+  "description": "Text node that renders from an offline-generated atlas — either a BMFont (AngelCode .fnt + .png) or an MSDF atlas (msdf-atlas-gen + .json). The atlas is pre-built so there is no runtime Canvas 2D rasterisation. All layout features (alignment, word-wrap, justify, leading, breakWords, whiteSpace, letterSpacing) and kerning pairs from the descriptor are fully supported. Outline effects are handled as shader uniforms — no extra draw calls, no atlas rebuilds. ## Usage ```ts const font = await loader.load(Asset.type('bmFont', 'fonts/ui.fnt')); // BmFont, no setup needed const label = new BitmapText('Score: 0', font, { msdf: true }); scene.addChild(label); label.text = 'Score: 42'; // cheap — marks the geometry stale label.style.align = 'center'; // cheap — same pending pass ``` Mutating any number of properties in the same frame is cheap; the geometry is rebuilt at most once, on demand.",
   "symbol": "BitmapText",
   "kind": "class",
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 95,
+  "memberCount": 99,
   "counts": {
     "constructors": 1,
-    "methods": 38,
+    "methods": 42,
     "properties": 42,
     "events": 14
   },
@@ -23,7 +23,8 @@
         "The atlas is pre-built so there is no runtime Canvas 2D rasterisation. All layout features (alignment, word-wrap, justify, leading, breakWords, whiteSpace, letterSpacing) and kerning pairs from the descriptor are fully supported. Outline effects are handled as shader uniforms — no extra draw calls, no atlas rebuilds.",
         "## Usage",
         "```ts const font = await loader.load(Asset.type('bmFont', 'fonts/ui.fnt')); // BmFont, no setup needed const label = new BitmapText('Score: 0', font, { msdf: true }); scene.addChild(label);",
-        "label.text = 'Score: 42'; // instant geometry rebuild label.style.align = 'center'; // immediate rebuild ```"
+        "label.text = 'Score: 42'; // cheap — marks the geometry stale label.style.align = 'center'; // cheap — same pending pass ```",
+        "Mutating any number of properties in the same frame is cheap; the geometry is rebuilt at most once, on demand."
       ],
       "importLine": "import { BitmapText } from '@codexo/exojs'",
       "sourceLink": null
@@ -131,6 +132,166 @@
       "title": "Methods",
       "members": [
         {
+          "name": "_consumePendingHint",
+          "signature": "_consumePendingHint(): StyleChangeHint | null",
+          "signatureTokens": [
+            {
+              "text": "_consumePendingHint",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "StyleChangeHint",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "StyleChangeHint | null",
+          "description": "Take the heaviest pending hint and settle the node, folding in whatever the attached TextStyle has latched since the last pass. A style carries its own dirty flag because it is mutated in place rather than assigned, so polling it here is what makes label.style.align = … land."
+        },
+        {
+          "name": "_markDirty",
+          "signature": "_markDirty(hint: StyleChangeHint): void",
+          "signatureTokens": [
+            {
+              "text": "_markDirty",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "hint",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "StyleChangeHint",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "hint",
+              "type": "StyleChangeHint",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Mark the laid-out geometry stale without laying anything out. Subclasses call this from every setter that affects the glyph run. The content stamp is not deferred with the pass — see _onStyleChange for why a retained subtree has to learn about the change immediately even though the geometry can wait."
+        },
+        {
+          "name": "_replaceStyle",
+          "signature": "_replaceStyle(style: TextStyle): void",
+          "signatureTokens": [
+            {
+              "text": "_replaceStyle",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "style",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextStyle",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "style",
+              "type": "TextStyle",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Swap the attached style, moving the in-place-mutation subscription with it so the replaced style stops driving this node."
+        },
+        {
+          "name": "_runLayout",
+          "signature": "_runLayout(): TextLayoutResult",
+          "signatureTokens": [
+            {
+              "text": "_runLayout",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextLayoutResult",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "TextLayoutResult",
+          "description": "Run one layout pass. Subclasses supply the glyph provider and style. hint is the heaviest change this pass has to account for: only 'font' invalidates the glyph source, so a subclass that pays to acquire one can reuse its cached provider for a plain 'layout' pass."
+        },
+        {
           "name": "_updateOrigin",
           "signature": "_updateOrigin(): void",
           "signatureTokens": [
@@ -157,7 +318,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Re-derive origin from the fractional anchor and the CURRENT local bounds. Uses local (untransformed) bounds on purpose: the transform multiplies the origin by scale itself, so deriving from world bounds would double-apply scale whenever the anchor is set after scaling. Subclasses whose local bounds change after construction (e.g. a sprite switching to a texture sub-frame) must call this to keep an anchored node anchored. The origin includes the bounds ORIGIN, not just its extent: a node whose local rectangle does not start at (0, 0) — a mesh built around its own centre, an Aseprite frame carrying an offset — still rotates and scales about its own middle at anchor = (0.5, 0.5)."
+          "description": "Anchor against the ADVANCE box, not against the local (ink) bounds. The base implementation derives the origin from getLocalBounds(), which is right for every node whose extent is its content. Text is the exception: its ink carries SDF padding that reaches past the glyphs on all four sides, by a different amount on each. Anchoring against it would centre the padded tile rather than the text, and would push an UNanchored label off its own position by the left/top padding. The typographic box is what a caller means by \"centre this caption\"."
         },
         {
           "name": "addFilter",
@@ -530,7 +691,7 @@
           ],
           "params": [],
           "returnType": "ReadonlyRectangle",
-          "description": "This node's untransformed extent in its own local coordinate space. Returns the LIVE internal rectangle, not a copy: it is read on hot paths (updateBounds re-reads it on every transform-dirty recompute, i.e. potentially every frame for a moving node), so copying it here would add a per-frame allocation. It is therefore typed as a ReadonlyRectangle — reads are unchanged, writes are rejected at compile time. Writing to it directly would skip the bounds/content invalidation the engine needs, leaving culling, hit-testing and retained render fragments on a stale extent. A custom Drawable that owns its own size sets it through _setLocalBounds, which writes and invalidates in one step."
+          "description": "Local ink extent — the union of the glyph quads, resolving a pending layout pass first. The resolve is not optional. Culling reads the local bounds BEFORE the renderer's collect phase gets a chance to call syncDirty, so a node that deferred its pass would be culled against the previous string's extent — and a label going from empty to non-empty would never appear at all. Reading is still cheap: with nothing pending this returns straight away, so no per-frame invalidation is introduced and a static subtree stays skippable."
         },
         {
           "name": "getNormals",
@@ -1212,7 +1373,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Replace the font and rebuild the geometry."
+          "description": "Replace the font and mark the geometry stale."
         },
         {
           "name": "setOrigin",
@@ -1607,7 +1768,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Consume any pending style mutations and apply them synchronously. The renderer calls this automatically before each draw, so manual calls are only needed when you require up-to-date geometry outside of a render pass (e.g. to measure bounds right after a style change)."
+          "description": "Resolve a pending layout pass, if any, and apply it synchronously. The renderer calls this before each draw and every extent read resolves on its own, so manual calls are rarely needed."
         },
         {
           "name": "update",
@@ -2301,7 +2462,7 @@
         },
         {
           "name": "layout",
-          "signature": "layout: LayoutOptions",
+          "signature": "layout: Readonly<LayoutOptions>",
           "signatureTokens": [
             {
               "text": "layout",
@@ -2312,13 +2473,25 @@
               "kind": "punctuation"
             },
             {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
               "text": "LayoutOptions",
               "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Flow-control options — maxWidth, letterSpacing, whiteSpace etc."
+          "description": "Flow-control options — maxWidth, letterSpacing, whiteSpace etc. Handed out read-only: the node holds its own copy, so mutating the object would change nothing. Assign a new one to re-flow."
         },
         {
           "name": "mask",
@@ -2414,7 +2587,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Per-page quad data consumed by the text renderer."
+          "description": "Per-page quad data consumed by the text renderer. Resolves a pending layout pass first, so a reader never sees the previous string's geometry."
         },
         {
           "name": "parent",
@@ -2653,7 +2826,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Pixel dimensions of the laid-out text block in local space. Used by the renderer to compute normalized gradient UVs."
+          "description": "Advance extent of the laid-out text — where the cursor ends up, which is the number to size a panel or place a caret against. This is NOT the rectangle the glyphs cover: SDF padding, outlines and shadows all reach past it, and in SDF mode the ink even starts at a negative coordinate. getLocalBounds returns that ink extent, and it is what culling, hit-testing and the gradient box use. Resolves a pending layout pass before answering."
         },
         {
           "name": "textures",

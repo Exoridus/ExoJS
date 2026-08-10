@@ -4,10 +4,10 @@ import type { GlyphAtlas } from './GlyphAtlas';
 import { SDF_RADIUS } from './GlyphAtlas';
 import { getDefaultGlyphAtlasPool } from './GlyphAtlasPool';
 import type { LayoutOptions } from './LayoutOptions';
-import { buildTextPageQuads, layoutText } from './TextLayout';
+import { emptyTextLayout, layoutText } from './TextLayout';
 import type { StyleChangeHint, TextStyleOptions } from './TextStyle';
 import { TextStyle } from './TextStyle';
-import type { TextPageQuads, TextSize } from './types';
+import type { TextLayoutResult, TextPageQuads } from './types';
 
 export type { TextPageQuads };
 
@@ -61,29 +61,19 @@ export interface TextOptions extends TextStyleOptions, LayoutOptions {
  * @stable
  */
 export class Text extends AbstractText {
-  private _style: TextStyle;
-  private _layout: LayoutOptions;
   private _colorGlyphs: boolean;
   private _sdfRadius: number;
   private _atlas: GlyphAtlas | null = null;
   private _destroyed = false;
   private _faceLoadVersion = 0;
 
-  /** Per-page quad geometry built by `_rebuild()`. */
-  private _pageQuads: TextPageQuads[] = [];
-  private _textBounds: TextSize = { width: 0, height: 0 };
-
   public constructor(text: string, options: TextOptions = {}) {
-    super(text);
-    this._style = new TextStyle(options);
-    this._layout = options;
+    super(text, new TextStyle(options), options);
     this._colorGlyphs = options.colorGlyphs ?? false;
     this._sdfRadius = options.sdfRadius ?? SDF_RADIUS;
 
     const face = this._extractFace(options);
     if (face !== null) void this._loadFace(face);
-
-    this._rebuild('font');
   }
 
   public get style(): TextStyle {
@@ -91,31 +81,12 @@ export class Text extends AbstractText {
   }
 
   public set style(v: TextStyle | TextStyleOptions) {
-    this._style = v instanceof TextStyle ? v : new TextStyle(v);
+    this._replaceStyle(v instanceof TextStyle ? v : new TextStyle(v));
+
     if (!(v instanceof TextStyle)) {
       const face = this._extractFace(v);
       if (face !== null) void this._loadFace(face);
     }
-    this._rebuild('font');
-  }
-
-  public override get text(): string {
-    return this._text;
-  }
-
-  public override set text(v: string) {
-    if (this._text === v) return;
-    this._text = v;
-    this._rebuild('layout');
-  }
-
-  public get layout(): LayoutOptions {
-    return this._layout;
-  }
-
-  public set layout(v: LayoutOptions) {
-    this._layout = v;
-    this._rebuild('layout');
   }
 
   /**
@@ -144,31 +115,14 @@ export class Text extends AbstractText {
     return this._colorGlyphs ? 'color' : 'sdf';
   }
 
-  /** Per-page quad data consumed by the text renderer. */
-  public get pageQuads(): readonly TextPageQuads[] {
-    return this._pageQuads;
-  }
-
-  public override get textBounds(): TextSize {
-    return this._textBounds;
-  }
-
   /** The {@link GlyphAtlas} this node currently draws from. */
   public get atlas(): GlyphAtlas | null {
     return this._atlas;
   }
 
-  public override syncDirty(): void {
-    const hint = this._style.consumeDirty();
-    if (hint !== null && hint !== 'tint') {
-      this._rebuild(hint);
-    }
-  }
-
   public override destroy(): void {
     this._destroyed = true;
     this._faceLoadVersion++;
-    this._pageQuads = [];
     this._atlas = null;
     super.destroy();
   }
@@ -208,58 +162,24 @@ export class Text extends AbstractText {
 
     const pool = getDefaultGlyphAtlasPool();
     pool.getAtlas(this._style.fontFamily, this._style.fontStyle, this._style.fontWeight, this.atlasMode, this._sdfRadius).clear();
-    this._rebuild('font');
+    this._markDirty('font');
   }
 
-  private _rebuild(_hint: StyleChangeHint): void {
-    this._pageQuads = [];
-    this._textBounds = { width: 0, height: 0 };
+  protected override _runLayout(hint: StyleChangeHint): TextLayoutResult {
+    // Empty text needs no glyph source at all, and acquiring one would create
+    // an atlas for a variant this node may never actually rasterize.
+    if (this._text.length === 0) return emptyTextLayout();
 
-    if (this._text.length === 0) {
-      // Empty transition: reset the extent and route through the content-dirty
-      // contract, exactly like the non-empty path below. Without this a Text
-      // going empty keeps its old local bounds and bumps no revision, so
-      // culling / hit-testing / the retained group aggregate read a stale
-      // extent, and any instruction-set cache of the prior geometry stays live.
-      this._setLocalBounds(0, 0, 0, 0);
-      this._updateOrigin();
-      this._style.consumeDirty();
-      return;
-    }
+    // Only a 'font' change can invalidate which atlas this node draws from;
+    // a re-flow reuses the one already resolved.
+    const atlas =
+      hint === 'font' || this._atlas === null
+        ? getDefaultGlyphAtlasPool().getAtlas(this._style.fontFamily, this._style.fontStyle, this._style.fontWeight, this.atlasMode, this._sdfRadius)
+        : this._atlas;
 
-    const pool = getDefaultGlyphAtlasPool();
-    const atlas = pool.getAtlas(this._style.fontFamily, this._style.fontStyle, this._style.fontWeight, this.atlasMode, this._sdfRadius);
     this._atlas = atlas;
 
-    const placements = layoutText(this._text, this._style, this._layout, atlas);
-
-    if (placements.length === 0) {
-      // Same empty-transition contract as above: no glyphs placed, so reset the
-      // extent and content-dirty rather than leaving a stale non-empty bounds.
-      this._setLocalBounds(0, 0, 0, 0);
-      this._updateOrigin();
-      this._style.consumeDirty();
-      return;
-    }
-
-    let maxX = 0,
-      maxY = 0;
-    for (const p of placements) {
-      const px = p.x + p.width;
-      const py = p.y + p.height;
-      if (px > maxX) maxX = px;
-      if (py > maxY) maxY = py;
-    }
-    this._textBounds = { width: maxX, height: maxY };
-    this._setLocalBounds(0, 0, maxX, maxY);
-
-    // An anchor is a fraction of the bounds, so a node whose text just changed
-    // width has to re-derive its origin — otherwise a centred label drifts left
-    // as it grows. Mirrors what Sprite does when it switches sub-frame.
-    this._updateOrigin();
-
-    this._pageQuads = buildTextPageQuads(placements);
-    this._style.consumeDirty();
+    return layoutText(this._text, this._style, this._layout, atlas);
   }
 }
 

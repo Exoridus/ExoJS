@@ -99,7 +99,17 @@ export type { TextOptions } from '#rendering/text/Text';
 export { Text } from '#rendering/text/Text';
 export type { FontFamily, FontRegistry, FontWeight, GradientAxis, StyleChangeHint, TextStyleOptions } from '#rendering/text/TextStyle';
 export { TextStyle } from '#rendering/text/TextStyle';
-export type { GlyphInfo, GlyphKey, GlyphPlacement, GlyphProvider, TextAlignment, TextLayoutStyle, TextPageQuads, TextSize } from '#rendering/text/types';
+export type {
+  GlyphInfo,
+  GlyphKey,
+  GlyphPlacement,
+  GlyphProvider,
+  TextAlignment,
+  TextLayoutResult,
+  TextLayoutStyle,
+  TextPageQuads,
+  TextSize,
+} from '#rendering/text/types';
 export type { DataTextureBuffer, DataTextureDirtyRegion, DataTextureFormat, DataTextureOptions } from '#rendering/texture/DataTexture';
 export { DataTexture } from '#rendering/texture/DataTexture';
 export { RenderTexture } from '#rendering/texture/RenderTexture';

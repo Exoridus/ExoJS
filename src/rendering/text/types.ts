@@ -2,7 +2,7 @@
 export type TextAlignment = 'left' | 'center' | 'right' | 'justify';
 
 /**
- * Minimal interface consumed by {@link layoutText} and {@link measureText}.
+ * Minimal interface consumed by {@link layoutText}.
  * Both {@link TextStyle} and the BMFont adapter satisfy this structurally.
  */
 export interface TextLayoutStyle {
@@ -89,10 +89,40 @@ export interface GlyphInfo {
   readonly yBearing?: number;
 }
 
-/** Pixel dimensions of a laid-out text string returned by {@link measureText}. */
+/**
+ * Advance extent of a laid-out text string in pixels — where the cursor ends
+ * up, not how far the glyphs reach. See {@link TextLayoutResult} for the
+ * difference between the two measures.
+ */
 export interface TextSize {
   readonly width: number;
   readonly height: number;
+}
+
+/**
+ * Result of a full text layout pass: quad placements plus both extents.
+ *
+ * Text has two honest sizes and they are not interchangeable. The advance is
+ * what a layout wants — it answers "how much room does this string take up in
+ * the flow". The ink is what the GPU wants — it answers "which rectangle do
+ * these glyphs actually cover", padding, outline reach and all.
+ */
+export interface TextLayoutResult {
+  /** Per-glyph quad placements in local text space. */
+  readonly placements: readonly GlyphPlacement[];
+  /**
+   * Advance extent — where the cursor ends up. Width is the widest line's
+   * advance (letterSpacing and kerning included, no trailing gap), height is
+   * `lineCount * (fontSize * lineHeight + leading)`. This is the measure a
+   * caller wants for layout, panel sizing and caret placement.
+   */
+  readonly advance: TextSize;
+  /**
+   * Ink extent — the union of the glyph quads, in the same local space as
+   * `placements`. Carries SDF padding and therefore outline/shadow reach, and
+   * its minimum is not necessarily zero. This is the node's local bounds.
+   */
+  readonly ink: { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
 }
 
 /**

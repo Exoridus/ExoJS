@@ -167,15 +167,18 @@ this.hud.addChild(this.scoreLabel);
 this.addChild(this.hud);
 ```
 
-The glyph geometry is not a child node — it lives on the `Text` itself as per-atlas-page quad data the text renderer consumes. Two rebuild paths feed it:
-- Assigning `text.text` (or `text.layout`, or a whole new `text.style`) re-lays out immediately. Assigning the same string is a no-op, so changing the text every frame only costs a rebuild on the frames it actually changes.
-- Mutating `style` fields (e.g. `text.style.fillColor = ...`) only raises a dirty flag. Any number of mutations in one frame coalesce into at most one rebuild, applied automatically before the next draw — no manual call needed. `text.syncDirty()` forces it early, which is what you want before reading bounds right after a style change.
+The glyph geometry is not a child node — it lives on the `Text` itself as per-atlas-page quad data the text renderer consumes. Nothing you assign lays the text out on the spot: assigning `text.text`, `text.layout` or a whole new `text.style`, and mutating `style` fields (e.g. `text.style.fillColor = ...`), all just mark the geometry stale. Any number of changes in one frame coalesce into **at most one layout pass**, which runs the moment something reads the node — its bounds, its measurements, or the renderer's collect phase, whichever comes first. Assigning the same string is a no-op, so changing the text every frame only costs a pass on the frames it actually changes. `text.syncDirty()` forces the pass early, but you rarely need it: every read resolves on its own.
 
 The node's local bounds track the laid-out text, so an anchored label re-derives its origin whenever the string changes width — a centred score readout stays centred as it grows.
 
 ## Measuring text
 
-`text.textBounds` reports the pixel dimensions of the laid-out block in local space as a [`TextSize`](/ExoJS/en/api/text-size/) (`{ width, height }`) — use it to size a panel around a label or to position something next to it:
+A laid-out string has **two honest sizes**, and picking the wrong one is the usual source of a panel that fits badly:
+
+- `text.textBounds` is the **advance** — where the cursor ends up. This is the layout measure: how much room the string takes up in the flow, and where a caret or a following element belongs. It is a [`TextSize`](/ExoJS/en/api/text-size/) (`{ width, height }`).
+- `text.getLocalBounds()` is the **ink** — the rectangle the glyph quads actually cover. It includes the SDF padding, and therefore the reach of any outline or shadow. In SDF mode it starts at a slightly negative `x`/`y` and is a little larger than the advance on both axes. This is what culling, hit-testing and the gradient ramp use.
+
+Use the advance to size a panel around a label or to position something next to it:
 
 ```ts
 this.label = new Text('Ready', { fontSize: 24 });
@@ -186,7 +189,7 @@ this.backdrop = new Panel({
 });
 ```
 
-Reading it right after a style mutation returns the pre-change size, because style changes are only applied on the next draw. Call `this.label.syncDirty()` first to force the pending rebuild.
+Both reads resolve a pending layout pass first, so the number you get always reflects the changes you have made — including a style mutation on the line above.
 
 ## Text constraints
 

@@ -1,16 +1,16 @@
 {
   "title": "AbstractText",
-  "description": "Base class for all text rendering nodes. Provides the common `text` property and the on-demand dirty protocol used by the renderer. Subclasses: - Text — runtime Canvas 2D / SDF rasterization - BitmapText — offline pre-built atlas (BMFont / MSDF)",
+  "description": "Base class for all text rendering nodes. Owns the string, the style and layout references, the on-demand dirty protocol, and the two extents a laid-out string has. A mutation never lays text out. It marks the node dirty; the pass runs on the next read — `getLocalBounds()`, `textBounds`, or the renderer's collect phase, whichever comes first — and runs exactly once per actual change no matter how many properties were touched in between. Subclasses: - Text — runtime Canvas 2D / SDF rasterization - BitmapText — offline pre-built atlas (BMFont / MSDF)",
   "symbol": "AbstractText",
   "kind": "class",
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 87,
+  "memberCount": 93,
   "counts": {
     "constructors": 1,
-    "methods": 37,
-    "properties": 35,
+    "methods": 41,
+    "properties": 37,
     "events": 14
   },
   "sections": [
@@ -19,7 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Base class for all text rendering nodes. Provides the common `text` property and the on-demand dirty protocol used by the renderer.",
+        "Base class for all text rendering nodes. Owns the string, the style and layout references, the on-demand dirty protocol, and the two extents a laid-out string has.",
+        "A mutation never lays text out. It marks the node dirty; the pass runs on the next read — `getLocalBounds()`, `textBounds`, or the renderer's collect phase, whichever comes first — and runs exactly once per actual change no matter how many properties were touched in between.",
         "Subclasses: - Text — runtime Canvas 2D / SDF rasterization - BitmapText — offline pre-built atlas (BMFont / MSDF)"
       ],
       "importLine": "import { AbstractText } from '@codexo/exojs'",
@@ -31,7 +32,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(text: string): AbstractText",
+          "signature": "new(text: string, style: TextStyle, layout: LayoutOptions): AbstractText",
           "signatureTokens": [
             {
               "text": "new",
@@ -54,6 +55,38 @@
               "kind": "keyword"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "style",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextStyle",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "layout",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LayoutOptions",
+              "kind": "type"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -71,6 +104,16 @@
               "name": "text",
               "type": "string",
               "optional": false
+            },
+            {
+              "name": "style",
+              "type": "TextStyle",
+              "optional": false
+            },
+            {
+              "name": "layout",
+              "type": "LayoutOptions",
+              "optional": false
             }
           ],
           "returnType": "AbstractText",
@@ -85,6 +128,184 @@
       "id": "methods",
       "title": "Methods",
       "members": [
+        {
+          "name": "_consumePendingHint",
+          "signature": "_consumePendingHint(): StyleChangeHint | null",
+          "signatureTokens": [
+            {
+              "text": "_consumePendingHint",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "StyleChangeHint",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "StyleChangeHint | null",
+          "description": "Take the heaviest pending hint and settle the node, folding in whatever the attached TextStyle has latched since the last pass. A style carries its own dirty flag because it is mutated in place rather than assigned, so polling it here is what makes label.style.align = … land."
+        },
+        {
+          "name": "_markDirty",
+          "signature": "_markDirty(hint: StyleChangeHint): void",
+          "signatureTokens": [
+            {
+              "text": "_markDirty",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "hint",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "StyleChangeHint",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "hint",
+              "type": "StyleChangeHint",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Mark the laid-out geometry stale without laying anything out. Subclasses call this from every setter that affects the glyph run. The content stamp is not deferred with the pass — see _onStyleChange for why a retained subtree has to learn about the change immediately even though the geometry can wait."
+        },
+        {
+          "name": "_replaceStyle",
+          "signature": "_replaceStyle(style: TextStyle): void",
+          "signatureTokens": [
+            {
+              "text": "_replaceStyle",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "style",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextStyle",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "style",
+              "type": "TextStyle",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Swap the attached style, moving the in-place-mutation subscription with it so the replaced style stops driving this node."
+        },
+        {
+          "name": "_runLayout",
+          "signature": "_runLayout(hint: StyleChangeHint): TextLayoutResult",
+          "signatureTokens": [
+            {
+              "text": "_runLayout",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "hint",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "StyleChangeHint",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextLayoutResult",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "hint",
+              "type": "StyleChangeHint",
+              "optional": false
+            }
+          ],
+          "returnType": "TextLayoutResult",
+          "description": "Run one layout pass. Subclasses supply the glyph provider and style. hint is the heaviest change this pass has to account for: only 'font' invalidates the glyph source, so a subclass that pays to acquire one can reuse its cached provider for a plain 'layout' pass."
+        },
         {
           "name": "_updateOrigin",
           "signature": "_updateOrigin(): void",
@@ -112,7 +333,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Re-derive origin from the fractional anchor and the CURRENT local bounds. Uses local (untransformed) bounds on purpose: the transform multiplies the origin by scale itself, so deriving from world bounds would double-apply scale whenever the anchor is set after scaling. Subclasses whose local bounds change after construction (e.g. a sprite switching to a texture sub-frame) must call this to keep an anchored node anchored. The origin includes the bounds ORIGIN, not just its extent: a node whose local rectangle does not start at (0, 0) — a mesh built around its own centre, an Aseprite frame carrying an offset — still rotates and scales about its own middle at anchor = (0.5, 0.5)."
+          "description": "Anchor against the ADVANCE box, not against the local (ink) bounds. The base implementation derives the origin from getLocalBounds(), which is right for every node whose extent is its content. Text is the exception: its ink carries SDF padding that reaches past the glyphs on all four sides, by a different amount on each. Anchoring against it would centre the padded tile rather than the text, and would push an UNanchored label off its own position by the left/top padding. The typographic box is what a caller means by \"centre this caption\"."
         },
         {
           "name": "addFilter",
@@ -485,7 +706,7 @@
           ],
           "params": [],
           "returnType": "ReadonlyRectangle",
-          "description": "This node's untransformed extent in its own local coordinate space. Returns the LIVE internal rectangle, not a copy: it is read on hot paths (updateBounds re-reads it on every transform-dirty recompute, i.e. potentially every frame for a moving node), so copying it here would add a per-frame allocation. It is therefore typed as a ReadonlyRectangle — reads are unchanged, writes are rejected at compile time. Writing to it directly would skip the bounds/content invalidation the engine needs, leaving culling, hit-testing and retained render fragments on a stale extent. A custom Drawable that owns its own size sets it through _setLocalBounds, which writes and invalidates in one step."
+          "description": "Local ink extent — the union of the glyph quads, resolving a pending layout pass first. The resolve is not optional. Culling reads the local bounds BEFORE the renderer's collect phase gets a chance to call syncDirty, so a node that deferred its pass would be culled against the previous string's extent — and a label going from empty to non-empty would never appear at all. Reading is still cheap: with nothing pending this returns straight away, so no per-frame invalidation is introduced and a static subtree stays skippable."
         },
         {
           "name": "getNormals",
@@ -1515,7 +1736,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Consume any pending style mutations and apply them synchronously. The renderer calls this automatically before each draw, so manual calls are only needed when you require up-to-date geometry outside of a render pass (e.g. to measure bounds right after a style change)."
+          "description": "Resolve a pending layout pass, if any, and apply it synchronously. The renderer calls this before each draw and every extent read resolves on its own, so manual calls are rarely needed."
         },
         {
           "name": "update",
@@ -2166,6 +2387,39 @@
           "description": ""
         },
         {
+          "name": "layout",
+          "signature": "layout: Readonly<LayoutOptions>",
+          "signatureTokens": [
+            {
+              "text": "layout",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LayoutOptions",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Flow-control options — maxWidth, letterSpacing, whiteSpace etc. Handed out read-only: the node holds its own copy, so mutating the object would change nothing. Assign a new one to re-flow."
+        },
+        {
           "name": "mask",
           "signature": "mask: MaskSource",
           "signatureTokens": [
@@ -2206,6 +2460,39 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "pageQuads",
+          "signature": "pageQuads: readonly TextPageQuads[]",
+          "signatureTokens": [
+            {
+              "text": "pageQuads",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextPageQuads",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Per-page quad data consumed by the text renderer. Resolves a pending layout pass first, so a reader never sees the previous string's geometry."
         },
         {
           "name": "parent",
@@ -2423,7 +2710,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Pixel dimensions of the laid-out text block in local space. Used by the renderer to compute normalized gradient UVs."
+          "description": "Advance extent of the laid-out text — where the cursor ends up, which is the number to size a panel or place a caret against. This is NOT the rectangle the glyphs cover: SDF padding, outlines and shadows all reach past it, and in SDF mode the ink even starts at a negative coordinate. getLocalBounds returns that ink extent, and it is what culling, hit-testing and the gradient box use. Resolves a pending layout pass before answering."
         },
         {
           "name": "tint",

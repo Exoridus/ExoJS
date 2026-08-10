@@ -19,14 +19,46 @@ import { TextStyle } from '#rendering/text/TextStyle';
 import type { GlyphInfo } from '#rendering/text/types';
 
 // ---------------------------------------------------------------------------
-// Mock pool
+// Layout-pass counter
+//
+// The dirty model's whole promise is "at most one pass per change", which is
+// only observable by counting the passes — a geometry comparison cannot tell
+// one rebuild from three.
 // ---------------------------------------------------------------------------
+
+const layoutCounter = vi.hoisted(() => ({ passes: 0 }));
+
+vi.mock('#rendering/text/TextLayout', async importOriginal => {
+  const actual = await importOriginal<typeof import('#rendering/text/TextLayout')>();
+
+  return {
+    ...actual,
+    layoutText: (...args: Parameters<typeof actual.layoutText>) => {
+      layoutCounter.passes++;
+
+      return actual.layoutText(...args);
+    },
+  };
+});
+
+const layoutPasses = (): number => layoutCounter.passes;
+
+// ---------------------------------------------------------------------------
+// Mock pool
+//
+// The glyph metrics imitate the SDF path: the atlas tile is bigger than the
+// advance and the bearings are negative, so the ink extent is wider than the
+// advance extent and starts left of / above the layout origin.
+// ---------------------------------------------------------------------------
+
+/** SDF padding baked into the mock glyph, mirroring `GlyphSdf`'s buffer. */
+const PADDING_BEARING = -4;
 
 const fixedGlyphInfo: GlyphInfo = {
   x: 0,
   y: 0,
-  width: 8,
-  height: 16,
+  width: 16,
+  height: 32,
   advance: 10,
   ascent: 13,
   page: 0,
@@ -34,6 +66,8 @@ const fixedGlyphInfo: GlyphInfo = {
   uvTop: 0.0,
   uvRight: 0.01,
   uvBottom: 0.02,
+  xBearing: PADDING_BEARING,
+  yBearing: PADDING_BEARING,
 };
 
 const mockPage = {
@@ -171,13 +205,13 @@ describe('Text', () => {
     const text = new Text('Hi');
     text.setAnchor(0.5, 0.5);
 
-    const shortWidth = text.getLocalBounds().width;
+    const shortWidth = text.textBounds.width;
 
     expect(text.origin.x).toBeCloseTo(shortWidth / 2);
 
     text.text = 'Much longer caption';
 
-    const longWidth = text.getLocalBounds().width;
+    const longWidth = text.textBounds.width;
 
     expect(longWidth).toBeGreaterThan(shortWidth);
     expect(text.origin.x).toBeCloseTo(longWidth / 2);
@@ -250,17 +284,134 @@ describe('Text', () => {
     expect(text.pageQuads[0]).not.toBe(quadsBefore);
   });
 
-  test('style property mutations are deferred to update()', () => {
+  test('style property mutations are deferred until something reads the node', () => {
     const text = new Text('Hi', { fontSize: 16 });
     const style = text.style;
     const quadsBefore = text.pageQuads[0];
+    const passesBefore = layoutPasses();
 
-    style.fontFamily = 'Georgia'; // font hint — must NOT rebuild immediately
+    style.fontFamily = 'Georgia'; // font hint — must NOT lay out immediately
 
-    expect(text.pageQuads[0]).toBe(quadsBefore);
+    expect(layoutPasses()).toBe(passesBefore);
 
     text.update(16);
+
+    expect(layoutPasses()).toBe(passesBefore + 1);
     expect(text.pageQuads[0]).not.toBe(quadsBefore);
+  });
+
+  // ME-60: the class doc promises "rebuilt at most once, on demand". Every
+  // setter used to lay the text out on the spot, so a label updated three
+  // times in a frame paid for three full passes and threw two of them away.
+  test('a run of mutations costs exactly one layout pass', () => {
+    const text = new Text('Hello', { fontSize: 16 });
+
+    // Settle the node so the constructor's own pass is not counted.
+    text.syncDirty();
+
+    const passesBefore = layoutPasses();
+
+    text.text = 'a';
+    text.text = 'b';
+    text.text = 'c';
+    text.style.align = 'center';
+    text.layout = { letterSpacing: 2 };
+
+    expect(layoutPasses()).toBe(passesBefore);
+
+    expect(text.pageQuads.length).toBeGreaterThan(0);
+
+    expect(layoutPasses()).toBe(passesBefore + 1);
+
+    // And a second read with nothing pending costs nothing at all.
+    expect(text.pageQuads.length).toBeGreaterThan(0);
+    expect(layoutPasses()).toBe(passesBefore + 1);
+  });
+
+  // The cull pass reads getLocalBounds() BEFORE the renderer's collect phase
+  // calls syncDirty(). A node that deferred its layout past that read would be
+  // culled against the previous string's extent.
+  test('getLocalBounds() resolves a pending layout without an explicit sync', () => {
+    const text = new Text('Hi');
+    const shortWidth = text.getLocalBounds().width;
+
+    text.text = 'Much longer caption';
+
+    expect(text.getLocalBounds().width).toBeGreaterThan(shortWidth);
+  });
+
+  test('a text going from empty to non-empty has a non-zero extent on the first read', () => {
+    const text = new Text('');
+
+    expect(text.getLocalBounds().width).toBe(0);
+
+    text.text = 'Now visible';
+
+    // Without the resolving getLocalBounds() this stays 0, the node is culled
+    // as empty, and the label never appears at all.
+    expect(text.getLocalBounds().width).toBeGreaterThan(0);
+  });
+
+  // Two measures, two meanings: the advance is where the cursor lands, the ink
+  // is the rectangle the padded SDF quads cover.
+  test('textBounds is the advance while getLocalBounds() is the wider ink', () => {
+    const text = new Text('Hi');
+    const advance = text.textBounds;
+    const ink = text.getLocalBounds();
+
+    expect(advance.width).toBe(2 * fixedGlyphInfo.advance);
+    expect(ink.x).toBe(PADDING_BEARING);
+    expect(ink.y).toBe(PADDING_BEARING);
+    expect(ink.width).toBeGreaterThan(advance.width);
+    expect(ink.height).toBeGreaterThan(advance.height);
+  });
+
+  // The anchor is measured against the typographic box, NOT against the ink:
+  // the SDF padding reaches past the glyphs by a different amount on each
+  // side, so anchoring to the ink would centre the padded tile instead of the
+  // caption — and would push an unanchored label off its own position.
+  test('the anchor is taken against the advance, not the padded ink', () => {
+    const text = new Text('Hi');
+    const advance = text.textBounds;
+    const ink = text.getLocalBounds();
+
+    text.setAnchor(0.5, 0.5);
+
+    expect(text.origin.x).toBeCloseTo(advance.width / 2);
+    expect(text.origin.y).toBeCloseTo(advance.height / 2);
+    expect(text.origin.x).not.toBeCloseTo(ink.x + ink.width / 2);
+  });
+
+  test('a laid-out text at the default anchor keeps its origin at zero', () => {
+    // Regression: deriving the origin from the ink gave an unanchored label an
+    // origin of (-padding, -padding), moving every SDF text on screen.
+    const text = new Text('Hi');
+
+    expect(text.pageQuads.length).toBeGreaterThan(0);
+    expect(text.origin.x).toBe(0);
+    expect(text.origin.y).toBe(0);
+  });
+
+  test('mutating the options object after construction does not re-flow the node', () => {
+    const options = { fontSize: 16, letterSpacing: 0 };
+    const text = new Text('Hi', options);
+    const widthBefore = text.textBounds.width;
+
+    options.letterSpacing = 40;
+
+    expect(text.textBounds.width).toBe(widthBefore);
+  });
+
+  test('layout is handed out as a copy of the assigned object', () => {
+    const text = new Text('Hi');
+    const assigned = { letterSpacing: 4 };
+
+    text.layout = assigned;
+    const widthBefore = text.textBounds.width;
+
+    assigned.letterSpacing = 40;
+
+    expect(text.textBounds.width).toBe(widthBefore);
   });
 
   test('colorGlyphs flag is accessible', () => {

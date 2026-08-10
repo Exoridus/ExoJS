@@ -456,6 +456,7 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "TextAlignment: type alias",
   "TextAsset: class",
   "TextFactory: class",
+  "TextLayoutResult: interface",
   "TextLayoutStyle: interface",
   "TextOptions: interface",
   "TextPageQuads: interface",

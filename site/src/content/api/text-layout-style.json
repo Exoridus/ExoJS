@@ -1,6 +1,6 @@
 {
   "title": "TextLayoutStyle",
-  "description": "Minimal interface consumed by layoutText and measureText. Both TextStyle and the BMFont adapter satisfy this structurally.",
+  "description": "Minimal interface consumed by layoutText. Both TextStyle and the BMFont adapter satisfy this structurally.",
   "symbol": "TextLayoutStyle",
   "kind": "interface",
   "subsystem": "rendering",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Minimal interface consumed by layoutText and measureText. Both TextStyle and the BMFont adapter satisfy this structurally."
+        "Minimal interface consumed by layoutText. Both TextStyle and the BMFont adapter satisfy this structurally."
       ],
       "importLine": "import { TextLayoutStyle } from '@codexo/exojs'",
       "sourceLink": null
