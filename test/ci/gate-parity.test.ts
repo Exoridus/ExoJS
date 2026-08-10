@@ -98,16 +98,16 @@ describe('CI gate jobs cover every gate group', () => {
   });
 });
 
+const groupJobPairs = groupNames.map(group => [group, EXPECTED_JOB_FOR_GROUP[group]] as const);
+
 describe('each gate group runs in the CI job that owns it', () => {
-  it.each(groupNames)('group `%s` is invoked inside job `%s`, not merely somewhere in the workflow', group => {
-    const jobName = EXPECTED_JOB_FOR_GROUP[group];
+  it.each(groupJobPairs)('group `%s` is invoked inside job `%s`, not merely somewhere in the workflow', (group, jobName) => {
     const jobBlock = extractJobBlock(workflow, jobName);
 
     expect(jobBlock).toMatch(new RegExp(`pnpm gates ${group}\\b`));
   });
 
-  it.each(groupNames)('the job owning group `%s` is required by `required-ci`', group => {
-    const jobName = EXPECTED_JOB_FOR_GROUP[group];
+  it.each(groupJobPairs)('group `%s` is owned by job `%s`, which `required-ci` depends on', (_group, jobName) => {
     const requiredNeeds = extractRequiredCiNeeds(workflow);
 
     expect(requiredNeeds).toContain(jobName);
