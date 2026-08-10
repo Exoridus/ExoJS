@@ -27,9 +27,14 @@ export interface LockstepPackage {
   /** Core is `false`; every opt-in package is an extension. */
   readonly isExtension: boolean;
   /**
-   * Package-policy shape: `true` ships a `/register` side-effect entry
-   * (`particles`/`tilemap`/`tiled`/`aseprite`/`ldtk`); `false` is a library that
-   * ships `sideEffects: false` (`physics`/`audio-fx`/`react`). Ignored for Core.
+   * Package-policy shape: `true` ships a `/register` side-effect entry; `false`
+   * is a library that ships `sideEffects: false`. Ignored for Core.
+   *
+   * Every package is `false` since `ApplicationOptions.extensions` became the
+   * only way to equip an app — there is no global registry left for a
+   * side-effect entry to register into. The field stays because
+   * `create-package --register` can still emit that shape and the policy has to
+   * keep being able to describe it; see the review note on retiring both.
    */
   readonly hasRegister: boolean;
   /**
@@ -42,13 +47,13 @@ export interface LockstepPackage {
 
 export const LOCKSTEP_PACKAGES = [
   { name: '@codexo/exojs', dir: '.', isExtension: false, hasRegister: false, inOfflineSmoke: true },
-  { name: '@codexo/exojs-particles', dir: 'packages/exojs-particles', isExtension: true, hasRegister: true, inOfflineSmoke: true },
-  { name: '@codexo/exojs-tilemap', dir: 'packages/exojs-tilemap', isExtension: true, hasRegister: true, inOfflineSmoke: true },
-  { name: '@codexo/exojs-tiled', dir: 'packages/exojs-tiled', isExtension: true, hasRegister: true, inOfflineSmoke: true },
+  { name: '@codexo/exojs-particles', dir: 'packages/exojs-particles', isExtension: true, hasRegister: false, inOfflineSmoke: true },
+  { name: '@codexo/exojs-tilemap', dir: 'packages/exojs-tilemap', isExtension: true, hasRegister: false, inOfflineSmoke: true },
+  { name: '@codexo/exojs-tiled', dir: 'packages/exojs-tiled', isExtension: true, hasRegister: false, inOfflineSmoke: true },
   { name: '@codexo/exojs-physics', dir: 'packages/exojs-physics', isExtension: true, hasRegister: false, inOfflineSmoke: true },
   { name: '@codexo/exojs-audio-fx', dir: 'packages/exojs-audio-fx', isExtension: true, hasRegister: false, inOfflineSmoke: true },
-  { name: '@codexo/exojs-aseprite', dir: 'packages/exojs-aseprite', isExtension: true, hasRegister: true, inOfflineSmoke: true },
-  { name: '@codexo/exojs-ldtk', dir: 'packages/exojs-ldtk', isExtension: true, hasRegister: true, inOfflineSmoke: true },
+  { name: '@codexo/exojs-aseprite', dir: 'packages/exojs-aseprite', isExtension: true, hasRegister: false, inOfflineSmoke: true },
+  { name: '@codexo/exojs-ldtk', dir: 'packages/exojs-ldtk', isExtension: true, hasRegister: false, inOfflineSmoke: true },
   { name: '@codexo/exojs-react', dir: 'packages/exojs-react', isExtension: true, hasRegister: false, inOfflineSmoke: false },
 ] as const satisfies readonly LockstepPackage[];
 

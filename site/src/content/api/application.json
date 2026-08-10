@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 51,
+  "memberCount": 52,
   "counts": {
     "constructors": 1,
     "methods": 10,
-    "properties": 32,
+    "properties": 33,
     "events": 8
   },
   "sections": [

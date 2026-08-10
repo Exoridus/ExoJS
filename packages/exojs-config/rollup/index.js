@@ -30,10 +30,17 @@ const corePaths = {
  *   `external` lists additional bare package names (e.g. `'react'`) to mark
  *   external alongside the always-external `@codexo/exojs*` core. Subpaths
  *   (e.g. `react/jsx-runtime`) are matched too.
+ *
+ *   `inputs` defaults to the root entry alone. A package that ships extra
+ *   entries — a `/debug` subpath, a `/register` side-effect entry — lists them
+ *   explicitly. The default used to include `src/register.ts`, which made a
+ *   missing register entry a build failure rather than the normal case; since
+ *   `ApplicationOptions.extensions` became the only way to equip an app, no
+ *   package ships one.
  * @returns {import('rollup').RollupOptions}
  */
 export function createExtensionConfig(opts) {
-  const { root, sourceCondition, inputs = ['src/index.ts', 'src/register.ts'], external = [] } = opts;
+  const { root, sourceCondition, inputs = ['src/index.ts'], external = [] } = opts;
 
   const defines = createBuildDefinesFromRepo({
     mode: process.env.EXOJS_ENV === 'development' ? 'development' : 'production',
