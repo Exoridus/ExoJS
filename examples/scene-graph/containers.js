@@ -15,7 +15,6 @@ class ContainersScene extends Scene {
             sprite.setPosition((i % 5) * (sprite.width + 15), ((i / 5) | 0) * (sprite.height + 10));
             this.bunnies.addChild(sprite);
         }
-        this.bunnies.setAnchor(0.5);
     }
     update(delta) {
         const bounds = this.bunnies.getBounds();

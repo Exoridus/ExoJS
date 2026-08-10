@@ -310,6 +310,13 @@ export class Sprite extends Drawable {
     // origin and renders offset by the size difference (an anchored sprite
     // switching from the full atlas to its first animation frame used to
     // land hundreds of pixels off-canvas).
+    //
+    // The zero-anchor skip is not an optimisation: a zero anchor means the
+    // anchor does not drive the origin at all, so an origin set explicitly by
+    // the caller has to survive a frame change. It cannot swallow a needed
+    // update either — the anchor-derived origin is a pure function of the
+    // anchor and the box SIZE, so a zero anchor always derives `(0, 0)`, which
+    // is what an anchor-free sprite already has.
     if (this.anchor.x !== 0 || this.anchor.y !== 0) {
       this._updateOrigin();
     }

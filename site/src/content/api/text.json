@@ -1277,7 +1277,7 @@
             }
           ],
           "returnType": "this",
-          "description": ""
+          "description": "Set the normalized anchor and re-derive origin from it."
         },
         {
           "name": "setBlendMode",
@@ -2189,7 +2189,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Normalized anchor in 0..1 along each axis that derives origin from the current bounds size. (0, 0) = top-left, (0.5, 0.5) = center, (1, 1) = bottom-right. Updates origin whenever the anchor or the local bounds change."
+          "description": "Normalized anchor in 0..1 along each axis that derives origin from this drawable's layout box. (0, 0) = top-left, (0.5, 0.5) = centre, (1, 1) = bottom-right. Updates origin whenever the anchor or the layout box changes. The mapping is a pure function of the anchor and the box size — the same anchor value always yields the same origin, whatever it was set to before — so (0, 0), the default, always means origin = (0, 0). Set origin directly instead when the pivot is not a fraction of the box."
         },
         {
           "name": "atlas",

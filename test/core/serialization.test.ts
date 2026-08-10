@@ -647,6 +647,76 @@ describe('serialization — AnimatedSprite', () => {
   });
 });
 
+describe('serialization — anchor', () => {
+  it('omits a default anchor and round-trips a non-default one', () => {
+    const texture = createTexture(64, 32);
+    const loader = fakeLoader([{ type: Texture, source: 'hero.png', resource: texture }]);
+
+    expect(serializeTree(new Sprite(texture), loader).anchorX).toBeUndefined();
+
+    const sprite = new Sprite(texture);
+
+    sprite.setAnchor(0.5, 0.25);
+
+    const data = serializeTree(sprite, loader);
+
+    expect(data.anchorX).toBe(0.5);
+    expect(data.anchorY).toBe(0.25);
+
+    const restored = deserializeTree(data, loader) as Sprite;
+
+    expect(restored.anchor.x).toBe(0.5);
+    expect(restored.anchor.y).toBe(0.25);
+    expect(restored.origin.x).toBe(32);
+    expect(restored.origin.y).toBe(8);
+  });
+
+  it('lets an explicitly stored origin win over the anchor it would derive', () => {
+    const texture = createTexture(64, 32);
+    const loader = fakeLoader([{ type: Texture, source: 'hero.png', resource: texture }]);
+    const data: SerializedNode = { type: 'Sprite', texture: 'hero.png', anchorX: 0.5, anchorY: 0.5, originX: 3, originY: 7 };
+
+    const restored = deserializeTree(data, loader) as Sprite;
+
+    // Writing the anchor re-derives the origin, so the read order decides:
+    // the anchor is applied first and the recorded origin overwrites it.
+    expect(restored.origin.x).toBe(3);
+    expect(restored.origin.y).toBe(7);
+    // The anchor still lands, so a later layout-box change re-derives from it.
+    expect(restored.anchor.x).toBe(0.5);
+    expect(restored.anchor.y).toBe(0.5);
+  });
+
+  it('keeps a deserialized AnimatedSprite anchored across differently-sized frames', () => {
+    const texture = createTexture(128, 128);
+    const loader = fakeLoader([{ type: Texture, source: 'hero.png', resource: texture }]);
+    const sprite = new AnimatedSprite(texture, {
+      big: { frames: [new Rectangle(0, 0, 64, 64)], fps: 10 },
+      small: { frames: [new Rectangle(0, 64, 16, 16)], fps: 10 },
+    });
+
+    sprite.setAnchor(0.5);
+    sprite.play('big');
+
+    expect(sprite.origin.x).toBe(32);
+    expect(sprite.origin.y).toBe(32);
+
+    const restored = deserializeTree(serializeTree(sprite, loader), loader) as AnimatedSprite;
+
+    expect(restored.origin.x).toBe(32);
+    expect(restored.origin.y).toBe(32);
+
+    // Without the anchor in the document this sprite would come back with
+    // anchor (0, 0) and a restored origin of (32, 32) that nothing re-derives:
+    // the 16x16 clip would keep pivoting around the 64x64 frame's centre.
+    restored.play('small');
+
+    expect(restored.anchor.x).toBe(0.5);
+    expect(restored.origin.x).toBe(8);
+    expect(restored.origin.y).toBe(8);
+  });
+});
+
 describe('serialization — BitmapText', () => {
   it('round-trips text, font ref, msdf and scale', () => {
     const fontData: BmFontData = {

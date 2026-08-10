@@ -24,7 +24,6 @@ class ContainersScene extends Scene {
             this.bunnies.addChild(sprite);
         }
 
-        this.bunnies.setAnchor(0.5);
     }
 
     override update(delta: Time): void {

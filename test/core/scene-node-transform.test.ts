@@ -422,7 +422,7 @@ describe('SceneNode.destroy() releases all owned resources', () => {
     expect(() => node.destroy()).not.toThrow();
   });
 
-  test('destroy releases transform, bounds, anchor, and flags resources', () => {
+  test('destroy releases transform, bounds, and flags resources', () => {
     const node = new SceneNode();
 
     node.getTransform();
@@ -436,11 +436,10 @@ describe('SceneNode.destroy() releases all owned resources', () => {
     const globalTransformSpy = vi.spyOn(node['_globalTransform'], 'destroy');
     const localBoundsSpy = vi.spyOn(node['_localBounds'], 'destroy');
     const boundsSpy = vi.spyOn(node['_bounds'], 'destroy');
-    const anchorSpy = vi.spyOn(node['_anchor'], 'destroy');
 
     node.destroy();
 
-    // All nine owned resources must be released. This guards against a
+    // All eight owned resources must be released. This guards against a
     // future refactor accidentally dropping a destroy call.
     expect(transformSpy).toHaveBeenCalledTimes(1);
     expect(positionSpy).toHaveBeenCalledTimes(1);
@@ -450,7 +449,20 @@ describe('SceneNode.destroy() releases all owned resources', () => {
     expect(globalTransformSpy).toHaveBeenCalledTimes(1);
     expect(localBoundsSpy).toHaveBeenCalledTimes(1);
     expect(boundsSpy).toHaveBeenCalledTimes(1);
+  });
+
+  test('Drawable.destroy releases the anchor it owns', () => {
+    const drawable = new TestDrawable();
+
+    drawable.getTransform();
+
+    const anchorSpy = vi.spyOn(drawable['_anchor'], 'destroy');
+    const tintSpy = vi.spyOn(drawable['_tint'], 'destroy');
+
+    drawable.destroy();
+
     expect(anchorSpy).toHaveBeenCalledTimes(1);
+    expect(tintSpy).toHaveBeenCalledTimes(1);
   });
 
   test('Container.destroy chains through SceneNode.destroy', () => {

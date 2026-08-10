@@ -69,6 +69,14 @@ export function writeCommonFields(node: SceneNode, out: SerializedNode): void {
     if (node.pixelSnapMode !== PixelSnapMode.None) {
       out.pixelSnapMode = node.pixelSnapMode;
     }
+
+    // The anchor is written alongside the origin it derives, not instead of
+    // it. A node that resolves its layout box lazily (an AnimatedSprite whose
+    // frames differ in size) has to know it is anchored before it can re-derive
+    // the origin for a new box; an origin restored on its own leaves the anchor
+    // at (0, 0) and the pivot goes stale on the next frame change.
+    if (node.anchor.x !== 0) out.anchorX = node.anchor.x;
+    if (node.anchor.y !== 0) out.anchorY = node.anchor.y;
   }
 }
 
@@ -87,6 +95,20 @@ export function applyCommonFields(node: SceneNode, data: SerializedNode): void {
   if (typeof data.scaleY === 'number') node.scale.y = data.scaleY;
   if (typeof data.skewX === 'number') node.skewX = data.skewX;
   if (typeof data.skewY === 'number') node.skewY = data.skewY;
+  // The anchor is applied BEFORE the origin, and deliberately so: writing the
+  // anchor re-derives the origin from the layout box, so an origin that was
+  // stored explicitly has to be written afterwards to win. Applying it the
+  // other way round would let the anchor silently overwrite a pivot the
+  // document recorded.
+  if (node instanceof Drawable) {
+    const anchorX = typeof data.anchorX === 'number' ? data.anchorX : 0;
+    const anchorY = typeof data.anchorY === 'number' ? data.anchorY : 0;
+
+    if (anchorX !== 0 || anchorY !== 0) {
+      node.anchor.set(anchorX, anchorY);
+    }
+  }
+
   if (typeof data.originX === 'number') node.origin.x = data.originX;
   if (typeof data.originY === 'number') node.origin.y = data.originY;
   if (data.visible === false) node.visible = false;

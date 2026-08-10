@@ -140,7 +140,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Re-derive origin from the fractional anchor and the CURRENT local bounds. Uses local (untransformed) bounds on purpose: the transform multiplies the origin by scale itself, so deriving from world bounds would double-apply scale whenever the anchor is set after scaling. Subclasses whose local bounds change after construction (e.g. a sprite switching to a texture sub-frame) must call this to keep an anchored node anchored. The origin includes the bounds ORIGIN, not just its extent: a node whose local rectangle does not start at (0, 0) — a mesh built around its own centre, an Aseprite frame carrying an offset — still rotates and scales about its own middle at anchor = (0.5, 0.5)."
+          "description": "Re-derive origin from the fractional anchor and the CURRENT layout box. Uses local (untransformed) bounds on purpose: the transform multiplies the origin by scale itself, so deriving from world bounds would double-apply scale whenever the anchor is set after scaling. Subclasses whose layout box changes after construction (e.g. a sprite switching to a texture sub-frame) must call this to keep an anchored node anchored. The anchor measures against the drawable's declared LAYOUT BOX — its extent, taken from its own local origin — and never against where its AABB happens to start. Only the size term participates, so the mapping from anchor to origin is a pure function of the anchor and the box size: anchor = (0, 0) always means origin = (0, 0), whatever the anchor was set to before. Folding the bounds origin in would make it path-dependent instead — a drawable whose rectangle starts off-origin would keep that corner baked into its origin after returning to the default anchor. A drawable whose layout box is NOT its local bounds overrides this: text measures against its typographic advance, an AnimatedSprite against the untrimmed source frame rather than the per-frame trimmed rectangle."
         },
         {
           "name": "addFilter",
@@ -1101,7 +1101,7 @@
             }
           ],
           "returnType": "this",
-          "description": ""
+          "description": "Set the normalized anchor and re-derive origin from it."
         },
         {
           "name": "setBlendMode",
@@ -2118,7 +2118,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Normalized anchor in 0..1 along each axis that derives origin from the current bounds size. (0, 0) = top-left, (0.5, 0.5) = center, (1, 1) = bottom-right. Updates origin whenever the anchor or the local bounds change."
+          "description": "Normalized anchor in 0..1 along each axis that derives origin from this drawable's layout box. (0, 0) = top-left, (0.5, 0.5) = centre, (1, 1) = bottom-right. Updates origin whenever the anchor or the layout box changes. The mapping is a pure function of the anchor and the box size — the same anchor value always yields the same origin, whatever it was set to before — so (0, 0), the default, always means origin = (0, 0). Set origin directly instead when the pivot is not a fraction of the box."
         },
         {
           "name": "blendMode",
