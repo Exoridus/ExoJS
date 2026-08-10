@@ -64,7 +64,12 @@ export enum ApplicationStatus {
 export type CanvasSizingMode = 'fixed' | 'fill' | 'fit' | 'shrink' | 'letterbox';
 
 export interface CanvasApplicationOptions {
-  /** Existing canvas element to use. If omitted, Application creates one. */
+  /**
+   * Existing canvas element to use. If omitted, Application creates one — and
+   * a canvas it created is also one it removes from the document again in
+   * {@link Application.destroy}. A canvas passed in here stays yours: it is
+   * left in the DOM untouched when the application goes down.
+   */
   element?: HTMLCanvasElement;
   /** Logical canvas width. Default: 800. */
   width?: number;
@@ -247,6 +252,25 @@ const systemsStartMark = 'exojs:systems:start';
 const systemsMeasure = 'exojs:systems';
 
 const createDefaultCanvas = (): HTMLCanvasElement => document.createElement('canvas');
+
+/**
+ * The parent-element inline style properties `'letterbox'` mode writes. Kept as
+ * one list so the snapshot taken before styling and the restore performed on
+ * teardown / mode change can never drift apart.
+ */
+const letterboxParentProperties = ['display', 'alignItems', 'justifyContent', 'overflow', 'background'] as const;
+
+type LetterboxParentProperty = (typeof letterboxParentProperties)[number];
+
+/**
+ * A parent element together with the exact inline values it had for every
+ * property {@link Application} was about to overwrite — `''` for a property
+ * with no inline value at all, which is also what removes it again on restore.
+ */
+interface ParentStyleSnapshot {
+  readonly element: HTMLElement;
+  readonly styles: Readonly<Record<LetterboxParentProperty, string>>;
+}
 
 /**
  * Upper bound for the auto-resolved device-pixel ratio. Caps the backing-store
@@ -448,6 +472,19 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   private readonly _recentErrors: RecentErrorEntry[] = [];
   /** Whether {@link Application.platform} was created here — an injected one is not ours to destroy. */
   private readonly _ownsPlatform: boolean;
+  /**
+   * Whether {@link Application.canvas} was created here. A canvas the caller
+   * passed in via `canvas.element` belongs to their page — it stays in the DOM
+   * when this application goes down; one the engine created does not.
+   */
+  private readonly _ownsCanvas: boolean;
+  /**
+   * What the parent element's inline styles looked like before `'letterbox'`
+   * mode restyled it, or `null` while no such styles are applied. Restoring
+   * from this touches only the properties the engine wrote, so a page that
+   * styles its own game container inline keeps everything else.
+   */
+  private _parentStyleSnapshot: ParentStyleSnapshot | null = null;
   private _visibilitySubscription: PlatformSubscription | null = null;
   private _resizeObserver: ResizeObserver | null = null;
   private _sizingMode: CanvasSizingMode = 'fixed';
@@ -477,6 +514,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._pixelRatio = canvasOptions.pixelRatio ?? resolveAutoPixelRatio();
     this._designWidth = logicalWidth;
     this._designHeight = logicalHeight;
+    this._ownsCanvas = canvasOptions.element === undefined;
     this.canvas = canvas;
     this._applyCanvasSize(logicalWidth, logicalHeight);
 
@@ -704,6 +742,13 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this._visibilitySubscription = null;
     });
 
+    // Same reasoning: the canvas may already be mounted and the parent already
+    // restyled by the time a later construction step throws, and the caller
+    // never gets an instance to call `destroy()` on.
+    attempt(() => {
+      this._releaseDom();
+    });
+
     // Application systems materialised before the failure go first: they are
     // the last thing constructed, and their own `destroy()` may read the core
     // managers. Those managers are registered here too but are owned by the
@@ -842,8 +887,11 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   /**
    * The active {@link CanvasSizingMode}. Assigning a new mode re-applies the
    * sizing strategy live: the previous mode's {@link ResizeObserver} (if any)
-   * is disconnected and the new mode's CSS / observer is installed. Assigning
-   * the current value is a no-op.
+   * is disconnected, the CSS that mode owned is undone — including the parent
+   * element styling `'letterbox'` applies, which is restored to whatever it was
+   * before — and only then is the new mode's CSS / observer installed, so no
+   * remnant of the outgoing mode survives the switch. Assigning the current
+   * value is a no-op.
    */
   public get sizingMode(): CanvasSizingMode {
     return this._sizingMode;
@@ -853,10 +901,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     if (mode === this._sizingMode) {
       return;
     }
+    const previous = this._sizingMode;
+
     this._resizeObserver?.disconnect();
     this._resizeObserver = null;
     this._sizingMode = mode;
-    this._applySizingMode(mode);
+    this._applySizingMode(mode, previous);
   }
 
   /**
@@ -1419,9 +1469,19 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * `'letterbox'` observes the parent and sizes a native-resolution,
    * design-aspect canvas centered within it, the parent background showing as
    * bars. `'fixed'` is a no-op — the exact pixel size was already applied.
+   *
+   * `previous` is the mode being replaced, if any. Whatever CSS that mode owned
+   * is undone first, so switching modes never leaves the losing mode's rules
+   * layered under the winning one's — `'fit'`'s `100%` box outliving a switch
+   * to `'fixed'`, say, or `'letterbox'`'s flex centering outliving a switch to
+   * `'fill'`.
    */
-  private _applySizingMode(mode: CanvasSizingMode): void {
+  private _applySizingMode(mode: CanvasSizingMode, previous: CanvasSizingMode | null = null): void {
     const style = this.canvas.style;
+
+    if (previous !== null) {
+      this._clearSizingModeStyles(previous);
+    }
 
     switch (mode) {
       case 'fill': {
@@ -1450,8 +1510,11 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         }
 
         // Center the canvas in the parent and let the parent background show as
-        // letterbox bars around it.
+        // letterbox bars around it. Snapshot first: these are the caller's
+        // element, and teardown has to hand it back the way it was found.
         const parentStyle = target.style;
+
+        this._snapshotParentStyles(target);
 
         parentStyle.display = 'flex';
         parentStyle.alignItems = 'center';
@@ -1483,6 +1546,81 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       case 'fixed':
       default:
         break;
+    }
+  }
+
+  /**
+   * Undo the canvas/parent CSS a sizing mode owns, returning the canvas to the
+   * plain design-size box every mode starts from. Only properties the mode
+   * itself wrote are touched — nothing here is a blanket style reset.
+   */
+  private _clearSizingModeStyles(mode: CanvasSizingMode): void {
+    const style = this.canvas.style;
+
+    switch (mode) {
+      case 'fit':
+        style.width = '';
+        style.height = '';
+        style.objectFit = '';
+        break;
+      case 'shrink':
+        style.maxWidth = '';
+        style.maxHeight = '';
+        style.objectFit = '';
+        break;
+      case 'letterbox':
+        this._restoreParentStyles();
+        break;
+      case 'fill':
+      case 'fixed':
+      default:
+        break;
+    }
+
+    // `'fit'` and `'letterbox'` replaced the explicit pixel box (the former by
+    // clearing it just above, the latter by writing a fitted one along with a
+    // parent-sized backing store), and `'fill'` last sized it to the parent.
+    // Restate the design size so the next mode starts from a known box.
+    this._applyCanvasSize(this._designWidth, this._designHeight);
+  }
+
+  /**
+   * Record the parent's inline values for every property `'letterbox'` is about
+   * to overwrite. The {@link ParentStyleSnapshot} record type is exhaustive over
+   * {@link letterboxParentProperties}, so a property added to the mode without
+   * being captured here fails to compile rather than silently escaping restore.
+   */
+  private _snapshotParentStyles(target: HTMLElement): void {
+    const style = target.style;
+
+    this._parentStyleSnapshot = {
+      element: target,
+      styles: {
+        display: style.display,
+        alignItems: style.alignItems,
+        justifyContent: style.justifyContent,
+        overflow: style.overflow,
+        background: style.background,
+      },
+    };
+  }
+
+  /**
+   * Put the parent element's inline styles back exactly as they were before
+   * `'letterbox'` mode touched them, and forget the snapshot. A no-op when no
+   * parent was ever restyled, so it is safe to call from every teardown path.
+   */
+  private _restoreParentStyles(): void {
+    const snapshot = this._parentStyleSnapshot;
+
+    if (snapshot === null) {
+      return;
+    }
+
+    this._parentStyleSnapshot = null;
+
+    for (const property of letterboxParentProperties) {
+      snapshot.element.style[property] = snapshot.styles[property];
     }
   }
 
@@ -1540,6 +1678,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * scene director, all clocks, all signals) and release event listeners. The
    * application instance is unusable after this call.
    *
+   * The page is left as it was found: any inline styles `'letterbox'` sizing
+   * wrote onto the canvas's parent element are restored to their previous
+   * values (and only those — nothing else on the element is touched), and a
+   * canvas the engine created itself is removed from the document. A canvas
+   * supplied through `canvas.element` belongs to the caller and stays in place.
+   *
    * Fires the RAF halt synchronously (so no further frame runs after this
    * call returns) but the rest of teardown runs as a background async chain,
    * awaited internally: `scenes` — including every retained and preloaded
@@ -1565,6 +1709,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._visibilitySubscription = null;
     this._resizeObserver?.disconnect();
     this._resizeObserver = null;
+    this._releaseDom();
 
     if (this._frameLoopActive) {
       if (this._status === ApplicationStatus.Running) {
@@ -1580,6 +1725,26 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       logger.error('Application.destroy() failed during teardown.', { source: 'Application', ...(error instanceof Error && { error }) });
       this.onError?.dispatch(error instanceof Error ? error : new Error(String(error)));
     });
+  }
+
+  /**
+   * Hand the page back what it lent us: the parent element keeps whichever
+   * inline styles it had before `'letterbox'` restyled it, and a canvas the
+   * engine created itself leaves the document. A canvas passed in through
+   * `canvas.element` is the caller's element and stays exactly where they put
+   * it — removing it would delete part of their page.
+   *
+   * Synchronous and part of `destroy()`'s immediate half rather than the async
+   * teardown chain: once the frame loop is halted the canvas shows a frozen
+   * last frame, and leaving that visible until an async scene `unload()`
+   * settles is a visible artefact, not an implementation detail.
+   */
+  private _releaseDom(): void {
+    this._restoreParentStyles();
+
+    if (this._ownsCanvas) {
+      this.canvas.remove();
+    }
   }
 
   /**

@@ -115,6 +115,7 @@ interface LifecycleHarness {
     _clearScene: MockInstance;
     _stopAndClearActiveScene: MockInstance;
     _abortInFlightNavigation: MockInstance;
+    _dispose: MockInstance;
     destroy: MockInstance;
   };
 }
@@ -171,6 +172,7 @@ const loadHarness = async (options: LifecycleHarnessOptions = {}): Promise<Lifec
     _clearScene: vi.fn().mockResolvedValue(undefined),
     _stopAndClearActiveScene: vi.fn().mockResolvedValue(undefined),
     _abortInFlightNavigation: vi.fn().mockReturnValue(false),
+    _dispose: vi.fn().mockResolvedValue(undefined),
     destroy: vi.fn(),
   };
   const inputManager = {
@@ -703,6 +705,149 @@ describe('Application lifecycle / getters / sizing', () => {
 
       expect(app.canvas.width).toBe(widthBefore);
       expect(app.canvas.height).toBe(heightBefore);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Sizing-mode CSS teardown — switching modes must not leave the outgoing
+  // mode's rules behind for the incoming one to fight with.
+  // -------------------------------------------------------------------------
+
+  describe('sizingMode switching: CSS cleanup', () => {
+    test('leaving "fit" drops its 100% box and objectFit', async () => {
+      const { Application } = await loadHarness();
+      const app = new Application({ canvas: { sizingMode: 'fit', width: 320, height: 240, pixelRatio: 1 }, backend: { type: 'webgl2' } });
+
+      app.sizingMode = 'fixed';
+
+      expect(app.canvas.style.objectFit).toBe('');
+      // Back to the explicit design box, not the parent-relative one.
+      expect(app.canvas.style.width).toBe('320px');
+      expect(app.canvas.style.height).toBe('240px');
+    });
+
+    test('leaving "shrink" drops its max-size clamp and objectFit', async () => {
+      const { Application } = await loadHarness();
+      const app = new Application({ canvas: { sizingMode: 'shrink' }, backend: { type: 'webgl2' } });
+
+      app.sizingMode = 'fit';
+
+      expect(app.canvas.style.maxWidth).toBe('');
+      expect(app.canvas.style.maxHeight).toBe('');
+      // The incoming mode's own rules are still applied afterwards.
+      expect(app.canvas.style.objectFit).toBe('contain');
+      expect(app.canvas.style.width).toBe('100%');
+    });
+
+    test('leaving "letterbox" hands the parent element its own styles back', async () => {
+      vi.stubGlobal('ResizeObserver', MockResizeObserver);
+      const { Application } = await loadHarness();
+      const parent = document.createElement('div');
+      const canvas = document.createElement('canvas');
+
+      parent.style.display = 'grid';
+      parent.style.background = 'rgb(255, 0, 0)';
+      parent.appendChild(canvas);
+
+      const app = new Application({ canvas: { element: canvas, sizingMode: 'letterbox' }, backend: { type: 'webgl2' } });
+
+      expect(parent.style.display).toBe('flex');
+
+      app.sizingMode = 'fixed';
+
+      // Properties that had an inline value keep it; ones that did not are gone
+      // again rather than left at the engine's value.
+      expect(parent.style.display).toBe('grid');
+      expect(parent.style.background).toBe('rgb(255, 0, 0)');
+      expect(parent.style.alignItems).toBe('');
+      expect(parent.style.justifyContent).toBe('');
+      expect(parent.style.overflow).toBe('');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // destroy(): DOM release
+  // -------------------------------------------------------------------------
+
+  describe('destroy(): DOM release', () => {
+    test('removes a canvas the engine created itself', async () => {
+      const { Application } = await loadHarness();
+      const container = document.createElement('div');
+
+      document.body.appendChild(container);
+
+      try {
+        const app = new Application({ canvas: { mount: container }, backend: { type: 'webgl2' } });
+
+        expect(container.contains(app.canvas)).toBe(true);
+
+        app.destroy();
+
+        expect(container.contains(app.canvas)).toBe(false);
+        expect(app.canvas.parentElement).toBeNull();
+      } finally {
+        container.remove();
+      }
+    });
+
+    test('leaves a caller-supplied canvas in the document', async () => {
+      const { Application } = await loadHarness();
+      const container = document.createElement('div');
+      const canvas = document.createElement('canvas');
+
+      container.appendChild(canvas);
+      document.body.appendChild(container);
+
+      try {
+        const app = new Application({ canvas: { element: canvas }, backend: { type: 'webgl2' } });
+
+        app.destroy();
+
+        expect(container.contains(canvas)).toBe(true);
+      } finally {
+        container.remove();
+      }
+    });
+
+    test('restores the parent styles "letterbox" overwrote, and only those', async () => {
+      vi.stubGlobal('ResizeObserver', MockResizeObserver);
+      const { Application } = await loadHarness();
+      const parent = document.createElement('div');
+      const canvas = document.createElement('canvas');
+
+      parent.style.overflow = 'scroll';
+      // A property the engine never writes — it must survive teardown untouched,
+      // which a blanket `parent.style.cssText = ''` reset would not manage.
+      parent.style.border = '2px solid rgb(0, 0, 0)';
+      parent.appendChild(canvas);
+
+      const app = new Application({ canvas: { element: canvas, sizingMode: 'letterbox' }, backend: { type: 'webgl2' } });
+
+      expect(parent.style.overflow).toBe('hidden');
+
+      app.destroy();
+
+      expect(parent.style.overflow).toBe('scroll');
+      expect(parent.style.display).toBe('');
+      expect(parent.style.background).toBe('');
+      expect(parent.style.border).toBe('2px solid rgb(0, 0, 0)');
+    });
+
+    test('is idempotent — a second destroy() does not re-touch the parent', async () => {
+      vi.stubGlobal('ResizeObserver', MockResizeObserver);
+      const { Application } = await loadHarness();
+      const parent = document.createElement('div');
+      const canvas = document.createElement('canvas');
+
+      parent.appendChild(canvas);
+
+      const app = new Application({ canvas: { element: canvas, sizingMode: 'letterbox' }, backend: { type: 'webgl2' } });
+
+      app.destroy();
+      parent.style.display = 'grid';
+      app.destroy();
+
+      expect(parent.style.display).toBe('grid');
     });
   });
 
