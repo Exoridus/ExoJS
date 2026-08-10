@@ -20,6 +20,12 @@ class HudScene extends Scene {
         // A bit of "world" content so the UI clearly sits on top of it.
         this.spinner = new Panel({ width: 160, height: 160, color: new Color(60, 130, 235, 1), cornerRadius: 24 });
         this.spinner.setPosition(640, 360);
+        // Rotate around the panel's centre. `origin` is the point a node is
+        // positioned and rotated about, so this also re-centres the panel on
+        // (640, 360) instead of hanging its top-left corner there. A `Panel`
+        // is a `Container` and has no content box of its own, which is why
+        // the normalised `anchor` is not the tool for this.
+        this.spinner.setOrigin(80, 80);
         this.addChild(this.spinner);
 
         // HUD: score + health anchored to the top-left corner.
