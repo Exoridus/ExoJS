@@ -63,7 +63,6 @@ class RectanglesCollisionScene extends Scene {
         }
     }
     draw(context) {
-        context.backend.clear(new Color(18, 22, 30));
         context.render(this.boxA);
         context.render(this.boxB);
         context.render(this.overlap);
@@ -77,7 +76,7 @@ const app = new Application({
         mount: document.body,
         sizingMode: 'fit',
     },
-    clearColor: Color.black,
+    clearColor: new Color(18, 22, 30),
     loader: {
         basePath: 'assets/',
     },

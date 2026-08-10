@@ -1,16 +1,16 @@
 {
   "title": "ObjectLayer",
-  "description": "A data-only layer of TileMapObjects — spawn points, trigger zones, collision regions, markers. Object layers are not rendered by the tile renderer; they are parsed and exposed for gameplay use (e.g. building physics colliders, placing entities). Query with query (untyped, fully back-compatible) or, when an ObjectSchema type argument `S` is supplied, with the typed accessors byType, byKind, and where — these narrow `properties` to the developer-declared shape. The schema is **opt-in**: the default type parameter reproduces the original untyped behaviour, so `new ObjectLayer(options)` and `map.getObjectLayer('x')` are unchanged.",
+  "description": "A data-only layer of TileMapObjects — spawn points, trigger zones, collision regions, markers. Object layers are not rendered by the tile renderer; they are parsed and exposed for gameplay use (e.g. building physics colliders, placing entities). The presentation fields the source format attaches to a layer — visible, opacity, offsetX/offsetY, parallaxX/parallaxY and tintColor — are carried through in full, with any enclosing group layers' contribution already folded in, so an object layer describes the same placement and shading its neighbouring tile and image layers do. Nothing here acts on them: code that draws these objects itself is what applies them. Query with query (untyped, fully back-compatible) or, when an ObjectSchema type argument `S` is supplied, with the typed accessors byType, byKind, and where — these narrow `properties` to the developer-declared shape. The schema is **opt-in**: the default type parameter reproduces the original untyped behaviour, so `new ObjectLayer(options)` and `map.getObjectLayer('x')` are unchanged.",
   "symbol": "ObjectLayer",
   "kind": "class",
   "subsystem": "tilemap",
   "importPath": "@codexo/exojs-tilemap",
   "tier": "advanced",
-  "memberCount": 18,
+  "memberCount": 21,
   "counts": {
     "constructors": 1,
     "methods": 6,
-    "properties": 11,
+    "properties": 14,
     "events": 0
   },
   "sections": [
@@ -20,6 +20,7 @@
       "members": [],
       "paragraphs": [
         "A data-only layer of TileMapObjects — spawn points, trigger zones, collision regions, markers. Object layers are not rendered by the tile renderer; they are parsed and exposed for gameplay use (e.g. building physics colliders, placing entities).",
+        "The presentation fields the source format attaches to a layer — visible, opacity, offsetX/offsetY, parallaxX/parallaxY and tintColor — are carried through in full, with any enclosing group layers' contribution already folded in, so an object layer describes the same placement and shading its neighbouring tile and image layers do. Nothing here acts on them: code that draws these objects itself is what applies them.",
         "Query with query (untyped, fully back-compatible) or, when an ObjectSchema type argument `S` is supplied, with the typed accessors byType, byKind, and where — these narrow `properties` to the developer-declared shape. The schema is **opt-in**: the default type parameter reproduces the original untyped behaviour, so `new ObjectLayer(options)` and `map.getObjectLayer('x')` are unchanged."
       ],
       "importLine": "import { ObjectLayer } from '@codexo/exojs-tilemap'",
@@ -1163,6 +1164,48 @@
           "description": "Layer opacity in [0, 1]."
         },
         {
+          "name": "parallaxX",
+          "signature": "parallaxX: number",
+          "signatureTokens": [
+            {
+              "text": "parallaxX",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Parallax scroll factor on the X axis — the same quantity import('./TileLayer').TileLayer.parallaxX carries, so an object layer authored beside a tile layer in the same parallax group reports the same factor. 1 = full camera speed, 0.5 = half speed, 0 = stationary. Nothing in this package applies it: object layers are data-only, so placing an object relative to the camera is the consumer's job (see ObjectLayer)."
+        },
+        {
+          "name": "parallaxY",
+          "signature": "parallaxY: number",
+          "signatureTokens": [
+            {
+              "text": "parallaxY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Parallax scroll factor on the Y axis. See ObjectLayer.parallaxX."
+        },
+        {
           "name": "properties",
           "signature": "properties: TileProperties",
           "signatureTokens": [
@@ -1182,6 +1225,35 @@
           "params": [],
           "returnType": null,
           "description": "Immutable layer-level properties."
+        },
+        {
+          "name": "tintColor",
+          "signature": "tintColor: number | null",
+          "signatureTokens": [
+            {
+              "text": "tintColor",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Multiplicative layer tint as 0xRRGGBB, or null for no tint. Carried from the source map (including the accumulated tint of any enclosing group layers) for code that draws these objects itself; like ObjectLayer.parallaxX, nothing in this package applies it."
         },
         {
           "name": "visible",

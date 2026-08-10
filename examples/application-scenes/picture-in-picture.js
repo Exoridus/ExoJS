@@ -30,7 +30,6 @@ class PictureInPictureScene extends Scene {
         this.pipView.follow(this.sprite, { lerp: 1 });
     }
     draw(context) {
-        context.clear(Color.black);
         context.render(this.sprite, { view: this.mainView });
         context.render(this.sprite, { view: this.pipView });
         context.render(this.frame, { view: context.screenView });

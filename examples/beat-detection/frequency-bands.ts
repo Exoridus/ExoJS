@@ -102,7 +102,6 @@ class FrequencyBandsScene extends Scene {
 
     override draw(context: RenderingContext): void {
         const app = this.app;
-        context.backend.clear();
 
         const { width, height } = app;
         const gap = 16;

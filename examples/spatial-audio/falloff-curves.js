@@ -85,7 +85,6 @@ class FalloffCurvesScene extends Scene {
     }
     draw(context) {
         const app = this.app;
-        context.backend.clear();
         this.graphics.clear();
         // Falloff-curve plots in the upper canvas area.
         const { x: plotX, y: plotY, w: plotW, h: plotH } = this.plot;

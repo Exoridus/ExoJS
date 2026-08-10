@@ -69,7 +69,6 @@ class BonfireScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear();
         context.render(this.smokeSystem);
         context.render(this.fireSystem);
     }

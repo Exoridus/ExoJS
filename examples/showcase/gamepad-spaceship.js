@@ -146,7 +146,6 @@ class GamepadSpaceshipScene extends Scene {
             point.y = -24;
     }
     draw(context) {
-        context.backend.clear();
         this.fx.clear();
         this.fx.fillColor = new Color(120, 130, 150);
         for (const asteroid of this.asteroids) {

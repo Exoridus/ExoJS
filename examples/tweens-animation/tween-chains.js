@@ -42,7 +42,6 @@ class TweenChainsScene extends Scene {
         a.start();
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.sprite);
     }
 }

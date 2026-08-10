@@ -19,7 +19,6 @@ class MeshTriangleScene extends Scene {
         this.triangle.rotate(delta.seconds * 60);
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.triangle);
     }
 }

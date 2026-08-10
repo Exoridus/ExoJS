@@ -33,7 +33,6 @@ class TypewriterTextScene extends Scene {
     }
     draw(context) {
         const app = this.app;
-        context.backend.clear();
         context.render(this.text);
         if (app.audio.locked) {
             context.render(this.tapPrompt);

@@ -44,7 +44,6 @@ draw(context: RenderingContext) {
     context.view.setCenter(400, 300);
     context.view.resize(800, 600);
 
-    context.backend.clear();
     context.render(this.world);
 }
 ```
@@ -59,7 +58,6 @@ The view supports following a target. The target can be any object with `x` and 
 draw(context: RenderingContext) {
     context.view.follow(this.player);
 
-    context.backend.clear();
     context.render(this.world);
 }
 ```
@@ -82,7 +80,6 @@ init() {
 draw(context: RenderingContext) {
     context.view.setZoom(this.zoom);
 
-    context.backend.clear();
     context.render(this.world);
 }
 ```
@@ -102,8 +99,6 @@ The active view can be swapped on every frame. Used together with viewports, thi
 
 ```ts
 draw(context: RenderingContext) {
-    context.backend.clear();
-
     context.view.setViewport(0, 0, 0.5, 1);
     context.view.setCenter(this.player1.x, this.player1.y);
     context.render(this.world);

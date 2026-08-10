@@ -40,7 +40,6 @@ class SignalBusInspectorScene extends Scene {
             `Manual Signal Inspector\n\nspawn listeners: ${this.signals.spawn.count}\n` +
                 `damage listeners: ${this.signals.damage.count}\n` +
                 `score listeners: ${this.signals.score.count}`;
-        context.backend.clear();
         context.render(this.text);
     }
 }

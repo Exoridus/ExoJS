@@ -45,7 +45,6 @@ class PivotAndAnchorScene extends Scene {
 
     override draw(context: RenderingContext): void {
         const m = this.sprite.getGlobalTransform();
-        context.backend.clear();
         context.render(this.sprite);
         this.pivotMarker.clear();
         this.pivotMarker.fillColor = new Color(255, 80, 80);

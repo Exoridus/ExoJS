@@ -93,7 +93,6 @@ class TiledMapImportScene extends Scene {
         this.hud.setStatus(`${FILTERS[this.filterIndex].label}: ${matches.length} match(es) — ${names}`);
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.mapNode);
         context.render(this.overlay);
     }

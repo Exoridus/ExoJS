@@ -30,7 +30,6 @@ app.systems.add({
         square.rotation = angle * 40;
     },
     draw(context: RenderingContext) {
-        context.backend.clear();
         context.render(square);
     },
 });

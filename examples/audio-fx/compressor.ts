@@ -105,7 +105,6 @@ class CompressorScene extends Scene {
 
     override draw(context: RenderingContext): void {
         const app = this.app;
-        context.backend.clear();
         this.gfx.clear();
         for (let i = 0; i < sliders.length; i++) {
             const def = sliders[i];

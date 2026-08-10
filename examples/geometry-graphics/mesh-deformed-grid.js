@@ -69,7 +69,6 @@ class MeshDeformedGridScene extends Scene {
         this.mesh.recomputeLocalBounds();
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.mesh);
     }
 }

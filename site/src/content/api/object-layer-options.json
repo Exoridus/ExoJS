@@ -6,11 +6,11 @@
   "subsystem": "tilemap",
   "importPath": "@codexo/exojs-tilemap",
   "tier": "stable",
-  "memberCount": 10,
+  "memberCount": 13,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 10,
+    "properties": 13,
     "events": 0
   },
   "sections": [
@@ -257,6 +257,56 @@
           "description": "Layer opacity in [0, 1]. Default 1."
         },
         {
+          "name": "parallaxX",
+          "signature": "parallaxX?: number",
+          "signatureTokens": [
+            {
+              "text": "parallaxX",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Parallax scroll factor on the X axis. 1 = full camera speed (normal), 0.5 = half speed (farther away), 0 = stationary. Default 1."
+        },
+        {
+          "name": "parallaxY",
+          "signature": "parallaxY?: number",
+          "signatureTokens": [
+            {
+              "text": "parallaxY",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Parallax scroll factor on the Y axis. 1 = full camera speed (normal), 0.5 = half speed (farther away), 0 = stationary. Default 1."
+        },
+        {
           "name": "properties",
           "signature": "properties?: TileProperties",
           "signatureTokens": [
@@ -280,6 +330,39 @@
           "params": [],
           "returnType": null,
           "description": "Layer-level properties (copied and frozen)."
+        },
+        {
+          "name": "tintColor",
+          "signature": "tintColor?: number | null",
+          "signatureTokens": [
+            {
+              "text": "tintColor",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Multiplicative layer tint as a 0xRRGGBB integer, or null for no tint (Tiled tintcolor). Default null."
         },
         {
           "name": "visible",

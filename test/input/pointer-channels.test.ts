@@ -4,6 +4,7 @@
  */
 
 import type { Application } from '#core/Application';
+import { Time } from '#core/Time';
 import { InputManager } from '#input/InputManager';
 import { Pointer, PointerState } from '#input/Pointer';
 import { ChannelSize, PointerButton } from '#input/types';
@@ -59,6 +60,9 @@ const createMockApp = (canvas: HTMLCanvasElement, pixelRatio = 1): Application =
         pointerDistanceThreshold: 10,
       },
     },
+    // `InputManager` reads `scenes.paused` to decide whether a long-press hold
+    // advances this frame.
+    scenes: { paused: false },
     _backingStoreToDesign: (backingStoreX: number, backingStoreY: number): { x: number; y: number } => ({
       x: (backingStoreX / canvas.width) * designWidth,
       y: (backingStoreY / canvas.height) * designHeight,
@@ -378,15 +382,19 @@ describe('Gesture — pinch', () => {
 // ---------------------------------------------------------------------------
 
 describe('Gesture — long press', () => {
-  beforeAll(() => {
-    vi.useFakeTimers();
-  });
+  /** Feed `milliseconds` of engine time through the manager, in 16 ms frames. */
+  const advanceFrames = (im: InputManager, milliseconds: number): void => {
+    const frame = new Time(16);
+    let remaining = milliseconds;
 
-  afterAll(() => {
-    vi.useRealTimers();
-  });
+    while (remaining > 0) {
+      frame.milliseconds = Math.min(16, remaining);
+      im.preUpdate(frame);
+      remaining -= frame.milliseconds;
+    }
+  };
 
-  test('pointer held 600ms without moving fires onLongPress', () => {
+  test('pointer held 600ms of engine time without moving fires onLongPress', () => {
     const canvas = createCanvas();
     const im = createInputManager(canvas);
 
@@ -399,14 +407,13 @@ describe('Gesture — long press', () => {
 
     expect(longPressSpy).not.toHaveBeenCalled();
 
-    vi.advanceTimersByTime(600);
+    // Frames without a delta advance the hold by nothing at all — the hold is
+    // measured in engine time, so a frame boundary on its own cannot mature it.
+    im.preUpdate(Time.zero);
 
-    // The long-press occurrence is queued onto the frame journal rather than
-    // dispatched from the timer callback directly, so it only fires on the
-    // next update() (the next frame boundary), not the instant the timer elapses.
     expect(longPressSpy).not.toHaveBeenCalled();
 
-    im.preUpdate(0 as never);
+    advanceFrames(im, 600);
 
     expect(longPressSpy).toHaveBeenCalledTimes(1);
 
@@ -426,7 +433,7 @@ describe('Gesture — long press', () => {
     // Move well beyond the 10px threshold.
     pointerMove(canvas, { pointerId: 1, pointerType: 'touch', clientX: 200, clientY: 100, isPrimary: true });
 
-    vi.advanceTimersByTime(600);
+    advanceFrames(im, 600);
 
     expect(longPressSpy).not.toHaveBeenCalled();
 

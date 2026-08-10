@@ -75,7 +75,6 @@ class RandomPitchPoolScene extends Scene {
     }
     draw(context) {
         const app = this.app;
-        context.backend.clear();
         this.graphics.clear();
         // Centre baseline.
         this.graphics.fillColor = new Color(60, 60, 70);

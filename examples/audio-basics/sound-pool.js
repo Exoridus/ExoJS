@@ -87,7 +87,6 @@ class SoundPoolScene extends Scene {
     }
     draw(context) {
         const app = this.app;
-        context.backend.clear();
         this.graphics.clear();
         const active = this.voices.length;
         // Pool capacity meter: one cell per slot, lit while occupied.

@@ -40,7 +40,6 @@ class SpriteBasicsScene extends Scene {
         this.hud.setStatus(`alpha ${alpha.toFixed(2)}`);
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.ship);
     }
 }

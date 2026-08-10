@@ -114,7 +114,6 @@ class FireworksScene extends Scene {
         }
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.explosions);
         for (const rocket of this.rockets) {
             context.render(rocket.sprite);

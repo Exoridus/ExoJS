@@ -14,7 +14,6 @@ class ResizeScene extends Scene {
         this.layout();
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.sprite);
         context.render(this.info);
     }

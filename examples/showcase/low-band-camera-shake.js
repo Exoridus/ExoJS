@@ -49,7 +49,6 @@ class LowBandCameraShakeScene extends Scene {
     }
     draw(context) {
         const app = this.app;
-        context.backend.clear(new Color(22, 24, 34));
         context.backend.setView(this.view);
         context.render(this.sprite);
         context.backend.setView(null);
@@ -66,6 +65,6 @@ const app = new Application({
         mount: document.body,
         sizingMode: 'fit',
     },
-    clearColor: Color.black,
+    clearColor: new Color(22, 24, 34),
 });
 app.start(LowBandCameraShakeScene);

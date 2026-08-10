@@ -96,7 +96,6 @@ class AudioBusesScene extends Scene {
     }
     draw(context) {
         const app = this.app;
-        context.backend.clear();
         this.graphics.clear();
         rows.forEach((row, index) => {
             const value = row.bus().volume;

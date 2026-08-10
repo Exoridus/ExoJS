@@ -30,7 +30,6 @@ class BoundingBoxesScene extends Scene {
         }
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.root);
     }
 }

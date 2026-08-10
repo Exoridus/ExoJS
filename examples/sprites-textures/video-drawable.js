@@ -96,7 +96,6 @@ class VideoDrawableScene extends Scene {
         this.overlay.rotate(delta.seconds * 60);
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.video);
         context.render(this.overlay);
     }

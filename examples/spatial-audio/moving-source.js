@@ -79,7 +79,6 @@ class MovingSourceScene extends Scene {
         const pan = Math.max(-1, Math.min(1, dx / ORBIT_X));
         const panText = pan < -0.05 ? `L ${Math.abs(pan).toFixed(2)}` : pan > 0.05 ? `R ${pan.toFixed(2)}` : 'center';
         this.label.text = `distance: ${dist.toFixed(0)} px   volume: ${(volume * 100).toFixed(0)}%   pan: ${panText}`;
-        context.backend.clear();
         this.graphics.clear();
         // Orbit path.
         this.graphics.fillColor = new Color(40, 50, 55);

@@ -70,7 +70,6 @@ class BeatSyncPulseScene extends Scene {
     }
     draw(context) {
         const app = this.app;
-        context.backend.clear();
         context.render(this.particles);
         context.render(this.sprite);
         if (app.audio.locked) {

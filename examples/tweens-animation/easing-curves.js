@@ -87,7 +87,6 @@ class EasingCurvesScene extends Scene {
         }
     }
     draw(context) {
-        context.backend.clear();
         const g = this.graphics;
         g.clear();
         const plotPadX = 10;

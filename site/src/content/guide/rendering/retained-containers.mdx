@@ -57,8 +57,6 @@ init() {
 }
 
 draw(context: RenderingContext) {
-    context.backend.clear();
-
     // Panning the camera over the world is ONE group-matrix update — no
     // descendant transform is recomputed, no child is re-collected.
     this.decor.setPosition(-this.cameraX, -this.cameraY);

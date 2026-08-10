@@ -58,7 +58,6 @@ class MultiTextureStressScene extends Scene {
         }
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.spriteLayer);
     }
     destroy() {

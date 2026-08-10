@@ -61,7 +61,6 @@ class MultiGamepadScene extends Scene {
         }
     }
     draw(context) {
-        context.backend.clear();
         for (const player of this.players) {
             if (player.pad.connected) {
                 context.render(player.sprite);

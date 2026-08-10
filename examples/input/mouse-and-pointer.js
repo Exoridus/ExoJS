@@ -63,7 +63,6 @@ class MouseAndPointerScene extends Scene {
         this.hud.setStatus(`x ${Math.round(this.pointer.x)}, y ${Math.round(this.pointer.y)} · Δ ${this.deltaX >= 0 ? '+' : ''}${this.deltaX.toFixed(0)}, ${this.deltaY >= 0 ? '+' : ''}${this.deltaY.toFixed(0)} · buttons: ${this.buttonLabel()} · clicks: ${this.clicks}`);
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.ship);
         this.crosshair.clear();
         this.crosshair.lineWidth = 2;

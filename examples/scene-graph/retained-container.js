@@ -52,7 +52,6 @@ class RetainedContainerScene extends Scene {
     draw(context) {
         const app = this.app;
         const { width, height } = app;
-        context.backend.clear();
         // Pan the whole field along a slow Lissajous path, like a camera drifting
         // over a static world. For a RetainedContainer this is ONE group-matrix
         // update per frame — the retained fragment is untouched, so no descendant

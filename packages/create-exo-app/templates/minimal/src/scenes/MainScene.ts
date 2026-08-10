@@ -20,7 +20,6 @@ export class MainScene extends Scene {
   }
 
   public override draw(context: RenderingContext): void {
-    context.backend.clear();
     context.render(this.root);
   }
 }

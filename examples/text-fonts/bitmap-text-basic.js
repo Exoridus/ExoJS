@@ -28,7 +28,6 @@ class BitmapTextBasicScene extends Scene {
         this.counter.text = `Frame: ${++this.frame}`;
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.title);
         context.render(this.info);
         context.render(this.wrapped);

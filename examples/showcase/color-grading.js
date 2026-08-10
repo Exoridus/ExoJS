@@ -102,7 +102,6 @@ class ColorGradingScene extends Scene {
         this.hud.setStatus(`${LOOKS[this.index].name}  (${this.index + 1}/${LOOKS.length})`);
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.sprite);
     }
 }

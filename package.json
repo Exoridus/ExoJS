@@ -183,6 +183,14 @@
       "path": "dist/exo.iife.min.js",
       "limit": "250 KB",
       "gzip": true
+    },
+    {
+      "path": "dist/exo.debug.esm.js",
+      "limit": "5 KB",
+      "gzip": true,
+      "ignore": [
+        "@codexo/exojs"
+      ]
     }
   ],
   "devDependencies": {

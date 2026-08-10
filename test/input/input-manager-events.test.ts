@@ -56,6 +56,9 @@ const createMockApp = (canvas: HTMLCanvasElement, pixelRatio = 1): Application =
         pointerDistanceThreshold: 10,
       },
     },
+    // `InputManager` reads `scenes.paused` to decide whether a long-press hold
+    // advances this frame.
+    scenes: { paused: false },
     _backingStoreToDesign: (backingStoreX: number, backingStoreY: number): { x: number; y: number } => ({
       x: (backingStoreX / canvas.width) * designWidth,
       y: (backingStoreY / canvas.height) * designHeight,

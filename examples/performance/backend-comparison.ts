@@ -53,7 +53,6 @@ class DemoScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear();
         for (const { sprite } of this.sprites) context.render(sprite);
     }
 }

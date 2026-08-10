@@ -31,7 +31,6 @@ class GradientScene extends Scene {
         this.orb.setScale(1 + Math.sin(app.activeTime.seconds * 2) * 0.07);
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.background);
         context.render(this.orb);
     }

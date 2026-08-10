@@ -314,7 +314,6 @@ class WorkerStreamedTerrainScene extends Scene {
         }
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.worldRoot, { view: this.camera });
     }
 }

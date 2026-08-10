@@ -31,7 +31,6 @@ class LocalVsGlobalTransformScene extends Scene {
         this.parent.rotate(delta.seconds * 60);
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.parent);
         context.render(this.globalSprite);
         context.render(this.localLabel);

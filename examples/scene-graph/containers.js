@@ -26,7 +26,6 @@ class ContainersScene extends Scene {
         this.bunnies.rotate(delta.seconds * 36);
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.rainbow);
         context.render(this.bunnies);
     }

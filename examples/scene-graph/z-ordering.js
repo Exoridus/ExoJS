@@ -35,7 +35,6 @@ class ZOrderingScene extends Scene {
         this.label.text = `Press 1, 2, 3 — front: ${names[index]}`;
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.group);
         context.render(this.label);
     }

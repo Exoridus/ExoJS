@@ -525,7 +525,6 @@ class AssetBrowserScene extends Scene {
         }
     }
     draw(context) {
-        context.backend.clear(C.bg);
         this.drawPreviewBg(context);
         this.drawPreviewContent(context);
         this.drawSidebar(context);

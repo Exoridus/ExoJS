@@ -42,7 +42,8 @@ Options are organised into groups:
 - `loader` — base path, fetch options, caching (`LoaderOptions`).
 - `rendering` — WebGL2 debug, context attributes, batch sizes (`RenderingApplicationOptions`).
 - `input` — gamepad definitions, slot strategy, pointer threshold (`InputApplicationOptions`).
-- `clearColor` — what `context.backend.clear()` paints each frame.
+- `clearColor` — the colour the canvas is painted with at the start of each frame.
+- `autoClear` — whether that per-frame clear happens at all. `true` by default; `false` hands the frame to a pipeline that preserves or clears it itself.
 - `backend` — `{ type: 'auto' }` (default), or pin to `'webgl2'` / `'webgpu'`.
 
 `clearColor` is not just a construction-time default — `app.clearColor` returns the render
@@ -151,7 +152,7 @@ import { Application, RenderingContext, Scene } from '@codexo/exojs';
 
 class HelloScene extends Scene {
     draw(context: RenderingContext) {
-        context.backend.clear();
+        context.render(this.root);
     }
 }
 

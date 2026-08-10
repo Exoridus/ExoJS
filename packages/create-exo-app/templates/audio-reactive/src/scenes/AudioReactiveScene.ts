@@ -56,7 +56,6 @@ export class AudioReactiveScene extends Scene {
 
   public override draw(context: RenderingContext): void {
     const { width, height } = this.app!.canvas;
-    context.backend.clear(new Color(8, 8, 16));
 
     if (this._started) {
       const spectrum = this._analyser.getSpectrum();

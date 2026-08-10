@@ -33,7 +33,6 @@ class PauseResumeScene extends Scene {
         this.sprite.rotate(delta.seconds * 180);
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.sprite);
         context.render(this.label);
     }

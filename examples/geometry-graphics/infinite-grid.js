@@ -84,7 +84,6 @@ class InfiniteGridScene extends Scene {
         this.filter.uniforms.uViewSize = [this.view.width, this.view.height];
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.sprite);
     }
 }

@@ -23,7 +23,6 @@ class PointerAndHittestScene extends Scene {
         }
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.root);
     }
 }

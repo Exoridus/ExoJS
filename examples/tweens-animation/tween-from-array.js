@@ -41,7 +41,6 @@ class TweenFromArrayScene extends Scene {
         first.start();
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.sprite);
     }
 }

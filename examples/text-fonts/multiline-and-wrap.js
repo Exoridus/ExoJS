@@ -35,7 +35,6 @@ class MultilineAndWrapScene extends Scene {
         this.textC.setPosition(colX(2), bodyY);
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.titleA);
         context.render(this.titleB);
         context.render(this.titleC);

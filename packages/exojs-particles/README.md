@@ -103,7 +103,6 @@ class DemoScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear();
         context.render(this.system);
     }
 }

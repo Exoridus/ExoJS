@@ -120,7 +120,6 @@ class ColorGradingScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear();
         context.render(this.sprite);
     }
 }

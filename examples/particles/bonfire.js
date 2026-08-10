@@ -37,7 +37,6 @@ class BonfireScene extends Scene {
         ])));
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.smokeSystem);
         context.render(this.fireSystem);
     }

@@ -37,7 +37,6 @@ class CameraBasicScene extends Scene {
     draw(context) {
         const app = this.app;
         const { width } = app;
-        context.backend.clear();
         context.render(this.grid);
         context.render(this.bunny);
         // Render a simple UI bar through the screen-space view

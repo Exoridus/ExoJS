@@ -24,7 +24,7 @@ import { Application, type RenderingContext, Scene } from '@codexo/exojs';
 
 class HelloScene extends Scene {
     draw(context: RenderingContext) {
-        context.backend.clear();
+        context.render(this.root);
     }
 }
 
@@ -32,9 +32,9 @@ const app = new Application({ scenes: { HelloScene }, canvas: { width: 800, heig
 app.start(HelloScene);
 ```
 
-The `context.backend.clear()` call paints the canvas with the application's `clearColor` (default black). Start each frame with `clear` unless you specifically want the previous frame to remain.
+The canvas is already painted with the application's `clearColor` before `draw` runs — the engine clears every frame, so a scene never has to open with a clear of its own. Pass `autoClear: false` to `Application` if you want the previous frame to remain instead.
 
-There's nothing visible yet because the scene doesn't render anything beyond the clear. Add a sprite next.
+There's nothing visible yet because the scene's root is still empty. Add a sprite next.
 
 ## Loading and drawing a sprite
 

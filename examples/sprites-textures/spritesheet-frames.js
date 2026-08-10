@@ -62,7 +62,6 @@ class SpritesheetFramesScene extends Scene {
         }
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.spritesheet.getFrameSprite(this.walkFrames()[this.frameIndex]));
     }
 }

@@ -104,7 +104,6 @@ class SpriteFollowsBodyScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear();
         context.render(this.floor);
         context.render(this.actor);
     }

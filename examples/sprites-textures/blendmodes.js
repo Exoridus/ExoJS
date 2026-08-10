@@ -96,7 +96,6 @@ class BlendmodesScene extends Scene {
         this.ticker += delta.seconds;
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.background);
         context.render(this.left);
         context.render(this.right);

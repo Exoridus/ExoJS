@@ -37,7 +37,7 @@ Every ExoJS project starts with an `Application`. For a fixed-size game canvas:
   title="examples/showcase/orb-dodge.ts"
 />
 
-`clearColor` sets the background that `context.backend.clear()` paints at the start of each frame. A dark near-black makes the colored orbs stand out clearly.
+`clearColor` sets the background the engine paints at the start of each frame, before `draw` runs. A dark near-black makes the colored orbs stand out clearly.
 
 ## Scene structure
 
@@ -58,7 +58,7 @@ A scene has four lifecycle hooks — override the ones you need:
 
 - `init()` — set up state; called once per activation
 - `update(delta)` — per-frame logic; `delta.seconds` carries elapsed time
-- `draw(context)` — per-frame rendering; start with `context.backend.clear()`
+- `draw(context)` — per-frame rendering, onto an already-cleared frame
 
 ## Player and keyboard movement
 
@@ -175,7 +175,6 @@ Score and elapsed time sit on top of the world as plain `Text` nodes — rendere
 
 ```ts
 draw(context: RenderingContext) {
-    context.backend.clear();
     context.render(this.world);
     context.render(this.scoreText);
     context.render(this.timeText);

@@ -44,7 +44,6 @@ class CustomFragmentShaderScene extends Scene {
         this.filter.uniforms.uTime = this.time;
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.sprite);
     }
 }

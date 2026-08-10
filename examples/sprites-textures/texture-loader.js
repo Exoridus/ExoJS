@@ -35,7 +35,6 @@ class TextureLoaderScene extends Scene {
         this.progress.loaded = this.textures.filter(texture => texture.loadState === 'ready').length;
     }
     draw(context) {
-        context.backend.clear();
         const { loaded, total } = this.progress;
         this.bar.clear();
         this.bar.fillColor = new Color(60, 60, 60);

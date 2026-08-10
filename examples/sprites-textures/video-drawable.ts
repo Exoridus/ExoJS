@@ -109,7 +109,6 @@ class VideoDrawableScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear();
         context.render(this.video);
         context.render(this.overlay);
     }

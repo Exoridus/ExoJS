@@ -93,7 +93,6 @@ class MusicLoopScene extends Scene {
 
     override draw(context: RenderingContext): void {
         const app = this.app;
-        context.backend.clear();
         this.graphics.clear();
 
         const duration = this.musicVoice.duration;

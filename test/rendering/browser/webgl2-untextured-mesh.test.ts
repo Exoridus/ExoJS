@@ -135,7 +135,6 @@ describe('WebGL2 untextured mesh rendering', () => {
       }
 
       public override draw(context: RenderingContext): void {
-        context.backend.clear();
         context.render(this.mesh);
       }
     }
@@ -232,7 +231,6 @@ describe('WebGL2 untextured mesh rendering', () => {
       }
 
       public override draw(context: RenderingContext): void {
-        context.backend.clear();
         context.render(this.root);
       }
     }

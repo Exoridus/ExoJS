@@ -602,7 +602,6 @@ class AssetBrowserScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear(C.bg);
         this.drawPreviewBg(context);
         this.drawPreviewContent(context);
         this.drawSidebar(context);

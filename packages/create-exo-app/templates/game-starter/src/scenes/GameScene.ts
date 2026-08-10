@@ -12,6 +12,11 @@ export class GameScene extends Scene {
   public override init(): void {
     const { width, height } = this.app!.canvas;
 
+    // Each scene owns its background. The engine clears to `app.clearColor`
+    // before `draw` runs, and `init` fires once per activation — so coming
+    // back from the game-over screen repaints the frame in this colour.
+    this.app!.clearColor.set(18, 28, 48);
+
     this._player = new Player();
     this._player.setPosition(width / 2, height / 2);
 
@@ -59,7 +64,6 @@ export class GameScene extends Scene {
   }
 
   public override draw(context: RenderingContext): void {
-    context.backend.clear();
     context.render(this.root);
   }
 }

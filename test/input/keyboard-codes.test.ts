@@ -5,6 +5,7 @@
  */
 
 import type { Application } from '#core/Application';
+import { Time } from '#core/Time';
 import { InputManager } from '#input/InputManager';
 import { keyboardChannelFromCode } from '#input/keyboardCodes';
 import { Keyboard } from '#input/types';
@@ -27,6 +28,9 @@ const createMockApp = (canvas: HTMLCanvasElement): Application =>
     height: canvas.height,
     pixelRatio: 1,
     options: { input: {} },
+    // `InputManager` reads `scenes.paused` to decide whether a long-press hold
+    // advances this frame.
+    scenes: { paused: false },
   }) as unknown as Application;
 
 const createFocusedInputManager = (): { im: InputManager; canvas: HTMLCanvasElement } => {
@@ -182,7 +186,7 @@ describe('InputManager — layout-independent keyboard channels', () => {
     press({ code: 'MediaPlayPause' });
     press({ code: '', key: 'Unidentified', keyCode: 229 });
     release({ code: 'MediaPlayPause' });
-    im.preUpdate();
+    im.preUpdate(Time.zero);
 
     expect(onKeyDown).not.toHaveBeenCalled();
     expect(onKeyUp).not.toHaveBeenCalled();
@@ -196,7 +200,7 @@ describe('InputManager — layout-independent keyboard channels', () => {
 
     im.onKeyDown.add(onKeyDown);
     press({ code: 'ArrowLeft', key: 'ArrowLeft', keyCode: 37 });
-    im.preUpdate();
+    im.preUpdate(Time.zero);
 
     expect(onKeyDown).toHaveBeenCalledTimes(1);
     expect(onKeyDown).toHaveBeenCalledWith(Keyboard.Left);
@@ -246,7 +250,7 @@ describe('InputManager — modifier side and aggregate channels', () => {
 
     im.onKeyDown.add(onKeyDown);
     press({ code: 'AltLeft', key: 'Alt', keyCode: 18 });
-    im.preUpdate();
+    im.preUpdate(Time.zero);
 
     expect(onKeyDown).toHaveBeenCalledTimes(1);
     expect(onKeyDown).toHaveBeenCalledWith(Keyboard.AltLeft);
@@ -261,7 +265,7 @@ describe('InputManager — modifier side and aggregate channels', () => {
     im.onStart(Keyboard.Control, onStart);
 
     press({ code: 'ControlRight', key: 'Control', keyCode: 17 });
-    im.preUpdate();
+    im.preUpdate(Time.zero);
 
     expect(onStart).toHaveBeenCalledTimes(1);
 
@@ -275,7 +279,7 @@ describe('InputManager — modifier side and aggregate channels', () => {
     im.onStart(Keyboard.ControlLeft, onStart);
 
     press({ code: 'ControlRight', key: 'Control', keyCode: 17 });
-    im.preUpdate();
+    im.preUpdate(Time.zero);
 
     expect(onStart).not.toHaveBeenCalled();
 

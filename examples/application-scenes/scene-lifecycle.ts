@@ -60,7 +60,6 @@ class LifecycleScene extends Scene {
 
     override draw(context: RenderingContext): void {
         this.drawCount++;
-        context.backend.clear();
         this.text.text = [...this.events.slice(-8), `draw ${this.drawCount}`].join('\n');
         context.render(this.text);
     }

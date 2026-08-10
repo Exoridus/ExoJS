@@ -102,7 +102,6 @@ class SoundPoolScene extends Scene {
 
     override draw(context: RenderingContext): void {
         const app = this.app;
-        context.backend.clear();
         this.graphics.clear();
 
         const active = this.voices.length;

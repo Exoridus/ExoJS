@@ -48,7 +48,6 @@ class GameScene extends Scene {
         this.sprite.setRotation(this.time * 80);
     }
     draw(context) {
-        context.backend.clear(new Color(20, 24, 34));
         context.render(this.root);
     }
     destroy() {
@@ -77,7 +76,7 @@ const app = new Application({
         mount: document.body,
         sizingMode: 'fit',
     },
-    clearColor: Color.black,
+    clearColor: new Color(20, 24, 34),
     loader: {
         basePath: 'assets/',
     },

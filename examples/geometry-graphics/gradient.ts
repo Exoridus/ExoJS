@@ -46,7 +46,6 @@ class GradientScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear();
         context.render(this.background);
         context.render(this.orb);
     }

@@ -11,7 +11,6 @@ class HelloWorldScene extends Scene {
         this.sprite.setPosition(width / 2, height / 2);
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.sprite);
     }
 }

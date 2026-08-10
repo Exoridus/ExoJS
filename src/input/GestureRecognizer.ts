@@ -1,7 +1,9 @@
+import type { Time } from '#core/Time';
+
 import type { Pointer } from './Pointer';
 
-/** Long-press threshold in milliseconds. */
-const longPressMs = 500;
+/** Long-press threshold, in seconds of engine time (see {@link GestureRecognizer.update}). */
+const longPressSeconds = 0.5;
 
 /**
  * Distance from the focal point below which a pointer has no usable angle, in
@@ -19,7 +21,8 @@ export type GestureJournalEvent =
 interface LongPressEntry {
   pointerId: number;
   pointer: Pointer;
-  timerId: ReturnType<typeof setTimeout>;
+  /** Engine seconds this pointer has been held so far, accumulated by {@link GestureRecognizer.update}. */
+  elapsedSeconds: number;
   startX: number;
   startY: number;
 }
@@ -28,8 +31,12 @@ interface LongPressEntry {
  * Internal multi-touch gesture recognizer used by {@link InputManager}.
  * Tracks active touch pointers, derives pinch/rotate deltas from **all** of
  * them, and reports a long-press occurrence when a single pointer is held still
- * for {@link longPressMs} (500 ms). Long-press cancels if the pointer moves
+ * for {@link longPressSeconds} (0.5 s). Long-press cancels if the pointer moves
  * beyond `distanceThreshold` pixels from the down position.
+ *
+ * The hold is measured in ENGINE time, accumulated frame by frame in
+ * {@link update}, not by a wall-clock timer — see that method for what that
+ * buys.
  *
  * Pinch and rotate are averaged over every active touch around their common
  * focal point, the way the platform gesture recognizers do — a third or fourth
@@ -72,22 +79,60 @@ export class GestureRecognizer {
     private readonly _enqueue: (event: GestureJournalEvent) => void,
   ) {}
 
+  /** `true` while at least one pointer is being held for a long-press — i.e. while {@link update} has work to do. */
+  public get hasPendingLongPress(): boolean {
+    return this.longPressEntries.size > 0;
+  }
+
+  /**
+   * Advance every pending hold by one frame of engine time and report the ones
+   * that have now been held for {@link longPressSeconds}, in `delta`'s own
+   * units — a `delta` of zero advances nothing.
+   *
+   * Long-press is the one gesture with a duration, so it is the one that needs
+   * a clock, and taking that clock from the frame delta rather than from a
+   * `setTimeout` is what makes it behave like the rest of the simulation: a
+   * hold advances only on frames the owning {@link InputManager} actually
+   * runs, so it freezes with a stopped application instead of maturing in the
+   * background. The caller decides whether the current frame counts at all —
+   * {@link InputManager.preUpdate} skips this call entirely while the active
+   * scene is paused, so a finger left on the screen through a pause menu does
+   * not complete a long-press behind it.
+   *
+   * A matured hold is dropped from the pending set and handed to the
+   * construction-time enqueue callback, exactly like a pinch or rotate — it is
+   * dispatched from {@link InputManager}'s frame journal, not from here.
+   *
+   * @internal
+   */
+  public update(delta: Time): void {
+    if (this.longPressEntries.size === 0) {
+      return;
+    }
+
+    const seconds = delta.seconds;
+
+    for (const entry of this.longPressEntries.values()) {
+      entry.elapsedSeconds += seconds;
+
+      if (entry.elapsedSeconds >= longPressSeconds) {
+        this.longPressEntries.delete(entry.pointerId);
+        this._enqueue({ kind: 'longpress', pointer: entry.pointer });
+      }
+    }
+  }
+
   public onPointerDown(pointer: Pointer): void {
     if (pointer.type === 'touch') {
       this.touchPointers.set(pointer.id, pointer);
       this._resetGestureBaseline();
     }
 
-    // Start long-press timer for every pointer type.
-    const timerId = setTimeout(() => {
-      this.longPressEntries.delete(pointer.id);
-      this._enqueue({ kind: 'longpress', pointer });
-    }, longPressMs);
-
+    // Start the long-press hold for every pointer type.
     this.longPressEntries.set(pointer.id, {
       pointerId: pointer.id,
       pointer,
-      timerId,
+      elapsedSeconds: 0,
       startX: pointer.x,
       startY: pointer.y,
     });
@@ -102,7 +147,6 @@ export class GestureRecognizer {
       const dy = pointer.y - entry.startY;
 
       if (Math.sqrt(dx * dx + dy * dy) > distanceThreshold) {
-        clearTimeout(entry.timerId);
         this.longPressEntries.delete(pointer.id);
       }
     }
@@ -148,21 +192,12 @@ export class GestureRecognizer {
   }
 
   public destroy(): void {
-    for (const entry of this.longPressEntries.values()) {
-      clearTimeout(entry.timerId);
-    }
-
     this.longPressEntries.clear();
     this.touchPointers.clear();
   }
 
   private _cancelLongPress(pointerId: number): void {
-    const entry = this.longPressEntries.get(pointerId);
-
-    if (entry) {
-      clearTimeout(entry.timerId);
-      this.longPressEntries.delete(pointerId);
-    }
+    this.longPressEntries.delete(pointerId);
   }
 
   private _resetGestureBaseline(): void {

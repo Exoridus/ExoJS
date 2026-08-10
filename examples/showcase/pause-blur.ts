@@ -59,7 +59,6 @@ class GameScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear(new Color(20, 24, 34));
         context.render(this.root);
     }
 
@@ -91,7 +90,7 @@ const app = new Application({
         mount: document.body,
         sizingMode: 'fit',
     },
-    clearColor: Color.black,
+    clearColor: new Color(20, 24, 34),
     loader: {
         basePath: 'assets/',
     },

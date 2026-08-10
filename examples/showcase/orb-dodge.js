@@ -159,7 +159,6 @@ class PlayScene extends Scene {
         // #endregion guide:collision-loop
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.world);
         context.render(this.scoreText);
         context.render(this.timeText);
@@ -207,7 +206,6 @@ class GameOverScene extends Scene {
         this.inputs.onTrigger(Keyboard.R, restart);
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.title);
         context.render(this.stats);
         context.render(this.hint);

@@ -31,6 +31,9 @@ class GameScene extends Scene {
     private pauseLabel!: Label;
 
     override init(): void {
+        // Background — the engine clears to this before every `draw`.
+        this.app.clearColor.set(20, 24, 34);
+
         this.player = new Sprite(this.loader.get('image/hero.png'));
         this.addChild(this.player);
         // ... game setup ...
@@ -60,7 +63,6 @@ class GameScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear(new Color(20, 24, 34));
         context.render(this.root);
     }
 

@@ -93,7 +93,6 @@ class DuckingScene extends Scene {
         // Slew toward the live value; a touch of attack/decay keeps the bars readable.
         this.musicMeter += (music - this.musicMeter) * 0.3;
         this.voiceMeter += (voice - this.voiceMeter) * 0.5;
-        context.backend.clear();
         this.gfx.clear();
         this.bar(this.musicLabel, 'music bus', this.musicBarY, this.musicMeter * 3, new Color(120, 200, 255));
         this.bar(this.voiceLabel, 'voice bus (sidechain)', this.voiceBarY, this.voiceMeter * 3, new Color(255, 190, 120));

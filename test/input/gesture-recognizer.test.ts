@@ -1,7 +1,14 @@
 /**
  * Direct unit tests for GestureRecognizer (long-press timing, two-touch
  * pinch/rotate derivation). Constructed standalone — no InputManager/DOM
- * involved — for precise control over pointer positions and timer advance.
+ * involved — for precise control over pointer positions and elapsed time.
+ *
+ * The long-press hold runs on ENGINE time: the recognizer accumulates the
+ * frame deltas handed to `update()` and never reads a wall clock, so these
+ * tests advance it by calling `update()` — deliberately NOT with
+ * `vi.useFakeTimers()`, which would only prove that a `setTimeout` still
+ * exists. The pause behaviour that engine time buys lives one level up, in
+ * InputManager (see test/input/gesture-journal-ordering.test.ts).
  *
  * GestureRecognizer holds no Signal of its own: every occurrence is handed to
  * the `_enqueue` callback supplied at construction (in production, that
@@ -11,6 +18,7 @@
  * rather than a parallel test-only dispatch fallback.
  */
 
+import { Time } from '#core/Time';
 import { type GestureJournalEvent, GestureRecognizer } from '#input/GestureRecognizer';
 import type { Pointer } from '#input/Pointer';
 
@@ -48,13 +56,21 @@ const longPresses = (events: GestureJournalEvent[]): LongPressEvent[] => events.
 const toDeg = (radians: number): number => radians * (180 / Math.PI);
 const toRad = (degrees: number): number => degrees * (Math.PI / 180);
 
-beforeEach(() => {
-  vi.useFakeTimers();
-});
+/**
+ * Advance the recognizer by `milliseconds` of engine time, split across frames
+ * of at most 16 ms so the accumulation is exercised the way the frame loop
+ * drives it rather than as one artificial jump.
+ */
+const advanceEngineTime = (recognizer: GestureRecognizer, milliseconds: number): void => {
+  const frame = new Time(16);
+  let remaining = milliseconds;
 
-afterEach(() => {
-  vi.useRealTimers();
-});
+  while (remaining > 0) {
+    frame.milliseconds = Math.min(16, remaining);
+    recognizer.update(frame);
+    remaining -= frame.milliseconds;
+  }
+};
 
 // ---------------------------------------------------------------------------
 // Long-press
@@ -68,7 +84,7 @@ describe('GestureRecognizer — long press', () => {
     recognizer.onPointerDown(pointer);
     expect(longPresses(events)).toHaveLength(0);
 
-    vi.advanceTimersByTime(500);
+    advanceEngineTime(recognizer, 500);
 
     expect(longPresses(events)).toHaveLength(1);
     expect(longPresses(events)[0]!.pointer).toBe(pointer);
@@ -81,7 +97,7 @@ describe('GestureRecognizer — long press', () => {
     const pointer = asPointer({ id: 1, x: 0, y: 0, type: 'mouse' });
 
     recognizer.onPointerDown(pointer);
-    vi.advanceTimersByTime(500);
+    advanceEngineTime(recognizer, 500);
 
     expect(longPresses(events)).toHaveLength(1);
 
@@ -92,27 +108,27 @@ describe('GestureRecognizer — long press', () => {
     const { recognizer, events } = createHarness();
 
     recognizer.onPointerDown(asPointer({ id: 1, x: 0, y: 0, type: 'touch' }));
-    vi.advanceTimersByTime(499);
+    advanceEngineTime(recognizer, 499);
 
     expect(longPresses(events)).toHaveLength(0);
 
     recognizer.destroy();
   });
 
-  test('onPointerUp cancels the pending long-press timer', () => {
+  test('onPointerUp cancels the pending long-press', () => {
     const { recognizer, events } = createHarness();
     const pointer = asPointer({ id: 1, x: 0, y: 0, type: 'touch' });
 
     recognizer.onPointerDown(pointer);
     recognizer.onPointerUp(pointer);
-    vi.advanceTimersByTime(600);
+    advanceEngineTime(recognizer, 600);
 
     expect(longPresses(events)).toHaveLength(0);
 
     recognizer.destroy();
   });
 
-  test("onPointerLeave cancels that pointer's pending long-press timer and (for touch) drops two-touch tracking", () => {
+  test("onPointerLeave cancels that pointer's pending long-press and (for touch) drops two-touch tracking", () => {
     const { recognizer, events } = createHarness();
 
     const pA = { id: 1, x: 0, y: 0, type: 'touch' };
@@ -121,7 +137,7 @@ describe('GestureRecognizer — long press', () => {
     recognizer.onPointerDown(asPointer(pA));
     recognizer.onPointerDown(asPointer(pB));
     recognizer.onPointerLeave(asPointer(pA));
-    vi.advanceTimersByTime(600);
+    advanceEngineTime(recognizer, 600);
 
     // pA's own long-press was cancelled; pB (never left) still fires its own.
     const firedFor = longPresses(events).map(e => (e.pointer as unknown as FakePointer).id);
@@ -137,13 +153,13 @@ describe('GestureRecognizer — long press', () => {
     recognizer.destroy();
   });
 
-  test('onPointerCancel cancels the pending long-press timer and (for touch) drops two-touch tracking', () => {
+  test('onPointerCancel cancels the pending long-press and (for touch) drops two-touch tracking', () => {
     const { recognizer, events } = createHarness();
     const pointer = asPointer({ id: 1, x: 0, y: 0, type: 'touch' });
 
     recognizer.onPointerDown(pointer);
     recognizer.onPointerCancel(pointer);
-    vi.advanceTimersByTime(600);
+    advanceEngineTime(recognizer, 600);
 
     expect(longPresses(events)).toHaveLength(0);
 
@@ -171,7 +187,7 @@ describe('GestureRecognizer — long press', () => {
     recognizer.onPointerDown(asPointer(pointer));
     pointer.x = 100; // well beyond distanceThreshold=10
     recognizer.onPointerMove(asPointer(pointer), distanceThreshold);
-    vi.advanceTimersByTime(600);
+    advanceEngineTime(recognizer, 600);
 
     expect(longPresses(events)).toHaveLength(0);
 
@@ -185,7 +201,7 @@ describe('GestureRecognizer — long press', () => {
     recognizer.onPointerDown(asPointer(pointer));
     pointer.x = 2; // within distanceThreshold=10
     recognizer.onPointerMove(asPointer(pointer), distanceThreshold);
-    vi.advanceTimersByTime(600);
+    advanceEngineTime(recognizer, 600);
 
     expect(longPresses(events)).toHaveLength(1);
 
@@ -197,7 +213,7 @@ describe('GestureRecognizer — long press', () => {
     const pointer = { id: 1, x: 0, y: 0, type: 'touch' };
 
     recognizer.onPointerDown(asPointer(pointer));
-    vi.advanceTimersByTime(600); // long-press fires and removes its own entry
+    advanceEngineTime(recognizer, 600); // long-press fires and removes its own entry
 
     expect(() => {
       pointer.x = 500;
@@ -207,15 +223,59 @@ describe('GestureRecognizer — long press', () => {
     recognizer.destroy();
   });
 
-  test('destroy() clears pending long-press timers so they never fire', () => {
+  test('destroy() drops pending long-press holds so they never fire', () => {
     const { recognizer, events } = createHarness();
 
     recognizer.onPointerDown(asPointer({ id: 1, x: 0, y: 0, type: 'touch' }));
     recognizer.destroy();
 
-    vi.advanceTimersByTime(600);
+    advanceEngineTime(recognizer, 600);
 
     expect(longPresses(events)).toHaveLength(0);
+  });
+
+  test('a held pointer that is never updated never fires — the hold runs on the frame delta, not on a wall clock', async () => {
+    const { recognizer, events } = createHarness();
+
+    recognizer.onPointerDown(asPointer({ id: 1, x: 0, y: 0, type: 'touch' }));
+
+    // Real time passes with no frames at all — the state a stopped
+    // application, a backgrounded tab, or a paused scene leaves the
+    // recognizer in. A `setTimeout`-based hold would have matured by now.
+    await new Promise(resolve => setTimeout(resolve, 20));
+    recognizer.update(Time.zero);
+
+    expect(longPresses(events)).toHaveLength(0);
+
+    // Frames resume: the hold picks up from where it was, needing the full
+    // threshold of engine time rather than being credited the real-time gap.
+    advanceEngineTime(recognizer, 499);
+    expect(longPresses(events)).toHaveLength(0);
+
+    advanceEngineTime(recognizer, 1);
+    expect(longPresses(events)).toHaveLength(1);
+
+    recognizer.destroy();
+  });
+
+  test("each held pointer keeps its own hold, so a second press does not inherit the first one's elapsed time", () => {
+    const { recognizer, events } = createHarness();
+    const first = asPointer({ id: 1, x: 0, y: 0, type: 'touch' });
+    const second = asPointer({ id: 2, x: 50, y: 0, type: 'touch' });
+
+    recognizer.onPointerDown(first);
+    advanceEngineTime(recognizer, 400);
+    recognizer.onPointerDown(second);
+    advanceEngineTime(recognizer, 100);
+
+    // 500 ms for the first, only 100 ms for the second.
+    expect(longPresses(events).map(e => (e.pointer as unknown as FakePointer).id)).toEqual([1]);
+
+    advanceEngineTime(recognizer, 400);
+
+    expect(longPresses(events).map(e => (e.pointer as unknown as FakePointer).id)).toEqual([1, 2]);
+
+    recognizer.destroy();
   });
 });
 

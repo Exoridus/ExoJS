@@ -88,7 +88,6 @@ class RandomPitchPoolScene extends Scene {
 
     override draw(context: RenderingContext): void {
         const app = this.app;
-        context.backend.clear();
         this.graphics.clear();
 
         // Centre baseline.

@@ -87,7 +87,6 @@ class SpriteFollowsBodyScene extends Scene {
         }
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.floor);
         context.render(this.actor);
     }

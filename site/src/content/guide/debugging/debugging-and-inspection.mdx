@@ -116,10 +116,10 @@ logger.error('Simulation step threw', { source: 'physics', error: new Error('phy
 
 Each call takes a `message` plus an optional options bag: `source` (rendered as `[ExoJS][source]`, or a bare `[ExoJS]` when omitted), `data` for structured context, and `error` for `error()` calls. Use `source` to identify the subsystem or class emitting the entry so your own tooling can filter by it.
 
-Severity follows `LogSeverity`: `Debug < Info < Warning < Error`. In production builds, `Debug`/`Info`/`Warning` calls are compiled out entirely — only `Error` survives — so it's safe to leave `logger.debug`/`logger.info` calls in shipped code without gating them yourself. In development builds, a console sink is registered by default and prefixes every line with a styled `[ExoJS]` (or `[ExoJS][source]`) badge.
+Severity follows `LogSeverity`: `Debug < Info < Warning < Error`. In production builds, `Debug`/`Info`/`Warning` calls never reach a sink — `Logger` checks severity at runtime and returns early — but only `Error` calls are unconditionally guaranteed to survive. The build does *not* compile the lower-severity calls out of the bundle: the `logger.debug(...)` call itself, its message string, and any `data` object you pass are still constructed and executed every time, and only discarded afterward. In development builds, a console sink is registered by default and prefixes every line with a styled `[ExoJS]` (or `[ExoJS][source]`) badge.
 
-<Callout type="info" title="Leave your debug logs in">
-Only `Error` survives a production build — `Debug`, `Info` and `Warning` are stripped out. So `logger.debug(...)` and `logger.info(...)` cost nothing shipped; there's no need to remove them or gate them behind your own flag.
+<Callout type="info" title="Debug logs are dropped at runtime, not stripped from the bundle">
+Only `Error` reaches a sink in a production build — `Debug`, `Info`, and `Warning` calls are discarded by an early return inside `Logger`, not removed from the shipped code. The call and its arguments still run, so if a message or `data` object is expensive to build, construct it lazily (e.g. behind a function or your own guard) rather than assuming it gets stripped.
 </Callout>
 
 To capture log entries yourself — for an in-game console, telemetry, or a custom debug panel — register a sink with `addSink`. It returns an unsubscribe function:

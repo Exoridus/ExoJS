@@ -158,7 +158,6 @@ class TiledMapPhysicsActorScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear();
         context.render(this.mapNode);
         context.render(this.actor);
         this.debug.render(context.backend);

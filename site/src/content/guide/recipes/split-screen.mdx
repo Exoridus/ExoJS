@@ -51,8 +51,6 @@ update(delta: Time) {
 }
 
 draw(context: RenderingContext) {
-    context.backend.clear();
-
     // Render left view
     context.render(this._leftPlayer, { view: this._leftView });
     context.render(this._rightPlayer, { view: this._leftView });

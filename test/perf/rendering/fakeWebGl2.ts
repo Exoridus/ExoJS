@@ -189,6 +189,21 @@ const byteLengthOf = (data: unknown): number => {
   return 0;
 };
 
+/** Bytes per typed-array element, for sizing an upload expressed as an element offset. */
+const elementBytesOf = (data: unknown): number => (ArrayBuffer.isView(data) ? ((data as { BYTES_PER_ELEMENT?: number }).BYTES_PER_ELEMENT ?? 1) : 1);
+
+/**
+ * Channel count behind a GL pixel-format constant. Read off the same global
+ * `WebGL2RenderingContext` the backend's format table reads (the stub installed
+ * by {@link installFakeWebGl2Globals} under Node, the real class in a browser),
+ * so the two always agree on which value means `RED`.
+ */
+const channelsOfFormat = (format: unknown): number => {
+  const gl = (globalThis as Record<string, unknown>)['WebGL2RenderingContext'] as Record<string, number> | undefined;
+
+  return gl !== undefined && format === gl['RED'] ? 1 : 4;
+};
+
 // A deterministic numeric value for any UPPER_SNAKE GL constant. Values need only
 // be internally consistent (the fake both produces and consumes them); they are
 // never compared to real WebGL2 enums.
@@ -373,11 +388,17 @@ export const createFakeWebGl2Context = (recorder: GlRecorder): WebGL2RenderingCo
   const recordTextureUpload = (args: unknown[]): void => {
     // texImage2D(target, level, internalFormat, width, height, border, format, type, data?)
     // texSubImage2D(target, level, xoffset, yoffset, width, height, format, type, data?)
+    // texSubImage2D(target, level, xoffset, yoffset, width, height, format, type, srcData, srcOffset)
     const isSub = args.length >= 9 && typeof args[2] === 'number' && typeof args[3] === 'number' && typeof args[4] === 'number' && typeof args[5] === 'number';
     const width = isSub ? (args[4] as number) : (args[3] as number);
     const height = isSub ? (args[5] as number) : (args[4] as number);
-    const data = args[args.length - 1];
-    const bytes = byteLengthOf(data);
+    // The `srcOffset` overload hands GL the WHOLE texture buffer plus an
+    // element offset, so its byte length describes the texture rather than the
+    // uploaded region. Size that upload from the region instead, otherwise a
+    // full-width band would be booked as the entire buffer.
+    const srcOffsetForm = args.length === 10 && ArrayBuffer.isView(args[8]) && typeof args[9] === 'number';
+    const data = srcOffsetForm ? args[8] : args[args.length - 1];
+    const bytes = srcOffsetForm ? width * height * channelsOfFormat(args[6]) * elementBytesOf(data) : byteLengthOf(data);
 
     recorder.textureUploads++;
     recorder.textureUploadBytes += bytes;

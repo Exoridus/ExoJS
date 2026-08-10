@@ -48,7 +48,6 @@ class PaletteCyclingScene extends Scene {
         this.palette.source = buildPaletteCanvas(Math.floor(this.offset));
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.sprite);
     }
 }

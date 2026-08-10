@@ -49,7 +49,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Existing canvas element to use. If omitted, Application creates one."
+          "description": "Existing canvas element to use. If omitted, Application creates one — and a canvas it created is also one it removes from the document again in Application.destroy. A canvas passed in here stays yours: it is left in the DOM untouched when the application goes down."
         },
         {
           "name": "height",
