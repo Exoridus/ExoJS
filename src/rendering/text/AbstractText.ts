@@ -1,3 +1,4 @@
+import { pickLayoutOptions } from '#core/serialization/serializerHelpers';
 import type { ReadonlyRectangle } from '#math/Rectangle';
 import { Drawable } from '#rendering/Drawable';
 
@@ -51,7 +52,9 @@ export abstract class AbstractText extends Drawable {
     this._style.onChange.add(this._onStyleChange);
     // Copied, not aliased: the caller keeps its own options object and may
     // well go on mutating it, which must not silently re-flow this node.
-    this._layout = { ...layout };
+    // Narrowed to the layout keys too — `TextOptions` is a flat merge of style
+    // and layout, and `Text` hands that whole bag down.
+    this._layout = pickLayoutOptions(layout);
   }
 
   /** The string currently displayed by this node. */
@@ -70,13 +73,17 @@ export abstract class AbstractText extends Drawable {
    *
    * Handed out read-only: the node holds its own copy, so mutating the object
    * would change nothing. Assign a new one to re-flow.
+   *
+   * Carries layout keys only. A subclass whose options bag merges style and
+   * layout into one flat object (as `TextOptions` does) still reports just the
+   * layout half here.
    */
   public get layout(): Readonly<LayoutOptions> {
     return this._layout;
   }
 
   public set layout(v: LayoutOptions) {
-    this._layout = { ...v };
+    this._layout = pickLayoutOptions(v);
     this._markDirty('layout');
   }
 

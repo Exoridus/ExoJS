@@ -104,8 +104,12 @@ export interface TextStyleOptions {
 
   // ── Gradient ──────────────────────────────────────────────────────────────
   /**
-   * Two-stop fill gradient `[top, bottom]`. When set, overrides `fillColor`
-   * for the glyph interior. `null` disables the gradient.
+   * Two-stop fill gradient. When set, overrides `fillColor` for the glyph
+   * interior. `null` disables the gradient.
+   *
+   * The first colour is the START of the ramp and the second its END, read
+   * along `gradientAxis`: `[top, bottom]` for `'vertical'`, `[left, right]`
+   * for `'horizontal'`.
    */
   gradientColors?: [Color, Color] | null;
   /** Gradient orientation. Defaults to `'vertical'`. */
@@ -371,8 +375,12 @@ export class TextStyle {
   // ── Gradient properties (hint: 'tint') ──────────────────────────────────
 
   /**
-   * Two-stop fill gradient `[top, bottom]`. When set, overrides `fillColor`
-   * for the glyph interior. Assign `null` to disable.
+   * Two-stop fill gradient. When set, overrides `fillColor` for the glyph
+   * interior. Assign `null` to disable.
+   *
+   * The first colour is the START of the ramp and the second its END, read
+   * along `gradientAxis`: `[top, bottom]` for `'vertical'`, `[left, right]`
+   * for `'horizontal'`.
    */
   public get gradientColors(): [Color, Color] | null {
     return this._gradientColors;

@@ -2580,7 +2580,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Flow-control options — maxWidth, letterSpacing, whiteSpace etc. Handed out read-only: the node holds its own copy, so mutating the object would change nothing. Assign a new one to re-flow."
+          "description": "Flow-control options — maxWidth, letterSpacing, whiteSpace etc. Handed out read-only: the node holds its own copy, so mutating the object would change nothing. Assign a new one to re-flow. Carries layout keys only. A subclass whose options bag merges style and layout into one flat object (as TextOptions does) still reports just the layout half here."
         },
         {
           "name": "mask",

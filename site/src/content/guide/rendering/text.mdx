@@ -88,8 +88,19 @@ The visual appearance comes from [`TextStyleOptions`](/ExoJS/en/api/text-style-o
 | `shadowOffsetY` | `number` | `0` | Vertical shadow offset in pixels |
 | `shadowAlpha` | `number` | `0` | Shadow opacity (`0`–`1`); `0` disables the shadow |
 | `shadowBlur` | `number` | `0` | Shadow blur softness (`0`–`1`) |
-| `gradientColors` | `[Color, Color] \| null` | `null` | Two-stop fill gradient `[top, bottom]`; overrides `fillColor` |
+| `gradientColors` | `[Color, Color] \| null` | `null` | Two-stop fill gradient; overrides `fillColor`. First colour starts the ramp, second ends it |
 | `gradientAxis` | `'vertical' \| 'horizontal'` | `'vertical'` | Gradient orientation |
+
+`gradientColors` is ordered along `gradientAxis` and always runs start → end: `[top, bottom]` for the default `'vertical'` axis, `[left, right]` for `'horizontal'`. The ramp spans the ink extent (`getLocalBounds()`), not the advance.
+
+```ts
+import { Color, Text } from '@codexo/exojs';
+
+const banner = new Text('Level Up', {
+    fontSize: 48,
+    gradientColors: [Color.white, Color.tomato], // white on top, tomato at the bottom
+});
+```
 
 Text flow and overflow come from [`LayoutOptions`](/ExoJS/en/api/layout-options/), merged into the same options object:
 

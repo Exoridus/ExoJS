@@ -49,8 +49,10 @@ void main(void) {
 
   vec4 fillColor;
   if (gradEnabled > 0.5) {
+    // v_gradUV is 0 at the top/left edge of the ink box and 1 at the
+    // bottom/right, so texel 7 (gradientColors[0]) belongs at t = 0.
     float t = gradVertical > 0.5 ? v_gradUV.y : v_gradUV.x;
-    fillColor = mix(tGradBot, tGradTop, t);
+    fillColor = mix(tGradTop, tGradBot, t);
   } else {
     fillColor = tFill;
   }

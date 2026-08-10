@@ -266,6 +266,41 @@ describe('serialization — Text', () => {
     expect(restored.style.fontFamily).toBe('Roboto');
     expect(restored.style.fillColor.r).toBe(10);
   });
+
+  // `TextOptions` is a flat merge of style and layout options, so the node has
+  // to split them itself — otherwise `fontSize` and a live `Color` end up
+  // inside a `layout` block that claims a structure the type does not have.
+  it('writes a layout block holding layout keys only, never style keys', () => {
+    const text = new Text('Wrapped', {
+      fontSize: 24,
+      fillColor: new Color(10, 20, 30, 1),
+      outlineWidth: 2,
+      maxWidth: 120,
+      letterSpacing: 3,
+      whiteSpace: 'pre',
+    });
+
+    expect(Object.keys(text.layout).sort()).toEqual(['letterSpacing', 'maxWidth', 'whiteSpace']);
+
+    const data = serializeTree(text);
+
+    expect(data.layout).toEqual({ maxWidth: 120, letterSpacing: 3, whiteSpace: 'pre' });
+
+    // The style half is not lost — it is written where it belongs.
+    expect(data.style).toMatchObject({ fontSize: 24, outlineWidth: 2 });
+
+    const restored = deserializeTree(data) as Text;
+
+    expect(restored.layout).toEqual({ maxWidth: 120, letterSpacing: 3, whiteSpace: 'pre' });
+    expect(restored.style.fontSize).toBe(24);
+    expect(restored.style.outlineWidth).toBe(2);
+  });
+
+  it('omits the layout block entirely when only style options are given', () => {
+    const data = serializeTree(new Text('Plain', { fontSize: 24, fillColor: new Color(1, 2, 3, 1) }));
+
+    expect(data.layout).toBeUndefined();
+  });
 });
 
 describe('serialization — custom serializer', () => {
