@@ -332,6 +332,41 @@ describe('BitmapText', () => {
 });
 
 // ---------------------------------------------------------------------------
+// BitmapText.measure()
+// ---------------------------------------------------------------------------
+
+describe('BitmapText.measure', () => {
+  test.each([
+    ['single line', 'AB', {}],
+    ['multi line', 'AB\nA\nBA', {}],
+    ['wrapped', 'A B A', { layout: { maxWidth: 12 } }],
+    ['letterSpacing', 'AB', { layout: { letterSpacing: 3 } }],
+    ['scaled and led', 'AB\nA', { scale: 2, leading: 4, lineHeight: 1.5 }],
+  ])('agrees with a node built the same way — %s', (_label, value, options) => {
+    const font = makeFont();
+    const node = new BitmapText(value, font, options);
+
+    expect(BitmapText.measure(value, font, options)).toEqual(node.textBounds);
+  });
+
+  test('letterSpacing and maxWidth reach the measurement', () => {
+    const font = makeFont();
+    const plain = BitmapText.measure('AB', font);
+    const spaced = BitmapText.measure('AB', font, { layout: { letterSpacing: 4 } });
+
+    expect(spaced.width).toBe(plain.width + 4);
+
+    const wrapped = BitmapText.measure('A B', font, { layout: { maxWidth: 12 } });
+
+    expect(wrapped.height).toBeGreaterThan(plain.height);
+  });
+
+  test('an empty string measures to nothing', () => {
+    expect(BitmapText.measure('', makeFont())).toEqual({ width: 0, height: 0 });
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Dev assertions — BmFont and BmFontAdapter
 // ---------------------------------------------------------------------------
 

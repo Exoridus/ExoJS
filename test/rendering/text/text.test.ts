@@ -426,6 +426,59 @@ describe('Text', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Text.measure()
+// ---------------------------------------------------------------------------
+
+describe('Text.measure', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // This is the claim the whole construction rests on: the static measurement
+  // and a node's own advance come out of the same layout pass against the same
+  // shared atlas, so they cannot drift apart.
+  test.each([
+    ['single line', 'Hello', {}],
+    ['multi line', 'Hello\nthere\nyou', {}],
+    ['wrapped', 'Hello there you', { maxWidth: 25 }],
+    ['letterSpacing', 'Hello', { letterSpacing: 3 }],
+    ['aligned and led', 'Hi\nthere', { align: 'center' as const, leading: 4, lineHeight: 1.5 }],
+  ])('agrees with a node built the same way — %s', (_label, value, options) => {
+    const node = new Text(value, { fontSize: 16, ...options });
+
+    expect(Text.measure(value, { fontSize: 16, ...options })).toEqual(node.textBounds);
+  });
+
+  test('letterSpacing and maxWidth actually reach the measurement', () => {
+    // The deleted `measureText` ignored both, which is why it disagreed with
+    // what a node of the same configuration reported.
+    const plain = Text.measure('Hello', { fontSize: 16 });
+    const spaced = Text.measure('Hello', { fontSize: 16, letterSpacing: 4 });
+
+    expect(spaced.width).toBe(plain.width + 4 * 4);
+
+    const wrapped = Text.measure('Hello there', { fontSize: 16, maxWidth: 25 });
+
+    expect(wrapped.height).toBeGreaterThan(plain.height);
+    expect(wrapped.width).toBeLessThan(Text.measure('Hello there', { fontSize: 16 }).width);
+  });
+
+  test('an empty string measures to nothing and touches no atlas', () => {
+    expect(Text.measure('', { fontSize: 16 })).toEqual({ width: 0, height: 0 });
+    expect(mockPool.getAtlas).not.toHaveBeenCalled();
+  });
+
+  test('measuring does not construct a node', () => {
+    const passesBefore = layoutPasses();
+
+    Text.measure('Hello', { fontSize: 16 });
+
+    // Exactly one pass: the measurement itself, with no node behind it.
+    expect(layoutPasses()).toBe(passesBefore + 1);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // FontFace-first tests
 // ---------------------------------------------------------------------------
 
