@@ -42,6 +42,24 @@ while read local_ref local_sha remote_ref remote_sha; do
     esac
 done
 
+# Both verify:quick and verify:release include `typecheck:site`, which
+# type-checks the site/examples package against the PUBLISHED entry points
+# (package.json `exports` → dist/esm/*.d.ts) rather than against src/. Without
+# a build those declaration files don't exist and tsc reports a wall of
+# ts(2307) "Cannot find module 'exojs'" — a failure mode that reads like a
+# broken import in the pushed change, not like a missing prerequisite. Checking
+# for the root entry point's .d.ts up front turns that into one actionable
+# line. Deliberately not running the build here: it is slow enough that a hook
+# doing it silently would be the thing people bypass.
+if [ "$is_tag_push" = "1" ] || [ "$is_branch_push" = "1" ]; then
+    if [ ! -e dist/esm/index.d.ts ]; then
+        echo "[pre-push] dist/ is missing — 'typecheck:site' would fail with ts(2307) 'Cannot find module exojs'."
+        echo "[pre-push] It type-checks site/examples against the published entry points, which only exist after a build."
+        echo "[pre-push] Run 'pnpm build', then push again."
+        exit 1
+    fi
+fi
+
 if [ "$is_tag_push" = "1" ]; then
     echo "[pre-push] tag push detected — running full release verification"
     npm run verify:release || exit 1
