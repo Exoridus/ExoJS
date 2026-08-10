@@ -283,7 +283,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Two-stop fill gradient [top, bottom]. When set, overrides fillColor for the glyph interior. null disables the gradient."
+          "description": "Two-stop fill gradient. When set, overrides fillColor for the glyph interior. null disables the gradient. The first colour is the START of the ramp and the second its END, read along gradientAxis: [top, bottom] for 'vertical', [left, right] for 'horizontal'."
         },
         {
           "name": "layout",

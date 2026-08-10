@@ -9,10 +9,13 @@
  * samples the ramp at the wrong place and the clamp eats the overhang.
  *
  * The check does not depend on the shape of the glyph. With a pure red/blue
- * vertical ramp, `r / (r + b)` at any covered pixel IS the ramp fraction, and
- * the ramp fraction is a closed form of the uploaded box — so each ink row can
+ * vertical ramp, `r / (r + b)` at any covered pixel IS the red stop's weight,
+ * and that weight is a closed form of the uploaded box — so each ink row can
  * be predicted from `text.getLocalBounds()` and compared. Partial coverage
  * scales both channels equally and cancels out of the ratio.
+ *
+ * It also pins the ORIENTATION: `gradientColors` reads `[top, bottom]`, so the
+ * first colour must dominate the top rows and fade out towards the bottom.
  *
  * Run via:  pnpm test:browser:webgl
  */
@@ -111,7 +114,8 @@ describe('WebGL2: the text gradient ramp spans the ink extent', () => {
     const backend = await createBackend();
     const root = new Container();
     // 'M' is wide and solid, so most rows carry a strong, unambiguous sample.
-    // gradientColors[0] feeds the shader's ramp-1.0 end, [1] its ramp-0.0 end.
+    // gradientColors[0] is the TOP stop — it feeds the shader's ramp-0.0 end,
+    // [1] its ramp-1.0 end.
     const text = new Text('M', {
       fontSize: 56,
       fillColor: Color.white,
@@ -140,12 +144,27 @@ describe('WebGL2: the text gradient ramp spans the ink extent', () => {
       for (const { y, share } of rows) {
         // The shader interpolates at the pixel centre.
         const localY = y + 0.5 - textY;
-        const expected = Math.min(1, Math.max(0, (localY - ink.y) / ink.height));
+        const t = Math.min(1, Math.max(0, (localY - ink.y) / ink.height));
+        // Red is gradientColors[0] — the TOP stop — so its share is 1 at the
+        // top of the ink box and falls to 0 at the bottom.
+        const expected = 1 - t;
 
         // Measured agreement is within 0.001 on every ink row; the slack
         // covers adapter rounding, not a difference of interpretation.
         expect(Math.abs(share - expected), `row ${y}: red share ${share.toFixed(3)}, expected ${expected.toFixed(3)}`).toBeLessThan(0.02);
       }
+
+      // Orientation, stated without the closed form: the highest sampled ink
+      // row must be materially redder than the lowest. Glyph coverage never
+      // reaches the padded edges of the ink box, so this compares the rows that
+      // actually carry signal rather than the ramp's endpoints.
+      const first = rows[0]!;
+      const last = rows[rows.length - 1]!;
+
+      expect(
+        first.share - last.share,
+        `red must fall from row ${first.y} (${first.share.toFixed(3)}) to row ${last.y} (${last.share.toFixed(3)})`,
+      ).toBeGreaterThan(0.2);
     } finally {
       root.destroy();
       backend.destroy();

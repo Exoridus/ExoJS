@@ -262,8 +262,10 @@ fn fragmentSdf(in: VertexOutput) -> @location(0) vec4<f32> {
 
     var fillColor : vec4<f32>;
     if (gradEnabled > 0.5) {
+        // gradUV is 0 at the top/left edge of the ink box and 1 at the
+        // bottom/right, so texel 7 (gradientColors[0]) belongs at t = 0.
         let t = select(in.gradUV.x, in.gradUV.y, gradVertical > 0.5);
-        fillColor = mix(tGradBot, tGradTop, t);
+        fillColor = mix(tGradTop, tGradBot, t);
     } else {
         fillColor = tFill;
     }
@@ -314,8 +316,10 @@ fn fragmentMsdf(in: VertexOutput) -> @location(0) vec4<f32> {
 
     var fillColor : vec4<f32>;
     if (gradEnabled > 0.5) {
+        // gradUV is 0 at the top/left edge of the ink box and 1 at the
+        // bottom/right, so texel 7 (gradientColors[0]) belongs at t = 0.
         let t = select(in.gradUV.x, in.gradUV.y, gradVertical > 0.5);
-        fillColor = mix(tGradBot, tGradTop, t);
+        fillColor = mix(tGradTop, tGradBot, t);
     } else {
         fillColor = tFill;
     }
