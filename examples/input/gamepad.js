@@ -120,7 +120,6 @@ class GamepadScene extends Scene {
         container.addChild(dPadDown);
         container.addChild(dPadLeft);
         container.addChild(dPadRight);
-        container.setAnchor(0.5);
         container.setPosition(width / 5, height / 2);
         return container;
     }
@@ -147,7 +146,6 @@ class GamepadScene extends Scene {
         container.addChild(buttonLeft);
         container.addChild(buttonRight);
         container.addChild(buttonBottom);
-        container.setAnchor(0.5);
         container.setPosition(width * 0.8, height / 2);
         return container;
     }
@@ -171,7 +169,6 @@ class GamepadScene extends Scene {
         container.addChild(rightButton);
         container.addChild(leftTrigger);
         container.addChild(rightTrigger);
-        container.setAnchor(0.5);
         container.setPosition(width / 2, height / 5);
         return container;
     }
@@ -186,7 +183,6 @@ class GamepadScene extends Scene {
         startButton.setPosition(width * 0.3, 0);
         container.addChild(selectButton);
         container.addChild(startButton);
-        container.setAnchor(0.5);
         container.setPosition(width / 2, height / 2);
         return container;
     }
@@ -213,7 +209,6 @@ class GamepadScene extends Scene {
         rightStick.setPosition(startRight.x, startRight.y);
         container.addChild(leftStick);
         container.addChild(rightStick);
-        container.setAnchor(0.5, 0);
         container.setPosition(width / 2, height * 0.65);
         return container;
     }

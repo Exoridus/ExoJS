@@ -69,6 +69,13 @@ export interface MeshOptions {
  * the AABB of those vertices and used by the cull pass. Re-computing
  * after in-place mutation is the caller's responsibility (call
  * `recomputeLocalBounds()`).
+ *
+ * A mesh has no declared layout box, so {@link Drawable.anchor} measures
+ * against that vertex AABB — which makes it unstable by construction. A
+ * single vertex moved outside the current hull grows the AABB and moves the
+ * pivot with it, and so does every `recomputeLocalBounds()` after a
+ * deformation. Set {@link SceneNode.origin} directly whenever the pivot has to
+ * stay put; the anchor is only a convenience for a mesh whose hull is fixed.
  */
 export class Mesh extends Drawable {
   // Backing fields are `protected` so the pooled `ImmediateMesh` subclass can

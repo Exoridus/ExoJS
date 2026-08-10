@@ -49,10 +49,15 @@ enum SceneNodeTransformFlags {
   BoundsRect = 1 << 9, // own _bounds is stale
 }
 
-// Internal: which reactive vector fired a change, so the single
-// `_onObservableChange` handler can route to the right dirty path without each
-// vector carrying a bound closure (4 fewer allocations per node).
-enum SceneNodeVectorChannel {
+/**
+ * Which reactive vector fired a change, so a single `_onObservableChange`
+ * handler can route to the right dirty path without each vector carrying a
+ * bound closure (4 fewer allocations per node). Shared with {@link Drawable},
+ * which owns the `Anchor` channel; the values are a single namespace so a
+ * node's vectors can never collide.
+ * @internal
+ */
+export enum SceneNodeVectorChannel {
   Position,
   Scale,
   Origin,
@@ -118,10 +123,13 @@ const NO_PARENT_VERSION = 0;
 
 /**
  * Transform-bearing leaf in the scene-graph hierarchy. Carries position,
- * rotation, scale, skew, origin, and a 2-component {@link Vector} `anchor`
- * used to derive `origin` from the local bounds. Implements {@link Collidable}
- * so any node can participate directly in the SAT collision pipeline via its
- * AABB or rotated/skewed quad.
+ * rotation, scale, skew and origin. Implements {@link Collidable} so any node
+ * can participate directly in the SAT collision pipeline via its AABB or
+ * rotated/skewed quad.
+ *
+ * The normalized `anchor` convenience that derives `origin` from a layout box
+ * lives on {@link Drawable}: it needs a box to measure, which a node that
+ * carries no geometry of its own does not have.
  *
  * Transform state is dirty-flag-cached: position/rotation/scale/skew/origin
  * mutations invalidate the local transform; either kind of mutation also
@@ -222,7 +230,6 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    * static-subtree skip. Every other writer belongs in {@link _setLocalBounds}.
    */
   protected readonly _localBounds = new Rectangle();
-  private _anchor = new ObservableVector(this, SceneNodeVectorChannel.Anchor, 0, 0);
   private _parentNode: Container | null = null;
   private _zIndex = 0;
   private _cullable = true;
@@ -287,20 +294,6 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
 
   public set origin(origin: ObservableVector) {
     this._origin.copy(origin);
-  }
-
-  /**
-   * Normalized anchor in 0..1 along each axis that derives `origin` from
-   * the current bounds size. `(0, 0)` = top-left, `(0.5, 0.5)` = center,
-   * `(1, 1)` = bottom-right. Updates `origin` whenever the anchor or the
-   * local bounds change.
-   */
-  public get anchor(): ObservableVector {
-    return this._anchor;
-  }
-
-  public set anchor(anchor: ObservableVector) {
-    this._anchor.copy(anchor);
   }
 
   public get parent(): Container | null {
@@ -511,12 +504,6 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
       this._transform.x = this._origin.x * -this._scale.x + this._position.x;
       this._transform.y = this._origin.y * -this._scale.y + this._position.y;
     }
-
-    return this;
-  }
-
-  public setAnchor(x: number, y: number = x): this {
-    this._anchor.set(x, y);
 
     return this;
   }
@@ -917,7 +904,6 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     this._worldAnchor = null;
     this._localBounds.destroy();
     this._bounds.destroy();
-    this._anchor.destroy();
     this._orientedBounds?.destroy();
   }
 
@@ -938,9 +924,10 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
 
   /**
    * Routes a change from one of this node's reactive {@link ObservableVector}
-   * components (position/scale/origin/anchor) to the matching dirty path. The
-   * vectors carry only a numeric channel, so this single handler replaces the
-   * four bound closures they used to allocate per node.
+   * components (position/scale/origin) to the matching dirty path. The vectors
+   * carry only a numeric channel, so this single handler replaces the bound
+   * closures they used to allocate per node. {@link Drawable} extends it with
+   * the anchor channel the same way — one override, still no closures.
    * @internal
    */
   public _onObservableChange(channel: number): void {
@@ -953,9 +940,6 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
         break;
       case SceneNodeVectorChannel.Origin:
         this._setOriginDirty();
-        break;
-      case SceneNodeVectorChannel.Anchor:
-        this._updateOrigin();
         break;
     }
   }
@@ -1247,34 +1231,5 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     this.flags.addMask(SceneNodeTransformFlags.Skew);
     this._invalidateSubtreeTransform();
     this._markOwnTransformDirty();
-  }
-
-  /**
-   * Re-derive `origin` from the fractional anchor and the CURRENT local
-   * bounds. Uses local (untransformed) bounds on purpose: the transform
-   * multiplies the origin by scale itself, so deriving from world bounds
-   * would double-apply scale whenever the anchor is set after scaling.
-   * Subclasses whose local bounds change after construction (e.g. a sprite
-   * switching to a texture sub-frame) must call this to keep an anchored
-   * node anchored.
-   *
-   * The anchor measures against the node's declared LAYOUT BOX — its extent,
-   * taken from the node's own local origin — and never against where its AABB
-   * happens to start. Only the size term participates, so the mapping from
-   * anchor to origin is a pure function of the anchor and the box size:
-   * `anchor = (0, 0)` always means `origin = (0, 0)`, whatever the anchor was
-   * set to before. Folding the bounds origin in would make it path-dependent
-   * instead — a node whose rectangle starts off-origin would keep that corner
-   * baked into its origin after returning to the default anchor.
-   *
-   * A node whose layout box is NOT its AABB overrides this: text measures
-   * against its typographic advance, an {@link AnimatedSprite} against the
-   * untrimmed source frame rather than the per-frame trimmed rectangle.
-   */
-  protected _updateOrigin(): void {
-    const { x, y } = this._anchor;
-    const bounds = this.getLocalBounds();
-
-    this.setOrigin(bounds.width * x, bounds.height * y);
   }
 }

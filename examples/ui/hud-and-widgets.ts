@@ -19,7 +19,6 @@ class HudScene extends Scene {
     override init(): void {
         // A bit of "world" content so the UI clearly sits on top of it.
         this.spinner = new Panel({ width: 160, height: 160, color: new Color(60, 130, 235, 1), cornerRadius: 24 });
-        this.spinner.setAnchor(0.5, 0.5);
         this.spinner.setPosition(640, 360);
         this.addChild(this.spinner);
 

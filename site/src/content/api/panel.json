@@ -6,11 +6,11 @@
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 108,
+  "memberCount": 105,
   "counts": {
     "constructors": 1,
-    "methods": 48,
-    "properties": 45,
+    "methods": 46,
+    "properties": 44,
     "events": 14
   },
   "sections": [
@@ -227,35 +227,6 @@
           "params": [],
           "returnType": "void",
           "description": "Redraw size-dependent content (background, child positions). Override in subclasses."
-        },
-        {
-          "name": "_updateOrigin",
-          "signature": "_updateOrigin(): void",
-          "signatureTokens": [
-            {
-              "text": "_updateOrigin",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "void",
-          "description": "Re-derive origin from the fractional anchor and the CURRENT local bounds. Uses local (untransformed) bounds on purpose: the transform multiplies the origin by scale itself, so deriving from world bounds would double-apply scale whenever the anchor is set after scaling. Subclasses whose local bounds change after construction (e.g. a sprite switching to a texture sub-frame) must call this to keep an anchored node anchored. The anchor measures against the node's declared LAYOUT BOX — its extent, taken from the node's own local origin — and never against where its AABB happens to start. Only the size term participates, so the mapping from anchor to origin is a pure function of the anchor and the box size: anchor = (0, 0) always means origin = (0, 0), whatever the anchor was set to before. Folding the bounds origin in would make it path-dependent instead — a node whose rectangle starts off-origin would keep that corner baked into its origin after returning to the default anchor. A node whose layout box is NOT its AABB overrides this: text measures against its typographic advance, an AnimatedSprite against the untrimmed source frame rather than the per-frame trimmed rectangle."
         },
         {
           "name": "[iterator]",
@@ -1677,74 +1648,6 @@
           "description": ""
         },
         {
-          "name": "setAnchor",
-          "signature": "setAnchor(x: number, y: number): this",
-          "signatureTokens": [
-            {
-              "text": "setAnchor",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "x",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "y",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "x",
-              "type": "number",
-              "optional": false
-            },
-            {
-              "name": "y",
-              "type": "number",
-              "optional": false
-            }
-          ],
-          "returnType": "this",
-          "description": ""
-        },
-        {
           "name": "setChildIndex",
           "signature": "setChildIndex(child: RenderNode, index: number): this",
           "signatureTokens": [
@@ -2600,27 +2503,6 @@
           "params": [],
           "returnType": null,
           "description": "Tab-traversal order among focusable nodes in the same focus scope. Lower values are visited first; equal values keep document (tree) order."
-        },
-        {
-          "name": "anchor",
-          "signature": "anchor: ObservableVector",
-          "signatureTokens": [
-            {
-              "text": "anchor",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "ObservableVector",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Normalized anchor in 0..1 along each axis that derives origin from the current bounds size. (0, 0) = top-left, (0.5, 0.5) = center, (1, 1) = bottom-right. Updates origin whenever the anchor or the local bounds change."
         },
         {
           "name": "background",
