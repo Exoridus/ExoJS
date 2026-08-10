@@ -289,8 +289,8 @@ ${pathLines}
 `,
 );
 
-// rollup.config.ts — register builds index + register (factory default); library
-// builds index only. No internal `#` imports, so sourceCondition is null.
+// rollup.config.ts — register builds index + register, library builds index
+// only (the factory default). No internal `#` imports, so sourceCondition is null.
 const rollupConfig = register
   ? `import { createExtensionConfig } from '@codexo/exojs-config/rollup';
 
@@ -300,6 +300,7 @@ const rollupConfig = register
 export default createExtensionConfig({
   root: import.meta.dirname,
   sourceCondition: null,
+  inputs: ['src/index.ts', 'src/register.ts'],
 });
 `
   : `import { createExtensionConfig } from '@codexo/exojs-config/rollup';

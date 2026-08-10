@@ -58,7 +58,6 @@
     "test/debug/render-pass-inspector-layer.test.ts": 3,
     "test/debug/render-pipeline-inspection.test.ts": 5,
     "test/extensions/dependency.test.ts": 18,
-    "test/extensions/hot-path.test.ts": 1,
     "test/extensions/snapshot.test.ts": 2,
     "test/input/action-patterns.test.ts": 2,
     "test/input/actions.test.ts": 2,

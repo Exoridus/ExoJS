@@ -25,14 +25,11 @@ Loading a map gives you layer grids and tileset textures — it is not a `Drawab
 </Callout>
 
 Like all extensions, the core ships nothing Tiled-specific — an `Application` only understands
-`.tmj` files once you activate the extension. There are two ways to do that.
+`.tmj` files once you activate the extension.
 
 ## Activation
 
-### Explicit (recommended)
-
-Pass `tiledExtension` to `ApplicationOptions.extensions`. This is explicit, tree-shakeable, and
-order-independent — the extension is bound to exactly this `Application`:
+Pass `tiledExtension` to `ApplicationOptions.extensions`. The extension is bound to exactly this `Application`:
 
 ```ts
 import { Application } from '@codexo/exojs';
@@ -43,22 +40,6 @@ const app = new Application({ extensions: [tiledExtension] });
 
 The package root (`@codexo/exojs-tiled`) is side-effect-free: importing it registers nothing
 globally. You decide which `Application` gets the extension.
-
-### `/register` convenience
-
-For an app that always wants Tiled support, import the `/register` entry once at startup. It
-registers `tiledExtension` in the global `ExtensionRegistry` and re-exports the same public API:
-
-```ts
-import '@codexo/exojs-tiled/register';
-import { Application } from '@codexo/exojs';
-
-const app = new Application(); // picks up tiledExtension automatically
-```
-
-The `/register` import must run **before** you construct the `Application` whose extensions are
-read from the global registry. The explicit `extensions: [...]` form works regardless of import
-order.
 
 ### Core-only
 
@@ -407,4 +388,4 @@ These raise a clear error or are intentionally absent from this release:
 - **API reference:** the [`Loader`](/ExoJS/en/api/loader/) page documents `load(...)`, explicit
   `Asset.type(...)` descriptors, and the `.tmj` extension lookup.
 - **Extension model:** the [Particles](/ExoJS/en/guide/effects/particles/) chapter walks through
-  the same explicit-vs-`/register` activation for the sibling renderer extension.
+  the same activation model for the sibling renderer extension.

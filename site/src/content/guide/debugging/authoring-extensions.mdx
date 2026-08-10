@@ -1,6 +1,6 @@
 ---
 title: 'Authoring extensions'
-description: 'Package custom renderers, asset handlers, and node serializers as a distributable ExoJS extension — the descriptor model, the ExtensionRegistry, and the package policy the official extensions follow.'
+description: 'Package custom renderers, asset handlers, and node serializers as a distributable ExoJS extension — the descriptor model, per-application selection, and the package policy the official extensions follow.'
 ---
 
 import Callout from '../../../components/Callout.astro';
@@ -35,11 +35,9 @@ Every field except `id` is optional, so the smallest possible extension is just 
 
 Bindings are **pure descriptors** — no active renderer, no GPU resources, no side effects until their `create(...)` is called once per backend/loader during `Application` construction.
 
-## Registering with the ExtensionRegistry
+## Equipping an application
 
-The [`ExtensionRegistry`](/ExoJS/en/guide/debugging/custom-renderers/) is a process-wide static catalogue of descriptors. There are two activation paths, mirroring the [Tiled](/ExoJS/en/guide/assets/tiled-maps/) and [Particles](/ExoJS/en/guide/effects/particles/) chapters.
-
-**Explicit (recommended).** Pass the descriptor to `ApplicationOptions.extensions`. Explicit, tree-shakeable, and order-independent — the extension binds to exactly this one `Application`:
+An extension does nothing until an `Application` is given it. There is exactly one way to do that — `ApplicationOptions.extensions`:
 
 ```ts
 import { Application } from '@codexo/exojs';
@@ -50,33 +48,22 @@ const confettiExtension: Extension = { id: 'com.example.confetti' };
 const app = new Application({ extensions: [confettiExtension] });
 ```
 
-**Global registration.** Register the descriptor once, and every subsequently constructed `Application` that uses global defaults picks it up:
+Omitting `extensions`, or passing `[]`, gives you a core-only application.
 
-```ts
-import { ExtensionRegistry } from '@codexo/exojs/extensions';
-import type { Extension } from '@codexo/exojs/extensions';
-
-const confettiExtension: Extension = { id: 'com.example.confetti' };
-
-ExtensionRegistry.register(confettiExtension);
-```
-
-An `Application` constructed with an explicit `extensions: []` takes **no** extensions — not even globally registered ones — so it stays fully core-only.
-
-<Callout type="pitfall" title="An id collision means a duplicate install">
-`register` is idempotent for the *same descriptor object* under the same id, but throws if a *different* object is already registered under that id. That is not a bug to work around — it is how the registry surfaces two copies (or mismatched versions) of your package in one dependency tree. Keep your descriptor a single module-level singleton so the same object is registered every time.
-</Callout>
+This is deliberately the only path. What an application can do is decided where it is constructed, not by which modules happened to get imported somewhere in the program — so two applications in one process can hold different sets. An editor beside its runtime preview, two canvases with different renderers, a test that must not see what a neighbouring test installed: all of those need the selection to be local, and a process-wide catalogue cannot give it.
 
 ### Snapshot semantics
 
-The registry is read exactly once per `Application`, when it flattens the active descriptors into an immutable **snapshot**:
+The selection is flattened once per `Application`, at construction, into an immutable **snapshot**:
 
 - **Dependency ordering** — descriptors listed in `dependencies` are materialised *before* their dependents (stable depth-first, post-order). A binding can safely assume its dependencies' bindings already exist.
 - **De-duplication** — the same descriptor object reached by several paths (a diamond dependency) is materialised once.
 - **Loud failures** — the same id provided by two *different* objects, or a dependency *cycle*, throws with a descriptive path rather than silently winning.
-- **Immutability** — in development builds every visited descriptor and its nested binding arrays are frozen, so an accidental post-registration mutation fails fast.
+- **Immutability** — in development builds every visited descriptor and its nested binding arrays are frozen, so an accidental post-construction mutation fails fast.
 
-`ExtensionRegistry.list()` returns a cached readonly view of the globally registered descriptors in registration order; the cache is invalidated only by a new `register` call, so repeated reads allocate nothing. Use `ExtensionRegistry.has(id)` / `get(id)` to query the catalogue.
+<Callout type="pitfall" title="An id collision means a duplicate install">
+Two *different* objects under the same id throw. That is not a bug to work around — it is how a snapshot surfaces two copies (or mismatched versions) of your package in one dependency tree. Keep your descriptor a single module-level singleton.
+</Callout>
 
 ## Typesafe renderer registration
 
@@ -120,33 +107,25 @@ Asset and serializer bindings follow the same shape — a descriptor plus a fact
 
 Study how `@codexo/exojs-particles` is set up — the official packages all follow the same shape.
 
-**Two entry points.** The package root is **side-effect-free**: importing `@codexo/exojs-particles` registers nothing globally and only exports the descriptor and public API. A separate `/register` entry is the **only** side-effectful module — it calls `ExtensionRegistry.register(...)` at evaluation time:
+**One entry point, no side effects.** The package root exports the descriptor and the public API and does nothing else — importing it must not change any application's behaviour. There is no registration module, because there is nothing global to register into; the consumer decides by passing the descriptor to the application that should have it.
 
 ```ts no-check
-// src/register.ts — the only side-effectful entry
-import { ExtensionRegistry } from '@codexo/exojs/extensions';
-import { confettiExtension } from './confettiExtension';
-
-ExtensionRegistry.register(confettiExtension);
-
+// src/index.ts — exports only, no side effects
+export { confettiExtension } from './confettiExtension';
 export * from './public';
 ```
 
-**`package.json`.** Declare both entries under `exports`, mark only the register module in `sideEffects` (so bundlers can tree-shake the rest), and depend on the core as a **peer** dependency — never a regular one, or a project could end up with two copies of `@codexo/exojs`:
+**`package.json`.** One entry under `exports`, `sideEffects: false` (the package has none, so a bundler may drop anything the consumer does not reach), and the core as a **peer** dependency — never a regular one, or a project could end up with two copies of `@codexo/exojs`:
 
 ```jsonc
 {
     "name": "@codexo/exojs-confetti",
     "type": "module",
-    "sideEffects": ["./dist/esm/register.js"],
+    "sideEffects": false,
     "exports": {
         ".": {
             "types": "./dist/esm/index.d.ts",
             "import": "./dist/esm/index.js"
-        },
-        "./register": {
-            "types": "./dist/esm/register.d.ts",
-            "import": "./dist/esm/register.js"
         },
         "./package.json": "./package.json"
     },
@@ -160,7 +139,7 @@ export * from './public';
 }
 ```
 
-**Import the SDK, not internals.** Author against the three public entry points only: `@codexo/exojs` (core runtime types), `@codexo/exojs/extensions` (the `Extension`/binding types and `ExtensionRegistry`), and `@codexo/exojs/renderer-sdk` (the abstract base renderers, `RenderBackend`, and `RenderBackendType`). Anything reached by a deep path is internal and unstable.
+**Import the SDK, not internals.** Author against the three public entry points only: `@codexo/exojs` (core runtime types), `@codexo/exojs/extensions` (the `Extension` and binding types), and `@codexo/exojs/renderer-sdk` (the abstract base renderers, `RenderBackend`, and `RenderBackendType`). Anything reached by a deep path is internal and unstable.
 
 ## Versioning pre-1.0
 
@@ -172,11 +151,10 @@ ExoJS is pre-1.0, so every minor release is a **clean break** — no back-compat
 
 ## A tiny extension end to end
 
-Putting the pieces together, the smallest useful extension is a descriptor plus one binding, registered against an `Application`:
+Putting the pieces together, the smallest useful extension is a descriptor plus one binding, handed to an `Application`:
 
 ```ts
 import { Application } from '@codexo/exojs';
-import { ExtensionRegistry } from '@codexo/exojs/extensions';
 import type { Extension } from '@codexo/exojs/extensions';
 
 // 1. Define one immutable, module-level descriptor.
@@ -185,14 +163,11 @@ export const confettiExtension: Extension = {
     // renderers: [confettiRenderer]  // ← the RendererBinding shown above
 };
 
-// 2a. Explicit activation — binds to exactly this Application.
+// 2. Equip the application that should have it.
 const app = new Application({ extensions: [confettiExtension] });
-
-// 2b. Or global activation for a `/register`-style entry.
-ExtensionRegistry.register(confettiExtension);
 ```
 
-From here, add real bindings: subclass an abstract SDK renderer for your `Drawable` type (see [Custom renderers](/ExoJS/en/guide/debugging/custom-renderers/)), wire it into a `RendererBinding`, split the package into a side-effect-free root and a `/register` entry, and pin the peer range. The result installs and activates exactly like the official extensions.
+From here, add real bindings: subclass an abstract SDK renderer for your `Drawable` type (see [Custom renderers](/ExoJS/en/guide/debugging/custom-renderers/)), wire it into a `RendererBinding`, keep the package root side-effect-free, and pin the peer range. The result installs and activates exactly like the official extensions.
 
 ## Where to go next
 

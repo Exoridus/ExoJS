@@ -1,10 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import type { Extension, RendererBinding } from '#extensions/Extension';
-import { ExtensionRegistry, getGlobalSnapshotInternal } from '#extensions/ExtensionRegistry';
 import { materializeRendererBindings } from '#extensions/materialize';
 import { buildSnapshot, EMPTY_SNAPSHOT } from '#extensions/snapshot';
-import { resetExtensionRegistryForTesting } from '#extensions/testing';
 import { Drawable } from '#rendering/Drawable';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
@@ -380,111 +378,40 @@ describe('Extension dependency graph', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Global + local behaviour
+// Selection is per application
 // ---------------------------------------------------------------------------
 
-describe('Global registry + local extensions', () => {
-  beforeEach(() => {
-    resetExtensionRegistryForTesting();
-  });
-
-  afterEach(() => {
-    resetExtensionRegistryForTesting();
-  });
-
-  function ids(snapshot: ReturnType<typeof getGlobalSnapshotInternal>): string[] {
+describe('Per-application selection', () => {
+  function ids(snapshot: ReturnType<typeof buildSnapshot>): string[] {
     return snapshot.extensions.map(e => e.id);
   }
 
-  it('global snapshot resolves dependencies correctly', () => {
-    // Register via global registry — the snapshot traverses dependencies.
+  it('a dependency is pulled in without being selected', () => {
     const tilemap = extension('tilemap');
     const tiled = extension('tiled', [tilemap]);
 
-    // Register both globally
-    ExtensionRegistry.register(tilemap);
-    ExtensionRegistry.register(tiled);
-
-    const snapshot = getGlobalSnapshotInternal();
-    // The global registry stores extensions; buildSnapshot resolves deps.
-    // With both registered, tilemap appears first (dependency) then tiled.
-    expect(ids(snapshot)).toEqual(['tilemap', 'tiled']);
+    // Selecting the dependent alone is enough — the graph supplies the rest.
+    expect(ids(buildSnapshot([tiled]))).toEqual(['tilemap', 'tiled']);
   });
 
-  it('dependency globally registered, dependent local', () => {
-    // local buildSnapshot only — but tiled's dependency pulls in tilemap
+  it('selecting both a dependency and its dependent materialises each once', () => {
     const tilemap = extension('tilemap');
     const tiled = extension('tiled', [tilemap]);
-
-    // tilemap is globally registered but we use local path only
-    // Since local path doesn't consult global, tilemap only comes from deps.
-    const snapshot = buildSnapshot([tiled]);
-    expect(ids(snapshot)).toEqual(['tilemap', 'tiled']);
-  });
-
-  it('both globally registered — each materialised once in order', () => {
-    const tilemap = extension('tilemap');
-    const tiled = extension('tiled', [tilemap]);
-
-    // Register tiled only (tilemap comes from deps)
-    ExtensionRegistry.register(tiled);
-
-    const snapshot = getGlobalSnapshotInternal();
-    expect(ids(snapshot)).toEqual(['tilemap', 'tiled']);
-  });
-
-  it('both local — each materialised once', () => {
-    const tilemap = extension('tilemap');
-    const tiled = extension('tiled', [tilemap]);
-
     const snapshot = buildSnapshot([tilemap, tiled]);
+
     expect(ids(snapshot)).toEqual(['tilemap', 'tiled']);
-  });
-
-  it('same descriptor appears globally and locally — local path deduplicates', () => {
-    const tilemap = extension('tilemap');
-    const tiled = extension('tiled', [tilemap]);
-
-    // Register tilemap globally
-    ExtensionRegistry.register(tilemap);
-
-    // Local snapshot uses tiled only — tilemap comes from deps (same object)
-    const snapshot = buildSnapshot([tiled]);
-    expect(ids(snapshot)).toEqual(['tilemap', 'tiled']);
-    // tilemap appears exactly once
     expect(snapshot.extensions.filter(e => e.id === 'tilemap')).toHaveLength(1);
   });
 
-  it('same ID appears globally and locally through different objects — local path does NOT see global', () => {
-    // This test verifies that local buildSnapshot is isolated from global registry.
-    // Different objects with the same ID in local path trigger an error.
-    // But since local doesn't consult global, the global-registered one is irrelevant.
-    const tilemapGlobal = extension('tilemap');
-    const tilemapLocal = extension('tilemap');
-    const tiled = extension('tiled', [tilemapLocal]);
-
-    // Register a different tilemap globally
-    ExtensionRegistry.register(tilemapGlobal);
-
-    // Local path uses tilemapLocal — that's fine within the local scope.
-    // The global tilemapGlobal is not consulted.
-    const snapshot = buildSnapshot([tiled]);
-    expect(ids(snapshot)).toEqual(['tilemap', 'tiled']);
-    expect(snapshot.extensions[0]).toBe(tilemapLocal);
-  });
-
-  it('global snapshot with dependencies preserves deterministic order', () => {
-    // Register in a specific order; snapshot traversal produces dependency-first order.
+  it('a deep chain comes out dependency-first regardless of selection order', () => {
     const leaf = extension('leaf');
     const mid = extension('mid', [leaf]);
     const root = extension('root', [mid]);
 
-    ExtensionRegistry.register(root); // register root first
-    ExtensionRegistry.register(mid);
-    ExtensionRegistry.register(leaf);
+    expect(ids(buildSnapshot([root]))).toEqual(['leaf', 'mid', 'root']);
+  });
 
-    const snapshot = getGlobalSnapshotInternal();
-    // Dependency-first order: leaf, mid, root
-    expect(ids(snapshot)).toEqual(['leaf', 'mid', 'root']);
+  it('an application selecting nothing gets nothing', () => {
+    expect(buildSnapshot([])).toBe(EMPTY_SNAPSHOT);
   });
 });

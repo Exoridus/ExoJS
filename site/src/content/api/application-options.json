@@ -161,7 +161,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Extension selection. undefined → Core + globally registered extensions. [] → Core only. [a, b, …] → Core + exactly these; global registry not consulted. Captured once at construction; later registrations do not affect already-constructed Applications."
+          "description": "Extension selection — the only way an Application is equipped. undefined or [] → Core only. [a, b, …] → Core plus exactly these. There is no global registry to fall back on: what an application can do is decided here, at its construction, and nowhere else. That is what lets two Applications in one process hold different extension sets — an editor next to its runtime preview, two canvases with different renderers, a test that must not see what a neighbouring test installed. ts import { tilemapExtension } from '@codexo/exojs-tilemap'; const app = new Application({ extensions: [tilemapExtension] });  Materialised once at construction."
         },
         {
           "name": "fixedTimeStep",

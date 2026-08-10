@@ -35,7 +35,6 @@ const rootDir = resolve(import.meta.dirname!, '..', '..');
 const requiredDistFiles = [
   'dist/esm/core/dev.js',
   'dist/esm/core/BuildInfo.js',
-  'dist/esm/extensions/ExtensionRegistry.js',
   'dist/esm/core/Application.js',
   'dist/esm/rendering/text/BitmapText.js',
   'dist/esm/rendering/texture/RenderTexture.js',
@@ -241,11 +240,6 @@ describe.runIf(hasProductionBuild || mustHaveProductionBuild)('production build 
     const content = read('dist/esm/core/dev.js');
     expect(content).not.toMatch(/(?<![a-zA-Z0-9_$])__VERSION__(?![a-zA-Z0-9_$])/);
     expect(content).not.toMatch(/(?<![a-zA-Z0-9_$])__REVISION__(?![a-zA-Z0-9_$])/);
-  });
-
-  it('has no unresolved __DEV__ in the ExtensionRegistry', () => {
-    const content = read('dist/esm/extensions/ExtensionRegistry.js');
-    expect(content).not.toMatch(/(?<![a-zA-Z0-9_$])__DEV__(?![a-zA-Z0-9_$])/);
   });
 
   it('has no unresolved constants anywhere in dist/esm/', () => {
