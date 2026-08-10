@@ -45,9 +45,35 @@ describe('ObjectLayer', () => {
     expect(layer.name).toBe('');
     expect(layer.visible).toBe(true);
     expect(layer.opacity).toBe(1);
+    expect(layer.offsetX).toBe(0);
+    expect(layer.offsetY).toBe(0);
+    expect(layer.parallaxX).toBe(1);
+    expect(layer.parallaxY).toBe(1);
+    expect(layer.tintColor).toBe(null);
     expect(layer.objects).toHaveLength(1);
     expect(Object.isFrozen(layer.objects)).toBe(true);
     expect(Object.isFrozen(layer.properties)).toBe(true);
+  });
+
+  it('carries the presentation fields it was constructed with', () => {
+    const layer = new ObjectLayer({
+      id: 1,
+      visible: false,
+      opacity: 0.5,
+      offsetX: 12,
+      offsetY: -8,
+      parallaxX: 0.25,
+      parallaxY: 2,
+      tintColor: 0x804020,
+    });
+
+    expect(layer.visible).toBe(false);
+    expect(layer.opacity).toBe(0.5);
+    expect(layer.offsetX).toBe(12);
+    expect(layer.offsetY).toBe(-8);
+    expect(layer.parallaxX).toBe(0.25);
+    expect(layer.parallaxY).toBe(2);
+    expect(layer.tintColor).toBe(0x804020);
   });
 
   it('query filters by name / type / kind / property (+ value), all combinable', () => {

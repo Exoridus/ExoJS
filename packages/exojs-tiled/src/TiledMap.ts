@@ -505,12 +505,13 @@ function convertObjectLayer(
     id: layer.id,
     name: layer.name,
     class: layer.class,
-    // `ObjectLayer` carries no parallax or tint, so the enclosing group's
-    // contribution to those two has nowhere to go — the rest folds in.
     visible: group.visible && layer.visible,
     opacity: group.opacity * layer.opacity,
     offsetX: group.offsetX + layer.offsetX,
     offsetY: group.offsetY + layer.offsetY,
+    parallaxX: group.parallaxX * layer.parallaxX,
+    parallaxY: group.parallaxY * layer.parallaxY,
+    tintColor: multiplyTiledTint(group.tintColor, parseTiledColor(layer.tintColor)),
     drawOrder: layer.drawOrder,
     objects,
     properties: convertProperties(layer.properties),

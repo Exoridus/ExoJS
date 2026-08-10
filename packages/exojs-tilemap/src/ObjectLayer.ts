@@ -264,6 +264,21 @@ export interface ObjectLayerOptions {
   /** Layer pixel offset Y. Default `0`. */
   readonly offsetY?: number;
   /**
+   * Parallax scroll factor on the X axis. `1` = full camera speed (normal),
+   * `0.5` = half speed (farther away), `0` = stationary. Default `1`.
+   */
+  readonly parallaxX?: number;
+  /**
+   * Parallax scroll factor on the Y axis. `1` = full camera speed (normal),
+   * `0.5` = half speed (farther away), `0` = stationary. Default `1`.
+   */
+  readonly parallaxY?: number;
+  /**
+   * Multiplicative layer tint as a `0xRRGGBB` integer, or `null` for no tint
+   * (Tiled `tintcolor`). Default `null`.
+   */
+  readonly tintColor?: number | null;
+  /**
    * Draw order for the objects (Tiled `draworder`): `'topdown'` (sorted by `y`)
    * or `'index'` (source order). Informational; objects are stored as given.
    * Default `'topdown'`.
@@ -280,6 +295,14 @@ export interface ObjectLayerOptions {
  * collision regions, markers. Object layers are not rendered by the tile
  * renderer; they are parsed and exposed for gameplay use (e.g. building physics
  * colliders, placing entities).
+ *
+ * The presentation fields the source format attaches to a layer —
+ * {@link visible}, {@link opacity}, {@link offsetX}/{@link offsetY},
+ * {@link parallaxX}/{@link parallaxY} and {@link tintColor} — are carried
+ * through in full, with any enclosing group layers' contribution already
+ * folded in, so an object layer describes the same placement and shading its
+ * neighbouring tile and image layers do. Nothing here acts on them: code that
+ * draws these objects itself is what applies them.
  *
  * Query with {@link query} (untyped, fully back-compatible) or, when an
  * {@link ObjectSchema} type argument `S` is supplied, with the typed accessors
@@ -316,6 +339,25 @@ export class ObjectLayer<S extends ObjectSchema = ObjectSchema> {
   public readonly offsetX: number;
   /** Layer pixel offset Y. */
   public readonly offsetY: number;
+  /**
+   * Parallax scroll factor on the X axis — the same quantity
+   * {@link import('./TileLayer').TileLayer.parallaxX} carries, so an object
+   * layer authored beside a tile layer in the same parallax group reports the
+   * same factor. `1` = full camera speed, `0.5` = half speed, `0` =
+   * stationary. Nothing in this package applies it: object layers are
+   * data-only, so placing an object relative to the camera is the consumer's
+   * job (see {@link ObjectLayer}).
+   */
+  public readonly parallaxX: number;
+  /** Parallax scroll factor on the Y axis. See {@link ObjectLayer.parallaxX}. */
+  public readonly parallaxY: number;
+  /**
+   * Multiplicative layer tint as `0xRRGGBB`, or `null` for no tint. Carried
+   * from the source map (including the accumulated tint of any enclosing group
+   * layers) for code that draws these objects itself; like
+   * {@link ObjectLayer.parallaxX}, nothing in this package applies it.
+   */
+  public readonly tintColor: number | null;
   /** Draw order for the objects (Tiled `draworder`). Informational. */
   public readonly drawOrder: 'topdown' | 'index';
   /** Immutable layer-level properties. */
@@ -331,6 +373,9 @@ export class ObjectLayer<S extends ObjectSchema = ObjectSchema> {
     this.opacity = options.opacity ?? 1;
     this.offsetX = options.offsetX ?? 0;
     this.offsetY = options.offsetY ?? 0;
+    this.parallaxX = options.parallaxX ?? 1;
+    this.parallaxY = options.parallaxY ?? 1;
+    this.tintColor = options.tintColor ?? null;
     this.drawOrder = options.drawOrder ?? 'topdown';
     this.properties = options.properties ? Object.freeze({ ...options.properties }) : Object.freeze({});
     this.objects = options.objects ? Object.freeze([...options.objects]) : Object.freeze([]);

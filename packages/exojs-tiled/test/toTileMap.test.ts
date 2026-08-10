@@ -930,13 +930,18 @@ describe('TiledMap.toTileMap() — group layer style is folded into the flattene
     expect(layer.tintColor).toBe(0x808080);
   });
 
-  it('object layers inside a group inherit visibility, opacity and offset', async () => {
+  it('object layers inside a group inherit the whole group style, parallax and tint included', async () => {
     const runtime = await convert([
       groupLayer(
         1,
         'Wrapper',
-        [{ id: 2, name: 'Spawns', type: 'objectgroup', visible: true, opacity: 0.5, x: 0, y: 0, offsetx: 4, objects: [] }],
-        { visible: false, opacity: 0.5, offsetx: 6 },
+        [
+          {
+            id: 2, name: 'Spawns', type: 'objectgroup', visible: true, opacity: 0.5, x: 0, y: 0,
+            offsetx: 4, parallaxx: 0.5, parallaxy: 0.5, tintcolor: '#ff8040', objects: [],
+          },
+        ],
+        { visible: false, opacity: 0.5, offsetx: 6, parallaxx: 0.5, parallaxy: 2, tintcolor: '#808080' },
       ),
     ]);
 
@@ -945,6 +950,35 @@ describe('TiledMap.toTileMap() — group layer style is folded into the flattene
     expect(layer.visible).toBe(false);
     expect(layer.opacity).toBeCloseTo(0.25, 10);
     expect(layer.offsetX).toBe(10);
+    expect(layer.parallaxX).toBeCloseTo(0.25, 10);
+    expect(layer.parallaxY).toBeCloseTo(1, 10);
+    // Same per-channel multiply the tile and image layers use.
+    expect(layer.tintColor).toBe(0x804020);
+  });
+
+  it('an object layer outside any group keeps its own parallax and tint verbatim', async () => {
+    const runtime = await convert([
+      {
+        id: 1, name: 'Spawns', type: 'objectgroup', visible: true, opacity: 1, x: 0, y: 0,
+        parallaxx: 0.5, parallaxy: 0.25, tintcolor: '#123456', objects: [],
+      },
+    ]);
+
+    const layer = runtime.getObjectLayer('Spawns')!;
+
+    expect(layer.parallaxX).toBe(0.5);
+    expect(layer.parallaxY).toBe(0.25);
+    expect(layer.tintColor).toBe(0x123456);
+  });
+
+  it('an object layer with no parallax or tint of its own defaults to the identity', async () => {
+    const runtime = await convert([{ id: 1, name: 'Spawns', type: 'objectgroup', visible: true, opacity: 1, x: 0, y: 0, objects: [] }]);
+
+    const layer = runtime.getObjectLayer('Spawns')!;
+
+    expect(layer.parallaxX).toBe(1);
+    expect(layer.parallaxY).toBe(1);
+    expect(layer.tintColor).toBe(null);
   });
 
   it('a layer outside any group keeps its own style verbatim', async () => {
