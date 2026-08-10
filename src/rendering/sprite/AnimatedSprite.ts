@@ -52,6 +52,14 @@ interface NormalizedAnimatedSpriteClip {
   readonly frameDurations: readonly number[] | null;
   readonly frameOffsets: ReadonlyArray<{ readonly x: number; readonly y: number }> | null;
   readonly repeat: number;
+  /**
+   * The clip's untrimmed source canvas, or `null` for a clip without
+   * {@link AnimatedSpriteClipDefinition.frameOffsets} (nothing was trimmed, so
+   * the frame rectangle IS the layout box). Computed once at
+   * {@link AnimatedSprite.defineClip} time; see
+   * {@link AnimatedSprite._updateOrigin} for how it is derived and why.
+   */
+  readonly sourceSize: { readonly width: number; readonly height: number } | null;
 }
 
 const defaultClipFps = 12;
@@ -222,12 +230,31 @@ export class AnimatedSprite extends Sprite {
       frameOffsets = clip.frameOffsets.map(offset => ({ x: offset.x, y: offset.y }));
     }
 
+    let sourceSize: { width: number; height: number } | null = null;
+
+    if (frameOffsets !== null) {
+      let width = 0;
+      let height = 0;
+
+      for (let i = 0; i < frames.length; i++) {
+        // Both arrays are the same length (validated above).
+        const frame = frames[i]!;
+        const offset = frameOffsets[i]!;
+
+        width = Math.max(width, offset.x + frame.width);
+        height = Math.max(height, offset.y + frame.height);
+      }
+
+      sourceSize = { width, height };
+    }
+
     this._clips.set(name, {
       frames: frames.map(frame => frame.clone()),
       frameDurationMs: 1000 / fps,
       frameDurations,
       frameOffsets,
       repeat,
+      sourceSize,
     });
 
     return this;
@@ -512,6 +539,49 @@ export class AnimatedSprite extends Sprite {
   }
 
   /**
+   * Anchor against the untrimmed SOURCE canvas, not against the per-frame
+   * trimmed rectangle.
+   *
+   * A trimmed atlas gives every frame its own size and its own
+   * {@link AnimatedSpriteClipDefinition.frameOffsets} entry. Measuring the
+   * anchor against that rectangle would move the pivot on every frame advance,
+   * so an anchored character would wobble around its own feet for the length
+   * of the animation. The pivot has to stand still, which means measuring
+   * against a box that is constant for the whole clip.
+   *
+   * A clip carries no explicit untrimmed size, so the box is derived from the
+   * frames themselves: `width = max(offset.x + frame.width)` and
+   * `height = max(offset.y + frame.height)` over every frame, anchored at the
+   * local origin `(0, 0)` — the point the offsets are expressed relative to.
+   * That is the smallest canvas every frame of the clip fits on, it is
+   * computed once per clip in {@link defineClip}, and it is identical for
+   * every frame index. It can under-report an authored canvas whose right or
+   * bottom edge is empty in every single frame; nothing in the frame data can
+   * distinguish that case, and the pivot stays stable either way.
+   *
+   * A clip WITHOUT `frameOffsets` is not trimmed, so its frame rectangle is
+   * its layout box and the base implementation already measures the right
+   * thing. It is used unchanged there — deriving a clip-wide box would be
+   * actively wrong for it, because such a clip keeps its rendered pixel size
+   * across differently-sized frames (see {@link _applyFrame}) and the
+   * per-frame extent is what maps onto that constant rendered box.
+   */
+  protected override _updateOrigin(): void {
+    const clip = this._currentClipName !== null ? this._clips.get(this._currentClipName) : undefined;
+    const sourceSize = clip?.sourceSize;
+
+    if (!sourceSize) {
+      super._updateOrigin();
+
+      return;
+    }
+
+    const { x, y } = this.anchor;
+
+    this.setOrigin(sourceSize.width * x, sourceSize.height * y);
+  }
+
+  /**
    * Apply the clip's frame at `frameIndex` to the sprite's texture region,
    * and — when the clip defines `frameOffsets` — translate the local quad by
    * that frame's `{x,y}` on top of the sprite's own position/origin. The
@@ -543,15 +613,11 @@ export class AnimatedSprite extends Sprite {
     if (offset) {
       const { height, width } = this.getLocalBounds();
 
+      // Moves the local rectangle's ORIGIN only. No origin re-derive is needed
+      // after it: {@link _updateOrigin} measures a trimmed clip against the
+      // clip-wide source canvas, which this write cannot change, and the
+      // origin pass inside `setTextureFrame` above already ran against it.
       this._setLocalBounds(offset.x, offset.y, width, height);
-
-      // The write above moved the local rectangle's ORIGIN, which the origin
-      // pass inside setTextureFrame ran too early to see. An anchored sprite
-      // has to re-derive here, or every frame keeps the origin of a rectangle
-      // starting at (0, 0) and per-frame offsets never reach it.
-      if (this.anchor.x !== 0 || this.anchor.y !== 0) {
-        this._updateOrigin();
-      }
     }
   }
 }

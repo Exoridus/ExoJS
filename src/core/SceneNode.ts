@@ -1258,15 +1258,23 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    * switching to a texture sub-frame) must call this to keep an anchored
    * node anchored.
    *
-   * The origin includes the bounds ORIGIN, not just its extent: a node whose
-   * local rectangle does not start at `(0, 0)` — a mesh built around its own
-   * centre, an Aseprite frame carrying an offset — still rotates and scales
-   * about its own middle at `anchor = (0.5, 0.5)`.
+   * The anchor measures against the node's declared LAYOUT BOX — its extent,
+   * taken from the node's own local origin — and never against where its AABB
+   * happens to start. Only the size term participates, so the mapping from
+   * anchor to origin is a pure function of the anchor and the box size:
+   * `anchor = (0, 0)` always means `origin = (0, 0)`, whatever the anchor was
+   * set to before. Folding the bounds origin in would make it path-dependent
+   * instead — a node whose rectangle starts off-origin would keep that corner
+   * baked into its origin after returning to the default anchor.
+   *
+   * A node whose layout box is NOT its AABB overrides this: text measures
+   * against its typographic advance, an {@link AnimatedSprite} against the
+   * untrimmed source frame rather than the per-frame trimmed rectangle.
    */
   protected _updateOrigin(): void {
     const { x, y } = this._anchor;
     const bounds = this.getLocalBounds();
 
-    this.setOrigin(bounds.x + bounds.width * x, bounds.y + bounds.height * y);
+    this.setOrigin(bounds.width * x, bounds.height * y);
   }
 }
