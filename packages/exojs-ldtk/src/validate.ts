@@ -130,6 +130,10 @@ function optionalString(obj: Record<string, unknown>, key: string, source: strin
   if (obj[key] !== undefined) expectString(obj[key], source, joinPath(path, key));
 }
 
+function optionalBoolean(obj: Record<string, unknown>, key: string, source: string, path: string): void {
+  if (obj[key] !== undefined) expectBoolean(obj[key], source, joinPath(path, key));
+}
+
 function eachEntry(
   value: unknown,
   source: string,
@@ -190,6 +194,9 @@ function validateLayerDef(raw: unknown, source: string, path: string): void {
   expectString(def.identifier, source, joinPath(path, 'identifier'));
   validateLayerType(def.type, source, joinPath(path, 'type'));
   expectNonNegativeInteger(def.gridSize, source, joinPath(path, 'gridSize'));
+  optionalNumber(def, 'parallaxFactorX', source, path);
+  optionalNumber(def, 'parallaxFactorY', source, path);
+  optionalBoolean(def, 'parallaxScaling', source, path);
 
   if (def.intGridValues !== undefined) {
     eachEntry(def.intGridValues, source, joinPath(path, 'intGridValues'), (item, itemPath) =>

@@ -362,6 +362,44 @@ describe('ldtkToTileMap', () => {
     });
   });
 
+  describe('layer conversion: parallax', () => {
+    /** Same layout as `layeredData` but the `Tiles` and `Entities` layer defs carry parallax factors. */
+    const parallaxData: LdtkData = {
+      ...layeredData,
+      defs: {
+        tilesets: layeredData.defs.tilesets,
+        layers: layeredData.defs.layers.map(def =>
+          def.uid === 101
+            ? { ...def, parallaxFactorX: 0.5, parallaxFactorY: -0.25 }
+            : def.uid === 103
+              ? { ...def, parallaxFactorX: 1, parallaxFactorY: 0 }
+              : def,
+        ),
+      },
+    };
+
+    it('converts a layer def parallax factor into the runtime TileLayer parallaxX/Y (1 - factor)', () => {
+      const result = ldtkToTileMap(parallaxData);
+      const tilesLayer = result.levels[0]?.layers.find(l => l.name === 'Tiles');
+      expect(tilesLayer?.parallaxX).toBeCloseTo(0.5);
+      expect(tilesLayer?.parallaxY).toBeCloseTo(1.25);
+    });
+
+    it('defaults a TileLayer to parallaxX/Y = 1 (no parallax) when the layer def has no factors', () => {
+      const result = ldtkToTileMap(parallaxData);
+      const groundLayer = result.levels[0]?.layers.find(l => l.name === 'Ground');
+      expect(groundLayer?.parallaxX).toBe(1);
+      expect(groundLayer?.parallaxY).toBe(1);
+    });
+
+    it('converts a layer def parallax factor into the runtime ObjectLayer parallaxX/Y', () => {
+      const result = ldtkToTileMap(parallaxData);
+      const entitiesLayer = result.levels[0]?.objectLayers[0];
+      expect(entitiesLayer?.parallaxX).toBe(0);
+      expect(entitiesLayer?.parallaxY).toBe(1);
+    });
+  });
+
   describe('destroy', () => {
     it('destroys all owned levels', () => {
       const result = ldtkToTileMap(minimalData);

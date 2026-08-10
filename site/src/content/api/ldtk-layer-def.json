@@ -6,11 +6,11 @@
   "subsystem": "ldtk",
   "importPath": "@codexo/exojs-ldtk",
   "tier": "stable",
-  "memberCount": 6,
+  "memberCount": 9,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 6,
+    "properties": 9,
     "events": 0
   },
   "sections": [
@@ -106,6 +106,81 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "parallaxFactorX",
+          "signature": "parallaxFactorX?: number",
+          "signatureTokens": [
+            {
+              "text": "parallaxFactorX",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Parallax horizontal factor, in [-1, 1]. 0 (the default) means \"no parallax\" — the layer scrolls at normal camera speed, same as every other layer. See import('./ldtkToTileMap').ldtkToTileMap for how this is carried onto the runtime layer's parallaxX."
+        },
+        {
+          "name": "parallaxFactorY",
+          "signature": "parallaxFactorY?: number",
+          "signatureTokens": [
+            {
+              "text": "parallaxFactorY",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Parallax vertical factor, in [-1, 1]. 0 (the default) means \"no parallax\"."
+        },
+        {
+          "name": "parallaxScaling",
+          "signature": "parallaxScaling?: boolean",
+          "signatureTokens": [
+            {
+              "text": "parallaxScaling",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether a non-zero parallax factor also scales this layer up/down to simulate depth. Defaults to true (LDtk's own default) when absent. Parsed and validated for round-trip fidelity, but not currently carried onto any runtime layer — the runtime tilemap model has no field for a parallax-driven scale multiplier (unlike parallaxX/parallaxY, which map onto the existing TileLayer/ObjectLayer fields also used by the Tiled adapter), and whether/how to add one is an open decision."
         },
         {
           "name": "tilesetDefUid",

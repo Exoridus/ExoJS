@@ -96,6 +96,14 @@ describe('validateLdtkData — accepts well-formed documents', () => {
       root.levels = [];
     }), SOURCE)).not.toThrow();
   });
+
+  it('accepts a layer definition with parallax factors and parallaxScaling', () => {
+    expect(() => validateLdtkData(withRoot(root => {
+      root.defs.layers[0].parallaxFactorX = 0.5;
+      root.defs.layers[0].parallaxFactorY = -0.25;
+      root.defs.layers[0].parallaxScaling = false;
+    }), SOURCE)).not.toThrow();
+  });
 });
 
 describe('validateLdtkData — rejects malformed documents', () => {
@@ -185,6 +193,18 @@ describe('validateLdtkData — rejects malformed documents', () => {
     expect(() => validateLdtkData(withRoot(root => {
       root.levels[0].fieldInstances = [{ __type: 'String', __value: 'x' }];
     }), SOURCE)).toThrow(/fieldInstances\[0\]\.__identifier/);
+  });
+
+  it('rejects a non-numeric parallaxFactorX on a layer definition', () => {
+    expect(() => validateLdtkData(withRoot(root => {
+      root.defs.layers[0].parallaxFactorX = 'fast';
+    }), SOURCE)).toThrow(/defs\.layers\[0\]\.parallaxFactorX/);
+  });
+
+  it('rejects a non-boolean parallaxScaling on a layer definition', () => {
+    expect(() => validateLdtkData(withRoot(root => {
+      root.defs.layers[0].parallaxScaling = 'yes';
+    }), SOURCE)).toThrow(/defs\.layers\[0\]\.parallaxScaling/);
   });
 });
 
