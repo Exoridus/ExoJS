@@ -289,6 +289,26 @@ export interface LdtkLayerDef {
   readonly tilesetDefUid?: number | null;
   readonly gridSize: number;
   readonly intGridValues?: readonly LdtkIntGridValueDef[];
+  /**
+   * Parallax horizontal factor, in `[-1, 1]`. `0` (the default) means "no
+   * parallax" — the layer scrolls at normal camera speed, same as every
+   * other layer. See {@link import('./ldtkToTileMap').ldtkToTileMap} for how
+   * this is carried onto the runtime layer's `parallaxX`.
+   */
+  readonly parallaxFactorX?: number;
+  /** Parallax vertical factor, in `[-1, 1]`. `0` (the default) means "no parallax". */
+  readonly parallaxFactorY?: number;
+  /**
+   * Whether a non-zero parallax factor also scales this layer up/down to
+   * simulate depth. Defaults to `true` (LDtk's own default) when absent.
+   *
+   * Parsed and validated for round-trip fidelity, but not currently carried
+   * onto any runtime layer — the runtime tilemap model has no field for a
+   * parallax-driven scale multiplier (unlike `parallaxX`/`parallaxY`, which
+   * map onto the existing `TileLayer`/`ObjectLayer` fields also used by the
+   * Tiled adapter), and whether/how to add one is an open decision.
+   */
+  readonly parallaxScaling?: boolean;
 }
 
 /** Top-level definitions block (`defs`). */

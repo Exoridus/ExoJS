@@ -13,6 +13,8 @@ import type {
 import { LDTK_FLIP_X, LDTK_FLIP_Y } from './LdtkData';
 import { getLdtkLevelEntries } from './ldtkLevelEntries';
 import { LdtkMap } from './LdtkMap';
+import type { LdtkLayerParallax } from './ldtkParallax';
+import { resolveLdtkLayerParallax } from './ldtkParallax';
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
@@ -93,19 +95,20 @@ function convertLevel(
     // Layer IDs must be unique within a TileMap (= one level).
     // Use layerDefUid directly — it is unique per layer definition in the file.
     const layerId = layerInst.layerDefUid;
+    const parallax = resolveLdtkLayerParallax(data, layerInst.layerDefUid);
 
     switch (layerInst.__type) {
       case 'Tiles':
       case 'AutoLayer':
-        runtimeLayers.push(convertTilesOrAutoLayer(layerInst, layerId, runtimeTilesets, tilesets));
+        runtimeLayers.push(convertTilesOrAutoLayer(layerInst, layerId, runtimeTilesets, tilesets, parallax));
         break;
 
       case 'IntGrid':
-        runtimeLayers.push(convertIntGridLayer(layerInst, layerId, runtimeTilesets, tilesets, data));
+        runtimeLayers.push(convertIntGridLayer(layerInst, layerId, runtimeTilesets, tilesets, data, parallax));
         break;
 
       case 'Entities':
-        runtimeObjectLayers.push(convertEntitiesLayer(layerInst, layerId, levelIndex, entityCounter));
+        runtimeObjectLayers.push(convertEntitiesLayer(layerInst, layerId, levelIndex, entityCounter, parallax));
         entityCounter += layerInst.entityInstances?.length ?? 0;
         break;
     }
@@ -144,8 +147,9 @@ function convertTilesOrAutoLayer(
   layerId: number,
   runtimeTilesets: readonly TileSet[],
   tilesets: ReadonlyMap<number, TileSet>,
+  parallax: LdtkLayerParallax,
 ): TileLayer {
-  const rLayer = makeTileLayer(layerInst, layerId, runtimeTilesets);
+  const rLayer = makeTileLayer(layerInst, layerId, runtimeTilesets, parallax);
   const tiles =
     layerInst.__type === 'Tiles' ? (layerInst.gridTiles ?? []) : (layerInst.autoLayerTiles ?? []);
   const tsUid = layerInst.__tilesetDefUid;
@@ -163,9 +167,10 @@ function convertIntGridLayer(
   runtimeTilesets: readonly TileSet[],
   tilesets: ReadonlyMap<number, TileSet>,
   data: LdtkData,
+  parallax: LdtkLayerParallax,
 ): TileLayer {
   const intGridProperties = buildIntGridProperties(layerInst, data);
-  const rLayer = makeTileLayer(layerInst, layerId, runtimeTilesets, intGridProperties);
+  const rLayer = makeTileLayer(layerInst, layerId, runtimeTilesets, parallax, intGridProperties);
   // IntGrid layers may carry auto-tiles when "Auto-layer" rules are
   // configured. Use those for rendering; raw intGridCsv is exposed as
   // data-only layer properties (see buildIntGridProperties).
@@ -184,6 +189,7 @@ function convertEntitiesLayer(
   layerId: number,
   levelIndex: number,
   entityCounter: number,
+  parallax: LdtkLayerParallax,
 ): ObjectLayer {
   const objects = convertEntityLayer(layerInst, layerInst.__gridSize, levelIndex, entityCounter);
   return new ObjectLayer({
@@ -193,6 +199,8 @@ function convertEntitiesLayer(
     opacity: layerInst.opacity ?? 1,
     offsetX: layerInst.pxOffsetX ?? 0,
     offsetY: layerInst.pxOffsetY ?? 0,
+    parallaxX: parallax.parallaxX,
+    parallaxY: parallax.parallaxY,
     objects,
   });
 }
@@ -203,6 +211,7 @@ function makeTileLayer(
   layerInst: LdtkLayerInstance,
   layerId: number,
   tilesets: readonly TileSet[],
+  parallax: LdtkLayerParallax,
   properties?: TileProperties,
 ): TileLayer {
   return new TileLayer({
@@ -217,6 +226,8 @@ function makeTileLayer(
     opacity: layerInst.opacity ?? 1,
     offsetX: layerInst.pxOffsetX ?? 0,
     offsetY: layerInst.pxOffsetY ?? 0,
+    parallaxX: parallax.parallaxX,
+    parallaxY: parallax.parallaxY,
     ...(properties && { properties }),
   });
 }
