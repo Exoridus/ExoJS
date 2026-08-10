@@ -13,6 +13,14 @@ import { GATE_GROUPS, type GateGroup } from '../../scripts/ci/gate-groups';
  * spelled out in only one of the two places, which is how the two gates fell
  * apart before.
  *
+ * A group's `pnpm gates <group>` invocation is not enough on its own: it also
+ * has to live in the job `EXPECTED_JOB_FOR_GROUP` says it belongs to, AND that
+ * job has to be a dependency of `required-ci`. Otherwise a group can run in a
+ * job nobody requires — green everywhere, but silently optional — which is the
+ * same drift class the original job-block assertion guarded against, one level
+ * up: not "gate missing from CI" but "gate runs in CI, just not where a merge
+ * is blocked on it".
+ *
  * What CAN still drift is a group nobody claims: adding a group here does not
  * create the CI job that runs it, and an unclaimed group would silently stop
  * running in CI while `verify:quick` keeps it green locally. That is the one
@@ -20,7 +28,8 @@ import { GATE_GROUPS, type GateGroup } from '../../scripts/ci/gate-groups';
  */
 
 const repoRoot = resolve(import.meta.dirname!, '../..');
-const workflow = readFileSync(resolve(repoRoot, '.github/workflows/_ci-checks.yml'), 'utf8');
+const workflowPath = resolve(repoRoot, '.github/workflows/_ci-checks.yml');
+const workflow = readFileSync(workflowPath, 'utf8');
 const packageJson = JSON.parse(readFileSync(resolve(repoRoot, 'package.json'), 'utf8')) as {
   scripts: Record<string, string>;
 };
@@ -29,6 +38,47 @@ const packageJson = JSON.parse(readFileSync(resolve(repoRoot, 'package.json'), '
 const invokedGroups = [...workflow.matchAll(/pnpm gates ([\w:-]+)/g)].map(match => match[1]!);
 
 const groupNames = Object.keys(GATE_GROUPS) as GateGroup[];
+
+/**
+ * The CI job each gate group is expected to run in. Kept as an explicit
+ * per-group table (rather than re-deriving it from the workflow) so a group
+ * quietly moving to the wrong job — or a new group shipping with no entry
+ * here — shows up as a failing assertion instead of passing by construction.
+ */
+const EXPECTED_JOB_FOR_GROUP = {
+  typecheck: 'typecheck',
+  lint: 'lint',
+  sync: 'sync-checks',
+  site: 'site-build',
+} as const satisfies Record<GateGroup, string>;
+
+/** Extracts the `jobs.<jobName>` block's raw YAML text (up to the next top-level job key or EOF). */
+function extractJobBlock(source: string, jobName: string): string {
+  const headerRe = new RegExp(`\\n {2}${jobName}:\\n`);
+  const startMatch = headerRe.exec(source);
+  if (!startMatch) {
+    throw new Error(`job "${jobName}" not found in ${workflowPath}`);
+  }
+
+  const rest = source.slice(startMatch.index + startMatch[0].length);
+  const nextJobMatch = /\n {2}[a-zA-Z][\w-]*:\n/.exec(rest);
+
+  return nextJobMatch ? rest.slice(0, nextJobMatch.index) : rest;
+}
+
+/** The job names listed in `jobs.required-ci.needs`, as an exact-match array. */
+function extractRequiredCiNeeds(source: string): string[] {
+  const block = extractJobBlock(source, 'required-ci');
+  const needsMatch = /needs:\s*\[([\s\S]*?)\]/.exec(block);
+  if (!needsMatch) {
+    throw new Error(`"needs" array not found in the required-ci job block of ${workflowPath}`);
+  }
+
+  return needsMatch[1]!
+    .split(',')
+    .map(entry => entry.trim())
+    .filter(entry => entry.length > 0);
+}
 
 describe('CI gate jobs cover every gate group', () => {
   it.each(groupNames)('group `%s` is invoked by a CI job', group => {
@@ -45,6 +95,22 @@ describe('CI gate jobs cover every gate group', () => {
     const duplicated = groupNames.filter(group => invokedGroups.filter(invoked => invoked === group).length > 1);
 
     expect(duplicated).toEqual([]);
+  });
+});
+
+describe('each gate group runs in the CI job that owns it', () => {
+  it.each(groupNames)('group `%s` is invoked inside job `%s`, not merely somewhere in the workflow', group => {
+    const jobName = EXPECTED_JOB_FOR_GROUP[group];
+    const jobBlock = extractJobBlock(workflow, jobName);
+
+    expect(jobBlock).toMatch(new RegExp(`pnpm gates ${group}\\b`));
+  });
+
+  it.each(groupNames)('the job owning group `%s` is required by `required-ci`', group => {
+    const jobName = EXPECTED_JOB_FOR_GROUP[group];
+    const requiredNeeds = extractRequiredCiNeeds(workflow);
+
+    expect(requiredNeeds).toContain(jobName);
   });
 });
 
