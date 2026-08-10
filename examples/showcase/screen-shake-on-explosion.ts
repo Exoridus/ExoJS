@@ -42,7 +42,6 @@ class ScreenShakeOnExplosionScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear();
         context.backend.setView(this.view);
         context.render(this.ps);
         context.backend.setView(null);

@@ -172,7 +172,6 @@ class PlayScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear();
         context.render(this.world);
         context.render(this.scoreText);
         context.render(this.timeText);
@@ -233,7 +232,6 @@ class GameOverScene extends Scene<GameOverData> {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear();
         context.render(this.title);
         context.render(this.stats);
         context.render(this.hint);

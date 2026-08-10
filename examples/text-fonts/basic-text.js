@@ -24,7 +24,6 @@ class BasicTextScene extends Scene {
         this.text.rotate(delta.seconds * 36);
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.text);
     }
 }

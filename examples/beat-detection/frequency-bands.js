@@ -85,7 +85,6 @@ class FrequencyBandsScene extends Scene {
     }
     draw(context) {
         const app = this.app;
-        context.backend.clear();
         const { width, height } = app;
         const gap = 16;
         const slotWidth = (width - gap) / BAND_COUNT;

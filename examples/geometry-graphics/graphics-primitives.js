@@ -32,7 +32,6 @@ class GraphicsPrimitivesScene extends Scene {
         this.circle.y = Math.sin(app.activeTime.seconds * 2) * 18;
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.sceneRoot);
     }
     destroy() {

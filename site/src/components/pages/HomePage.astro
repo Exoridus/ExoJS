@@ -49,7 +49,6 @@ class HeroScene extends Scene {
   }
 
   draw(context) {
-    context.backend.clear();
     context.render(this.ship);
   }
 }
@@ -65,7 +64,7 @@ const quickstartSnippet = `import { Application, Scene } from '@codexo/exojs';
 
 class HelloScene extends Scene {
   draw(context) {
-    context.backend.clear();
+    context.render(this.root);
   }
 }
 

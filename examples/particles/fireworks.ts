@@ -161,7 +161,6 @@ class FireworksScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear();
         context.render(this.explosions);
 
         for (const rocket of this.rockets) {

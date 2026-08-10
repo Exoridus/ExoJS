@@ -132,7 +132,6 @@ class KeyRebindingScene extends Scene {
         const app = this.app;
         const { width } = app;
 
-        context.backend.clear();
         this.graphics.clear();
 
         // Static ground line, just below where the hero square rests.

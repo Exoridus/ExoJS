@@ -114,7 +114,6 @@ class ReverbAndDelayScene extends Scene {
     }
     draw(context) {
         const app = this.app;
-        context.backend.clear();
         this.gfx.clear();
         // A big click pad that flashes on each trigger so the play action reads.
         const lit = Math.floor(60 + this.flash * 180);

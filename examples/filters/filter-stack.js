@@ -74,7 +74,6 @@ class FilterStackScene extends Scene {
         return labels.length > 0 ? `Active: ${labels.join(' → ')}` : 'Active: none (original sprite)';
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.sprite);
     }
 }

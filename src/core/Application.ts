@@ -146,7 +146,24 @@ export interface InputApplicationOptions {
 }
 
 export interface ApplicationOptions<Registry extends SceneRegistryShape<Registry> = {}> {
+  /**
+   * The colour every frame starts from. Applied by the engine's own per-frame
+   * clear (see {@link ApplicationOptions.autoClear}) and readable/assignable
+   * later as {@link Application.clearColor}. Default: cornflower blue.
+   */
   clearColor?: Color;
+  /**
+   * Clear the canvas to {@link ApplicationOptions.clearColor} at the start of
+   * every frame, before the scene draws. Default `true` — a scene's `draw()`
+   * therefore paints onto a fresh frame and needs no clear of its own.
+   *
+   * Set `false` for pipelines that own the whole frame themselves: feedback /
+   * trail effects that deliberately keep the previous frame, or a custom
+   * renderer that issues its own clear as part of its first pass. Nothing else
+   * changes — {@link Application.clearColor} is still the colour a manual
+   * `context.clear(app.clearColor)` would use.
+   */
+  autoClear?: boolean;
   backend?: BackendConfig;
   canvas?: CanvasApplicationOptions;
   loader?: LoaderOptions;
@@ -467,6 +484,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   private readonly _snapshot: ExtensionSnapshot;
   private _capabilities: Capabilities | null = null;
   private _documentVisible = true;
+  /** Resolved {@link ApplicationOptions.autoClear} — read once per frame. */
+  private _autoClear = true;
   private _cursor = 'default';
   private _consecutiveFrameErrors = 0;
   private readonly _recentErrors: RecentErrorEntry[] = [];
@@ -566,6 +585,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
       this.options = {
         clearColor: appSettings.clearColor ?? Color.cornflowerBlue,
+        autoClear: appSettings.autoClear ?? true,
         backend: appSettings.backend ?? defaultBackendConfig,
         canvas: {
           element: this.canvas,
@@ -600,6 +620,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         ...(appSettings.seed !== undefined && { seed: appSettings.seed }),
         ...(appSettings.fixedTimeStep !== undefined && { fixedTimeStep: appSettings.fixedTimeStep }),
       };
+
+      this._autoClear = this.options.autoClear ?? true;
 
       // Capture extension snapshot before constructing extension-sensitive subsystems.
       this._snapshot = appSettings.extensions === undefined ? getGlobalSnapshotInternal() : buildSnapshot([...(appSettings.extensions ?? [])]);
@@ -910,9 +932,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
-   * The colour the canvas is cleared to each frame, as a live {@link Color}.
-   * Assigning copies into the backend's clear colour (effective next frame);
-   * you may also mutate it in place via `app.clearColor.set(...)`.
+   * The colour the canvas is cleared to at the start of each frame, as a live
+   * {@link Color}. Assigning copies into the backend's clear colour (effective
+   * next frame); you may also mutate it in place via `app.clearColor.set(...)`.
+   * The per-frame clear itself can be turned off with
+   * {@link ApplicationOptions.autoClear}, which leaves this the colour a manual
+   * `context.clear(app.clearColor)` uses.
    */
   public get clearColor(): Color {
     return this._backend.clearColor;
@@ -1169,7 +1194,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    *    {@link Application.onFixedFrame}.
    * 3. **Update** — `app.systems` update phase, then `scenes.update()` + the
    *    scene's systems update phase.
-   * 4. **Draw** — the scene draws (plus its systems and UI layer); an active
+   * 4. **Draw** — the canvas is cleared to {@link Application.clearColor}
+   *    (unless `autoClear: false`), then the scene draws (plus its systems and UI layer); an active
    *    transition session's own visual output composites either below or
    *    above the `app.systems` draw phase depending on the session's
    *    `placement` (`'scene'`: below app overlays; `'screen'`: above them,
@@ -1243,6 +1269,13 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
         this.scenes.update(frameDelta);
         this.scenes._updateTransition(frameDelta);
+
+        // The frame starts from `clearColor`, so a scene's `draw()` never has to
+        // open with a clear of its own. Opt out with `autoClear: false` when the
+        // pipeline wants the previous frame preserved or clears it itself.
+        if (this._autoClear) {
+          this._rendering.clear(this.clearColor);
+        }
 
         if (this.scenes._transitionPlacement() === 'scene') {
           this.scenes.draw(this._rendering);

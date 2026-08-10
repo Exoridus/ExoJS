@@ -83,7 +83,6 @@ class MultiGamepadScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear();
 
         for (const player of this.players) {
             if (player.pad.connected) {

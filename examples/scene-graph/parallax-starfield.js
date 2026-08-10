@@ -29,7 +29,6 @@ class ParallaxStarfieldScene extends Scene {
     draw(context) {
         const app = this.app;
         const { width, height } = app;
-        context.backend.clear();
         for (let i = 0; i < this.layers.length; i++) {
             const layer = this.layers[i];
             const factor = speeds[i];

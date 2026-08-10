@@ -68,7 +68,6 @@ class ActionMappingScene extends Scene {
         this.hud.setHint(`Driven by: ${this.lastDevice}`);
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.sprite);
     }
 }

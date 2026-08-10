@@ -73,7 +73,6 @@ class CustomWgslModuleScene extends Scene {
         }
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.system);
     }
 }

@@ -42,6 +42,9 @@ vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
       setView: vi.fn().mockReturnThis(),
       draw: vi.fn().mockReturnThis(),
       execute: vi.fn().mockReturnThis(),
+      // Stand-in for the backend's live clear colour — identity is all the
+      // auto-clear specs below compare, so a plain object is enough.
+      clearColor: { red: 100, green: 149, blue: 237, alpha: 1 },
       clear: vi.fn().mockReturnThis(),
       pushScissorRect: vi.fn().mockReturnThis(),
       popScissorRect: vi.fn().mockReturnThis(),
@@ -80,6 +83,9 @@ vi.mock('#rendering/webgpu/WebGpuBackend', () => ({
       setView: vi.fn().mockReturnThis(),
       draw: vi.fn().mockReturnThis(),
       execute: vi.fn().mockReturnThis(),
+      // Stand-in for the backend's live clear colour — identity is all the
+      // auto-clear specs below compare, so a plain object is enough.
+      clearColor: { red: 100, green: 149, blue: 237, alpha: 1 },
       clear: vi.fn().mockReturnThis(),
       pushScissorRect: vi.fn().mockReturnThis(),
       popScissorRect: vi.fn().mockReturnThis(),
@@ -445,6 +451,41 @@ describe('Application.update() — loop timing', () => {
       const dispatchedDelta = frameHandler.mock.calls[0][0] as Time;
 
       expect(dispatchedDelta.milliseconds).toBeCloseTo(16, 4);
+    });
+
+    test('the frame is cleared to clearColor, once, before the scene draws', () => {
+      mockFrameElapsed(app, 16);
+
+      const draw = vi.spyOn(app.scenes, 'draw');
+
+      app.update();
+
+      expect(app.backend.clear).toHaveBeenCalledTimes(1);
+      expect(app.backend.clear).toHaveBeenCalledWith(app.clearColor);
+      // Clearing after the draw would wipe the frame that was just rendered.
+      const clearOrder = (app.backend.clear as unknown as MockInstance).mock.invocationCallOrder[0]!;
+
+      expect(clearOrder).toBeLessThan(draw.mock.invocationCallOrder[0]!);
+    });
+
+    test('autoClear: false leaves the frame untouched, so the previous one survives', () => {
+      const uncleared = new Application({ backend: { type: 'webgl2' }, autoClear: false });
+
+      try {
+        forceRunning(uncleared);
+        vi.spyOn(uncleared.input, 'preUpdate').mockReturnValue(uncleared.input);
+        vi.spyOn(uncleared.interaction, 'preUpdate').mockImplementation(() => undefined);
+        mockFrameElapsed(uncleared, 16);
+
+        uncleared.update();
+
+        expect(uncleared.backend.clear).not.toHaveBeenCalled();
+        // The colour is still resolved and available for a manual clear.
+        expect(uncleared.clearColor).toBeDefined();
+      } finally {
+        (uncleared as unknown as Record<string, unknown>)['_status'] = ApplicationStatus.Stopped;
+        uncleared.destroy();
+      }
     });
 
     test('update() is a no-op when status is not Running', () => {

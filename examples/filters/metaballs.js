@@ -53,7 +53,6 @@ class MetaballsScene extends Scene {
         }
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.balls);
     }
 }

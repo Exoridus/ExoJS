@@ -141,7 +141,6 @@ class AudioVisualisationScene extends Scene {
 
         this.screen.updateTexture();
 
-        context.backend.clear();
         context.render(this.screen);
 
         if (app.audio.locked) {

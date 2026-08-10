@@ -33,7 +33,6 @@ class RenderToTextureScene extends Scene {
         return renderTexture;
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.container);
         context.render(this.renderSprite);
     }

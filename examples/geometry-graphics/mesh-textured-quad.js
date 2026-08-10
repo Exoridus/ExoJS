@@ -28,7 +28,6 @@ class MeshTexturedQuadScene extends Scene {
         this.quad.rotate(delta.seconds * 30);
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.quad);
     }
 }

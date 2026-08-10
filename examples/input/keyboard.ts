@@ -71,7 +71,6 @@ class KeyboardScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear();
         this.square.clear();
         this.square.fillColor = new Color(120, 200, 255);
         this.square.drawRectangle(this.position.x - 20, this.position.y - 20, 40, 40);

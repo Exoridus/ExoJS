@@ -51,7 +51,6 @@ class LifecycleScene extends Scene {
     }
     draw(context) {
         this.drawCount++;
-        context.backend.clear();
         this.text.text = [...this.events.slice(-8), `draw ${this.drawCount}`].join('\n');
         context.render(this.text);
     }

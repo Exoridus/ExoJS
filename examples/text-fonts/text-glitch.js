@@ -45,7 +45,6 @@ class TextGlitchScene extends Scene {
         this.filter.uniforms.uShift = (Math.random() - 0.5) * 0.01;
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.text);
     }
 }

@@ -75,7 +75,6 @@ class PointerToWorldScene extends Scene {
         this.hud.setStatus(`Screen ${Math.round(this.cursor.x)}, ${Math.round(this.cursor.y)} → World ${this.world.x.toFixed(0)}, ${this.world.y.toFixed(0)} · zoom ${this.view.zoomLevel.toFixed(2)}`);
     }
     draw(context) {
-        context.backend.clear();
         context.backend.setView(this.view);
         context.render(this.grid);
         // Rebuild markers each frame in their fixed world positions.

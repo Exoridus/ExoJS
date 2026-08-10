@@ -33,7 +33,6 @@ class NestedTransformsScene extends Scene {
         this.moonOrbit.rotate(delta.seconds * 180);
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.planetOrbit);
     }
 }

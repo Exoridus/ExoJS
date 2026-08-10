@@ -101,7 +101,6 @@ class CrossfadeTracksScene extends Scene {
     }
     draw(context) {
         const app = this.app;
-        context.backend.clear();
         this.graphics.clear();
         // voice.volume returns the fade TARGET immediately, so ease the
         // displayed level toward it for a smooth meter during the 2s ramp.

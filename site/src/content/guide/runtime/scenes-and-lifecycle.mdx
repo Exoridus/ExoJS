@@ -31,7 +31,7 @@ class TitleScene extends Scene {
 
     draw(context: RenderingContext) {
         // per-frame rendering
-        context.backend.clear();
+        context.render(this.root);
     }
 }
 ```
@@ -247,7 +247,6 @@ draw(context: RenderingContext) {
     const alpha = this.app.frameAlpha;
     const renderX = this.hero.prevX + (this.hero.x - this.hero.prevX) * alpha;
     this.hero.setPosition(renderX, this.hero.y);
-    context.backend.clear();
     context.render(this.root);
 }
 ```
@@ -272,7 +271,6 @@ This is the hook with the most surprising default: **`draw` does nothing if you 
 
 ```ts
 draw(context: RenderingContext) {
-    context.backend.clear();
     context.render(this.root);
 }
 ```
@@ -287,7 +285,6 @@ The trade-off is that you can render selectively when you need to:
 
 ```ts
 draw(context: RenderingContext) {
-    context.backend.clear();
     context.render(this.world);
 
     if (this.showHud) {

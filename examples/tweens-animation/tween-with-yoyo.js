@@ -10,7 +10,6 @@ class TweenWithYoyoScene extends Scene {
         app.tweens.create(this.sprite).to({ rotation: 20 }, 0.8).yoyo(true).repeat(-1).start();
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.sprite);
     }
 }

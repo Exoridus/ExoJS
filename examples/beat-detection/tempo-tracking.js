@@ -66,7 +66,6 @@ class TempoTrackingScene extends Scene {
         const meterHeight = 30;
         const confidenceY = height * 0.42 + 36;
         const onsetY = height * 0.62 + 36;
-        context.backend.clear();
         this.bars.clear();
         // Confidence meter.
         this.bars.fillColor = new Color(40, 44, 56);

@@ -78,7 +78,6 @@ class MultitouchScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear();
         this.graphics.clear();
 
         let index = 0;

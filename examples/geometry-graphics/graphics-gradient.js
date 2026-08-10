@@ -47,7 +47,6 @@ class GraphicsGradientScene extends Scene {
         this.orb.setScale(1 + Math.sin(app.activeTime.seconds * 2) * 0.06);
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.sceneRoot);
     }
     destroy() {

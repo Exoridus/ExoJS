@@ -44,7 +44,6 @@ class CrtScanlinesScene extends Scene {
         return this.enabled ? 'CRT: ON (scanlines + barrel + vignette)' : 'CRT: OFF (original sprite)';
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.sprite);
     }
 }

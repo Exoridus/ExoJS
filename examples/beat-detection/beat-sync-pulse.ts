@@ -89,7 +89,6 @@ class BeatSyncPulseScene extends Scene {
 
     override draw(context: RenderingContext): void {
         const app = this.app;
-        context.backend.clear();
         context.render(this.particles);
         context.render(this.sprite);
 

@@ -50,7 +50,6 @@ class RenderToTextureScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear();
         context.render(this.container);
         context.render(this.renderSprite);
     }

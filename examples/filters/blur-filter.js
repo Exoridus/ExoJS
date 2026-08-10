@@ -58,7 +58,6 @@ class BlurFilterScene extends Scene {
         this.hud.setStatus(this.statusText());
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.sprite);
     }
 }

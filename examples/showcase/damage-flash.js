@@ -32,7 +32,6 @@ class DamageFlashScene extends Scene {
         });
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.ship);
     }
 }

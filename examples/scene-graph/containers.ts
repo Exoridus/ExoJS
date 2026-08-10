@@ -39,7 +39,6 @@ class ContainersScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear();
         context.render(this.rainbow);
         context.render(this.bunnies);
     }

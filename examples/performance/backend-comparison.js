@@ -49,7 +49,6 @@ class DemoScene extends Scene {
         }
     }
     draw(context) {
-        context.backend.clear();
         for (const { sprite } of this.sprites)
             context.render(sprite);
     }

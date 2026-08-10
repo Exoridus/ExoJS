@@ -45,7 +45,6 @@ class MultilineAndWrapScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear();
         context.render(this.titleA);
         context.render(this.titleB);
         context.render(this.titleC);

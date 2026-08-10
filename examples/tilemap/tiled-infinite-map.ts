@@ -119,7 +119,6 @@ class TiledInfiniteMapScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear();
         context.render(this.mapNode, { view: this.camera });
     }
 }

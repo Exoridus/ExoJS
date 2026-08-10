@@ -7,7 +7,7 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # Render targets
 
-The canvas is the default render target — every `context.backend.clear()` and `context.render(sprite)` goes there. A [`RenderTexture`](/ExoJS/en/api/render-texture/) is a second target: an off-screen surface you can draw into and then sample as a texture on a sprite, apply filters to, or composite back into the main scene.
+The canvas is the default render target — the engine's per-frame clear and every `context.render(sprite)` go there. A [`RenderTexture`](/ExoJS/en/api/render-texture/) is a second target: an off-screen surface you can draw into and then sample as a texture on a sprite, apply filters to, or composite back into the main scene.
 
 This is the foundation of multi-pass rendering in ExoJS: render-to-texture for caching, minimaps, picture-in-picture views, reflection maps, and as a staging area before post-processing.
 
@@ -83,8 +83,8 @@ draw(context: RenderingContext) {
     this.worldLayer.render(context.backend);
     context.backend.setRenderTarget(null);
 
-    // 2. Draw the main scene — the off-screen result is now a texture
-    context.backend.clear();
+    // 2. Draw the main scene — the off-screen result is now a texture.
+    //    The canvas itself was already cleared before `draw` ran.
     context.render(this.display);
     context.render(this.hud);
 }
@@ -132,7 +132,6 @@ init() {
 }
 
 draw(context: RenderingContext) {
-    context.backend.clear();
     context.render(this.cachedSprite);
     // ... dynamic content on top ...
 }

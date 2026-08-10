@@ -44,7 +44,6 @@ class TextureLoaderScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear();
         const { loaded, total } = this.progress;
         this.bar.clear();
         this.bar.fillColor = new Color(60, 60, 60);

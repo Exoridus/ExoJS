@@ -116,7 +116,6 @@ class AudioVisualisationScene extends Scene {
         this.context.strokeStyle = '#fff';
         this.context.lineWidth = 4;
         this.screen.updateTexture();
-        context.backend.clear();
         context.render(this.screen);
         if (app.audio.locked) {
             context.render(this.tapPrompt);

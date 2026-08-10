@@ -117,7 +117,6 @@ class CrossfadeTracksScene extends Scene {
 
     override draw(context: RenderingContext): void {
         const app = this.app;
-        context.backend.clear();
         this.graphics.clear();
 
         // voice.volume returns the fade TARGET immediately, so ease the

@@ -62,7 +62,6 @@ class RetainedContainerScene extends Scene {
         const app = this.app;
         const { width, height } = app;
 
-        context.backend.clear();
 
         // Pan the whole field along a slow Lissajous path, like a camera drifting
         // over a static world. For a RetainedContainer this is ONE group-matrix

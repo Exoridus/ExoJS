@@ -81,7 +81,6 @@ class MusicLoopScene extends Scene {
     }
     draw(context) {
         const app = this.app;
-        context.backend.clear();
         this.graphics.clear();
         const duration = this.musicVoice.duration;
         const time = this.musicVoice.time;

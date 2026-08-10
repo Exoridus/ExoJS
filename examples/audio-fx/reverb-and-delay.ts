@@ -127,7 +127,6 @@ class ReverbAndDelayScene extends Scene {
 
     override draw(context: RenderingContext): void {
         const app = this.app;
-        context.backend.clear();
         this.gfx.clear();
 
         // A big click pad that flashes on each trigger so the play action reads.

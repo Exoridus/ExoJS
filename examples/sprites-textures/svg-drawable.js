@@ -25,7 +25,6 @@ class SvgDrawableScene extends Scene {
         this.sprite.setPosition((width / 2) | 0, (height / 2) | 0);
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.sprite);
     }
 }

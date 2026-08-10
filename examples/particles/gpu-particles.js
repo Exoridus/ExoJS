@@ -31,7 +31,6 @@ class GpuParticlesScene extends Scene {
         this.hud.setStatus(`${this.system.aliveCount.toLocaleString()} live / ${CAPACITY.toLocaleString()} cap · ${backend}`);
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.system);
     }
 }

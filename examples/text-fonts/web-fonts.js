@@ -15,7 +15,6 @@ class WebFontsScene extends Scene {
         this.loaded.setPosition(width / 2, height / 2 + 60);
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.default);
         context.render(this.loaded);
     }

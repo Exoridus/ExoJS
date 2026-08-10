@@ -38,7 +38,6 @@ class PerformanceOverlayScene extends Scene {
         }
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.layer);
     }
 }

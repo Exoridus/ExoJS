@@ -35,7 +35,6 @@ class WorldScreenScene extends Scene {
         const world = this.toWorld(this.pointer.x, this.pointer.y);
         this.text.text = `screen: ${this.pointer.x | 0}, ${this.pointer.y | 0}\nworld: ${world.x | 0}, ${world.y | 0}`;
         this.text.setPosition(12, 12);
-        context.backend.clear();
         context.backend.setView(this.view);
         context.render(this.grid);
         context.render(this.markers);

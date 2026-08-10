@@ -112,7 +112,6 @@ class ParticleStressScene extends Scene {
         }
     }
     draw(context) {
-        context.backend.clear();
         for (const entry of this.particleSystems) {
             context.render(entry.instance);
         }

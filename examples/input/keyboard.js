@@ -59,7 +59,6 @@ class KeyboardScene extends Scene {
         this.hud.setStatus(`Held: ${held.length ? held.join(' + ') : 'none'}`);
     }
     draw(context) {
-        context.backend.clear();
         this.square.clear();
         this.square.fillColor = new Color(120, 200, 255);
         this.square.drawRectangle(this.position.x - 20, this.position.y - 20, 40, 40);

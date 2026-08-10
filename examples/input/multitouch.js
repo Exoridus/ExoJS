@@ -60,7 +60,6 @@ class MultitouchScene extends Scene {
         this.hud.setStatus(`Active touches: ${this.pointers.size} / ${MAX_TOUCHES}`);
     }
     draw(context) {
-        context.backend.clear();
         this.graphics.clear();
         let index = 0;
         for (const touch of this.pointers.values()) {

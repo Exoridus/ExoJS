@@ -85,7 +85,6 @@ class CompressorScene extends Scene {
     }
     draw(context) {
         const app = this.app;
-        context.backend.clear();
         this.gfx.clear();
         for (let i = 0; i < sliders.length; i++) {
             const def = sliders[i];

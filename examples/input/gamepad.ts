@@ -38,7 +38,6 @@ class GamepadScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear();
         context.render(this.status);
         context.render(this.container);
     }

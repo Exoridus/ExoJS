@@ -79,7 +79,6 @@ class ColorFilterScene extends Scene {
         return `Preset: ${PRESETS[this.index]}  (${this.index + 1}/${PRESETS.length})`;
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.sprite);
     }
 }

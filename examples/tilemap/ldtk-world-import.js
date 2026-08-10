@@ -111,7 +111,6 @@ class LdtkWorldImportScene extends Scene {
         return labels;
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.content);
     }
 }

@@ -39,16 +39,15 @@ A blank or black canvas usually means one of the following:
 
 **The canvas is not visible.** Check that `app.canvas` is mounted in the DOM and has non-zero dimensions. If the canvas element is in a `display: none` container or has zero width/height via CSS, nothing renders.
 
-**`context.render()` is missing from `draw`.** Every frame you need to both clear the backend and explicitly render your scene graph root:
+**`context.render()` is missing from `draw`.** The engine clears the frame for you, but it never renders your scene graph for you — `draw` has to say what to draw:
 
 ```ts
 draw(context: RenderingContext) {
-    context.backend.clear();
     context.render(this.root);
 }
 ```
 
-Without `context.render(this.root)`, the frame is cleared but no nodes are drawn. Without `context.backend.clear()`, the previous frame is never painted over.
+Without `context.render(this.root)`, the frame is cleared and nothing else happens, so the canvas stays a flat `clearColor`.
 
 **Objects are not added to the root.** Sprites and containers only appear if they are part of the rendered tree. Add them to `this.root` or to a container that is itself in the root.
 
@@ -68,11 +67,10 @@ draw(backend) {
 }
 ```
 
-The current API passes a render context, not a bare backend, and renders nodes through the context rather than calling `render` on the node itself:
+The current API passes a render context, not a bare backend, and renders nodes through the context rather than calling `render` on the node itself. The manual clear is gone too — the engine clears each frame before `draw` runs:
 
 ```ts
 draw(context: RenderingContext) {
-    context.backend.clear();
     context.render(this.root);
 }
 ```

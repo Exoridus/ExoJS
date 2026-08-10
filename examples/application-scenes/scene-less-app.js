@@ -26,7 +26,6 @@ app.systems.add({
         square.rotation = angle * 40;
     },
     draw(context) {
-        context.backend.clear();
         context.render(square);
     },
 });

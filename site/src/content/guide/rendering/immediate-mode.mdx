@@ -71,8 +71,6 @@ Build the geometry once in `Scene.init` and keep it — it carries no transform,
 
 ```ts
 draw(context: RenderingContext) {
-    context.backend.clear();
-
     // A row of the same triangle, each at a different position, rotation,
     // and scale. Each call is its own flush and its own draw call.
     for (let i = 0; i < 5; i++) {
@@ -113,8 +111,6 @@ Each frame, rebuild the instances and submit the batch. `clear` resets the insta
 
 ```ts
 draw(context: RenderingContext) {
-    context.backend.clear();
-
     this.batch.clear();
     for (const spark of this.sparks) {
         const x = this.centerX + Math.cos(spark.angle) * spark.radius;

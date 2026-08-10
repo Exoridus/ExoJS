@@ -68,7 +68,6 @@ class ChromaticAberrationScene extends Scene {
         return this.intensity === 0 ? 'Intensity: 0% (no split — original)' : `Intensity: ${pct}%  (uOffset ${offset})`;
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.sprite);
     }
 }

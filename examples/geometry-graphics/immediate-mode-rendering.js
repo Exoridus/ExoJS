@@ -132,7 +132,6 @@ class ImmediateModeScene extends Scene {
         const centerX = width / 2;
         const centerY = height / 2;
         const time = this.elapsed;
-        context.backend.clear();
         // 1) Instanced field. Rebuild the per-instance transforms each frame,
         //    then submit the whole batch as ONE instanced draw call — or, when
         //    toggled off, draw each instance with its own drawGeometry to show

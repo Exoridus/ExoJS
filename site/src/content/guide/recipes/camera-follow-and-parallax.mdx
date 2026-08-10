@@ -32,7 +32,6 @@ update(delta: Time) {
 }
 
 draw(context: RenderingContext) {
-    context.backend.clear();
     context.render(this.worldLayer, { view: this._view });
 }
 ```
@@ -69,7 +68,6 @@ init() {
 }
 
 draw(context: RenderingContext) {
-    context.backend.clear();
     for (const layer of this._layers) {
         const offsetX = (400 - this._pointer.x) * layer.speed;
         const offsetY = (300 - this._pointer.y) * layer.speed;
@@ -91,8 +89,6 @@ For side-scrolling games, offset background layers relative to the camera positi
 
 ```ts
 draw(context: RenderingContext) {
-    context.backend.clear();
-
     // Background — moves at 30% of camera speed
     this._skyLayer.setPosition(
         this._view.center.x * 0.3,

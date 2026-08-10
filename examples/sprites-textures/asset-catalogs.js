@@ -133,7 +133,6 @@ class AssetCatalogsScene extends Scene {
     }
     // #endregion guide:dynamic-path
     draw(context) {
-        context.backend.clear();
         this.bar.clear();
         this.bar.fillColor = new Color(48, 52, 62);
         this.bar.drawRectangle(this.barX, this.barY, this.barWidth, 22);

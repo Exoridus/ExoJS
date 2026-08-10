@@ -30,7 +30,6 @@ class ScreenShakeOnExplosionScene extends Scene {
         });
     }
     draw(context) {
-        context.backend.clear();
         context.backend.setView(this.view);
         context.render(this.ps);
         context.backend.setView(null);

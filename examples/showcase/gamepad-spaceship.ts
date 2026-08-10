@@ -193,7 +193,6 @@ class GamepadSpaceshipScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear();
 
         this.fx.clear();
 

@@ -158,7 +158,6 @@ class AssetCatalogsScene extends Scene {
     // #endregion guide:dynamic-path
 
     override draw(context: RenderingContext): void {
-        context.backend.clear();
 
         this.bar.clear();
         this.bar.fillColor = new Color(48, 52, 62);

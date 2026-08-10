@@ -136,7 +136,6 @@ class TiledMapPhysicsActorScene extends Scene {
         }
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.mapNode);
         context.render(this.actor);
         this.debug.render(context.backend);

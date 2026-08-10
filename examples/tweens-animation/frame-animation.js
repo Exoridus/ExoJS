@@ -30,7 +30,6 @@ class FrameAnimationScene extends Scene {
         this.sprite.play('walk');
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.root);
     }
 }

@@ -27,7 +27,6 @@ class PlaySoundScene extends Scene {
         });
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.text);
     }
 }

@@ -50,7 +50,6 @@ class MinimapWithMaskScene extends Scene {
             )
             .addPass(
                 new CallbackRenderPass((context) => {
-                    context.backend.clear();
                     this.drawWorld(context.backend);
                 }),
             )

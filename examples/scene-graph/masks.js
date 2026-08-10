@@ -34,7 +34,6 @@ class MasksScene extends Scene {
         this.rectMask.y = (height / 2 + Math.sin(this.time * 1.4) * r - 55) | 0;
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.rectSprite);
         context.render(this.gfxSprite);
     }

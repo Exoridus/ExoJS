@@ -103,7 +103,6 @@ class EasingCurvesScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear();
 
         const g = this.graphics;
 

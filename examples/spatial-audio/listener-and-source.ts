@@ -102,7 +102,6 @@ class ListenerAndSourceScene extends Scene {
         const panText = pan < -0.05 ? `L ${Math.abs(pan).toFixed(2)}` : pan > 0.05 ? `R ${pan.toFixed(2)}` : 'center';
         this.label.text = `distance: ${dist.toFixed(0)} px   volume: ${(volume * 100).toFixed(0)}%   pan: ${panText}`;
 
-        context.backend.clear();
         this.graphics.clear();
 
         // Reference + max distance rings around the listener.

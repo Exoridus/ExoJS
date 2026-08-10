@@ -30,7 +30,6 @@ class GamepadScene extends Scene {
         }
     }
     draw(context) {
-        context.backend.clear();
         context.render(this.status);
         context.render(this.container);
     }

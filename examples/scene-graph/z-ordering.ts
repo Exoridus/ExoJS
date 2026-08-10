@@ -43,7 +43,6 @@ class ZOrderingScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear();
         context.render(this.group);
         context.render(this.label);
     }

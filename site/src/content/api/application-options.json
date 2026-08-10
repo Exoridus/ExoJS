@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 12,
+  "memberCount": 13,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 12,
+    "properties": 13,
     "events": 0
   },
   "sections": [
@@ -26,6 +26,31 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "autoClear",
+          "signature": "autoClear?: boolean",
+          "signatureTokens": [
+            {
+              "text": "autoClear",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Clear the canvas to ApplicationOptions.clearColor at the start of every frame, before the scene draws. Default true — a scene's draw() therefore paints onto a fresh frame and needs no clear of its own. Set false for pipelines that own the whole frame themselves: feedback / trail effects that deliberately keep the previous frame, or a custom renderer that issues its own clear as part of its first pass. Nothing else changes — Application.clearColor is still the colour a manual context.clear(app.clearColor) would use."
+        },
         {
           "name": "backend",
           "signature": "backend?: BackendConfig",
@@ -99,7 +124,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "The colour every frame starts from. Applied by the engine's own per-frame clear (see ApplicationOptions.autoClear) and readable/assignable later as Application.clearColor. Default: cornflower blue."
         },
         {
           "name": "extensions",

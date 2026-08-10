@@ -38,7 +38,6 @@ class LocalVsGlobalTransformScene extends Scene {
     }
 
     override draw(context: RenderingContext): void {
-        context.backend.clear();
         context.render(this.parent);
         context.render(this.globalSprite);
         context.render(this.localLabel);
