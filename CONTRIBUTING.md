@@ -159,7 +159,7 @@ child list.
 - Packages ship `.js` + `.d.ts` + source maps — **never raw `.ts` runtime entries**.
   The `exports` map is the public interface; the bundler profile is the supported
   type-resolution target (browser/bundler-first).
-- Extensions are side-effect-free at the root; `@codexo/<ext>/register` performs the
-  explicit registration.
+- Extensions are side-effect-free at the root; pass their descriptor to
+  `ApplicationOptions.extensions` to equip an app. There is no global registry.
 - The synchronized offline snapshot (npm tarballs + versioned ESM vendor trees +
   examples + built site) is the GitHub Full Release archive.

@@ -47,6 +47,3 @@ describe('buildSnapshot([asepriteExtension])', () => {
     expect(snapshot.serializers).toHaveLength(0);
   });
 });
-
-// ── Side-effect contract: root entry vs /register ───────────────────────────────
-
