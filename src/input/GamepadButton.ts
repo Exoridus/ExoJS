@@ -148,19 +148,57 @@ export namespace GamepadButton {
   export const DPadRight = button(15);
   /** Home / Guide / PS button. */
   export const Guide = button(16);
-  /** Share / Create button (PS4/PS5, Xbox Series). */
+  /**
+   * Share / Create button.
+   *
+   * Written by {@link XboxGamepadMapping} (Xbox Series pads). On PlayStation
+   * pads the Share/Create button reports as {@link Select} instead — the
+   * browser puts it on the standard Back/Select slot.
+   */
   export const Share = button(17);
-  /** Capture / Screenshot button (Switch, Xbox Series). */
+  /**
+   * Capture / Screenshot button.
+   *
+   * Written by {@link SwitchProGamepadMapping} and, as the closest semantic
+   * match for its Quick Access button, {@link SteamDeckGamepadMapping}.
+   */
   export const Capture = button(18);
-  /** Touchpad click (PlayStation). */
+  /**
+   * Touchpad **click**.
+   *
+   * Written by {@link PlayStationGamepadMapping} (DualShock 4, DualSense).
+   * Finger coordinates are a separate matter — see `GamepadAxis.TouchpadX`.
+   */
   export const Touchpad = button(19);
-  /** First paddle / extra button (Xbox Elite, Steam Controller, PS5 Edge, Steam Deck L4). */
+  /**
+   * First paddle / extra button.
+   *
+   * Written by {@link SteamDeckGamepadMapping} (L4) only. Xbox Elite paddles
+   * do **not** reach this channel: the Windows path is XInput, whose
+   * `XINPUT_GAMEPAD` struct carries no paddle bits, and no browser mapper
+   * emits them. Reaching them needs WebHID and a custom `GamepadDefinition`.
+   */
   export const Paddle1 = button(20);
-  /** Second paddle / extra button (Xbox Elite, Steam Deck R4, PS5 Edge). */
+  /**
+   * Second paddle / extra button.
+   *
+   * Written by {@link SteamDeckGamepadMapping} (R4) only — see
+   * {@link Paddle1} for why Xbox Elite paddles are absent.
+   */
   export const Paddle2 = button(21);
-  /** Third paddle / extra button (Xbox Elite, Steam Deck L5). */
+  /**
+   * Third paddle / extra button.
+   *
+   * Written by {@link SteamDeckGamepadMapping} (L5) only — see
+   * {@link Paddle1} for why Xbox Elite paddles are absent.
+   */
   export const Paddle3 = button(22);
-  /** Fourth paddle / extra button (Xbox Elite, Steam Deck R5). */
+  /**
+   * Fourth paddle / extra button.
+   *
+   * Written by {@link SteamDeckGamepadMapping} (R5) only — see
+   * {@link Paddle1} for why Xbox Elite paddles are absent.
+   */
   export const Paddle4 = button(23);
   // Offsets 24..31 reserved for future named buttons / custom mapping use.
 }

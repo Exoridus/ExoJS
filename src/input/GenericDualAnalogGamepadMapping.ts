@@ -12,13 +12,24 @@ import { GamepadMapping, GamepadMappingFamily } from './GamepadMapping';
  *  - One signed aggregate channel (e.g. `LeftStickX`) for direct -1..1
  *    consumption — useful for movement or aiming.
  *
+ * The standard layout ends at button index 16 (the Meta/Guide button).
+ * Browsers expose **one** device-specific slot beyond it, at index 17, and
+ * what sits there depends on the device — Share on an Xbox Series pad,
+ * Capture on a Switch Pro, the touchpad click on a DualShock 4 / DualSense.
+ * This baseline therefore declares nothing at 17; device subclasses pass
+ * their own entry through `extraButtons`.
+ *
  * Device-specific subclasses (Xbox, PlayStation, Switch Pro, etc.) inherit
- * this layout and override only {@link GamepadMapping.family}.
+ * this layout, override {@link GamepadMapping.family}, and add at most that
+ * one button.
+ *
+ * @param extraButtons - Device-specific buttons appended after the standard
+ * layout. Their raw indices must not collide with 0–16.
  */
 export class GenericDualAnalogGamepadMapping extends GamepadMapping {
   public readonly family: GamepadMappingFamily = GamepadMappingFamily.GenericDualAnalog;
 
-  public constructor() {
+  public constructor(extraButtons: readonly GamepadButton[] = []) {
     super(
       [
         new GamepadButton(0, GamepadButton.South),
@@ -38,10 +49,7 @@ export class GenericDualAnalogGamepadMapping extends GamepadMapping {
         new GamepadButton(14, GamepadButton.DPadLeft),
         new GamepadButton(15, GamepadButton.DPadRight),
         new GamepadButton(16, GamepadButton.Guide),
-        new GamepadButton(17, GamepadButton.Share),
-        new GamepadButton(18, GamepadButton.Capture),
-        new GamepadButton(19, GamepadButton.Touchpad),
-        new GamepadButton(20, GamepadButton.Paddle1),
+        ...extraButtons,
       ],
       [
         // Direction-split (0..1).
