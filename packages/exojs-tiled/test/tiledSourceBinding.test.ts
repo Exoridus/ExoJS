@@ -6,8 +6,8 @@ import { beforeEach, describe, expect, it,vi } from 'vitest';
 
 import { loadTiledMap } from '../src/loadTiledMap';
 import { TiledMap } from '../src/TiledMap';
-import { tiledMapBinding } from '../src/tiledMapBinding';
 import { tiledRuntimeMapBinding } from '../src/tiledRuntimeMapBinding';
+import { tiledSourceBinding } from '../src/tiledSourceBinding';
 
 function fakeLoader(): Loader {
   return { load: vi.fn() } as unknown as Loader;
@@ -31,7 +31,7 @@ function makeContext(fixtures: Record<string, unknown>) {
 
   const fetchJson = vi.fn(async (source: string): Promise<unknown> => {
       if (Object.hasOwn(fixtures, source)) return fixtures[source];
-      throw new Error(`tiledMapBinding.test: no fixture for "${source}"`);
+      throw new Error(`tiledSourceBinding.test: no fixture for "${source}"`);
     });
 
   const context: AssetLoaderContext = {
@@ -53,10 +53,10 @@ function makeContext(fixtures: Record<string, unknown>) {
       tex.height = 32;
       return tex;
     }
-    if (asset?.type === 'tiledMap') {
+    if (asset?.type === 'tiledSource') {
       return loadTiledMap(asset.source as string, context);
     }
-    throw new Error(`tiledMapBinding.test: unexpected loader.load token: ${String(token)}`);
+    throw new Error(`tiledSourceBinding.test: unexpected loader.load token: ${String(token)}`);
   });
 
   return { context, loaderLoad };
@@ -64,39 +64,39 @@ function makeContext(fixtures: Record<string, unknown>) {
 
 // ── Descriptor tests ─────────────────────────────────────────────────────────
 
-describe('tiledMapBinding descriptor', () => {
+describe('tiledSourceBinding descriptor', () => {
   it('targets TiledMap constructor', () => {
-    expect(tiledMapBinding.ctor).toBe(TiledMap);
+    expect(tiledSourceBinding.ctor).toBe(TiledMap);
   });
 
-  it('has typeNames ["tiledMap"]', () => {
-    expect(tiledMapBinding.typeNames).toEqual(['tiledMap']);
+  it('has typeNames ["tiledSource"]', () => {
+    expect(tiledSourceBinding.typeNames).toEqual(['tiledSource']);
   });
 
   it('does NOT claim file extensions (token-only binding)', () => {
-    expect((tiledMapBinding as { extensions?: unknown }).extensions).toBeUndefined();
+    expect((tiledSourceBinding as { extensions?: unknown }).extensions).toBeUndefined();
   });
 
   it('create() returns an object with a load function', () => {
-    expect(typeof tiledMapBinding.create(fakeLoader()).load).toBe('function');
+    expect(typeof tiledSourceBinding.create(fakeLoader()).load).toBe('function');
   });
 });
 
 // ── load() tests ──────────────────────────────────────────────────────────────
 
-describe('tiledMapBinding.load — minimal map', () => {
+describe('tiledSourceBinding.load — minimal map', () => {
   const { context } = makeContext({ 'minimal.tmj': loadFixture('minimal.tmj') });
 
   beforeEach(() => { vi.clearAllMocks(); });
 
   it('returns a TiledMap instance', async () => {
-    const handler = tiledMapBinding.create(context.loader);
+    const handler = tiledSourceBinding.create(context.loader);
     const result = await handler.load({ source: 'minimal.tmj' }, context);
     expect(result).toBeInstanceOf(TiledMap);
   });
 
   it('preserves map dimensions on the returned TiledMap', async () => {
-    const handler = tiledMapBinding.create(context.loader);
+    const handler = tiledSourceBinding.create(context.loader);
     const result = await handler.load({ source: 'minimal.tmj' }, context);
     expect(result.width).toBe(4);
     expect(result.height).toBe(4);
@@ -105,7 +105,7 @@ describe('tiledMapBinding.load — minimal map', () => {
   });
 
   it('stores the source URL on the TiledMap', async () => {
-    const handler = tiledMapBinding.create(context.loader);
+    const handler = tiledSourceBinding.create(context.loader);
     const result = await handler.load({ source: 'minimal.tmj' }, context);
     expect(result.source).toBe('minimal.tmj');
   });
@@ -113,7 +113,7 @@ describe('tiledMapBinding.load — minimal map', () => {
 
 // ── G-TILED-DIRECT-EQUIVALENCE ────────────────────────────────────────────────
 //
-// load(Asset.type('tileMap', url)) must be semantically equivalent to load(Asset.type('tiledMap', url)).toTileMap():
+// load(Asset.type('tileMap', url)) must be semantically equivalent to load(Asset.type('tiledSource', url)).toTileMap():
 // same dimensions, layer count, tileset count, and tile data.
 
 describe('G-TILED-DIRECT-EQUIVALENCE — load(TileMap) ≡ load(TiledMap).toTileMap()', () => {
@@ -124,7 +124,7 @@ describe('G-TILED-DIRECT-EQUIVALENCE — load(TileMap) ≡ load(TiledMap).toTile
   it('both paths produce a TileMap with the same dimensions', async () => {
     const { context } = makeContext(FIXTURES);
     const runtimeHandler = tiledRuntimeMapBinding.create(context.loader);
-    const sourceHandler  = tiledMapBinding.create(context.loader);
+    const sourceHandler  = tiledSourceBinding.create(context.loader);
 
     const direct    = await runtimeHandler.load({ source: 'world.tmj' }, context);
     const fromSource = (await sourceHandler.load({ source: 'world.tmj' }, context)).toTileMap();
@@ -138,7 +138,7 @@ describe('G-TILED-DIRECT-EQUIVALENCE — load(TileMap) ≡ load(TiledMap).toTile
   it('both paths produce the same number of layers and tilesets', async () => {
     const { context } = makeContext(FIXTURES);
     const runtimeHandler = tiledRuntimeMapBinding.create(context.loader);
-    const sourceHandler  = tiledMapBinding.create(context.loader);
+    const sourceHandler  = tiledSourceBinding.create(context.loader);
 
     const direct     = await runtimeHandler.load({ source: 'world.tmj' }, context);
     const fromSource = (await sourceHandler.load({ source: 'world.tmj' }, context)).toTileMap();
@@ -150,7 +150,7 @@ describe('G-TILED-DIRECT-EQUIVALENCE — load(TileMap) ≡ load(TiledMap).toTile
   it('both paths produce the same tile count in the first layer', async () => {
     const { context } = makeContext(FIXTURES);
     const runtimeHandler = tiledRuntimeMapBinding.create(context.loader);
-    const sourceHandler  = tiledMapBinding.create(context.loader);
+    const sourceHandler  = tiledSourceBinding.create(context.loader);
 
     const direct     = await runtimeHandler.load({ source: 'world.tmj' }, context);
     const fromSource = (await sourceHandler.load({ source: 'world.tmj' }, context)).toTileMap();
@@ -168,7 +168,7 @@ describe('G-TILED-DIRECT-EQUIVALENCE — load(TileMap) ≡ load(TiledMap).toTile
 describe('G-TILED-TEXTURE-OWNERSHIP — destroy() does not free Loader textures', () => {
   it('texture reference remains accessible after TiledMap.destroy()', async () => {
     const { context } = makeContext({ 'with-tex.tmj': loadFixture('with-tileset-image.tmj') });
-    const handler = tiledMapBinding.create(context.loader);
+    const handler = tiledSourceBinding.create(context.loader);
     const tiledMap = await handler.load({ source: 'with-tex.tmj' }, context);
     const texture = tiledMap.tilesets[0].texture;
 

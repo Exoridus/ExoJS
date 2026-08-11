@@ -103,7 +103,7 @@ describe('AudioManager.update()', () => {
       }),
     }));
 
-    const { Application, ApplicationStatus } = await import('#core/Application');
+    const { Application, ApplicationState } = await import('#core/Application');
     const { SystemRegistry } = await import('#core/SystemRegistry');
     const { SystemOrder } = await import('#core/SystemOrder');
 
@@ -112,7 +112,7 @@ describe('AudioManager.update()', () => {
 
     const preUpdateStub = (name: string): { preUpdate: () => void } => ({ preUpdate: () => callOrder.push(name) });
 
-    rawApp['_status'] = ApplicationStatus.Running;
+    rawApp['_state'] = ApplicationState.Running;
     rawApp['_frameLoopActive'] = true;
     rawApp['pauseOnHidden'] = false;
     rawApp['_documentVisible'] = true;

@@ -2,11 +2,11 @@ import type { MockInstance } from 'vitest';
 
 /**
  * Application.start() startup-sequencing: _frameLoopActive decouples the
- * per-frame loop's gate from `_status`, so a frame-driven transition session
- * can progress during the very first `start()` call (before `_status` flips
+ * per-frame loop's gate from `_state`, so a frame-driven transition session
+ * can progress during the very first `start()` call (before `_state` flips
  * to Running).
  */
-import { Application, ApplicationStatus } from '#core/Application';
+import { Application, ApplicationState } from '#core/Application';
 import { Scene } from '#core/Scene';
 import { SceneTransition, type SceneTransitionEnvironment, type SceneTransitionRequirements, type SceneTransitionSession } from '#core/SceneTransition';
 
@@ -34,6 +34,9 @@ vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
       resize: vi.fn().mockReturnThis(),
       view: { getBounds: vi.fn().mockReturnValue({ left: 0, top: 0, right: 800, bottom: 600 }) },
       renderTarget: {},
+      // Core renderer bindings key their factory map on backendType, so a stub
+      // naming a real backend also has to accept the renderers bound to it.
+      rendererRegistry: { bindRenderer: vi.fn() },
       backendType: 'webgl2',
       setView: vi.fn().mockReturnThis(),
       draw: vi.fn().mockReturnThis(),
@@ -91,11 +94,11 @@ describe('Application — _frameLoopActive', () => {
     expect(frameLoopActive(app)).toBe(true);
 
     await startPromise;
-    expect(app.status).toBe(ApplicationStatus.Running);
-    app.destroy();
+    expect(app.state).toBe(ApplicationState.Running);
+    void app.destroy();
   });
 
-  test('a scheduled RAF callback runs its body (and reschedules) even while _status is still Loading', async () => {
+  test('a scheduled RAF callback runs its body (and reschedules) even while _state is still Loading', async () => {
     const app = new Application({ backend: { type: 'webgl2' } });
     const startPromise = app.start();
 
@@ -105,7 +108,7 @@ describe('Application — _frameLoopActive', () => {
 
     // start() hasn't resolved yet (status is still Loading), but the loop
     // must already be live and self-rescheduling — this is the bug being fixed.
-    expect(app.status).toBe(ApplicationStatus.Loading);
+    expect(app.state).toBe(ApplicationState.Loading);
     const callsBeforeManualTick = rafSpy.mock.calls.length;
 
     expect(rafCallbacks.length).toBeGreaterThan(0);
@@ -114,7 +117,7 @@ describe('Application — _frameLoopActive', () => {
     expect(rafSpy.mock.calls.length).toBeGreaterThan(callsBeforeManualTick);
 
     await startPromise;
-    app.destroy();
+    void app.destroy();
   });
 
   test('_activeClock starts ticking as soon as _frameLoopActive flips true, not after start() resolves', async () => {
@@ -135,7 +138,7 @@ describe('Application — _frameLoopActive', () => {
     expect(activeTimeDuringLoading).toBeGreaterThanOrEqual(0);
 
     await startPromise;
-    app.destroy();
+    void app.destroy();
   });
 
   describe('_stopFrameLoop() — fatal frame error, stop(), destroy() during Loading', () => {
@@ -152,13 +155,13 @@ describe('Application — _frameLoopActive', () => {
       app.update();
 
       expect(frameLoopActive(app)).toBe(false);
-      expect(app.status).toBe(ApplicationStatus.Stopped);
+      expect(app.state).toBe(ApplicationState.Stopped);
       expect(cafSpy).toHaveBeenCalled();
 
-      app.destroy();
+      void app.destroy();
     });
 
-    test('stop() halts the loop even while _status is still Loading (mid-startup)', async () => {
+    test('stop() halts the loop even while _state is still Loading (mid-startup)', async () => {
       const app = new Application({ backend: { type: 'webgl2' } });
       const startPromise = app.start().catch(() => undefined); // will reject — see next test
 
@@ -166,25 +169,25 @@ describe('Application — _frameLoopActive', () => {
       await Promise.resolve();
       await Promise.resolve();
 
-      expect(app.status).toBe(ApplicationStatus.Loading);
+      expect(app.state).toBe(ApplicationState.Loading);
       expect(frameLoopActive(app)).toBe(true);
 
       app.stop();
 
       expect(frameLoopActive(app)).toBe(false);
-      expect(app.status).toBe(ApplicationStatus.Stopped);
+      expect(app.state).toBe(ApplicationState.Stopped);
 
       await startPromise;
-      app.destroy();
+      void app.destroy();
     });
 
     test('stop() is a no-op when the loop was never started (still Stopped)', () => {
       const app = new Application({ backend: { type: 'webgl2' } });
 
       expect(() => app.stop()).not.toThrow();
-      expect(app.status).toBe(ApplicationStatus.Stopped);
+      expect(app.state).toBe(ApplicationState.Stopped);
 
-      app.destroy();
+      void app.destroy();
     });
 
     test('destroy() during Loading also halts the loop (delegates to stop())', async () => {
@@ -197,7 +200,7 @@ describe('Application — _frameLoopActive', () => {
 
       expect(frameLoopActive(app)).toBe(true);
 
-      app.destroy();
+      void app.destroy();
 
       expect(frameLoopActive(app)).toBe(false);
 
@@ -248,16 +251,16 @@ describe('Application — _frameLoopActive', () => {
       }
 
       expect(sessionActive(app)).toBe(true);
-      expect(app.status).toBe(ApplicationStatus.Loading);
+      expect(app.state).toBe(ApplicationState.Loading);
 
       app.stop();
 
       await expect(startPromise).rejects.toThrow(/navigation aborted/i);
       expect(transition.sessionDestroyed).toBe(true);
-      expect(app.status).toBe(ApplicationStatus.Stopped);
+      expect(app.state).toBe(ApplicationState.Stopped);
       expect(app.scenes.currentScene).toBeNull();
 
-      app.destroy();
+      void app.destroy();
     });
 
     test('app.stop() called mid-transition while a scene is ALREADY active unloads that scene, not just skips it', async () => {
@@ -297,7 +300,7 @@ describe('Application — _frameLoopActive', () => {
       await app.start(SceneA);
 
       expect(app.scenes.currentScene).toBeInstanceOf(SceneA);
-      expect(app.status).toBe(ApplicationStatus.Running);
+      expect(app.state).toBe(ApplicationState.Running);
 
       const transition = new HangingSceneTransition();
       const changePromise = app.scenes.change(SceneB, { transition });
@@ -312,7 +315,7 @@ describe('Application — _frameLoopActive', () => {
 
       await expect(changePromise).rejects.toThrow(/navigation aborted/i);
       expect(transition.sessionDestroyed).toBe(true);
-      expect(app.status).toBe(ApplicationStatus.Stopped);
+      expect(app.state).toBe(ApplicationState.Stopped);
       // The bug this test guards: stop() must not leave SceneA loaded just
       // because a navigation abort (rather than a clean stop) is what
       // triggered the unload — SceneA never committed away, so it is still
@@ -320,7 +323,7 @@ describe('Application — _frameLoopActive', () => {
       // contract is to unload whatever is active.
       expect(app.scenes.currentScene).toBeNull();
 
-      app.destroy();
+      void app.destroy();
     });
   });
 });

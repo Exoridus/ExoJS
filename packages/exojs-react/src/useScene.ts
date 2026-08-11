@@ -1,4 +1,4 @@
-import { ApplicationStatus, type Scene, type SceneConstructor } from '@codexo/exojs';
+import { ApplicationState, type Scene, type SceneConstructor } from '@codexo/exojs';
 import { type DependencyList, useEffect, useRef, useState } from 'react';
 
 import { useExoApp } from './useExoApp';
@@ -65,7 +65,7 @@ export function useScene<T extends Scene>(SceneClass: new () => T, deps: Depende
 
     const apply = async (): Promise<void> => {
       try {
-        if (app.status === ApplicationStatus.Stopped || app.status === ApplicationStatus.Loading) {
+        if (app.state === ApplicationState.Stopped || app.state === ApplicationState.Loading) {
           // Stopped: first activation, which initializes the backend and starts
           // the frame loop. Loading: an earlier effect's `start()` is still in
           // flight — including its own initial scene navigation, which

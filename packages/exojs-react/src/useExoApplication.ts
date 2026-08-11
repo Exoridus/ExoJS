@@ -108,7 +108,10 @@ export function useExoApplication(
     onReadyRef.current?.(application);
 
     return () => {
-      application.destroy();
+      // A React cleanup function cannot await, and teardown failures already
+      // travel through the application's own error pipeline — so the Promise
+      // is deliberately dropped rather than reported a second time here.
+      void application.destroy();
       setApp(null);
     };
     // Recreate only when the backend identity changes; live options are synced

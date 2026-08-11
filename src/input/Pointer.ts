@@ -84,15 +84,22 @@ export function computeDesignPoint(app: Application, platform: PlatformAdapter, 
   return app._backingStoreToDesign(backingStoreX, backingStoreY);
 }
 
-/** High-level lifecycle state of a {@link Pointer}. */
+/**
+ * High-level lifecycle state of a {@link Pointer}.
+ *
+ * Distinct from {@link PointerStateFlag}, which is a bitfield of the per-frame
+ * events a pointer saw. This is the single state the pointer is *in*, and it is
+ * only ever compared by identity — hence string values, which read as
+ * themselves in a debugger.
+ */
 export enum PointerState {
-  Unknown,
-  InsideCanvas,
-  OutsideCanvas,
-  Pressed,
-  Moving,
-  Released,
-  Cancelled,
+  Unknown = 'unknown',
+  InsideCanvas = 'insideCanvas',
+  OutsideCanvas = 'outsideCanvas',
+  Pressed = 'pressed',
+  Moving = 'moving',
+  Released = 'released',
+  Cancelled = 'cancelled',
 }
 
 /**

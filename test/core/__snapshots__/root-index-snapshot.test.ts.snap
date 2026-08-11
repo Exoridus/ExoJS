@@ -9,7 +9,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "AnimatedSprite",
   "AnimationManager",
   "Application",
-  "ApplicationStatus",
+  "ApplicationState",
   "ArcadeStickGamepadMapping",
   "Asset",
   "AssetCacheError",

@@ -29,7 +29,7 @@ const setNavigatorGpu = (gpu: unknown): (() => void) => {
 
 interface ApplicationTestHarness {
   readonly Application: typeof import('#core/Application').Application;
-  readonly ApplicationStatus: typeof import('#core/Application').ApplicationStatus;
+  readonly ApplicationState: typeof import('#core/Application').ApplicationState;
   readonly LoaderMock: MockInstance;
   readonly InputManagerMock: MockInstance;
   readonly webglManager: {
@@ -185,11 +185,11 @@ const loadApplicationHarness = async (
     }),
   }));
 
-  const { Application, ApplicationStatus } = await import('#core/Application');
+  const { Application, ApplicationState } = await import('#core/Application');
 
   return {
     Application,
-    ApplicationStatus,
+    ApplicationState,
     LoaderMock,
     InputManagerMock,
     webglManager,
@@ -207,7 +207,7 @@ describe('Application', () => {
   });
 
   test('update flushes renderer once per frame while running', async () => {
-    const { Application, ApplicationStatus } = await loadApplicationHarness();
+    const { Application, ApplicationState } = await loadApplicationHarness();
     const app = Object.create(Application.prototype) as import('#core/Application').Application;
     const rawApp = app as unknown as Record<string, unknown>;
     const systemsUpdate = vi.fn();
@@ -240,7 +240,7 @@ describe('Application', () => {
       restart: vi.fn(),
     };
 
-    rawApp['_status'] = ApplicationStatus.Running;
+    rawApp['_state'] = ApplicationState.Running;
     rawApp['_frameLoopActive'] = true;
     rawApp['pauseOnHidden'] = false;
     rawApp['_documentVisible'] = true;
@@ -565,7 +565,7 @@ describe('Application', () => {
   });
 
   test('stop() catches async scene teardown failures instead of leaking rejections', async () => {
-    const { Application, ApplicationStatus } = await loadApplicationHarness();
+    const { Application, ApplicationState } = await loadApplicationHarness();
     const app = Object.create(Application.prototype) as import('#core/Application').Application;
     const rawApp = app as unknown as Record<string, unknown>;
     const sceneTeardownError = new Error('scene teardown failed');
@@ -582,7 +582,7 @@ describe('Application', () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
     rawApp['platform'] = { requestFrame: vi.fn().mockReturnValue(1), cancelFrame: cancelSpy };
-    rawApp['_status'] = ApplicationStatus.Running;
+    rawApp['_state'] = ApplicationState.Running;
     rawApp['_frameLoopActive'] = true;
     rawApp['_frameRequest'] = 99;
     rawApp['scenes'] = sceneDirector;
@@ -597,7 +597,7 @@ describe('Application', () => {
     expect(cancelSpy).toHaveBeenCalledWith(99);
     expect(activeClock.stop).toHaveBeenCalledTimes(1);
     expect(frameClock.stop).toHaveBeenCalledTimes(1);
-    expect(app.status).toBe(ApplicationStatus.Stopped);
+    expect(app.state).toBe(ApplicationState.Stopped);
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       '%c[ExoJS][Application]',
       expect.stringContaining('color'),

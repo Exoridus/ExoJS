@@ -9,7 +9,7 @@ import type { MockInstance } from 'vitest';
  *     Stopped, last banner call has fatal: true.
  *  5. A successful frame resets the consecutive counter.
  */
-import { Application, ApplicationStatus } from '#core/Application';
+import { Application, ApplicationState } from '#core/Application';
 import { logger } from '#core/logging';
 import { Time } from '#core/Time';
 
@@ -51,6 +51,9 @@ vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
       resize: vi.fn().mockReturnThis(),
       view: {},
       renderTarget: {},
+      // Core renderer bindings key their factory map on backendType, so a stub
+      // naming a real backend also has to accept the renderers bound to it.
+      rendererRegistry: { bindRenderer: vi.fn() },
       backendType: 'webgl2',
       setView: vi.fn().mockReturnThis(),
       draw: vi.fn().mockReturnThis(),
@@ -79,6 +82,9 @@ vi.mock('#rendering/webgpu/WebGpuBackend', () => ({
       resize: vi.fn().mockReturnThis(),
       view: {},
       renderTarget: {},
+      // Core renderer bindings key their factory map on backendType, so a stub
+      // naming a real backend also has to accept the renderers bound to it.
+      rendererRegistry: { bindRenderer: vi.fn() },
       backendType: 'webgpu',
       setView: vi.fn().mockReturnThis(),
       draw: vi.fn().mockReturnThis(),
@@ -94,7 +100,7 @@ vi.mock('#rendering/webgpu/WebGpuBackend', () => ({
 function forceRunning(app: Application): void {
   const record = app as unknown as Record<string, unknown>;
 
-  record['_status'] = ApplicationStatus.Running;
+  record['_state'] = ApplicationState.Running;
   record['_frameLoopActive'] = true;
 }
 
@@ -125,8 +131,8 @@ describe('Application frame guard', () => {
   });
 
   afterEach(() => {
-    (app as unknown as Record<string, unknown>)['_status'] = ApplicationStatus.Stopped;
-    app.destroy();
+    (app as unknown as Record<string, unknown>)['_state'] = ApplicationState.Stopped;
+    void app.destroy();
     vi.restoreAllMocks();
   });
 
@@ -172,7 +178,7 @@ describe('Application frame guard', () => {
       app.update();
 
       expect(rafSpy).toHaveBeenCalledTimes(1);
-      expect(app.status).toBe(ApplicationStatus.Running);
+      expect(app.state).toBe(ApplicationState.Running);
     });
 
     test('the next (successful) frame actually runs its body', () => {
@@ -236,7 +242,7 @@ describe('Application frame guard', () => {
       app.update();
       app.update();
 
-      expect(app.status).toBe(ApplicationStatus.Stopped);
+      expect(app.state).toBe(ApplicationState.Stopped);
       expect(cafSpy).toHaveBeenCalled();
       // Two reschedules (after frames 1 and 2); the halting frame must not reschedule.
       expect(rafSpy).toHaveBeenCalledTimes(2);
@@ -298,7 +304,7 @@ describe('Application frame guard', () => {
       app.update();
       app.update();
 
-      expect(app.status).toBe(ApplicationStatus.Running);
+      expect(app.state).toBe(ApplicationState.Running);
       expect(rafSpy).toHaveBeenCalledTimes(5);
     });
   });
@@ -325,12 +331,12 @@ describe('Application frame guard', () => {
       expect(onError).toHaveBeenCalledTimes(1);
       expect(onError).toHaveBeenCalledWith(asyncError);
       expect(app.recentErrors).toHaveLength(1);
-      expect(app.status).toBe(ApplicationStatus.Running);
+      expect(app.state).toBe(ApplicationState.Running);
 
       // Async errors never count toward the consecutive-frame-halt threshold.
       handler(new Error('another'));
       handler(new Error('yet another'));
-      expect(app.status).toBe(ApplicationStatus.Running);
+      expect(app.state).toBe(ApplicationState.Running);
     });
 
     test('does NOT log an async render error a second time — the backend already logged it at source', () => {

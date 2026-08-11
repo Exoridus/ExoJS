@@ -25,7 +25,7 @@ npm install @codexo/exojs @codexo/exojs-tilemap
 - `TileMap` (re-exported from `@codexo/exojs-tilemap`) — generic runtime tilemap; the common-case result of `loader.load(Asset.type('tileMap', url))`
 - `TileMapNode` / `TileLayerNode` (re-exported from `@codexo/exojs-tilemap`) — scene nodes that render a loaded `TileMap` on WebGL2/WebGPU
 - `TileMapView` / `TileMapBand` (re-exported from `@codexo/exojs-tilemap`) — group a map's layers into independently placeable bands for interleaving actors between tile layers; same class identity, so `instanceof` holds across both import paths (the canonical view/band docs live in the [`@codexo/exojs-tilemap` README](https://www.npmjs.com/package/@codexo/exojs-tilemap))
-- `TiledMap` — parsed Tiled source model; advanced/diagnostic use via `loader.load(Asset.type('tiledMap', url))`
+- `TiledMap` — parsed Tiled source model; advanced/diagnostic use via `loader.load(Asset.type('tiledSource', url))`
 - `TiledTileset` — parsed tileset (atlas-image or collection-of-images); holds resolved textures
 - `TiledLayer` hierarchy — `TiledTileLayer`, `TiledObjectLayer`, `TiledImageLayer`, `TiledGroupLayer`
 - `TiledObject` — parsed object (point, ellipse, polygon, polyline, text, tile-ref, rectangle)
@@ -62,36 +62,22 @@ Load the fully resolved Tiled source model and convert it manually:
 ```ts
 import { TiledMap } from '@codexo/exojs-tiled';
 
-const source = await app.loader.load(Asset.type('tiledMap', 'maps/world.tmj'));
+const source = await app.loader.load(Asset.type('tiledSource', 'maps/world.tmj'));
 const map = source.toTileMap();
 ```
 
 Both paths are semantically equivalent. The runtime binding (`TileMap`) uses the Loader-managed
 source-model sub-load internally, so concurrent or duplicate loads are deduplicated.
 
-## `/register` convenience entry
-
-Importing `/register` registers `tiledExtension` (and its `tilemapExtension` dependency) in the
-global `ExtensionRegistry`. Subsequently created Applications that use global defaults will
-receive both extensions automatically.
-
-```ts
-// Side effect: registers tiledExtension in the global ExtensionRegistry.
-import '@codexo/exojs-tiled/register';
-
-// All named exports are also re-exported from /register:
-import { TileMap, TiledMap, tiledExtension } from '@codexo/exojs-tiled/register';
-```
-
 ## Extension dependency
 
 `tiledExtension.dependencies` includes `tilemapExtension` from `@codexo/exojs-tilemap`.
-Registering `tiledExtension` is sufficient — `buildSnapshot` and `ExtensionRegistry.register`
-traverse the dependency graph automatically.
+Passing `tiledExtension` to `ApplicationOptions.extensions` is sufficient — `buildSnapshot`
+traverses the dependency graph automatically.
 
 ## Asset loading
 
-`loader.load(Asset.type('tileMap', url))` (common path) and `loader.load(Asset.type('tiledMap', url))` (advanced path) both:
+`loader.load(Asset.type('tileMap', url))` (common path) and `loader.load(Asset.type('tiledSource', url))` (advanced path) both:
 
 1. Fetch and validate the `.tmj` file.
 2. Resolve each tileset entry (fetches external `.tsj` files via the Loader cache).

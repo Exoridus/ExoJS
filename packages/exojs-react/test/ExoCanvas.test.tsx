@@ -11,8 +11,8 @@ import { MockApplication } from './support/mock-application';
 // above this file's imports (top-level bindings are not initialised yet).
 vi.mock('@codexo/exojs', async importActual => {
   const actual = await importActual<typeof import('@codexo/exojs')>();
-  const { MockApplication: MockApp, configureApplicationStatus } = await import('./support/mock-application');
-  configureApplicationStatus(actual.ApplicationStatus);
+  const { MockApplication: MockApp, configureApplicationState } = await import('./support/mock-application');
+  configureApplicationState(actual.ApplicationState);
   return { ...actual, Application: MockApp };
 });
 

@@ -5,7 +5,7 @@
  *   - pauseOnHidden resume delta-spike fix (_frameClock.restart in hidden path)
  *   - internal MAX_DELTA_MS clamp applied to simulation delta
  */
-import { Application, ApplicationStatus } from '#core/Application';
+import { Application, ApplicationState } from '#core/Application';
 import { Time } from '#core/Time';
 
 // ---------------------------------------------------------------------------
@@ -38,6 +38,9 @@ vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
       resize: vi.fn().mockReturnThis(),
       view: {},
       renderTarget: {},
+      // Core renderer bindings key their factory map on backendType, so a stub
+      // naming a real backend also has to accept the renderers bound to it.
+      rendererRegistry: { bindRenderer: vi.fn() },
       backendType: 'webgl2',
       setView: vi.fn().mockReturnThis(),
       draw: vi.fn().mockReturnThis(),
@@ -79,6 +82,9 @@ vi.mock('#rendering/webgpu/WebGpuBackend', () => ({
       resize: vi.fn().mockReturnThis(),
       view: {},
       renderTarget: {},
+      // Core renderer bindings key their factory map on backendType, so a stub
+      // naming a real backend also has to accept the renderers bound to it.
+      rendererRegistry: { bindRenderer: vi.fn() },
       backendType: 'webgpu',
       setView: vi.fn().mockReturnThis(),
       draw: vi.fn().mockReturnThis(),
@@ -104,7 +110,7 @@ vi.mock('#rendering/webgpu/WebGpuBackend', () => ({
 function forceRunning(app: Application): void {
   const record = app as unknown as Record<string, unknown>;
 
-  record['_status'] = ApplicationStatus.Running;
+  record['_state'] = ApplicationState.Running;
   record['_frameLoopActive'] = true;
 }
 
@@ -142,8 +148,8 @@ describe('Application.update() — loop timing', () => {
 
   afterEach(() => {
     // Stop before destroy so destroy() doesn't try to unload a scene
-    (app as unknown as Record<string, unknown>)['_status'] = ApplicationStatus.Stopped;
-    app.destroy();
+    (app as unknown as Record<string, unknown>)['_state'] = ApplicationState.Stopped;
+    void app.destroy();
     vi.restoreAllMocks();
   });
 
@@ -483,15 +489,15 @@ describe('Application.update() — loop timing', () => {
         // The colour is still resolved and available for a manual clear.
         expect(uncleared.clearColor).toBeDefined();
       } finally {
-        (uncleared as unknown as Record<string, unknown>)['_status'] = ApplicationStatus.Stopped;
-        uncleared.destroy();
+        (uncleared as unknown as Record<string, unknown>)['_state'] = ApplicationState.Stopped;
+        void uncleared.destroy();
       }
     });
 
     test('update() is a no-op when status is not Running', () => {
       const record = app as unknown as Record<string, unknown>;
 
-      record['_status'] = ApplicationStatus.Stopped;
+      record['_state'] = ApplicationState.Stopped;
       record['_frameLoopActive'] = false;
       mockFrameElapsed(app, 16);
 

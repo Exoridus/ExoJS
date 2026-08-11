@@ -4,7 +4,7 @@
  * `app.animations` and is advanced once per frame from the core preUpdate
  * phase — and deregisters again on stop, detach, completion and destroy.
  */
-import { Application, ApplicationStatus } from '#core/Application';
+import { Application, ApplicationState } from '#core/Application';
 import { Time } from '#core/Time';
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
@@ -39,6 +39,10 @@ const backendStub = (): Record<string, unknown> => ({
   resize: vi.fn().mockReturnThis(),
   view: {},
   renderTarget: {},
+  // Core renderer bindings key their per-backend factory map on this value, so
+  // a stub that names a real backend also has to accept the renderers that get
+  // bound to it.
+  rendererRegistry: { bindRenderer: vi.fn() },
   backendType: 'webgl2',
   setView: vi.fn().mockReturnThis(),
   draw: vi.fn().mockReturnThis(),
@@ -71,7 +75,7 @@ vi.mock('#rendering/webgpu/WebGpuBackend', () => ({
 const forceRunning = (app: Application): void => {
   const record = app as unknown as Record<string, unknown>;
 
-  record['_status'] = ApplicationStatus.Running;
+  record['_state'] = ApplicationState.Running;
   record['_frameLoopActive'] = true;
 };
 
@@ -109,8 +113,8 @@ describe('AnimatedSprite scheduling', () => {
   });
 
   afterEach(() => {
-    (app as unknown as Record<string, unknown>)['_status'] = ApplicationStatus.Stopped;
-    app.destroy();
+    (app as unknown as Record<string, unknown>)['_state'] = ApplicationState.Stopped;
+    void app.destroy();
     vi.restoreAllMocks();
   });
 

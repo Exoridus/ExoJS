@@ -10,7 +10,7 @@ export type {
   WebGl2BackendConfig,
   WebGpuBackendConfig,
 } from './Application';
-export { Application, ApplicationStatus } from './Application';
+export { Application, ApplicationState } from './Application';
 export { Bounds } from './Bounds';
 export type { BuildInfo } from './BuildInfo';
 export { buildInfo } from './BuildInfo';

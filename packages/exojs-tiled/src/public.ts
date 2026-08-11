@@ -10,8 +10,8 @@ export type { AssetBinding, AssetHandler, AssetLoadRequest, Extension } from '@c
 export type { TiledBuildInfo } from './tiledBuildInfo';
 export { tiledBuildInfo } from './tiledBuildInfo';
 export { tiledExtension } from './tiledExtension';
-export { tiledMapBinding } from './tiledMapBinding';
 export { tiledRuntimeMapBinding } from './tiledRuntimeMapBinding';
+export { tiledSourceBinding } from './tiledSourceBinding';
 export type {
   ChunkCoord,
   EllipseObject,
@@ -129,10 +129,10 @@ declare module '@codexo/exojs' {
       // defaults this to a value type: its leaf is an `AssetRef<TileMap>`.
       isValue: true;
     };
-    tiledMap: {
+    tiledSource: {
       resource: TiledMap;
       config: { source: string; format?: 'tiled' };
-      /** See `tileMap` — `tiledMapBinding` ships no seamless adapter either. */
+      /** See `tileMap` — `tiledSourceBinding` ships no seamless adapter either. */
       isValue: true;
     };
   }

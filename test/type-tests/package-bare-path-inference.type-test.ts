@@ -66,7 +66,7 @@ type _LdtkGetIsRef = Expect<Equal<typeof ldtkLeaf, AssetRef<LdtkMap>>>;
 // both `get(descriptor)` and a catalog leaf resolve it to `AssetRef<T>`).
 // Unlike the bare-path results above, a descriptor leaf is minted by `createLeaf`
 // and therefore comes back BRANDED — still an `AssetRef` for a value kind.
-const tiledFromDescriptor = loader.get(Asset.type('tiledMap', 'world.tmj'));
+const tiledFromDescriptor = loader.get(Asset.type('tiledSource', 'world.tmj'));
 type _TiledDescriptorIsRef = Expect<Equal<typeof tiledFromDescriptor, CatalogValueLeaf<TiledMap>>>;
 const tiledPlainRef: AssetRef<TiledMap> = tiledFromDescriptor;
 

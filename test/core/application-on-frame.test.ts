@@ -9,7 +9,7 @@ import type { MockInstance } from 'vitest';
 
 interface OnFrameTestHarness {
   readonly Application: typeof import('#core/Application').Application;
-  readonly ApplicationStatus: typeof import('#core/Application').ApplicationStatus;
+  readonly ApplicationState: typeof import('#core/Application').ApplicationState;
   readonly sceneDirector: { update: MockInstance; setScene: MockInstance; destroy: MockInstance; _dispose: MockInstance };
   readonly backend: {
     flush: MockInstance;
@@ -116,9 +116,9 @@ const loadOnFrameHarness = async (): Promise<OnFrameTestHarness> => {
     }),
   }));
 
-  const { Application, ApplicationStatus } = await import('#core/Application');
+  const { Application, ApplicationState } = await import('#core/Application');
 
-  return { Application, ApplicationStatus, sceneDirector, backend };
+  return { Application, ApplicationState, sceneDirector, backend };
 };
 
 // ---------------------------------------------------------------------------
@@ -141,11 +141,11 @@ describe('Application.onFrame', () => {
     expect(typeof app.onFrame.dispatch).toBe('function');
     expect(typeof app.onFrame.count).toBe('number');
 
-    app.destroy();
+    void app.destroy();
   });
 
   test('app.update() dispatches onFrame after sceneDirector.update and before backend.flush', async () => {
-    const { Application, ApplicationStatus } = await loadOnFrameHarness();
+    const { Application, ApplicationState } = await loadOnFrameHarness();
     const app = Object.create(Application.prototype) as import('#core/Application').Application;
     const rawApp = app as unknown as Record<string, unknown>;
 
@@ -183,7 +183,7 @@ describe('Application.onFrame', () => {
       view: { update: vi.fn() },
     };
 
-    rawApp['_status'] = ApplicationStatus.Running;
+    rawApp['_state'] = ApplicationState.Running;
     rawApp['_frameLoopActive'] = true;
     rawApp['pauseOnHidden'] = false;
     rawApp['_documentVisible'] = true;
@@ -222,7 +222,7 @@ describe('Application.onFrame', () => {
     app.onFrame.add(handler);
     expect(app.onFrame.count).toBeGreaterThan(0);
 
-    app.destroy();
+    void app.destroy();
 
     // destroy() disposes scenes first, awaited internally in a background
     // async chain, before the rest of teardown (including onFrame.destroy())

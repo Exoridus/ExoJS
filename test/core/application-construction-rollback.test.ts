@@ -38,6 +38,9 @@ vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
       resize: vi.fn().mockReturnThis(),
       view: { getBounds: vi.fn() },
       renderTarget: {},
+      // Core renderer bindings key their factory map on backendType, so a stub
+      // naming a real backend also has to accept the renderers bound to it.
+      rendererRegistry: { bindRenderer: vi.fn() },
       backendType: 'webgl2',
       setView: vi.fn().mockReturnThis(),
       draw: vi.fn().mockReturnThis(),
@@ -292,6 +295,6 @@ describe('Application construction rollback', () => {
 
     expect(destroyOrder).toEqual([]);
 
-    app.destroy();
+    void app.destroy();
   });
 });

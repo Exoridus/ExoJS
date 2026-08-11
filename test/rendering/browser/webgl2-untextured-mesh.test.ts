@@ -155,7 +155,7 @@ describe('WebGL2 untextured mesh rendering', () => {
       expectPixelNear(readPixel(backend, 60, 60), [255, 255, 0, 255]); // inside mesh → yellow
       expectPixelNear(readPixel(backend, 120, 120), [0, 0, 0, 255]); // outside → background
     } finally {
-      app.destroy();
+      void app.destroy();
       container.remove();
     }
   });
@@ -259,7 +259,7 @@ describe('WebGL2 untextured mesh rendering', () => {
       expect(bright, `expected a saturated box edge at (64,40), got [${edge.join(', ')}]`).toBeGreaterThan(120);
     } finally {
       overlay.destroy();
-      app.destroy();
+      void app.destroy();
       container.remove();
     }
   });

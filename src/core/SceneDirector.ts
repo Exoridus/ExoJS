@@ -846,7 +846,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       return false;
     }
 
-    entry.status = 'cancelling';
+    this._beginPreloadCancellation(entry);
 
     try {
       await entry.ready;
@@ -1172,7 +1172,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     this._preloaded.clear();
 
     for (const [, entry] of preloadedInReverseInsertionOrder) {
-      entry.status = 'cancelling';
+      this._beginPreloadCancellation(entry);
 
       try {
         await entry.ready;
@@ -1337,6 +1337,21 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * here, this call simply propagates the same rejection `change()` would
    * have produced for a fresh `prepare()` failure.
    */
+  /**
+   * Mark a preload entry as cancelling and abort its scene's
+   * {@link Scene.lifecycleSignal} in the same step. Every caller then waits
+   * for `entry.ready` before tearing the scope down, and that wait is on a
+   * `prepare()` whose `load()` may be arbitrarily long — the abort is what
+   * gives a cooperative `load()` the chance to stop early instead of holding
+   * the cancellation open. `cancelling` is only ever set on an entry that is
+   * about to be disposed, so aborting here can never strand a scope that goes
+   * on to live.
+   */
+  private _beginPreloadCancellation(entry: PreloadEntry): void {
+    entry.status = 'cancelling';
+    entry.scope.scene._abortLifecycle();
+  }
+
   private async _awaitClaimedPreload(entry: PreloadEntry): Promise<SceneScope> {
     await entry.ready;
 
@@ -1378,7 +1393,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * nothing further to do in that case.
    */
   private _discardStalePreload(entry: PreloadEntry): void {
-    entry.status = 'cancelling';
+    this._beginPreloadCancellation(entry);
 
     void entry.ready
       .then(() => this._disposeScene(entry.scope, { dispatchStopScene: false }))

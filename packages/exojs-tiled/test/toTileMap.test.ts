@@ -58,7 +58,7 @@ function makeContext(fixtures: Record<string, unknown>) {
       tex.height = size.h;
       return tex;
     }
-    if (asset?.type === 'tiledMap') {
+    if (asset?.type === 'tiledSource') {
       return loadTiledMap(asset.source as string, context);
     }
     throw new Error(`toTileMap.test: unexpected loader.load token: ${String(token)}`);

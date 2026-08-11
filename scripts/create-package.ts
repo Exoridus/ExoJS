@@ -2,10 +2,9 @@
  * create:package — scaffold a new lockstep extension package.
  *
  * `pnpm create:package <name> [flags]` generates `packages/exojs-<name>/` from
- * the conventions the existing extension packages share (aseprite/tiled for the
- * register style, physics/audio-fx for the library style), then auto-wires it
- * into the single sources of truth so adding a package is one command instead of
- * a ~10-file hand-edit.
+ * the conventions the existing library-style extension packages share
+ * (physics/audio-fx), then auto-wires it into the single sources of truth so
+ * adding a package is one command instead of a ~10-file hand-edit.
  *
  * Auto-wired (string-edit, idempotent):
  *   - scripts/release/lockstep-packages.ts  (LOCKSTEP_PACKAGES entry — the SoT
@@ -22,8 +21,7 @@
  *     scripts/release/RELEASING.md (do this BEFORE the package's first release)
  *
  * Usage:
- *   pnpm create:package <name>                       # library (default)
- *   pnpm create:package <name> --register            # ships /register
+ *   pnpm create:package <name>                       # library (only mode)
  *   pnpm create:package <name> --dep tilemap         # runtime workspace dep
  *   pnpm create:package <name> --description "…"      # manifest description
  *   pnpm create:package <name> --no-offline-smoke    # exclude from offline smoke
@@ -38,17 +36,14 @@ const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 interface Options {
   name: string;
-  register: boolean;
   deps: string[];
   description?: string;
   inOfflineSmoke: boolean;
 }
 
-const USAGE = `Usage: pnpm create:package <name> [--register | --library] [--dep <pkg>]... [--description "<text>"] [--no-offline-smoke]
+const USAGE = `Usage: pnpm create:package <name> [--dep <pkg>]... [--description "<text>"] [--no-offline-smoke]
 
   <name>               bare package name without the "exojs-"/scope prefix (kebab-case), e.g. "spine"
-  --register           ship a /register side-effect entry (extension style: aseprite, tiled)
-  --library            DEFAULT — sideEffects:false, no /register (library style: physics, audio-fx)
   --dep <pkg>          add a runtime workspace dependency on @codexo/exojs-<pkg> (repeatable / comma list)
   --description "..."  package.json description
   --no-offline-smoke   exclude from the offline external-consumer smoke (react is the precedent)`;
@@ -60,8 +55,6 @@ function fail(message: string): never {
 
 function parseArgs(argv: readonly string[]): Options {
   let name: string | undefined;
-  let register = false;
-  let library = false;
   const deps: string[] = [];
   let description: string | undefined;
   let inOfflineSmoke = true;
@@ -79,12 +72,6 @@ function parseArgs(argv: readonly string[]): Options {
     };
 
     switch (flag) {
-      case '--register':
-        register = true;
-        break;
-      case '--library':
-        library = true;
-        break;
       case '--dep':
         for (const d of takeValue().split(',')) {
           const trimmed = d.trim();
@@ -110,13 +97,12 @@ function parseArgs(argv: readonly string[]): Options {
   }
 
   if (name === undefined) fail('a package <name> is required');
-  if (register && library) fail('--register and --library are mutually exclusive');
 
   // Tolerate a leading scope/prefix the user may have typed; the canonical name
   // is the bare kebab segment.
   name = name.replace(/^@codexo\//, '').replace(/^exojs-/, '');
 
-  return { name, register, deps, ...(description !== undefined ? { description } : {}), inOfflineSmoke };
+  return { name, deps, ...(description !== undefined ? { description } : {}), inOfflineSmoke };
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -148,7 +134,7 @@ const insertBefore = (content: string, anchor: string, lines: readonly string[])
 // ── Parse + validate ─────────────────────────────────────────────────────────
 
 const opts = parseArgs(process.argv.slice(2));
-const { name, register, deps, inOfflineSmoke } = opts;
+const { name, deps, inOfflineSmoke } = opts;
 
 if (!KEBAB_RE.test(name)) fail(`name "${name}" is not kebab-case (lowercase letters/digits, single dashes)`);
 
@@ -170,7 +156,7 @@ for (const dep of deps) {
 }
 
 const camel = toCamel(name);
-const description = opts.description ?? `${toTitle(name)} ${register ? 'extension' : 'library'} for ExoJS.`;
+const description = opts.description ?? `${toTitle(name)} library for ExoJS.`;
 
 // Version is shared across all lockstep packages — read it from Core rather than
 // hard-coding, so the scaffold always matches the current in-tree version.
@@ -200,7 +186,7 @@ const manifest: Record<string, unknown> = {
     directory: pkgDirRel,
   },
   type: 'module',
-  sideEffects: register ? ['./dist/esm/register.js'] : false,
+  sideEffects: false,
   main: './dist/esm/index.js',
   module: './dist/esm/index.js',
   types: './dist/esm/index.d.ts',
@@ -210,15 +196,6 @@ const manifest: Record<string, unknown> = {
       import: './dist/esm/index.js',
       default: './dist/esm/index.js',
     },
-    ...(register
-      ? {
-          './register': {
-            types: './dist/esm/register.d.ts',
-            import: './dist/esm/register.js',
-            default: './dist/esm/register.js',
-          },
-        }
-      : {}),
     './package.json': './package.json',
   },
   files: ['dist/esm/', 'README.md', 'LICENSE'],
@@ -289,24 +266,12 @@ ${pathLines}
 `,
 );
 
-// rollup.config.ts — register builds index + register, library builds index
-// only (the factory default). No internal `#` imports, so sourceCondition is null.
-const rollupConfig = register
-  ? `import { createExtensionConfig } from '@codexo/exojs-config/rollup';
+// rollup.config.ts — a single side-effect-free entry (the factory default).
+// No internal `#` imports, so sourceCondition is null.
+const rollupConfig = `import { createExtensionConfig } from '@codexo/exojs-config/rollup';
 
-// ${pkgName} ships a /register side-effect entry alongside the side-effect-free
-// root. No package-internal \`#\` imports (all same-directory \`./\`), so no source
-// condition / node-resolve is needed; Core's \`#\` resolves to its dist.
-export default createExtensionConfig({
-  root: import.meta.dirname,
-  sourceCondition: null,
-  inputs: ['src/index.ts', 'src/register.ts'],
-});
-`
-  : `import { createExtensionConfig } from '@codexo/exojs-config/rollup';
-
-// ${pkgName} is a library package (no /register): a single side-effect-free
-// entry. No package-internal \`#\` imports (all same-directory \`./\`), so no source
+// ${pkgName} is a library package: a single side-effect-free entry. No
+// package-internal \`#\` imports (all same-directory \`./\`), so no source
 // condition / node-resolve is needed; Core's \`#\` resolves to its dist.
 export default createExtensionConfig({
   root: import.meta.dirname,
@@ -317,11 +282,7 @@ export default createExtensionConfig({
 emit('rollup.config.ts', rollupConfig);
 
 // src/index.ts
-const indexHeader = register
-  ? `// ${pkgName} — side-effect-free root entry.
-// Importing this entry does NOT register the extension globally.
-// Use ${pkgName}/register for global registration.`
-  : `// ${pkgName} — side-effect-free root entry.`;
+const indexHeader = `// ${pkgName} — side-effect-free root entry.`;
 emit('src/index.ts', `${indexHeader}\n\nexport * from './public';\n`);
 
 // src/public.ts — a small placeholder so TypeDoc/typecheck has a public symbol.
@@ -336,25 +297,7 @@ export type ${toPascal(dep)}Module = typeof import('@codexo/exojs-${dep}');`,
   )
   .join('\n');
 
-const publicTs = register
-  ? `// Side-effect-free public API for ${pkgName}.
-// No registration is performed on import.
-
-import type { Extension } from '@codexo/exojs/extensions';
-
-/**
- * Default immutable extension descriptor for ${pkgName}.
- *
- * Register it explicitly via \`ApplicationOptions.extensions\`, or import
- * \`${pkgName}/register\` for global auto-registration. Replace the empty
- * descriptor below with this package's real renderer/asset/serializer bindings.
- */
-export const ${camel}Extension: Extension = Object.freeze({
-  id: '${pkgName}',
-});
-${depTypeExports}
-`
-  : `// Side-effect-free public API for ${pkgName}.
+const publicTs = `// Side-effect-free public API for ${pkgName}.
 
 /**
  * Placeholder so TypeDoc and the typecheck gate have a stable public symbol.
@@ -365,29 +308,9 @@ ${depTypeExports}
 `;
 emit('src/public.ts', publicTs);
 
-// src/register.ts — only for register mode (the single side-effectful entry).
-if (register) {
-  emit(
-    'src/register.ts',
-    `// ${pkgName}/register — explicit registration entry.
-// Importing this entry registers the default ${camel}Extension descriptor in the
-// global ExtensionRegistry. Subsequently constructed Applications that use global
-// defaults will receive this extension. This is the only side-effectful entry.
-
-import { ExtensionRegistry } from '@codexo/exojs/extensions';
-
-import { ${camel}Extension } from './public';
-
-ExtensionRegistry.register(${camel}Extension);
-
-export * from './public';
-`,
-  );
-}
-
 // test/<name>.test.ts — a trivial smoke test (mirrors the package tests'
 // relative `../src/index` import convention).
-const testSymbol = register ? `${camel}Extension` : `${camel}PackageName`;
+const testSymbol = `${camel}PackageName`;
 emit(
   `test/${name}.test.ts`,
   `import { describe, expect, it } from 'vitest';
@@ -411,53 +334,12 @@ const compatTable = `## Core compatibility
 
 const installDeps = ['@codexo/exojs', pkgName, ...deps.map(d => `@codexo/exojs-${d}`)].join(' ');
 
-const readme = register
-  ? `# ${pkgName}
+const readme = `# ${pkgName}
 
 ${description}
 
-> Official ExoJS extension. \`@codexo/exojs\` is a peer dependency.
-
-## Installation
-
-\`\`\`sh
-npm install ${installDeps}
-\`\`\`
-
-## Usage
-
-Freshly scaffolded — replace the placeholder \`${camel}Extension\` descriptor in
-\`src/public.ts\` (and this section) with the real API.
-
-\`\`\`ts
-import { Application } from '@codexo/exojs';
-import { ${camel}Extension } from '${pkgName}';
-
-const app = new Application({ extensions: [${camel}Extension] });
-\`\`\`
-
-## \`/register\` convenience entry
-
-\`\`\`ts
-// Side effect: registers ${camel}Extension in the global ExtensionRegistry.
-import '${pkgName}/register';
-\`\`\`
-
-Importing the package root (\`${pkgName}\`) does **not** register anything — that is
-the only side-effectful entry.
-
-${compatTable}
-
-## License
-
-MIT © Codexo
-`
-  : `# ${pkgName}
-
-${description}
-
-> A peer-dependency library on top of \`@codexo/exojs\` (no \`/register\` entry —
-> construct its API directly).
+> A peer-dependency library on top of \`@codexo/exojs\` — construct its API
+> directly and pass it to \`ApplicationOptions.extensions\`.
 
 ## Installation
 
@@ -491,7 +373,7 @@ const wired: string[] = [];
 
 // 1. scripts/release/lockstep-packages.ts — append a LockstepPackage entry.
 {
-  const entry = `  { name: '${pkgName}', dir: '${pkgDirRel}', isExtension: true, hasRegister: ${register}, inOfflineSmoke: ${inOfflineSmoke} },`;
+  const entry = `  { name: '${pkgName}', dir: '${pkgDirRel}', isExtension: true, inOfflineSmoke: ${inOfflineSmoke} },`;
   const updated = insertBefore(lockstepSrc, '] as const satisfies readonly LockstepPackage[];', [entry]);
   writeFileSync(lockstepPath, updated, 'utf8');
   wired.push('scripts/release/lockstep-packages.ts (LOCKSTEP_PACKAGES)');
@@ -533,7 +415,7 @@ const wired: string[] = [];
 // ── Report ───────────────────────────────────────────────────────────────────
 
 const out = process.stdout;
-out.write(`\nScaffolded ${pkgName} (${register ? 'register' : 'library'}${deps.length ? `, deps: ${deps.join(', ')}` : ''}) @ v${coreVersion}\n\n`);
+out.write(`\nScaffolded ${pkgName} (library${deps.length ? `, deps: ${deps.join(', ')}` : ''}) @ v${coreVersion}\n\n`);
 
 out.write('Generated files:\n');
 for (const f of generated) out.write(`  + ${f}\n`);

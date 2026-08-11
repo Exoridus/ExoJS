@@ -26,7 +26,7 @@ function loadFixture(name: string): unknown {
 
 // ── Mock context factory ─────────────────────────────────────────────────────
 //
-// The runtime binding's handler calls ctx.loader.load(Asset.type('tiledMap', source, opts))
+// The runtime binding's handler calls ctx.loader.load(Asset.type('tiledSource', source, opts))
 // as a sub-load to share the Loader cache with the source binding. The mock
 // below handles both Texture and TiledMap sub-loads, both arriving as `Asset.type(...)`
 // asset descriptors (single-argument form).
@@ -58,7 +58,7 @@ function makeContext(fixtures: Record<string, unknown>) {
       tex.height = 32;
       return tex;
     }
-    if (asset?.type === 'tiledMap') {
+    if (asset?.type === 'tiledSource') {
       return loadTiledMap(asset.source as string, context);
     }
     throw new Error(`tiledRuntimeMapBinding.test: unexpected loader.load token: ${String(token)}`);
@@ -138,10 +138,10 @@ describe('tiledRuntimeMapBinding.load — minimal map', () => {
     expect(result.tileHeight).toBe(16);
   });
 
-  it('delegates to ctx.loader.load(Asset.type(tiledMap, source)) internally', async () => {
+  it('delegates to ctx.loader.load(Asset.type(tiledSource, source)) internally', async () => {
     const handler = tiledRuntimeMapBinding.create(context.loader);
     await handler.load({ source: 'minimal.tmj' }, context);
-    expect(context.loader.load).toHaveBeenCalledWith(Asset.type('tiledMap', 'minimal.tmj'));
+    expect(context.loader.load).toHaveBeenCalledWith(Asset.type('tiledSource', 'minimal.tmj'));
   });
 
   it('rejects a map whose tileset carries no image', async () => {
@@ -208,6 +208,6 @@ describe('tiledRuntimeMapBinding.load — options passthrough', () => {
     const handler = tiledRuntimeMapBinding.create(context.loader);
     const opts = { format: 'tiled' as const };
     await handler.load({ source: 'world.tmj', options: opts }, context);
-    expect(loaderLoad).toHaveBeenCalledWith(Asset.type('tiledMap', 'world.tmj', opts));
+    expect(loaderLoad).toHaveBeenCalledWith(Asset.type('tiledSource', 'world.tmj', opts));
   });
 });

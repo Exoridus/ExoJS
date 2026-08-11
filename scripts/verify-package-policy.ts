@@ -13,13 +13,12 @@ const targets = LOCKSTEP_PACKAGES.map(p => ({
   dir: p.dir === '.' ? root : resolve(root, p.dir),
   name: p.name,
   isExtension: p.isExtension,
-  hasRegister: p.hasRegister,
 }));
 
 let failed = 0;
 
 for (const t of targets) {
-  const { ok, checks } = verifyRuntimePackage(t.dir, { name: t.name, isExtension: t.isExtension, hasRegister: t.hasRegister ?? true });
+  const { ok, checks } = verifyRuntimePackage(t.dir, { name: t.name, isExtension: t.isExtension });
   const bad = checks.filter(c => !c.ok);
   console.log(`${ok ? '✓' : '✗'} ${t.name} (${checks.length} checks${bad.length ? `, ${bad.length} failed` : ''})`);
   for (const c of bad) console.log(`    ✗ ${c.name}${c.detail ? ` — ${c.detail}` : ''}`);

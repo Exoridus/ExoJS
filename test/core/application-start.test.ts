@@ -6,7 +6,7 @@ import type { MockInstance } from 'vitest';
  * WebGL2/WebGPU backends are mocked (kept out of jsdom) — SceneDirector,
  * the scene registry, and scene activation all run for real.
  */
-import { Application, ApplicationStatus } from '#core/Application';
+import { Application, ApplicationState } from '#core/Application';
 import { Scene } from '#core/Scene';
 
 // ---------------------------------------------------------------------------
@@ -38,6 +38,9 @@ vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
       resize: vi.fn().mockReturnThis(),
       view: { getBounds: vi.fn() },
       renderTarget: {},
+      // Core renderer bindings key their factory map on backendType, so a stub
+      // naming a real backend also has to accept the renderers bound to it.
+      rendererRegistry: { bindRenderer: vi.fn() },
       backendType: 'webgl2',
       setView: vi.fn().mockReturnThis(),
       draw: vi.fn().mockReturnThis(),
@@ -70,7 +73,7 @@ describe('Application.start() — scene-less and constructor overloads', () => {
 
     expect(app.scenes.currentScene).toBeNull();
     expect(app.scenes.state).toBeNull();
-    app.destroy();
+    void app.destroy();
   });
 
   test('start(Ctor) activates the registered scene', async () => {
@@ -80,7 +83,7 @@ describe('Application.start() — scene-less and constructor overloads', () => {
     await app.start(StartTestScene);
 
     expect(app.scenes.currentScene).toBeInstanceOf(StartTestScene);
-    app.destroy();
+    void app.destroy();
   });
 
   test('start(Ctor, data) forwards activation data to load()/init()', async () => {
@@ -105,7 +108,7 @@ describe('Application.start() — scene-less and constructor overloads', () => {
 
     expect(seenInLoad).toEqual({ level: 7 });
     expect(seenInInit).toEqual({ level: 7 });
-    app.destroy();
+    void app.destroy();
   });
 
   test('start(Ctor) rejects for an unregistered constructor', async () => {
@@ -113,7 +116,7 @@ describe('Application.start() — scene-less and constructor overloads', () => {
     const app = new Application({ backend: { type: 'webgl2' } });
 
     await expect(app.start(UnregisteredScene)).rejects.toThrow(/is not registered in ApplicationOptions\.scenes/);
-    app.destroy();
+    void app.destroy();
   });
 
   test('start() failure stops the frame loop instead of leaving it running forever', async () => {
@@ -128,7 +131,7 @@ describe('Application.start() — scene-less and constructor overloads', () => {
 
     expect((app as unknown as { _frameLoopActive: boolean })._frameLoopActive).toBe(false);
 
-    app.destroy();
+    void app.destroy();
   });
 
   test('a second start() while startup is in flight joins it instead of resolving early', async () => {
@@ -139,7 +142,7 @@ describe('Application.start() — scene-less and constructor overloads', () => {
 
     // start() flips to Loading synchronously, before its first await — so the
     // second caller below observes a startup that is genuinely still running.
-    expect(app.status).toBe(ApplicationStatus.Loading);
+    expect(app.state).toBe(ApplicationState.Loading);
 
     const second = app.start(ConcurrentStartScene);
 
@@ -147,11 +150,11 @@ describe('Application.start() — scene-less and constructor overloads', () => {
 
     // Awaiting the second call must mean startup is done — not merely that the
     // call returned early while the first one is still mid-navigation.
-    expect(app.status).toBe(ApplicationStatus.Running);
+    expect(app.state).toBe(ApplicationState.Running);
     expect(app.scenes.currentScene).toBeInstanceOf(ConcurrentStartScene);
 
     await first;
-    app.destroy();
+    void app.destroy();
   });
 
   test('a concurrent start() rejects with the in-flight startup failure and leaves the app restartable', async () => {
@@ -174,13 +177,13 @@ describe('Application.start() — scene-less and constructor overloads', () => {
     await expect(first).rejects.toThrow('load failed');
     await expect(second).rejects.toThrow('load failed');
 
-    expect(app.status).toBe(ApplicationStatus.Stopped);
+    expect(app.state).toBe(ApplicationState.Stopped);
 
     // The failed attempt must not leave a stale in-flight promise behind.
     await expect(app.start(FlakyStartScene)).resolves.toBe(app);
     expect(app.scenes.currentScene).toBeInstanceOf(FlakyStartScene);
 
-    app.destroy();
+    void app.destroy();
   });
 
   test('destroy() fully disposes the active scene before destroying the loader/rendering/audio/backend', async () => {
@@ -201,7 +204,7 @@ describe('Application.start() — scene-less and constructor overloads', () => {
 
     await app.start(OrderCheckScene);
 
-    app.destroy();
+    void app.destroy();
 
     for (let i = 0; i < 32 && order.length < 4; i++) {
       await Promise.resolve();
