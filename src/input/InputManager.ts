@@ -205,7 +205,6 @@ export class InputManager {
     },
   };
   private readonly wheelOffset = new Vector();
-  private readonly gestureCenter = new Vector();
   private readonly flags = new Flags<InputManagerFlag>();
   /** Keyboard transitions since the last flush, in true chronological order (see updateEvents). */
   private readonly keyEvents: KeyChannelEvent[] = [];
@@ -249,7 +248,18 @@ export class InputManager {
   public readonly onPointerTap = new Signal<[pointer: Pointer, x: number, y: number]>();
   public readonly onPointerSwipe = new Signal<[pointer: Pointer, x: number, y: number]>();
   public readonly onPointerCancel = new Signal<[pointer: Pointer, x: number, y: number]>();
-  public readonly onMouseWheel = new Signal<[Vector]>();
+  /**
+   * Fires once per frame in which the wheel moved, with the accumulated
+   * offset for that frame. `deltaY` is the usual scroll axis; `deltaX`
+   * carries horizontal wheels and trackpad swipes. Both are normalized out
+   * of the event's `deltaMode`, so a line- or page-mode wheel arrives in the
+   * same units as a pixel-mode one.
+   *
+   * The values are plain numbers rather than a `Vector` on purpose: the
+   * offset is reset to zero right after dispatch, so a shared instance would
+   * be stale by the time a listener that kept it read it again.
+   */
+  public readonly onMouseWheel = new Signal<[deltaX: number, deltaY: number]>();
   /**
    * Fires once per physical key press with the key's channel. OS auto-repeat
    * while a key is held does not fire again, so this matches the down
@@ -301,10 +311,23 @@ export class InputManager {
   /** Fires whenever any pad reports an axis value change. */
   public readonly onAnyGamepadAxisChange = new Signal<[Gamepad, GamepadAxis, number]>();
 
-  /** Fires on every two-touch-pointer move where the distance between them changed. `scale` > 1 = spreading, < 1 = pinching. */
-  public readonly onPinch = new Signal<[scale: number, center: Vector]>();
-  /** Fires on every two-touch-pointer move where the angle between them changed. `angleDelta` is in radians. */
-  public readonly onRotate = new Signal<[angleDelta: number, center: Vector]>();
+  /**
+   * Fires on every two-touch-pointer move where the distance between them
+   * changed. `scale` > 1 = spreading, < 1 = pinching; the center is the
+   * midpoint between the two pointers, in the same coordinate space as
+   * {@link Pointer.position}.
+   *
+   * The center arrives as two numbers rather than a `Vector` on purpose — a
+   * shared instance would be overwritten by the next gesture entry in the
+   * same frame.
+   */
+  public readonly onPinch = new Signal<[scale: number, centerX: number, centerY: number]>();
+  /**
+   * Fires on every two-touch-pointer move where the angle between them
+   * changed. `angleDelta` is in radians; the center is the midpoint between
+   * the two pointers — see {@link onPinch} for why it is not a `Vector`.
+   */
+  public readonly onRotate = new Signal<[angleDelta: number, centerX: number, centerY: number]>();
   /**
    * Fires when a pointer has been held without significant movement for
    * ≥ 500 ms of ENGINE time — frame deltas summed across the frames this
@@ -698,7 +721,6 @@ export class InputManager {
     this.pointerSlots.clear();
     this.freeSlots.length = 0;
     this.wheelOffset.destroy();
-    this.gestureCenter.destroy();
     this.flags.destroy();
 
     this.onPointerEnter.destroy();
@@ -1367,7 +1389,7 @@ export class InputManager {
     }
 
     if (this.flags.popMask(InputManagerFlag.MouseWheel)) {
-      this.onMouseWheel.dispatch(this.wheelOffset);
+      this.onMouseWheel.dispatch(this.wheelOffset.x, this.wheelOffset.y);
       this.wheelOffset.set(0, 0);
     }
 
@@ -1411,14 +1433,12 @@ export class InputManager {
       }
 
       if (entry.kind === 'pinch') {
-        this.gestureCenter.set(entry.x, entry.y);
-        this.onPinch.dispatch(entry.scale, this.gestureCenter);
+        this.onPinch.dispatch(entry.scale, entry.x, entry.y);
         continue;
       }
 
       if (entry.kind === 'rotate') {
-        this.gestureCenter.set(entry.x, entry.y);
-        this.onRotate.dispatch(entry.angleDelta, this.gestureCenter);
+        this.onRotate.dispatch(entry.angleDelta, entry.x, entry.y);
         continue;
       }
 

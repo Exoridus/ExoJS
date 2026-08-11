@@ -8,7 +8,6 @@ import type { Application } from '#core/Application';
 import { Signal } from '#core/Signal';
 import type { Stage } from '#core/Stage';
 import { Rectangle } from '#math/Rectangle';
-import { Vector } from '#math/Vector';
 import { Container } from '#rendering/Container';
 import { ScrollContainer } from '#ui/ScrollContainer';
 
@@ -17,8 +16,8 @@ import { ScrollContainer } from '#ui/ScrollContainer';
 // ---------------------------------------------------------------------------
 
 /** Build a minimal Stage whose `app.input` carries a real onMouseWheel Signal. */
-const makeStage = (pointerPos: { x: number; y: number } | null | undefined = null): { stage: Stage; onMouseWheel: Signal<[Vector]> } => {
-  const onMouseWheel = new Signal<[Vector]>();
+const makeStage = (pointerPos: { x: number; y: number } | null | undefined = null): { stage: Stage; onMouseWheel: Signal<[deltaX: number, deltaY: number]> } => {
+  const onMouseWheel = new Signal<[deltaX: number, deltaY: number]>();
   const app = {
     input: {
       onMouseWheel,
@@ -161,7 +160,7 @@ describe('ScrollContainer mouse-wheel routing', () => {
     stubContentBounds(scroll, new Rectangle(0, 0, 500, 500));
     scroll._setStage(stage);
 
-    onMouseWheel.dispatch(new Vector(0, 50));
+    onMouseWheel.dispatch(0, 50);
 
     expect(scroll.scrollY).toBe(0);
   });
@@ -173,7 +172,7 @@ describe('ScrollContainer mouse-wheel routing', () => {
     stubContentBounds(scroll, new Rectangle(0, 0, 500, 500));
     scroll._setStage(stage);
 
-    onMouseWheel.dispatch(new Vector(0, 50));
+    onMouseWheel.dispatch(0, 50);
 
     expect(scroll.scrollY).toBe(0);
   });
@@ -185,7 +184,7 @@ describe('ScrollContainer mouse-wheel routing', () => {
     stubContentBounds(scroll, new Rectangle(0, 0, 500, 500));
     scroll._setStage(stage);
 
-    onMouseWheel.dispatch(new Vector(30, 20));
+    onMouseWheel.dispatch(30, 20);
 
     expect(scroll.scrollX).toBe(0);
     expect(scroll.scrollY).toBe(20);
@@ -198,7 +197,7 @@ describe('ScrollContainer mouse-wheel routing', () => {
     stubContentBounds(scroll, new Rectangle(0, 0, 500, 500));
     scroll._setStage(stage);
 
-    onMouseWheel.dispatch(new Vector(30, 20));
+    onMouseWheel.dispatch(30, 20);
 
     expect(scroll.scrollX).toBe(30);
     expect(scroll.scrollY).toBe(0);
@@ -211,7 +210,7 @@ describe('ScrollContainer mouse-wheel routing', () => {
     stubContentBounds(scroll, new Rectangle(0, 0, 500, 500));
     scroll._setStage(stage);
 
-    onMouseWheel.dispatch(new Vector(30, 20));
+    onMouseWheel.dispatch(30, 20);
 
     expect(scroll.scrollX).toBe(30);
     expect(scroll.scrollY).toBe(20);
@@ -252,7 +251,7 @@ describe('ScrollContainer viewport bounds (ME-58)', () => {
     stubContentBounds(scroll, new Rectangle(0, 0, 5000, 5000));
     scroll._setStage(stage);
 
-    onMouseWheel.dispatch(new Vector(0, 50));
+    onMouseWheel.dispatch(0, 50);
 
     expect(scroll.scrollY).toBe(0);
   });

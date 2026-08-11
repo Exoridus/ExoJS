@@ -1,6 +1,5 @@
 import type { Stage } from '#core/Stage';
 import { Rectangle } from '#math/Rectangle';
-import type { Vector } from '#math/Vector';
 import { Container } from '#rendering/Container';
 
 import { Widget } from './Widget';
@@ -49,7 +48,7 @@ export class ScrollContainer extends Widget {
   /** Scratch rect reused by {@link ScrollContainer.updateBounds} — avoids an allocation on every bounds rebuild. */
   private readonly _viewportRect = new Rectangle();
 
-  private readonly _onWheel = (delta: Vector): void => {
+  private readonly _onWheel = (deltaX: number, deltaY: number): void => {
     const pos = this._stage?.app?.input.getPrimaryPointerPosition();
 
     if (pos === null || pos === undefined) {
@@ -62,7 +61,7 @@ export class ScrollContainer extends Widget {
       return;
     }
 
-    this.scrollBy(this._direction !== 'vertical' ? delta.x : 0, this._direction !== 'horizontal' ? delta.y : 0);
+    this.scrollBy(this._direction !== 'vertical' ? deltaX : 0, this._direction !== 'horizontal' ? deltaY : 0);
   };
 
   public constructor(options: ScrollContainerOptions) {

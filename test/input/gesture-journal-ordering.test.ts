@@ -23,7 +23,6 @@
 import type { Application } from '#core/Application';
 import { Time } from '#core/Time';
 import { InputManager } from '#input/InputManager';
-import type { Vector } from '#math/Vector';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
 
 // ---------------------------------------------------------------------------
@@ -360,19 +359,16 @@ describe('InputManager — destroy clears gesture holds and queued state', () =>
 });
 
 // ---------------------------------------------------------------------------
-// Shared scratch vector: center coordinates must not leak between entries
+// Center coordinates must not leak between entries
 // ---------------------------------------------------------------------------
 
 describe('InputManager — gesture center coordinates across multiple queued gestures in one frame', () => {
-  test('two pinch occurrences queued in the same frame each dispatch with their own, distinct center — the reused scratch Vector must not leak', () => {
+  test('two pinch occurrences queued in the same frame each dispatch with their own, distinct center', () => {
     const { im, canvas } = createInputManager();
     const seenCenters: Array<{ x: number; y: number }> = [];
 
-    im.onPinch.add((_scale, center: Vector) => {
-      // Clone synchronously — `center` is a mutable Vector InputManager
-      // reuses across every dispatch, so it MUST be read here, not stashed
-      // by reference and inspected after the fact.
-      seenCenters.push({ x: center.x, y: center.y });
+    im.onPinch.add((_scale, centerX, centerY) => {
+      seenCenters.push({ x: centerX, y: centerY });
     });
 
     settleTwoTouchBaseline(im, canvas, 10, 0); // distance=10, center=(5,0)

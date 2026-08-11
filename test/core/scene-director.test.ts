@@ -37,7 +37,6 @@ import { Signal } from '#core/Signal';
 import { Time } from '#core/Time';
 import type { Pointer } from '#input/Pointer';
 import { Rectangle } from '#math/Rectangle';
-import type { Vector } from '#math/Vector';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 
 interface InputManagerStub {
@@ -51,7 +50,7 @@ interface InputManagerStub {
   readonly onPointerTap: Signal<[Pointer]>;
   readonly onPointerSwipe: Signal<[Pointer]>;
   readonly onPointerCancel: Signal<[Pointer]>;
-  readonly onMouseWheel: Signal<[Vector]>;
+  readonly onMouseWheel: Signal<[deltaX: number, deltaY: number]>;
 }
 
 const createInputManagerStub = (): InputManagerStub => ({
@@ -65,7 +64,7 @@ const createInputManagerStub = (): InputManagerStub => ({
   onPointerTap: new Signal<[Pointer]>(),
   onPointerSwipe: new Signal<[Pointer]>(),
   onPointerCancel: new Signal<[Pointer]>(),
-  onMouseWheel: new Signal<[Vector]>(),
+  onMouseWheel: new Signal<[number, number]>(),
 });
 
 type ApplicationStub = Application & {
