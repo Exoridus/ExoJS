@@ -1,8 +1,8 @@
 import type { AssetBinding, Extension } from '@codexo/exojs/extensions';
 import { tilemapExtension } from '@codexo/exojs-tilemap';
 
-import { tiledSourceBinding } from './tiledSourceBinding';
 import { tiledRuntimeMapBinding } from './tiledRuntimeMapBinding';
+import { tiledSourceBinding } from './tiledSourceBinding';
 
 /**
  * Default immutable Tiled extension descriptor.

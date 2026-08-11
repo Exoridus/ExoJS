@@ -6,8 +6,8 @@ import { beforeEach, describe, expect, it,vi } from 'vitest';
 
 import { loadTiledMap } from '../src/loadTiledMap';
 import { TiledMap } from '../src/TiledMap';
-import { tiledSourceBinding } from '../src/tiledSourceBinding';
 import { tiledRuntimeMapBinding } from '../src/tiledRuntimeMapBinding';
+import { tiledSourceBinding } from '../src/tiledSourceBinding';
 
 function fakeLoader(): Loader {
   return { load: vi.fn() } as unknown as Loader;

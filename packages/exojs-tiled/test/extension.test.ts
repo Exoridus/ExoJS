@@ -9,8 +9,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { buildSnapshot } from '../../../src/extensions/snapshot';
 import { tiledExtension } from '../src/tiledExtension';
 import { TiledMap } from '../src/TiledMap';
-import { tiledSourceBinding } from '../src/tiledSourceBinding';
 import { tiledRuntimeMapBinding } from '../src/tiledRuntimeMapBinding';
+import { tiledSourceBinding } from '../src/tiledSourceBinding';
 
 function fakeLoader(): Loader {
   return { load: vi.fn() } as unknown as Loader;

@@ -10,8 +10,8 @@ export type { AssetBinding, AssetHandler, AssetLoadRequest, Extension } from '@c
 export type { TiledBuildInfo } from './tiledBuildInfo';
 export { tiledBuildInfo } from './tiledBuildInfo';
 export { tiledExtension } from './tiledExtension';
-export { tiledSourceBinding } from './tiledSourceBinding';
 export { tiledRuntimeMapBinding } from './tiledRuntimeMapBinding';
+export { tiledSourceBinding } from './tiledSourceBinding';
 export type {
   ChunkCoord,
   EllipseObject,
