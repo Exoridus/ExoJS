@@ -52,11 +52,31 @@ import { SystemRegistry } from './SystemRegistry';
 import { freezeTime, Time } from './Time';
 import { canvasSourceToDataUrl, isWebKitUserAgent } from './utils';
 
-export enum ApplicationStatus {
-  Loading = 1,
-  Running = 2,
-  Halting = 3,
-  Stopped = 4,
+/**
+ * Lifecycle state of an {@link Application}, in the same vocabulary
+ * {@link SceneState} uses for a scene.
+ *
+ * | State | Meaning |
+ * |---|---|
+ * | `Stopped` | Constructed, or halted again — no frame loop, still reusable |
+ * | `Loading` | {@link Application.start} is running: backend, scene navigation |
+ * | `Running` | Frame loop live |
+ * | `Halting` | {@link Application.stop} or {@link Application.destroy} is taking the loop down |
+ * | `Destroying` | {@link Application.destroy}'s asynchronous teardown is in flight |
+ * | `Destroyed` | Teardown finished — the instance is permanently unusable |
+ *
+ * `Destroying` and `Destroyed` are distinct because teardown is asynchronous:
+ * `destroy()` returns a Promise, and everything between that call and its
+ * fulfilment is `Destroying`. Both are terminal in the sense that
+ * {@link Application.start} rejects from either.
+ */
+export enum ApplicationState {
+  Loading = 'loading',
+  Running = 'running',
+  Halting = 'halting',
+  Stopped = 'stopped',
+  Destroying = 'destroying',
+  Destroyed = 'destroyed',
 }
 
 /** How {@link Application} sizes its canvas within the parent element. */
@@ -269,6 +289,20 @@ const maxFixedSteps = 5;
 const maxConsecutiveFrameErrors = 3;
 /** Bounded size of the {@link Application.recentErrors} ring buffer. */
 const maxRecentErrors = 20;
+/**
+ * How long {@link Application.destroy} waits for scene teardown before it
+ * gives up on it and releases the rest of the engine anyway.
+ *
+ * A scene whose `unload()` never settles would otherwise hold the whole
+ * teardown open forever — the backend, the loader and the audio context stay
+ * alive with it, and the Promise `destroy()` returns never fulfils. Waiting
+ * without limit turns one misbehaving scene into a leak of everything;
+ * proceeding turns it into a loud, bounded failure. Scene teardown that
+ * outlives the grace period keeps running, and may touch subsystems that are
+ * destroyed by then — which is exactly why the timeout is reported through
+ * {@link Application.onError} rather than swallowed.
+ */
+const sceneTeardownGraceMs = 5000;
 
 // User Timing mark/measure names for the per-frame loop (dev-only, see `update()`).
 // Constant strings so the Performance panel groups every frame's entries
@@ -436,7 +470,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * exhaustion), or a scene-unload failure in {@link Application.stop}.
    *
    * The frame guard keeps the loop alive through intermittent failures and
-   * halts it (status `Stopped`) after 3 consecutive failing frames. Narrow
+   * halts it (state `Stopped`) after 3 consecutive failing frames. Narrow
    * with `error instanceof RenderError` for structured GPU failure details;
    * see {@link Application.recentErrors} for the bounded error history.
    */
@@ -473,7 +507,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   private readonly _frameDelta: Time = new Time();
   private _frameAlpha = 0;
 
-  private _status: ApplicationStatus = ApplicationStatus.Stopped;
+  private _state: ApplicationState = ApplicationState.Stopped;
   /**
    * The startup run that is currently in flight, or `null` while none is.
    * Held so a second {@link Application.start} call made during the `Loading`
@@ -482,7 +516,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    */
   private _startPromise: Promise<this> | null = null;
   private _frameLoopActive = false;
-  private _destroyed = false;
+  /**
+   * The teardown run started by the first {@link Application.destroy} call, or
+   * `null` while none is. Held so every later call returns that same Promise
+   * instead of starting a second teardown over already-released subsystems.
+   */
+  private _destroyPromise: Promise<void> | null = null;
   private _pixelRatio: number = defaultCanvasSettings.pixelRatio;
   private _designWidth: number = defaultCanvasSettings.width;
   private _designHeight: number = defaultCanvasSettings.height;
@@ -751,7 +790,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     // A binding that ran before the failing one holds a reference to this
     // half-built application. Marking it destroyed makes a later `start()` on
     // that reference fail loudly instead of running on torn-down subsystems.
-    this._destroyed = true;
+    this._state = ApplicationState.Destroyed;
 
     const failures: unknown[] = [];
     const attempt = (step: () => void): void => {
@@ -822,8 +861,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     }
   }
 
-  public get status(): ApplicationStatus {
-    return this._status;
+  /**
+   * Where this application currently sits in its lifecycle. Same vocabulary
+   * as {@link Scene.state} — see {@link ApplicationState} for the table.
+   */
+  public get state(): ApplicationState {
+    return this._state;
   }
 
   public get startupTime(): Time {
@@ -1026,7 +1069,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * Initialize the render backend, await capability detection, and start the
    * per-frame loop without activating a scene. Use `start(target, data?)` to
    * start directly into a registered scene. Idempotent — if the application
-   * is already running the call is a no-op. On error the status returns to
+   * is already running the call is a no-op. On error the state returns to
    * `Stopped` and the error propagates.
    */
   public async start(): Promise<this>;
@@ -1035,13 +1078,13 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * `target` — a registered string key, or a constructor registered in
    * `ApplicationOptions.scenes` — and start the per-frame loop. Idempotent —
    * if the application is already running the call is a no-op. On error the
-   * status returns to `Stopped` and the error propagates.
+   * state returns to `Stopped` and the error propagates.
    */
   public async start<K extends RegistryKeyOf<Registry>>(target: K, ...args: ChangeSceneArgs<InferSceneData<Registry[K]>>): Promise<this>;
   public async start<C extends NavigableSceneConstructor<Registry>>(target: C, ...args: ChangeSceneArgs<InferSceneData<C>>): Promise<this>;
   /**
    * Concurrency: a call made while an earlier `start()` is still in flight
-   * (status `Loading`) joins that run — it resolves when startup actually
+   * (state `Loading`) joins that run — it resolves when startup actually
    * completes, or rejects with its failure, and its own `target`/`args` are
    * ignored rather than driving a second, overlapping scene navigation
    * ({@link SceneDirector.change} rejects on overlapping navigation). Check
@@ -1049,17 +1092,20 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * caller's target may differ from the one already starting.
    */
   public async start(target?: AnySceneConstructor | string, ...args: readonly unknown[]): Promise<this> {
-    invariant(!this._destroyed, 'Application.start() was called after destroy(). Construct a new Application instead of reusing a destroyed one.');
+    invariant(
+      this._state !== ApplicationState.Destroying && this._state !== ApplicationState.Destroyed,
+      'Application.start() was called after destroy(). Construct a new Application instead of reusing a destroyed one.',
+    );
 
     if (this._startPromise !== null) {
       return this._startPromise;
     }
 
-    if (this._status !== ApplicationStatus.Stopped) {
+    if (this._state !== ApplicationState.Stopped) {
       return this;
     }
 
-    this._status = ApplicationStatus.Loading;
+    this._state = ApplicationState.Loading;
 
     // Published before the first await so a `start()` call made from the same
     // synchronous tick — or any point in the `Loading` window — finds it. The
@@ -1090,17 +1136,17 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // The frame loop must be live BEFORE the initial navigation runs —
       // a frame-driven SceneTransitionSession needs update()/render()
       // calls to progress, and update()'s gate no longer waits for
-      // `_status === Running`. Started as early as
+      // `_state === Running`. Started as early as
       // possible (ahead of the capabilities await, not just the scene
       // nav) so nothing downstream can observe the loop live and
-      // `_status` already `Running` in the same synchronous tick — a real
+      // `_state` already `Running` in the same synchronous tick — a real
       // RAF callback never fires synchronously anyway, so capabilities
       // (documented as available only once `start()` resolves) is always
       // settled well before any frame body actually runs.
       this._startFrameLoop();
 
       // Guarantee at least one full microtask turn between the loop going
-      // live and `_status` flipping to `Running` — otherwise, when
+      // live and `_state` flipping to `Running` — otherwise, when
       // `capabilitiesPromise` is already settled (e.g. a later `start()`
       // call on a second Application reusing the memoized
       // `Capabilities.ready`), the two awaits below could resolve in the
@@ -1124,10 +1170,10 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         );
       }
 
-      this._status = ApplicationStatus.Running;
+      this._state = ApplicationState.Running;
     } catch (error) {
       this._stopFrameLoop();
-      this._status = ApplicationStatus.Stopped;
+      this._state = ApplicationState.Stopped;
       throw error;
     }
 
@@ -1137,10 +1183,10 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   /**
    * Flip the internal "loop is live" flag, schedule the first frame, and
    * reset every clock the frame body depends on — all in one place so every
-   * call site that can start the loop does so identically. `_status` is left
+   * call site that can start the loop does so identically. `_state` is left
    * untouched (still `Loading` at the point {@link Application.start} calls
    * this) — {@link Application.update}'s gate reads `_frameLoopActive`, a
-   * strict superset of `_status === Running`.
+   * strict superset of `_state === Running`.
    */
   private _startFrameLoop(): void {
     this._frameLoopActive = true;
@@ -1345,7 +1391,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
     if (fatal) {
       this._stopFrameLoop();
-      this._status = ApplicationStatus.Stopped;
+      this._state = ApplicationState.Stopped;
       logger.error(`Frame loop halted after ${maxConsecutiveFrameErrors} consecutive frame errors.`, { source: 'core', error: normalized });
     }
   }
@@ -1399,7 +1445,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * + frame clocks. Leaves backend, input, audio, etc. intact — call
    * {@link Application.destroy} to release everything. Acts whenever the
    * frame loop is actually live (`_frameLoopActive`), including mid-`start()`
-   * — not only while `_status` is `Running`.
+   * — not only while `_state` is `Running`.
    *
    * A stop is allowed to interrupt a navigation — that is the point of it.
    * Everything scene-related is therefore delegated to the single
@@ -1434,8 +1480,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       return this;
     }
 
-    if (this._status === ApplicationStatus.Running) {
-      this._status = ApplicationStatus.Halting;
+    if (this._state === ApplicationState.Running) {
+      this._state = ApplicationState.Halting;
     }
 
     // One reason object for the one abort: `_stopFrameLoop()` performs it (it
@@ -1452,7 +1498,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this.onError?.dispatch(error instanceof Error ? error : new Error(String(error)));
     });
 
-    this._status = ApplicationStatus.Stopped;
+    this._state = ApplicationState.Stopped;
 
     return this;
   }
@@ -1728,25 +1774,45 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * supplied through `canvas.element` belongs to the caller and stays in place.
    *
    * Fires the RAF halt synchronously (so no further frame runs after this
-   * call returns) but the rest of teardown runs as a background async chain,
-   * awaited internally: `scenes` — including every retained and preloaded
-   * scope, and any scene's own async `unload()` — is fully disposed FIRST,
-   * before the Loader, rendering context, audio manager, or backend are
-   * destroyed, so a scene's teardown code never touches an already-destroyed
-   * dependency. This intentionally does not route through the public
-   * {@link Application.stop}, which fire-and-forgets its own scene-clear —
-   * that would race against `scenes._dispose()`'s own active-scope teardown
-   * for ownership of the same scope. `destroy()` instead halts the frame
-   * loop directly and lets `scenes._dispose()` own scene teardown entirely.
+   * call returns) and returns a Promise that fulfils once the rest of teardown
+   * has run: `scenes` — including every retained and preloaded scope, and any
+   * scene's own async `unload()` — is fully disposed FIRST, before the Loader,
+   * rendering context, audio manager, or backend are destroyed, so a scene's
+   * teardown code never touches an already-destroyed dependency. This
+   * intentionally does not route through the public {@link Application.stop},
+   * which fire-and-forgets its own scene-clear — that would race against
+   * `scenes._dispose()`'s own active-scope teardown for ownership of the same
+   * scope. `destroy()` instead halts the frame loop directly and lets
+   * `scenes._dispose()` own scene teardown entirely.
    *
    * `destroy()` called right after a `stop()` is covered by the same
    * guarantee, not an exception to it: the scene teardown `stop()` fired and
    * did not await is published on the director, and `scenes._dispose()` waits
    * for it — including a still-pending `Scene.unload()` — before any
    * dependency is destroyed.
+   *
+   * The returned Promise **never rejects**: teardown failures go to
+   * {@link Application.onError} and the log, exactly as they did when this was
+   * a fire-and-forget chain, and the remaining stages still run. Awaiting it
+   * therefore means "teardown is over", not "teardown succeeded" — which is
+   * what a caller reusing the canvas or asserting on released resources needs.
+   *
+   * Scene teardown is bounded: if `scenes._dispose()` has not settled within
+   * the grace period the engine reports a timeout and releases everything else
+   * anyway, rather than leaving the whole application pinned by one scene whose
+   * `unload()` never resolves. A scene that wants to cooperate with this should
+   * watch {@link Scene.lifecycleSignal}, which is aborted when its teardown
+   * begins.
+   *
+   * Idempotent: every call after the first returns the same Promise as the
+   * first and starts no second teardown. {@link Application.state} is
+   * `Destroying` while the returned Promise is pending and `Destroyed`
+   * afterwards.
    */
-  public destroy(): void {
-    this._destroyed = true;
+  public destroy(): Promise<void> {
+    if (this._destroyPromise !== null) {
+      return this._destroyPromise;
+    }
 
     this._visibilitySubscription?.();
     this._visibilitySubscription = null;
@@ -1755,19 +1821,25 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._releaseDom();
 
     if (this._frameLoopActive) {
-      if (this._status === ApplicationStatus.Running) {
-        this._status = ApplicationStatus.Halting;
+      if (this._state === ApplicationState.Running) {
+        this._state = ApplicationState.Halting;
       }
 
       this._stopFrameLoop();
     }
 
-    this._status = ApplicationStatus.Stopped;
+    this._state = ApplicationState.Destroying;
 
-    void this._disposeManagedResources().catch((error: unknown) => {
-      logger.error('Application.destroy() failed during teardown.', { source: 'Application', ...(error instanceof Error && { error }) });
-      this.onError?.dispatch(error instanceof Error ? error : new Error(String(error)));
-    });
+    this._destroyPromise = this._disposeManagedResources()
+      .catch((error: unknown) => {
+        logger.error('Application.destroy() failed during teardown.', { source: 'Application', ...(error instanceof Error && { error }) });
+        this.onError?.dispatch(error instanceof Error ? error : new Error(String(error)));
+      })
+      .then(() => {
+        this._state = ApplicationState.Destroyed;
+      });
+
+    return this._destroyPromise;
   }
 
   /**
@@ -1800,7 +1872,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    */
   private async _disposeManagedResources(): Promise<void> {
     try {
-      await this.scenes._dispose();
+      await this._disposeScenesWithinGrace();
     } catch (error) {
       logger.error('Application.destroy() failed to fully dispose SceneDirector.', { source: 'Application', ...(error instanceof Error && { error }) });
     }
@@ -1842,6 +1914,42 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this.onBackendLost.destroy();
     this.onBackendRestored.destroy();
     this.onError.destroy();
+  }
+
+  /**
+   * Await scene teardown, but not indefinitely: {@link sceneTeardownGraceMs}
+   * after the wait starts the engine stops waiting, reports the timeout
+   * through the normal error pipeline and lets the rest of teardown proceed.
+   *
+   * The abandoned teardown is not cancelled — nothing here can cancel a
+   * Promise a scene never settles. It keeps running against subsystems this
+   * method is about to destroy, which is a worse outcome than a clean
+   * shutdown and a better one than an application that never goes down at
+   * all. The error names the scene teardown as the cause so the report points
+   * at the `unload()` that hung rather than at whatever fails downstream of
+   * it.
+   */
+  private async _disposeScenesWithinGrace(): Promise<void> {
+    let graceTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const grace = new Promise<'timeout'>(resolve => {
+      graceTimer = setTimeout(() => resolve('timeout'), sceneTeardownGraceMs);
+    });
+
+    try {
+      const outcome = await Promise.race([this.scenes._dispose(), grace]);
+
+      if (outcome === 'timeout') {
+        const error = new Error(
+          `Application.destroy() gave up waiting for scene teardown after ${sceneTeardownGraceMs} ms and released the rest of the engine anyway. A Scene.unload() is most likely never settling — watch Scene.lifecycleSignal and resolve when it aborts.`,
+        );
+
+        logger.error(error.message, { source: 'Application', error });
+        this.onError.dispatch(error);
+      }
+    } finally {
+      clearTimeout(graceTimer);
+    }
   }
 
   private _onPlatformVisibilityChange(visible: boolean): void {

@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 30,
+  "memberCount": 31,
   "counts": {
     "constructors": 1,
     "methods": 13,
-    "properties": 12,
+    "properties": 13,
     "events": 4
   },
   "sections": [
@@ -841,6 +841,27 @@
           "params": [],
           "returnType": null,
           "description": "Scene-bound interaction facade. this.root and a materialized this.ui are attached automatically; use this.interaction.observe(root) for any additional root that needs pointer/focus routing. Observations are detached automatically when the scene ends permanently. Throws if accessed before the scene is attached to an Application."
+        },
+        {
+          "name": "lifecycleSignal",
+          "signature": "lifecycleSignal: AbortSignal",
+          "signatureTokens": [
+            {
+              "text": "lifecycleSignal",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AbortSignal",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Aborted the moment this scene's permanent teardown begins — before Scene.unload is called, and also on the paths where unload() never runs at all (a failed activation, a preload cancelled before it was ever consumed, Application.destroy). Pass it to anything that takes an AbortSignal — fetch() above all — so work started in Scene.load stops when the scene goes away instead of resolving into a torn-down scene. The abort reason is the standard AbortError DOMException, so a fetch() given this signal rejects exactly as it would for any other abort. This is what keeps teardown bounded: Application.destroy() waits a fixed grace period for scene teardown and then proceeds without it. A scene whose asynchronous work watches this signal settles well inside that window; one that ignores it can be abandoned mid-teardown."
         },
         {
           "name": "loader",

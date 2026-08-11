@@ -8,7 +8,7 @@ import { Signal } from '#core/Signal';
 
 interface FocusVisibilityHarness {
   readonly Application: typeof import('#core/Application').Application;
-  readonly ApplicationStatus: typeof import('#core/Application').ApplicationStatus;
+  readonly ApplicationState: typeof import('#core/Application').ApplicationState;
   readonly inputManagerMock: {
     update: MockInstance;
     preUpdate: MockInstance;
@@ -149,7 +149,7 @@ const loadHarness = async (): Promise<FocusVisibilityHarness> => {
 
   return {
     Application: mod.Application,
-    ApplicationStatus: mod.ApplicationStatus,
+    ApplicationState: mod.ApplicationState,
     inputManagerMock,
     sceneDirectorMock,
     interactionMock,
@@ -246,7 +246,7 @@ describe('Application focus / visibility', () => {
   });
 
   test('pauseOnHidden=true skips frame body but keeps rAF scheduled when hidden', async () => {
-    const { Application, ApplicationStatus, sceneDirectorMock, interactionMock, inputManagerMock } = await loadHarness();
+    const { Application, ApplicationState, sceneDirectorMock, interactionMock, inputManagerMock } = await loadHarness();
     const app = new Application({ canvas: { element: document.createElement('canvas') } });
     const rawApp = app as unknown as Record<string, unknown>;
 
@@ -259,7 +259,7 @@ describe('Application focus / visibility', () => {
     expect(app.documentVisible).toBe(false);
 
     // Set up raw state for update()
-    rawApp['_status'] = ApplicationStatus.Running;
+    rawApp['_state'] = ApplicationState.Running;
     rawApp['_frameLoopActive'] = true;
     rawApp['_updateHandler'] = vi.fn();
     rawApp['_frameClock'] = {
@@ -293,13 +293,13 @@ describe('Application focus / visibility', () => {
     });
 
     // Set status/loop-flag to Stopped/false so destroy() doesn't try to stop real clocks
-    rawApp['_status'] = ApplicationStatus.Stopped;
+    rawApp['_state'] = ApplicationState.Stopped;
     rawApp['_frameLoopActive'] = false;
     app.destroy();
   });
 
   test('pauseOnHidden=false (default) updates normally even when hidden', async () => {
-    const { Application, ApplicationStatus, sceneDirectorMock, inputManagerMock } = await loadHarness();
+    const { Application, ApplicationState, sceneDirectorMock, inputManagerMock } = await loadHarness();
     const app = new Application({ canvas: { element: document.createElement('canvas') } });
     const rawApp = app as unknown as Record<string, unknown>;
 
@@ -310,7 +310,7 @@ describe('Application focus / visibility', () => {
     });
     document.dispatchEvent(new Event('visibilitychange'));
 
-    rawApp['_status'] = ApplicationStatus.Running;
+    rawApp['_state'] = ApplicationState.Running;
     rawApp['_frameLoopActive'] = true;
     rawApp['_updateHandler'] = vi.fn();
     rawApp['_frameClock'] = {
@@ -350,7 +350,7 @@ describe('Application focus / visibility', () => {
     });
 
     // Set status/loop-flag to Stopped/false so destroy() doesn't try to stop real clocks
-    rawApp['_status'] = ApplicationStatus.Stopped;
+    rawApp['_state'] = ApplicationState.Stopped;
     rawApp['_frameLoopActive'] = false;
     app.destroy();
   });

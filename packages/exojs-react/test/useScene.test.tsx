@@ -1,4 +1,4 @@
-import { Application, ApplicationStatus, Scene as ExoScene } from '@codexo/exojs';
+import { Application, ApplicationState, Scene as ExoScene } from '@codexo/exojs';
 import { render, waitFor } from '@testing-library/react';
 import { type DependencyList, type ReactElement, type ReactNode, StrictMode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -11,8 +11,8 @@ import { MockApplication } from './support/mock-application';
 // above this file's imports (top-level bindings are not initialised yet).
 vi.mock('@codexo/exojs', async importActual => {
   const actual = await importActual<typeof import('@codexo/exojs')>();
-  const { MockApplication: MockApp, configureApplicationStatus, configureConcurrentNavigationError } = await import('./support/mock-application');
-  configureApplicationStatus(actual.ApplicationStatus);
+  const { MockApplication: MockApp, configureApplicationState, configureConcurrentNavigationError } = await import('./support/mock-application');
+  configureApplicationState(actual.ApplicationState);
   configureConcurrentNavigationError(actual.ConcurrentSceneNavigationError);
   return { ...actual, Application: MockApp };
 });
@@ -132,7 +132,7 @@ describe('useScene', () => {
       </StrictMode>,
     );
 
-    await waitFor(() => expect(app.status).toBe(ApplicationStatus.Running));
+    await waitFor(() => expect(app.state).toBe(ApplicationState.Running));
 
     // The second mount must join the in-flight start() rather than racing a
     // scenes.change() against its navigation.

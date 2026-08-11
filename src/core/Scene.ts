@@ -105,6 +105,36 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
 
   private _scope: SceneScope<Data> | null = null;
   private readonly _destroyScope = new DestroyScope();
+  private readonly _lifecycle = new AbortController();
+
+  /**
+   * Aborted the moment this scene's permanent teardown begins — before
+   * {@link Scene.unload} is called, and also on the paths where `unload()`
+   * never runs at all (a failed activation, a preload cancelled before it was
+   * ever consumed, {@link Application.destroy}).
+   *
+   * Pass it to anything that takes an `AbortSignal` — `fetch()` above all —
+   * so work started in {@link Scene.load} stops when the scene goes away
+   * instead of resolving into a torn-down scene. The abort reason is the
+   * standard `AbortError` `DOMException`, so a `fetch()` given this signal
+   * rejects exactly as it would for any other abort.
+   *
+   * This is what keeps teardown bounded: `Application.destroy()` waits a fixed
+   * grace period for scene teardown and then proceeds without it. A scene
+   * whose asynchronous work watches this signal settles well inside that
+   * window; one that ignores it can be abandoned mid-teardown.
+   *
+   * @example
+   * ```ts
+   * public override async load(): Promise<void> {
+   *   const response = await fetch('/level.json', { signal: this.lifecycleSignal });
+   *   this.level = await response.json();
+   * }
+   * ```
+   */
+  public get lifecycleSignal(): AbortSignal {
+    return this._lifecycle.signal;
+  }
 
   /**
    * The {@link Application} this scene is attached to. The framework attaches a
@@ -474,6 +504,18 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
   public _attach(app: Application, scope: SceneScope<Data>): void {
     this._app = app as ApplicationOf<AppLike>;
     this._scope = scope;
+  }
+
+  /**
+   * Abort {@link Scene.lifecycleSignal}. Called by `SceneScope` at the top of
+   * every teardown path, before any hook that could await. Idempotent — a
+   * second abort on an already-aborted controller is a no-op, which matters
+   * because more than one path can reach the same scope (a cancelled preload
+   * that is then disposed, say).
+   * @internal
+   */
+  public _abortLifecycle(): void {
+    this._lifecycle.abort();
   }
 
   /**

@@ -6,7 +6,7 @@ import type { MockInstance } from 'vitest';
  * WebGL2/WebGPU backends are mocked (kept out of jsdom) — SceneDirector,
  * the scene registry, and scene activation all run for real.
  */
-import { Application, ApplicationStatus } from '#core/Application';
+import { Application, ApplicationState } from '#core/Application';
 import { Scene } from '#core/Scene';
 
 // ---------------------------------------------------------------------------
@@ -139,7 +139,7 @@ describe('Application.start() — scene-less and constructor overloads', () => {
 
     // start() flips to Loading synchronously, before its first await — so the
     // second caller below observes a startup that is genuinely still running.
-    expect(app.status).toBe(ApplicationStatus.Loading);
+    expect(app.state).toBe(ApplicationState.Loading);
 
     const second = app.start(ConcurrentStartScene);
 
@@ -147,7 +147,7 @@ describe('Application.start() — scene-less and constructor overloads', () => {
 
     // Awaiting the second call must mean startup is done — not merely that the
     // call returned early while the first one is still mid-navigation.
-    expect(app.status).toBe(ApplicationStatus.Running);
+    expect(app.state).toBe(ApplicationState.Running);
     expect(app.scenes.currentScene).toBeInstanceOf(ConcurrentStartScene);
 
     await first;
@@ -174,7 +174,7 @@ describe('Application.start() — scene-less and constructor overloads', () => {
     await expect(first).rejects.toThrow('load failed');
     await expect(second).rejects.toThrow('load failed');
 
-    expect(app.status).toBe(ApplicationStatus.Stopped);
+    expect(app.state).toBe(ApplicationState.Stopped);
 
     // The failed attempt must not leave a stale in-flight promise behind.
     await expect(app.start(FlakyStartScene)).resolves.toBe(app);

@@ -1,4 +1,4 @@
-import { ApplicationStatus, type Scene as ExoScene, type SceneTransitionSelection } from '@codexo/exojs';
+import { ApplicationState, type Scene as ExoScene, type SceneTransitionSelection } from '@codexo/exojs';
 import {
   Children,
   createContext,
@@ -118,7 +118,7 @@ export function Scenes({ active, transition, children }: ScenesProps): ReactElem
 
     const apply = async (): Promise<void> => {
       try {
-        if (app.status === ApplicationStatus.Stopped) {
+        if (app.state === ApplicationState.Stopped) {
           // First activation initializes the backend and starts the frame loop;
           // transitions only apply to subsequent switches.
           await app.start(SceneClass);

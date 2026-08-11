@@ -1,16 +1,16 @@
 import { vi } from 'vitest';
 
-// Values mirrored from the real `ApplicationStatus` enum. They are injected by
+// Values mirrored from the real `ApplicationState` enum. They are injected by
 // each test file's `vi.mock('@codexo/exojs', …)` factory via
-// `configureApplicationStatus(actual.ApplicationStatus)` so the mock never
-// hard-codes the enum's numeric members (and can't drift from the real engine).
-const status = { stopped: 4, running: 2, loading: 1 };
+// `configureApplicationState(actual.ApplicationState)` so the mock never
+// hard-codes the enum's members (and can't drift from the real engine).
+const state = { stopped: 'stopped', running: 'running', loading: 'loading' };
 
-/** Inject the real enum values so the mock's status matches what the hooks compare against. */
-export function configureApplicationStatus(applicationStatus: { Stopped: number; Running: number; Loading: number }): void {
-  status.stopped = applicationStatus.Stopped;
-  status.running = applicationStatus.Running;
-  status.loading = applicationStatus.Loading;
+/** Inject the real enum values so the mock's state matches what the hooks compare against. */
+export function configureApplicationState(applicationState: { Stopped: string; Running: string; Loading: string }): void {
+  state.stopped = applicationState.Stopped;
+  state.running = applicationState.Running;
+  state.loading = applicationState.Loading;
 }
 
 /**
@@ -54,7 +54,7 @@ interface MockApplicationOptions {
  * Minimal `Signal`-alike (add/remove/dispatch/count) for `MockApplication.onError`.
  * Deliberately NOT the real `Signal` from `@codexo/exojs` — this module is
  * dynamically imported from inside the `vi.mock('@codexo/exojs', …)` factory
- * (see `configureApplicationStatus` above for the same reasoning), so a
+ * (see `configureApplicationState` above for the same reasoning), so a
  * top-level `import { Signal } from '@codexo/exojs'` here would re-enter the
  * still-resolving mock factory and deadlock the module loader.
  */
@@ -103,7 +103,7 @@ export class MockApplication {
   /** The exact options object the hook passed to `new Application(...)`. */
   public readonly options: MockApplicationOptions;
 
-  public status: number = status.stopped;
+  public state: string = state.stopped;
   public destroyed = false;
 
   private _sizingMode: string;
@@ -165,13 +165,13 @@ export class MockApplication {
       return this._startPromise;
     }
 
-    if (this.status !== status.stopped) {
+    if (this.state !== state.stopped) {
       return this;
     }
 
     // `Loading` is entered synchronously, before the first await, so a caller
     // in the same tick observes a startup that is genuinely still running.
-    this.status = status.loading;
+    this.state = state.loading;
     this._navigationInFlight = SceneClass !== undefined;
 
     const startPromise = (async (): Promise<MockApplication> => {
@@ -184,7 +184,7 @@ export class MockApplication {
           this._activate(SceneClass);
         }
 
-        this.status = status.running;
+        this.state = state.running;
 
         return this;
       } finally {

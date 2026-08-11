@@ -364,16 +364,18 @@ export class SceneScope<Data = unknown> {
   }
 
   /**
-   * Failed-activation cleanup: destroys every
-   * engine-managed registration this scope created, releases loader claims,
-   * and invokes `scene.destroy()` — but never `scene.unload()`, since the
-   * scene never completed activation. Never throws; cleanup failures are
+   * Failed-activation cleanup: aborts {@link Scene.lifecycleSignal}, destroys
+   * every engine-managed registration this scope created, releases loader
+   * claims, and invokes `scene.destroy()` — but never `scene.unload()`, since
+   * the scene never completed activation. Never throws; cleanup failures are
    * reported through the application error pipeline. Idempotent.
    */
   public destroyFailedActivation(): void {
     if (!canDestroy(this._state)) {
       return;
     }
+
+    this.scene._abortLifecycle();
 
     const previous = this._state;
 
@@ -398,7 +400,8 @@ export class SceneScope<Data = unknown> {
   }
 
   /**
-   * Permanent teardown, in normative order: disable input +
+   * Permanent teardown, in normative order: abort
+   * {@link Scene.lifecycleSignal}, disable input +
    * interaction, `unload()` (guarded), destroy systems, tweens + audio,
    * inputs + interaction, detach the automatic root/UI observations,
    * `scene.destroy()` + engine-owned internals teardown, then release loader
@@ -409,6 +412,11 @@ export class SceneScope<Data = unknown> {
     if (!canDestroy(this._state)) {
       return;
     }
+
+    // Before anything that can await — `unload()` is the first such stage, and
+    // a scene watching the signal has to see it aborted by the time its own
+    // teardown hook runs, not afterwards.
+    this.scene._abortLifecycle();
 
     const previous = this._state;
 

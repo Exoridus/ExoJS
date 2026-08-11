@@ -9,7 +9,7 @@ import type { MockInstance } from 'vitest';
 
 interface OnFrameTestHarness {
   readonly Application: typeof import('#core/Application').Application;
-  readonly ApplicationStatus: typeof import('#core/Application').ApplicationStatus;
+  readonly ApplicationState: typeof import('#core/Application').ApplicationState;
   readonly sceneDirector: { update: MockInstance; setScene: MockInstance; destroy: MockInstance; _dispose: MockInstance };
   readonly backend: {
     flush: MockInstance;
@@ -116,9 +116,9 @@ const loadOnFrameHarness = async (): Promise<OnFrameTestHarness> => {
     }),
   }));
 
-  const { Application, ApplicationStatus } = await import('#core/Application');
+  const { Application, ApplicationState } = await import('#core/Application');
 
-  return { Application, ApplicationStatus, sceneDirector, backend };
+  return { Application, ApplicationState, sceneDirector, backend };
 };
 
 // ---------------------------------------------------------------------------
@@ -145,7 +145,7 @@ describe('Application.onFrame', () => {
   });
 
   test('app.update() dispatches onFrame after sceneDirector.update and before backend.flush', async () => {
-    const { Application, ApplicationStatus } = await loadOnFrameHarness();
+    const { Application, ApplicationState } = await loadOnFrameHarness();
     const app = Object.create(Application.prototype) as import('#core/Application').Application;
     const rawApp = app as unknown as Record<string, unknown>;
 
@@ -183,7 +183,7 @@ describe('Application.onFrame', () => {
       view: { update: vi.fn() },
     };
 
-    rawApp['_status'] = ApplicationStatus.Running;
+    rawApp['_state'] = ApplicationState.Running;
     rawApp['_frameLoopActive'] = true;
     rawApp['pauseOnHidden'] = false;
     rawApp['_documentVisible'] = true;

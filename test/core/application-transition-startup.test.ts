@@ -1,10 +1,10 @@
 /**
  * A real FadeSceneTransition drives the very first Application.start() call
  * end-to-end, proving the _frameLoopActive startup-sequencing fix actually
- * lets a frame-driven transition session progress before _status flips to
+ * lets a frame-driven transition session progress before _state flips to
  * Running — the exact deadlock scenario that fix prevents.
  */
-import { Application, ApplicationStatus } from '#core/Application';
+import { Application, ApplicationState } from '#core/Application';
 import { Scene } from '#core/Scene';
 import { FadeSceneTransition } from '#core/transitions/FadeSceneTransition';
 
@@ -110,7 +110,7 @@ describe('Application.start() with a real FadeSceneTransition', () => {
       await startPromise;
 
       expect(app.scenes.currentScene).toBeInstanceOf(TitleScene);
-      expect(app.status).toBe(ApplicationStatus.Running);
+      expect(app.state).toBe(ApplicationState.Running);
     } finally {
       perfSpy.mockRestore();
       rafSpy.mockRestore();

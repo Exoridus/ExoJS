@@ -4,7 +4,7 @@
  * `app.animations` and is advanced once per frame from the core preUpdate
  * phase — and deregisters again on stop, detach, completion and destroy.
  */
-import { Application, ApplicationStatus } from '#core/Application';
+import { Application, ApplicationState } from '#core/Application';
 import { Time } from '#core/Time';
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
@@ -71,7 +71,7 @@ vi.mock('#rendering/webgpu/WebGpuBackend', () => ({
 const forceRunning = (app: Application): void => {
   const record = app as unknown as Record<string, unknown>;
 
-  record['_status'] = ApplicationStatus.Running;
+  record['_state'] = ApplicationState.Running;
   record['_frameLoopActive'] = true;
 };
 
@@ -109,7 +109,7 @@ describe('AnimatedSprite scheduling', () => {
   });
 
   afterEach(() => {
-    (app as unknown as Record<string, unknown>)['_status'] = ApplicationStatus.Stopped;
+    (app as unknown as Record<string, unknown>)['_state'] = ApplicationState.Stopped;
     app.destroy();
     vi.restoreAllMocks();
   });

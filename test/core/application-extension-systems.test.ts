@@ -131,14 +131,10 @@ describe('Application app-system extension bindings', () => {
     const userSystem: System = { update: vi.fn(), destroy: () => order.push('user') };
     app.systems.add(userSystem);
 
-    app.destroy();
-
-    // destroy() now disposes `scenes` first, awaited internally, before the
-    // rest of teardown (including `systems.destroy()`) runs — give that
-    // background chain a few microtask turns to settle.
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
+    // destroy() disposes `scenes` first and only then the rest of teardown
+    // (including `systems.destroy()`); awaiting it is what makes that ordering
+    // observable instead of a microtask-count guess.
+    await app.destroy();
 
     expect(order).toEqual(['user', 'extension']);
   });
@@ -159,11 +155,7 @@ describe('Application app-system extension bindings', () => {
     // also releases rendering, audio, input, backend and platform was cut short.
     app.onFrame.add(() => {});
 
-    app.destroy();
-
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
+    await app.destroy();
 
     expect(app.onFrame.count).toBe(0);
   });

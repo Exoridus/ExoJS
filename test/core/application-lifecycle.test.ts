@@ -81,7 +81,7 @@ const setNavigatorGpu = (gpu: unknown): (() => void) => {
 
 interface LifecycleHarness {
   readonly Application: typeof import('#core/Application').Application;
-  readonly ApplicationStatus: typeof import('#core/Application').ApplicationStatus;
+  readonly ApplicationState: typeof import('#core/Application').ApplicationState;
   readonly Texture: typeof import('#rendering/texture/Texture').Texture;
   readonly loader: { destroy: MockInstance };
   readonly webglManager: {
@@ -250,12 +250,12 @@ const loadHarness = async (options: LifecycleHarnessOptions = {}): Promise<Lifec
     }),
   }));
 
-  const { Application, ApplicationStatus } = await import('#core/Application');
+  const { Application, ApplicationState } = await import('#core/Application');
   const { Texture } = await import('#rendering/texture/Texture');
 
   return {
     Application,
-    ApplicationStatus,
+    ApplicationState,
     Texture,
     loader,
     webglManager,
@@ -1220,14 +1220,14 @@ describe('Application lifecycle / getters / sizing', () => {
 
   describe('stop(): onError dispatch on scene-teardown failure', () => {
     test('dispatches the original Error instance when the rejection value is already an Error', async () => {
-      const { Application, ApplicationStatus, sceneDirector } = await loadHarness();
+      const { Application, ApplicationState, sceneDirector } = await loadHarness();
       const app = new Application({ backend: { type: 'webgl2' } });
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
       const teardownError = new Error('scene teardown failed');
       sceneDirector._stopAndClearActiveScene.mockRejectedValueOnce(teardownError);
 
       const rawApp = app as unknown as Record<string, unknown>;
-      rawApp['_status'] = ApplicationStatus.Running;
+      rawApp['_state'] = ApplicationState.Running;
       rawApp['_frameLoopActive'] = true;
       const errorHandler = vi.fn();
       app.onError.add(errorHandler);
@@ -1241,13 +1241,13 @@ describe('Application lifecycle / getters / sizing', () => {
     });
 
     test('wraps a non-Error rejection value into a new Error', async () => {
-      const { Application, ApplicationStatus, sceneDirector } = await loadHarness();
+      const { Application, ApplicationState, sceneDirector } = await loadHarness();
       const app = new Application({ backend: { type: 'webgl2' } });
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
       sceneDirector._stopAndClearActiveScene.mockRejectedValueOnce('a plain string rejection');
 
       const rawApp = app as unknown as Record<string, unknown>;
-      rawApp['_status'] = ApplicationStatus.Running;
+      rawApp['_state'] = ApplicationState.Running;
       rawApp['_frameLoopActive'] = true;
       const errorHandler = vi.fn();
       app.onError.add(errorHandler);
@@ -1270,13 +1270,13 @@ describe('Application lifecycle / getters / sizing', () => {
 
   describe('_stopFrameLoop() -> scenes._abortInFlightNavigation() wiring', () => {
     test('stop() halts the loop (aborting any in-flight navigation) and then delegates the scene side to the single stop-and-clear operation', async () => {
-      const { Application, ApplicationStatus, sceneDirector } = await loadHarness();
+      const { Application, ApplicationState, sceneDirector } = await loadHarness();
       const app = new Application({ backend: { type: 'webgl2' } });
       const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
 
       try {
         await app.start();
-        (app as unknown as Record<string, unknown>)['_status'] = ApplicationStatus.Running;
+        (app as unknown as Record<string, unknown>)['_state'] = ApplicationState.Running;
 
         app.stop();
 
@@ -1296,7 +1296,7 @@ describe('Application lifecycle / getters / sizing', () => {
       // director operation, which no-ops on the scene side when nothing is
       // active. stop() branching on `currentScene` itself is what used to
       // split the stop into two steps racing the navigation lock.
-      const { Application, ApplicationStatus, sceneDirector } = await loadHarness();
+      const { Application, ApplicationState, sceneDirector } = await loadHarness();
       sceneDirector.currentScene = null;
 
       const app = new Application({ backend: { type: 'webgl2' } });
@@ -1304,7 +1304,7 @@ describe('Application lifecycle / getters / sizing', () => {
 
       try {
         await app.start();
-        (app as unknown as Record<string, unknown>)['_status'] = ApplicationStatus.Running;
+        (app as unknown as Record<string, unknown>)['_state'] = ApplicationState.Running;
 
         app.stop();
 
@@ -1317,13 +1317,13 @@ describe('Application lifecycle / getters / sizing', () => {
     });
 
     test('the stop-and-clear operation is handed a SceneNavigationAbortedError as its reason', async () => {
-      const { Application, ApplicationStatus, sceneDirector } = await loadHarness();
+      const { Application, ApplicationState, sceneDirector } = await loadHarness();
       const app = new Application({ backend: { type: 'webgl2' } });
       const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
 
       try {
         await app.start();
-        (app as unknown as Record<string, unknown>)['_status'] = ApplicationStatus.Running;
+        (app as unknown as Record<string, unknown>)['_state'] = ApplicationState.Running;
 
         app.stop();
 
@@ -1341,13 +1341,13 @@ describe('Application lifecycle / getters / sizing', () => {
     });
 
     test('_abortInFlightNavigation() is called with a SceneNavigationAbortedError', async () => {
-      const { Application, ApplicationStatus, sceneDirector } = await loadHarness();
+      const { Application, ApplicationState, sceneDirector } = await loadHarness();
       const app = new Application({ backend: { type: 'webgl2' } });
       const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
 
       try {
         await app.start();
-        (app as unknown as Record<string, unknown>)['_status'] = ApplicationStatus.Running;
+        (app as unknown as Record<string, unknown>)['_state'] = ApplicationState.Running;
 
         app.stop();
 
