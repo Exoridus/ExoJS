@@ -66,14 +66,10 @@
                 var exoRenderingEntry;
                 var exoRendererSdkEntry;
                 var particlesEntry;
-                var particlesRegisterEntry;
                 var audioFxEntry;
                 var tiledEntry;
-                var tiledRegisterEntry;
                 var tilemapEntry;
-                var tilemapRegisterEntry;
                 var ldtkEntry;
-                var ldtkRegisterEntry;
                 var physicsEntry;
                 var physicsDebugEntry;
                 if (!safeVersion || safeVersion === 'current') {
@@ -83,14 +79,10 @@
                     exoRenderingEntry = './vendor/exojs/esm/rendering.js?no-cache=' + noCache;
                     exoRendererSdkEntry = './vendor/exojs/esm/renderer-sdk.js?no-cache=' + noCache;
                     particlesEntry = './vendor/exojs-particles/esm/index.js?no-cache=' + noCache;
-                    particlesRegisterEntry = './vendor/exojs-particles/esm/register.js?no-cache=' + noCache;
                     audioFxEntry = './vendor/exojs-audio-fx/esm/index.js?no-cache=' + noCache;
                     tiledEntry = './vendor/exojs-tiled/esm/index.js?no-cache=' + noCache;
-                    tiledRegisterEntry = './vendor/exojs-tiled/esm/register.js?no-cache=' + noCache;
                     tilemapEntry = './vendor/exojs-tilemap/esm/index.js?no-cache=' + noCache;
-                    tilemapRegisterEntry = './vendor/exojs-tilemap/esm/register.js?no-cache=' + noCache;
                     ldtkEntry = './vendor/exojs-ldtk/esm/index.js?no-cache=' + noCache;
-                    ldtkRegisterEntry = './vendor/exojs-ldtk/esm/register.js?no-cache=' + noCache;
                     physicsEntry = './vendor/exojs-physics/esm/index.js?no-cache=' + noCache;
                     physicsDebugEntry = './vendor/exojs-physics/esm/debug/index.js?no-cache=' + noCache;
                 } else {
@@ -103,14 +95,10 @@
                     exoRenderingEntry = cdnBase + 'exojs@' + safeVersion + '/dist/esm/rendering.js';
                     exoRendererSdkEntry = cdnBase + 'exojs@' + safeVersion + '/dist/esm/renderer-sdk.js';
                     particlesEntry = cdnBase + 'exojs-particles@' + safeVersion + '/dist/esm/index.js';
-                    particlesRegisterEntry = cdnBase + 'exojs-particles@' + safeVersion + '/dist/esm/register.js';
                     audioFxEntry = cdnBase + 'exojs-audio-fx@' + safeVersion + '/dist/esm/index.js';
                     tiledEntry = cdnBase + 'exojs-tiled@' + safeVersion + '/dist/esm/index.js';
-                    tiledRegisterEntry = cdnBase + 'exojs-tiled@' + safeVersion + '/dist/esm/register.js';
                     tilemapEntry = cdnBase + 'exojs-tilemap@' + safeVersion + '/dist/esm/index.js';
-                    tilemapRegisterEntry = cdnBase + 'exojs-tilemap@' + safeVersion + '/dist/esm/register.js';
                     ldtkEntry = cdnBase + 'exojs-ldtk@' + safeVersion + '/dist/esm/index.js';
-                    ldtkRegisterEntry = cdnBase + 'exojs-ldtk@' + safeVersion + '/dist/esm/register.js';
                     physicsEntry = cdnBase + 'exojs-physics@' + safeVersion + '/dist/esm/index.js';
                     physicsDebugEntry = cdnBase + 'exojs-physics@' + safeVersion + '/dist/esm/debug/index.js';
                 }
@@ -123,14 +111,10 @@
                         '@codexo/exojs/rendering': exoRenderingEntry,
                         '@codexo/exojs/renderer-sdk': exoRendererSdkEntry,
                         '@codexo/exojs-particles': particlesEntry,
-                        '@codexo/exojs-particles/register': particlesRegisterEntry,
                         '@codexo/exojs-audio-fx': audioFxEntry,
                         '@codexo/exojs-tiled': tiledEntry,
-                        '@codexo/exojs-tiled/register': tiledRegisterEntry,
                         '@codexo/exojs-tilemap': tilemapEntry,
-                        '@codexo/exojs-tilemap/register': tilemapRegisterEntry,
                         '@codexo/exojs-ldtk': ldtkEntry,
-                        '@codexo/exojs-ldtk/register': ldtkRegisterEntry,
                         '@codexo/exojs-physics': physicsEntry,
                         '@codexo/exojs-physics/debug': physicsDebugEntry,
                         '@examples/runtime': './examples/shared/runtime.js?no-cache=' + noCache,
