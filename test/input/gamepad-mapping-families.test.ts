@@ -66,7 +66,7 @@ describe('trivial device-family mappings', () => {
 // `DUAL_SENSE_BUTTON_TOUCHPAD` all sit at 17 with their counts at 18 — so there
 // is no index above 17 either.
 describe('the device-specific button slot at index 17', () => {
-  const slot17 = (mapping: { buttons: readonly { index: number; channel: number }[] }): number | undefined =>
+  const slot17 = (mapping: { buttons: ReadonlyArray<{ index: number; channel: number }> }): number | undefined =>
     mapping.buttons.find(button => button.index === 17)?.channel;
 
   test('an Xbox Series pad puts Share there', () => {
@@ -91,11 +91,7 @@ describe('the device-specific button slot at index 17', () => {
   });
 
   test('the three devices disagree about slot 17, so no baseline value can be right', () => {
-    const channels = new Set([
-      slot17(new XboxGamepadMapping()),
-      slot17(new SwitchProGamepadMapping()),
-      slot17(new PlayStationGamepadMapping()),
-    ]);
+    const channels = new Set([slot17(new XboxGamepadMapping()), slot17(new SwitchProGamepadMapping()), slot17(new PlayStationGamepadMapping())]);
 
     expect(channels.size).toBe(3);
   });

@@ -16,7 +16,9 @@ import { ScrollContainer } from '#ui/ScrollContainer';
 // ---------------------------------------------------------------------------
 
 /** Build a minimal Stage whose `app.input` carries a real onMouseWheel Signal. */
-const makeStage = (pointerPos: { x: number; y: number } | null | undefined = null): { stage: Stage; onMouseWheel: Signal<[deltaX: number, deltaY: number]> } => {
+const makeStage = (
+  pointerPos: { x: number; y: number } | null | undefined = null,
+): { stage: Stage; onMouseWheel: Signal<[deltaX: number, deltaY: number]> } => {
   const onMouseWheel = new Signal<[deltaX: number, deltaY: number]>();
   const app = {
     input: {

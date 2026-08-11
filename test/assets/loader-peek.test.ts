@@ -104,10 +104,17 @@ describe('Loader.peek — pure in-memory lookup', () => {
 
   // Invalid usage fails loudly exactly as it does on get(); only "the key is
   // fine, nothing stored under it" is the undefined case.
+  // Both of these are rejected at compile time by the overloads too — an
+  // unregistered extension resolves `KindByPath` to `never`, and a plain object
+  // matches no overload. The runtime guards are what a JavaScript consumer, a
+  // dynamic string, or a `registerType` gap runs into, so they get their own
+  // coverage through a loosened view of the method.
+  const untyped = (loader: Loader): { peek(input: unknown): unknown } => loader as unknown as { peek(input: unknown): unknown };
+
   test('throws for a path whose extension resolves to no registered type', () => {
     const loader = createCoreLoader();
 
-    expect(() => loader.peek('data/config.unknownext' as string)).toThrow(/no type registered/i);
+    expect(() => untyped(loader).peek('data/config.unknownext')).toThrow(/no type registered/i);
 
     loader.destroy();
   });
@@ -115,7 +122,7 @@ describe('Loader.peek — pure in-memory lookup', () => {
   test('throws for an input that is neither a path nor a descriptor', () => {
     const loader = createCoreLoader();
 
-    expect(() => loader.peek({ not: 'an asset' } as never)).toThrow(/path string or an Asset\.type/i);
+    expect(() => untyped(loader).peek({ not: 'an asset' })).toThrow(/path string or an Asset\.type/i);
 
     loader.destroy();
   });

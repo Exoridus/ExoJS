@@ -889,7 +889,9 @@ export class Loader {
       ctor = resolved.ctor;
       source = resolved.source;
     } else {
-      throw new Error('Loader: peek() accepts a path string or an Asset.type(...) descriptor. A catalog leaf is already a handle — read its loadState instead.');
+      throw new Error(
+        'Loader: peek() accepts a path string or an Asset.type(...) descriptor. A catalog leaf is already a handle — read its loadState instead.',
+      );
     }
 
     return this._residency._hasStored(ctor, source) ? (this._residency._peekResource(ctor, source) ?? undefined) : undefined;
