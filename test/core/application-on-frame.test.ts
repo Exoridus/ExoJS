@@ -141,7 +141,7 @@ describe('Application.onFrame', () => {
     expect(typeof app.onFrame.dispatch).toBe('function');
     expect(typeof app.onFrame.count).toBe('number');
 
-    app.destroy();
+    void app.destroy();
   });
 
   test('app.update() dispatches onFrame after sceneDirector.update and before backend.flush', async () => {
@@ -222,7 +222,7 @@ describe('Application.onFrame', () => {
     app.onFrame.add(handler);
     expect(app.onFrame.count).toBeGreaterThan(0);
 
-    app.destroy();
+    void app.destroy();
 
     // destroy() disposes scenes first, awaited internally in a background
     // async chain, before the rest of teardown (including onFrame.destroy())

@@ -781,7 +781,7 @@ describe('Application lifecycle / getters / sizing', () => {
 
         expect(container.contains(app.canvas)).toBe(true);
 
-        app.destroy();
+        void app.destroy();
 
         expect(container.contains(app.canvas)).toBe(false);
         expect(app.canvas.parentElement).toBeNull();
@@ -801,7 +801,7 @@ describe('Application lifecycle / getters / sizing', () => {
       try {
         const app = new Application({ canvas: { element: canvas }, backend: { type: 'webgl2' } });
 
-        app.destroy();
+        void app.destroy();
 
         expect(container.contains(canvas)).toBe(true);
       } finally {
@@ -825,7 +825,7 @@ describe('Application lifecycle / getters / sizing', () => {
 
       expect(parent.style.overflow).toBe('hidden');
 
-      app.destroy();
+      void app.destroy();
 
       expect(parent.style.overflow).toBe('scroll');
       expect(parent.style.display).toBe('');
@@ -843,9 +843,9 @@ describe('Application lifecycle / getters / sizing', () => {
 
       const app = new Application({ canvas: { element: canvas, sizingMode: 'letterbox' }, backend: { type: 'webgl2' } });
 
-      app.destroy();
+      void app.destroy();
       parent.style.display = 'grid';
-      app.destroy();
+      void app.destroy();
 
       expect(parent.style.display).toBe('grid');
     });
@@ -1449,7 +1449,7 @@ describe('Application lifecycle / getters / sizing', () => {
         // Ignore the fallback's own teardown of the context it discarded.
         destroyedContexts.length = 0;
 
-        app.destroy();
+        void app.destroy();
 
         // destroy() halts the frame loop synchronously and finishes the rest
         // of teardown on an async chain it awaits internally.

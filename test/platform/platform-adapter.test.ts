@@ -27,6 +27,9 @@ const loadApplication = async (): Promise<typeof import('#core/Application').App
     onDeviceLost: { add: vi.fn(), destroy: vi.fn() },
     onDeviceRestored: { add: vi.fn(), destroy: vi.fn() },
     onRenderError: { add: vi.fn(), destroy: vi.fn() },
+    // Core renderer bindings key their factory map on backendType, so a stub
+    // naming a real backend also has to accept the renderers bound to it.
+    rendererRegistry: { bindRenderer: vi.fn() },
     backendType: 'webgl2',
   };
 
@@ -98,7 +101,7 @@ describe('platform injection', () => {
     expect(app.platform.constructor.name).toBe('BrowserPlatform');
     expect((app.platform as BrowserPlatform).surface).toBe(app.canvas);
 
-    app.destroy();
+    void app.destroy();
   });
 
   it('uses the injected adapter instead', async () => {
@@ -108,7 +111,7 @@ describe('platform injection', () => {
 
     expect(app.platform).toBe(platform);
 
-    app.destroy();
+    void app.destroy();
   });
 
   it('routes input touch-action and the cursor through the adapter', async () => {
@@ -121,7 +124,7 @@ describe('platform injection', () => {
     expect(platform.calls).toContain('setTouchAction:none');
     expect(platform.calls).toContain('setCursor:crosshair');
 
-    app.destroy();
+    void app.destroy();
   });
 
   it('reads document visibility from the adapter and follows its changes', async () => {
@@ -139,7 +142,7 @@ describe('platform injection', () => {
     expect(app.documentVisible).toBe(false);
     expect(seen).toEqual([false]);
 
-    app.destroy();
+    void app.destroy();
   });
 
   it('leaves an injected adapter for its owner to dispose', async () => {
@@ -147,7 +150,7 @@ describe('platform injection', () => {
     const platform = createRecordingPlatform();
     const app = new Application({ platform });
 
-    app.destroy();
+    void app.destroy();
 
     expect(platform.calls).not.toContain('destroy');
   });

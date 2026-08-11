@@ -35,6 +35,9 @@ vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
       resize: vi.fn().mockReturnThis(),
       view: { getBounds: vi.fn().mockReturnValue({ left: 0, top: 0, right: 800, bottom: 600 }) },
       renderTarget: {},
+      // Core renderer bindings key their factory map on backendType, so a stub
+      // naming a real backend also has to accept the renderers bound to it.
+      rendererRegistry: { bindRenderer: vi.fn() },
       backendType: 'webgl2',
       setView: vi.fn().mockReturnThis(),
       draw: vi.fn().mockReturnThis(),
@@ -124,7 +127,7 @@ describe('Application.stop() unloads the active scene regardless of an in-flight
       expect(unloaded).toHaveBeenCalledTimes(1);
       expect(errors).toEqual([]);
     } finally {
-      app.destroy();
+      void app.destroy();
     }
   });
 
@@ -179,7 +182,7 @@ describe('Application.stop() unloads the active scene regardless of an in-flight
       expect(app.scenes.currentScene).toBeNull();
       expect(await navigationOutcome).not.toBe('resolved');
     } finally {
-      app.destroy();
+      void app.destroy();
     }
   });
 
@@ -213,7 +216,7 @@ describe('Application.stop() unloads the active scene regardless of an in-flight
       expect(errors).toContain(teardownError);
     } finally {
       consoleErrorSpy.mockRestore();
-      app.destroy();
+      void app.destroy();
     }
   });
 
@@ -238,7 +241,7 @@ describe('Application.stop() unloads the active scene regardless of an in-flight
     const backendDestroy = vi.spyOn(app.backend, 'destroy');
 
     app.stop(); // fire-and-forget scene clear
-    app.destroy();
+    void app.destroy();
     await settle();
 
     expect(releaseUnload).not.toBeNull();
@@ -275,7 +278,7 @@ describe('Application.stop() unloads the active scene regardless of an in-flight
     // become the thing destroy() waits on.
     await app.scenes.change(OtherScene);
 
-    app.destroy();
+    void app.destroy();
     await settle();
 
     expect(releaseUnload).not.toBeNull();
@@ -322,7 +325,7 @@ describe('Application.stop() unloads the active scene regardless of an in-flight
       expect(errors.some(error => error instanceof ConcurrentSceneNavigationError)).toBe(false);
       expect(await navigationOutcome).not.toBe('resolved');
     } finally {
-      app.destroy();
+      void app.destroy();
     }
   });
 });

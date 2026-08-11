@@ -132,7 +132,7 @@ describe('registerType() on a loader that already has bindings', () => {
       expect(app.loader.hasAssetType('applicationText')).toBe(true);
       await expect(app.loader.load('app-override.json' as never)).resolves.toBe('extension:app-override.json');
     } finally {
-      app.destroy();
+      void app.destroy();
     }
   });
 

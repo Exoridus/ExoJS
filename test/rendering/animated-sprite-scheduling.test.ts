@@ -39,6 +39,10 @@ const backendStub = (): Record<string, unknown> => ({
   resize: vi.fn().mockReturnThis(),
   view: {},
   renderTarget: {},
+  // Core renderer bindings key their per-backend factory map on this value, so
+  // a stub that names a real backend also has to accept the renderers that get
+  // bound to it.
+  rendererRegistry: { bindRenderer: vi.fn() },
   backendType: 'webgl2',
   setView: vi.fn().mockReturnThis(),
   draw: vi.fn().mockReturnThis(),
@@ -110,7 +114,7 @@ describe('AnimatedSprite scheduling', () => {
 
   afterEach(() => {
     (app as unknown as Record<string, unknown>)['_state'] = ApplicationState.Stopped;
-    app.destroy();
+    void app.destroy();
     vi.restoreAllMocks();
   });
 

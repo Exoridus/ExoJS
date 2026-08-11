@@ -175,7 +175,7 @@ describe('Application focus / visibility', () => {
     inputManagerMock.canvasFocused = true;
     expect(app.canvasFocused).toBe(true);
 
-    app.destroy();
+    void app.destroy();
   });
 
   test('focusing the canvas dispatches onCanvasFocusChange(true)', async () => {
@@ -188,7 +188,7 @@ describe('Application focus / visibility', () => {
     inputManagerMock.onCanvasFocusChange.dispatch(true);
     expect(handler).toHaveBeenCalledWith(true);
 
-    app.destroy();
+    void app.destroy();
   });
 
   test('blurring the canvas dispatches onCanvasFocusChange(false)', async () => {
@@ -201,7 +201,7 @@ describe('Application focus / visibility', () => {
     inputManagerMock.onCanvasFocusChange.dispatch(false);
     expect(handler).toHaveBeenCalledWith(false);
 
-    app.destroy();
+    void app.destroy();
   });
 
   test('documentVisible is true initially', async () => {
@@ -211,7 +211,7 @@ describe('Application focus / visibility', () => {
     // jsdom visibilityState defaults to 'visible'
     expect(app.documentVisible).toBe(true);
 
-    app.destroy();
+    void app.destroy();
   });
 
   test('visibilitychange event flips documentVisible and dispatches signal', async () => {
@@ -242,7 +242,7 @@ describe('Application focus / visibility', () => {
     expect(handler).toHaveBeenCalledWith(true);
     expect(handler).toHaveBeenCalledTimes(2);
 
-    app.destroy();
+    void app.destroy();
   });
 
   test('pauseOnHidden=true skips frame body but keeps rAF scheduled when hidden', async () => {
@@ -295,7 +295,7 @@ describe('Application focus / visibility', () => {
     // Set status/loop-flag to Stopped/false so destroy() doesn't try to stop real clocks
     rawApp['_state'] = ApplicationState.Stopped;
     rawApp['_frameLoopActive'] = false;
-    app.destroy();
+    void app.destroy();
   });
 
   test('pauseOnHidden=false (default) updates normally even when hidden', async () => {
@@ -352,7 +352,7 @@ describe('Application focus / visibility', () => {
     // Set status/loop-flag to Stopped/false so destroy() doesn't try to stop real clocks
     rawApp['_state'] = ApplicationState.Stopped;
     rawApp['_frameLoopActive'] = false;
-    app.destroy();
+    void app.destroy();
   });
 
   test('destroy() unsubscribes visibilitychange listener', async () => {
@@ -362,7 +362,7 @@ describe('Application focus / visibility', () => {
     const handler = vi.fn();
     app.onVisibilityChange.add(handler);
 
-    app.destroy();
+    void app.destroy();
 
     // After destroy, dispatching visibilitychange should not call our handler
     // (because the signal is destroyed and the listener is removed from document)

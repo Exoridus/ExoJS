@@ -33,6 +33,9 @@ vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
       resize: vi.fn().mockReturnThis(),
       view: { getBounds: vi.fn() },
       renderTarget: {},
+      // Core renderer bindings key their factory map on backendType, so a stub
+      // naming a real backend also has to accept the renderers bound to it.
+      rendererRegistry: { bindRenderer: vi.fn() },
       backendType: 'webgl2',
       setView: vi.fn().mockReturnThis(),
       draw: vi.fn().mockReturnThis(),
@@ -77,7 +80,7 @@ describe('Application app-system extension bindings', () => {
     expect(seenApp?.audio).toBeDefined();
     expect(seenApp?.tweens).toBeDefined();
     expect(seenApp?.scenes).toBeDefined();
-    app.destroy();
+    void app.destroy();
   });
 
   test('the returned system is registered on app.systems', () => {
@@ -87,7 +90,7 @@ describe('Application app-system extension bindings', () => {
     const app = new Application({ backend: { type: 'webgl2' }, extensions: [ext] });
 
     expect(app.systems.has(system)).toBe(true);
-    app.destroy();
+    void app.destroy();
   });
 
   test('a binding returning undefined is skipped, not an error', () => {
@@ -117,8 +120,8 @@ describe('Application app-system extension bindings', () => {
     expect(appB.systems.has(created[1]!)).toBe(true);
     expect(appB.systems.has(created[0]!)).toBe(false);
 
-    appA.destroy();
-    appB.destroy();
+    void appA.destroy();
+    void appB.destroy();
   });
 
   test('app.destroy() destroys the extension system, in reverse registration order with a later user system', async () => {
@@ -165,13 +168,13 @@ describe('Application app-system extension bindings', () => {
     const baseline = new Application({ backend: { type: 'webgl2' } });
     const coreSystemCount = baseline.systems.size;
 
-    baseline.destroy();
+    void baseline.destroy();
 
     const app = new Application({ backend: { type: 'webgl2' }, extensions: [ext] });
 
     // The engine's own core managers are always registered; the extension
     // contributes nothing on top of them.
     expect(app.systems.size).toBe(coreSystemCount);
-    app.destroy();
+    void app.destroy();
   });
 });

@@ -151,6 +151,40 @@ For a field a subclass may read but must not mutate, neither is needed — make
 the field private and expose a `readonly` getter, as `Container` does for its
 child list.
 
+## Enums: string when the value is a name, numeric when the value is a number
+
+A public enum member's value is part of the API — it shows up in a debugger, in
+serialized documents and in a log line. Pick the representation from what the
+value actually _is_:
+
+- **String enum** for a closed set of names the engine chose itself:
+  `SceneState.Active = 'active'`, `TextureFormat.Rgba8 = 'rgba8'`,
+  `ApplicationState.Running = 'running'`. These read correctly everywhere
+  without a lookup table, survive a round trip through JSON, and cost nothing
+  the engine cares about — none of them sits in a per-frame comparison that a
+  string would measurably slow down.
+- **Numeric enum only when the number carries meaning of its own.** Three cases
+  qualify, and each one is documented at the declaration:
+  - the value _is_ a platform constant — `ScaleModes.Nearest = 0x2600` and
+    `WrapModes.Repeat = 0x2901` are WebGL2 `GLenum`s passed straight to the
+    driver;
+  - the value is a bitfield member — `SpriteFlags`, `ViewFlags`,
+    `PointerStateFlag`, `ChannelSize`/`ChannelOffset`, all of which are
+    combined with `|` and tested with `&`;
+  - the value is written into a GPU buffer — `PixelSnapMode` is packed into a
+    `Float32Array` row and read by both shader families, so its numbering is a
+    wire format, not a label.
+- **Ordering** is a fourth, narrower case: `SystemOrder` and `LogSeverity` are
+  numeric because callers compare and interpolate them (`order: -450`,
+  `severity >= Warning`).
+
+`const enum` stays reserved for hot internal discriminators that never cross the
+package boundary (`RenderEntryKind`, `ClipKind`, `CollisionType`).
+
+Prefer a plain string union over an enum when there is no need to reference the
+members as values — `CanvasSizingMode` is a union, not an enum, because callers
+only ever write the literal.
+
 ## Distribution
 
 - npm packages are **modular and self-contained**: `@codexo/exojs` ships Core only;

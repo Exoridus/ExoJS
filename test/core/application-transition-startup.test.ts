@@ -32,6 +32,9 @@ vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
       resize: vi.fn().mockReturnThis(),
       view: { getBounds: vi.fn().mockReturnValue({ left: 0, top: 0, right: 800, bottom: 600 }) },
       renderTarget: {},
+      // Core renderer bindings key their factory map on backendType, so a stub
+      // naming a real backend also has to accept the renderers bound to it.
+      rendererRegistry: { bindRenderer: vi.fn() },
       backendType: 'webgl2',
       setView: vi.fn().mockReturnThis(),
       draw: vi.fn().mockReturnThis(),
@@ -114,7 +117,7 @@ describe('Application.start() with a real FadeSceneTransition', () => {
     } finally {
       perfSpy.mockRestore();
       rafSpy.mockRestore();
-      app.destroy();
+      void app.destroy();
     }
   });
 });

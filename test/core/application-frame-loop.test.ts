@@ -34,6 +34,9 @@ vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
       resize: vi.fn().mockReturnThis(),
       view: { getBounds: vi.fn().mockReturnValue({ left: 0, top: 0, right: 800, bottom: 600 }) },
       renderTarget: {},
+      // Core renderer bindings key their factory map on backendType, so a stub
+      // naming a real backend also has to accept the renderers bound to it.
+      rendererRegistry: { bindRenderer: vi.fn() },
       backendType: 'webgl2',
       setView: vi.fn().mockReturnThis(),
       draw: vi.fn().mockReturnThis(),
@@ -92,7 +95,7 @@ describe('Application — _frameLoopActive', () => {
 
     await startPromise;
     expect(app.state).toBe(ApplicationState.Running);
-    app.destroy();
+    void app.destroy();
   });
 
   test('a scheduled RAF callback runs its body (and reschedules) even while _state is still Loading', async () => {
@@ -114,7 +117,7 @@ describe('Application — _frameLoopActive', () => {
     expect(rafSpy.mock.calls.length).toBeGreaterThan(callsBeforeManualTick);
 
     await startPromise;
-    app.destroy();
+    void app.destroy();
   });
 
   test('_activeClock starts ticking as soon as _frameLoopActive flips true, not after start() resolves', async () => {
@@ -135,7 +138,7 @@ describe('Application — _frameLoopActive', () => {
     expect(activeTimeDuringLoading).toBeGreaterThanOrEqual(0);
 
     await startPromise;
-    app.destroy();
+    void app.destroy();
   });
 
   describe('_stopFrameLoop() — fatal frame error, stop(), destroy() during Loading', () => {
@@ -155,7 +158,7 @@ describe('Application — _frameLoopActive', () => {
       expect(app.state).toBe(ApplicationState.Stopped);
       expect(cafSpy).toHaveBeenCalled();
 
-      app.destroy();
+      void app.destroy();
     });
 
     test('stop() halts the loop even while _state is still Loading (mid-startup)', async () => {
@@ -175,7 +178,7 @@ describe('Application — _frameLoopActive', () => {
       expect(app.state).toBe(ApplicationState.Stopped);
 
       await startPromise;
-      app.destroy();
+      void app.destroy();
     });
 
     test('stop() is a no-op when the loop was never started (still Stopped)', () => {
@@ -184,7 +187,7 @@ describe('Application — _frameLoopActive', () => {
       expect(() => app.stop()).not.toThrow();
       expect(app.state).toBe(ApplicationState.Stopped);
 
-      app.destroy();
+      void app.destroy();
     });
 
     test('destroy() during Loading also halts the loop (delegates to stop())', async () => {
@@ -197,7 +200,7 @@ describe('Application — _frameLoopActive', () => {
 
       expect(frameLoopActive(app)).toBe(true);
 
-      app.destroy();
+      void app.destroy();
 
       expect(frameLoopActive(app)).toBe(false);
 
@@ -257,7 +260,7 @@ describe('Application — _frameLoopActive', () => {
       expect(app.state).toBe(ApplicationState.Stopped);
       expect(app.scenes.currentScene).toBeNull();
 
-      app.destroy();
+      void app.destroy();
     });
 
     test('app.stop() called mid-transition while a scene is ALREADY active unloads that scene, not just skips it', async () => {
@@ -320,7 +323,7 @@ describe('Application — _frameLoopActive', () => {
       // contract is to unload whatever is active.
       expect(app.scenes.currentScene).toBeNull();
 
-      app.destroy();
+      void app.destroy();
     });
   });
 });

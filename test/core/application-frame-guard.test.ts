@@ -51,6 +51,9 @@ vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
       resize: vi.fn().mockReturnThis(),
       view: {},
       renderTarget: {},
+      // Core renderer bindings key their factory map on backendType, so a stub
+      // naming a real backend also has to accept the renderers bound to it.
+      rendererRegistry: { bindRenderer: vi.fn() },
       backendType: 'webgl2',
       setView: vi.fn().mockReturnThis(),
       draw: vi.fn().mockReturnThis(),
@@ -79,6 +82,9 @@ vi.mock('#rendering/webgpu/WebGpuBackend', () => ({
       resize: vi.fn().mockReturnThis(),
       view: {},
       renderTarget: {},
+      // Core renderer bindings key their factory map on backendType, so a stub
+      // naming a real backend also has to accept the renderers bound to it.
+      rendererRegistry: { bindRenderer: vi.fn() },
       backendType: 'webgpu',
       setView: vi.fn().mockReturnThis(),
       draw: vi.fn().mockReturnThis(),
@@ -126,7 +132,7 @@ describe('Application frame guard', () => {
 
   afterEach(() => {
     (app as unknown as Record<string, unknown>)['_state'] = ApplicationState.Stopped;
-    app.destroy();
+    void app.destroy();
     vi.restoreAllMocks();
   });
 

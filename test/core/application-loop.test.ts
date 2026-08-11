@@ -38,6 +38,9 @@ vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
       resize: vi.fn().mockReturnThis(),
       view: {},
       renderTarget: {},
+      // Core renderer bindings key their factory map on backendType, so a stub
+      // naming a real backend also has to accept the renderers bound to it.
+      rendererRegistry: { bindRenderer: vi.fn() },
       backendType: 'webgl2',
       setView: vi.fn().mockReturnThis(),
       draw: vi.fn().mockReturnThis(),
@@ -79,6 +82,9 @@ vi.mock('#rendering/webgpu/WebGpuBackend', () => ({
       resize: vi.fn().mockReturnThis(),
       view: {},
       renderTarget: {},
+      // Core renderer bindings key their factory map on backendType, so a stub
+      // naming a real backend also has to accept the renderers bound to it.
+      rendererRegistry: { bindRenderer: vi.fn() },
       backendType: 'webgpu',
       setView: vi.fn().mockReturnThis(),
       draw: vi.fn().mockReturnThis(),
@@ -143,7 +149,7 @@ describe('Application.update() — loop timing', () => {
   afterEach(() => {
     // Stop before destroy so destroy() doesn't try to unload a scene
     (app as unknown as Record<string, unknown>)['_state'] = ApplicationState.Stopped;
-    app.destroy();
+    void app.destroy();
     vi.restoreAllMocks();
   });
 
@@ -484,7 +490,7 @@ describe('Application.update() — loop timing', () => {
         expect(uncleared.clearColor).toBeDefined();
       } finally {
         (uncleared as unknown as Record<string, unknown>)['_state'] = ApplicationState.Stopped;
-        uncleared.destroy();
+        void uncleared.destroy();
       }
     });
 

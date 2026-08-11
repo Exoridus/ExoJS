@@ -6,7 +6,7 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
 // Loading a Tiled `.tmj` map through @codexo/exojs-tiled's *advanced*
 // parsed-source path, then querying its object layer.
 //
-//   - `loader.load(Asset.type('tiledMap', url))` returns a `TiledMap` — the
+//   - `loader.load(Asset.type('tiledSource', url))` returns a `TiledMap` — the
 //     fully parsed, diagnostic-friendly source model (map/tileset/layer
 //     metadata, custom properties, `.getProperty()`). This is the same file
 //     the common-case `Asset.type('tileMap', url)` binding loads internally.
@@ -42,7 +42,7 @@ class TiledMapImportScene extends Scene {
         // Advanced path: parsed TiledMap -> map property lookup -> manual
         // toTileMap() conversion (the common-case Asset.type('tileMap', ...)
         // binding does the same conversion internally).
-        const source = await this.loader.load(Asset.type('tiledMap', 'json/maps/harbor-plaza.tmj'));
+        const source = await this.loader.load(Asset.type('tiledSource', 'json/maps/harbor-plaza.tmj'));
         const runtimeMap = source.toTileMap();
         this.mapNode = new TileMapNode(runtimeMap);
         const zones = runtimeMap.getObjectLayer('Zones');
