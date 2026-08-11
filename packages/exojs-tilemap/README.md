@@ -131,13 +131,6 @@ Actors are application-owned siblings. `TileMapView` never adopts or destroys ac
 - After layers are structurally added to or removed from the map, call `view.refreshLayers()`:
   unchanged layer nodes keep their identity and bands keep their placement in your scene graph.
 
-## `/register` convenience entry
-
-```ts
-// Side effect: registers tilemapExtension in the global ExtensionRegistry.
-import '@codexo/exojs-tilemap/register';
-```
-
 ## Renderer model
 
 - **Chunk-first.** A `TileLayerNode` is a container of per-chunk `TileChunkNode` drawables (one

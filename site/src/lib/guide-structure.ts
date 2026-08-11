@@ -250,7 +250,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                 slug: 'tiled-maps',
                 level: 'intermediate',
                 learningGoals: [
-                    'activate the official Tiled extension explicitly or via /register',
+                    'activate the official Tiled extension via ApplicationOptions.extensions',
                     'load a .tmj map through the loader and read its layers and tilesets',
                     'understand tileset texture ownership and the supported format scope',
                 ],
@@ -261,7 +261,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                 slug: 'aseprite',
                 level: 'intermediate',
                 learningGoals: [
-                    'activate the Aseprite extension explicitly or via /register',
+                    'activate the Aseprite extension via ApplicationOptions.extensions',
                     'load an Aseprite JSON sheet as an AsepriteSheet',
                     'play tag animations with createAnimatedSprite',
                 ],
@@ -272,7 +272,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                 slug: 'ldtk',
                 level: 'intermediate',
                 learningGoals: [
-                    'activate the LDtk extension explicitly or via /register',
+                    'activate the LDtk extension via ApplicationOptions.extensions',
                     'load a .ldtk world and render each level as a TileMap',
                     'understand tileset texture ownership and absolute-URL resolution',
                 ],

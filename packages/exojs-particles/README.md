@@ -61,20 +61,6 @@ const app = new Application({
 });
 ```
 
-## `/register` convenience entry
-
-Importing `/register` registers the default `particlesExtension` descriptor in the global `ExtensionRegistry`. Subsequently created Applications that use global defaults will automatically receive the Particles extension. This is the only side-effectful entry in this package.
-
-```ts
-// Side effect: registers particlesExtension in the global ExtensionRegistry.
-import '@codexo/exojs-particles/register';
-
-// All named exports are re-exported from /register:
-import { ParticleSystem, particlesExtension } from '@codexo/exojs-particles/register';
-```
-
-**Note:** `/register` does not use automatic discovery. It explicitly calls `ExtensionRegistry.register(particlesExtension)` at module evaluation time.
-
 ## Minimal working example
 
 ```ts

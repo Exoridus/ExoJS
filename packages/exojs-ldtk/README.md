@@ -52,23 +52,6 @@ app.scenes.root.addChild(new TileMapNode(level));
 [README](https://www.npmjs.com/package/@codexo/exojs-tilemap) for the rendering/culling model and
 actor interleaving).
 
-## `/register` convenience entry
-
-Importing `/register` registers `ldtkExtension` (and its `tilemapExtension` dependency) in the
-global `ExtensionRegistry`, so subsequently created Applications that use global defaults pick them
-up automatically:
-
-```ts
-// Side effect: registers ldtkExtension in the global ExtensionRegistry.
-import '@codexo/exojs-ldtk/register';
-
-// All named exports are also re-exported from /register:
-import { LdtkMap, ldtkExtension } from '@codexo/exojs-ldtk/register';
-```
-
-This is the only side-effectful entry — importing the package root (`@codexo/exojs-ldtk`) does
-**not** register anything.
-
 ## Texture ownership
 
 Tileset textures are loaded via the Loader and stay in the Loader cache. `LdtkMap.destroy()`

@@ -69,25 +69,11 @@ const map = source.toTileMap();
 Both paths are semantically equivalent. The runtime binding (`TileMap`) uses the Loader-managed
 source-model sub-load internally, so concurrent or duplicate loads are deduplicated.
 
-## `/register` convenience entry
-
-Importing `/register` registers `tiledExtension` (and its `tilemapExtension` dependency) in the
-global `ExtensionRegistry`. Subsequently created Applications that use global defaults will
-receive both extensions automatically.
-
-```ts
-// Side effect: registers tiledExtension in the global ExtensionRegistry.
-import '@codexo/exojs-tiled/register';
-
-// All named exports are also re-exported from /register:
-import { TileMap, TiledMap, tiledExtension } from '@codexo/exojs-tiled/register';
-```
-
 ## Extension dependency
 
 `tiledExtension.dependencies` includes `tilemapExtension` from `@codexo/exojs-tilemap`.
-Registering `tiledExtension` is sufficient — `buildSnapshot` and `ExtensionRegistry.register`
-traverse the dependency graph automatically.
+Passing `tiledExtension` to `ApplicationOptions.extensions` is sufficient — `buildSnapshot`
+traverses the dependency graph automatically.
 
 ## Asset loading
 

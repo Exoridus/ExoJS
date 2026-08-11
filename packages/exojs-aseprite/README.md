@@ -48,22 +48,6 @@ app.scenes.root.addChild(sprite);
 Clip frame rate is derived from each frame's Aseprite `duration` (falling back to 12 fps). Frame
 indices in a tag are resolved against the ordered frame array; out-of-range indices are skipped.
 
-## `/register` convenience entry
-
-Importing `/register` registers `asepriteExtension` in the global `ExtensionRegistry`, so
-subsequently created Applications that use global defaults pick it up automatically:
-
-```ts
-// Side effect: registers asepriteExtension in the global ExtensionRegistry.
-import '@codexo/exojs-aseprite/register';
-
-// All named exports are also re-exported from /register:
-import { AsepriteSheet, asepriteExtension } from '@codexo/exojs-aseprite/register';
-```
-
-This is the only side-effectful entry — importing the package root (`@codexo/exojs-aseprite`) does
-**not** register anything.
-
 ## Texture ownership
 
 The packed texture is loaded via the Loader and stays in the Loader cache. `AsepriteSheet.destroy()`
