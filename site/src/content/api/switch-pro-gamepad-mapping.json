@@ -1,6 +1,6 @@
 {
   "title": "SwitchProGamepadMapping",
-  "description": "Mapping for the Nintendo Switch Pro Controller connected via USB or Bluetooth. Inherits the full GenericDualAnalogGamepadMapping layout. The Capture button is surfaced through the Capture channel; Home maps to Guide. Note that on some browsers the controller is only recognised after being paired through Steam or a dedicated driver.",
+  "description": "Mapping for the Nintendo Switch Pro Controller connected via USB or Bluetooth. Inherits the full GenericDualAnalogGamepadMapping layout and claims the one device-specific slot at index 17 for the Capture button; Home maps to Guide, Minus/Plus to Select/Start. Note that on some browsers the controller is only recognised after being paired through Steam or a dedicated driver.",
   "symbol": "SwitchProGamepadMapping",
   "kind": "class",
   "subsystem": "input",
@@ -20,7 +20,8 @@
       "members": [],
       "paragraphs": [
         "Mapping for the Nintendo Switch Pro Controller connected via USB or Bluetooth.",
-        "Inherits the full GenericDualAnalogGamepadMapping layout. The Capture button is surfaced through the Capture channel; Home maps to Guide. Note that on some browsers the controller is only recognised after being paired through Steam or a dedicated driver."
+        "Inherits the full GenericDualAnalogGamepadMapping layout and claims the one device-specific slot at index 17 for the Capture button; Home maps to Guide, Minus/Plus to Select/Start.",
+        "Note that on some browsers the controller is only recognised after being paired through Steam or a dedicated driver."
       ],
       "importLine": "import { SwitchProGamepadMapping } from '@codexo/exojs'",
       "sourceLink": null

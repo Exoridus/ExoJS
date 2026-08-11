@@ -825,7 +825,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Secondary touchpad X (0..1). Steam Deck (right pad), other dual-touchpad hardware."
+          "description": "Secondary touchpad X (0..1) on dual-touchpad hardware. Device-specific: no built-in mapping writes this channel."
         },
         {
           "name": "Touchpad2Y",
@@ -846,7 +846,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Secondary touchpad Y (0..1)."
+          "description": "Secondary touchpad Y (0..1) on dual-touchpad hardware. Device-specific: no built-in mapping writes this channel."
         },
         {
           "name": "TouchpadX",
@@ -867,7 +867,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Primary touchpad X (0..1, left to right). PlayStation, Steam Deck (left pad), Steam Controller."
+          "description": "Primary touchpad X (0..1, left to right). Device-specific: no built-in mapping writes this channel."
         },
         {
           "name": "TouchpadY",
@@ -888,7 +888,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Primary touchpad Y (0..1, top to bottom)."
+          "description": "Primary touchpad Y (0..1, top to bottom). Device-specific: no built-in mapping writes this channel."
         }
       ],
       "paragraphs": [],

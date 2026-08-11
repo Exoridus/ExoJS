@@ -31,7 +31,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(): SteamControllerGamepadMapping",
+          "signature": "new(extraButtons: readonly GamepadButton[]): SteamControllerGamepadMapping",
           "signatureTokens": [
             {
               "text": "new",
@@ -39,6 +39,30 @@
             },
             {
               "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extraButtons",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButton",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
               "kind": "punctuation"
             },
             {
@@ -54,7 +78,13 @@
               "kind": "type"
             }
           ],
-          "params": [],
+          "params": [
+            {
+              "name": "extraButtons",
+              "type": "readonly GamepadButton[]",
+              "optional": false
+            }
+          ],
           "returnType": "SteamControllerGamepadMapping",
           "description": ""
         }

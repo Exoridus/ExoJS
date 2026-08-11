@@ -1644,7 +1644,7 @@
         },
         {
           "name": "onMouseWheel",
-          "signature": "onMouseWheel: Signal<[Vector]>",
+          "signature": "onMouseWheel: Signal<[deltaX, deltaY]>",
           "signatureTokens": [
             {
               "text": "onMouseWheel",
@@ -1667,7 +1667,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "Vector",
+              "text": "deltaX",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "deltaY",
               "kind": "type"
             },
             {
@@ -1681,11 +1689,11 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Fires once per frame in which the wheel moved, with the accumulated offset for that frame. deltaY is the usual scroll axis; deltaX carries horizontal wheels and trackpad swipes. Both are normalized out of the event's deltaMode, so a line- or page-mode wheel arrives in the same units as a pixel-mode one. The values are plain numbers rather than a Vector on purpose: the offset is reset to zero right after dispatch, so a shared instance would be stale by the time a listener that kept it read it again."
         },
         {
           "name": "onPinch",
-          "signature": "onPinch: Signal<[scale, center]>",
+          "signature": "onPinch: Signal<[scale, centerX, centerY]>",
           "signatureTokens": [
             {
               "text": "onPinch",
@@ -1716,7 +1724,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "center",
+              "text": "centerX",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "centerY",
               "kind": "type"
             },
             {
@@ -1730,7 +1746,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fires on every two-touch-pointer move where the distance between them changed. scale > 1 = spreading, < 1 = pinching."
+          "description": "Fires on every two-touch-pointer move where the distance between them changed. scale > 1 = spreading, < 1 = pinching; the center is the midpoint between the two pointers, in the same coordinate space as Pointer.position. The center arrives as two numbers rather than a Vector on purpose — a shared instance would be overwritten by the next gesture entry in the same frame."
         },
         {
           "name": "onPointerCancel",
@@ -2190,7 +2206,7 @@
         },
         {
           "name": "onRotate",
-          "signature": "onRotate: Signal<[angleDelta, center]>",
+          "signature": "onRotate: Signal<[angleDelta, centerX, centerY]>",
           "signatureTokens": [
             {
               "text": "onRotate",
@@ -2221,7 +2237,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "center",
+              "text": "centerX",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "centerY",
               "kind": "type"
             },
             {
@@ -2235,7 +2259,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fires on every two-touch-pointer move where the angle between them changed. angleDelta is in radians."
+          "description": "Fires on every two-touch-pointer move where the angle between them changed. angleDelta is in radians; the center is the midpoint between the two pointers — see onPinch for why it is not a Vector."
         }
       ],
       "paragraphs": [],

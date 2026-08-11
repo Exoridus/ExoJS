@@ -334,7 +334,7 @@
         },
         {
           "name": "getBounds",
-          "signature": "getBounds(): Rectangle",
+          "signature": "getBounds(out?: Rectangle): Rectangle",
           "signatureTokens": [
             {
               "text": "getBounds",
@@ -343,6 +343,22 @@
             {
               "text": "(",
               "kind": "punctuation"
+            },
+            {
+              "text": "out",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Rectangle",
+              "kind": "type"
             },
             {
               "text": ")",
@@ -357,9 +373,15 @@
               "kind": "type"
             }
           ],
-          "params": [],
+          "params": [
+            {
+              "name": "out",
+              "type": "Rectangle",
+              "optional": true
+            }
+          ],
           "returnType": "Rectangle",
-          "description": "Return the world-space bounding rectangle of the currently visible area, recalculating if dirty. Used for frustum culling by Drawable.render."
+          "description": "Return the world-space bounding rectangle of the currently visible area, recalculating if dirty. Used for frustum culling by Drawable.render. Pass out to receive a copy you own. Without it the return value is this view's cached rectangle, which the next recalculation overwrites in place."
         },
         {
           "name": "getInverseTransform",
