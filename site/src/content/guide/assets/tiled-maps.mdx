@@ -69,7 +69,7 @@ XML (`.tmx`/`.tsx`), isometric or hexagonal orientations, collection-of-images t
 import { Asset } from '@codexo/exojs';
 
 // Explicit type
-const map = await loader.load(Asset.type('tiledMap', 'levels/forest.tmj'));
+const map = await loader.load(Asset.type('tiledSource', 'levels/forest.tmj'));
 
 // By path — the `.tmj` extension is registered, so the type is inferred
 const sameMap = await loader.load('levels/forest.tmj');

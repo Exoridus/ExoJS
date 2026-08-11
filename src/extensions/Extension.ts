@@ -114,7 +114,7 @@ export interface RendererBinding<Target extends Drawable = Drawable> {
 export interface AssetBinding<Result = unknown, Options = undefined> {
   readonly ctor: AssetConstructor<Result>;
   /**
-   * Descriptor type names that resolve to this handler, e.g. `['tiledMap']`.
+   * Descriptor type names that resolve to this handler, e.g. `['tiledSource']`.
    * Most bindings declare exactly one name; a binding may declare several when a
    * single asset type is reachable under multiple aliases (e.g. `['vtt', 'srt']`).
    * Each name maps an `Asset.type(...)`/constructor descriptor's `type` field to

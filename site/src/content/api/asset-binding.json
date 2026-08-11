@@ -298,7 +298,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Descriptor type names that resolve to this handler, e.g. ['tiledMap']. Most bindings declare exactly one name; a binding may declare several when a single asset type is reachable under multiple aliases (e.g. ['vtt', 'srt']). Each name maps an Asset.type(...)/constructor descriptor's type field to this handler. defineAsset supplies the canonical name automatically."
+          "description": "Descriptor type names that resolve to this handler, e.g. ['tiledSource']. Most bindings declare exactly one name; a binding may declare several when a single asset type is reachable under multiple aliases (e.g. ['vtt', 'srt']). Each name maps an Asset.type(...)/constructor descriptor's type field to this handler. defineAsset supplies the canonical name automatically."
         }
       ],
       "paragraphs": [],

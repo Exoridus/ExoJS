@@ -25,7 +25,7 @@ npm install @codexo/exojs @codexo/exojs-tilemap
 - `TileMap` (re-exported from `@codexo/exojs-tilemap`) — generic runtime tilemap; the common-case result of `loader.load(Asset.type('tileMap', url))`
 - `TileMapNode` / `TileLayerNode` (re-exported from `@codexo/exojs-tilemap`) — scene nodes that render a loaded `TileMap` on WebGL2/WebGPU
 - `TileMapView` / `TileMapBand` (re-exported from `@codexo/exojs-tilemap`) — group a map's layers into independently placeable bands for interleaving actors between tile layers; same class identity, so `instanceof` holds across both import paths (the canonical view/band docs live in the [`@codexo/exojs-tilemap` README](https://www.npmjs.com/package/@codexo/exojs-tilemap))
-- `TiledMap` — parsed Tiled source model; advanced/diagnostic use via `loader.load(Asset.type('tiledMap', url))`
+- `TiledMap` — parsed Tiled source model; advanced/diagnostic use via `loader.load(Asset.type('tiledSource', url))`
 - `TiledTileset` — parsed tileset (atlas-image or collection-of-images); holds resolved textures
 - `TiledLayer` hierarchy — `TiledTileLayer`, `TiledObjectLayer`, `TiledImageLayer`, `TiledGroupLayer`
 - `TiledObject` — parsed object (point, ellipse, polygon, polyline, text, tile-ref, rectangle)
@@ -62,7 +62,7 @@ Load the fully resolved Tiled source model and convert it manually:
 ```ts
 import { TiledMap } from '@codexo/exojs-tiled';
 
-const source = await app.loader.load(Asset.type('tiledMap', 'maps/world.tmj'));
+const source = await app.loader.load(Asset.type('tiledSource', 'maps/world.tmj'));
 const map = source.toTileMap();
 ```
 
@@ -91,7 +91,7 @@ traverse the dependency graph automatically.
 
 ## Asset loading
 
-`loader.load(Asset.type('tileMap', url))` (common path) and `loader.load(Asset.type('tiledMap', url))` (advanced path) both:
+`loader.load(Asset.type('tileMap', url))` (common path) and `loader.load(Asset.type('tiledSource', url))` (advanced path) both:
 
 1. Fetch and validate the `.tmj` file.
 2. Resolve each tileset entry (fetches external `.tsj` files via the Loader cache).

@@ -9,7 +9,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { buildSnapshot } from '../../../src/extensions/snapshot';
 import { tiledExtension } from '../src/tiledExtension';
 import { TiledMap } from '../src/TiledMap';
-import { tiledMapBinding } from '../src/tiledMapBinding';
+import { tiledSourceBinding } from '../src/tiledSourceBinding';
 import { tiledRuntimeMapBinding } from '../src/tiledRuntimeMapBinding';
 
 function fakeLoader(): Loader {
@@ -36,7 +36,7 @@ describe('@codexo/exojs-tiled extension descriptor', () => {
   });
 
   it('source binding (TiledMap) is listed second', () => {
-    expect(tiledExtension.assets![1]).toBe(tiledMapBinding);
+    expect(tiledExtension.assets![1]).toBe(tiledSourceBinding);
   });
 
   // ── tiledRuntimeMapBinding
@@ -52,17 +52,17 @@ describe('@codexo/exojs-tiled extension descriptor', () => {
     expect((tiledRuntimeMapBinding as { extensions?: readonly string[] }).extensions).toEqual(['tmj']);
   });
 
-  // ── tiledMapBinding (advanced/source)
+  // ── tiledSourceBinding (advanced/source)
   it('source binding targets TiledMap constructor', () => {
-    expect(tiledMapBinding.ctor).toBe(TiledMap);
+    expect(tiledSourceBinding.ctor).toBe(TiledMap);
   });
 
-  it('source binding has typeNames ["tiledMap"]', () => {
-    expect(tiledMapBinding.typeNames).toEqual(['tiledMap']);
+  it('source binding has typeNames ["tiledSource"]', () => {
+    expect(tiledSourceBinding.typeNames).toEqual(['tiledSource']);
   });
 
   it('source binding does NOT claim file extensions (token-only)', () => {
-    expect((tiledMapBinding as { extensions?: unknown }).extensions).toBeUndefined();
+    expect((tiledSourceBinding as { extensions?: unknown }).extensions).toBeUndefined();
   });
 
   it('buildSnapshot([tiledExtension]) materializes tilemapExtension before tiledExtension', () => {
@@ -74,7 +74,7 @@ describe('@codexo/exojs-tiled extension descriptor', () => {
     const snapshot = buildSnapshot([tiledExtension]);
     expect(snapshot.assets).toHaveLength(2);
     expect(snapshot.assets).toContain(tiledRuntimeMapBinding);
-    expect(snapshot.assets).toContain(tiledMapBinding);
+    expect(snapshot.assets).toContain(tiledSourceBinding);
   });
 
   it('buildSnapshot([tiledExtension]) pulls in the tilemap renderer binding (one-extension rendering)', () => {
@@ -85,30 +85,30 @@ describe('@codexo/exojs-tiled extension descriptor', () => {
   });
 });
 
-describe('@codexo/exojs-tiled asset handler — tiledMapBinding', () => {
+describe('@codexo/exojs-tiled asset handler — tiledSourceBinding', () => {
   it('create() returns an object with a load function', () => {
-    const handler = tiledMapBinding.create(fakeLoader());
+    const handler = tiledSourceBinding.create(fakeLoader());
     expect(typeof handler.load).toBe('function');
   });
 
   it('create() returns an object with a getIdentityKey function', () => {
-    const handler = tiledMapBinding.create(fakeLoader());
+    const handler = tiledSourceBinding.create(fakeLoader());
     expect(typeof handler.getIdentityKey).toBe('function');
   });
 });
 
-describe('tiledMapBinding.getIdentityKey', () => {
-  const handler = tiledMapBinding.create(fakeLoader());
+describe('tiledSourceBinding.getIdentityKey', () => {
+  const handler = tiledSourceBinding.create(fakeLoader());
 
   it('includes source and format in the key', () => {
     expect(handler.getIdentityKey!({ source: 'world.tmj' })).toBe('world.tmj|tiled');
   });
 });
 
-describe('tiledRuntimeMapBinding and tiledMapBinding identity keys', () => {
+describe('tiledRuntimeMapBinding and tiledSourceBinding identity keys', () => {
   it('produce the same key string for the same source (Loader namespaces them by type)', () => {
     const runtimeHandler = tiledRuntimeMapBinding.create(fakeLoader());
-    const sourceHandler  = tiledMapBinding.create(fakeLoader());
+    const sourceHandler  = tiledSourceBinding.create(fakeLoader());
     // Both use the same discriminator; the Loader prepends distinct type IDs so
     // their cache keys are different even though this string matches.
     const req = { source: 'world.tmj' };
