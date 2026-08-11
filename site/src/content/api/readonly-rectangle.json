@@ -294,7 +294,7 @@
         },
         {
           "name": "getBounds",
-          "signature": "getBounds(): Rectangle",
+          "signature": "getBounds(out?: Rectangle): Rectangle",
           "signatureTokens": [
             {
               "text": "getBounds",
@@ -303,6 +303,22 @@
             {
               "text": "(",
               "kind": "punctuation"
+            },
+            {
+              "text": "out",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Rectangle",
+              "kind": "type"
             },
             {
               "text": ")",
@@ -317,7 +333,13 @@
               "kind": "type"
             }
           ],
-          "params": [],
+          "params": [
+            {
+              "name": "out",
+              "type": "Rectangle",
+              "optional": true
+            }
+          ],
           "returnType": "Rectangle",
           "description": ""
         },

@@ -1,6 +1,6 @@
 {
   "title": "GenericDualAnalogGamepadMapping",
-  "description": "Baseline mapping for dual-analog controllers that follow the standard W3C Gamepad API layout (axes 0–3 for both sticks, axes 4–7 auxiliary). Each signed stick axis is exposed three ways for ergonomic binding: - Two direction-split, non-negative channels (e.g. `LeftStickLeft` / `LeftStickRight`) for \"buttons-style\" subscriptions. - One signed aggregate channel (e.g. `LeftStickX`) for direct -1..1 consumption — useful for movement or aiming. Device-specific subclasses (Xbox, PlayStation, Switch Pro, etc.) inherit this layout and override only GamepadMapping.family.",
+  "description": "Baseline mapping for dual-analog controllers that follow the standard W3C Gamepad API layout (axes 0–3 for both sticks, axes 4–7 auxiliary). Each signed stick axis is exposed three ways for ergonomic binding: - Two direction-split, non-negative channels (e.g. `LeftStickLeft` / `LeftStickRight`) for \"buttons-style\" subscriptions. - One signed aggregate channel (e.g. `LeftStickX`) for direct -1..1 consumption — useful for movement or aiming. The standard layout ends at button index 16 (the Meta/Guide button). Browsers expose **one** device-specific slot beyond it, at index 17, and what sits there depends on the device — Share on an Xbox Series pad, Capture on a Switch Pro, the touchpad click on a DualShock 4 / DualSense. This baseline therefore declares nothing at 17; device subclasses pass their own entry through `extraButtons`. Device-specific subclasses (Xbox, PlayStation, Switch Pro, etc.) inherit this layout, override GamepadMapping.family, and add at most that one button.",
   "symbol": "GenericDualAnalogGamepadMapping",
   "kind": "class",
   "subsystem": "input",
@@ -21,7 +21,8 @@
       "paragraphs": [
         "Baseline mapping for dual-analog controllers that follow the standard W3C Gamepad API layout (axes 0–3 for both sticks, axes 4–7 auxiliary).",
         "Each signed stick axis is exposed three ways for ergonomic binding: - Two direction-split, non-negative channels (e.g. `LeftStickLeft` / `LeftStickRight`) for \"buttons-style\" subscriptions. - One signed aggregate channel (e.g. `LeftStickX`) for direct -1..1 consumption — useful for movement or aiming.",
-        "Device-specific subclasses (Xbox, PlayStation, Switch Pro, etc.) inherit this layout and override only GamepadMapping.family."
+        "The standard layout ends at button index 16 (the Meta/Guide button). Browsers expose **one** device-specific slot beyond it, at index 17, and what sits there depends on the device — Share on an Xbox Series pad, Capture on a Switch Pro, the touchpad click on a DualShock 4 / DualSense. This baseline therefore declares nothing at 17; device subclasses pass their own entry through `extraButtons`.",
+        "Device-specific subclasses (Xbox, PlayStation, Switch Pro, etc.) inherit this layout, override GamepadMapping.family, and add at most that one button."
       ],
       "importLine": "import { GenericDualAnalogGamepadMapping } from '@codexo/exojs'",
       "sourceLink": null
@@ -32,7 +33,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(): GenericDualAnalogGamepadMapping",
+          "signature": "new(extraButtons: readonly GamepadButton[]): GenericDualAnalogGamepadMapping",
           "signatureTokens": [
             {
               "text": "new",
@@ -40,6 +41,30 @@
             },
             {
               "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extraButtons",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButton",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
               "kind": "punctuation"
             },
             {
@@ -55,7 +80,13 @@
               "kind": "type"
             }
           ],
-          "params": [],
+          "params": [
+            {
+              "name": "extraButtons",
+              "type": "readonly GamepadButton[]",
+              "optional": false
+            }
+          ],
           "returnType": "GenericDualAnalogGamepadMapping",
           "description": ""
         }

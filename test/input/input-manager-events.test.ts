@@ -505,12 +505,12 @@ describe('InputManager — mouse wheel', () => {
 
   test('wheel event while focused writes the offset, dispatches onMouseWheel, then resets to zero', () => {
     const { im, canvas } = createInputManager();
-    // The dispatched vector is a mutable internal instance reset to (0, 0)
-    // right after dispatch, so capture its value synchronously inside the
-    // handler rather than reading `mock.calls` afterwards.
+    // The payload is two plain numbers, so `mock.calls` stays valid after the
+    // internal accumulator is reset — that is the point of not handing out a
+    // reused Vector here.
     const seen: Array<{ x: number; y: number }> = [];
-    const onWheel = vi.fn((vector: { x: number; y: number }) => {
-      seen.push({ x: vector.x, y: vector.y });
+    const onWheel = vi.fn((deltaX: number, deltaY: number) => {
+      seen.push({ x: deltaX, y: deltaY });
     });
 
     im.onMouseWheel.add(onWheel);
@@ -529,11 +529,39 @@ describe('InputManager — mouse wheel', () => {
     im.destroy();
   });
 
+  // The offset accumulator is reset to (0, 0) immediately after dispatch. When
+  // the payload was that very Vector instance, anything a listener retained
+  // silently turned into (0, 0) one statement later; two numbers cannot.
+  test('a listener that keeps the wheel payload still holds the right values after the accumulator resets', () => {
+    const { im, canvas } = createInputManager();
+    const retained: Array<[number, number]> = [];
+
+    im.onMouseWheel.add((deltaX, deltaY) => {
+      retained.push([deltaX, deltaY]);
+    });
+
+    canvas.dispatchEvent(new FocusEvent('focus'));
+    canvas.dispatchEvent(new WheelEvent('wheel', { deltaX: 4, deltaY: -8 }));
+    im.preUpdate(0 as never);
+
+    // A second, differently-valued frame must not rewrite what the first one
+    // handed out.
+    canvas.dispatchEvent(new WheelEvent('wheel', { deltaX: 1, deltaY: 2 }));
+    im.preUpdate(0 as never);
+
+    expect(retained).toEqual([
+      [4, -8],
+      [1, 2],
+    ]);
+
+    im.destroy();
+  });
+
   test('multiple wheel events within one frame accumulate instead of overwriting, normalized across deltaModes', () => {
     const { im, canvas } = createInputManager();
     const seen: Array<{ x: number; y: number }> = [];
-    const onWheel = vi.fn((vector: { x: number; y: number }) => {
-      seen.push({ x: vector.x, y: vector.y });
+    const onWheel = vi.fn((deltaX: number, deltaY: number) => {
+      seen.push({ x: deltaX, y: deltaY });
     });
 
     im.onMouseWheel.add(onWheel);

@@ -55,7 +55,7 @@ export interface ReadonlyRectangle extends Collidable {
   readonly bottom: number;
   equals(rectangle?: Partial<RectangleLike>): boolean;
   clone(): Rectangle;
-  getBounds(): Rectangle;
+  getBounds(out?: Rectangle): Rectangle;
   containsRect(rect: Rectangle): boolean;
   /**
    * Unlike {@link Rectangle.transform}, `result` is REQUIRED here: the
@@ -208,8 +208,8 @@ export class Rectangle implements ShapeLike, ObservableVectorOwner, ReadonlyRect
     );
   }
 
-  public getBounds(): Rectangle {
-    return this.clone();
+  public getBounds(out?: Rectangle): Rectangle {
+    return out === undefined ? this.clone() : out.copy(this);
   }
 
   public getNormals(): Vector[] {

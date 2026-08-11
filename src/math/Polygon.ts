@@ -173,7 +173,7 @@ export class Polygon implements ShapeLike {
     );
   }
 
-  public getBounds(): Rectangle {
+  public getBounds(out: Rectangle = new Rectangle()): Rectangle {
     let minX = Infinity;
     let minY = Infinity;
     let maxX = -Infinity;
@@ -186,7 +186,7 @@ export class Polygon implements ShapeLike {
       maxY = Math.max(point.y, maxY);
     }
 
-    return new Rectangle(this.x + minX, this.y + minY, maxX - minX, maxY - minY);
+    return out.set(this.x + minX, this.y + minY, maxX - minX, maxY - minY);
   }
 
   /**

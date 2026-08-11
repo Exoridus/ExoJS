@@ -296,7 +296,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Capture / Screenshot button (Switch, Xbox Series)."
+          "description": "Capture / Screenshot button. Written by SwitchProGamepadMapping and, as the closest semantic match for its Quick Access button, SteamDeckGamepadMapping."
         },
         {
           "name": "DPadDown",
@@ -527,7 +527,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "First paddle / extra button (Xbox Elite, Steam Controller, PS5 Edge, Steam Deck L4)."
+          "description": "First paddle / extra button. Written by SteamDeckGamepadMapping (L4) only. Xbox Elite paddles do **not** reach this channel: the Windows path is XInput, whose XINPUT_GAMEPAD struct carries no paddle bits, and no browser mapper emits them. Reaching them needs WebHID and a custom GamepadDefinition."
         },
         {
           "name": "Paddle2",
@@ -548,7 +548,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Second paddle / extra button (Xbox Elite, Steam Deck R4, PS5 Edge)."
+          "description": "Second paddle / extra button. Written by SteamDeckGamepadMapping (R4) only — see Paddle1 for why Xbox Elite paddles are absent."
         },
         {
           "name": "Paddle3",
@@ -569,7 +569,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Third paddle / extra button (Xbox Elite, Steam Deck L5)."
+          "description": "Third paddle / extra button. Written by SteamDeckGamepadMapping (L5) only — see Paddle1 for why Xbox Elite paddles are absent."
         },
         {
           "name": "Paddle4",
@@ -590,7 +590,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fourth paddle / extra button (Xbox Elite, Steam Deck R5)."
+          "description": "Fourth paddle / extra button. Written by SteamDeckGamepadMapping (R5) only — see Paddle1 for why Xbox Elite paddles are absent."
         },
         {
           "name": "RightShoulder",
@@ -695,7 +695,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Share / Create button (PS4/PS5, Xbox Series)."
+          "description": "Share / Create button. Written by XboxGamepadMapping (Xbox Series pads). On PlayStation pads the Share/Create button reports as Select instead — the browser puts it on the standard Back/Select slot."
         },
         {
           "name": "South",
@@ -758,7 +758,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Touchpad click (PlayStation)."
+          "description": "Touchpad **click**. Written by PlayStationGamepadMapping (DualShock 4, DualSense). Finger coordinates are a separate matter — see GamepadAxis.TouchpadX."
         },
         {
           "name": "West",

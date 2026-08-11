@@ -108,12 +108,12 @@ export class Line implements ShapeLike {
     return new Line(this.fromX, this.fromY, this.toX, this.toY) as this;
   }
 
-  public getBounds(): Rectangle {
+  public getBounds(out: Rectangle = new Rectangle()): Rectangle {
     const { fromX, fromY, toX, toY } = this;
     const minX = Math.min(fromX, toX);
     const minY = Math.min(fromY, toY);
 
-    return new Rectangle(minX, minY, Math.max(fromX, toX) - minX, Math.max(fromY, toY) - minY);
+    return out.set(minX, minY, Math.max(fromX, toX) - minX, Math.max(fromY, toY) - minY);
   }
 
   public getNormals(): Vector[] {

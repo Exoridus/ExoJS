@@ -235,14 +235,37 @@ export namespace GamepadAxis {
   /** Signed right-stick Y axis (-1..1). */
   export const RightStickY = axis(43);
 
-  // Touchpad XY (PlayStation 4/5, Steam Deck, dual-touchpad Steam-class hardware).
-  /** Primary touchpad X (0..1, left to right). PlayStation, Steam Deck (left pad), Steam Controller. */
+  // Touchpad XY — device-specific, written by no built-in mapping.
+  //
+  // The Gamepad API does not carry touchpad coordinates: its standard axis set
+  // stops after the two sticks, and browsers model a touchpad as a *button*
+  // (the click) rather than an axis pair. These four channels exist for custom
+  // `GamepadDefinition`s that source finger positions elsewhere — WebHID being
+  // the practical route — and stay at 0 otherwise. The touchpad click itself
+  // is a real channel: see `GamepadButton.Touchpad`.
+  /**
+   * Primary touchpad X (0..1, left to right).
+   *
+   * Device-specific: no built-in mapping writes this channel.
+   */
   export const TouchpadX = axis(44);
-  /** Primary touchpad Y (0..1, top to bottom). */
+  /**
+   * Primary touchpad Y (0..1, top to bottom).
+   *
+   * Device-specific: no built-in mapping writes this channel.
+   */
   export const TouchpadY = axis(45);
-  /** Secondary touchpad X (0..1). Steam Deck (right pad), other dual-touchpad hardware. */
+  /**
+   * Secondary touchpad X (0..1) on dual-touchpad hardware.
+   *
+   * Device-specific: no built-in mapping writes this channel.
+   */
   export const Touchpad2X = axis(46);
-  /** Secondary touchpad Y (0..1). */
+  /**
+   * Secondary touchpad Y (0..1) on dual-touchpad hardware.
+   *
+   * Device-specific: no built-in mapping writes this channel.
+   */
   export const Touchpad2Y = axis(47);
 
   // Auxiliary axes (4 bipolar axes split into 8 non-negative channels).

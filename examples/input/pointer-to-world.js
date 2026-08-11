@@ -44,8 +44,8 @@ class PointerToWorldScene extends Scene {
             this.markerWorld.push({ x: world.x, y: world.y });
         });
         // Scroll to nudge a user-controlled zoom that the automatic breath multiplies.
-        app.input.onMouseWheel.add(offset => {
-            this.userZoom = Math.max(0.4, Math.min(3, this.userZoom + (offset.y < 0 ? 0.1 : -0.1)));
+        app.input.onMouseWheel.add((_deltaX, deltaY) => {
+            this.userZoom = Math.max(0.4, Math.min(3, this.userZoom + (deltaY < 0 ? 0.1 : -0.1)));
         });
         this.hud = mountControls({
             title: 'Pointer to World',

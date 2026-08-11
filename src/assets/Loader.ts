@@ -653,7 +653,18 @@ export class Loader {
    * an already-loaded source returns the stored resource; an unknown source
    * returns a placeholder handle immediately, starts the fetch, and fills the
    * handle in place when the payload arrives (track it via `loadState` /
-   * `loaded`). Failed loads switch the handle to its failed representation;
+   * `loaded`).
+   *
+   * **This is an acquiring call, not a plain lookup.** Besides possibly
+   * starting a fetch it also **claims** the resolved key for this loader's
+   * lifetime, so the asset stays resident until a matching {@link release}
+   * (or, for `scene.loader`, until the scene tears down). That claim is the
+   * reason `get` is the right default: you almost always want the thing you
+   * are about to use to stay loaded. When you only want to know whether
+   * something is already in memory — without claiming it and without starting
+   * a fetch — use {@link peek}.
+   *
+   * Failed loads switch the handle to its failed representation;
    * calling `get` again for a `'failed'` source retries and heals the same
    * handle in place. Invalid inputs and missing bindings throw synchronously
    * before a fetch starts.
@@ -821,6 +832,69 @@ export class Loader {
       `Loader: type "${type}" inferred from "${path}" has no seamless adapter and is not a value type — ` +
         `use load(Asset.type('${type}', '${path}')) instead.`,
     );
+  }
+
+  /**
+   * Pure in-memory lookup: the resource already stored for `path`, or
+   * `undefined` if nothing is held for it.
+   *
+   * The counterpart to {@link get} — and the one to reach for when the answer
+   * "not loaded" is a legitimate one rather than something to fix by loading.
+   * Unlike `get`, this **never** starts a fetch, **never** mints a placeholder
+   * handle, and **never** claims anything, so it cannot keep an asset alive by
+   * accident. Calling it in a loop is free.
+   *
+   * Invalid usage still fails loudly, exactly as it does on `get`: a path
+   * whose extension resolves to no registered type, or an input that is
+   * neither a path string nor an `Asset.type(...)` descriptor, throws. Only
+   * "the key is fine, nothing is stored under it" comes back as `undefined`.
+   *
+   * A catalog leaf needs no `peek`: the leaf *is* the handle, so read its
+   * `loadState` / `loaded` directly.
+   *
+   * @example
+   * ```ts
+   * // Use the real texture if it happens to be resident, otherwise skip the
+   * // decoration entirely — without pulling it into memory.
+   * const sparkle = loader.peek('image/sparkle.png');
+   * if (sparkle !== undefined) {
+   *     stage.addChild(new Sprite(sparkle));
+   * }
+   * ```
+   *
+   * @remarks A custom type bound via `bindAsset` may legitimately store a
+   * nullish payload; such an entry reports `undefined` here and is
+   * indistinguishable from "not stored".
+   */
+  public peek<S extends string>(path: [KindByPath<S>] extends [never] ? never : S): ResourceForKind<KindByPath<S>> | undefined;
+  /** Pure in-memory lookup from an `Asset.type(...)` descriptor — see the path overload. */
+  public peek<T>(asset: Asset<T>): T | undefined;
+  public peek(input: string | object): unknown {
+    let ctor: AssetConstructor;
+    let source: string;
+
+    if (input instanceof AssetImpl) {
+      const { type, source: src } = input._config;
+      const resolved = this._typeRegistry.resolveTypeName(type) ?? this._valueTokenForKind(type);
+
+      if (resolved === undefined) {
+        throw new Error(`Loader: peek(Asset.type('${String(type)}', …)) — no type is registered under "${String(type)}".`);
+      }
+
+      ctor = resolved;
+      source = src;
+    } else if (typeof input === 'string') {
+      const resolved = this._resolveBarePath(input);
+
+      ctor = resolved.ctor;
+      source = resolved.source;
+    } else {
+      throw new Error(
+        'Loader: peek() accepts a path string or an Asset.type(...) descriptor. A catalog leaf is already a handle — read its loadState instead.',
+      );
+    }
+
+    return this._residency._hasStored(ctor, source) ? (this._residency._peekResource(ctor, source) ?? undefined) : undefined;
   }
 
   /**

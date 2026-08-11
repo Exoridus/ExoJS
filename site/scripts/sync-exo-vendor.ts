@@ -388,7 +388,7 @@ const syncVendor = (): void => {
     // core: copy the ESM tree, rewrite '#'-subpath imports to relative paths
     // (Monaco can't resolve '#'), emit an `esm-typings.json` manifest, and emit a
     // `monaco-registry.json` (virtual package.json + subpath shims for e.g.
-    // `/register`, `/debug`). Without this the playground's TypeScript worker
+    // `/debug`). Without this the playground's TypeScript worker
     // can't resolve `@codexo/exojs-particles` & co. and every extension example
     // shows a ts2307 "Cannot find module" error.
     const extensionPackages = ['exojs-particles', 'exojs-audio-fx', 'exojs-tilemap', 'exojs-tiled', 'exojs-ldtk', 'exojs-physics'] as const;

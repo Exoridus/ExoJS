@@ -191,7 +191,7 @@ class AssetBrowserScene extends Scene {
 
         app.input.onPointerTap.add(p => this.onTap(p.x, p.y));
         app.input.onPointerMove.add(p => this.onMove(p.x, p.y));
-        app.input.onMouseWheel.add(v => this.onWheel(v.y));
+        app.input.onMouseWheel.add((_deltaX, deltaY) => this.onWheel(deltaY));
 
         this.selectFirstInCategory();
     }

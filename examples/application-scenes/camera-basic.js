@@ -25,8 +25,8 @@ class CameraBasicScene extends Scene {
         app.input.onPointerMove.add(p => {
             app.rendering.view.setCenter(p.x, p.y);
         });
-        app.input.onMouseWheel.add(delta => {
-            this.zoom = Math.max(0.2, Math.min(4, this.zoom - delta.y * 0.001));
+        app.input.onMouseWheel.add((_deltaX, deltaY) => {
+            this.zoom = Math.max(0.2, Math.min(4, this.zoom - deltaY * 0.001));
             app.rendering.view.setZoom(this.zoom);
         });
     }

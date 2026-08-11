@@ -121,9 +121,12 @@ declare const camera: { zoom: number };
 declare const map: Container;
 declare function showContextMenu(x: number, y: number): void;
 
-application.input.onPinch.add(scale => {
-    // scale > 1 = spreading fingers, scale < 1 = pinching
+application.input.onPinch.add((scale, centerX, centerY) => {
+    // scale > 1 = spreading fingers, scale < 1 = pinching.
+    // centerX/centerY are the midpoint between the two pointers — zoom
+    // towards it to keep the pinched spot under the fingers.
     camera.zoom *= scale;
+    map.setPosition(centerX, centerY);
 });
 
 application.input.onRotate.add(angleDelta => {

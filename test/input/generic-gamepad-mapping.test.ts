@@ -123,17 +123,34 @@ describe('GamepadMapping (via GenericDualAnalogGamepadMapping)', () => {
 });
 
 describe('GenericDualAnalogGamepadMapping', () => {
-  test('maps menu and extended buttons including guide, share, capture, touchpad, and paddle1', () => {
+  test('maps the menu buttons and stops at the standard layout', () => {
     const mapping = new GenericDualAnalogGamepadMapping();
     const buttonsByIndex = new Map(mapping.buttons.map(button => [button.index, button.channel]));
 
     expect(buttonsByIndex.get(8)).toBe(GamepadButton.Select);
     expect(buttonsByIndex.get(9)).toBe(GamepadButton.Start);
     expect(buttonsByIndex.get(16)).toBe(GamepadButton.Guide);
-    expect(buttonsByIndex.get(17)).toBe(GamepadButton.Share);
-    expect(buttonsByIndex.get(18)).toBe(GamepadButton.Capture);
-    expect(buttonsByIndex.get(19)).toBe(GamepadButton.Touchpad);
-    expect(buttonsByIndex.get(20)).toBe(GamepadButton.Paddle1);
+  });
+
+  // The standard layout ends at 16 (Meta/Guide) and browsers expose exactly one
+  // device-specific slot after it, at 17 — Share on an Xbox Series pad, Capture
+  // on a Switch Pro, the touchpad click on a DualShock 4 / DualSense. Claiming
+  // 17 in the baseline made every one of those fire the wrong channel, and 18+
+  // were never delivered at all.
+  test('claims nothing beyond the standard layout', () => {
+    const mapping = new GenericDualAnalogGamepadMapping();
+    const indices = mapping.buttons.map(button => button.index);
+
+    expect(Math.max(...indices)).toBe(16);
+    expect(indices.filter(index => index > 16)).toEqual([]);
+  });
+
+  test('appends device-specific buttons handed to the constructor', () => {
+    const mapping = new GenericDualAnalogGamepadMapping([new GamepadButton(17, GamepadButton.Touchpad)]);
+    const buttonsByIndex = new Map(mapping.buttons.map(button => [button.index, button.channel]));
+
+    expect(buttonsByIndex.get(16)).toBe(GamepadButton.Guide);
+    expect(buttonsByIndex.get(17)).toBe(GamepadButton.Touchpad);
   });
 
   test('maps additional axes and reserves larger per-gamepad channel space', () => {
