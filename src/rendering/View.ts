@@ -588,14 +588,19 @@ export class View implements ObservableVectorOwner {
   /**
    * Return the world-space bounding rectangle of the currently visible area, recalculating if dirty.
    * Used for frustum culling by {@link Drawable.render}.
+   *
+   * Pass `out` to receive a copy you own. Without it the return value is this
+   * view's cached rectangle, which the next recalculation overwrites in place.
    */
-  public getBounds(): Rectangle {
+  public getBounds(out?: Rectangle): Rectangle {
     if (this._flags.hasMask(ViewFlags.BoundingBox)) {
       this.updateBounds();
       this._flags.removeMask(ViewFlags.BoundingBox);
     }
 
-    return this._bounds.getRect();
+    const bounds = this._bounds.getRect();
+
+    return out === undefined ? bounds : out.copy(bounds);
   }
 
   protected updateBounds(): this {

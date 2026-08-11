@@ -119,8 +119,8 @@ export class Ellipse implements ShapeLike {
     return new Ellipse(this.x, this.y, this.rx, this.ry) as this;
   }
 
-  public getBounds(): Rectangle {
-    return new Rectangle(this.x - this.rx, this.y - this.ry, this.rx * 2, this.ry * 2);
+  public getBounds(out: Rectangle = new Rectangle()): Rectangle {
+    return out.set(this.x - this.rx, this.y - this.ry, this.rx * 2, this.ry * 2);
   }
 
   public getNormals(): Vector[] {

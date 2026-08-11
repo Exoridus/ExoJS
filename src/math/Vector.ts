@@ -81,8 +81,8 @@ export class Vector extends AbstractVector implements ShapeLike {
     return null;
   }
 
-  public getBounds(): Rectangle {
-    return Rectangle.temp.set(this.x, this.y, 0, 0);
+  public getBounds(out: Rectangle = new Rectangle()): Rectangle {
+    return out.set(this.x, this.y, 0, 0);
   }
 
   public contains(x: number, y: number): boolean {

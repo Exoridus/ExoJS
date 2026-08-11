@@ -552,8 +552,14 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    * matrix is applied on the GPU, not here) — this is deliberate and matches
    * the rendering convention. For a true world-space extent of such a node,
    * lift this rect by the group's {@link getWorldTransform} matrix.
+   *
+   * Pass `out` to receive a copy you own. Without it the return value is this
+   * node's **cached** rectangle, rebuilt in place whenever the transform or
+   * the local extent changes — retaining it across frames hands you a value
+   * that silently moves. The cache is why the no-arg form does not allocate:
+   * this runs per node per frame for culling and hit-testing.
    */
-  public getBounds(): Rectangle {
+  public getBounds(out?: Rectangle): Rectangle {
     this.getGlobalTransform(); // ensures this node's own _globalTransformVersion is current
 
     if (this.flags.hasMask(SceneNodeTransformFlags.BoundsRect) || this._boundsBuiltAtVersion !== this._globalTransformVersion) {
@@ -562,7 +568,9 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
       this._boundsBuiltAtVersion = this._globalTransformVersion;
     }
 
-    return this._bounds.getRect();
+    const bounds = this._bounds.getRect();
+
+    return out === undefined ? bounds : out.copy(bounds);
   }
 
   public updateBounds(): this {

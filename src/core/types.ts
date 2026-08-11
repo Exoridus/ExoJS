@@ -96,7 +96,16 @@ export interface Destroyable {
 
 /** Anything that can produce an axis-aligned bounding {@link Rectangle}. */
 export interface HasBoundingBox {
-  getBounds(): Rectangle;
+  /**
+   * The axis-aligned bounding box of this object.
+   *
+   * Pass `out` to write into a rectangle you own — every implementer honours
+   * it, so this form is always safe to retain and never allocates. Without
+   * `out`, the {@link ShapeLike} shapes return a **fresh** rectangle, while a
+   * node or view that maintains a cached box (see {@link SceneNode.getBounds})
+   * returns that cached instance, which the next invalidation overwrites.
+   */
+  getBounds(out?: Rectangle): Rectangle;
 }
 
 /**

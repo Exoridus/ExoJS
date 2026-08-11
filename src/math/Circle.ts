@@ -160,8 +160,8 @@ export class Circle implements ShapeLike {
     return (x === undefined || this.x === x) && (y === undefined || this.y === y) && (radius === undefined || this.radius === radius);
   }
 
-  public getBounds(): Rectangle {
-    return new Rectangle(this.x - this.radius, this.y - this.radius, this.radius * 2, this.radius * 2);
+  public getBounds(out: Rectangle = new Rectangle()): Rectangle {
+    return out.set(this.x - this.radius, this.y - this.radius, this.radius * 2, this.radius * 2);
   }
 
   /**
