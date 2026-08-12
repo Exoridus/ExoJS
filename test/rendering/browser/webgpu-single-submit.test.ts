@@ -311,11 +311,6 @@ describe('WebGPU single-submit frame', () => {
     // coordinator-side `passHasDraws` knowledge rather than each renderer's own
     // cursor.
     //
-    // ONE mesh flush is the boundary of what this merges. `WebGpuMeshRenderer`
-    // rewrites its vertex / index / uniform buffers from offset 0 on every
-    // flush, so a SECOND mesh flush still has to end the pass holding the
-    // first's draws — the per-pass cursor discipline `drawInstancedBatch` uses
-    // has not been extended to the flush path.
     const cell = 16;
     const columns = [0, 24, 48];
     const spriteColors = ['#ff0000', '#00ff00'];
@@ -389,6 +384,102 @@ describe('WebGPU single-submit frame', () => {
       mesh.destroy();
       sprites.forEach(sprite => sprite.destroy());
       spriteTextures.forEach(texture => texture.destroy());
+      backend.destroy();
+    }
+  });
+
+  test('many sprite/mesh alternations still cost ONE pass and ONE submit, with per-flush mesh pixels correct', async ctx => {
+    const backend = await setupBackend();
+    // Each alternation switches the active renderer, so this frame contains N
+    // separate mesh flushes. The mesh renderer used to rewrite its vertex /
+    // index / uniform buffers from offset 0 on every flush, so flush k+1's
+    // writes would land under the draws flush k had already recorded into the
+    // open pass — which forced each flush to end (submit) that pass first. Cost
+    // was one pass and one submit PER FLUSH, i.e. linear in the alternation
+    // count. The flush path now appends at pass-scoped cursors instead, so the
+    // whole frame collapses to one pass again.
+    //
+    // Distinct colours AND distinct positions per mesh are what makes an
+    // aliasing regression visible: a flush whose bytes were overwritten by a
+    // later one paints the later mesh's colour, at the later mesh's coordinates
+    // — leaving its own cell at the black clear.
+    const alternations = 6;
+    const cell = 8;
+    const spriteRow = 0;
+    const meshRow = 32;
+    const meshColors: RgbaTuple[] = Array.from({ length: alternations }, (_, i) => hexToRgba(paletteColor(i)));
+    const texture = createSolidTexture('#ffffff', 8);
+    const sprites: Sprite[] = [];
+    const meshes: Mesh[] = [];
+
+    for (let i = 0; i < alternations; i++) {
+      const sprite = new Sprite(texture);
+      const x = i * 10;
+
+      sprite.setPosition(x, spriteRow);
+      sprite.width = cell;
+      sprite.height = cell;
+      sprites.push(sprite);
+
+      meshes.push(
+        new Mesh({
+          vertices: new Float32Array([x, meshRow, x + cell, meshRow, x + cell, meshRow + cell, x, meshRow, x + cell, meshRow + cell, x, meshRow + cell]),
+          uvs: new Float32Array([0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1]),
+          colors: packRgbaPerVertex(meshColors[i]!, 6),
+        }),
+      );
+    }
+
+    // Closing on a sprite keeps the frame boundary out of the measurement: with
+    // a mesh last, the NEXT frame's pending clear is consumed by the mesh
+    // renderer's empty-clear pass (it holds no draw calls at that point), which
+    // adds a pass unrelated to what this test measures.
+    const trailingSprite = new Sprite(texture);
+
+    trailingSprite.setPosition(alternations * 10, spriteRow);
+    trailingSprite.width = cell;
+    trailingSprite.height = cell;
+
+    const renderAlternating = (): void => {
+      backend.resetStats();
+      backend.clear(Color.black);
+
+      for (let i = 0; i < alternations; i++) {
+        sprites[i]!.render(backend);
+        meshes[i]!.render(backend);
+      }
+
+      trailingSprite.render(backend);
+      backend.flush();
+    };
+
+    try {
+      // Warm up so pipelines are compiled and the shared buffers have ratcheted
+      // up to the frame's total: a capacity growth legitimately splits the pass,
+      // and sizing to the post-split flush would peg them at one flush forever.
+      for (let frame = 0; frame < 3; frame++) {
+        if (!(await renderGuarded(ctx, backend, renderAlternating))) {
+          return;
+        }
+      }
+
+      const submits = countSubmits(backend, renderAlternating);
+
+      // One draw call per sprite flush and per mesh flush, plus the trailing sprite.
+      expect(backend.stats.drawCalls).toBe(alternations * 2 + 1);
+      expect(backend.stats.renderPasses).toBe(1);
+      expect(submits).toBe(1);
+
+      const readPixel = readWebGpuPixels(backend, canvasSize);
+
+      for (let i = 0; i < alternations; i++) {
+        expectPixelNear(readPixel(i * 10 + 4, meshRow + 4), meshColors[i]!);
+      }
+    } finally {
+      meshes.forEach(mesh => mesh.destroy());
+      sprites.forEach(sprite => sprite.destroy());
+      trailingSprite.destroy();
+      texture.destroy();
       backend.destroy();
     }
   });
