@@ -1,13 +1,16 @@
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
-import { type DrawCommand, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import { type DrawCommand, type MaterialKey, RenderEntryKind } from '#rendering/plan/RenderCommand';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
+import type { GroupScope } from '#rendering/plan/RenderScope';
+import type { RetainedDrawData } from '#rendering/plan/RetainedPlanCache';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
+import { BlendModes } from '#rendering/types';
 
 class BoxDrawable extends Drawable {
   public constructor(public readonly id: string) {
@@ -15,6 +18,68 @@ class BoxDrawable extends Drawable {
     this._setLocalBounds(0, 0, 16, 16);
   }
 }
+
+const mkTypedMaterialKey = (pipelineKey: number, bindKey: number): MaterialKey => ({
+  rendererId: 1,
+  blendMode: BlendModes.Normal,
+  textureId: -1,
+  shaderId: -1,
+  pipelineKey,
+  bindKey,
+});
+
+/** A drawable whose material key is dictated by the test rather than derived. */
+class KeyedDrawable extends Drawable {
+  public constructor(
+    private readonly pipelineKey: number,
+    private readonly bindKey: number,
+  ) {
+    super();
+    this._setLocalBounds(0, 0, 16, 16);
+  }
+
+  public override _getOrComputeMaterialKey(): MaterialKey {
+    return mkTypedMaterialKey(this.pipelineKey, this.bindKey);
+  }
+}
+
+/** Replays fixed retained slots instead of collecting children — the `_replayRetainedDraw` path. */
+class ReplayOnlyContainer extends Container {
+  public constructor(private readonly slots: readonly RetainedDrawData[]) {
+    super();
+  }
+
+  protected override _collectContent(builder: RenderPlanBuilder): void {
+    for (const slot of this.slots) {
+      builder._replayRetainedDraw(slot);
+    }
+  }
+}
+
+const mkSlot = (drawable: Drawable, seq: number, pipelineKey: number, bindKey: number): RetainedDrawData => ({
+  drawable,
+  seq,
+  zIndex: 0,
+  material: mkTypedMaterialKey(pipelineKey, bindKey),
+  minX: 0,
+  minY: 0,
+  maxX: 16,
+  maxY: 16,
+});
+
+/**
+ * A `Container` passed to `build` gets wrapped in its own group scope, so the
+ * collected draws live one level below the plan root.
+ */
+const childGroupScope = (root: GroupScope): GroupScope => {
+  const entry = root.entries[0];
+
+  if (entry?.kind !== RenderEntryKind.Group) {
+    throw new Error('expected the plan root to hold a single group entry');
+  }
+
+  return entry.scope;
+};
 
 const mkMaterialKey = (pipelineKey: number, bindKey: number) => ({
   rendererId: 1,
@@ -55,9 +120,40 @@ const createDrawEntry = (drawable: Drawable, opts: DrawEntryOpts = {}) => {
   };
 };
 
+/**
+ * Mirrors the `hasMixedMaterial` flag RenderPlanBuilder maintains incrementally
+ * while collecting, so hand-built scopes behave like collected ones. The
+ * optimizer skips material grouping outright when the flag is false, so a
+ * fixture that forgot it would silently test nothing.
+ */
+const deriveHasMixedMaterial = (entries: readonly object[]): boolean => {
+  let firstPipelineKey: number | null = null;
+  let firstBindKey = 0;
+
+  for (const entry of entries) {
+    const candidate = entry as { kind: RenderEntryKind; command?: DrawCommand };
+
+    if (candidate.kind !== RenderEntryKind.Draw || candidate.command === undefined) {
+      continue;
+    }
+
+    const { pipelineKey, bindKey } = candidate.command.material;
+
+    if (firstPipelineKey === null) {
+      firstPipelineKey = pipelineKey;
+      firstBindKey = bindKey;
+    } else if (firstPipelineKey !== pipelineKey || firstBindKey !== bindKey) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
 interface CreatePlanOpts {
   entries: object[];
   hasMixedZ?: boolean;
+  hasMixedMaterial?: boolean;
   preserveDrawOrder?: boolean;
 }
 
@@ -144,7 +240,11 @@ const createPlan = (opts: CreatePlanOpts) => {
           kind: RenderEntryKind.Group as const,
           entries: opts.entries as [],
           hasMixedZ: opts.hasMixedZ ?? false,
+          hasMixedMaterial: opts.hasMixedMaterial ?? deriveHasMixedMaterial(opts.entries),
           preserveDrawOrder: opts.preserveDrawOrder ?? false,
+          transformNode: null,
+          retainedInstructions: null,
+          retainedRecordTarget: null,
         },
       },
     ],
@@ -226,7 +326,11 @@ describe('material grouping', () => {
             kind: RenderEntryKind.Group as const,
             entries: [createDrawEntry(b, { pipelineKey: 100, bindKey: 100 })],
             hasMixedZ: false,
+            hasMixedMaterial: false,
             preserveDrawOrder: false,
+            transformNode: null,
+            retainedInstructions: null,
+            retainedRecordTarget: null,
           },
         },
         createDrawEntry(b, { pipelineKey: 100, bindKey: 100 }),
@@ -418,6 +522,141 @@ describe('material grouping', () => {
       if (groupEntry.kind === RenderEntryKind.Group) {
         expect(groupEntry.scope.preserveDrawOrder).toBe(true);
       }
+    } finally {
+      RenderPlanBuilder.release(builder);
+    }
+  });
+
+  test('single-material scope: skipping the material pass changes nothing', () => {
+    // Three interleaved same-material draws. Whether the optimizer runs the
+    // material pass or skips it on `hasMixedMaterial: false`, the resulting draw
+    // order and groupIndex sequence must be identical — that equality is what
+    // makes the skip safe.
+    const mkEntries = () => {
+      const a = new BoxDrawable('a');
+      const b = new BoxDrawable('b');
+      const c = new BoxDrawable('c');
+
+      return [
+        createDrawEntry(a, { pipelineKey: 100, bindKey: 100, aabb: { minX: 0, minY: 0, maxX: 16, maxY: 16 } }),
+        createDrawEntry(b, { pipelineKey: 100, bindKey: 100, aabb: { minX: 50, minY: 50, maxX: 66, maxY: 66 } }),
+        createDrawEntry(c, { pipelineKey: 100, bindKey: 100, aabb: { minX: 0, minY: 0, maxX: 16, maxY: 16 } }),
+      ];
+    };
+
+    const skipped = createPlan({ entries: mkEntries(), hasMixedMaterial: false });
+    const forced = createPlan({ entries: mkEntries(), hasMixedMaterial: true });
+
+    RenderPlanOptimizer.optimize(skipped);
+    RenderPlanOptimizer.optimize(forced);
+
+    const ids = (plan: ReturnType<typeof createPlan>) => plan.passes[0].root.entries.map((e: any) => ((e.command as DrawCommand).drawable as BoxDrawable).id);
+
+    expect(ids(skipped)).toEqual(ids(forced));
+    expect(getGroupIndices(skipped)).toEqual(getGroupIndices(forced));
+    expect(getGroupIndices(skipped)).toEqual([2, 2, 2]);
+  });
+
+  test('hasMixedMaterial false suppresses the overlap-aware reorder a mixed scope would get', () => {
+    // Same fixture as the reorder test above, but with the precheck flag forced
+    // off: the reorder must not happen. Proves the flag is load-bearing rather
+    // than decorative, so a builder that stops maintaining it fails loudly.
+    const a = new BoxDrawable('a');
+    const b = new BoxDrawable('b');
+    const c = new BoxDrawable('c');
+
+    const plan = createPlan({
+      entries: [
+        createDrawEntry(a, { pipelineKey: 100, bindKey: 100, aabb: { minX: 0, minY: 0, maxX: 16, maxY: 16 } }),
+        createDrawEntry(b, { pipelineKey: 200, bindKey: 200, aabb: { minX: 50, minY: 50, maxX: 66, maxY: 66 } }),
+        createDrawEntry(c, { pipelineKey: 100, bindKey: 100, aabb: { minX: 0, minY: 0, maxX: 16, maxY: 16 } }),
+      ],
+      hasMixedMaterial: false,
+    });
+
+    RenderPlanOptimizer.optimize(plan);
+
+    const materials = getMaterials(plan);
+
+    expect(materials.map((m: any) => m.pipelineKey)).toEqual([100, 200, 100]);
+  });
+
+  test('collected single-material scope leaves hasMixedMaterial false', () => {
+    const { backend } = createRuntime();
+    const container = new Container();
+
+    container.addChild(new KeyedDrawable(100, 100));
+    container.addChild(new KeyedDrawable(100, 100));
+
+    const builder = RenderPlanBuilder.acquire();
+
+    try {
+      const scope = childGroupScope(builder.build(container, backend).passes[0]!.root);
+
+      expect(scope.entries).toHaveLength(2);
+      expect(scope.hasMixedMaterial).toBe(false);
+    } finally {
+      RenderPlanBuilder.release(builder);
+    }
+  });
+
+  test('collected scope sets hasMixedMaterial on a differing pipelineKey or bindKey', () => {
+    const { backend } = createRuntime();
+
+    for (const second of [new KeyedDrawable(200, 100), new KeyedDrawable(100, 200)]) {
+      const container = new Container();
+
+      container.addChild(new KeyedDrawable(100, 100));
+      container.addChild(second);
+
+      const builder = RenderPlanBuilder.acquire();
+
+      try {
+        const scope = childGroupScope(builder.build(container, backend).passes[0]!.root);
+
+        expect(scope.entries).toHaveLength(2);
+        expect(scope.hasMixedMaterial).toBe(true);
+      } finally {
+        RenderPlanBuilder.release(builder);
+      }
+    }
+  });
+
+  test('the retained-replay path folds replayed materials into hasMixedMaterial', () => {
+    const { backend } = createRuntime();
+    const a = new BoxDrawable('a');
+    const b = new BoxDrawable('b');
+
+    const mixed = new ReplayOnlyContainer([mkSlot(a, 0, 100, 100), mkSlot(b, 1, 200, 200)]);
+    const uniform = new ReplayOnlyContainer([mkSlot(a, 0, 100, 100), mkSlot(b, 1, 100, 100)]);
+
+    const builder = RenderPlanBuilder.acquire();
+
+    try {
+      expect(childGroupScope(builder.build(mixed, backend).passes[0]!.root).hasMixedMaterial).toBe(true);
+      expect(childGroupScope(builder.build(uniform, backend).passes[0]!.root).hasMixedMaterial).toBe(false);
+    } finally {
+      RenderPlanBuilder.release(builder);
+    }
+  });
+
+  test('a recycled pooled scope does not carry hasMixedMaterial across frames', () => {
+    const { backend } = createRuntime();
+    const mixed = new Container();
+
+    mixed.addChild(new KeyedDrawable(100, 100));
+    mixed.addChild(new KeyedDrawable(200, 200));
+
+    const uniform = new Container();
+
+    uniform.addChild(new KeyedDrawable(100, 100));
+    uniform.addChild(new KeyedDrawable(100, 100));
+
+    const builder = RenderPlanBuilder.acquire();
+
+    try {
+      expect(childGroupScope(builder.build(mixed, backend).passes[0]!.root).hasMixedMaterial).toBe(true);
+      expect(childGroupScope(builder.build(uniform, backend).passes[0]!.root).hasMixedMaterial).toBe(false);
     } finally {
       RenderPlanBuilder.release(builder);
     }

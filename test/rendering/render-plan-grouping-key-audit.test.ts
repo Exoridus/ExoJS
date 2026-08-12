@@ -146,6 +146,36 @@ const createDrawEntry = (
   },
 });
 
+/**
+ * Mirrors the `hasMixedMaterial` flag RenderPlanBuilder maintains incrementally
+ * while collecting, so hand-built scopes behave like collected ones. The
+ * optimizer skips material grouping outright when the flag is false, so a
+ * fixture that forgot it would silently test nothing.
+ */
+const deriveHasMixedMaterial = (entries: readonly object[]): boolean => {
+  let firstPipelineKey: number | null = null;
+  let firstBindKey = 0;
+
+  for (const entry of entries) {
+    const candidate = entry as { kind: RenderEntryKind; command?: DrawCommand };
+
+    if (candidate.kind !== RenderEntryKind.Draw || candidate.command === undefined) {
+      continue;
+    }
+
+    const { pipelineKey, bindKey } = candidate.command.material;
+
+    if (firstPipelineKey === null) {
+      firstPipelineKey = pipelineKey;
+      firstBindKey = bindKey;
+    } else if (firstPipelineKey !== pipelineKey || firstBindKey !== bindKey) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
 const createPlan = (entries: object[]) => {
   const { backend, destroy } = createBuildBackend();
 
@@ -160,6 +190,7 @@ const createPlan = (entries: object[]) => {
             kind: RenderEntryKind.Group as const,
             entries: entries as GroupScope['entries'],
             hasMixedZ: false,
+            hasMixedMaterial: deriveHasMixedMaterial(entries),
             preserveDrawOrder: false,
           },
         },
@@ -615,6 +646,7 @@ describe('render plan grouping key audit', () => {
           kind: RenderEntryKind.Group as const,
           entries: [createDrawEntry(nested, 100, 200)],
           hasMixedZ: false,
+          hasMixedMaterial: false,
           preserveDrawOrder: false,
         },
       };

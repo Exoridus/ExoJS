@@ -1,9 +1,7 @@
-import type { DrawCommand, MaterialKey } from './RenderCommand';
+import type { DrawCommand } from './RenderCommand';
 import { RenderEntryKind } from './RenderCommand';
 import type { RenderPlan } from './RenderPlan';
 import type { DrawScopeEntry, GroupScope, ScopeEntry } from './RenderScope';
-
-const groupKey = (material: MaterialKey): string => `${material.pipelineKey}:${material.bindKey}`;
 
 const aabbOverlap = (a: DrawCommand, b: DrawCommand): boolean => a.minX < b.maxX && a.maxX > b.minX && a.minY < b.maxY && a.maxY > b.minY;
 
@@ -48,49 +46,63 @@ export class RenderPlanOptimizer {
       return;
     }
 
-    let segStart = 0;
+    // Two O(1) prechecks that make the whole segment scan disappear in the
+    // common case. The scan can only ever move a draw when the scope holds more
+    // than one material AND is allowed to reorder; without both, every segment
+    // walks its draws, allocates the per-z buckets, and then bails. A scope with
+    // a single material is by far the most frequent shape, so gating here — not
+    // deep inside `_overlapAwareGroup` — is what actually removes the cost.
+    if (scope.hasMixedMaterial && !scope.preserveDrawOrder) {
+      let segStart = 0;
 
-    for (let i = 0; i <= n; i++) {
-      // In-bounds when i < n.
-      const entry = i < n ? entries[i]! : null;
-      const isBoundary = entry === null || entry.kind === RenderEntryKind.Group || entry.kind === RenderEntryKind.Barrier;
+      for (let i = 0; i <= n; i++) {
+        // In-bounds when i < n.
+        const entry = i < n ? entries[i]! : null;
+        const isBoundary = entry === null || entry.kind === RenderEntryKind.Group || entry.kind === RenderEntryKind.Barrier;
 
-      if (isBoundary && i > segStart) {
-        const segEnd = i;
-        const segLen = segEnd - segStart;
-
-        if (segLen >= 1) {
-          this._materialGroupSegment(entries, segStart, segEnd, scope.preserveDrawOrder);
+        if (isBoundary && i > segStart) {
+          this._materialGroupSegment(entries, segStart, i);
         }
 
-        segStart = i + 1;
-      } else if (isBoundary) {
-        segStart = i + 1;
+        if (isBoundary) {
+          segStart = i + 1;
+        }
       }
     }
 
     this._assignGroupIndices(scope);
   }
 
+  /**
+   * Assigns the adjacency `groupIndex` the backends batch on. Runs on every
+   * scope unconditionally — unlike the reordering above, this is not an
+   * optimization the plan can go without.
+   *
+   * The previous material is carried as its two numeric key fields rather than a
+   * `${pipelineKey}:${bindKey}` string, so the walk allocates nothing per draw.
+   */
   private static _assignGroupIndices(scope: GroupScope): void {
     let nextGroupIndex = 1;
-    let prevKey: string | null = null;
-    let prevZ: number | null = null;
+    let hasPrev = false;
+    let prevPipelineKey = 0;
+    let prevBindKey = 0;
+    let prevZ = 0;
 
     for (const entry of scope.entries) {
       if (entry.kind !== RenderEntryKind.Draw) {
-        prevKey = null;
-        prevZ = null;
+        hasPrev = false;
 
         continue;
       }
 
-      const key = groupKey(entry.command.material);
+      const material = entry.command.material;
       const z = entry.zIndex;
 
-      if (prevKey === null || prevZ === null || key !== prevKey || z !== prevZ) {
+      if (!hasPrev || material.pipelineKey !== prevPipelineKey || material.bindKey !== prevBindKey || z !== prevZ) {
         nextGroupIndex++;
-        prevKey = key;
+        hasPrev = true;
+        prevPipelineKey = material.pipelineKey;
+        prevBindKey = material.bindKey;
         prevZ = z;
       }
 
@@ -98,21 +110,19 @@ export class RenderPlanOptimizer {
     }
   }
 
-  private static _materialGroupSegment(entries: ScopeEntry[], start: number, end: number, preserveDrawOrder: boolean): void {
-    const len = end - start;
-
-    if (len <= 1) {
+  private static _materialGroupSegment(entries: ScopeEntry[], start: number, end: number): void {
+    if (end - start <= 1) {
       return;
     }
 
-    const draws: Array<{ entry: DrawScopeEntry; origIdx: number }> = [];
+    const draws: DrawScopeEntry[] = [];
 
     for (let i = start; i < end; i++) {
       // In-bounds: start..end-1 lie within entries.
       const entry = entries[i]!;
 
       if (entry.kind === RenderEntryKind.Draw) {
-        draws.push({ entry, origIdx: i });
+        draws.push(entry);
       }
     }
 
@@ -120,37 +130,59 @@ export class RenderPlanOptimizer {
       return;
     }
 
-    if (!preserveDrawOrder) {
-      const zGroups = new Map<number, Array<{ entry: DrawScopeEntry; origIdx: number }>>();
+    const zGroups = new Map<number, DrawScopeEntry[]>();
 
-      for (const d of draws) {
-        const z = d.entry.zIndex;
-        const list = zGroups.get(z) ?? [];
+    for (const draw of draws) {
+      const list = zGroups.get(draw.zIndex);
 
-        list.push(d);
-        zGroups.set(z, list);
+      if (list === undefined) {
+        zGroups.set(draw.zIndex, [draw]);
+      } else {
+        list.push(draw);
       }
+    }
 
-      for (const zGroup of zGroups.values()) {
-        if (zGroup.length > 1) {
-          this._overlapAwareGroup(zGroup, entries, start, end);
-        }
+    for (const zGroup of zGroups.values()) {
+      if (zGroup.length > 1) {
+        this._overlapAwareGroup(zGroup, entries, start, end);
       }
     }
   }
 
-  private static _overlapAwareGroup(zGroup: Array<{ entry: DrawScopeEntry; origIdx: number }>, entries: ScopeEntry[], segStart: number, segEnd: number): void {
-    const keyGroups = new Map<string, Array<{ entry: DrawScopeEntry; origIdx: number }>>();
+  private static _overlapAwareGroup(zGroup: DrawScopeEntry[], entries: ScopeEntry[], segStart: number, segEnd: number): void {
+    // Bucket the z-group by material. The bucket index is a nested
+    // pipelineKey -> bindKey -> bucket map rather than a `${pipelineKey}:${bindKey}`
+    // string key: both ids come from monotonically growing intern registries
+    // with no documented upper bound, so a bit-packed composite would be a
+    // latent collision, and a string key would allocate once per draw.
+    // `keyGroups` keeps the buckets in first-seen order, which is the order the
+    // single-string map iterated in and the order the reorder below picks its
+    // one winning bucket from.
+    const bucketIndex = new Map<number, Map<number, DrawScopeEntry[]>>();
+    const keyGroups: DrawScopeEntry[][] = [];
 
-    for (const d of zGroup) {
-      const key = groupKey(d.entry.command.material);
-      const list = keyGroups.get(key) ?? [];
+    for (const draw of zGroup) {
+      const material = draw.command.material;
+      let byBindKey = bucketIndex.get(material.pipelineKey);
 
-      list.push(d);
-      keyGroups.set(key, list);
+      if (byBindKey === undefined) {
+        byBindKey = new Map<number, DrawScopeEntry[]>();
+        bucketIndex.set(material.pipelineKey, byBindKey);
+      }
+
+      const bucket = byBindKey.get(material.bindKey);
+
+      if (bucket === undefined) {
+        const created = [draw];
+
+        byBindKey.set(material.bindKey, created);
+        keyGroups.push(created);
+      } else {
+        bucket.push(draw);
+      }
     }
 
-    if (keyGroups.size <= 1) {
+    if (keyGroups.length <= 1) {
       return;
     }
 
@@ -158,9 +190,9 @@ export class RenderPlanOptimizer {
     // O(n) scan; with many same-z draws (e.g. cycled textures over a flat list)
     // that made this method O(n^2). A scope's entries are distinct objects, so a
     // single Map over `entries[segStart..segEnd)` yields the same first-match
-    // index `indexOf` returned — and the only reorder this method performs is the
-    // last thing it does before `break`, so no lookup ever runs against stale
-    // positions (the map stays valid for the whole scan).
+    // index `indexOf` returned — and this method performs at most one reorder,
+    // after which it returns, so no lookup ever runs against stale positions
+    // (the map stays valid for the whole scan).
     const positionIndex = new Map<ScopeEntry, number>();
 
     for (let i = segStart; i < segEnd; i++) {
@@ -168,101 +200,112 @@ export class RenderPlanOptimizer {
       positionIndex.set(entries[i]!, i);
     }
 
-    for (const group of keyGroups.values()) {
-      if (group.length <= 1) {
-        continue;
+    for (const group of keyGroups) {
+      if (this._tryReorderKeyGroup(group, entries, segStart, segEnd, positionIndex)) {
+        return;
       }
-
-      const positions: number[] = [];
-
-      for (const g of group) {
-        const pos = positionIndex.get(g.entry);
-
-        // The map holds only entries in [segStart, segEnd); a hit is in range.
-        if (pos !== undefined) {
-          positions.push(pos);
-        }
-      }
-
-      positions.sort((a, b) => a - b);
-
-      if (positions.length === 0) {
-        continue;
-      }
-
-      // Non-empty (guarded above); positions are valid indices in [segStart, segEnd).
-      const first = positions[0]!;
-      const last = positions[positions.length - 1]!;
-
-      if (last - first + 1 === positions.length) {
-        continue;
-      }
-
-      let blocked = false;
-
-      for (let p = first + 1; p < last && !blocked; p++) {
-        // In-bounds: p in (first, last) ⊂ [segStart, segEnd).
-        const mid = entries[p]!;
-
-        if (mid.kind !== RenderEntryKind.Draw) {
-          continue;
-        }
-
-        const midKey = groupKey(mid.command.material);
-
-        // group has length >= 1 (guarded above).
-        if (midKey === groupKey(group[0]!.entry.command.material)) {
-          continue;
-        }
-
-        for (const g of group) {
-          if (aabbOverlap(g.entry.command, mid.command)) {
-            blocked = true;
-
-            break;
-          }
-        }
-      }
-
-      if (blocked) {
-        continue;
-      }
-
-      const beforeFirst: ScopeEntry[] = [];
-
-      for (let p = segStart; p < first; p++) {
-        // In-bounds: p < first <= segEnd.
-        beforeFirst.push(entries[p]!);
-      }
-
-      const afterLast: ScopeEntry[] = [];
-
-      for (let p = last + 1; p < segEnd; p++) {
-        // In-bounds: p < segEnd.
-        afterLast.push(entries[p]!);
-      }
-
-      const groupSet = new Set(group.map(g => g.entry));
-      const betweenNonGroup: ScopeEntry[] = [];
-
-      for (let p = first; p <= last; p++) {
-        // In-bounds: first..last ⊂ [segStart, segEnd).
-        const entry = entries[p]!;
-
-        if (!groupSet.has(entry as DrawScopeEntry)) {
-          betweenNonGroup.push(entry);
-        }
-      }
-
-      const groupEntries: ScopeEntry[] = group.map(g => g.entry);
-      const reordered: ScopeEntry[] = [...beforeFirst, ...groupEntries, ...betweenNonGroup, ...afterLast];
-
-      for (let p = segStart; p < segEnd; p++) {
-        // reordered has exactly segEnd-segStart entries; p-segStart is in-bounds.
-        entries[p] = reordered[p - segStart]!;
-      }
-
-      break;
     }
+  }
+
+  /**
+   * Attempts to pull one material bucket's draws together into a contiguous run.
+   * Returns `true` when `entries[segStart..segEnd)` was rewritten, which ends the
+   * scan: the reorder invalidates the caller's `positionIndex`, so at most one
+   * bucket may win per segment.
+   */
+  private static _tryReorderKeyGroup(
+    group: DrawScopeEntry[],
+    entries: ScopeEntry[],
+    segStart: number,
+    segEnd: number,
+    positionIndex: Map<ScopeEntry, number>,
+  ): boolean {
+    if (group.length <= 1) {
+      return false;
+    }
+
+    const positions: number[] = [];
+
+    for (const draw of group) {
+      const pos = positionIndex.get(draw);
+
+      // The map holds only entries in [segStart, segEnd); a hit is in range.
+      if (pos !== undefined) {
+        positions.push(pos);
+      }
+    }
+
+    positions.sort((a, b) => a - b);
+
+    if (positions.length === 0) {
+      return false;
+    }
+
+    // Non-empty (guarded above); positions are valid indices in [segStart, segEnd).
+    const first = positions[0]!;
+    const last = positions[positions.length - 1]!;
+
+    if (last - first + 1 === positions.length) {
+      return false;
+    }
+
+    // group has length >= 1 (guarded above).
+    const groupMaterial = group[0]!.command.material;
+
+    for (let p = first + 1; p < last; p++) {
+      // In-bounds: p in (first, last) ⊂ [segStart, segEnd).
+      const mid = entries[p]!;
+
+      if (mid.kind !== RenderEntryKind.Draw) {
+        continue;
+      }
+
+      const midMaterial = mid.command.material;
+
+      if (midMaterial.pipelineKey === groupMaterial.pipelineKey && midMaterial.bindKey === groupMaterial.bindKey) {
+        continue;
+      }
+
+      for (const draw of group) {
+        if (aabbOverlap(draw.command, mid.command)) {
+          return false;
+        }
+      }
+    }
+
+    const beforeFirst: ScopeEntry[] = [];
+
+    for (let p = segStart; p < first; p++) {
+      // In-bounds: p < first <= segEnd.
+      beforeFirst.push(entries[p]!);
+    }
+
+    const afterLast: ScopeEntry[] = [];
+
+    for (let p = last + 1; p < segEnd; p++) {
+      // In-bounds: p < segEnd.
+      afterLast.push(entries[p]!);
+    }
+
+    const groupSet = new Set<ScopeEntry>(group);
+    const betweenNonGroup: ScopeEntry[] = [];
+
+    for (let p = first; p <= last; p++) {
+      // In-bounds: first..last ⊂ [segStart, segEnd).
+      const entry = entries[p]!;
+
+      if (!groupSet.has(entry)) {
+        betweenNonGroup.push(entry);
+      }
+    }
+
+    const reordered: ScopeEntry[] = [...beforeFirst, ...group, ...betweenNonGroup, ...afterLast];
+
+    for (let p = segStart; p < segEnd; p++) {
+      // reordered has exactly segEnd-segStart entries; p-segStart is in-bounds.
+      entries[p] = reordered[p - segStart]!;
+    }
+
+    return true;
   }
 }

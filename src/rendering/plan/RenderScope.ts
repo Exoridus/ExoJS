@@ -75,6 +75,15 @@ export interface GroupScope {
   readonly kind: RenderEntryKind.Group;
   entries: ScopeEntry[];
   hasMixedZ: boolean;
+  /**
+   * `true` once this scope has seen two draws whose materials differ in
+   * `pipelineKey` or `bindKey`. Maintained incrementally while the plan is
+   * collected, exactly like {@link GroupScope.hasMixedZ}, and read by
+   * {@link RenderPlanOptimizer} to skip the material-grouping pass outright:
+   * with a single material the pass provably cannot reorder anything, so the
+   * per-draw bookkeeping it would otherwise allocate is pure waste.
+   */
+  hasMixedMaterial: boolean;
   preserveDrawOrder: boolean;
   /**
    * The transform-group boundary node whose world matrix scopes this group's

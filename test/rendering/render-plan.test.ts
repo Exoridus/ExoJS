@@ -520,6 +520,9 @@ describe('render plan', () => {
             kind: RenderEntryKind.Group,
             entries: [firstEntry, secondEntry],
             hasMixedZ: false,
+            // The two draws really do use different materials, so the material
+            // pass must be allowed to run — otherwise this asserts nothing.
+            hasMixedMaterial: true,
           },
         },
       ],
@@ -639,6 +642,7 @@ describe('render plan', () => {
             kind: RenderEntryKind.Group as const,
             entries: [createDraw(a, { pk: 100, bk: 100 }), createDraw(b, { pk: 100, bk: 100 })],
             hasMixedZ: false,
+            hasMixedMaterial: false,
             preserveDrawOrder: false,
           },
         },
