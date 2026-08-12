@@ -35,17 +35,58 @@ import { createSpatialSmoothingSettings, type SpatialSmoothingSettings } from '.
  * is what keeps the re-lock window honest: replaying into a suspended context
  * would hand the handler a `play()` that answers with silence and a warning
  * recommending this very signal.
+ *
+ * `remove()` cancels either case, including a replay already queued but not yet
+ * run, and `destroy()` cancels everything — the same disposal guarantee
+ * {@link AudioBus.onceSetup} gives through its returned disposer.
  * @internal
  */
 class UnlockSignal extends Signal {
+  /**
+   * Handlers whose replay microtask is queued but has not run yet. A replayed
+   * handler is deliberately never registered in the base `Signal` — it must
+   * fire once, not on the next unlock as well — which would leave `remove()`
+   * and `destroy()` nothing to find, so the pending set is what they cancel
+   * against. Without it a scene that subscribes in `init` and unsubscribes in
+   * `unload` still starts music for a scene that is already gone, and a
+   * handler surviving `destroy()` calls `play()` on a destroyed manager, which
+   * throws unobserved out of the microtask.
+   */
+  private readonly _pendingReplays = new Set<() => void>();
+  private _destroyed = false;
+
   public override add(handler: () => void): this {
+    if (this._destroyed) {
+      return this;
+    }
+
     if (isAudioContextReady()) {
-      queueMicrotask(handler);
+      if (!this._pendingReplays.has(handler)) {
+        this._pendingReplays.add(handler);
+        queueMicrotask((): void => {
+          // Cancelled by `remove()`/`destroy()` between `add()` and this task.
+          if (this._pendingReplays.delete(handler)) {
+            handler();
+          }
+        });
+      }
 
       return this;
     }
 
     return super.add(handler);
+  }
+
+  public override remove(handler: () => void): this {
+    this._pendingReplays.delete(handler);
+
+    return super.remove(handler);
+  }
+
+  public override destroy(): void {
+    this._destroyed = true;
+    this._pendingReplays.clear();
+    super.destroy();
   }
 
   /**
@@ -455,6 +496,11 @@ export class AudioManager {
     // Set before the drain so nothing can start new playback from an `onEnd`
     // handler, which is also what bounds the loop below.
     this._destroyed = true;
+
+    // Silence the unlock path first: a queued replay or a handler still waiting
+    // for the gesture would otherwise call `play()` on this very manager after
+    // it has gone terminal.
+    this.onUnlock.destroy();
 
     const failures: unknown[] = [];
 

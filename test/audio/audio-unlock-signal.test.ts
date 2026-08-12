@@ -139,4 +139,84 @@ describe('AudioManager.onUnlock contract', () => {
 
     manager.destroy();
   });
+
+  // Finding 3: a queued replay could not be cancelled, because the replay path
+  // never registered the handler for `remove()` to find. A scene subscribing in
+  // `init` and cleaning up in `unload` still started music for a dead scene —
+  // and a handler surviving `destroy()` calls `play()` on a destroyed manager,
+  // which throws unobserved out of the microtask.
+  describe('cancellation', () => {
+    test('remove() cancels a replay queued in the same tick', async () => {
+      const manager = new AudioManager();
+      // Let construction settle, so the `add` below really takes the REPLAY
+      // path rather than registering into a not-yet-dispatched signal.
+      await Promise.resolve();
+
+      const handler = vi.fn();
+
+      manager.onUnlock.add(handler);
+      manager.onUnlock.remove(handler);
+      await Promise.resolve();
+
+      expect(handler).not.toHaveBeenCalled();
+
+      manager.destroy();
+    });
+
+    test('remove() cancels a handler registered while locked', () => {
+      const manager = new AudioManager();
+
+      setContextState('suspended');
+      manager.preUpdate(frame);
+
+      const handler = vi.fn();
+      manager.onUnlock.add(handler);
+      manager.onUnlock.remove(handler);
+
+      setContextState('running');
+      manager.preUpdate(frame);
+
+      expect(handler).not.toHaveBeenCalled();
+
+      manager.destroy();
+    });
+
+    test('destroy() cancels a replay queued in the same tick', async () => {
+      const manager = new AudioManager();
+      await Promise.resolve(); // as above: force the replay path
+
+      const handler = vi.fn();
+
+      manager.onUnlock.add(handler);
+      manager.destroy();
+      await Promise.resolve();
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('nothing fires for a handler added after destroy()', async () => {
+      const manager = new AudioManager();
+      manager.destroy();
+
+      const handler = vi.fn();
+      manager.onUnlock.add(handler);
+      await Promise.resolve();
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('a manager destroyed while locked never unlocks afterwards', () => {
+      setContextState('suspended');
+
+      const manager = new AudioManager();
+      const handler = vi.fn();
+      manager.onUnlock.add(handler);
+      manager.destroy();
+
+      setContextState('running');
+      manager.preUpdate(frame);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+  });
 });
