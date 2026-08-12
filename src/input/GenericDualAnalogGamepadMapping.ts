@@ -28,11 +28,19 @@ import type { GamepadPromptControl } from './GamepadPromptLayouts';
  * layout. Their raw indices must not collide with 0–16.
  * @param promptLabels - Device-specific prompt labels, see
  * {@link GamepadMapping.promptLabels}.
+ * @param family - Device family to report. Subclasses override the field
+ * instead; the parameter exists so a known device that turns out to be
+ * standard-normalised can keep its family — and therefore its prompt
+ * labels — while falling back to this layout.
  */
 export class GenericDualAnalogGamepadMapping extends GamepadMapping {
-  public readonly family: GamepadMappingFamily = GamepadMappingFamily.GenericDualAnalog;
+  public readonly family: GamepadMappingFamily;
 
-  public constructor(extraButtons: readonly GamepadButton[] = [], promptLabels?: ReadonlyMap<GamepadPromptControl, string>) {
+  public constructor(
+    extraButtons: readonly GamepadButton[] = [],
+    promptLabels?: ReadonlyMap<GamepadPromptControl, string>,
+    family: GamepadMappingFamily = GamepadMappingFamily.GenericDualAnalog,
+  ) {
     super(
       [
         new GamepadButton(0, GamepadButton.South),
@@ -83,5 +91,7 @@ export class GenericDualAnalogGamepadMapping extends GamepadMapping {
       ],
       promptLabels,
     );
+
+    this.family = family;
   }
 }

@@ -6,11 +6,11 @@
   "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 7,
+  "memberCount": 8,
   "counts": {
     "constructors": 1,
     "methods": 2,
-    "properties": 4,
+    "properties": 5,
     "events": 0
   },
   "sections": [
@@ -31,7 +31,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(extraButtons: readonly GamepadButton[], promptLabels?: ReadonlyMap<GamepadPromptControl, string>): SteamControllerGamepadMapping",
+          "signature": "new(extraButtons: readonly GamepadButton[], promptLabels?: ReadonlyMap<GamepadPromptControl, string>, family: GamepadMappingFamily): SteamControllerGamepadMapping",
           "signatureTokens": [
             {
               "text": "new",
@@ -106,6 +106,22 @@
               "kind": "punctuation"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "family",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadMappingFamily",
+              "kind": "type"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -128,6 +144,11 @@
               "name": "promptLabels",
               "type": "ReadonlyMap<GamepadPromptControl, string>",
               "optional": true
+            },
+            {
+              "name": "family",
+              "type": "GamepadMappingFamily",
+              "optional": false
             }
           ],
           "returnType": "SteamControllerGamepadMapping",
@@ -321,6 +342,27 @@
           "params": [],
           "returnType": null,
           "description": "Identifies the device family this mapping targets."
+        },
+        {
+          "name": "layout",
+          "signature": "layout: GamepadMappingLayout",
+          "signatureTokens": [
+            {
+              "text": "layout",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadMappingLayout",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Index space this mapping's button and axis indices are written against. Defaults to GamepadMappingLayout.Standard. A mapping that encodes raw HID report order must declare GamepadMappingLayout.Raw, so resolveGamepadDefinition can discard it when the browser reports the same device as already standard-normalised."
         },
         {
           "name": "promptLabels",

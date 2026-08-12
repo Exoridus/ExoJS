@@ -30,6 +30,7 @@ const buildDefinition = (mapping = new GenericDualAnalogGamepadMapping()) => ({
     vendorId: null,
     productId: null,
     productKey: null,
+    mapping: 'standard' as const,
   },
   mapping,
 });

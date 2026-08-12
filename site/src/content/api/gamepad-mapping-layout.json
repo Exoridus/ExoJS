@@ -1,0 +1,77 @@
+{
+  "title": "GamepadMappingLayout",
+  "description": "Which index space a GamepadMapping's button and axis indices live in. Almost every mapping is written against the W3C \"standard\" layout the browser normalises known devices into. A `Raw` mapping instead encodes a device's unnormalised HID report order, which is only correct while the browser leaves that device unnormalised — see SteamDeckGamepadMapping, the one built-in mapping in that category.",
+  "symbol": "GamepadMappingLayout",
+  "kind": "enum",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Which index space a GamepadMapping's button and axis indices live in.",
+        "Almost every mapping is written against the W3C \"standard\" layout the browser normalises known devices into. A `Raw` mapping instead encodes a device's unnormalised HID report order, which is only correct while the browser leaves that device unnormalised — see SteamDeckGamepadMapping, the one built-in mapping in that category."
+      ],
+      "importLine": "import { GamepadMappingLayout } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "members",
+      "title": "Members",
+      "members": [
+        {
+          "name": "Raw",
+          "signature": "Raw",
+          "signatureTokens": [
+            {
+              "text": "Raw",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Standard",
+          "signature": "Standard",
+          "signatureTokens": [
+            {
+              "text": "Standard",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/GamepadMapping.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadMapping.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/GamepadMapping.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadMapping.ts"
+}

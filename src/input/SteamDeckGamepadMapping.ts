@@ -1,6 +1,6 @@
 import { GamepadAxis } from './GamepadAxis';
 import { GamepadButton } from './GamepadButton';
-import { GamepadMapping, GamepadMappingFamily } from './GamepadMapping';
+import { GamepadMapping, GamepadMappingFamily, GamepadMappingLayout } from './GamepadMapping';
 
 /**
  * Mapping for the Valve Steam Deck (and the new Valve Controller via vendor
@@ -14,9 +14,17 @@ import { GamepadMapping, GamepadMappingFamily } from './GamepadMapping';
  * W3C-standard 0-3), the D-pad lives at indices 16-19, paddles at 20-23, and
  * triggers report as analog axes 8/9 rather than buttons 6/7. Indices are
  * derived from the Linux SDL_GameControllerDB entry for `Valve Steam Deck`.
+ *
+ * Because those indices are raw rather than W3C-standard, this mapping declares
+ * {@link GamepadMappingLayout.Raw}: should a browser ever report the same
+ * device as `mapping: "standard"`, `resolveGamepadDefinition` discards this
+ * layout in favour of the generic one rather than routing standard indices
+ * through raw slots.
  */
 export class SteamDeckGamepadMapping extends GamepadMapping {
   public readonly family: GamepadMappingFamily = GamepadMappingFamily.SteamDeck;
+
+  public override readonly layout = GamepadMappingLayout.Raw;
 
   public constructor() {
     super(
