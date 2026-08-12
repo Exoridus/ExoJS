@@ -19,9 +19,9 @@ interface MockBufferSourceNode {
   buffer: AudioBuffer | null;
 }
 
-const createAudioBufferStub = (): AudioBuffer =>
+const createAudioBufferStub = (duration = 2): AudioBuffer =>
   ({
-    duration: 2,
+    duration,
   }) as AudioBuffer;
 
 const createBufferSourceNodeMock = (): MockBufferSourceNode =>
