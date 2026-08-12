@@ -266,7 +266,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
 
     vao.connect(this._createVaoRuntime(gl, vaoHandle));
 
-    const nodeDataTexture = this._createNodeDataTexture(gl, initialNodeCapacity);
+    const nodeDataTexture = this._createNodeDataTexture(backend, initialNodeCapacity);
 
     this._connection = { gl, buffers, vertexBuffer, indexBuffer, vao, nodeDataTexture, nodeDataCapacity: initialNodeCapacity };
   }
@@ -429,17 +429,19 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       let cap = c.nodeDataCapacity;
       while (cap < nodeCount) cap *= 2;
       gl.deleteTexture(c.nodeDataTexture);
-      c.nodeDataTexture = this._createNodeDataTexture(gl, cap);
+      c.nodeDataTexture = this._createNodeDataTexture(this.getBackend(), cap);
       c.nodeDataCapacity = cap;
     }
 
-    // Route the unit switch through the backend so its texture-unit cache stays
-    // in sync. A raw gl.activeTexture here would leave the cache reading unit 0,
-    // and the atlas bindTexture(_, 0) in _drawBatches would then skip its own
-    // switch and bind the atlas to unit 1 — leaving the SDF sampler (unit 0)
-    // empty and the text invisible whenever it is the first draw of a frame.
-    this.getBackend().setActiveTextureUnit(1);
-    gl.bindTexture(gl.TEXTURE_2D, c.nodeDataTexture);
+    // Route both the unit switch and the bind through the backend so its
+    // texture-unit and per-unit bind caches stay in sync. A raw gl.activeTexture
+    // here would leave the unit cache reading unit 0, and the atlas
+    // bindTexture(_, 0) in _drawBatches would then skip its own switch and bind
+    // the atlas to unit 1 — leaving the SDF sampler (unit 0) empty and the text
+    // invisible whenever it is the first draw of a frame. A raw gl.bindTexture
+    // would likewise leave the bind cache claiming unit 1 still holds whatever
+    // managed texture was there last.
+    this.getBackend().setActiveTextureUnit(1).bindRawTexture(c.nodeDataTexture);
     gl.texSubImage2D(
       gl.TEXTURE_2D,
       0,
@@ -924,16 +926,23 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
 
   // ── WebGL helpers ─────────────────────────────────────────────────────────
 
-  private _createNodeDataTexture(gl: WebGL2RenderingContext, capacity: number): WebGLTexture {
+  /**
+   * Allocate the renderer-private node-data texture. Both binds go through the
+   * backend so its per-unit bind cache keeps mirroring GL — the allocation
+   * happens on whatever unit is active, and leaving that unit's cached handle
+   * stale would let a later managed bind on the same unit be skipped.
+   */
+  private _createNodeDataTexture(backend: WebGl2Backend, capacity: number): WebGLTexture {
+    const gl = backend.context;
     const tex = gl.createTexture();
     if (tex === null) throw new Error('WebGl2TextRenderer: could not create node data texture.');
-    gl.bindTexture(gl.TEXTURE_2D, tex);
+    backend.bindRawTexture(tex);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, nodeTexels, capacity, 0, gl.RGBA, gl.FLOAT, null);
-    gl.bindTexture(gl.TEXTURE_2D, null);
+    backend.bindRawTexture(null);
     return tex;
   }
 

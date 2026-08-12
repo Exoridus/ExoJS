@@ -259,7 +259,12 @@ export class WebGl2Backend implements RenderBackend {
   private _renderGroupTransformId = 0;
   private _shader: Shader | null = null;
   private _blendMode: BlendModes | null = null;
-  private _texture: Texture | RenderTexture | null = null;
+  // What GL currently has bound to TEXTURE_2D on each texture unit, indexed by
+  // unit. Keyed on the `WebGLTexture` handle rather than the user-side
+  // `Texture`, so a releaseGpu / re-upload cycle — which hands the same
+  // `Texture` a brand new handle — can never match a stale slot. A hole
+  // (`undefined`) means "unit never touched", which reads as a miss and binds.
+  private readonly _boundHandles: Array<WebGLTexture | null> = [];
   private _textureUnit = 0;
   private _vao: WebGl2VertexArrayObject | null = null;
   private _clearColor: Color = new Color();
@@ -928,18 +933,15 @@ export class WebGl2Backend implements RenderBackend {
     }
 
     if (texture === null) {
-      if (this._texture !== null) {
-        this._context.bindTexture(this._context.TEXTURE_2D, null);
-        this._texture = null;
-      }
+      this._bindTextureHandle(null);
 
       return this;
     }
 
-    const textureState = this._syncTexture(texture);
-
-    this._context.bindTexture(this._context.TEXTURE_2D, textureState.handle);
-    this._texture = texture;
+    // `_syncTexture` performs the bind itself (through the same per-unit cache)
+    // because its parameter and upload calls act on whatever is bound to the
+    // active unit — binding a second time here would only duplicate GL work.
+    this._syncTexture(texture);
 
     return this;
   }
@@ -951,12 +953,35 @@ export class WebGl2Backend implements RenderBackend {
    * renderer's private node-data texture) must route the unit switch through
    * here instead of calling `gl.activeTexture` directly — otherwise the cache
    * goes stale and a later {@link bindTexture} can skip its own `activeTexture`
-   * call, binding to the wrong unit. After this returns the caller may issue its
-   * own raw `gl.bindTexture` on the now-active unit.
+   * call, binding to the wrong unit. Bind the handle itself with
+   * {@link bindRawTexture} rather than `gl.bindTexture`, so the per-unit bind
+   * cache keeps mirroring GL.
    * @internal
    */
   public setActiveTextureUnit(unit: number): this {
     this._setTextureUnit(unit);
+
+    return this;
+  }
+
+  /**
+   * Bind a raw `WebGLTexture` (or `null`) to the active texture unit through
+   * the backend's per-unit bind cache.
+   *
+   * For renderer-private handles that have no user-side {@link Texture} — the
+   * text renderer's node-data texture is the only one today. Going through here
+   * instead of `gl.bindTexture` keeps the cache coherent: the backend both
+   * skips a redundant re-bind of this handle and still re-binds when a managed
+   * texture has to take the unit back.
+   *
+   * A raw handle deleted behind the cache's back needs no notification: GL
+   * unbinds it everywhere, and a deleted `WebGLTexture` can never be handed out
+   * again, so a slot still naming it can only ever cost one redundant bind —
+   * never suppress a needed one.
+   * @internal
+   */
+  public bindRawTexture(handle: WebGLTexture | null): this {
+    this._bindTextureHandle(handle);
 
     return this;
   }
@@ -1085,6 +1110,38 @@ export class WebGl2Backend implements RenderBackend {
       this._textureUnit = unit;
 
       gl.activeTexture(gl.TEXTURE0 + unit);
+    }
+  }
+
+  /**
+   * Bind `handle` to the active texture unit, skipping the call when GL already
+   * has it there. Per-unit rather than global: the same handle legitimately
+   * occupies several units at once (batched sprite slots), so a single
+   * last-bound slot would either miss those binds or suppress needed ones.
+   */
+  private _bindTextureHandle(handle: WebGLTexture | null): void {
+    const unit = this._textureUnit;
+
+    if (this._boundHandles[unit] === handle) {
+      return;
+    }
+
+    this._context.bindTexture(this._context.TEXTURE_2D, handle);
+    this._boundHandles[unit] = handle;
+  }
+
+  /**
+   * Drop every cached binding of `handle`. Deleting a texture unbinds it from
+   * every unit of the current context (GL spec), so the cache has to follow
+   * without issuing any GL call of its own.
+   */
+  private _forgetTextureHandle(handle: WebGLTexture): void {
+    const boundHandles = this._boundHandles;
+
+    for (let unit = 0; unit < boundHandles.length; unit++) {
+      if (boundHandles[unit] === handle) {
+        boundHandles[unit] = null;
+      }
     }
   }
 
@@ -1549,7 +1606,7 @@ export class WebGl2Backend implements RenderBackend {
     this._renderer = null;
     this._shader = null;
     this._blendMode = null;
-    this._texture = null;
+    this._boundHandles.length = 0;
     this._boundFramebuffer = null;
     this._activeDrawCommand = null;
     this._transformTextureCount = -1;
@@ -1711,7 +1768,7 @@ export class WebGl2Backend implements RenderBackend {
     // the next bind must run unconditionally rather than short-circuiting on a
     // stale identity match.
     this._boundFramebuffer = null;
-    this._texture = null;
+    this._boundHandles.length = 0;
     this._textureUnit = 0;
     this._vao = null;
     this._shader = null;
@@ -1791,7 +1848,7 @@ export class WebGl2Backend implements RenderBackend {
     }
 
     for (const texture of [...this._textureStates.keys()]) {
-      this._evictTexture(texture, false);
+      this._evictTexture(texture);
     }
   }
 
@@ -1823,12 +1880,12 @@ export class WebGl2Backend implements RenderBackend {
 
     if (!state) {
       this._subscribeToDestroy(texture, this._textureDestroyHandlers, () => {
-        this._evictTexture(texture, true);
+        this._evictTexture(texture);
       });
 
       if (texture instanceof Texture) {
         this._subscribeToRelease(texture, this._textureReleaseHandlers, () => {
-          this._evictTexture(texture, true, false);
+          this._evictTexture(texture, false);
         });
       }
 
@@ -1885,7 +1942,7 @@ export class WebGl2Backend implements RenderBackend {
     this._unsubscribeFromDestroy(target, this._renderTargetDestroyHandlers);
 
     if (target instanceof RenderTexture) {
-      this._evictTexture(target, false);
+      this._evictTexture(target);
     }
 
     if (state) {
@@ -1924,7 +1981,7 @@ export class WebGl2Backend implements RenderBackend {
    * real, later `destroy()`. The release subscription is always dropped —
    * `_getTextureState` re-subscribes it fresh if the handle is bound again.
    */
-  private _evictTexture(texture: Texture | RenderTexture, rebind: boolean, unsubscribeDestroy = true): void {
+  private _evictTexture(texture: Texture | RenderTexture, unsubscribeDestroy = true): void {
     const state = this._textureStates.get(texture);
 
     if (unsubscribeDestroy) {
@@ -1936,23 +1993,11 @@ export class WebGl2Backend implements RenderBackend {
     }
 
     if (state) {
-      if (this._texture === texture) {
-        this._context.bindTexture(this._context.TEXTURE_2D, null);
-        this._texture = null;
-      }
-
       this._context.deleteTexture(state.handle);
+      this._forgetTextureHandle(state.handle);
       this._accountant.free(state.accountedBytes);
       state.accountedBytes = 0;
       this._textureStates.delete(texture);
-    }
-
-    if (this._texture === texture) {
-      this._texture = null;
-    }
-
-    if (rebind && this._texture !== null) {
-      this.bindTexture(this._texture);
     }
   }
 
@@ -2157,7 +2202,7 @@ export class WebGl2Backend implements RenderBackend {
     const state = this._getTextureState(texture);
     const version = texture instanceof RenderTexture ? texture.textureVersion : texture.version;
 
-    gl.bindTexture(gl.TEXTURE_2D, state.handle);
+    this._bindTextureHandle(state.handle);
 
     if (state.version !== version) {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, texture.scaleMode);
