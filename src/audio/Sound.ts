@@ -106,6 +106,13 @@ export class Sound implements Playable {
   /** @internal — load lifecycle, driven by the Loader's seamless pipeline. */
   public readonly _loadState = new LoadState<Sound>();
   private readonly _sprites = new Map<string, NormalizedAudioSpriteClip>();
+  /**
+   * Memoized sub-{@link Sound}s handed out by {@link Sound.sprite}. One per
+   * name, for the lifetime of that definition: a fresh sub-Sound per call would
+   * give every call its own voice pool, which makes the pool policy — the whole
+   * point of pooling a frequently-triggered sprite — silently unenforceable.
+   */
+  private readonly _spriteSounds = new Map<string, Sound>();
 
   // Playable buffer window (seconds). Full buffer by default; narrowed by clip().
   private _clipStart = 0;
@@ -242,8 +249,15 @@ export class Sound implements Playable {
     return this;
   }
 
+  /**
+   * Replace the whole sprite table. Every sub-{@link Sound} previously handed
+   * out by {@link Sound.sprite} is destroyed — the definitions they were
+   * derived from are gone, so keeping them alive would keep stale windows (and
+   * their voices) playing.
+   */
   public setSprites(sprites: Readonly<Record<string, AudioSpriteClip>>): this {
     this._sprites.clear();
+    this._destroySpriteSounds();
 
     for (const [name, clip] of Object.entries(sprites)) {
       this.defineSprite(name, clip);
@@ -252,6 +266,11 @@ export class Sound implements Playable {
     return this;
   }
 
+  /**
+   * Define (or redefine) a named sub-region of the buffer. Redefining a name
+   * discards the sub-{@link Sound} {@link Sound.sprite} memoized for it, so the
+   * next lookup reflects the new window.
+   */
   public defineSprite(name: string, clip: AudioSpriteClip): this {
     if (name.trim().length === 0) {
       throw new Error('Sound sprite names must be non-empty strings.');
@@ -277,6 +296,7 @@ export class Sound implements Playable {
       end,
       loop: clip.loop ?? false,
     });
+    this._dropSpriteSound(name);
 
     return this;
   }
@@ -285,10 +305,54 @@ export class Sound implements Playable {
     return this._sprites.has(name);
   }
 
+  /**
+   * Remove a sprite definition and destroy the sub-{@link Sound}
+   * {@link Sound.sprite} memoized for it, stopping anything it still had
+   * playing.
+   */
   public removeSprite(name: string): this {
     this._sprites.delete(name);
+    this._dropSpriteSound(name);
 
     return this;
+  }
+
+  /**
+   * The {@link Sound} for a named sprite — the playback side of
+   * {@link Sound.defineSprite}. Same concept as {@link Sound.clip}, addressed
+   * by name instead of by offset: a sub-Sound over the same decoded buffer,
+   * with the clip's own `loop` flag and its own voice pool.
+   *
+   * The result is memoized per name, so the pool is shared across every play of
+   * that sprite and repeated lookups are free. It stays valid until the name is
+   * redefined, removed, or this sound is destroyed.
+   *
+   * @throws If no sprite with that name is defined.
+   *
+   * @example
+   * ```ts
+   * sound.defineSprite('impact', { start: 0.5, end: 0.8 });
+   * app.audio.play(sound.sprite('impact'));
+   * ```
+   */
+  public sprite(name: string): Sound {
+    const memoized = this._spriteSounds.get(name);
+
+    if (memoized !== undefined) {
+      return memoized;
+    }
+
+    const clip = this._sprites.get(name);
+
+    if (clip === undefined) {
+      throw new Error(`Sound sprite "${name}" is not defined.`);
+    }
+
+    const sprite = this._subSound(clip.start, clip.end, clip.loop);
+
+    this._spriteSounds.set(name, sprite);
+
+    return sprite;
   }
 
   /**
@@ -306,19 +370,49 @@ export class Sound implements Playable {
     const start = clamp(offset, 0, this._audioBuffer.duration);
     const end = clamp(start + duration, start, this._audioBuffer.duration);
 
-    const clip = new Sound(this._audioBuffer, {
+    return this._subSound(start, end, this.loop);
+  }
+
+  /**
+   * Build a sub-{@link Sound} over the `[start, end]` window of this sound's
+   * buffer — the shared body of {@link Sound.clip} and {@link Sound.sprite}.
+   * Inherits this sound's playback defaults, but takes `loop` from the caller
+   * so a sprite definition's own loop flag wins over the parent's.
+   */
+  private _subSound(start: number, end: number, loop: boolean): Sound {
+    const sub = new Sound(this._audioBuffer, {
       volume: this.volume,
-      loop: this.loop,
+      loop,
       playbackRate: this.playbackRate,
       muted: this.muted,
       poolSize: this._poolSize,
       poolStrategy: this._poolStrategy,
       priority: this._priority,
     });
-    clip._clipStart = start;
-    clip._clipEnd = end;
 
-    return clip;
+    sub._clipStart = start;
+    sub._clipEnd = end;
+
+    return sub;
+  }
+
+  /** Destroy and forget the sub-{@link Sound} memoized for `name`, if any. */
+  private _dropSpriteSound(name: string): void {
+    const sprite = this._spriteSounds.get(name);
+
+    if (sprite !== undefined) {
+      this._spriteSounds.delete(name);
+      sprite.destroy();
+    }
+  }
+
+  /** Destroy and forget every memoized sprite sub-{@link Sound}. */
+  private _destroySpriteSounds(): void {
+    for (const sprite of this._spriteSounds.values()) {
+      sprite.destroy();
+    }
+
+    this._spriteSounds.clear();
   }
 
   /**
@@ -374,48 +468,13 @@ export class Sound implements Playable {
   }
 
   /**
-   * Create a voice for a named sprite clip.
-   * @internal Used by managers that want sprite-level playback.
-   */
-  public _createSpriteVoice(manager: AudioManager, name: string, options: SoundPlayOptions = {}): Voice {
-    const clip = this._sprites.get(name);
-
-    if (!clip) {
-      throw new Error(`Sound sprite "${name}" is not defined.`);
-    }
-
-    const bus = options.bus ?? manager.sound;
-    const notLoaded = this._notLoadedVoice(bus);
-
-    if (notLoaded !== null) {
-      return notLoaded;
-    }
-
-    const clipOffset = Math.max(0, options.time ?? 0);
-    const offset = clip.start + clipOffset;
-
-    if (offset >= clip.end) {
-      throw new Error(`Sound sprite "${name}" offset (${clipOffset}s) exceeds clip duration (${clip.end - clip.start}s).`);
-    }
-
-    const loop = options.loop ?? clip.loop;
-
-    return this._buildVoice(manager, { ...options, loop }, offset, {
-      base: clip.start,
-      end: clip.end,
-      loopStart: clip.start,
-      loopEnd: clip.end,
-    });
-  }
-
-  /**
    * If the sound is not playable-loaded, return a {@link NoopVoice} with a
    * differentiated warning; otherwise return `null` so the caller builds a
-   * real voice. Both the main path ({@link Sound._createVoice}) and the sprite
-   * path ({@link Sound._createSpriteVoice}) route through this before reaching
-   * {@link Sound._buildVoice} — after eviction the sprite path can otherwise
-   * hand `_buildVoice` a `null` buffer (a sprite defined while loaded, then
-   * evicted and replayed before the reload settles).
+   * real voice. {@link Sound._createVoice} routes through this before reaching
+   * {@link Sound._buildVoice}, which covers full sounds, {@link Sound.clip}s
+   * and {@link Sound.sprite}s alike — they are all just Sounds — so
+   * `_buildVoice` can never be handed a `null` buffer (a sprite defined while
+   * loaded, then evicted and replayed before the reload settles).
    */
   private _notLoadedVoice(bus: AudioBus): Voice | null {
     if (this._loadState.value === 'failed') {
@@ -439,9 +498,9 @@ export class Sound implements Playable {
    * play-time options, and tracks the voice for eviction.
    */
   private _buildVoice(manager: AudioManager, options: SoundPlayOptions, offset: number, window: SoundVoiceWindow): Voice {
-    // @internal invariant: the buffer is non-null here. Both `_createVoice` and
-    // `_createSpriteVoice` route through `_notLoadedVoice` before reaching this
-    // method, so a null buffer can no longer arrive through any real caller.
+    // @internal invariant: the buffer is non-null here. `_createVoice` routes
+    // through `_notLoadedVoice` before reaching this method, so a null buffer
+    // can no longer arrive through any real caller.
     const buffer = this._audioBuffer;
 
     if (buffer === null) {
@@ -520,6 +579,7 @@ export class Sound implements Playable {
   public destroy(): void {
     this._stopAllVoices();
     this._sprites.clear();
+    this._destroySpriteSounds();
   }
 
   private _pruneEndedVoices(): void {

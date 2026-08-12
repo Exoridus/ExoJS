@@ -195,6 +195,15 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
   `SequenceAction` string patterns gain shorthand aliases: `Ctrl` for
   `Control`, `Cmd`/`Command`/`Super` for `Meta`, `Opt` for `Alt`, `Esc` for
   `Escape`.
+- **`Sound.sprite(name)` — the public way to play a named audio sprite.**
+  Sprite definitions (`defineSprite`/`setSprites`/the `sprites` option) had no
+  public playback path at all: the only way to reach one was the `@internal`
+  `Sound._createSpriteVoice`. `sprite(name)` is the named counterpart of
+  `clip(offset, duration)` — it returns a `Sound` over that window, sharing the
+  parent's decoded buffer, so it plays through `app.audio.play()` like any other
+  sound. The result is memoized per name (one shared voice pool per sprite,
+  rather than a fresh pool per call) and discarded when the name is redefined,
+  removed, or the sound is destroyed. An undefined name throws.
 
 ### Changed
 
@@ -333,6 +342,11 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
 
 ### Removed
 
+- **BREAKING — `Sound._createSpriteVoice` removed.** The `@internal` second
+  playback path is gone; `Sound.sprite(name)` replaces it. Playing a sprite
+  with a `time` offset at or past its clip end now returns an already-ended
+  `NoopVoice` — the same answer every other out-of-range play gives — instead
+  of throwing.
 - **BREAKING — `Scene.onLoad`/`Scene.onUnload` removed.** Redundant with
   `SceneDirector.onStartScene`/`onStopScene` and the overridable
   `load()`/`unload()` methods themselves; replaced in spirit by the new

@@ -147,7 +147,7 @@ describe('Sound', () => {
       },
     });
 
-    sound._createSpriteVoice(manager, 'click');
+    manager.play(sound.sprite('click'));
 
     expect(factory.sources.length).toBe(1);
 
@@ -166,7 +166,7 @@ describe('Sound', () => {
     const sound = new Sound(createAudioBufferStub());
 
     sound.defineSprite('hum', { start: 0.1, end: 0.6, loop: true });
-    sound._createSpriteVoice(manager, 'hum');
+    manager.play(sound.sprite('hum'));
 
     expect(factory.sources.length).toBe(1);
     expect(factory.sources[0].loop).toBe(true);
@@ -179,10 +179,56 @@ describe('Sound', () => {
   });
 
   test('unknown sprite names fail clearly', () => {
-    const manager = new AudioManager();
     const sound = new Sound(createAudioBufferStub());
 
-    expect(() => sound._createSpriteVoice(manager, 'missing')).toThrow('Sound sprite "missing" is not defined.');
+    expect(() => sound.sprite('missing')).toThrow('Sound sprite "missing" is not defined.');
+    sound.destroy();
+  });
+
+  test('sprite() memoizes one sub-Sound per name so the voice pool is shared', () => {
+    const sound = new Sound(createAudioBufferStub(2), { sprites: { click: { start: 0, end: 0.5 } } });
+
+    expect(sound.sprite('click')).toBe(sound.sprite('click'));
+
+    sound.destroy();
+  });
+
+  test('sprite() maps the clip window and its own loop flag onto the sub-Sound', () => {
+    const sound = new Sound(createAudioBufferStub(2), {
+      sprites: { hum: { start: 0.25, end: 1.25, loop: true } },
+      loop: false,
+      volume: 0.5,
+    });
+    const hum = sound.sprite('hum');
+
+    expect(hum.duration).toBeCloseTo(1);
+    expect(hum.loop).toBe(true);
+    expect(hum.volume).toBe(0.5);
+
+    sound.destroy();
+  });
+
+  test('removeSprite() / redefinition drop the memoized sub-Sound', () => {
+    const sound = new Sound(createAudioBufferStub(2), { sprites: { click: { start: 0, end: 0.5 } } });
+    const first = sound.sprite('click');
+
+    sound.defineSprite('click', { start: 1, end: 1.5 });
+    const redefined = sound.sprite('click');
+    expect(redefined).not.toBe(first);
+
+    sound.removeSprite('click');
+    expect(() => sound.sprite('click')).toThrow('Sound sprite "click" is not defined.');
+
+    sound.destroy();
+  });
+
+  test('setSprites() drops every memoized sub-Sound', () => {
+    const sound = new Sound(createAudioBufferStub(2), { sprites: { click: { start: 0, end: 0.5 } } });
+    const first = sound.sprite('click');
+
+    sound.setSprites({ click: { start: 0, end: 0.5 } });
+    expect(sound.sprite('click')).not.toBe(first);
+
     sound.destroy();
   });
 
@@ -225,13 +271,13 @@ describe('Sound', () => {
     sound.destroy();
   });
 
-  test('_createSpriteVoice() rejects an offset at/past the clip end', () => {
+  test('playing a sprite past its clip end returns a NoopVoice, like any other clip', () => {
     const manager = new AudioManager();
     const sound = new Sound(createAudioBufferStub(2), {
       sprites: { click: { start: 0, end: 0.5 } },
     });
 
-    expect(() => sound._createSpriteVoice(manager, 'click', { time: 0.5 })).toThrow(/exceeds clip duration/);
+    expect(manager.play(sound.sprite('click'), { time: 0.5 })).toBeInstanceOf(NoopVoice);
     sound.destroy();
   });
 

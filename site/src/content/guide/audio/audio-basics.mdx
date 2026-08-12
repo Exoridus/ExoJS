@@ -217,15 +217,21 @@ Buses have independent `volume` (0..2), `muted`, and `pan` controls, plus a filt
 A `Sound` can define named sub-regions ("sprites") on the descriptor — useful when you bake several effects into a single file and want to address them by name rather than by offset:
 
 ```ts
-import { Sound } from '@codexo/exojs';
+import { type Application, Sound } from '@codexo/exojs';
 
+declare const application: Application;
 declare const sound: Sound;
 
 sound.defineSprite('impact', { start: 0.5, end: 0.8 });
-sound.defineSprite('whoosh', { start: 1.2, end: 1.6 });
+sound.defineSprite('whoosh', { start: 1.2, end: 1.6, loop: true });
+
+// `sprite(name)` is the playback side: it returns a `Sound` over that window.
+application.audio.play(sound.sprite('impact'));
 ```
 
 Sprites can also be declared up front via the `sprites` constructor option. They are part of the `Sound` descriptor's data; clip ranges are validated against the buffer duration when defined.
+
+`sound.sprite(name)` is the named counterpart of `sound.clip(offset, duration)` — both return a `Sound` sharing the parent's decoded buffer, so they play through `app.audio.play()` like any other sound and carry their own voice pool and playback defaults (a sprite's `loop` flag becomes the sub-sound's `loop`). The sub-sound is memoized per name, so the pool really is shared across every play of that sprite; it is discarded when the name is redefined or removed. Looking up a name that was never defined throws.
 
 ## Examples
 

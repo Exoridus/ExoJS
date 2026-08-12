@@ -93,7 +93,7 @@ describe('Sound.play before load', () => {
 
     let voice: unknown;
     expect(() => {
-      voice = sound._createSpriteVoice(manager, 'hit', {});
+      voice = manager.play(sound.sprite('hit'), {});
     }).not.toThrow();
     expect(voice).toBeInstanceOf(NoopVoice);
   });

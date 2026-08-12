@@ -6,10 +6,10 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 24,
+  "memberCount": 25,
   "counts": {
     "constructors": 1,
-    "methods": 9,
+    "methods": 10,
     "properties": 14,
     "events": 0
   },
@@ -347,7 +347,7 @@
             }
           ],
           "returnType": "this",
-          "description": ""
+          "description": "Define (or redefine) a named sub-region of the buffer. Redefining a name discards the sub-Sound Sound.sprite memoized for it, so the next lookup reflects the new window."
         },
         {
           "name": "destroy",
@@ -470,7 +470,7 @@
             }
           ],
           "returnType": "this",
-          "description": ""
+          "description": "Remove a sprite definition and destroy the sub-Sound Sound.sprite memoized for it, stopping anything it still had playing."
         },
         {
           "name": "setPoolSize",
@@ -596,7 +596,54 @@
             }
           ],
           "returnType": "this",
-          "description": ""
+          "description": "Replace the whole sprite table. Every sub-Sound previously handed out by Sound.sprite is destroyed — the definitions they were derived from are gone, so keeping them alive would keep stale windows (and their voices) playing."
+        },
+        {
+          "name": "sprite",
+          "signature": "sprite(name: string): Sound",
+          "signatureTokens": [
+            {
+              "text": "sprite",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Sound",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "Sound",
+          "description": "The Sound for a named sprite — the playback side of Sound.defineSprite. Same concept as Sound.clip, addressed by name instead of by offset: a sub-Sound over the same decoded buffer, with the clip's own loop flag and its own voice pool. The result is memoized per name, so the pool is shared across every play of that sprite and repeated lookups are free. It stays valid until the name is redefined, removed, or this sound is destroyed."
         }
       ],
       "paragraphs": [],
