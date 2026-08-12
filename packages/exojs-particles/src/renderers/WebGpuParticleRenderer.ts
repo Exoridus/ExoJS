@@ -2,7 +2,7 @@
 
 import type { GeometryAttribute, Material } from '@codexo/exojs';
 import type { BlendModes } from '@codexo/exojs/renderer-sdk';
-import type { WebGpuBackend } from '@codexo/exojs/renderer-sdk';
+import type { WebGpuActiveRenderPass, WebGpuBackend } from '@codexo/exojs/renderer-sdk';
 import { DataTexture } from '@codexo/exojs/renderer-sdk';
 import { Texture } from '@codexo/exojs/renderer-sdk';
 import { AbstractWebGpuRenderer } from '@codexo/exojs/renderer-sdk';
@@ -14,6 +14,13 @@ import { assertVertexGeometryCompatible } from '#renderModes/ParticleBufferLayou
 import type { ParticleRenderMode } from '#renderModes/ParticleRenderMode';
 
 const uniformByteLength = 176;
+/**
+ * Stride of one draw call's slot in the uniform ring. `setBindGroup`'s dynamic
+ * offset must be a multiple of the device's `minUniformBufferOffsetAlignment`,
+ * whose spec-mandated maximum is 256 — so a fixed 256 is valid on every device
+ * and needs no limit query.
+ */
+const uniformSlotStride = 256;
 
 /**
  * WebGPU vertex formats by `<n?><type>x<size>` key, where the leading `n`
@@ -83,6 +90,17 @@ interface ParticleModeResources {
   readonly pipelines: Map<string, GPURenderPipeline>;
   vertexBuffer: GPUBuffer | null;
   vertexBufferByteLength: number;
+  /**
+   * The render pass {@link vertexPassBytes} is scoped to, compared by identity
+   * against the coordinator's active pass. Anything else (a different pass, or
+   * none open) means this mode holds no draws in the open pass and its cursor
+   * restarts at 0. The mode's buffers are renderer-owned, so this is the local
+   * answer to "would writing them now alias a draw already recorded" — the
+   * coordinator's `passHasDraws` answers that only for SHARED resources.
+   */
+  passRef: WebGpuActiveRenderPass | null;
+  /** Bytes of {@link vertexBuffer} the open pass has consumed. */
+  vertexPassBytes: number;
 }
 
 interface WebGpuParticleDrawCall {
@@ -136,6 +154,17 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
   private _pipelineLayout: GPUPipelineLayout | null = null;
   private _uniformBuffer: GPUBuffer | null = null;
   private _uniformBindGroup: GPUBindGroup | null = null;
+  private _uniformBufferCapacity = 0;
+  /**
+   * Slots of the uniform ring the open pass has consumed, and the pass they are
+   * scoped to. One draw call takes one slot; the base is added as the bind
+   * group's dynamic offset, so consecutive flushes append instead of all
+   * rewriting slot 0. Same identity-comparison rule as
+   * {@link ParticleModeResources.passRef}, one level up: the ring is shared by
+   * every mode this renderer draws.
+   */
+  private _uniformPassSlots = 0;
+  private _ownDrawsPass: WebGpuActiveRenderPass | null = null;
   private readonly _resources = new Map<Material, ParticleModeResources>();
   /**
    * Materials this renderer already registered a dispose listener on.
@@ -185,10 +214,8 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
   public flush(): void {
     const backend = this._backend;
     const device = this._device;
-    const uniformBuffer = this._uniformBuffer;
-    const uniformBindGroup = this._uniformBindGroup;
 
-    if (!backend || !device || !uniformBuffer || !uniformBindGroup) {
+    if (!backend || !device || this._uniformBuffer === null || this._uniformBindGroup === null) {
       return;
     }
 
@@ -211,108 +238,22 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
       return;
     }
 
-    // One command encoder / pass per drawcall. Each particle system's
-    // queue.writeBuffer calls target offset 0 of the mode's vertex and the
-    // uniform buffer — a single pass with multiple systems would see all
-    // writeBuffers serialize before submit, leaving only the last
-    // system's data in those buffers and making every earlier draw read
-    // the wrong data. Also: _ensureCapacity may destroy and recreate the
-    // vertex buffer on growth; keeping one drawcall per pass means
-    // that destroy happens strictly between submits, so no pass holds a
-    // reference to a buffer that has since been destroyed.
+    // Every draw call APPENDS at the cursors the open pass has reached — a byte
+    // offset into the mode's vertex buffer, a slot in the uniform ring — and
+    // adds the base at bind time, so N particle draws cost ONE pass and ONE
+    // submit instead of N of each. Rewriting either buffer from offset 0 (which
+    // this loop used to do, hence its pass per draw call) cannot work with the
+    // pass left open: `queue.writeBuffer` is ordered against the submit, not
+    // against the individual draws inside it, so draw k+1's write would land
+    // under draw k's already-recorded read of the same bytes.
     for (let drawCallIndex = 0; drawCallIndex < this._drawCallCount; drawCallIndex++) {
       const drawCall = this._drawCalls[drawCallIndex]!;
-      const system = drawCall.system;
-      const particleCount = system.liveCount;
 
-      if (particleCount === 0) {
+      if (drawCall.system.liveCount === 0) {
         continue;
       }
 
-      const mode = system.renderMode;
-      const resources = this._getOrCreateResources(mode, device);
-      const coordinator = backend._passCoordinator;
-
-      // The pass survives a renderer switch, so it can still hold another
-      // renderer's draws. Resolving the texture binding below syncs dirty
-      // content on the queue timeline, ahead of the deferred submit, which
-      // would retroactively change a recorded draw sampling that same texture.
-      if (coordinator.passHasDraws && backend._textureUploadWouldMutate(drawCall.texture)) {
-        coordinator.endPass();
-      }
-
-      const pipeline = this._getPipeline(resources, drawCall.blendMode, backend.renderTargetFormat, coordinator.stencilActive);
-      const textureBinding = backend.getTextureBinding(drawCall.texture);
-      const textureBindGroup = device.createBindGroup({
-        layout: this._textureBindGroupLayout!,
-        entries: [
-          {
-            binding: 0,
-            resource: textureBinding.view,
-          },
-          {
-            binding: 1,
-            resource: textureBinding.sampler,
-          },
-        ],
-      });
-
-      this._writeUniformData(backend, system, drawCall.texture);
-
-      // GPU mode: the system's compute pipeline already wrote the
-      // interleaved instance data into its own buffer. Bind it
-      // directly — no CPU build, no writeBuffer for instance data.
-      // CPU mode: the mode builds from CPU SoA into its scratch buffer,
-      // which is uploaded into the buffer this renderer owns for it.
-      let drawCount = particleCount;
-      const vertexBuffer = ((): GPUBuffer => {
-        if (system.gpuMode && system.gpuState !== null) {
-          return system.gpuState.instanceBuffer;
-        }
-
-        mode.build(system);
-        drawCount = mode.count;
-
-        const buffer = this._ensureCapacity(device, resources, drawCount);
-
-        device.queue.writeBuffer(buffer, 0, mode.data, 0, drawCount * resources.stride);
-
-        return buffer;
-      })();
-
-      device.queue.writeBuffer(uniformBuffer, 0, this._uniformData.buffer, this._uniformData.byteOffset, this._uniformData.byteLength);
-
-      // One coordinator-owned pass per drawcall: each system's writeBuffers
-      // target offset 0, so the pass must be submitted before the next system
-      // overwrites those buffers. acquirePass/endPass preserve that 1:1 ratio.
-      const pass = coordinator.acquirePass().pass;
-
-      pass.setBindGroup(0, uniformBindGroup);
-      pass.setPipeline(pipeline);
-      pass.setBindGroup(1, textureBindGroup);
-      pass.setVertexBuffer(0, vertexBuffer);
-
-      if (resources.meshBuffer !== null) {
-        this._syncMeshBuffer(device, resources, mode);
-        pass.setVertexBuffer(1, resources.meshBuffer);
-      }
-
-      // `mode.count` is instance count for an instanced mode and vertex count
-      // otherwise, so it drives exactly one of the two draw arguments.
-      const instanceCount = resources.instanced ? drawCount : 1;
-
-      if (resources.indexBuffer !== null) {
-        pass.setIndexBuffer(resources.indexBuffer, resources.indexFormat);
-        pass.drawIndexed(resources.indexCount, instanceCount, 0, 0, 0);
-      } else {
-        pass.draw(resources.instanced ? resources.indexCount : drawCount, instanceCount, 0, 0);
-      }
-
-      coordinator.markPassDraws();
-      backend.stats.batches++;
-      backend.stats.drawCalls++;
-
-      coordinator.endPass();
+      this._drawSystem(backend, device, drawCall);
     }
 
     this._drawCallCount = 0;
@@ -330,8 +271,10 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
         {
           binding: 0,
           visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+          // One ring slot per draw call, selected by the dynamic offset.
           buffer: {
             type: 'uniform',
+            hasDynamicOffset: true,
           },
         },
       ],
@@ -357,21 +300,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     this._pipelineLayout = this._device.createPipelineLayout({
       bindGroupLayouts: [this._uniformBindGroupLayout, this._textureBindGroupLayout],
     });
-    this._uniformBuffer = this._device.createBuffer({
-      size: uniformByteLength,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    });
-    this._uniformBindGroup = this._device.createBindGroup({
-      layout: this._uniformBindGroupLayout,
-      entries: [
-        {
-          binding: 0,
-          resource: {
-            buffer: this._uniformBuffer,
-          },
-        },
-      ],
-    });
+    this._createUniformResources(this._device, uniformSlotStride);
   }
 
   protected onDisconnect(): void {
@@ -386,12 +315,216 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
 
     this._uniformBindGroup = null;
     this._uniformBuffer = null;
+    this._uniformBufferCapacity = 0;
+    this._uniformPassSlots = 0;
+    this._ownDrawsPass = null;
     this._pipelineLayout = null;
     this._textureBindGroupLayout = null;
     this._uniformBindGroupLayout = null;
     this._device = null;
     this._backend = null;
     this._drawCallCount = 0;
+  }
+
+  /**
+   * Append one system's draw at the open pass's cursors and record it, leaving
+   * the pass open. Ends (submits) the pass first only where appending cannot
+   * cover the hazard — see {@link _appendWouldAlias}.
+   */
+  private _drawSystem(backend: WebGpuBackend, device: GPUDevice, drawCall: WebGpuParticleDrawCall): void {
+    const system = drawCall.system;
+    const mode = system.renderMode;
+    const resources = this._getOrCreateResources(mode, device);
+    const coordinator = backend._passCoordinator;
+
+    // GPU mode: the system's compute pipeline already wrote the interleaved
+    // instance data into its own buffer — from its own encoder and its own
+    // submit, in the system's update, so that compute pass is finished and
+    // ordered ahead of this render pass no matter when the render pass ends.
+    // Bind it directly: no CPU build, no writeBuffer, no cursor, since the
+    // buffer belongs to that one system and is never appended to.
+    // CPU mode: the mode builds from CPU SoA into its scratch buffer, which is
+    // uploaded into the buffer this renderer owns for the mode — shared by every
+    // system drawing that mode, so that one takes the cursor. The build is pure
+    // CPU work, so it runs up front and gives the checks below the byte count
+    // this draw will append.
+    const gpuState = system.gpuMode ? system.gpuState : null;
+    let drawCount = system.liveCount;
+    let appendBytes = 0;
+
+    if (gpuState === null) {
+      mode.build(system);
+      drawCount = mode.count;
+      // At least one stride, so a zero-element build still leaves the cursor on
+      // the 4-byte boundary `setVertexBuffer` and `writeBuffer` require.
+      appendBytes = Math.max(drawCount, 1) * resources.stride;
+    }
+
+    const meshGeometry = mode.vertexGeometry;
+    const meshSyncRequired = resources.meshBuffer !== null && meshGeometry !== null && resources.meshVersion !== meshGeometry.version;
+
+    // Pass totals appending would reach, resolved BEFORE the split below. They
+    // size the buffers even when the split does happen: sizing to the lone draw
+    // that remains after it would peg both buffers at one draw forever — the
+    // split shrinks the requirement back, the capacity never ratchets, and every
+    // draw call opens its own pass again, which is the state this discipline
+    // exists to remove.
+    const targetVertexBytes = this._modePassBytes(coordinator.activePass, resources) + appendBytes;
+    const targetUniformSlots = this._uniformPassBase(coordinator.activePass) + 1;
+
+    if (this._appendWouldAlias(backend, drawCall, resources, meshSyncRequired, targetVertexBytes, targetUniformSlots)) {
+      coordinator.endPass();
+    }
+
+    // Re-resolved after the split: an ended pass restarts every cursor at 0,
+    // while the draws it held keep reading the bytes already written at their
+    // own base offsets.
+    const vertexByteOffset = this._modePassBytes(coordinator.activePass, resources);
+    const uniformSlot = this._uniformPassBase(coordinator.activePass);
+
+    // Sized to the pre-split pass totals, not to what remains after it.
+    this._ensureUniformCapacity(device, targetUniformSlots);
+
+    const pipeline = this._getPipeline(resources, drawCall.blendMode, backend.renderTargetFormat, coordinator.stencilActive);
+    const textureBinding = backend.getTextureBinding(drawCall.texture);
+    const textureBindGroup = device.createBindGroup({
+      layout: this._textureBindGroupLayout!,
+      entries: [
+        {
+          binding: 0,
+          resource: textureBinding.view,
+        },
+        {
+          binding: 1,
+          resource: textureBinding.sampler,
+        },
+      ],
+    });
+
+    this._writeUniformData(backend, system, drawCall.texture);
+
+    const vertexBuffer = gpuState !== null ? gpuState.instanceBuffer : this._uploadModeData(device, resources, mode, targetVertexBytes, vertexByteOffset, drawCount);
+
+    device.queue.writeBuffer(
+      this._uniformBuffer!,
+      uniformSlot * uniformSlotStride,
+      this._uniformData.buffer,
+      this._uniformData.byteOffset,
+      this._uniformData.byteLength,
+    );
+
+    if (meshSyncRequired) {
+      this._syncMeshBuffer(device, resources, mode);
+    }
+
+    const active = coordinator.acquirePass();
+    const pass = active.pass;
+
+    pass.setBindGroup(0, this._uniformBindGroup, [uniformSlot * uniformSlotStride]);
+    pass.setPipeline(pipeline);
+    pass.setBindGroup(1, textureBindGroup);
+    pass.setVertexBuffer(0, vertexBuffer, gpuState !== null ? 0 : vertexByteOffset);
+
+    if (resources.meshBuffer !== null) {
+      pass.setVertexBuffer(1, resources.meshBuffer);
+    }
+
+    // `mode.count` is instance count for an instanced mode and vertex count
+    // otherwise, so it drives exactly one of the two draw arguments.
+    const instanceCount = resources.instanced ? drawCount : 1;
+
+    if (resources.indexBuffer !== null) {
+      pass.setIndexBuffer(resources.indexBuffer, resources.indexFormat);
+      pass.drawIndexed(resources.indexCount, instanceCount, 0, 0, 0);
+    } else {
+      pass.draw(resources.instanced ? resources.indexCount : drawCount, instanceCount, 0, 0);
+    }
+
+    coordinator.markPassDraws();
+    backend.stats.batches++;
+    backend.stats.drawCalls++;
+
+    // The pass stays open. Its cursors carry this draw's consumption forward so
+    // the next draw — this flush's or a later one's — appends AFTER the slices
+    // this one reads instead of overwriting them. The backend ends the pass at
+    // the frame boundary and at every genuine boundary in between.
+    this._ownDrawsPass = active;
+    this._uniformPassSlots = uniformSlot + 1;
+    resources.passRef = active;
+    resources.vertexPassBytes = vertexByteOffset + appendBytes;
+  }
+
+  /**
+   * Whether appending this draw would retroactively change what a draw already
+   * recorded into the open pass reads — in which case the caller ends (submits)
+   * that pass first, which restarts every cursor at 0.
+   */
+  private _appendWouldAlias(
+    backend: WebGpuBackend,
+    drawCall: WebGpuParticleDrawCall,
+    resources: ParticleModeResources,
+    meshSyncRequired: boolean,
+    targetVertexBytes: number,
+    targetUniformSlots: number,
+  ): boolean {
+    const coordinator = backend._passCoordinator;
+    const active = coordinator.activePass;
+
+    // The texture cache is SHARED, and resolving the binding syncs dirty content
+    // on the queue timeline ahead of the deferred submit. The pass survives a
+    // renderer switch, so the endangered draw need not be one of ours — hence
+    // the coordinator-side question rather than a local cursor.
+    if (coordinator.passHasDraws && backend._textureUploadWouldMutate(drawCall.texture)) {
+      return true;
+    }
+
+    if (active === null) {
+      return false;
+    }
+
+    // The rest are renderer-OWNED buffers, so they ask this renderer's own
+    // cursors instead: only draws of ours read them. Re-writing the mode's
+    // per-vertex geometry from 0 aliases the draws already bound to it, and
+    // growing either the mode's vertex buffer or the uniform ring frees the
+    // buffer those draws read. Appending covers neither.
+    if (resources.passRef === active && (meshSyncRequired || targetVertexBytes > resources.vertexBufferByteLength)) {
+      return true;
+    }
+
+    return this._ownDrawsPass === active && targetUniformSlots * uniformSlotStride > this._uniformBufferCapacity;
+  }
+
+  /**
+   * Bytes of the mode's vertex buffer `active` has consumed, or 0 when it holds
+   * none of that mode's draws (a different pass, or none open).
+   */
+  private _modePassBytes(active: WebGpuActiveRenderPass | null, resources: ParticleModeResources): number {
+    return active !== null && resources.passRef === active ? resources.vertexPassBytes : 0;
+  }
+
+  /** Uniform ring slots `active` has consumed, or 0 when it holds no draws of ours. */
+  private _uniformPassBase(active: WebGpuActiveRenderPass | null): number {
+    return active !== null && this._ownDrawsPass === active ? this._uniformPassSlots : 0;
+  }
+
+  /**
+   * Upload what the mode just built into this draw's sub-range of the mode's
+   * vertex buffer, growing it to the pass total first. Returns the buffer to
+   * bind, since growth replaces it.
+   */
+  private _uploadModeData(
+    device: GPUDevice,
+    resources: ParticleModeResources,
+    mode: ParticleRenderMode,
+    targetByteLength: number,
+    byteOffset: number,
+    elementCount: number,
+  ): GPUBuffer {
+    const buffer = this._ensureCapacity(device, resources, targetByteLength);
+
+    device.queue.writeBuffer(buffer, byteOffset, mode.data, 0, elementCount * resources.stride);
+
+    return buffer;
   }
 
   private _getOrCreateResources(mode: ParticleRenderMode, device: GPUDevice): ParticleModeResources {
@@ -519,6 +652,8 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
       pipelines: new Map<string, GPURenderPipeline>(),
       vertexBuffer: null,
       vertexBufferByteLength: 0,
+      passRef: null,
+      vertexPassBytes: 0,
     };
   }
 
@@ -547,25 +682,28 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     resources.vertexBuffer = null;
     resources.meshBuffer = null;
     resources.vertexBufferByteLength = 0;
+    resources.passRef = null;
+    resources.vertexPassBytes = 0;
   }
 
   /**
-   * Grow the mode's vertex buffer to hold `elementCount` elements of its
-   * stride. Grow-only and doubling, matching the mode's own scratch-buffer
-   * policy; the returned buffer is the one this draw must bind, since growth
-   * replaces it.
+   * Grow the mode's vertex buffer to `requiredByteLength`, which is the whole
+   * open pass's consumption of it (this draw's append plus everything already
+   * written for the draws it holds), not just this draw's own bytes. Grow-only
+   * and doubling, matching the mode's own scratch-buffer policy; the returned
+   * buffer is the one this draw must bind, since growth replaces it.
    */
-  private _ensureCapacity(device: GPUDevice, resources: ParticleModeResources, elementCount: number): GPUBuffer {
+  private _ensureCapacity(device: GPUDevice, resources: ParticleModeResources, requiredByteLength: number): GPUBuffer {
     const stride = resources.stride;
-    const requiredByteLength = Math.max(elementCount, 1) * stride;
+    const required = Math.max(requiredByteLength, stride);
 
-    if (resources.vertexBuffer !== null && requiredByteLength <= resources.vertexBufferByteLength) {
+    if (resources.vertexBuffer !== null && required <= resources.vertexBufferByteLength) {
       return resources.vertexBuffer;
     }
 
     let byteLength = resources.vertexBufferByteLength || stride;
 
-    while (byteLength < requiredByteLength) {
+    while (byteLength < required) {
       byteLength *= 2;
     }
 
@@ -577,6 +715,48 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     resources.vertexBufferByteLength = byteLength;
 
     return resources.vertexBuffer;
+  }
+
+  /**
+   * Grow the uniform ring to `slots` draw-call slots — again the open pass's
+   * total, not this draw's one slot. Doubling and grow-only; growth frees the
+   * current buffer, so the caller must have ended any pass holding draws of
+   * ours that read it.
+   */
+  private _ensureUniformCapacity(device: GPUDevice, slots: number): void {
+    const requiredBytes = slots * uniformSlotStride;
+
+    if (requiredBytes <= this._uniformBufferCapacity) {
+      return;
+    }
+
+    this._uniformBuffer?.destroy();
+    this._createUniformResources(device, Math.max(requiredBytes, this._uniformBufferCapacity * 2));
+  }
+
+  /** (Re-)create the uniform ring and its bind group at `capacityBytes`. */
+  private _createUniformResources(device: GPUDevice, capacityBytes: number): void {
+    this._uniformBufferCapacity = capacityBytes;
+    this._uniformBuffer = device.createBuffer({
+      label: 'particles:uniform-ring',
+      size: capacityBytes,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    this._uniformBindGroup = device.createBindGroup({
+      label: 'particles:uniform-bind-group',
+      layout: this._uniformBindGroupLayout!,
+      entries: [
+        {
+          binding: 0,
+          // Explicit size: the dynamic offset addresses one slot, so the binding
+          // must span one slot's worth of uniforms rather than the whole ring.
+          resource: {
+            buffer: this._uniformBuffer,
+            size: uniformByteLength,
+          },
+        },
+      ],
+    });
   }
 
   private _writeUniformData(backend: WebGpuBackend, system: ParticleSystem, texture: Texture): void {

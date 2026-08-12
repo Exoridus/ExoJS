@@ -443,6 +443,16 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
   into one pass and one submit. The pass still ends where it must: a capacity
   growth, a projection rewrite, and the shared transform-storage / texture-upload
   hazards.
+- **WebGPU particle draws share one render pass and one submit.**
+  `WebGpuParticleRenderer` opened a render pass, recorded one draw call and
+  ended (submitted) it again — per particle system, because every system
+  rewrote the render mode's shared vertex buffer and the system uniform buffer
+  from offset 0. Each draw call now appends at pass-scoped cursors (a byte
+  offset into the mode's vertex buffer, a slot in a uniform ring) and adds the
+  base at bind time, so a frame's particle draws cost one pass and one submit
+  regardless of how many systems or flushes it contains. A capacity growth and
+  a mid-frame edit to a mode's own vertex geometry still end the pass, since
+  appending cannot cover either.
 - **`Container` caches its paint order and child-index lookups.**
   `InteractionManager` re-sorted every container's children on every single
   hit-test call, and `getChildIndex()` did a linear `indexOf` scan on every
