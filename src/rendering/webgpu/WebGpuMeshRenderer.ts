@@ -16,6 +16,7 @@ import type { View } from '#rendering/View';
 import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
 import type { WebGpuBackend } from './WebGpuBackend';
 import { getWebGpuBlendState } from './WebGpuBlendState';
+import { WebGpuInstanceArena } from './WebGpuInstanceArena';
 import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
 import type {
   WebGpuRetainedBatchPayload,
@@ -27,14 +28,17 @@ import type {
 import { packSnapViewport } from './webgpuSnapViewport';
 import { stencilContentDepthStencilState } from './WebGpuStencilState';
 import {
+  applyUserUniformUpload,
   collectScalarUniforms,
   collectTextureBindings,
   createUserUniformState,
   packUserUniforms,
+  planUserUniformUpload,
   resetUserUniformState,
   resolveUserUniformBindGroup,
   userUniformBufferBytes,
   type UserUniformState,
+  type UserUniformUpload,
 } from './webgpuUserUniforms';
 
 /** WGSL source for the default (non-instanced) mesh pipeline. @internal */
@@ -377,17 +381,32 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   private _instancedUniformBuffer: GPUBuffer | null = null;
   private _instancedUniformBufferCapacity = 0;
   private readonly _instancedUniformScratch = new Float32Array(transformUniformByteLength / Float32Array.BYTES_PER_ELEMENT);
-  private _instancedAttributeBuffer: GPUBuffer | null = null;
-  private _instancedAttributeBufferCapacity = 0;
+  // Per-instance free attributes for the immediate batch path. An arena rather
+  // than a single rewritten buffer, because several batches now share one open
+  // pass and `queue.writeBuffer` is ordered against the submit, not against the
+  // individual draws inside it.
+  private readonly _instancedAttributeArena = new WebGpuInstanceArena('mesh:instanced-attribute-buffer', 0);
+  // ── Immediate-batch pass scope ────────────────────────────────────────────
+  // `drawInstancedBatch` records into the coordinator's open pass and no longer
+  // ends it, so consecutive `drawBatch` calls land in ONE pass and ONE submit.
+  // Everything it writes at a cursor is therefore scoped to that pass, not to
+  // the frame. Pass identity is the key: the coordinator builds a fresh active
+  // pass object on every acquire, so a pass ended by anyone else (a target
+  // switch, a stencil clip, another renderer) is distinguished automatically.
+  private _instancedBatchPass: WebGpuActiveRenderPass | null = null;
+  private _instancedBatchUniformSlots = 0;
+  private readonly _instancedBatchUniformBuffersInPass = new Set<GPUBuffer>();
   private _instancedNodeIndexBuffer: GPUBuffer | null = null;
   private _instancedNodeIndexBufferCapacity = 0;
   private _instancedNodeIndexData: Uint32Array = new Uint32Array(0);
-  // Per-frame write cursor into the shared node-index buffer (bytes). Multiple
-  // instanced batches in one flush go into ONE submit, so each MUST occupy a
-  // DISTINCT sub-range — writing them all at offset 0 aliases: the first
-  // batch's draw would read the last batch's node indices at submit time.
-  // Reset at the start of each flush; `_instancedNodeIndexByteOffset` holds the
-  // offset the most recent upload wrote at (for the draw + retained record).
+  // Write cursor into the shared node-index buffer (bytes), scoped to one open
+  // render pass. Every instanced batch in a pass goes into ONE submit, so each
+  // MUST occupy a DISTINCT sub-range — writing them all at offset 0 aliases: the
+  // first batch's draw would read the last batch's node indices at submit time.
+  // Both the flush loop and the immediate `drawInstancedBatch` path append here;
+  // reset whenever the pass they wrote into is ended.
+  // `_instancedNodeIndexByteOffset` holds the offset the most recent upload
+  // wrote at (for the draw + retained record).
   private _instancedNodeIndexFrameBytes = 0;
   private _instancedNodeIndexByteOffset = 0;
   private _instancedTransformBindGroup: GPUBindGroup | null = null;
@@ -472,9 +491,17 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   /**
    * Draw `mesh`'s geometry once as an explicit instanced batch over the
    * contiguous transform slots `[startNodeIndex, startNodeIndex + count)`,
-   * already written into the shared transform storage by the backend. Drawn
-   * immediately in its own render pass. Backs {@link RenderingContext.drawBatch}
-   * via {@link WebGpuBackend.drawInstanced}.
+   * already written into the shared transform storage by the backend. Backs
+   * {@link RenderingContext.drawBatch} via {@link WebGpuBackend.drawInstanced}.
+   *
+   * Recorded into the coordinator's open pass and left open: consecutive
+   * `drawBatch` calls merge into one pass and one `queue.submit` instead of
+   * paying a pass plus a submit each. Every per-batch upload therefore takes a
+   * fresh slice of a pass-scoped cursor (node indices, uniform slot, free
+   * attributes), and anything that would retroactively change a draw already
+   * recorded into the pass ends it first — the same discipline the sprite batch
+   * path uses, since `queue.writeBuffer` is ordered against the submit rather
+   * than against the individual draws inside it.
    *
    * With a custom material the draw runs through that material's own instanced
    * pipeline: group 0 stays the shared transform storage (so
@@ -490,16 +517,68 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       return;
     }
 
+    const coordinator = backend._passCoordinator;
     const material = mesh.material;
     const texture = mesh.texture ?? TextureClass.white;
     const premultiplySample = backend.shouldPremultiplyTextureSample(texture);
+    const resources = material === null ? null : this._getOrCreateCustomShaderResources(material);
+    // Packed, not uploaded: the write is a hazard against draws already in the
+    // pass, so it has to be decided before anything below is recorded.
+    const uniformPlan = resources === null ? null : planUserUniformUpload(material!, resources, device, 'mesh:material-user-uniform-buffer');
 
-    this._ensureInstancedUniformCapacity(1);
+    const maxNodeIndex = (startNodeIndex + count - 1) >>> 0;
+    const nodeIndexBytes = count * Uint32Array.BYTES_PER_ELEMENT;
+    const attributeBytes = instances === null ? 0 : count * instances.strideFloats * Float32Array.BYTES_PER_ELEMENT;
+    // Re-packing a cached geometry rewrites (and on growth replaces) the very
+    // vertex/index buffers an earlier draw in this pass binds. A geometry not
+    // cached yet allocates fresh buffers and is no hazard.
+    const cachedGeometry = mesh.geometry === null ? undefined : this._geometryCache.get(mesh.geometry);
+    const geometryWouldRewrite = cachedGeometry !== undefined && cachedGeometry.version !== mesh.geometry!.version;
 
-    const maxNodeIndex = this._uploadInstancedNodeIndexRange(startNodeIndex, count);
+    let active = coordinator.acquirePass();
+
+    this._syncInstancedBatchPass(active);
+
+    // Sized for everything this pass has taken SO FAR plus this batch, captured
+    // before the guard below may reset the cursors. Sizing to the single batch
+    // that remains after a reopen would peg both buffers at one batch forever:
+    // the guard would split the pass, the split would shrink the requirement
+    // back, the capacity would never ratchet, and every batch would open its own
+    // pass. Growing to the pre-split total instead converges within a frame or
+    // two, exactly like the sprite path's arena doubling.
+    const targetNodeIndexBytes = this._instancedNodeIndexFrameBytes + nodeIndexBytes;
+    const targetUniformSlots = this._instancedBatchUniformSlots + 1;
+
+    // Every reallocation below frees a buffer an earlier draw in this pass still
+    // references, and every write below lands ahead of the whole submit; both
+    // are answered by ending (submitting) the pass and reopening with fresh
+    // slices. With no earlier draw of ours in the pass there is nothing to
+    // protect, so the common single-batch case never splits.
+    if (
+      this._instancedNodeIndexFrameBytes > 0 &&
+      (geometryWouldRewrite ||
+        backend._textureUploadWouldMutate(texture) ||
+        backend._transformStorageWouldGrow(maxNodeIndex + 1) ||
+        this._instancedNodeIndexWouldGrow(targetNodeIndexBytes) ||
+        this._instancedUniformWouldGrow(targetUniformSlots) ||
+        (attributeBytes > 0 && !this._instancedAttributeArena.fits(attributeBytes)) ||
+        (uniformPlan !== null && this._instancedBatchUniformWriteWouldAlias(uniformPlan)))
+    ) {
+      active = this._reopenInstancedBatchPass(backend);
+    }
+
+    if (attributeBytes > 0 && !this._instancedAttributeArena.fits(attributeBytes)) {
+      this._instancedAttributeArena.grow(device, attributeBytes);
+    }
+
+    this._ensureInstancedUniformCapacity(targetUniformSlots);
+    this._ensureInstancedNodeIndexCapacity(count, targetNodeIndexBytes);
+
+    const nodeIndexByteOffset = this._uploadInstancedNodeIndexRange(startNodeIndex, count);
     const storage = backend.getTransformStorageBuffer(maxNodeIndex + 1);
+    const uniformSlot = this._instancedBatchUniformSlots++;
 
-    this._writeInstancedUniformSlot(0, backend, premultiplySample);
+    this._writeInstancedUniformSlot(uniformSlot, backend, premultiplySample);
 
     const staticGeometry = this._getOrCreateGeometryEntry(mesh);
     const instanceNodeIndexBuffer = this._instancedNodeIndexBuffer;
@@ -508,44 +587,96 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       throw new Error('Instanced node-index buffer must be initialized before drawing.');
     }
 
-    const attributeBuffer = instances === null ? null : this._uploadInstanceAttributes(instances, count);
+    const attributeByteOffset = attributeBytes > 0 ? this._uploadInstanceAttributes(instances!, attributeBytes) : 0;
     const renderTargetFormat = backend.renderTargetFormat;
-    const stencil = backend._passCoordinator.stencilActive;
+    const stencil = coordinator.stencilActive;
     // The material owns its blend mode; the mesh's own overrides it when set
     // away from the default — same rule as the node and WebGL2 batch paths.
     const blendMode = material !== null && mesh.blendMode === BlendModes.Normal ? material.blendMode : mesh.blendMode;
-    const resources = material === null ? null : this._getOrCreateCustomShaderResources(material);
-
-    if (resources !== null) {
-      this._uploadUserUniforms(material!, resources);
-    }
-
-    const pass = backend._passCoordinator.acquirePass().pass;
+    const pass = active.pass;
 
     if (resources === null) {
       pass.setPipeline(this._getInstancedPipeline({ blendMode, format: renderTargetFormat, stencil }));
       pass.setBindGroup(1, this._getTextureBindGroup(backend, texture));
     } else {
+      // Planned before the pass was settled; writes only when the material's
+      // values actually changed since its last upload.
+      applyUserUniformUpload(uniformPlan!, resources, device);
+      this._instancedBatchUniformBuffersInPass.add(uniformPlan!.buffer);
+
       pass.setPipeline(this._getOrCreateCustomInstancedPipeline(resources, blendMode, renderTargetFormat, stencil, instances));
       pass.setBindGroup(1, this._getOrCreateMeshTextureBindGroup(resources, backend, texture));
       pass.setBindGroup(2, this._getUserBindGroup(backend, material!, resources));
     }
 
-    pass.setBindGroup(0, this._getOrCreateInstancedTransformBindGroup(storage.buffer, storage.tintBuffer), [0]);
+    pass.setBindGroup(0, this._getOrCreateInstancedTransformBindGroup(storage.buffer, storage.tintBuffer), [
+      uniformSlot * this._uniformAlignment,
+    ]);
     pass.setVertexBuffer(0, staticGeometry.vertexBuffer);
-    pass.setVertexBuffer(1, instanceNodeIndexBuffer);
+    pass.setVertexBuffer(1, instanceNodeIndexBuffer, nodeIndexByteOffset);
 
-    if (attributeBuffer !== null) {
-      pass.setVertexBuffer(2, attributeBuffer);
+    if (attributeBytes > 0) {
+      pass.setVertexBuffer(2, this._instancedAttributeArena.buffer, attributeByteOffset);
     }
 
     pass.setIndexBuffer(staticGeometry.indexBuffer, 'uint16');
     pass.drawIndexed(staticGeometry.indexCount, count);
 
-    backend._passCoordinator.endPass();
-
     backend.stats.batches++;
     backend.stats.drawCalls++;
+  }
+
+  /**
+   * Reset the cursors scoped to a single open pass when a different pass than
+   * the last batch's is open. The coordinator builds a fresh active-pass object
+   * on every acquire, so reference identity also covers a pass ended by someone
+   * else entirely (target switch, stencil clip, another renderer's flush).
+   */
+  private _syncInstancedBatchPass(active: WebGpuActiveRenderPass): void {
+    if (this._instancedBatchPass === active) {
+      return;
+    }
+
+    this._instancedBatchPass = active;
+    this._instancedNodeIndexFrameBytes = 0;
+    this._instancedBatchUniformSlots = 0;
+    this._instancedBatchUniformBuffersInPass.clear();
+    this._instancedAttributeArena.resetPass();
+    this._instancedAttributeArena.syncPass(active);
+  }
+
+  /** Drop the pass association so the next sync restarts every cursor. */
+  private _resetInstancedBatchPass(): void {
+    this._instancedBatchPass = null;
+    this._instancedNodeIndexFrameBytes = 0;
+    this._instancedBatchUniformSlots = 0;
+    this._instancedBatchUniformBuffersInPass.clear();
+    this._instancedAttributeArena.resetPass();
+  }
+
+  /** End (submit) the open pass and reopen a fresh one with empty cursors. */
+  private _reopenInstancedBatchPass(backend: WebGpuBackend): WebGpuActiveRenderPass {
+    backend._passCoordinator.endPass();
+    this._resetInstancedBatchPass();
+
+    const active = backend._passCoordinator.acquirePass();
+
+    this._syncInstancedBatchPass(active);
+
+    return active;
+  }
+
+  /**
+   * Whether this batch's planned user-uniform write would land on a buffer a
+   * draw already recorded into the open pass reads. A buffer being replaced
+   * counts too: the apply step destroys the outgrown one.
+   */
+  private _instancedBatchUniformWriteWouldAlias(upload: UserUniformUpload): boolean {
+    if (upload.staleBuffer !== null && this._instancedBatchUniformBuffersInPass.has(upload.staleBuffer)) {
+      return true;
+    }
+
+    return upload.writes && this._instancedBatchUniformBuffersInPass.has(upload.buffer);
   }
 
   public flush(): void {
@@ -569,10 +700,22 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       if (backend.clearRequested) {
         backend._passCoordinator.acquirePass();
         backend._passCoordinator.endPass();
+        this._resetInstancedBatchPass();
       }
       this._resetFrame();
       return;
     }
+
+    // Phases 2-4 below rewrite the shared vertex/index/uniform and instanced
+    // node-index buffers from offset 0, and may reallocate them. Immediate
+    // `drawInstancedBatch` draws left in the open pass still read those exact
+    // buffers, and `queue.writeBuffer` lands ahead of the whole submit — so end
+    // (submit) that pass before touching anything.
+    if (this._instancedBatchPass !== null && this._instancedBatchPass === backend._passCoordinator.activePass) {
+      backend._passCoordinator.endPass();
+    }
+
+    this._resetInstancedBatchPass();
 
     // Phase 1: compute layout offsets (default vs. custom paths use separate
     // buffers, so default offsets are independent of custom offsets).
@@ -608,12 +751,12 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     const defaultDrawCalls = this._drawCallCount - this._totalCustomDraws();
     this._ensureUniformCapacity(defaultDrawCalls);
     this._ensureInstancedUniformCapacity(this._drawCallCount);
-    // Every instanced batch this frame gets a distinct node-index sub-range;
-    // size the buffer to the frame total upfront (an upper bound — not every
-    // draw is instanced) so no mid-loop realloc invalidates a written range,
-    // and reset the per-frame write cursor.
+    // Every instanced batch in this flush gets a distinct node-index sub-range;
+    // size the buffer to the flush total upfront (an upper bound — not every
+    // draw is instanced) so no mid-loop realloc invalidates a written range. The
+    // cursor is already 0: the guard above ended any pass holding immediate
+    // batches, which resets it.
     this._ensureInstancedNodeIndexCapacity(this._drawCallCount);
-    this._instancedNodeIndexFrameBytes = 0;
 
     // Phase 3: pack default-path vertex/index/uniform data.
     const defaultUniformBytes = defaultDrawCalls * this._uniformAlignment;
@@ -907,6 +1050,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     }
 
     backend._passCoordinator.endPass();
+    this._resetInstancedBatchPass();
 
     this._resetFrame();
   }
@@ -1038,7 +1182,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     this._uniformBuffer?.destroy();
     this._instancedUniformBuffer?.destroy();
     this._instancedNodeIndexBuffer?.destroy();
-    this._instancedAttributeBuffer?.destroy();
+    this._instancedAttributeArena.destroy();
+    this._resetInstancedBatchPass();
     this._pipelines.clear();
     this._instancedPipelines.clear();
     this._textureBindGroups = new WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView }>();
@@ -1305,55 +1450,47 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     return maxNodeIndex;
   }
 
-  // Like _uploadInstancedNodeIndices but for an explicit batch over a contiguous
-  // slot range [startNodeIndex, startNodeIndex + count); returns the max index.
+  /**
+   * Like {@link _uploadInstancedNodeIndices} but for an explicit batch over the
+   * contiguous slot range `[startNodeIndex, startNodeIndex + count)`. Writes into
+   * this pass's next free sub-range and returns its byte offset, so every batch
+   * sharing the open pass reads its OWN indices at submit time. The caller has
+   * already ensured capacity for the range.
+   */
   private _uploadInstancedNodeIndexRange(startNodeIndex: number, count: number): number {
-    this._ensureInstancedNodeIndexCapacity(count);
-
     for (let i = 0; i < count; i++) {
       this._instancedNodeIndexData[i] = (startNodeIndex + i) >>> 0;
     }
 
+    const byteOffset = this._instancedNodeIndexFrameBytes;
+
     this._device!.queue.writeBuffer(
       this._instancedNodeIndexBuffer!,
-      0,
+      byteOffset,
       this._instancedNodeIndexData.buffer,
       this._instancedNodeIndexData.byteOffset,
       count * Uint32Array.BYTES_PER_ELEMENT,
     );
 
-    return (startNodeIndex + count - 1) >>> 0;
+    this._instancedNodeIndexByteOffset = byteOffset;
+    this._instancedNodeIndexFrameBytes = byteOffset + count * Uint32Array.BYTES_PER_ELEMENT;
+
+    return byteOffset;
   }
 
   /**
-   * Upload a batch's packed free per-instance attributes into the shared
-   * divisor-1 buffer and return it.
-   *
-   * Writes at offset 0, matching {@link _uploadInstancedNodeIndexRange}. Note
-   * that the flush path's {@link _uploadInstancedNodeIndices} instead advances a
-   * per-frame cursor so concurrently-encoded batches cannot alias; if that ever
-   * needs to hold for the immediate batch path too, both uploads must move to a
-   * cursor together, since they index the same draws.
+   * Upload a batch's packed free per-instance attributes into this pass's next
+   * free slice of the shared divisor-1 arena and return that byte offset. Takes
+   * the same cursor discipline as {@link _uploadInstancedNodeIndexRange}, since
+   * both index the same draws: batches sharing one submit must not alias. The
+   * caller has already grown the arena to fit `byteLength`.
    */
-  private _uploadInstanceAttributes(instances: InstanceDataView, count: number): GPUBuffer {
-    const device = this._device!;
-    const byteLength = count * instances.strideFloats * Float32Array.BYTES_PER_ELEMENT;
+  private _uploadInstanceAttributes(instances: InstanceDataView, byteLength: number): number {
+    const offset = this._instancedAttributeArena.take(byteLength);
 
-    if (byteLength > this._instancedAttributeBufferCapacity) {
-      this._instancedAttributeBuffer?.destroy();
-      this._instancedAttributeBufferCapacity = Math.max(byteLength, this._instancedAttributeBufferCapacity * 2 || byteLength);
-      this._instancedAttributeBuffer = device.createBuffer({
-        label: 'mesh:instanced-attribute-buffer',
-        size: this._instancedAttributeBufferCapacity,
-        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-      });
-    }
+    this._device!.queue.writeBuffer(this._instancedAttributeArena.buffer!, offset, instances.data.buffer, instances.data.byteOffset, byteLength);
 
-    const buffer = this._instancedAttributeBuffer!;
-
-    device.queue.writeBuffer(buffer, 0, instances.data.buffer, instances.data.byteOffset, byteLength);
-
-    return buffer;
+    return offset;
   }
 
   /**
@@ -1419,9 +1556,13 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     return pipeline;
   }
 
-  private _ensureInstancedNodeIndexCapacity(instanceCount: number): void {
-    const requiredBytes = instanceCount * Uint32Array.BYTES_PER_ELEMENT;
-
+  /**
+   * Size the CPU staging array for `instanceCount` indices and the GPU buffer for
+   * `requiredBytes`. The two differ on the immediate batch path: staging only
+   * holds one batch, while the buffer must also keep the sub-ranges earlier
+   * batches in the open pass already wrote.
+   */
+  private _ensureInstancedNodeIndexCapacity(instanceCount: number, requiredBytes = instanceCount * Uint32Array.BYTES_PER_ELEMENT): void {
     if (this._instancedNodeIndexData.length < instanceCount) {
       this._instancedNodeIndexData = new Uint32Array(Math.max(instanceCount, this._instancedNodeIndexData.length * 2 || 1));
     }
@@ -1435,6 +1576,16 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
         usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
       });
     }
+  }
+
+  /** Whether sizing the node-index buffer to `requiredBytes` would free the current one. */
+  private _instancedNodeIndexWouldGrow(requiredBytes: number): boolean {
+    return requiredBytes > this._instancedNodeIndexBufferCapacity;
+  }
+
+  /** Whether sizing the instanced uniform buffer to `slots` would free the current one. */
+  private _instancedUniformWouldGrow(slots: number): boolean {
+    return slots * this._uniformAlignment > this._instancedUniformBufferCapacity;
   }
 
   private _ensureInstancedUniformCapacity(drawCallCount: number): void {

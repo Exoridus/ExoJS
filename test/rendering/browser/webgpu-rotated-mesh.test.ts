@@ -118,6 +118,9 @@ const renderScoped = async (ctx: { skip: (reason: string) => void }, backend: We
     backend.resetStats();
     backend.clear(Color.black);
     draw();
+    // `drawBatch` records into the open pass and leaves it open so consecutive
+    // batches share one submit; end the frame before reading the canvas back.
+    backend.flush();
     validationError = await device.popErrorScope();
   } catch (error) {
     if (isDeviceLoss(error)) {
