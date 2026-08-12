@@ -582,6 +582,15 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
   check is now an always-on `invariant` throw, matching the existing
   ancestor-cycle guard, so a use-after-destroy attach fails the same way in
   every build instead of degrading quietly in production only.
+- **`WebGpuMeshRenderer.onDisconnect()` no longer destroys buffers a
+  still-open pass draws against.** Since the pass-cursor sweep, a mesh flush
+  no longer ends the WebGPU render pass; disconnecting the renderer on its
+  own (mid-frame, outside `WebGpuBackend.destroy()`/device loss, both of
+  which already drop the pass first) could leave its own draws recorded into
+  a pass that was still open and unsubmitted, then free the vertex, index,
+  uniform and instanced buffers they read — a destroyed-buffer validation
+  error whenever something later submitted that pass. `onDisconnect()` now
+  ends its own open pass first when it holds the renderer's draws.
 
 ### Docs
 
