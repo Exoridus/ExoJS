@@ -499,7 +499,12 @@ export class AudioManager {
 
     // Silence the unlock path first: a queued replay or a handler still waiting
     // for the gesture would otherwise call `play()` on this very manager after
-    // it has gone terminal.
+    // it has gone terminal. Dropping the global subscription matters beyond
+    // this manager — a handler that throws inside `onAudioContextReady`'s
+    // dispatch terminates that dispatch outright, so a dead Application could
+    // otherwise stop a live one's buses from ever being set up. Symmetric with
+    // `AudioBus.destroy` and `AudioListener.destroy`.
+    onAudioContextReady.remove(this._onAudioContextReady);
     this.onUnlock.destroy();
 
     const failures: unknown[] = [];

@@ -219,4 +219,21 @@ describe('AudioManager.onUnlock contract', () => {
       expect(handler).not.toHaveBeenCalled();
     });
   });
+
+  // Finding 8: AudioBus and AudioListener both drop their global-ready
+  // subscription in destroy(); AudioManager did not. A manager destroyed before
+  // the first gesture still ran its handler from inside the global dispatch —
+  // and per Signal's contract a handler that throws there terminates the OUTER
+  // dispatch, taking every other Application's bus setup down with it.
+  test('destroy() unsubscribes the manager from the global ready signal', () => {
+    setContextState('suspended');
+
+    const before = onAudioContextReady.count;
+    const manager = new AudioManager();
+    expect(onAudioContextReady.count).toBeGreaterThan(before);
+
+    manager.destroy();
+
+    expect(onAudioContextReady.count).toBe(before);
+  });
 });
