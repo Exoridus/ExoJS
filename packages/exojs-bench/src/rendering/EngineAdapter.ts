@@ -15,7 +15,8 @@ export type ArchetypeId =
   | 'mixed-blend'
   | 'mixed-material'
   | 'mixed-material-atlased'
-  | 'instanced-batch';
+  | 'instanced-batch'
+  | 'mixed-sprite-mesh';
 
 /** Structural definition of a scene archetype, independent of any engine or backend. */
 export interface ArchetypeSpec {
@@ -104,6 +105,29 @@ export interface ArchetypeSpec {
    * archetype reaches.
    */
   readonly batchSize?: number;
+  /**
+   * Spacing, in leaf index space, at which a single {@link Mesh} leaf replaces a
+   * sprite: leaf `i` is a mesh when `i % meshEvery === meshEvery - 1`.
+   * `undefined` keeps the sprite-only scene every other archetype builds.
+   *
+   * Renderer SWITCHES are the measured dimension, so the scene is deliberately
+   * lopsided — long sprite runs punctuated by one mesh — rather than two equal
+   * plateaus. Equal plateaus would fill half the frame with mesh leaves, and the
+   * default mesh path costs one draw call per leaf, so the measurement would be
+   * swamped by per-mesh draw-call cost and say nothing about the switch. One
+   * mesh per run puts `~nodeCount / meshEvery` switch PAIRS in the frame while
+   * keeping the mesh draw-call count in the same order as the sprite batch
+   * count.
+   *
+   * On WebGPU each switch used to end the open render pass and `queue.submit`,
+   * and the mesh renderer ended its own pass again at the tail of every flush —
+   * so the frame's submit count scaled with the switch count.
+   *
+   * ExoJS-ONLY, like `viewCount` and `materialCount` — a competitor arm builds
+   * its ordinary sprite scene instead, so this archetype carries no cross-arm
+   * meaning.
+   */
+  readonly meshEvery?: number;
 }
 
 /** One matrix cell: a single (engine, config, backend, archetype, node count) combination to measure. */

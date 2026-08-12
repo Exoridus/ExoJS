@@ -96,6 +96,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
   private _stencilLoadOp: GPULoadOp = 'load';
   private _stencilRef = 0;
   private _active: WebGpuActiveRenderPass | null = null;
+  private _passHasDraws = false;
 
   public constructor(backend: WebGpuPassBackend) {
     this._backend = backend;
@@ -116,6 +117,35 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
   /** The open GPU pass, or `null` when none is open. @internal */
   public get activePass(): WebGpuActiveRenderPass | null {
     return this._active;
+  }
+
+  /**
+   * Whether the open pass holds draws recorded by anyone — this renderer or
+   * another one. The pass survives a renderer switch, so a renderer's own
+   * cursors no longer answer "would mutating a resource now retroactively
+   * change a draw already in this pass": the draw may belong to a renderer that
+   * flushed earlier into the same pass.
+   *
+   * The contract deliberately stops at a boolean. Guards against a *shared*
+   * resource being mutated under recorded draws (the transform storage buffer,
+   * managed texture content) need only "does this pass hold any draw" — never
+   * "whose". Every "is it mine" question is answered locally, by comparing
+   * against {@link activePass} by identity.
+   * @internal
+   */
+  public get passHasDraws(): boolean {
+    return this._passHasDraws;
+  }
+
+  /**
+   * Record that a draw was encoded into the open pass. Called by every renderer
+   * at the site that bumps `stats.drawCalls`. A no-op with no pass open.
+   * @internal
+   */
+  public markPassDraws(): void {
+    if (this._active !== null) {
+      this._passHasDraws = true;
+    }
   }
 
   /**
@@ -158,6 +188,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     const encoder = backend.device.createCommandEncoder({ label: 'pass-coordinator:command-encoder' });
     const pass = encoder.beginRenderPass(descriptor);
 
+    this._passHasDraws = false;
     backend.stats.renderPasses++;
 
     const scissor = backend.getScissorRect();
@@ -194,6 +225,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     }
 
     this._active = null;
+    this._passHasDraws = false;
     active.pass.end();
     this._backend.submit(active.encoder.finish());
   }
@@ -258,6 +290,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
 
     const active = this.acquirePass();
     this._stencil.draw(active.pass, active.targetFormat, true, shape, transform, active.view);
+    this.markPassDraws();
     this.endPass();
 
     this._stencilWriteInProgress = false;
@@ -288,6 +321,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
 
     const active = this.acquirePass();
     this._stencil.draw(active.pass, active.targetFormat, false, entry.shape, entry.transform, active.view);
+    this.markPassDraws();
     this.endPass();
 
     this._stencilWriteInProgress = false;

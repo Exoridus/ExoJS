@@ -3,7 +3,6 @@
 import { Matrix } from '@codexo/exojs';
 import type {
   RenderTexture,
-  WebGpuActiveRenderPass,
   WebGpuRetainedBatchPayload,
   WebGpuRetainedBatchReplayer,
   WebGpuRetainedNodeIndexRange,
@@ -182,7 +181,6 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
   private _currentTexture: Texture | null = null;
 
   // ── Retained-batch replay state ───────────────────────────────────────────
-  private _lastReplayPass: WebGpuActiveRenderPass | null = null;
   private readonly _stagedReplayGroupData = new Float32Array(16);
   // Reused single-slot texture list handed to the backend at record time; a
   // tile chunk batch always binds exactly one tileset texture (slot 0).
@@ -257,7 +255,6 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     this._writtenViewUpdateId = -1;
     this._writtenGroupTransformId = -1;
     this._hasWrittenProjection = false;
-    this._lastReplayPass = null;
   }
 
   public render(node: TileChunkNode): void {
@@ -411,9 +408,27 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     const scissor = backend.getScissorRect();
     const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
 
-    const pass = backend._passCoordinator.acquirePass().pass;
+    const coordinator = backend._passCoordinator;
+    const willDraw =
+      this._quadIndex > 0 && !maskClipsAll && this._instanceBuffer !== null && this._indexBuffer !== null && this._currentBlendMode !== null && this._currentTexture !== null;
 
-    if (this._quadIndex > 0 && !maskClipsAll && this._instanceBuffer !== null && this._indexBuffer !== null && this._currentBlendMode !== null && this._currentTexture !== null) {
+    // The pass survives a renderer switch, so it can hold ANOTHER renderer's
+    // draws by the time this flush runs. Resolving the shared transform storage
+    // below may free the buffer those draws bind, and syncing the tileset
+    // texture may re-upload content they sample — both land on the queue
+    // timeline ahead of the deferred submit. End (submit) the pass first so
+    // they keep what they were recorded against.
+    if (
+      willDraw &&
+      coordinator.passHasDraws &&
+      (backend._textureUploadWouldMutate(this._currentTexture!) || backend._transformStorageWouldGrow(this._maxNodeIndex + 1))
+    ) {
+      coordinator.endPass();
+    }
+
+    const pass = coordinator.acquirePass().pass;
+
+    if (willDraw) {
       device.queue.writeBuffer(this._instanceBuffer, 0, this._instanceData, 0, this._quadIndex * instanceStrideBytes);
 
       const storage = backend.getTransformStorageBuffer(this._maxNodeIndex + 1);
@@ -430,6 +445,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
       pass.setIndexBuffer(this._indexBuffer, 'uint16');
       pass.drawIndexed(indicesPerInstance, this._quadIndex, 0, 0, 0);
 
+      coordinator.markPassDraws();
       backend.stats.batches++;
       backend.stats.drawCalls++;
     }
@@ -454,7 +470,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
       );
     }
 
-    backend._passCoordinator.endPass();
+    coordinator.endPass();
 
     this._quadIndex = 0;
     this._maxNodeIndex = 0;
@@ -587,15 +603,14 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     }
 
     const coordinator = backend._passCoordinator;
-    let activePass = coordinator.activePass;
-    const passHasDraws = activePass !== null && this._lastReplayPass === activePass;
 
     // Same-frame texture mutation guard: resolving the bindings below
     // re-uploads mutated content on the queue timeline BEFORE the deferred
     // submit, which would retroactively change draws already recorded into
     // the open pass. End (submit) the pass first so they keep the
-    // pre-mutation content.
-    if (passHasDraws) {
+    // pre-mutation content. The texture cache is shared and the pass survives
+    // a renderer switch, so any recorded draw is at risk, not just one of ours.
+    if (coordinator.passHasDraws) {
       for (const texture of payload.textures) {
         if (backend._textureUploadWouldMutate(texture)) {
           coordinator.endPass();
@@ -632,7 +647,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     }
 
     if (uboDirty) {
-      activePass = coordinator.activePass;
+      const activePass = coordinator.activePass;
 
       if (activePass !== null && bundle.drawsInPass === activePass) {
         // Rewriting the UBO would retroactively re-project this bundle's
@@ -659,7 +674,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     pass.drawIndexed(indicesPerInstance, payload.instanceCount, 0, 0, 0);
 
     bundle.drawsInPass = active;
-    this._lastReplayPass = active;
+    coordinator.markPassDraws();
     backend.stats.batches++;
     backend.stats.drawCalls++;
   }

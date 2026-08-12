@@ -5,6 +5,7 @@ import { Container } from '#rendering/Container';
 import { Geometry } from '#rendering/geometry/Geometry';
 import { ShaderSource } from '#rendering/material/ShaderSource';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
+import { Mesh } from '#rendering/mesh/Mesh';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { RenderBatch } from '#rendering/RenderBatch';
 import { RetainedContainer } from '#rendering/RetainedContainer';
@@ -17,6 +18,19 @@ import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { mutationSignature, selectMutationIndices } from '../../shared/mutation';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
+
+/**
+ * One mesh leaf for the `mixed-sprite-mesh` archetype: the same SPRITE_SIZE quad
+ * a sprite leaf covers, as a flat six-vertex triangle list with full-texture UVs.
+ * Deliberately the plainest mesh the renderer has — no material, no indices — so
+ * the archetype measures the renderer SWITCH and not mesh-specific work.
+ */
+const createLeafMesh = (texture: Texture): Mesh =>
+  new Mesh({
+    vertices: new Float32Array([0, 0, SPRITE_SIZE, 0, SPRITE_SIZE, SPRITE_SIZE, 0, 0, SPRITE_SIZE, SPRITE_SIZE, 0, SPRITE_SIZE]),
+    uvs: new Float32Array([0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1]),
+    texture,
+  });
 
 /**
  * One SPRITE_SIZE quad in local space, the single geometry every instance of the
@@ -340,6 +354,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       const blendRunLength = Math.max(1, spec.blendRunLength ?? 1);
       const materialCount = Math.max(0, spec.materialCount ?? 0);
       const materialRunLength = Math.max(1, spec.materialRunLength ?? 1);
+      const meshEvery = Math.max(0, spec.meshEvery ?? 0);
 
       materials = [];
 
@@ -402,21 +417,30 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
         // (24 textures, depth-2 spine) would not break batches at all. Cycling
         // per bucket position makes each stream sweep all textures, overflowing
         // the slots as intended.
-        const sprite = new Sprite(textures[Math.floor(i / spine.length) % textures.length]!);
+        // Sprite/mesh interleave (see `ArchetypeSpec.meshEvery`): every Nth leaf
+        // draws the same SPRITE_SIZE quad through the MESH renderer, so each one
+        // costs a renderer switch out and back while nothing else about the
+        // scene changes. Left unset, every leaf is a sprite — the pre-existing
+        // shape.
+        const leafTexture = textures[Math.floor(i / spine.length) % textures.length]!;
+        const isMesh = meshEvery > 0 && i % meshEvery === meshEvery - 1;
+        const leaf: Sprite | Mesh = isMesh ? createLeafMesh(leafTexture) : new Sprite(leafTexture);
 
-        sprite.cullable = spec.cullingEnabled;
+        leaf.cullable = spec.cullingEnabled;
 
         // Blend-mode / material plateaus keyed on the GLOBAL leaf index, using
         // the same formula the Pixi arm uses, so both arms assign the identical
         // mode to the identical sprite and the resulting draw-call structure is
         // comparable. Left at the engine default when the archetype does not
-        // set the dimension.
+        // set the dimension. Materials are a sprite-only dimension: the
+        // `SpriteMaterial` instances built above have no mesh counterpart, and
+        // no archetype combines `materialCount` with `meshRunLength`.
         if (blendModeCount > 1) {
-          sprite.blendMode = CYCLED_BLEND_MODES[Math.floor(i / blendRunLength) % blendModeCount]!;
+          leaf.blendMode = CYCLED_BLEND_MODES[Math.floor(i / blendRunLength) % blendModeCount]!;
         }
 
-        if (materials.length > 0) {
-          sprite.material = materials[Math.floor(i / materialRunLength) % materials.length]!;
+        if (materials.length > 0 && leaf instanceof Sprite) {
+          leaf.material = materials[Math.floor(i / materialRunLength) % materials.length]!;
         }
 
         // `overdraw` stacks nodeCount full-viewport quads at the origin to
@@ -431,19 +455,22 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
         // positioned at the origin rather than centred, to actually cover the
         // visible area rather than half of it) makes nodeCount the real fill
         // multiplier: nodeCount x VIEWPORT_WIDTH x VIEWPORT_HEIGHT overdraw.
-        if (overdraw) {
-          sprite.width = VIEWPORT_WIDTH;
-          sprite.height = VIEWPORT_HEIGHT;
+        // `overdraw` never sets `meshRunLength`, so this stays a sprite path.
+        if (overdraw && leaf instanceof Sprite) {
+          leaf.width = VIEWPORT_WIDTH;
+          leaf.height = VIEWPORT_HEIGHT;
         }
 
         const x = overdraw ? 0 : GRID_MARGIN + (i % columns) * cellWidth + cellWidth / 2;
         const y = overdraw ? 0 : GRID_MARGIN + Math.floor(i / columns) * cellHeight + cellHeight / 2;
 
-        sprite.setPosition(x, y);
-        spine[i % spine.length]!.addChild(sprite);
+        leaf.setPosition(x, y);
+        spine[i % spine.length]!.addChild(leaf);
 
-        if (selectedSet.has(i)) {
-          leaves.push({ sprite, baseX: x, baseY: y });
+        // Mesh leaves have no mutable-leaf shape (the archetype that builds them
+        // sets `mutationFraction: 0`, so `selectedSet` is empty there anyway).
+        if (selectedSet.has(i) && leaf instanceof Sprite) {
+          leaves.push({ sprite: leaf, baseX: x, baseY: y });
         }
       }
 

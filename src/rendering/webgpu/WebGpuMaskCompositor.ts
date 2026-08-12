@@ -231,6 +231,7 @@ export class WebGpuMaskCompositor {
     pass.setIndexBuffer(this._indexBuffer!, 'uint16');
     pass.drawIndexed(6);
 
+    manager._passCoordinator.markPassDraws();
     manager.stats.batches++;
     manager.stats.drawCalls++;
 

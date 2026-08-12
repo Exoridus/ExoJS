@@ -122,6 +122,16 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   // call, so the frame cost scaled with the CALL count rather than the instance
   // count. ExoJS-only — see `ArchetypeSpec.batchSize`.
   { id: 'instanced-batch', nodeCounts: GPU_BOUND_COUNTS, nestingDepth: 1, textureCount: 1, mutationFraction: 0, cullingEnabled: false, batchSize: 64 },
+  // The only archetype that puts TWO renderers in one frame. Every other one
+  // draws through a single renderer, so the cost of handing the draw stream from
+  // one to the next — a pass end plus a `queue.submit` per switch on WebGPU —
+  // was invisible to the whole matrix. `meshEvery: 64` mirrors the blend and
+  // material plateaus in switch density (a few hundred in a 25k frame, the shape
+  // a real mixed scene of sprites plus custom geometry produces) while keeping
+  // the mesh leaf count low: the default mesh path draws one call per leaf, so
+  // an even sprite/mesh split would measure per-mesh draw-call cost instead of
+  // the switch. ExoJS-only — see `ArchetypeSpec.meshEvery`.
+  { id: 'mixed-sprite-mesh', nodeCounts: GPU_BOUND_COUNTS, nestingDepth: 2, textureCount: 1, mutationFraction: 0, cullingEnabled: false, meshEvery: 64 },
   {
     id: 'mixed-material-atlased',
     nodeCounts: GPU_BOUND_COUNTS,

@@ -23,6 +23,7 @@ import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
 import { Geometry } from '#rendering/geometry/Geometry';
+import { Mesh } from '#rendering/mesh/Mesh';
 import { RenderingContext } from '#rendering/RenderingContext';
 import type { RenderNode } from '#rendering/RenderNode';
 import { Sprite } from '#rendering/sprite/Sprite';
@@ -173,6 +174,19 @@ const paletteColor = (index: number): string => {
 };
 const palette36 = Array.from({ length: 36 }, (_, i) => paletteColor(i));
 
+// `Mesh.colors` takes one packed-RGBA8 u32 per vertex. Building it through a
+// byte view keeps the channel order explicit rather than relying on a hand-rolled
+// shift expression matching the platform's endianness.
+const packRgbaPerVertex = (rgba: RgbaTuple, vertexCount: number): Uint32Array => {
+  const bytes = new Uint8Array(vertexCount * 4);
+
+  for (let i = 0; i < vertexCount; i++) {
+    bytes.set(rgba, i * 4);
+  }
+
+  return new Uint32Array(bytes.buffer);
+};
+
 // Parse a `#rrggbb` string to an opaque RGBA tuple (canvas alphaMode 'opaque').
 const hexToRgba = (hex: string): RgbaTuple => [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16), 255];
 
@@ -281,6 +295,100 @@ describe('WebGPU single-submit frame', () => {
     } finally {
       root.destroy();
       textures.forEach(texture => texture.destroy());
+      backend.destroy();
+    }
+  });
+
+  test('a sprite/mesh/sprite frame merges both renderers into ONE pass and ONE submit', async ctx => {
+    const backend = await setupBackend();
+    // Two sprites on the top row and one mesh on the bottom row, rendered
+    // sprite -> mesh -> sprite so the backend switches renderers twice. A
+    // renderer switch used to end (submit) the pass, and the mesh renderer
+    // additionally ended its own at the tail of every flush — so this frame cost
+    // a pass plus a submit per alternation, and the sprite flush after the mesh
+    // had to open a fresh pass. Both renderers write into the SHARED transform
+    // storage and share the texture cache, which is why merging them needs the
+    // coordinator-side `passHasDraws` knowledge rather than each renderer's own
+    // cursor.
+    //
+    // ONE mesh flush is the boundary of what this merges. `WebGpuMeshRenderer`
+    // rewrites its vertex / index / uniform buffers from offset 0 on every
+    // flush, so a SECOND mesh flush still has to end the pass holding the
+    // first's draws — the per-pass cursor discipline `drawInstancedBatch` uses
+    // has not been extended to the flush path.
+    const cell = 16;
+    const columns = [0, 24, 48];
+    const spriteColors = ['#ff0000', '#00ff00'];
+    const meshColor: RgbaTuple = [255, 255, 0, 255];
+    const spriteTextures = spriteColors.map(color => createSolidTexture(color, 8));
+    const sprites = spriteTextures.map((texture, i) => {
+      const sprite = new Sprite(texture);
+
+      sprite.setPosition(columns[i]!, 0);
+      sprite.width = cell;
+      sprite.height = cell;
+
+      return sprite;
+    });
+    // The mesh carries its colour in the vertex stream and samples the 1x1 white
+    // texture, so no extra texture bindings are involved.
+    const meshX = columns[2]!;
+    const meshY = 24;
+    const mesh = new Mesh({
+      vertices: new Float32Array([
+        meshX,
+        meshY,
+        meshX + cell,
+        meshY,
+        meshX + cell,
+        meshY + cell,
+        meshX,
+        meshY,
+        meshX + cell,
+        meshY + cell,
+        meshX,
+        meshY + cell,
+      ]),
+      uvs: new Float32Array([0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1]),
+      colors: packRgbaPerVertex(meshColor, 6),
+    });
+
+    const renderInterleaved = (): void => {
+      backend.resetStats();
+      backend.clear(Color.black);
+
+      sprites[0]!.render(backend);
+      mesh.render(backend);
+      sprites[1]!.render(backend);
+
+      backend.flush();
+    };
+
+    try {
+      for (let frame = 0; frame < 3; frame++) {
+        if (!(await renderGuarded(ctx, backend, renderInterleaved))) {
+          return;
+        }
+      }
+
+      const submits = countSubmits(backend, renderInterleaved);
+
+      expect(backend.stats.drawCalls).toBe(3);
+      expect(backend.stats.renderPasses).toBe(1);
+      expect(submits).toBe(1);
+
+      // Pixels are what actually guard the merge: a pass that keeps all three
+      // draws but lets one renderer's buffer write land under the other's
+      // recorded draws would still submit once, and paint the wrong cells.
+      const readPixel = readWebGpuPixels(backend, canvasSize);
+
+      expectPixelNear(readPixel(columns[0]! + 8, 8), hexToRgba(spriteColors[0]!));
+      expectPixelNear(readPixel(columns[1]! + 8, 8), hexToRgba(spriteColors[1]!));
+      expectPixelNear(readPixel(meshX + 8, meshY + 8), meshColor);
+    } finally {
+      mesh.destroy();
+      sprites.forEach(sprite => sprite.destroy());
+      spriteTextures.forEach(texture => texture.destroy());
       backend.destroy();
     }
   });

@@ -233,6 +233,7 @@ export class WebGpuShaderFilter extends Filter {
           pass.setBindGroup(1, userBindGroup);
           pass.draw(4);
 
+          gpu._passCoordinator.markPassDraws();
           gpu.stats.drawCalls++;
 
           gpu._passCoordinator.endPass();
