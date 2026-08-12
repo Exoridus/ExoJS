@@ -4,7 +4,7 @@ import { GamepadMappingFamily } from '#input/GamepadMapping';
 import { GenericDualAnalogGamepadMapping } from '#input/GenericDualAnalogGamepadMapping';
 import { JoyConLeftGamepadMapping } from '#input/JoyConLeftGamepadMapping';
 import { JoyConRightGamepadMapping } from '#input/JoyConRightGamepadMapping';
-import { PlayStationGamepadMapping } from '#input/PlayStationGamepadMapping';
+import { PlayStationGamepadMapping, PlayStationGeneration } from '#input/PlayStationGamepadMapping';
 import { SteamControllerGamepadMapping } from '#input/SteamControllerGamepadMapping';
 import { SwitchProGamepadMapping } from '#input/SwitchProGamepadMapping';
 import { XboxGamepadMapping } from '#input/XboxGamepadMapping';
@@ -92,6 +92,16 @@ describe('the device-specific button slot at index 17', () => {
 
     expect(mapping.family).toBe(GamepadMappingFamily.PlayStation);
     expect(slot17(mapping)).toBe(GamepadButton.Touchpad);
+    expect(slot17(new PlayStationGamepadMapping(PlayStationGeneration.PS4))).toBe(GamepadButton.Touchpad);
+  });
+
+  // A PS3 pad has no touchpad, so the standard layout ends at index 16 for it.
+  test('a PlayStation 3 controller claims nothing there', () => {
+    const mapping = new PlayStationGamepadMapping(PlayStationGeneration.PS3);
+
+    expect(mapping.family).toBe(GamepadMappingFamily.PlayStation);
+    expect(slot17(mapping)).toBeUndefined();
+    expect(mapping.hasChannel(GamepadButton.Touchpad)).toBe(false);
   });
 
   test('the three devices disagree about slot 17, so no baseline value can be right', () => {

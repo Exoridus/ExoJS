@@ -3,7 +3,7 @@ import type { GamepadMapping } from './GamepadMapping';
 import { GenericDualAnalogGamepadMapping } from './GenericDualAnalogGamepadMapping';
 import { JoyConLeftGamepadMapping } from './JoyConLeftGamepadMapping';
 import { JoyConRightGamepadMapping } from './JoyConRightGamepadMapping';
-import { PlayStationGamepadMapping } from './PlayStationGamepadMapping';
+import { PlayStationGamepadMapping, PlayStationGeneration } from './PlayStationGamepadMapping';
 import { SteamControllerGamepadMapping } from './SteamControllerGamepadMapping';
 import { SteamDeckGamepadMapping } from './SteamDeckGamepadMapping';
 import { SwitchProGamepadMapping } from './SwitchProGamepadMapping';
@@ -253,10 +253,14 @@ const exactDeviceDefinitions: GamepadDefinition[] = [
   createStaticGamepadDefinition('Xbox One Elite Controller', () => new XboxGamepadMapping(), '045e:02e3'),
   createStaticGamepadDefinition('Xbox Elite Wireless Controller Series 2', () => new XboxGamepadMapping(), ['045e:0b00', '045e:0b05', '045e:0b22']),
   createStaticGamepadDefinition('Xbox Series Controller', () => new XboxGamepadMapping(), ['045e:0b12', '045e:0b13']),
-  createStaticGamepadDefinition('PlayStation 3 Controller', () => new PlayStationGamepadMapping(), '054c:0268'),
-  createStaticGamepadDefinition('DualShock 4 Controller', () => new PlayStationGamepadMapping(), ['054c:05c4', '054c:09cc', '054c:0ba0']),
-  createStaticGamepadDefinition('DualSense Controller', () => new PlayStationGamepadMapping(), '054c:0ce6'),
-  createStaticGamepadDefinition('DualSense Edge Controller', () => new PlayStationGamepadMapping(), '054c:0df2'),
+  createStaticGamepadDefinition('PlayStation 3 Controller', () => new PlayStationGamepadMapping(PlayStationGeneration.PS3), '054c:0268'),
+  createStaticGamepadDefinition('DualShock 4 Controller', () => new PlayStationGamepadMapping(PlayStationGeneration.PS4), [
+    '054c:05c4',
+    '054c:09cc',
+    '054c:0ba0',
+  ]),
+  createStaticGamepadDefinition('DualSense Controller', () => new PlayStationGamepadMapping(PlayStationGeneration.PS5), '054c:0ce6'),
+  createStaticGamepadDefinition('DualSense Edge Controller', () => new PlayStationGamepadMapping(PlayStationGeneration.PS5), '054c:0df2'),
   createStaticGamepadDefinition('Joy-Con (L)', () => new JoyConLeftGamepadMapping(), '057e:2006'),
   createStaticGamepadDefinition('Joy-Con (R)', () => new JoyConRightGamepadMapping(), '057e:2007'),
   createStaticGamepadDefinition('Joy-Con Charging Grip', () => new SwitchProGamepadMapping(), '057e:200e'),
@@ -287,14 +291,20 @@ const exactDeviceDefinitions: GamepadDefinition[] = [
   createStaticGamepadDefinition('PowerA Switch Controller', () => new SwitchProGamepadMapping(), '20d6:a713'),
   createStaticGamepadDefinition('PowerA OPS Pro Wireless Controller', () => new GenericDualAnalogGamepadMapping(), '20d6:4033'),
   createStaticGamepadDefinition('PowerA OPS Wireless Controller', () => new GenericDualAnalogGamepadMapping(), '20d6:4026'),
-  createStaticGamepadDefinition('Nacon Revolution 3 Controller', () => new PlayStationGamepadMapping(), '146b:0611'),
-  createStaticGamepadDefinition('Nacon Revolution Unlimited Pro Controller', () => new PlayStationGamepadMapping(), '146b:0d08'),
-  createStaticGamepadDefinition('Nacon Revolution Infinity Controller', () => new PlayStationGamepadMapping(), '146b:0d10'),
-  createStaticGamepadDefinition('Nacon Revolution 5 Pro Controller', () => new PlayStationGamepadMapping(), ['3285:0d17', '3285:0d19']),
-  createStaticGamepadDefinition('Razer Raiju Controller', () => new PlayStationGamepadMapping(), '1532:1000'),
-  createStaticGamepadDefinition('Razer Raiju Mobile Controller', () => new PlayStationGamepadMapping(), ['1532:0705', '1532:0707']),
-  createStaticGamepadDefinition('Razer Raiju Tournament Edition Controller', () => new PlayStationGamepadMapping(), ['1532:1007', '1532:100a']),
-  createStaticGamepadDefinition('Razer Raiju Ultimate Controller', () => new PlayStationGamepadMapping(), ['1532:1004', '1532:1009']),
+  createStaticGamepadDefinition('Nacon Revolution 3 Controller', () => new PlayStationGamepadMapping(PlayStationGeneration.PS4), '146b:0611'),
+  createStaticGamepadDefinition('Nacon Revolution Unlimited Pro Controller', () => new PlayStationGamepadMapping(PlayStationGeneration.PS4), '146b:0d08'),
+  createStaticGamepadDefinition('Nacon Revolution Infinity Controller', () => new PlayStationGamepadMapping(PlayStationGeneration.PS4), '146b:0d10'),
+  createStaticGamepadDefinition('Nacon Revolution 5 Pro Controller', () => new PlayStationGamepadMapping(PlayStationGeneration.PS5), [
+    '3285:0d17',
+    '3285:0d19',
+  ]),
+  createStaticGamepadDefinition('Razer Raiju Controller', () => new PlayStationGamepadMapping(PlayStationGeneration.PS4), '1532:1000'),
+  createStaticGamepadDefinition('Razer Raiju Mobile Controller', () => new PlayStationGamepadMapping(PlayStationGeneration.PS4), ['1532:0705', '1532:0707']),
+  createStaticGamepadDefinition('Razer Raiju Tournament Edition Controller', () => new PlayStationGamepadMapping(PlayStationGeneration.PS4), [
+    '1532:1007',
+    '1532:100a',
+  ]),
+  createStaticGamepadDefinition('Razer Raiju Ultimate Controller', () => new PlayStationGamepadMapping(PlayStationGeneration.PS4), ['1532:1004', '1532:1009']),
   createStaticGamepadDefinition('Razer Raion Controller', () => new ArcadeStickGamepadMapping(), '1532:1100'),
 ];
 

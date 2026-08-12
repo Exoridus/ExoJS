@@ -118,7 +118,7 @@
         },
         {
           "name": "getControlLabels",
-          "signature": "getControlLabels(family: GamepadMappingFamily): ReadonlyMap<GamepadPromptControl, string>",
+          "signature": "getControlLabels(source: GamepadMapping | GamepadMappingFamily): ReadonlyMap<GamepadPromptControl, string>",
           "signatureTokens": [
             {
               "text": "getControlLabels",
@@ -129,11 +129,19 @@
               "kind": "punctuation"
             },
             {
-              "text": "family",
+              "text": "source",
               "kind": "param"
             },
             {
               "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadMapping",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
               "kind": "punctuation"
             },
             {
@@ -175,13 +183,13 @@
           ],
           "params": [
             {
-              "name": "family",
-              "type": "GamepadMappingFamily",
+              "name": "source",
+              "type": "GamepadMapping | GamepadMappingFamily",
               "optional": false
             }
           ],
           "returnType": "ReadonlyMap<GamepadPromptControl, string>",
-          "description": "Returns the label map for the given device family, e.g. { ButtonSouth → \"A\" } for Xbox or { ButtonSouth → \"Cross\" } for PlayStation. Falls back to generic labels when family has no registered label set."
+          "description": "Returns the label map for a device, e.g. { ButtonSouth → \"A\" } for Xbox or { ButtonSouth → \"Cross\" } for PlayStation. Falls back to generic labels when the family has no registered label set. Pass the connected pad's GamepadMapping rather than its family whenever you have one: a family spans several product generations, and the mapping contributes the labels that differ between them through GamepadMapping.promptLabels — \"Share\" on a DualShock 4 where the family default reads \"Create\". The merged map is cached per mapping."
         },
         {
           "name": "getControlPosition",
