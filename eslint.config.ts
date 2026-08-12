@@ -1041,10 +1041,17 @@ export default defineConfig([
   },
 
   {
-    files: ['src/rendering/webgpu/WebGpuBackend.ts', 'src/rendering/webgpu/WebGpuMeshRenderer.ts', 'src/rendering/webgpu/WebGpuSpriteRenderer.ts'],
+    files: [
+      'src/rendering/webgpu/WebGpuBackend.ts',
+      'src/rendering/webgpu/WebGpuMeshRenderer.ts',
+      'src/rendering/webgpu/WebGpuSpriteRenderer.ts',
+      'src/rendering/webgpu/WebGpuTextRenderer.ts',
+    ],
     rules: {
       // Cohesive WebGPU backend/renderer surface; each file is a single
-      // tightly-coupled unit (device/pipeline state, draw submission).
+      // tightly-coupled unit (device/pipeline state, draw submission), and the
+      // text renderer additionally carries its whole WGSL module as one
+      // template literal that cannot be split the way `max-lines` assumes.
       // Splitting would scatter that state across files for no readability
       // gain. Known deviation, candidate for a later extraction.
       'max-lines': 'off',

@@ -3,6 +3,7 @@
 import { Matrix } from '@codexo/exojs';
 import type {
   RenderTexture,
+  WebGpuActiveRenderPass,
   WebGpuRetainedBatchPayload,
   WebGpuRetainedBatchReplayer,
   WebGpuRetainedNodeIndexRange,
@@ -164,7 +165,11 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
   private _transformStorageBuffer: GPUBuffer | null = null;
   private _indexBuffer: GPUBuffer | null = null;
   private _instanceBuffer: GPUBuffer | null = null;
-  private _instanceCapacity = 0;
+  // Capacity of the GPU instance buffer, in BYTES: it carries every flush the
+  // open pass has taken, not just the pending one. The CPU staging array is
+  // sized separately (in instances) because it only ever holds one flush.
+  private _instanceBufferCapacity = 0;
+  private _instanceStagingCapacity = 0;
   private _instanceData: ArrayBuffer = new ArrayBuffer(0);
   private _instanceFloat32 = new Float32Array(this._instanceData);
   private _instanceUint32 = new Uint32Array(this._instanceData);
@@ -179,6 +184,22 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
   private _maxNodeIndex = 0;
   private _currentBlendMode: BlendModes | null = null;
   private _currentTexture: Texture | null = null;
+
+  // ── Pass-scoped write cursor ──────────────────────────────────────────────
+  // `flush()` no longer ends the pass, so consecutive flushes record into ONE
+  // open pass and ONE submit. Everything written into the shared instance
+  // buffer is therefore scoped to that pass, not to a single flush: a flush
+  // that rewrote the buffer from offset 0 would have the earlier flushes' draws
+  // read this flush's bytes, because `queue.writeBuffer` is ordered against the
+  // submit and not against the individual draws inside it. Each flush appends
+  // at `_instancePassBytes` instead and adds the base at bind time.
+  //
+  // `_passDraws` is the open pass this renderer has actually RECORDED draws
+  // into. Pass identity is the key: the coordinator builds a fresh active-pass
+  // object on every acquire, so a pass ended by anyone else (a target switch, a
+  // stencil clip, another renderer) is distinguished automatically.
+  private _passDraws: WebGpuActiveRenderPass | null = null;
+  private _instancePassBytes = 0;
 
   // ── Retained-batch replay state ───────────────────────────────────────────
   private readonly _stagedReplayGroupData = new Float32Array(16);
@@ -225,6 +246,17 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
   }
 
   protected onDisconnect(): void {
+    // The teardown below destroys the very buffers a draw of ours left in the
+    // open pass still binds, and the pass no longer ends at the tail of a
+    // flush. Submit it first so those draws reach the queue against live
+    // buffers. Backend destroy and device loss drop the pass before disconnecting
+    // renderers, so this only fires when a renderer is disconnected on its own.
+    const coordinator = this._backend?._passCoordinator ?? null;
+
+    if (coordinator !== null && this._passDraws !== null && this._passDraws === coordinator.activePass) {
+      coordinator.endPass();
+    }
+
     this._instanceBuffer?.destroy();
     this._indexBuffer?.destroy();
     this._uniformBuffer?.destroy();
@@ -243,10 +275,13 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     this._shaderModule = null;
     this._device = null;
     this._backend = null;
-    this._instanceCapacity = 0;
+    this._instanceBufferCapacity = 0;
+    this._instanceStagingCapacity = 0;
     this._instanceData = new ArrayBuffer(0);
     this._instanceFloat32 = new Float32Array(this._instanceData);
     this._instanceUint32 = new Uint32Array(this._instanceData);
+    this._passDraws = null;
+    this._instancePassBytes = 0;
     this._quadIndex = 0;
     this._maxNodeIndex = 0;
     this._currentBlendMode = null;
@@ -308,7 +343,11 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
 
     const blendModeChanged = this._currentBlendMode !== null && blendMode !== this._currentBlendMode;
     const textureChanged = this._currentTexture !== null && texture !== this._currentTexture;
-    const willExceed = this._quadIndex + quads.length > this._instanceCapacity && this._instanceCapacity > 0;
+    // Overflowing the CPU staging array flushes the accumulated run rather than
+    // growing it. The GPU buffer is NOT what this asks about: it now carries
+    // every flush in the pass, so flushing frees no room there — its capacity is
+    // resolved in `flush()` against the pass total.
+    const willExceed = this._quadIndex + quads.length > this._instanceStagingCapacity && this._instanceStagingCapacity > 0;
 
     if ((blendModeChanged || textureChanged || willExceed) && this._quadIndex > 0) {
       this.flush();
@@ -318,7 +357,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     this._currentTexture = texture;
     backend.setBlendMode(blendMode);
 
-    this._ensureInstanceCapacity(this._quadIndex + quads.length);
+    this._ensureStagingCapacity(this._quadIndex + quads.length);
 
     const f32 = this._instanceFloat32;
     const u32 = this._instanceUint32;
@@ -386,14 +425,60 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     // (view, updateId, group-id, snap-rect) state.
     const view = backend.view;
     const viewportChanged = packSnapViewport(backend, this._projectionData, 32);
-
-    if (
+    const projectionChanged =
       !this._hasWrittenProjection ||
       this._writtenView !== view ||
       this._writtenViewUpdateId !== view.updateId ||
       this._writtenGroupTransformId !== backend.renderGroupTransformId ||
-      viewportChanged
+      viewportChanged;
+
+    const scissor = backend.getScissorRect();
+    const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
+
+    const coordinator = backend._passCoordinator;
+    // Aliased as consts so the `willDraw` predicate narrows them for the draw
+    // block below (the same narrowing the inlined condition used to provide).
+    const texture = this._currentTexture;
+    const blendMode = this._currentBlendMode;
+    const indexBuffer = this._indexBuffer;
+    const willDraw = this._quadIndex > 0 && !maskClipsAll && texture !== null && blendMode !== null && indexBuffer !== null;
+
+    const flushBytes = this._quadIndex * instanceStrideBytes;
+    // Sized for everything this pass has taken SO FAR plus this flush, captured
+    // BEFORE the guard below may reset the cursor — and used to size the buffer
+    // even when it does split. Sizing to the lone flush that remains after a
+    // split would peg the buffer at one flush forever: the guard would split,
+    // the split would shrink the requirement back, the capacity would never
+    // ratchet, and every flush would open its own pass again.
+    const targetInstanceBytes = this._instancePassBytes + flushBytes;
+    const ownDrawsInPass = this._passDraws !== null && this._passDraws === coordinator.activePass;
+
+    // Two predicates, deliberately different. The first gates the hazards
+    // against resources only THIS renderer binds — the projection UBO (rewritten
+    // at offset 0, which would retroactively re-project our earlier draws) and
+    // the instance buffer (whose reallocation frees what those draws read) — so
+    // it asks this renderer's own cursor. The second gates the two SHARED ones
+    // (transform storage, managed texture content), which the pass may hold
+    // another renderer's draws against, so it asks the coordinator. Both land on
+    // the queue timeline ahead of the deferred submit, and both are answered by
+    // ending (submitting) the pass first.
+    if (
+      (ownDrawsInPass && (projectionChanged || (willDraw && targetInstanceBytes > this._instanceBufferCapacity))) ||
+      (willDraw &&
+        coordinator.passHasDraws &&
+        (backend._textureUploadWouldMutate(texture) || backend._transformStorageWouldGrow(this._maxNodeIndex + 1)))
     ) {
+      coordinator.endPass();
+    }
+
+    // Any boundary above — or one another renderer hit since our last flush —
+    // means the open pass no longer holds our draws, so the cursor restarts.
+    if (this._passDraws !== coordinator.activePass) {
+      this._passDraws = null;
+      this._instancePassBytes = 0;
+    }
+
+    if (projectionChanged) {
       packAffineMat4(view.getTransform(), this._projectionData, 0);
       packAffineMat4(backend.renderGroupTransform ?? Matrix.identity, this._projectionData, 16);
 
@@ -405,49 +490,34 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
       device.queue.writeBuffer(uniformBuffer, 0, this._projectionData.buffer, this._projectionData.byteOffset, this._projectionData.byteLength);
     }
 
-    const scissor = backend.getScissorRect();
-    const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
+    const active = coordinator.acquirePass();
+    const pass = active.pass;
 
-    const coordinator = backend._passCoordinator;
+    if (willDraw) {
+      const instanceBuffer = this._ensureInstanceBufferCapacity(device, targetInstanceBytes);
+      const instanceByteOffset = this._instancePassBytes;
 
-    // The pass survives a renderer switch, so it can hold ANOTHER renderer's
-    // draws by the time this flush runs. Resolving the shared transform storage
-    // below may free the buffer those draws bind, and syncing the tileset
-    // texture may re-upload content they sample — both land on the queue
-    // timeline ahead of the deferred submit. End (submit) the pass first so
-    // they keep what they were recorded against. Only the conditions this check
-    // actually needs are repeated from the draw condition below: hoisting the
-    // whole predicate into a boolean would cost the narrowing the draw block
-    // relies on.
-    if (
-      this._quadIndex > 0 &&
-      !maskClipsAll &&
-      this._currentTexture !== null &&
-      coordinator.passHasDraws &&
-      (backend._textureUploadWouldMutate(this._currentTexture) || backend._transformStorageWouldGrow(this._maxNodeIndex + 1))
-    ) {
-      coordinator.endPass();
-    }
-
-    const pass = coordinator.acquirePass().pass;
-
-    if (this._quadIndex > 0 && !maskClipsAll && this._instanceBuffer !== null && this._indexBuffer !== null && this._currentBlendMode !== null && this._currentTexture !== null) {
-      device.queue.writeBuffer(this._instanceBuffer, 0, this._instanceData, 0, this._quadIndex * instanceStrideBytes);
+      device.queue.writeBuffer(instanceBuffer, instanceByteOffset, this._instanceData, 0, flushBytes);
 
       const storage = backend.getTransformStorageBuffer(this._maxNodeIndex + 1);
       const transformBindGroup = this._getOrCreateTransformBindGroup(device, uniformBuffer, storage.buffer);
-      const textureBindGroup = this._getOrCreateTextureBindGroup(device, backend, this._currentTexture);
+      const textureBindGroup = this._getOrCreateTextureBindGroup(device, backend, texture);
 
-      const stencil = backend._passCoordinator.stencilActive;
-      const pipeline = this._getPipeline(this._currentBlendMode, backend.renderTargetFormat, stencil);
+      const stencil = coordinator.stencilActive;
+      const pipeline = this._getPipeline(blendMode, backend.renderTargetFormat, stencil);
 
       pass.setPipeline(pipeline);
       pass.setBindGroup(0, transformBindGroup);
       pass.setBindGroup(1, textureBindGroup);
-      pass.setVertexBuffer(0, this._instanceBuffer);
-      pass.setIndexBuffer(this._indexBuffer, 'uint16');
+      pass.setVertexBuffer(0, instanceBuffer, instanceByteOffset);
+      pass.setIndexBuffer(indexBuffer, 'uint16');
       pass.drawIndexed(indicesPerInstance, this._quadIndex, 0, 0, 0);
 
+      // The pass stays open; the cursor carries this flush's consumption forward
+      // so the next flush in the same pass appends AFTER the slice these draws
+      // read instead of overwriting it.
+      this._instancePassBytes = instanceByteOffset + flushBytes;
+      this._passDraws = active;
       coordinator.markPassDraws();
       backend.stats.batches++;
       backend.stats.drawCalls++;
@@ -460,21 +530,15 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     // scissor), since visibility is re-evaluated live at replay. A batch
     // always binds a single tileset texture (slot 0); a pixel-snapped node
     // already poisoned the capture in render().
-    if (this._quadIndex > 0 && backend._retainedCaptureActive && this._currentBlendMode !== null && this._currentTexture !== null) {
-      this._recordTextures[0] = this._currentTexture;
-      backend._recordRetainedBatch(
-        this,
-        this._instanceData,
-        this._quadIndex * instanceStrideBytes,
-        this._quadIndex,
-        this._currentBlendMode,
-        this._recordTextures,
-        1,
-      );
+    if (this._quadIndex > 0 && backend._retainedCaptureActive && blendMode !== null && texture !== null) {
+      this._recordTextures[0] = texture;
+      backend._recordRetainedBatch(this, this._instanceData, flushBytes, this._quadIndex, blendMode, this._recordTextures, 1);
     }
 
-    coordinator.endPass();
-
+    // The pass is deliberately left OPEN. It ends at genuine boundaries only
+    // (the backend's frame/plan end, a target or view switch, a stencil clip)
+    // and at the hazard splits above, so N tile-chunk flushes in a frame cost
+    // one pass and one submit rather than N.
     this._quadIndex = 0;
     this._maxNodeIndex = 0;
     this._currentBlendMode = null;
@@ -739,12 +803,17 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     return pipeline;
   }
 
-  private _ensureInstanceCapacity(instanceCount: number): void {
-    if (!this._device || instanceCount <= this._instanceCapacity) {
+  /**
+   * Grow the CPU staging array to hold `instanceCount` instances, carrying the
+   * quads packed so far. Flush-local: the array only ever holds the pending
+   * batch, so it is sized independently of the pass-scoped GPU buffer.
+   */
+  private _ensureStagingCapacity(instanceCount: number): void {
+    if (instanceCount <= this._instanceStagingCapacity) {
       return;
     }
 
-    let nextCapacity = Math.max(this._instanceCapacity, initialBatchCapacity);
+    let nextCapacity = Math.max(this._instanceStagingCapacity, initialBatchCapacity);
 
     while (nextCapacity < instanceCount) {
       nextCapacity *= 2;
@@ -758,17 +827,38 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
       new Uint8Array(instanceData).set(new Uint8Array(oldData, 0, carryBytes));
     }
 
-    const instanceBuffer = this._device.createBuffer({
-      size: instanceData.byteLength,
-      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-    });
-
-    this._instanceBuffer?.destroy();
-
-    this._instanceCapacity = nextCapacity;
+    this._instanceStagingCapacity = nextCapacity;
     this._instanceData = instanceData;
     this._instanceFloat32 = new Float32Array(instanceData);
     this._instanceUint32 = new Uint32Array(instanceData);
+  }
+
+  /**
+   * Resolve the GPU instance buffer for `requiredBytes` — the total this pass
+   * would reach by appending, not this flush's own bytes. Reallocation frees the
+   * buffer earlier draws in the open pass read, so the caller must have ended
+   * that pass (and restarted the cursor) before a growing call. Capacity
+   * doubles, so the split a growth costs converges away within a frame or two.
+   */
+  private _ensureInstanceBufferCapacity(device: GPUDevice, requiredBytes: number): GPUBuffer {
+    const existing = this._instanceBuffer;
+
+    if (existing !== null && requiredBytes <= this._instanceBufferCapacity) {
+      return existing;
+    }
+
+    const nextCapacity = Math.max(this._instanceBufferCapacity * 2, requiredBytes, initialBatchCapacity * instanceStrideBytes);
+    const instanceBuffer = device.createBuffer({
+      label: 'tile-chunk:instance-buffer',
+      size: nextCapacity,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    });
+
+    existing?.destroy();
+
+    this._instanceBufferCapacity = nextCapacity;
     this._instanceBuffer = instanceBuffer;
+
+    return instanceBuffer;
   }
 }

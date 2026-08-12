@@ -48,6 +48,16 @@ const nodeFloats = nodeTexels * 4;
 // Per-vertex layout (20 bytes): pos f32x2 + uv f32x2 + nodeIndex f32
 const vertexStrideBytes = 20;
 const vertexStrideWords = vertexStrideBytes / 4;
+// Word offset of the per-vertex node index within one vertex.
+const nodeIndexWord = 4;
+
+/**
+ * Byte size of `indexCount` uint16 indices, rounded up to 4. `GPUQueue.writeBuffer`
+ * rejects byte counts and offsets that are not a multiple of 4, so index sub-ranges
+ * within the shared buffer are laid out on 4-byte boundaries — which also satisfies
+ * `setIndexBuffer`'s weaker 2-byte offset requirement.
+ */
+const alignIndexBytes = (indexCount: number): number => (indexCount * Uint16Array.BYTES_PER_ELEMENT + 3) & ~3;
 
 const initialVertexCapacity = 256;
 const initialIndexCapacity = 384;
@@ -407,6 +417,21 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
   private _frameBindGroup: GPUBindGroup | null = null;
   private _frameBindGroupDirty = true;
 
+  // The pass this renderer's live-path draws were last recorded into, plus the
+  // write cursors scoped to it. The pass survives a renderer switch, so several
+  // `flush()` calls now record into ONE pass and ONE submit: a flush that
+  // rewrote the shared vertex / index / node buffers from offset 0 would have
+  // the earlier flush's draws read the later flush's bytes, because
+  // `queue.writeBuffer` is ordered against the submit and not against the
+  // individual draws inside it. Each flush therefore APPENDS at these cursors
+  // and adds the base at bind time. The coordinator builds a fresh active-pass
+  // object per acquire, so reference identity also covers a pass ended by
+  // someone else entirely (target switch, stencil clip, another renderer).
+  private _ownDrawsPass: WebGpuActiveRenderPass | null = null;
+  private _vertexPassBytes = 0;
+  private _indexPassBytes = 0;
+  private _nodePassCount = 0;
+
   // FrameUniforms (projection + group) skip state: a matching (view identity,
   // view.updateId, group-transform id) triple means the proj UBO already holds
   // this flush's transform, so the 96-byte write is skipped. Per-node style
@@ -469,34 +494,22 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       return (this._textureKeyMap.get(a.atlasTexture) ?? 0) - (this._textureKeyMap.get(b.atlasTexture) ?? 0);
     });
 
-    // Upload FrameUniforms: projection + group as vec4-padded mat3x3 columns
+    // Stage FrameUniforms: projection + group as vec4-padded mat3x3 columns
     // plus the device-pixel snap viewport rect, packed via the shared canonical
     // (non-transposed) column order. The write is skipped when the UBO already
     // holds this exact (view, updateId, group-id, snap-rect) state — static
-    // text then issues zero projection uploads.
+    // text then issues zero projection uploads. Whether it changes is decided
+    // here but applied below, because a rewrite of this single-slot UBO would
+    // retroactively re-project draws of ours already recorded into the open
+    // pass: appending cannot cover it, so it is a pass boundary.
     const view = backend.view;
     const viewportChanged = packSnapViewport(backend, this._projData, 24);
-
-    if (
+    const projectionChanged =
       !this._hasWrittenProjection ||
       this._writtenView !== view ||
       this._writtenViewUpdateId !== view.updateId ||
       this._writtenGroupTransformId !== backend.renderGroupTransformId ||
-      viewportChanged
-    ) {
-      packAffineMat3Std140(view.getTransform(), this._projData, 0);
-      packAffineMat3Std140(backend.renderGroupTransform ?? Matrix.identity, this._projData, 12);
-
-      this._writtenView = view;
-      this._writtenViewUpdateId = view.updateId;
-      this._writtenGroupTransformId = backend.renderGroupTransformId;
-      this._hasWrittenProjection = true;
-
-      device.queue.writeBuffer(this._projBuffer!, 0, this._projData.buffer, 0, projectionBytes);
-    }
-
-    // Upload per-node style data (may reallocate the storage buffer)
-    this._uploadNodeBuffer(device);
+      viewportChanged;
 
     // Build interleaved vertex/index data for all batches in one pass
     const quads = this._pendingQuads;
@@ -568,26 +581,98 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       qi = qj;
     }
 
-    // Upload vertex/index buffers (reallocate GPU side when needed)
-    this._ensureGpuVertexBuffer(device, packedV);
-    this._ensureGpuIndexBuffer(device, packedI);
-    device.queue.writeBuffer(this._vertexBuffer!, 0, this._vertexData, 0, packedV * vertexStrideBytes);
-    device.queue.writeBuffer(this._indexBuffer!, 0, this._indexData.buffer, 0, packedI * 2);
-
+    // The recording carries this flush's OWN dense, 0-based node indices, so it
+    // has to take its copy of the staged vertex bytes before they are rebased
+    // onto the pass cursor below.
     if (backend._retainedCaptureActive) {
       this._tryRecordRetainedBatch(backend, batches);
     }
 
+    const coordinator = backend._passCoordinator;
+    const flushVertexBytes = packedV * vertexStrideBytes;
+    const flushIndexBytes = alignIndexBytes(packedI);
+
+    // The writes below land in the shared vertex / index / node buffers and may
+    // reallocate them. Draws of OURS left in the open pass — from an earlier
+    // flush — still read those exact buffers, and `queue.writeBuffer` lands
+    // ahead of the whole submit, so this flush APPENDS at the pass cursors
+    // rather than rewriting from offset 0. Ending the pass is the fallback for
+    // the two cases appending cannot cover: a reallocation (which frees the
+    // buffer those draws read) and a projection rewrite (a single-slot UBO
+    // every draw of ours reads). Another renderer's draws in the pass are not
+    // at risk: none of these buffers is shared, and the pass survives a
+    // renderer switch precisely so they can stay.
+    const ownDrawsInPass = this._ownDrawsPass !== null && this._ownDrawsPass === coordinator.activePass;
+    // Sized for everything this pass has taken SO FAR plus this flush, captured
+    // BEFORE the guard below may reset the cursors — and used to size the
+    // buffers even when it does split. Sizing to the lone flush that remains
+    // after a split would peg every buffer at one flush forever: the guard
+    // would split, the split would shrink the requirement back, the capacity
+    // would never ratchet, and every flush would open its own pass.
+    const targetVertexBytes = this._vertexPassBytes + flushVertexBytes;
+    const targetIndexBytes = this._indexPassBytes + flushIndexBytes;
+    const targetNodeCount = this._nodePassCount + this._nodeCount;
+
+    if (ownDrawsInPass && (projectionChanged || this._flushAppendWouldGrow(targetVertexBytes, targetIndexBytes, targetNodeCount))) {
+      coordinator.endPass();
+      this._resetPassCursors();
+    } else if (!ownDrawsInPass) {
+      // No draws of ours are held by the open pass (it was ended by a boundary,
+      // or never opened), so every cursor restarts.
+      this._resetPassCursors();
+    }
+
+    const vertexBase = this._vertexPassBytes;
+    const indexBase = this._indexPassBytes;
+    const nodeBase = this._nodePassCount;
+
+    if (projectionChanged) {
+      packAffineMat3Std140(view.getTransform(), this._projData, 0);
+      packAffineMat3Std140(backend.renderGroupTransform ?? Matrix.identity, this._projData, 12);
+
+      this._writtenView = view;
+      this._writtenViewUpdateId = view.updateId;
+      this._writtenGroupTransformId = backend.renderGroupTransformId;
+      this._hasWrittenProjection = true;
+
+      device.queue.writeBuffer(this._projBuffer!, 0, this._projData.buffer, 0, projectionBytes);
+    }
+
+    // Upload per-node style data at this flush's sub-range of the pass, and
+    // shift the staged per-vertex node indices to match: the storage binding
+    // covers the whole buffer (no dynamic offset), so the rebase has to travel
+    // in the vertex attribute the shader indexes with.
+    this._uploadNodeBuffer(device, nodeBase, targetNodeCount);
+
+    if (nodeBase > 0) {
+      for (let v = 0; v < packedV; v++) {
+        const w = v * vertexStrideWords + nodeIndexWord;
+
+        this._float32View[w] = this._float32View[w]! + nodeBase;
+      }
+    }
+
+    // Upload vertex/index buffers (reallocate GPU side when needed), sized to
+    // the pass totals and written at this flush's base offsets.
+    this._ensureGpuVertexBuffer(device, targetVertexBytes);
+    this._ensureGpuIndexBuffer(device, targetIndexBytes);
+    device.queue.writeBuffer(this._vertexBuffer!, vertexBase, this._vertexData, 0, flushVertexBytes);
+    device.queue.writeBuffer(this._indexBuffer!, indexBase, this._indexData.buffer, 0, flushIndexBytes);
+
     const format = backend.renderTargetFormat;
-    const stencil = backend._passCoordinator.stencilActive;
+    const stencil = coordinator.stencilActive;
     const frameBindGroup = this._getFrameBindGroup(device);
 
-    const coordinator = backend._passCoordinator;
-
     // The pass survives a renderer switch, so it can still hold another
-    // renderer's draws. Resolving an atlas bind group below syncs a dirty glyph
-    // page on the queue timeline, ahead of the deferred submit, which would
-    // retroactively change a recorded draw sampling that same atlas.
+    // renderer's draws — or an earlier flush of ours this one appended after.
+    // Resolving an atlas bind group below syncs a dirty glyph page on the queue
+    // timeline, ahead of the deferred submit, which would retroactively change
+    // a recorded draw sampling that same atlas.
+    //
+    // Ending the pass here does NOT rewind the cursors: this flush's bytes are
+    // already written at the base offsets, and its draws (recorded below into
+    // the freshly opened pass) still read them there. Rewinding would let a
+    // later append overwrite bytes those draws read.
     if (coordinator.passHasDraws) {
       for (const batch of batches) {
         if (backend._textureUploadWouldMutate(batch.atlasTexture)) {
@@ -598,11 +683,13 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     }
 
     // The coordinator owns the GPU pass (load/clear resolution, pass count and
-    // scissor are applied there) and ends + submits it below.
-    const pass = coordinator.acquirePass().pass;
+    // scissor are applied there). It stays OPEN afterwards so a following flush,
+    // or another renderer, merges into the same submit.
+    const active = coordinator.acquirePass();
+    const pass = active.pass;
 
-    pass.setVertexBuffer(0, this._vertexBuffer);
-    pass.setIndexBuffer(this._indexBuffer!, 'uint16');
+    pass.setVertexBuffer(0, this._vertexBuffer, vertexBase);
+    pass.setIndexBuffer(this._indexBuffer!, 'uint16', indexBase);
 
     let lastShaderType: ShaderType | null = null;
     let lastTexture: Texture | null = null;
@@ -623,7 +710,13 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       backend.stats.drawCalls++;
     }
 
-    coordinator.endPass();
+    // Carry this flush's consumption forward so a following flush in the same
+    // pass appends AFTER these draws' slices instead of overwriting the bytes
+    // they read.
+    this._ownDrawsPass = active;
+    this._vertexPassBytes = vertexBase + flushVertexBytes;
+    this._indexPassBytes = indexBase + flushIndexBytes;
+    this._nodePassCount = nodeBase + this._nodeCount;
 
     this._resetFrameState();
   }
@@ -767,6 +860,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     this._writtenViewUpdateId = -1;
     this._writtenGroupTransformId = -1;
     this._hasWrittenProjection = false;
+    this._resetPassCursors();
 
     this._pipelines.clear();
     this._texBindGroups = new WeakMap<Texture, { group: GPUBindGroup; view: GPUTextureView }>();
@@ -900,8 +994,14 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
 
   // ── GPU resource helpers ─────────────────────────────────────────────────
 
-  private _uploadNodeBuffer(device: GPUDevice): void {
-    const requiredBytes = this._nodeCount * nodeFloats * 4;
+  /**
+   * Upload this flush's per-node style data into the pass-wide node buffer at
+   * node `base`, sizing the buffer for `passNodeCount` nodes. Staging holds only
+   * this flush's nodes; the buffer must also keep the rows earlier draws in the
+   * open pass still read.
+   */
+  private _uploadNodeBuffer(device: GPUDevice, base: number, passNodeCount: number): void {
+    const requiredBytes = passNodeCount * nodeFloats * 4;
 
     if (requiredBytes > this._nodeBufferCapacity) {
       let newCap = this._nodeBufferCapacity;
@@ -916,15 +1016,18 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       this._frameBindGroupDirty = true;
     }
 
-    device.queue.writeBuffer(this._nodeBuffer!, 0, this._nodeDataArray.buffer, 0, requiredBytes);
+    const flushBytes = this._nodeCount * nodeFloats * 4;
+
+    if (flushBytes > 0) {
+      device.queue.writeBuffer(this._nodeBuffer!, base * nodeFloats * 4, this._nodeDataArray.buffer, 0, flushBytes);
+    }
   }
 
-  private _ensureGpuVertexBuffer(device: GPUDevice, vertexCount: number): void {
-    const required = vertexCount * vertexStrideBytes;
-    if (required <= this._vertexBufferCapacity) return;
+  private _ensureGpuVertexBuffer(device: GPUDevice, requiredBytes: number): void {
+    if (requiredBytes <= this._vertexBufferCapacity) return;
 
     let newCap = this._vertexBufferCapacity;
-    while (newCap < required) newCap *= 2;
+    while (newCap < requiredBytes) newCap *= 2;
     this._vertexBuffer?.destroy();
     this._vertexBuffer = device.createBuffer({
       label: 'WebGpuTextRenderer/vertices',
@@ -934,12 +1037,11 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     this._vertexBufferCapacity = newCap;
   }
 
-  private _ensureGpuIndexBuffer(device: GPUDevice, indexCount: number): void {
-    const required = indexCount * 2;
-    if (required <= this._indexBufferCapacity) return;
+  private _ensureGpuIndexBuffer(device: GPUDevice, requiredBytes: number): void {
+    if (requiredBytes <= this._indexBufferCapacity) return;
 
     let newCap = this._indexBufferCapacity;
-    while (newCap < required) newCap *= 2;
+    while (newCap < requiredBytes) newCap *= 2;
     this._indexBuffer?.destroy();
     this._indexBuffer = device.createBuffer({
       label: 'WebGpuTextRenderer/indices',
@@ -947,6 +1049,25 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
     });
     this._indexBufferCapacity = newCap;
+  }
+
+  /**
+   * Whether sizing the shared buffers to the pass totals a flush would reach by
+   * appending reallocates any of them. Reallocation destroys the buffer the draws
+   * already recorded into the open pass read, so the caller must end that pass
+   * (which zeroes the cursors) instead of appending. All arguments are pass
+   * totals, not this flush's deltas.
+   */
+  private _flushAppendWouldGrow(vertexBytes: number, indexBytes: number, nodeCount: number): boolean {
+    return vertexBytes > this._vertexBufferCapacity || indexBytes > this._indexBufferCapacity || nodeCount * nodeFloats * 4 > this._nodeBufferCapacity;
+  }
+
+  /** Drop the pass association so the next flush restarts every cursor. */
+  private _resetPassCursors(): void {
+    this._ownDrawsPass = null;
+    this._vertexPassBytes = 0;
+    this._indexPassBytes = 0;
+    this._nodePassCount = 0;
   }
 
   private _getFrameBindGroup(device: GPUDevice): GPUBindGroup {

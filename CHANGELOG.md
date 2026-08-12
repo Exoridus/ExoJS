@@ -426,6 +426,33 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
 
 ### Performance
 
+- **WebGPU text flushes share one render pass and one submit.** The WebGPU text
+  renderer rewrote its shared vertex, index and node-data buffers from offset 0
+  on every flush, and ended (submitted) the render pass at the tail of each one
+  to keep those writes from landing under draws already recorded. A frame that
+  alternates sprites and text therefore cost one pass and one submit per text
+  flush. Each flush now appends at pass-scoped cursors and adds the base at bind
+  time, so the whole frame collapses to a single pass again. A capacity growth
+  and a projection rewrite remain real pass boundaries.
+- **WebGPU tile chunks cost one render pass per frame, not one per flush.** The
+  tile-chunk renderer rewrote its shared instance buffer from offset 0 and ended
+  (submitted) the render pass at the tail of every flush, so a frame that broke
+  the tile batch N times — a tileset change, a blend-mode change, an interleaved
+  actor — paid N render passes and N `queue.submit` calls. Each flush now appends
+  at a pass-scoped cursor and binds its own sub-range, so those flushes merge
+  into one pass and one submit. The pass still ends where it must: a capacity
+  growth, a projection rewrite, and the shared transform-storage / texture-upload
+  hazards.
+- **WebGPU particle draws share one render pass and one submit.**
+  `WebGpuParticleRenderer` opened a render pass, recorded one draw call and
+  ended (submitted) it again — per particle system, because every system
+  rewrote the render mode's shared vertex buffer and the system uniform buffer
+  from offset 0. Each draw call now appends at pass-scoped cursors (a byte
+  offset into the mode's vertex buffer, a slot in a uniform ring) and adds the
+  base at bind time, so a frame's particle draws cost one pass and one submit
+  regardless of how many systems or flushes it contains. A capacity growth and
+  a mid-frame edit to a mode's own vertex geometry still end the pass, since
+  appending cannot cover either.
 - **`Container` caches its paint order and child-index lookups.**
   `InteractionManager` re-sorted every container's children on every single
   hit-test call, and `getChildIndex()` did a linear `indexOf` scan on every
