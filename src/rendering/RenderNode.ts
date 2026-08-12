@@ -64,7 +64,7 @@ export type MaskSource = Rectangle | Texture | RenderTexture | RenderNode | null
 /**
  * {@link SceneNode} that can produce visual output. Adds the rendering
  * pipeline features on top of the structural transform/bounds carried by
- * SceneNode: `tint`, `alpha`, `blendMode`, post-process `filters`, an
+ * SceneNode: `tint`, `blendMode`, post-process `filters`, an
  * optional `mask` (via {@link MaskSource}), bitmap caching
  * (`cacheAsBitmap`), and the interaction surface
  * (`interactive`, `draggable`, all the pointer Signals).

@@ -1,6 +1,6 @@
 {
   "title": "RenderNode",
-  "description": "SceneNode that can produce visual output. Adds the rendering pipeline features on top of the structural transform/bounds carried by SceneNode: `tint`, `alpha`, `blendMode`, post-process `filters`, an optional `mask` (via MaskSource), bitmap caching (`cacheAsBitmap`), and the interaction surface (`interactive`, `draggable`, all the pointer Signals). `RenderNode.render(backend)` is the per-frame visual entry point. The base implementation collects a render plan, optimizes local ordering, and plays it through the active backend. Subclasses of note: Container (children), Sprite (textured quad), Mesh (custom geometry), Graphics (immediate-mode shapes), Text (glyph-atlas text), Video (video texture), ParticleSystem (particles).",
+  "description": "SceneNode that can produce visual output. Adds the rendering pipeline features on top of the structural transform/bounds carried by SceneNode: `tint`, `blendMode`, post-process `filters`, an optional `mask` (via MaskSource), bitmap caching (`cacheAsBitmap`), and the interaction surface (`interactive`, `draggable`, all the pointer Signals). `RenderNode.render(backend)` is the per-frame visual entry point. The base implementation collects a render plan, optimizes local ordering, and plays it through the active backend. Subclasses of note: Container (children), Sprite (textured quad), Mesh (custom geometry), Graphics (immediate-mode shapes), Text (glyph-atlas text), Video (video texture), ParticleSystem (particles).",
   "symbol": "RenderNode",
   "kind": "class",
   "subsystem": "rendering",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "SceneNode that can produce visual output. Adds the rendering pipeline features on top of the structural transform/bounds carried by SceneNode: `tint`, `alpha`, `blendMode`, post-process `filters`, an optional `mask` (via MaskSource), bitmap caching (`cacheAsBitmap`), and the interaction surface (`interactive`, `draggable`, all the pointer Signals).",
+        "SceneNode that can produce visual output. Adds the rendering pipeline features on top of the structural transform/bounds carried by SceneNode: `tint`, `blendMode`, post-process `filters`, an optional `mask` (via MaskSource), bitmap caching (`cacheAsBitmap`), and the interaction surface (`interactive`, `draggable`, all the pointer Signals).",
         "`RenderNode.render(backend)` is the per-frame visual entry point. The base implementation collects a render plan, optimizes local ordering, and plays it through the active backend.",
         "Subclasses of note: Container (children), Sprite (textured quad), Mesh (custom geometry), Graphics (immediate-mode shapes), Text (glyph-atlas text), Video (video texture), ParticleSystem (particles)."
       ],
