@@ -1,16 +1,16 @@
 {
   "title": "PlayStationGamepadMapping",
-  "description": "Mapping for Sony PlayStation controllers, covering DualShock 4 and DualSense (PS4 / PS5) when connected via USB or Bluetooth. Inherits the full GenericDualAnalogGamepadMapping layout and claims the one device-specific slot at index 17 for the touchpad **click**. Share/Create sits on the standard Select slot (index 8) on these pads, so it needs no entry of its own. Touchpad *coordinates* are not available here: browsers model the touchpad as a button, and the standard axis set stops after the two sticks. Reading finger positions requires WebHID and a custom `GamepadDefinition`.",
+  "description": "Mapping for Sony PlayStation controllers, covering DualShock 3, DualShock 4 and DualSense (PS3 / PS4 / PS5) when connected via USB or Bluetooth. Inherits the full GenericDualAnalogGamepadMapping layout. On PS4 and PS5 pads it claims the one device-specific slot at index 17 for the touchpad **click**; a PS3 pad has no touchpad and stops at the standard index 16. Select/Share/Create sits on the standard Select slot (index 8) on all three, so it needs no entry of its own — but it is printed differently on each, which is what GamepadMapping.promptLabels carries here. Touchpad *coordinates* are not available: browsers model the touchpad as a button, and the standard axis set stops after the two sticks. Reading finger positions requires WebHID and a custom `GamepadDefinition`.",
   "symbol": "PlayStationGamepadMapping",
   "kind": "class",
   "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 6,
+  "memberCount": 8,
   "counts": {
     "constructors": 1,
     "methods": 2,
-    "properties": 3,
+    "properties": 5,
     "events": 0
   },
   "sections": [
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Mapping for Sony PlayStation controllers, covering DualShock 4 and DualSense (PS4 / PS5) when connected via USB or Bluetooth.",
-        "Inherits the full GenericDualAnalogGamepadMapping layout and claims the one device-specific slot at index 17 for the touchpad **click**. Share/Create sits on the standard Select slot (index 8) on these pads, so it needs no entry of its own.",
-        "Touchpad *coordinates* are not available here: browsers model the touchpad as a button, and the standard axis set stops after the two sticks. Reading finger positions requires WebHID and a custom `GamepadDefinition`."
+        "Mapping for Sony PlayStation controllers, covering DualShock 3, DualShock 4 and DualSense (PS3 / PS4 / PS5) when connected via USB or Bluetooth.",
+        "Inherits the full GenericDualAnalogGamepadMapping layout. On PS4 and PS5 pads it claims the one device-specific slot at index 17 for the touchpad **click**; a PS3 pad has no touchpad and stops at the standard index 16. Select/Share/Create sits on the standard Select slot (index 8) on all three, so it needs no entry of its own — but it is printed differently on each, which is what GamepadMapping.promptLabels carries here.",
+        "Touchpad *coordinates* are not available: browsers model the touchpad as a button, and the standard axis set stops after the two sticks. Reading finger positions requires WebHID and a custom `GamepadDefinition`."
       ],
       "importLine": "import { PlayStationGamepadMapping } from '@codexo/exojs'",
       "sourceLink": null
@@ -32,7 +32,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(): PlayStationGamepadMapping",
+          "signature": "new(generation: PlayStationGeneration): PlayStationGamepadMapping",
           "signatureTokens": [
             {
               "text": "new",
@@ -41,6 +41,18 @@
             {
               "text": "(",
               "kind": "punctuation"
+            },
+            {
+              "text": "generation",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PlayStationGeneration",
+              "kind": "type"
             },
             {
               "text": ")",
@@ -55,7 +67,13 @@
               "kind": "type"
             }
           ],
-          "params": [],
+          "params": [
+            {
+              "name": "generation",
+              "type": "PlayStationGeneration",
+              "optional": false
+            }
+          ],
           "returnType": "PlayStationGamepadMapping",
           "description": ""
         }
@@ -247,6 +265,72 @@
           "params": [],
           "returnType": null,
           "description": "Identifies the device family this mapping targets."
+        },
+        {
+          "name": "generation",
+          "signature": "generation: PlayStationGeneration",
+          "signatureTokens": [
+            {
+              "text": "generation",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PlayStationGeneration",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Console generation this instance was built for."
+        },
+        {
+          "name": "promptLabels",
+          "signature": "promptLabels?: ReadonlyMap<GamepadPromptControl, string>",
+          "signatureTokens": [
+            {
+              "text": "promptLabels",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyMap",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadPromptControl",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Device-specific prompt labels, applied on top of the family label set by GamepadPromptLayouts.getControlLabels. A GamepadMappingFamily spans several product generations whose buttons are not all named the same — the PlayStation Select button reads \"Select\" on a PS3 pad, \"Share\" on a DualShock 4 and \"Create\" on a DualSense, yet all three share one family. Declare only the controls that differ from the family default here; undefined means the family set already labels this device correctly."
         }
       ],
       "paragraphs": [],

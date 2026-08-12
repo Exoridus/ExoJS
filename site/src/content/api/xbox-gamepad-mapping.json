@@ -6,11 +6,11 @@
   "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 6,
+  "memberCount": 7,
   "counts": {
     "constructors": 1,
     "methods": 2,
-    "properties": 3,
+    "properties": 4,
     "events": 0
   },
   "sections": [
@@ -247,6 +247,51 @@
           "params": [],
           "returnType": null,
           "description": "Identifies the device family this mapping targets."
+        },
+        {
+          "name": "promptLabels",
+          "signature": "promptLabels?: ReadonlyMap<GamepadPromptControl, string>",
+          "signatureTokens": [
+            {
+              "text": "promptLabels",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyMap",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadPromptControl",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Device-specific prompt labels, applied on top of the family label set by GamepadPromptLayouts.getControlLabels. A GamepadMappingFamily spans several product generations whose buttons are not all named the same — the PlayStation Select button reads \"Select\" on a PS3 pad, \"Share\" on a DualShock 4 and \"Create\" on a DualSense, yet all three share one family. Declare only the controls that differ from the family default here; undefined means the family set already labels this device correctly."
         }
       ],
       "paragraphs": [],

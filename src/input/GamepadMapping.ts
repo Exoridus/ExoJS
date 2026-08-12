@@ -2,6 +2,7 @@ import type { GamepadAxis } from './GamepadAxis';
 import type { GamepadAxisChannel } from './GamepadAxis';
 import type { GamepadButton } from './GamepadButton';
 import type { GamepadButtonChannel } from './GamepadButton';
+import type { GamepadPromptControl } from './GamepadPromptLayouts';
 
 /**
  * Discriminant tag identifying which device family a {@link GamepadMapping} belongs to.
@@ -38,9 +39,23 @@ export abstract class GamepadMapping {
   /** Ordered list of axes, indexed by the Gamepad API axis index. */
   public readonly axes: readonly GamepadAxis[];
 
-  protected constructor(buttons: readonly GamepadButton[], axes: readonly GamepadAxis[]) {
+  /**
+   * Device-specific prompt labels, applied on top of the family label set by
+   * {@link GamepadPromptLayouts.getControlLabels}.
+   *
+   * A {@link GamepadMappingFamily} spans several product generations whose
+   * buttons are not all named the same — the PlayStation `Select` button reads
+   * "Select" on a PS3 pad, "Share" on a DualShock 4 and "Create" on a
+   * DualSense, yet all three share one family. Declare only the controls that
+   * differ from the family default here; `undefined` means the family set
+   * already labels this device correctly.
+   */
+  public readonly promptLabels?: ReadonlyMap<GamepadPromptControl, string> | undefined;
+
+  protected constructor(buttons: readonly GamepadButton[], axes: readonly GamepadAxis[], promptLabels?: ReadonlyMap<GamepadPromptControl, string>) {
     this.buttons = buttons;
     this.axes = axes;
+    this.promptLabels = promptLabels;
   }
 
   /**

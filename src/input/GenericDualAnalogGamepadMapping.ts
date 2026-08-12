@@ -1,6 +1,7 @@
 import { GamepadAxis } from './GamepadAxis';
 import { GamepadButton } from './GamepadButton';
 import { GamepadMapping, GamepadMappingFamily } from './GamepadMapping';
+import type { GamepadPromptControl } from './GamepadPromptLayouts';
 
 /**
  * Baseline mapping for dual-analog controllers that follow the standard
@@ -25,11 +26,13 @@ import { GamepadMapping, GamepadMappingFamily } from './GamepadMapping';
  *
  * @param extraButtons - Device-specific buttons appended after the standard
  * layout. Their raw indices must not collide with 0–16.
+ * @param promptLabels - Device-specific prompt labels, see
+ * {@link GamepadMapping.promptLabels}.
  */
 export class GenericDualAnalogGamepadMapping extends GamepadMapping {
   public readonly family: GamepadMappingFamily = GamepadMappingFamily.GenericDualAnalog;
 
-  public constructor(extraButtons: readonly GamepadButton[] = []) {
+  public constructor(extraButtons: readonly GamepadButton[] = [], promptLabels?: ReadonlyMap<GamepadPromptControl, string>) {
     super(
       [
         new GamepadButton(0, GamepadButton.South),
@@ -78,6 +81,7 @@ export class GenericDualAnalogGamepadMapping extends GamepadMapping {
         new GamepadAxis(7, GamepadAxis.AuxiliaryAxis3Negative, { invert: true }),
         new GamepadAxis(7, GamepadAxis.AuxiliaryAxis3Positive),
       ],
+      promptLabels,
     );
   }
 }

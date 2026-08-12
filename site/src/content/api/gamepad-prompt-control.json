@@ -31,7 +31,7 @@
       "members": [
         {
           "name": "GamepadPromptControl",
-          "signature": "\"DPad\" | \"DPadUp\" | \"DPadDown\" | \"DPadLeft\" | \"DPadRight\" | \"ButtonNorth\" | \"ButtonWest\" | \"ButtonEast\" | \"ButtonSouth\" | \"LeftShoulder\" | \"RightShoulder\" | \"LeftTrigger\" | \"RightTrigger\" | \"Select\" | \"Start\" | \"LeftStick\" | \"RightStick\"",
+          "signature": "\"DPad\" | \"DPadUp\" | \"DPadDown\" | \"DPadLeft\" | \"DPadRight\" | \"ButtonNorth\" | \"ButtonWest\" | \"ButtonEast\" | \"ButtonSouth\" | \"LeftShoulder\" | \"RightShoulder\" | \"LeftTrigger\" | \"RightTrigger\" | \"Select\" | \"Start\" | \"LeftStick\" | \"RightStick\" | \"Paddle1\" | \"Paddle2\" | \"Paddle3\" | \"Paddle4\"",
           "signatureTokens": [
             {
               "text": "\"DPad\"",
@@ -163,6 +163,38 @@
             },
             {
               "text": "\"RightStick\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"Paddle1\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"Paddle2\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"Paddle3\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"Paddle4\"",
               "kind": "keyword"
             }
           ],

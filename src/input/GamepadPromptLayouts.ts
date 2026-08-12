@@ -1,5 +1,6 @@
 import type { GamepadButtonChannel } from './GamepadButton';
 import { GamepadButton } from './GamepadButton';
+import type { GamepadMapping } from './GamepadMapping';
 import { GamepadMappingFamily } from './GamepadMapping';
 
 /**
@@ -28,7 +29,11 @@ export type GamepadPromptControl =
   | 'Select'
   | 'Start'
   | 'LeftStick'
-  | 'RightStick';
+  | 'RightStick'
+  | 'Paddle1'
+  | 'Paddle2'
+  | 'Paddle3'
+  | 'Paddle4';
 
 const basePositions = new Map<GamepadPromptControl, readonly [number, number]>([
   ['DPad', [0.22, 0.58]],
@@ -48,6 +53,12 @@ const basePositions = new Map<GamepadPromptControl, readonly [number, number]>([
   ['Start', [0.54, 0.5]],
   ['LeftStick', [0.38, 0.66]],
   ['RightStick', [0.62, 0.66]],
+  // Paddles sit on the back of the device; the silhouette shows them below the
+  // grips, upper pair first, mirrored left/right the way the channels are.
+  ['Paddle1', [0.32, 0.82]],
+  ['Paddle2', [0.68, 0.82]],
+  ['Paddle3', [0.26, 0.92]],
+  ['Paddle4', [0.74, 0.92]],
 ]);
 
 const channelMap = new Map<GamepadPromptControl, GamepadButtonChannel>([
@@ -67,7 +78,16 @@ const channelMap = new Map<GamepadPromptControl, GamepadButtonChannel>([
   ['DPadDown', GamepadButton.DPadDown],
   ['DPadLeft', GamepadButton.DPadLeft],
   ['DPadRight', GamepadButton.DPadRight],
+  ['Paddle1', GamepadButton.Paddle1],
+  ['Paddle2', GamepadButton.Paddle2],
+  ['Paddle3', GamepadButton.Paddle3],
+  ['Paddle4', GamepadButton.Paddle4],
 ]);
+
+const createLabels = (
+  base: ReadonlyMap<GamepadPromptControl, string>,
+  overrides: ReadonlyArray<readonly [GamepadPromptControl, string]>,
+): ReadonlyMap<GamepadPromptControl, string> => new Map<GamepadPromptControl, string>([...base, ...overrides]);
 
 const genericLabels = new Map<GamepadPromptControl, string>([
   ['ButtonNorth', 'North'],
@@ -82,6 +102,10 @@ const genericLabels = new Map<GamepadPromptControl, string>([
   ['Start', 'Start'],
   ['LeftStick', 'L3'],
   ['RightStick', 'R3'],
+  ['Paddle1', 'P1'],
+  ['Paddle2', 'P2'],
+  ['Paddle3', 'P3'],
+  ['Paddle4', 'P4'],
 ]);
 
 const xboxLabels = new Map<GamepadPromptControl, string>([
@@ -97,8 +121,18 @@ const xboxLabels = new Map<GamepadPromptControl, string>([
   ['Start', 'Menu'],
   ['LeftStick', 'L3'],
   ['RightStick', 'R3'],
+  // Elite Series 2 prints P1-P4 on the paddles.
+  ['Paddle1', 'P1'],
+  ['Paddle2', 'P2'],
+  ['Paddle3', 'P3'],
+  ['Paddle4', 'P4'],
 ]);
 
+/**
+ * DualSense names. The PlayStation family also covers PS3 pads ("Select" /
+ * "Start") and DualShock 4 ("Share"); those generations override the two
+ * differing entries through {@link GamepadMapping.promptLabels}.
+ */
 const playStationLabels = new Map<GamepadPromptControl, string>([
   ['ButtonNorth', 'Triangle'],
   ['ButtonWest', 'Square'],
@@ -129,17 +163,55 @@ const switchLabels = new Map<GamepadPromptControl, string>([
   ['RightStick', 'R3'],
 ]);
 
+/**
+ * Solo Joy-Con (L). The SL/SR rail buttons report paddle channels — see
+ * {@link JoyConLeftGamepadMapping} — and this half takes the two left-hand
+ * slots, so only those two carry a label.
+ */
+const joyConLeftLabels = createLabels(switchLabels, [
+  ['Paddle1', 'SL'],
+  ['Paddle3', 'SR'],
+]);
+
+/** Solo Joy-Con (R), taking the two right-hand paddle slots. */
+const joyConRightLabels = createLabels(switchLabels, [
+  ['Paddle2', 'SR'],
+  ['Paddle4', 'SL'],
+]);
+
+/**
+ * Steam Deck. Valve prints A/B/X/Y on the face cluster and View/Menu beside
+ * it, but keeps the PlayStation-style L1/R1/L2/R2 shoulder names, so this is
+ * neither the generic nor the Xbox set. The back paddles are L4/R4/L5/R5, in
+ * the {@link GamepadButton.Paddle1}-to-`Paddle4` order
+ * {@link SteamDeckGamepadMapping} writes them in.
+ */
+const steamDeckLabels = createLabels(genericLabels, [
+  ['ButtonNorth', 'Y'],
+  ['ButtonWest', 'X'],
+  ['ButtonEast', 'B'],
+  ['ButtonSouth', 'A'],
+  ['Select', 'View'],
+  ['Start', 'Menu'],
+  ['Paddle1', 'L4'],
+  ['Paddle2', 'R4'],
+  ['Paddle3', 'L5'],
+  ['Paddle4', 'R5'],
+]);
+
 const promptLabelsByFamily = new Map<GamepadMappingFamily, ReadonlyMap<GamepadPromptControl, string>>([
   [GamepadMappingFamily.GenericDualAnalog, genericLabels],
   [GamepadMappingFamily.Xbox, xboxLabels],
   [GamepadMappingFamily.PlayStation, playStationLabels],
   [GamepadMappingFamily.SwitchPro, switchLabels],
-  [GamepadMappingFamily.JoyConLeft, switchLabels],
-  [GamepadMappingFamily.JoyConRight, switchLabels],
+  [GamepadMappingFamily.JoyConLeft, joyConLeftLabels],
+  [GamepadMappingFamily.JoyConRight, joyConRightLabels],
   [GamepadMappingFamily.SteamController, genericLabels],
-  [GamepadMappingFamily.SteamDeck, genericLabels],
+  [GamepadMappingFamily.SteamDeck, steamDeckLabels],
   [GamepadMappingFamily.ArcadeStick, genericLabels],
 ]);
+
+const mappingLabelCache = new WeakMap<GamepadMapping, ReadonlyMap<GamepadPromptControl, string>>();
 
 /**
  * Static utility that drives in-game controller-prompt UI.
@@ -169,6 +241,10 @@ export class GamepadPromptLayouts {
     'Start',
     'LeftStick',
     'RightStick',
+    'Paddle1',
+    'Paddle2',
+    'Paddle3',
+    'Paddle4',
   ];
 
   /**
@@ -181,12 +257,41 @@ export class GamepadPromptLayouts {
   }
 
   /**
-   * Returns the label map for the given device family, e.g. `{ ButtonSouth → "A" }`
-   * for Xbox or `{ ButtonSouth → "Cross" }` for PlayStation.
-   * Falls back to generic labels when `family` has no registered label set.
+   * Returns the label map for a device, e.g. `{ ButtonSouth → "A" }` for Xbox
+   * or `{ ButtonSouth → "Cross" }` for PlayStation. Falls back to generic
+   * labels when the family has no registered label set.
+   *
+   * Pass the connected pad's {@link GamepadMapping} rather than its family
+   * whenever you have one: a family spans several product generations, and the
+   * mapping contributes the labels that differ between them through
+   * {@link GamepadMapping.promptLabels} — "Share" on a DualShock 4 where the
+   * family default reads "Create". The merged map is cached per mapping.
+   *
+   * @example
+   * ```ts
+   * const labels = GamepadPromptLayouts.getControlLabels(gamepad.mapping);
+   * hint.text = `Press ${labels.get('ButtonSouth')} to jump`;
+   * ```
    */
-  public static getControlLabels(family: GamepadMappingFamily): ReadonlyMap<GamepadPromptControl, string> {
-    return promptLabelsByFamily.get(family) ?? genericLabels;
+  public static getControlLabels(source: GamepadMappingFamily | GamepadMapping): ReadonlyMap<GamepadPromptControl, string> {
+    if (typeof source === 'string') {
+      return promptLabelsByFamily.get(source) ?? genericLabels;
+    }
+
+    const familyLabels = promptLabelsByFamily.get(source.family) ?? genericLabels;
+
+    if (source.promptLabels === undefined) {
+      return familyLabels;
+    }
+
+    let labels = mappingLabelCache.get(source);
+
+    if (labels === undefined) {
+      labels = createLabels(familyLabels, [...source.promptLabels]);
+      mappingLabelCache.set(source, labels);
+    }
+
+    return labels;
   }
 
   /**
