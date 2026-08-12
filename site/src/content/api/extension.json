@@ -6,11 +6,11 @@
   "subsystem": "extensions",
   "importPath": "@codexo/exojs/extensions",
   "tier": "advanced",
-  "memberCount": 7,
+  "memberCount": 6,
   "counts": {
     "constructors": 0,
     "methods": 1,
-    "properties": 6,
+    "properties": 5,
     "events": 0
   },
   "sections": [
@@ -86,7 +86,7 @@
             }
           ],
           "returnType": "void | ExtensionDisposer",
-          "description": "Set this application up for whatever the binding arrays cannot express — a subscription on Application.onResize, a MutationObserver, a worker, a debug overlay appended next to the canvas. Runs once per Application, as the final construction step: every core manager, every materialised binding and every system from Extension.systems already exists, and dependencies listed in Extension.dependencies are installed first. Return an ExtensionDisposer to undo it. The Application holds the disposers of everything it installed and runs them in reverse installation order — during Application.destroy, or, if a later construction step throws, during that constructor's rollback. Return nothing when there is nothing to undo. A disposer that throws is reported and the remaining ones still run. An extension's lifetime is its Application's lifetime: there is no uninstall at runtime, and no scene-level scope — extensions equip an application, not a scene. install throwing aborts construction, and whatever it had already done before throwing is its own to undo: the disposer it never returned cannot be run for it."
+          "description": "Set this application up for whatever the binding arrays cannot express — an app-level System on Application.systems, a subscription on Application.onResize, a MutationObserver, a worker, a debug overlay appended next to the canvas. Runs once per Application, as the final construction step: every core manager and every materialised binding already exists, and dependencies listed in Extension.dependencies are installed first. Return an ExtensionDisposer to undo it. The Application holds the disposers of everything it installed and runs them in reverse installation order — during Application.destroy, or, if a later construction step throws, during that constructor's rollback. Return nothing when there is nothing to undo. A disposer that throws is reported and the remaining ones still run. An extension's lifetime is its Application's lifetime: there is no uninstall at runtime, and no scene-level scope — extensions equip an application, not a scene. install throwing aborts construction, and whatever it had already done before throwing is its own to undo: the disposer it never returned cannot be run for it."
         }
       ],
       "paragraphs": [],
@@ -300,43 +300,6 @@
             {
               "text": ">",
               "kind": "punctuation"
-            },
-            {
-              "text": "[]",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "systems",
-          "signature": "systems?: readonly ApplicationSystemBinding[]",
-          "signatureTokens": [
-            {
-              "text": "systems",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "readonly",
-              "kind": "keyword"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "ApplicationSystemBinding",
-              "kind": "type"
             },
             {
               "text": "[]",

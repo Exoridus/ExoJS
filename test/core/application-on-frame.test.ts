@@ -71,7 +71,6 @@ const loadOnFrameHarness = async (): Promise<OnFrameTestHarness> => {
     }),
   }));
   vi.doMock('#extensions/materialize', () => ({
-    materializeApplicationSystems: vi.fn(),
     materializeAssetBindings: vi.fn(),
     materializeRendererBindings: vi.fn(),
     materializeSerializerBindings: vi.fn(),

@@ -5,7 +5,7 @@ import { Loader, type LoaderOptions } from '#assets/Loader';
 import { AudioManager } from '#audio/AudioManager';
 import type { Extension, ExtensionDisposer } from '#extensions/Extension';
 import { disposeExtensions, installExtensions } from '#extensions/lifetime';
-import { materializeApplicationSystems, materializeAssetBindings, materializeRendererBindings, materializeSerializerBindings } from '#extensions/materialize';
+import { materializeAssetBindings, materializeRendererBindings, materializeSerializerBindings } from '#extensions/materialize';
 import { buildSnapshot, type ExtensionSnapshot } from '#extensions/snapshot';
 import type { GamepadDefinition } from '#input/GamepadDefinitions';
 import type { GamepadSlotStrategy } from '#input/InputManager';
@@ -736,14 +736,11 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
       this._coreSystems = [this.input, this.interaction, this._audio, this.tweens, this.animations, this._rendering];
 
-      // Every core manager exists by this point, so app-system bindings can capture references to them.
-      materializeApplicationSystems(this, this._snapshot.systems);
-
       // The last construction step, so `install(app)` sees a complete
-      // application — every manager, every materialised binding, every
-      // extension system already on `systems`. Its mirror image is the first
-      // step of teardown, in both `_disposeManagedResources` and the rollback
-      // below.
+      // application — every manager and every materialised binding already in
+      // place, so an installer may add its own systems and capture references
+      // to the core managers. Its mirror image is the first step of teardown,
+      // in both `_disposeManagedResources` and the rollback below.
       installExtensions(this, this._snapshot.extensions, this._extensionDisposers);
     } catch (error) {
       // The caller gets no instance, so this is the only chance to release
@@ -759,8 +756,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * Release every subsystem a failed constructor had already built, and undo
    * every {@link Extension.install} that had already run. Without it, a throw
    * from any construction step — most realistically an extension's own
-   * `install()` or a binding in `materializeApplicationSystems()`, the last
-   * two — strands the platform adapter, loader, backend, rendering context,
+   * `install()`, the last one — strands the platform adapter, loader, backend, rendering context,
    * input, interaction and scene director with no owner: the caller never
    * receives an `Application` and so can never call
    * {@link Application.destroy}.
@@ -783,10 +779,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * a director reached through this path has not navigated: no active scope,
    * no retained scopes, so its teardown reduces to destroying its own
    * Signals. That is not an absolute guarantee, though: an extension's
-   * `ApplicationSystemBinding.create(app)` — invoked from
-   * `materializeApplicationSystems`, the last construction step, with the
-   * live `app` — could itself call `app.scenes.preload()` before a later
-   * binding throws, leaving a preloaded scope (and its in-flight `load()`)
+   * `install(app)` — the last construction step, invoked with the live `app`
+   * — could itself call `app.scenes.preload()` before a later extension's
+   * `install` throws, leaving a preloaded scope (and its in-flight `load()`)
    * for this fire-and-forget teardown to race. It is *not* a substitute
    * for {@link Application._disposeManagedResources}, which awaits
    * `scenes._dispose()` precisely because by then there is scene state to

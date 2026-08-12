@@ -197,11 +197,11 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
   `Escape`.
 - **`Extension.install(app)` and `ExtensionDisposer` — extensions have a
   lifetime of their own.** An extension descriptor may now carry an
-  `install(app)` hook for whatever the `renderers`/`assets`/`serializers`/
-  `systems` arrays cannot express: a subscription on an application signal, a
-  debug overlay next to the canvas, a worker, an observer. It runs once per
-  `Application` as the final construction step — every core manager, every
-  materialised binding and every extension system already exists — with
+  `install(app)` hook for whatever the `renderers`/`assets`/`serializers`
+  arrays cannot express: an app-level `System`, a subscription on an
+  application signal, a debug overlay next to the canvas, a worker, an
+  observer. It runs once per `Application` as the final construction step —
+  every core manager and every materialised binding already exists — with
   dependencies installed ahead of their dependents, and may return an
   `ExtensionDisposer` (a synchronous `() => void`). The `Application` holds
   those disposers and runs them in **reverse installation order**: in
@@ -352,6 +352,12 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
 
 ### Removed
 
+- **BREAKING — `Extension.systems` and `ApplicationSystemBinding` removed.**
+  A system binding’s `create(app)` was exactly `install: app => { app.systems.add(system) }`,
+  down to the reverse-order destruction `SystemRegistry` performs either way —
+  two hooks running at the same moment with the same argument. Contribute an
+  app-level system from `install(app)` instead; unlike a binding, the same
+  closure can also undo it via the returned `ExtensionDisposer`.
 - **BREAKING — `Scene.onLoad`/`Scene.onUnload` removed.** Redundant with
   `SceneDirector.onStartScene`/`onStopScene` and the overridable
   `load()`/`unload()` methods themselves; replaced in spirit by the new

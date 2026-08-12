@@ -158,20 +158,6 @@ export interface SerializerBinding<T extends SceneNode = SceneNode> {
 }
 
 /**
- * Produces an app-level {@link System} for one {@link Application} instance,
- * or `undefined` to opt out for that instance. `create(app)` runs once per
- * Application, after every core manager already exists on `app` — safe to
- * read {@link Application.input}, {@link Application.interaction}, etc. The
- * returned system is registered on {@link Application.systems} exactly like
- * a user-added system, including reverse-order destruction. Extensions never
- * inject scene-level systems or augment scenes — app-level only.
- * @advanced
- */
-export interface ApplicationSystemBinding {
-  create(app: Application): System | undefined;
-}
-
-/**
  * Undoes one {@link Extension.install} call, for the one {@link Application}
  * that call was made against. Returned by `install`, held by that Application,
  * and invoked exactly once during its teardown.
@@ -203,16 +189,15 @@ export interface Extension {
   readonly renderers?: readonly RendererBinding[];
   readonly assets?: readonly AssetBinding[];
   readonly serializers?: readonly SerializerBinding[];
-  readonly systems?: readonly ApplicationSystemBinding[];
   /**
-   * Set this application up for whatever the binding arrays cannot express — a
-   * subscription on {@link Application.onResize}, a `MutationObserver`, a
-   * worker, a debug overlay appended next to the canvas.
+   * Set this application up for whatever the binding arrays cannot express — an
+   * app-level {@link System} on {@link Application.systems}, a subscription on
+   * {@link Application.onResize}, a `MutationObserver`, a worker, a debug
+   * overlay appended next to the canvas.
    *
    * Runs once per Application, as the final construction step: every core
-   * manager, every materialised binding and every system from
-   * {@link Extension.systems} already exists, and dependencies listed in
-   * {@link Extension.dependencies} are installed first.
+   * manager and every materialised binding already exists, and dependencies
+   * listed in {@link Extension.dependencies} are installed first.
    *
    * Return an {@link ExtensionDisposer} to undo it. The Application holds the
    * disposers of everything it installed and runs them in reverse installation

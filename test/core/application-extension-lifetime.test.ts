@@ -75,24 +75,22 @@ describe('Extension install()', () => {
     void app.destroy();
   });
 
-  test('runs after every core manager and after its own systems are registered', () => {
+  test('runs after every core manager, so an installer may register a system that reads them', () => {
     const system: System = { update: vi.fn() };
-    let sawSystem = false;
     let sawManagers = false;
 
     const ext: Extension = {
       id: 'ordering',
-      systems: [{ create: () => system }],
       install: app => {
-        sawSystem = app.systems.has(system);
         sawManagers = app.input !== undefined && app.interaction !== undefined && app.scenes !== undefined && app.audio !== undefined;
+        app.systems.add(system);
       },
     };
 
     const app = new Application({ backend: { type: 'webgl2' }, extensions: [ext] });
 
-    expect(sawSystem).toBe(true);
     expect(sawManagers).toBe(true);
+    expect(app.systems.has(system)).toBe(true);
 
     void app.destroy();
   });
@@ -152,16 +150,19 @@ describe('Extension disposers', () => {
     const system: System = { update: vi.fn(), destroy: () => void order.push('system') };
     const ext: Extension = {
       id: 'mirror',
-      systems: [{ create: () => system }],
-      install: () => () => void order.push('disposer'),
+      install: app => {
+        app.systems.add(system);
+
+        return () => void order.push('disposer');
+      },
     };
 
     const app = new Application({ backend: { type: 'webgl2' }, extensions: [ext] });
 
     await app.destroy();
 
-    // `install` runs after the system bindings materialise, so its disposer has
-    // to run before `systems.destroy()` takes them down again.
+    // Teardown mirrors installation: the disposer runs before
+    // `systems.destroy()` takes down what the installer registered.
     expect(order).toEqual(['disposer', 'system']);
   });
 
@@ -259,5 +260,91 @@ describe('Extension install() during a failed construction', () => {
     }
 
     expect(caught).toBe(failure);
+  });
+});
+
+/**
+ * `install` is the only way an extension contributes an app-level system, so
+ * these cover what the removed `Extension.systems` binding used to guarantee:
+ * per-application instances, ordinary registration on `app.systems`, and a
+ * teardown that survives a system whose `destroy()` throws.
+ */
+describe('Systems registered by an extension install()', () => {
+  test('two applications built from one descriptor get independent system instances', () => {
+    const created: System[] = [];
+    const ext: Extension = {
+      id: 'per-app',
+      install: app => {
+        const system: System = { update: vi.fn() };
+
+        created.push(system);
+        app.systems.add(system);
+      },
+    };
+
+    const appA = new Application({ backend: { type: 'webgl2' }, extensions: [ext] });
+    const appB = new Application({ backend: { type: 'webgl2' }, extensions: [ext] });
+
+    expect(created).toHaveLength(2);
+    expect(appA.systems.has(created[0]!)).toBe(true);
+    expect(appA.systems.has(created[1]!)).toBe(false);
+    expect(appB.systems.has(created[1]!)).toBe(true);
+    expect(appB.systems.has(created[0]!)).toBe(false);
+
+    void appA.destroy();
+    void appB.destroy();
+  });
+
+  test('destroy() takes them down in reverse registration order with a later user system', async () => {
+    const order: string[] = [];
+    const extSystem: System = { update: vi.fn(), destroy: () => void order.push('extension') };
+    const ext: Extension = { id: 'destroy-order', install: app => void app.systems.add(extSystem) };
+    const app = new Application({ backend: { type: 'webgl2' }, extensions: [ext] });
+
+    const userSystem: System = { update: vi.fn(), destroy: () => void order.push('user') };
+
+    app.systems.add(userSystem);
+
+    // destroy() disposes `scenes` first and only then the rest of teardown
+    // (including `systems.destroy()`); awaiting it is what makes that ordering
+    // observable instead of a microtask-count guess.
+    await app.destroy();
+
+    expect(order).toEqual(['user', 'extension']);
+  });
+
+  test('a throwing system destroy() does not strand the teardown steps after systems.destroy()', async () => {
+    const extSystem: System = {
+      update: vi.fn(),
+      destroy: (): never => {
+        throw new Error('extension system blew up');
+      },
+    };
+    const ext: Extension = { id: 'throwing-destroy', install: app => void app.systems.add(extSystem) };
+    const app = new Application({ backend: { type: 'webgl2' }, extensions: [ext] });
+
+    // onFrame is destroyed at the very end of _disposeManagedResources, well
+    // past systems.destroy() — a live handler afterwards means the chain that
+    // also releases rendering, audio, input, backend and platform was cut short.
+    app.onFrame.add(() => {});
+
+    await app.destroy();
+
+    expect(app.onFrame.count).toBe(0);
+  });
+
+  test('a renderer-only extension adds no system of its own', () => {
+    const ext: Extension = { id: 'renderer-only', renderers: [] };
+    const baseline = new Application({ backend: { type: 'webgl2' } });
+    const coreSystemCount = baseline.systems.size;
+
+    void baseline.destroy();
+
+    const app = new Application({ backend: { type: 'webgl2' }, extensions: [ext] });
+
+    // The engine's own core managers are always registered; the extension
+    // contributes nothing on top of them.
+    expect(app.systems.size).toBe(coreSystemCount);
+    void app.destroy();
   });
 });

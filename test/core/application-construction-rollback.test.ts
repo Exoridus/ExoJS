@@ -14,7 +14,7 @@ import { Application } from '#core/Application';
 import { SceneDirector } from '#core/SceneDirector';
 import type { System } from '#core/System';
 import { SystemRegistry } from '#core/SystemRegistry';
-import type { ApplicationSystemBinding, AssetBinding, Extension } from '#extensions/Extension';
+import type { AssetBinding, Extension } from '#extensions/Extension';
 import { InputManager } from '#input/InputManager';
 import { InteractionManager } from '#input/InteractionManager';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
@@ -97,16 +97,21 @@ const createRecordingPlatform = (): PlatformAdapter & { readonly calls: string[]
   };
 };
 
-/** An extension whose last app-system binding throws — the real failure mode. */
-const throwingSystemExtension = (error: Error, before?: ApplicationSystemBinding): Extension => {
-  const failing: ApplicationSystemBinding = {
-    create: (): never => {
-      throw error;
-    },
-  };
+/**
+ * An extension whose `install` throws — the real failure mode, and the last
+ * construction step. `before` is a system the installer registers before it
+ * throws, so the rollback has extension-owned state to unwind.
+ */
+const throwingInstallExtension = (error: Error, before?: System): Extension => ({
+  id: 'rollback-probe',
+  install: (app): never => {
+    if (before !== undefined) {
+      app.systems.add(before);
+    }
 
-  return { id: 'rollback-probe', systems: before === undefined ? [failing] : [before, failing] };
-};
+    throw error;
+  },
+});
 
 beforeEach(() => {
   destroyOrder.length = 0;
@@ -118,12 +123,12 @@ afterEach(() => {
 });
 
 describe('Application construction rollback', () => {
-  test('the error thrown by an extension binding propagates unchanged', () => {
+  test('the error thrown by an extension install propagates unchanged', () => {
     const failure = new Error('binding exploded');
     let caught: unknown;
 
     try {
-      new Application({ backend: { type: 'webgl2' }, extensions: [throwingSystemExtension(failure)] });
+      new Application({ backend: { type: 'webgl2' }, extensions: [throwingInstallExtension(failure)] });
     } catch (error) {
       caught = error;
     }
@@ -144,7 +149,7 @@ describe('Application construction rollback', () => {
     recordDestroy(TweenManager.prototype, 'tweens');
     recordDestroy(AudioManager.prototype, 'audio');
 
-    expect(() => new Application({ backend: { type: 'webgl2' }, extensions: [throwingSystemExtension(new Error('boom'))] })).toThrow('boom');
+    expect(() => new Application({ backend: { type: 'webgl2' }, extensions: [throwingInstallExtension(new Error('boom'))] })).toThrow('boom');
 
     expect(destroyOrder).toEqual([
       // App-level registry first: extension systems are the last thing built
@@ -187,7 +192,7 @@ describe('Application construction rollback', () => {
       () =>
         new Application({
           backend: { type: 'webgl2' },
-          extensions: [throwingSystemExtension(new Error('boom'), { create: () => hostile })],
+          extensions: [throwingInstallExtension(new Error('boom'), hostile)],
         }),
     ).toThrow('boom');
 
@@ -224,7 +229,7 @@ describe('Application construction rollback', () => {
           new Application({
             backend: { type: 'webgl2' },
             canvas: { mount: host, sizingMode: 'fill' },
-            extensions: [throwingSystemExtension(new Error('boom'))],
+            extensions: [throwingInstallExtension(new Error('boom'))],
           }),
       ).toThrow('boom');
 
@@ -240,7 +245,7 @@ describe('Application construction rollback', () => {
     }
   });
 
-  test('a system materialised before the failing binding is destroyed', () => {
+  test('a system registered by the installer before it threw is destroyed', () => {
     const destroyed = vi.fn();
     const earlier: System = { update: vi.fn(), destroy: destroyed };
 
@@ -248,7 +253,7 @@ describe('Application construction rollback', () => {
       () =>
         new Application({
           backend: { type: 'webgl2' },
-          extensions: [throwingSystemExtension(new Error('boom'), { create: () => earlier })],
+          extensions: [throwingInstallExtension(new Error('boom'), earlier)],
         }),
     ).toThrow('boom');
 
@@ -258,7 +263,7 @@ describe('Application construction rollback', () => {
   test('an injected platform adapter is left alive, but its visibility subscription is released', () => {
     const platform = createRecordingPlatform();
 
-    expect(() => new Application({ backend: { type: 'webgl2' }, platform, extensions: [throwingSystemExtension(new Error('boom'))] })).toThrow('boom');
+    expect(() => new Application({ backend: { type: 'webgl2' }, platform, extensions: [throwingInstallExtension(new Error('boom'))] })).toThrow('boom');
 
     // Not ours to destroy — the caller injected it and may still be using it.
     expect(platform.calls).not.toContain('destroy');
@@ -291,7 +296,7 @@ describe('Application construction rollback', () => {
     recordDestroy(SceneDirector.prototype, 'scenes');
     recordDestroy(SystemRegistry.prototype, 'systems');
 
-    const app = new Application({ backend: { type: 'webgl2' }, extensions: [{ id: 'ok', systems: [{ create: () => ({ update: vi.fn() }) }] }] });
+    const app = new Application({ backend: { type: 'webgl2' }, extensions: [{ id: 'ok', install: created => void created.systems.add({ update: vi.fn() }) }] });
 
     expect(destroyOrder).toEqual([]);
 
