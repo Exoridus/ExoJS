@@ -50,7 +50,8 @@ import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import { ShaderSource } from '#rendering/material/ShaderSource';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
-import { type DrawCommand, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import { type DrawCommand, materialKeyForcesFlush, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import type { RenderPlan } from '#rendering/plan/RenderPlan';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
 import type { GroupScope } from '#rendering/plan/RenderScope';
@@ -143,7 +144,7 @@ const createDrawEntry = (
       rendererId: overrides.rendererId,
       shaderId: overrides.shaderId,
       ownMaterial: overrides.ownMaterial ?? false,
-    }),
+    } as Partial<DrawCommand['material']>),
     minX: 0,
     minY: 0,
     maxX: 16,
@@ -157,9 +158,8 @@ const createDrawEntry = (
  * optimizer skips material grouping outright when the flag is false, so a
  * fixture that forgot it would silently test nothing.
  */
-const deriveHasMixedMaterial = (entries: readonly object[]): boolean => {
-  let firstPipelineKey: number | null = null;
-  let firstBindKey = 0;
+const deriveHasMixedPipeline = (entries: readonly object[]): boolean => {
+  let first: DrawCommand['material'] | null = null;
 
   for (const entry of entries) {
     const candidate = entry as { kind: RenderEntryKind; command?: DrawCommand };
@@ -168,12 +168,11 @@ const deriveHasMixedMaterial = (entries: readonly object[]): boolean => {
       continue;
     }
 
-    const { pipelineKey, bindKey } = candidate.command.material;
+    const material = candidate.command.material;
 
-    if (firstPipelineKey === null) {
-      firstPipelineKey = pipelineKey;
-      firstBindKey = bindKey;
-    } else if (firstPipelineKey !== pipelineKey || firstBindKey !== bindKey) {
+    if (first === null) {
+      first = material;
+    } else if (materialKeyForcesFlush(first.pipelineKey, first.bindKey, first.ownMaterial, material)) {
       return true;
     }
   }
@@ -181,37 +180,31 @@ const deriveHasMixedMaterial = (entries: readonly object[]): boolean => {
   return false;
 };
 
-const createPlan = (entries: object[]) => {
+const createPlan = (entries: object[]): RenderPlan => {
   const { backend, destroy } = createBuildBackend();
 
   try {
-    return {
-      passes: [
-        {
-          target: null as unknown,
-          view: backend.view,
-          clearColor: null as unknown,
-          root: {
-            kind: RenderEntryKind.Group as const,
-            entries: entries as GroupScope['entries'],
-            hasMixedZ: false,
-            hasMixedPipeline: deriveHasMixedMaterial(entries),
-            preserveDrawOrder: false,
-          },
-        },
-      ],
-      nodeCount: 0,
-      reset() {
-        this.passes.length = 0;
-        this.nodeCount = 0;
-      },
+    const scope: GroupScope = {
+      kind: RenderEntryKind.Group,
+      entries: entries as GroupScope['entries'],
+      hasMixedZ: false,
+      hasMixedPipeline: deriveHasMixedPipeline(entries),
+      preserveDrawOrder: false,
+      transformNode: null,
+      retainedInstructions: null,
+      retainedRecordTarget: null,
     };
+
+    return {
+      passes: [{ target: null, view: backend.view, clearColor: null, root: scope }],
+      nodeCount: 0,
+    } as unknown as RenderPlan;
   } finally {
     destroy();
   }
 };
 
-const getGroupIndices = (plan: ReturnType<typeof createPlan>) =>
+const getGroupIndices = (plan: RenderPlan) =>
   plan.passes[0].root.entries
     .filter((e: unknown) => (e as { kind: RenderEntryKind }).kind === RenderEntryKind.Draw)
     .map((e: unknown) => (e as { command: DrawCommand }).command.groupIndex ?? 0);
@@ -281,10 +274,7 @@ describe('render plan grouping key audit', () => {
       const a = new AuditDrawable();
       const b = new AuditDrawable();
 
-      const plan = createPlan([
-        createDrawEntry(a, 100, 200, { ownMaterial: true }),
-        createDrawEntry(b, 100, 999, { ownMaterial: true }),
-      ]);
+      const plan = createPlan([createDrawEntry(a, 100, 200, { ownMaterial: true }), createDrawEntry(b, 100, 999, { ownMaterial: true })]);
 
       RenderPlanOptimizer.optimize(plan);
 

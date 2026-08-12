@@ -609,9 +609,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       pass.setBindGroup(2, this._getUserBindGroup(backend, material!, resources));
     }
 
-    pass.setBindGroup(0, this._getOrCreateInstancedTransformBindGroup(storage.buffer, storage.tintBuffer), [
-      uniformSlot * this._uniformAlignment,
-    ]);
+    pass.setBindGroup(0, this._getOrCreateInstancedTransformBindGroup(storage.buffer, storage.tintBuffer), [uniformSlot * this._uniformAlignment]);
     pass.setVertexBuffer(0, staticGeometry.vertexBuffer);
     pass.setVertexBuffer(1, instanceNodeIndexBuffer, nodeIndexByteOffset);
 

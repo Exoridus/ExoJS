@@ -70,6 +70,7 @@ const material = (): MaterialKey => ({
   shaderId: -1,
   pipelineKey: 1,
   bindKey: 1,
+  ownMaterial: false,
 });
 
 class TestDrawable extends Drawable {

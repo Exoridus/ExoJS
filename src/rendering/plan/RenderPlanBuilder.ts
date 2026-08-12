@@ -674,10 +674,7 @@ export class RenderPlanBuilder {
       scope.firstPipelineKey = material.pipelineKey;
       scope.firstBindKey = material.bindKey;
       scope.firstOwnMaterial = material.ownMaterial;
-    } else if (
-      !scope.hasMixedPipeline &&
-      materialKeyForcesFlush(scope.firstPipelineKey, scope.firstBindKey, scope.firstOwnMaterial, material)
-    ) {
+    } else if (!scope.hasMixedPipeline && materialKeyForcesFlush(scope.firstPipelineKey, scope.firstBindKey, scope.firstOwnMaterial, material)) {
       scope.hasMixedPipeline = true;
     }
   }
