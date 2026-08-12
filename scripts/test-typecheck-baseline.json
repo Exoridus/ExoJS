@@ -86,7 +86,7 @@
     "test/rendering/filters/web-gl2-shader-filter.test.ts": 3,
     "test/rendering/gradient.test.ts": 1,
     "test/rendering/mask-source.test.ts": 1,
-    "test/rendering/material-grouping.test.ts": 15,
+    "test/rendering/material-grouping.test.ts": 5,
     "test/rendering/pass/web-gpu-pass-coordinator.test.ts": 1,
     "test/rendering/render-dispatch.test.ts": 1,
     "test/rendering/render-effects.test.ts": 3,

@@ -57,6 +57,13 @@ interface RetainedBackendHooks {
 interface MutableGroupScope extends GroupScope {
   _nextSeq: number;
   firstZ: number | null;
+  /**
+   * First-draw material of this scope, the `hasMixedMaterial` counterpart of
+   * {@link MutableGroupScope.firstZ}. `firstPipelineKey === null` means "no draw
+   * seen yet"; `firstBindKey` is only meaningful once it is set.
+   */
+  firstPipelineKey: number | null;
+  firstBindKey: number;
 }
 
 /**
@@ -403,6 +410,8 @@ export class RenderPlanBuilder {
     //     and paint the scope in the wrong order.
     //   - `_nextSeq`: a later normally-emitted sibling (e.g. a nested Container)
     //     in the same scope must not collide with a replayed slot's seq.
+    // The matching `hasMixedMaterial` fold needs no mirror here: it hangs off
+    // `_pushDrawEntry` below, which this path already goes through.
     const scope = this._currentScope();
 
     if (slot.seq >= scope._nextSeq) {
@@ -587,12 +596,15 @@ export class RenderPlanBuilder {
       kind: RenderEntryKind.Group,
       entries: [],
       hasMixedZ: false,
+      hasMixedMaterial: false,
       preserveDrawOrder: false,
       transformNode: null,
       retainedInstructions: null,
       retainedRecordTarget: null,
       _nextSeq: 0,
       firstZ: null,
+      firstPipelineKey: null,
+      firstBindKey: 0,
     };
 
     this._groupPool[this._groupPoolCursor] = scope;
@@ -600,12 +612,15 @@ export class RenderPlanBuilder {
 
     scope.entries.length = 0;
     scope.hasMixedZ = false;
+    scope.hasMixedMaterial = false;
     scope.preserveDrawOrder = preserveDrawOrder;
     scope.transformNode = null;
     scope.retainedInstructions = null;
     scope.retainedRecordTarget = null;
     scope._nextSeq = 0;
     scope.firstZ = null;
+    scope.firstPipelineKey = null;
+    scope.firstBindKey = 0;
 
     return scope;
   }
@@ -639,6 +654,25 @@ export class RenderPlanBuilder {
     return command;
   }
 
+  /**
+   * Fold a draw's material into the scope's `hasMixedMaterial` flag. Lives in
+   * {@link _pushDrawEntry} rather than beside the `firstZ`/`hasMixedZ` updates
+   * because materials exist on draws only: `_pushDrawEntry` is the single funnel
+   * every draw entry — freshly collected or retained-replayed — passes through,
+   * so no emit path can silently skip the bookkeeping and leave the flag `false`
+   * while the scope really does hold several materials.
+   */
+  private _foldMaterialIntoScope(scope: MutableGroupScope, command: DrawCommand): void {
+    const material = command.material;
+
+    if (scope.firstPipelineKey === null) {
+      scope.firstPipelineKey = material.pipelineKey;
+      scope.firstBindKey = material.bindKey;
+    } else if (!scope.hasMixedMaterial && (scope.firstPipelineKey !== material.pipelineKey || scope.firstBindKey !== material.bindKey)) {
+      scope.hasMixedMaterial = true;
+    }
+  }
+
   private _pushDrawEntry(seq: number, zIndex: number, command: DrawCommand): void {
     let entry = this._drawEntryPool[this._drawEntryPoolCursor];
 
@@ -652,7 +686,11 @@ export class RenderPlanBuilder {
     }
 
     this._drawEntryPoolCursor++;
-    this._currentScope().entries.push(entry);
+
+    const scope = this._currentScope();
+
+    this._foldMaterialIntoScope(scope, command);
+    scope.entries.push(entry);
   }
 
   private _pushGroupEntry(seq: number, zIndex: number, scope: GroupScope): void {
