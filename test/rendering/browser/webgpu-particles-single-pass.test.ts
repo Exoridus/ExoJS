@@ -61,7 +61,13 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
   // The particle renderer is not part of the core renderer bindings — the
   // `@codexo/exojs-particles` package materialises it itself via its Extension
   // descriptor, and these tests build a bare backend without an Application.
-  materializeRendererBindings(backend, particlesExtension.renderers);
+  const { renderers } = particlesExtension;
+
+  if (!renderers) {
+    throw new Error('particlesExtension exposes no renderer bindings');
+  }
+
+  materializeRendererBindings(backend, renderers);
 
   return backend;
 };
