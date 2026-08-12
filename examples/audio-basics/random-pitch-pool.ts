@@ -73,8 +73,8 @@ class RandomPitchPoolScene extends Scene {
         const app = this.app;
         this.flash = Math.max(0, this.flash - delta.seconds * 4);
 
-        // Core defers playback until the AudioContext unlocks on the first
-        // gesture; skip firing while audio is still locked.
+        // A Sound played before the AudioContext unlocks on the first gesture
+        // is a no-op, so skip firing while audio is still locked.
         if (!this.active || app.audio.locked) return;
 
         this.timer += delta.seconds;

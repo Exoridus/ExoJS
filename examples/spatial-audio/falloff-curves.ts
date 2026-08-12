@@ -75,7 +75,7 @@ class FalloffCurvesScene extends Scene {
         });
 
         // Shown while the browser still blocks audio (`app.audio.locked`); the
-        // first click or keypress unlocks it and the queued loops start.
+        // first click or keypress unlocks it and the loops start.
         this.tapPrompt = new Text('Click or press any key to start audio', { fillColor: Color.white, fontSize: 22, align: 'center' })
             .setAnchor(0.5, 0.5)
             .setPosition(width / 2, height - 24);
@@ -92,21 +92,25 @@ class FalloffCurvesScene extends Scene {
             this.listener.y = pointer.y;
         });
 
-        // Core defers playback until the AudioContext unlocks on the first
-        // gesture, then starts automatically — just call play().
-        for (let i = 0; i < this.sounds.length; i++) {
-            const { model, x, y } = this.sources[i];
-            app.audio.play(this.sounds[i], {
-                loop: true,
-                volume: 0.5,
-                position: { x, y },
-                distanceModel: model,
-                refDistance: REF_DISTANCE,
-                maxDistance: MAX_DISTANCE,
-                rolloffFactor: ROLLOFF,
-            });
-        }
-        this.hud.setStatus('Move the pointer to relocate the listener');
+        // A Sound played while audio is still locked is a no-op: a suspended
+        // AudioContext's clock stands still, so nothing can be scheduled
+        // honestly. Start the loops from the unlock gesture instead.
+        // Subscribing is safe even if audio unlocked earlier — onUnlock replays.
+        app.audio.onUnlock.add(() => {
+            for (let i = 0; i < this.sounds.length; i++) {
+                const { model, x, y } = this.sources[i];
+                app.audio.play(this.sounds[i], {
+                    loop: true,
+                    volume: 0.5,
+                    position: { x, y },
+                    distanceModel: model,
+                    refDistance: REF_DISTANCE,
+                    maxDistance: MAX_DISTANCE,
+                    rolloffFactor: ROLLOFF,
+                });
+            }
+            this.hud.setStatus('Move the pointer to relocate the listener');
+        });
     }
 
     override draw(context: RenderingContext): void {

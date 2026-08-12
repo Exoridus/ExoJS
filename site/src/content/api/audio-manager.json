@@ -10,8 +10,8 @@
   "counts": {
     "constructors": 1,
     "methods": 14,
-    "properties": 7,
-    "events": 1
+    "properties": 8,
+    "events": 0
   },
   "sections": [
     {
@@ -830,6 +830,27 @@
           "description": ""
         },
         {
+          "name": "onUnlock",
+          "signature": "onUnlock: Signal",
+          "signatureTokens": [
+            {
+              "text": "onUnlock",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires once when the AudioContext transitions to \"running\" — i.e. the first user gesture unlocks audio under the browser's autoplay policy. This is the canonical place to start anything that must play as soon as audio is available: ts app.audio.onUnlock.add(() => app.audio.play(music, { loop: true }));  Subscribing after audio has already unlocked runs the handler right away (on a microtask) rather than waiting for a dispatch that will never come — so a scene loaded mid-session gets the same behaviour as one loaded at startup. Check AudioManager.locked for the current state. See AudioManager.play for what each asset kind does when played before the gesture."
+        },
+        {
           "name": "sound",
           "signature": "sound: AudioBus",
           "signatureTokens": [
@@ -890,7 +911,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "true while audio is blocked by the browser's autoplay policy — no user gesture has resumed the AudioContext yet. Voices played while locked are deferred (streams) or skipped (generators) until that gesture."
+          "description": "true while audio is blocked by the browser's autoplay policy — no user gesture has resumed the AudioContext yet. What a play call does while locked depends on the asset: an AudioStream is deferred and starts on the gesture, because a media element owns its own playhead and can simply be told to play later. A Sound or an AudioGenerator is **skipped** — it returns an already-ended voice and never makes a sound. Neither can be deferred honestly: a suspended context's currentTime stands still, so every source scheduled while locked lands on the same instant and the entire backlog would fire simultaneously on the gesture. Start such playback from AudioManager.onUnlock instead."
         },
         {
           "name": "muteOnHidden",
@@ -912,52 +933,6 @@
           "params": [],
           "returnType": null,
           "description": "When true, the master bus is muted while document.hidden is true. Wired to Application.onVisibilityChange via AudioManager._applyVisibility; the application calls that hook automatically — set this flag to opt in to the behavior."
-        }
-      ],
-      "paragraphs": [],
-      "importLine": null,
-      "sourceLink": null
-    },
-    {
-      "id": "events",
-      "title": "Events",
-      "members": [
-        {
-          "name": "onUnlock",
-          "signature": "onUnlock: Signal<[]>",
-          "signatureTokens": [
-            {
-              "text": "onUnlock",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Signal",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "[",
-              "kind": "punctuation"
-            },
-            {
-              "text": "]",
-              "kind": "punctuation"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Fires once when the AudioContext transitions to \"running\" — i.e. the first user gesture unlocks audio under the browser's autoplay policy. Check AudioManager.locked for the current state; sounds played while locked are deferred and start automatically on that gesture."
         }
       ],
       "paragraphs": [],

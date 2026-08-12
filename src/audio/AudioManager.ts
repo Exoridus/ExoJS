@@ -13,6 +13,53 @@ import type { Sound, SoundPlayOptions } from './Sound';
 import { createSpatialSmoothingSettings, type SpatialSmoothingSettings } from './spatial-smoothing';
 
 /**
+ * The signal behind {@link AudioManager.onUnlock}. A plain one-shot `Signal`
+ * would be a trap here: `onUnlock` is the documented place to start playback
+ * that cannot be deferred past the autoplay gesture, and a scene loaded *after*
+ * the user's first click would subscribe to a signal that has already fired and
+ * silently never play. Late subscribers are therefore replayed instead of
+ * registered — on a microtask, so the handler never runs before `add()`
+ * returns, matching the ordering an ordinary dispatch would have.
+ *
+ * Mirrors {@link AudioBus.onceSetup}, which resolves the same
+ * already-happened-by-the-time-you-asked problem the same way.
+ * @internal
+ */
+class UnlockSignal extends Signal {
+  private _dispatched = false;
+
+  public override add(handler: () => void): this {
+    if (this._dispatched) {
+      queueMicrotask(handler);
+
+      return this;
+    }
+
+    return super.add(handler);
+  }
+
+  public override once(handler: () => void): this {
+    if (this._dispatched) {
+      queueMicrotask(handler);
+
+      return this;
+    }
+
+    return super.once(handler);
+  }
+
+  /** Fire the one-shot. Idempotent; subsequent subscribers are replayed. @internal */
+  public _unlock(): void {
+    if (this._dispatched) {
+      return;
+    }
+
+    this._dispatched = true;
+    this.dispatch();
+  }
+}
+
+/**
  * Per-{@link Application} owner of the audio mix: three pre-configured
  * {@link AudioBus} instances (`master` ← `music` + `sound`), a single
  * {@link AudioListener} for spatial audio, and a registry of any extra busses
@@ -39,11 +86,24 @@ export class AudioManager {
   public readonly spatial: SpatialSmoothingSettings = createSpatialSmoothingSettings();
   /**
    * Fires once when the AudioContext transitions to "running" — i.e. the first
-   * user gesture unlocks audio under the browser's autoplay policy. Check
-   * {@link AudioManager.locked} for the current state; sounds played while
-   * locked are deferred and start automatically on that gesture.
+   * user gesture unlocks audio under the browser's autoplay policy. This is the
+   * canonical place to start anything that must play as soon as audio is
+   * available:
+   *
+   * ```ts
+   * app.audio.onUnlock.add(() => app.audio.play(music, { loop: true }));
+   * ```
+   *
+   * Subscribing after audio has already unlocked runs the handler right away
+   * (on a microtask) rather than waiting for a dispatch that will never come —
+   * so a scene loaded mid-session gets the same behaviour as one loaded at
+   * startup.
+   *
+   * Check {@link AudioManager.locked} for the current state. See
+   * {@link AudioManager.play} for what each asset kind does when played before
+   * the gesture.
    */
-  public readonly onUnlock = new Signal();
+  public readonly onUnlock: Signal = new UnlockSignal();
 
   private readonly _registered = new Map<string, AudioBus>();
   private readonly _spatial = new Set<SpatialVoice>();
@@ -56,6 +116,17 @@ export class AudioManager {
   private readonly _voices = new Set<Voice>();
   private _muteOnHidden = false;
   private _destroyed = false;
+  /**
+   * Whether the "played while locked" warning has already been issued for this
+   * manager. Throttled per manager rather than per call: a menu can fire dozens
+   * of click sounds a second while audio is still locked, and every one of them
+   * would produce the identical message — one line names the problem, a flood
+   * buries it (and every other log the developer is reading). Re-armed by
+   * {@link AudioManager.preUpdate} once the context runs, so a context that
+   * drops back to suspended later (an iOS audio-session interruption, a bfcache
+   * restore) reports its own first occurrence again.
+   */
+  private _lockedWarningIssued = false;
 
   public constructor() {
     this.master = new AudioBus('master', { parent: null });
@@ -68,16 +139,18 @@ export class AudioManager {
     this._registered.set('music', this.music);
     this._registered.set('sound', this.sound);
 
+    const unlock = this.onUnlock as UnlockSignal;
+
     if (isAudioContextReady()) {
       // The shared context is already running — this manager was constructed
       // after the one-shot ready signal fired (e.g. a second Application in
       // the same process; the buses above would otherwise consume the signal
       // before this handler registers). Dispatch the unlock on a microtask so
       // subscribers registered right after construction still observe it.
-      queueMicrotask(() => this.onUnlock.dispatch());
+      queueMicrotask(() => unlock._unlock());
     } else {
       onAudioContextReady.add((): void => {
-        this.onUnlock.dispatch();
+        unlock._unlock();
       });
     }
   }
@@ -101,11 +174,41 @@ export class AudioManager {
 
   /**
    * `true` while audio is blocked by the browser's autoplay policy — no user
-   * gesture has resumed the AudioContext yet. Voices played while locked are
-   * deferred (streams) or skipped (generators) until that gesture.
+   * gesture has resumed the AudioContext yet.
+   *
+   * What a play call does while locked depends on the asset: an
+   * {@link AudioStream} is deferred and starts on the gesture, because a media
+   * element owns its own playhead and can simply be told to play later. A
+   * {@link Sound} or an {@link AudioGenerator} is **skipped** — it returns an
+   * already-ended voice and never makes a sound. Neither can be deferred
+   * honestly: a suspended context's `currentTime` stands still, so every
+   * source scheduled while locked lands on the same instant and the entire
+   * backlog would fire simultaneously on the gesture.
+   *
+   * Start such playback from {@link AudioManager.onUnlock} instead.
    */
   public get locked(): boolean {
     return !isAudioContextReady();
+  }
+
+  /**
+   * Report the first play call this manager skipped because audio was still
+   * locked, then stay quiet until audio unlocks — see
+   * {@link AudioManager._lockedWarningIssued} for why it is throttled.
+   * @internal Called by the {@link Playable} implementations that skip.
+   */
+  public _warnPlaybackWhileLocked(asset: string): void {
+    if (this._lockedWarningIssued) {
+      return;
+    }
+
+    this._lockedWarningIssued = true;
+    logger.warn(
+      `AudioManager.play() was called while audio is still locked by the browser's autoplay policy; the ${asset} was skipped. ` +
+        'Start playback from the unlock gesture instead — `app.audio.onUnlock.add(() => app.audio.play(music, { loop: true }))` — ' +
+        'or gate it on `app.audio.locked`. Further skipped plays are not reported until audio unlocks.',
+      { source: 'AudioManager' },
+    );
   }
 
   /**
@@ -125,6 +228,16 @@ export class AudioManager {
    * const voice = app.audio.play(shootSfx);
    * // Later:
    * voice.stop();
+   * ```
+   *
+   * While audio is still locked by the browser's autoplay policy
+   * ({@link AudioManager.locked}), a {@link Sound} or {@link AudioGenerator}
+   * play call is a **no-op**: it returns an already-ended voice and warns once.
+   * An {@link AudioStream} is deferred and starts on the unlock gesture. Start
+   * the former from {@link AudioManager.onUnlock}:
+   *
+   * ```ts
+   * app.audio.onUnlock.add(() => app.audio.play(music, { loop: true }));
    * ```
    *
    * Throws once the manager has been destroyed — see {@link AudioManager.destroy}.
@@ -173,6 +286,13 @@ export class AudioManager {
 
   /** {@link SystemMethods.preUpdate} phase, at {@link SystemOrder.CoreAudio}. The frame delta is unused here (hence `_delta`). */
   public preUpdate(_delta: Time): void {
+    // Re-arm the one-shot locked-playback warning once audio is available
+    // again, so a later re-lock reports its own first occurrence. Guarded on
+    // the flag so the common (never-warned) case costs a single boolean read.
+    if (this._lockedWarningIssued && isAudioContextReady()) {
+      this._lockedWarningIssued = false;
+    }
+
     this.listener._tick();
     // Tick spatial voices and prune ended ones.
     for (const voice of this._spatial) {

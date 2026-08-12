@@ -133,6 +133,7 @@ export class AudioGenerator implements Playable {
     const bus = options.bus ?? manager.sound;
 
     if (!isAudioContextReady()) {
+      manager._warnPlaybackWhileLocked('generator');
       return new NoopVoice(bus);
     }
 

@@ -204,6 +204,11 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
   sound. The result is memoized per name (one shared voice pool per sprite,
   rather than a fresh pool per call) and discarded when the name is redefined,
   removed, or the sound is destroyed. An undefined name throws.
+- **`AudioManager.onUnlock` replays for late subscribers.** It is the documented
+  home for playback that cannot be deferred past the autoplay gesture, so a
+  scene loaded _after_ the user's first click used to subscribe to a one-shot
+  signal that had already fired and stay silent forever. Subscribing once audio
+  is unlocked now runs the handler on a microtask instead.
 
 ### Changed
 
@@ -342,6 +347,19 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
 
 ### Removed
 
+- **BREAKING — playing a `Sound` before the autoplay unlock is now a no-op.**
+  `SoundVoice` started its buffer source in its own constructor with
+  `source.start(0, offset)`. A suspended `AudioContext`'s `currentTime` stands
+  still, so every sound played before the first user gesture was scheduled at
+  the _same_ instant and the whole backlog fired simultaneously on the unlock —
+  while the docs claimed such voices were "deferred". `AudioManager.play()` now
+  returns an already-ended `NoopVoice` for a `Sound` played while
+  `AudioManager.locked`, matching what `AudioGenerator` already did, and warns
+  once per `AudioManager` (re-armed when audio unlocks, so a menu full of click
+  sounds cannot flood the console). `AudioStream` keeps its deferral — a media
+  element owns its own playhead and can honestly be told to play later. Start
+  buffer/generator playback from `app.audio.onUnlock`:
+  `app.audio.onUnlock.add(() => app.audio.play(music, { loop: true }))`.
 - **BREAKING — `Sound.clip()` no longer throws on a not-yet-loaded sound.** It
   used to require a decoded buffer because it snapshotted one; a clip is now
   bound to the sound it was cut from and resolves the buffer at playback time,

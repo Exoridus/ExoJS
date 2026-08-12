@@ -17,7 +17,8 @@ function linearAttenuation(distance) {
 }
 class ListenerAndSourceScene extends Scene {
     sound;
-    voice;
+    voice = null;
+    source = { x: 0, y: 0 };
     dragging = false;
     listener;
     graphics;
@@ -39,7 +40,7 @@ class ListenerAndSourceScene extends Scene {
         this.label = new Text('', { fillColor: Color.white, fontSize: 17 });
         this.label.setPosition(20, 20);
         // Shown while the browser still blocks audio (`app.audio.locked`); the
-        // first click or keypress unlocks it and the queued loop starts.
+        // first click or keypress unlocks it and the loop starts.
         this.tapPrompt = new Text('Click or press any key to start audio', { fillColor: Color.white, fontSize: 22, align: 'center' })
             .setAnchor(0.5, 0.5)
             .setPosition(width / 2, height - 48);
@@ -49,12 +50,11 @@ class ListenerAndSourceScene extends Scene {
             status: 'Click or press any key to start…',
             hint: 'The green dot is the listener. Drag the red source — volume falls off with distance.',
         });
+        this.source.x = width / 2 + 220;
+        this.source.y = height / 2;
         app.input.onPointerDown.add(pointer => {
-            const source = this.voice.position;
-            if (!source)
-                return;
-            const dx = pointer.x - source.x;
-            const dy = pointer.y - source.y;
+            const dx = pointer.x - this.source.x;
+            const dy = pointer.y - this.source.y;
             // Generous grab radius so the source is easy to pick up.
             if (dx * dx + dy * dy < SOURCE_RADIUS * SOURCE_RADIUS * 4)
                 this.dragging = true;
@@ -62,28 +62,35 @@ class ListenerAndSourceScene extends Scene {
         app.input.onPointerMove.add(pointer => {
             if (!this.dragging)
                 return;
-            this.voice.position = { x: pointer.x, y: pointer.y };
+            this.source.x = pointer.x;
+            this.source.y = pointer.y;
+            if (this.voice)
+                this.voice.position = this.source;
         });
         app.input.onPointerUp.add(() => {
             this.dragging = false;
         });
-        // Core defers playback until the AudioContext unlocks on the first
-        // gesture, then starts automatically — just call play().
+        // A Sound played while audio is still locked is a no-op: a suspended
+        // AudioContext's clock stands still, so nothing can be scheduled
+        // honestly. Start the loop from the unlock gesture instead. Subscribing
+        // is safe even if audio unlocked earlier — onUnlock replays.
         // play() returns the narrow Voice interface; Sound voices are spatializable.
-        this.voice = app.audio.play(this.sound, {
-            loop: true,
-            volume: 1,
-            position: { x: width / 2 + 220, y: height / 2 },
-            distanceModel: 'linear',
-            refDistance: REF_DISTANCE,
-            maxDistance: MAX_DISTANCE,
-            rolloffFactor: ROLLOFF,
+        app.audio.onUnlock.add(() => {
+            this.voice = app.audio.play(this.sound, {
+                loop: true,
+                volume: 1,
+                position: this.source,
+                distanceModel: 'linear',
+                refDistance: REF_DISTANCE,
+                maxDistance: MAX_DISTANCE,
+                rolloffFactor: ROLLOFF,
+            });
+            this.hud.setStatus('Drag the red source to move it');
         });
-        this.hud.setStatus('Drag the red source to move it');
     }
     draw(context) {
         const app = this.app;
-        const source = this.voice.position ?? { x: 0, y: 0 };
+        const source = this.source;
         const dx = source.x - this.listener.x;
         const dy = source.y - this.listener.y;
         const dist = Math.sqrt(dx * dx + dy * dy);

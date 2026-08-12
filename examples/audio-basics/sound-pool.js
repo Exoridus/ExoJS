@@ -75,8 +75,8 @@ class SoundPoolScene extends Scene {
         this.clock += delta.seconds;
         // Drop voices that have ended this frame so the meter reads truthfully.
         this.voices = this.voices.filter(end => end > this.clock);
-        // Core defers playback until the AudioContext unlocks on the first
-        // gesture; skip firing while audio is still locked.
+        // A Sound played before the AudioContext unlocks on the first gesture
+        // is a no-op, so skip firing while audio is still locked.
         if (!this.firing || app.audio.locked)
             return;
         this.timer += delta.seconds;

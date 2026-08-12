@@ -267,21 +267,25 @@ describe('Sound — LeastRecentlyUsed eviction while the audio context is not re
   afterEach(() => vi.restoreAllMocks());
 
   // LRU falls back to `now = 0` when the audio context is not running yet.
+  // Playing is skipped outright while locked, so the surviving way in is
+  // `setPoolSize()` — a pool shrunk while audio is suspended still has to pick
+  // a victim, and must do so without spawning a context to read the clock from.
   test('LRU eviction still picks a victim when isAudioContextReady() is false', () => {
     const factory = setupSourceFactory();
     const manager = new AudioManager();
     const sound = new Sound(createAudioBufferStub(4), {
-      poolSize: 1,
+      poolSize: 2,
       poolStrategy: SoundPoolStrategy.LeastRecentlyUsed,
     });
 
     manager.play(sound); // src[0]
+    manager.play(sound); // src[1]
 
     const ctx = getAudioContext();
     const originalState = ctx.state;
     ctx.state = 'suspended';
 
-    manager.play(sound); // src[1] — triggers eviction with the context not ready
+    sound.setPoolSize(1); // trims with the context not ready
 
     ctx.state = originalState;
 
