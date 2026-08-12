@@ -400,6 +400,21 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
 
 ### Fixed
 
+- **Each `Application` now gets its own spatial listener.**
+  `AudioContext.listener` belongs to the process-wide `AudioContext`, so two
+  `Application`s writing their absolute world position into it every frame
+  simply overwrote each other — last writer per frame won, and both mixes
+  panned against whichever ticked last. The real WebAudio listener is now
+  pinned at the origin (orientation unchanged) and every spatial voice writes
+  its panner position **relative** to its own manager's `AudioListener`.
+  Distance, attenuation and the distance model are mathematically identical,
+  and the Doppler path is untouched (it always worked in absolute world
+  coordinates in JS). Two consequences worth knowing: listener motion is now
+  smoothed per voice rather than once centrally (the central
+  `SmoothedAudioParam`s on `AudioListener` are gone), and
+  `app.audio.spatial.teleportThreshold` is measured on the source-to-listener
+  offset — a listener warp snaps every spatial voice, and a source warping
+  together with the listener no longer crosses the threshold at all.
 - **Scene pause now actually stops `Sound` playback.** `SceneAudio` detects
   pausable voices by duck-typing `pause`/`resume`, and `AudioStreamVoice` was
   the only implementation of `Pausable` — so every buffer-backed ambience or

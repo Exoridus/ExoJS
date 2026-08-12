@@ -147,46 +147,42 @@ describe('AudioListener', () => {
     listener.destroy();
   });
 
-  // 6. _tick() writes position to audioContext.listener.positionX/Y/Z
-  test('_tick() calls setValueAtTime on positionX/Y/Z of the WebAudio listener', () => {
-    const listener = new AudioListener();
-    listener.target = { x: 12, y: 34 };
-    listener._tick();
-
+  // ME-35: `ctx.listener` is process-wide, so it is pinned at the origin once
+  // at setup and never moved. A moving listener reaches the mix through each
+  // voice's RELATIVE panner position instead — see
+  // test/audio/listener-virtualization.test.ts.
+  test('setup pins the global WebAudio listener at the origin', () => {
     const l = getListenerMock();
-    expect(l.positionX.setValueAtTime).toHaveBeenCalledWith(12, expect.any(Number));
-    expect(l.positionY.setValueAtTime).toHaveBeenCalledWith(34, expect.any(Number));
+    new AudioListener().destroy();
+
+    expect(l.positionX.setValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
+    expect(l.positionY.setValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
     expect(l.positionZ.setValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
-    listener.destroy();
   });
 
-  // AU4: listener position writes go through the smoothing layer — first write
-  // snaps, an ordinary move ramps (setTargetAtTime, no zipper), and a stationary
-  // listener is not re-written each frame (epsilon-skip).
-  test('_tick() snaps the first position, ramps a move, and skips a stationary listener (AU4)', () => {
+  test('_tick() never writes to the global WebAudio listener position', () => {
     const listener = new AudioListener();
     const l = getListenerMock() as unknown as {
-      positionX: { setValueAtTime: MockInstance; setTargetAtTime: MockInstance; cancelScheduledValues: MockInstance };
+      positionX: { setValueAtTime: MockInstance; setTargetAtTime: MockInstance };
+      positionY: { setValueAtTime: MockInstance; setTargetAtTime: MockInstance };
     };
 
-    // First tick: snap into place with setValueAtTime, never a ramp.
+    l.positionX.setValueAtTime.mockClear();
+    l.positionY.setValueAtTime.mockClear();
+
     listener.target = { x: 100, y: 0 };
     listener._tick();
-    expect(l.positionX.setValueAtTime).toHaveBeenCalledWith(100, expect.any(Number));
-    expect(l.positionX.setTargetAtTime).not.toHaveBeenCalled();
-
-    // Move a little: ramp toward the target with setTargetAtTime.
-    l.positionX.setValueAtTime.mockClear();
-    listener.target = { x: 130, y: 0 };
+    listener.target = { x: 130, y: 40 };
     listener._tick();
-    expect(l.positionX.setTargetAtTime).toHaveBeenCalledWith(130, expect.any(Number), expect.any(Number));
-    expect(l.positionX.setValueAtTime).not.toHaveBeenCalled();
 
-    // Stationary: no further scheduling.
-    l.positionX.setTargetAtTime.mockClear();
-    listener._tick();
-    expect(l.positionX.setTargetAtTime).not.toHaveBeenCalled();
     expect(l.positionX.setValueAtTime).not.toHaveBeenCalled();
+    expect(l.positionX.setTargetAtTime).not.toHaveBeenCalled();
+    expect(l.positionY.setValueAtTime).not.toHaveBeenCalled();
+    expect(l.positionY.setTargetAtTime).not.toHaveBeenCalled();
+
+    // The virtual position itself still tracks the target.
+    expect(listener.position.x).toBe(130);
+    expect(listener.position.y).toBe(40);
 
     listener.destroy();
   });
@@ -255,15 +251,21 @@ describe('AudioListener', () => {
     listener.destroy();
   });
 
-  // R2. position is written to audioListener.positionX/Y/Z via _ctx.currentTime
-  test('_tick() writes position to positionX/Y/Z using _ctx (not listener.context)', () => {
+  // R2. setup reads the clock from _ctx, not from the (spec-absent) listener.context
+  test('setup pins the origin using _ctx.currentTime (not listener.context)', () => {
+    const l = getListenerMock();
+    l.positionX.setValueAtTime.mockClear();
+
     const listener = new AudioListener();
+
+    expect((l as unknown as { context?: unknown }).context).toBeUndefined();
+    expect(l.positionX.setValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
+
     listener.target = { x: 55, y: 66 };
     listener._tick();
-    const l = getListenerMock();
-    expect(l.positionX.setValueAtTime).toHaveBeenCalledWith(55, expect.any(Number));
-    expect(l.positionY.setValueAtTime).toHaveBeenCalledWith(66, expect.any(Number));
-    expect(l.positionZ.setValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
+    expect(listener.position.x).toBe(55);
+    expect(listener.position.y).toBe(66);
+
     listener.destroy();
   });
 
@@ -355,11 +357,15 @@ describe('AudioListener', () => {
     const listener = new LegacyAudioListener();
 
     expect(setOrientation).toHaveBeenCalledWith(0, 0, -1, 0, 1, 0);
+    // Pinned at the origin, exactly like the AudioParam path.
+    expect(setPosition).toHaveBeenCalledWith(0, 0, 0);
 
+    setPosition.mockClear();
     listener.target = { x: 7, y: 9 };
     listener._tick();
 
-    expect(setPosition).toHaveBeenCalledWith(7, 9, 0);
+    expect(setPosition).not.toHaveBeenCalled();
+    expect(listener.position.x).toBe(7);
 
     listener.destroy();
     vi.doUnmock('#audio/audio-context');
