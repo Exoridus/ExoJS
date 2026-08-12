@@ -409,8 +409,11 @@ export class Sound implements Playable {
    * sub-range (seconds) of this sound — an audio atlas / sprite-sheet clip. The
    * clip does not copy anything: it reads the decoded {@link AudioBuffer} from
    * the sound it was cut from at playback time, so it follows that sound
-   * through eviction and reload. It inherits this sound's default playback +
-   * spatial settings and gets its own independent voice pool.
+   * through eviction and reload. It inherits this sound's playback defaults
+   * (`volume`, `loop`, `playbackRate`, `muted`) and pool configuration, and
+   * gets its own independent voice pool. Spatialization is not among them: a
+   * `Sound` carries none — it is set per play via {@link PlayOptions} and lives
+   * on the returned {@link Voice}.
    *
    * Available before the sound has loaded, and on a clip of a clip (the nested
    * window is capped by the outer one).
