@@ -9,6 +9,6 @@
 // mutation-determinism, the incremental checkpoint writer, CLI arg parsing) live
 // under `../shared`.
 
-export { type LibraryProvenance, type MatrixOutcome, type Provenance, runMatrix } from './driver';
+export { type LibraryProvenance, type MatrixOutcome, type MatrixSelection, profileCell, type ProfileOutcome, type ProfileRow, type Provenance, runMatrix } from './driver';
 export type { ArchetypeId, Backend, CellResult, CellSpec } from './EngineAdapter';
 export { type ReportData, writeReport } from './report';

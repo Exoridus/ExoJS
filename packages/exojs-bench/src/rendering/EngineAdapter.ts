@@ -4,7 +4,17 @@ import type { BaseCellResult } from '../shared/result';
 export type Backend = 'webgl2' | 'webgpu';
 
 /** Identifier for one of the fixed set of scene archetypes exercised by the benchmark. */
-export type ArchetypeId = 'static-heavy' | 'dynamic-heavy' | 'deep-hierarchy' | 'overdraw' | 'batch-breaking' | 'split-screen';
+export type ArchetypeId =
+  | 'static-heavy'
+  | 'dynamic-heavy'
+  | 'deep-hierarchy'
+  | 'overdraw'
+  | 'batch-breaking'
+  | 'batch-breaking-atlased'
+  | 'split-screen'
+  | 'mixed-blend'
+  | 'mixed-material'
+  | 'mixed-material-atlased';
 
 /** Structural definition of a scene archetype, independent of any engine or backend. */
 export interface ArchetypeSpec {
@@ -47,6 +57,38 @@ export interface ArchetypeSpec {
    * `archetypes.ts`.
    */
   readonly viewCount?: number;
+  /**
+   * Number of distinct fixed-function blend modes cycled across the scene's
+   * leaves. `undefined`/`1` means every leaf keeps the engine's default
+   * (`Normal`), which is what every pre-existing archetype does.
+   *
+   * The mode for leaf `i` is `floor(i / blendRunLength) % blendModeCount`, so
+   * the scene contains long same-mode runs rather than alternating per sprite —
+   * a per-sprite alternation would degenerate to one draw call per sprite on
+   * ANY batcher and would measure nothing but flush overhead. Only modes with a
+   * fixed-function GPU blend equation are used (normal / add / multiply /
+   * screen), because those exist on both arms; the engine's backdrop-aware
+   * "advanced" modes have no Pixi equivalent that costs the same, so including
+   * them would make the arms incomparable.
+   */
+  readonly blendModeCount?: number;
+  /** Run length (in leaf index space) of one blend-mode plateau; see {@link blendModeCount}. */
+  readonly blendRunLength?: number;
+  /**
+   * Number of distinct custom sprite materials cycled across the scene's
+   * leaves, or `undefined`/`0` for the default (material-less) sprite path.
+   *
+   * ExoJS-ONLY, like `viewCount`: Pixi 8 has no per-Sprite custom-shader API
+   * (its equivalent is a `Mesh` with its own `Shader`, a different geometry
+   * path entirely), so the Pixi arm renders the same scene WITHOUT materials.
+   * An archetype that sets this is therefore an ExoJS-internal probe on the
+   * material dimension — read it against the otherwise-identical
+   * `mixed-blend` archetype to isolate the custom-material cost — and NOT a
+   * cross-arm wall-clock comparison.
+   */
+  readonly materialCount?: number;
+  /** Run length (in leaf index space) of one material plateau; see {@link materialCount}. */
+  readonly materialRunLength?: number;
 }
 
 /** One matrix cell: a single (engine, config, backend, archetype, node count) combination to measure. */

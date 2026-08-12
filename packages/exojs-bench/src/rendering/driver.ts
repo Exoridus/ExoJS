@@ -470,6 +470,36 @@ const applyFilter = (cells: readonly CellSpec[], filter: Partial<CellSpec>): Cel
 };
 
 /**
+ * Multi-value cell selection: a cell survives when, for every field the
+ * selection lists, the cell's value appears in that field's list. The
+ * single-valued {@link applyFilter} could only ever pin ONE archetype or ONE
+ * engine per invocation, which forced a multi-archetype comparison to be split
+ * across several process launches — i.e. across several browser sessions,
+ * breaking the same-session rule the whole report rests on. This lets one
+ * session cover exactly the arms and archetypes a given question needs, and
+ * nothing else.
+ */
+export interface MatrixSelection {
+  /** Engine labels to keep (e.g. `['exojs', 'pixi']`), or omitted for all. */
+  readonly engines?: readonly string[];
+  /** Engine config labels to keep (e.g. `['current', 'retained']`), or omitted for all. */
+  readonly configs?: readonly string[];
+  /** Archetype ids to keep, or omitted for all. */
+  readonly archetypes?: readonly string[];
+  /** Node counts to keep, or omitted for all. */
+  readonly nodeCounts?: readonly number[];
+}
+
+const applySelection = (cells: readonly CellSpec[], selection: MatrixSelection): CellSpec[] =>
+  cells.filter(
+    cell =>
+      (selection.engines === undefined || selection.engines.includes(cell.engine)) &&
+      (selection.configs === undefined || selection.configs.includes(cell.config)) &&
+      (selection.archetypes === undefined || selection.archetypes.includes(cell.archetype)) &&
+      (selection.nodeCounts === undefined || selection.nodeCounts.includes(cell.nodeCount)),
+  );
+
+/**
  * Callback invoked the instant a cell finishes measuring, BEFORE the run
  * continues to the next cell. The CLI wires this to the incremental checkpoint
  * writer (`shared/checkpoint.ts`) so a later crash never discards finished work.
@@ -696,6 +726,212 @@ const runBackend = async (options: {
   return { provenance, results };
 };
 
+/** One aggregated row of a CPU profile: a source location and the self time attributed to it. */
+export interface ProfileRow {
+  /** Function name as the V8 sampler reported it (empty for top-level/anonymous frames). */
+  readonly functionName: string;
+  /** Source URL the frame came from, trimmed to a repository-relative path where possible. */
+  readonly source: string;
+  /** Self time in milliseconds, summed over every sampler node with this (function, source, line). */
+  readonly selfMs: number;
+  /** Share of the whole profile's self time, in percent. */
+  readonly selfPercent: number;
+}
+
+/** Result of one CPU-profiling run: the cell profiled, the wall clock it took, and self time by frame. */
+export interface ProfileOutcome {
+  /** The cell that was profiled. */
+  readonly spec: CellSpec;
+  /** GPU/backend provenance for the profiled session. */
+  readonly provenance: Provenance;
+  /** Number of frames the profiled loop rendered. */
+  readonly frames: number;
+  /** Wall clock the in-page frame loop took, in milliseconds. */
+  readonly wallMs: number;
+  /** Total self time the sampler attributed, in milliseconds (below `wallMs` by the sampler's blind spots). */
+  readonly totalSelfMs: number;
+  /** Self time per source frame, descending. */
+  readonly rows: readonly ProfileRow[];
+  /** Self time aggregated per source FILE, descending — the view that answers "which subsystem". */
+  readonly byFile: ReadonlyArray<{ readonly source: string; readonly selfMs: number; readonly selfPercent: number }>;
+}
+
+/** Minimal shape of the `Profiler.stop` payload this driver consumes. */
+interface CdpProfile {
+  readonly nodes: ReadonlyArray<{
+    readonly id: number;
+    readonly hitCount?: number;
+    readonly callFrame: { readonly functionName: string; readonly url: string; readonly lineNumber: number };
+  }>;
+  readonly startTime: number;
+  readonly endTime: number;
+  readonly samples?: readonly number[];
+  readonly timeDeltas?: readonly number[];
+}
+
+/**
+ * Shorten a profiler URL to something readable: the Vite dev server serves
+ * engine source from the repo root, so `http://127.0.0.1:PORT/@fs/C:/…/exojs/src/x.ts`
+ * and `/src/x.ts` both collapse to `src/x.ts`; a pre-bundled competitor keeps
+ * its `node_modules/.vite/deps/…` identity, which is exactly what distinguishes
+ * "time inside Pixi" from "time inside the engine".
+ */
+const shortenProfileUrl = (url: string): string => {
+  if (url.length === 0) {
+    return '(native)';
+  }
+
+  const withoutQuery = url.split('?')[0]!;
+  const marker = withoutQuery.lastIndexOf('/exojs/');
+
+  if (marker >= 0) {
+    return withoutQuery.slice(marker + '/exojs/'.length);
+  }
+
+  try {
+    return new URL(withoutQuery).pathname.replace(/^\/+/, '');
+  } catch {
+    return withoutQuery;
+  }
+};
+
+/**
+ * Run one cell under the V8 CPU sampler and return self time attributed by
+ * source frame.
+ *
+ * The sampler is started BETWEEN the in-page setup phase and the frame loop
+ * (see `page/harness.ts`'s `__profileSetup` / `__profileFrames`), so engine
+ * init, scene construction and warmup are outside the capture and the profile
+ * describes the per-frame path only.
+ *
+ * Self time is derived from `samples` + `timeDeltas` when the sampler provides
+ * them (exact per-sample attribution) and falls back to distributing the
+ * profile's wall span across `hitCount` otherwise. Sampling at 50µs rather than
+ * the 1000µs default is what makes a 0.1ms/frame retained cell resolvable at
+ * all; it costs profile size, not accuracy.
+ */
+export const profileCell = async (options: {
+  spec: CellSpec;
+  /** Frames rendered inside the sampled window. */
+  frames?: number;
+  /** Frames rendered before sampling starts, to settle shader compile / JIT. */
+  warmupFrames?: number;
+  /** Sampling interval in microseconds. */
+  intervalUs?: number;
+}): Promise<ProfileOutcome> => {
+  const { spec } = options;
+  const frames = options.frames ?? 200;
+  const warmupFrames = options.warmupFrames ?? 30;
+  const engineVersion = readEngineVersion();
+  const server = await startViteServer(engineVersion);
+
+  try {
+    const baseUrl = server.resolvedUrls?.local[0];
+
+    if (baseUrl === undefined) {
+      throw new Error('The Vite dev server did not report a local URL.');
+    }
+
+    const flags = spec.backend === 'webgpu' ? WEBGPU_LAUNCH_FLAGS : LAUNCH_FLAGS;
+    const browser = await chromium.launch({ channel: 'chromium', headless: true, args: [...flags] });
+
+    try {
+      const page = await browser.newPage();
+
+      await page.goto(baseUrl, { waitUntil: 'load' });
+      await page.waitForFunction(() => typeof globalThis.__profileSetup === 'function');
+
+      const client = await page.context().newCDPSession(page);
+
+      await client.send('Profiler.enable');
+      await client.send('Profiler.setSamplingInterval', { interval: options.intervalUs ?? 50 });
+
+      await page.evaluate(args => globalThis.__profileSetup!(args.cell, args.warmup), { cell: spec, warmup: warmupFrames });
+      await client.send('Profiler.start');
+
+      const wallMs = await page.evaluate(count => globalThis.__profileFrames!(count), frames);
+      const stopped = (await client.send('Profiler.stop')) as unknown as { profile: CdpProfile };
+      const profile = stopped.profile;
+
+      const adapter = spec.backend === 'webgpu' ? 'profiled webgpu session' : await readRendererInPage(page);
+
+      await page.evaluate(() => globalThis.__profileDispose!());
+
+      // Per-node self time. `timeDeltas[i]` is the interval BEFORE `samples[i]`
+      // in microseconds, so charging it to `samples[i]` attributes each
+      // observed interval to the frame that was on top at its end — the
+      // standard reading of a V8 CPU profile.
+      const selfUsByNode = new Map<number, number>();
+
+      if (profile.samples !== undefined && profile.timeDeltas !== undefined) {
+        for (let i = 0; i < profile.samples.length; i++) {
+          const nodeId = profile.samples[i]!;
+          const delta = profile.timeDeltas[i] ?? 0;
+
+          selfUsByNode.set(nodeId, (selfUsByNode.get(nodeId) ?? 0) + delta);
+        }
+      } else {
+        const totalHits = profile.nodes.reduce((sum, node) => sum + (node.hitCount ?? 0), 0);
+        const spanUs = profile.endTime - profile.startTime;
+
+        for (const node of profile.nodes) {
+          if (totalHits > 0 && node.hitCount) {
+            selfUsByNode.set(node.id, (node.hitCount / totalHits) * spanUs);
+          }
+        }
+      }
+
+      const byFrame = new Map<string, { functionName: string; source: string; selfMs: number }>();
+      const byFile = new Map<string, number>();
+      let totalSelfMs = 0;
+
+      for (const node of profile.nodes) {
+        const selfMs = (selfUsByNode.get(node.id) ?? 0) / 1000;
+
+        if (selfMs <= 0) {
+          continue;
+        }
+
+        const source = `${shortenProfileUrl(node.callFrame.url)}:${node.callFrame.lineNumber + 1}`;
+        const fileSource = shortenProfileUrl(node.callFrame.url);
+        const key = `${node.callFrame.functionName}@${source}`;
+        const existing = byFrame.get(key);
+
+        if (existing === undefined) {
+          byFrame.set(key, { functionName: node.callFrame.functionName, source, selfMs });
+        } else {
+          existing.selfMs += selfMs;
+        }
+
+        byFile.set(fileSource, (byFile.get(fileSource) ?? 0) + selfMs);
+        totalSelfMs += selfMs;
+      }
+
+      const rows: ProfileRow[] = [...byFrame.values()]
+        .map(entry => ({ ...entry, selfPercent: totalSelfMs > 0 ? (entry.selfMs / totalSelfMs) * 100 : 0 }))
+        .sort((a, b) => b.selfMs - a.selfMs);
+
+      const files = [...byFile.entries()]
+        .map(([source, selfMs]) => ({ source, selfMs, selfPercent: totalSelfMs > 0 ? (selfMs / totalSelfMs) * 100 : 0 }))
+        .sort((a, b) => b.selfMs - a.selfMs);
+
+      return {
+        spec,
+        provenance: { adapter, backend: spec.backend, flags, headless: true, engineVersion, timestamp: new Date().toISOString(), software: isSoftwareRenderer(adapter) },
+        frames,
+        wallMs,
+        totalSelfMs,
+        rows,
+        byFile: files,
+      };
+    } finally {
+      await browser.close();
+    }
+  } finally {
+    await server.close();
+  }
+};
+
 /** Full outcome of a matrix run: per-backend provenance, competitor-library provenance, and every cell result. */
 export interface MatrixOutcome {
   /** One provenance stamp per backend exercised. */
@@ -723,6 +959,8 @@ export interface MatrixOutcome {
 export const runMatrix = async (options: {
   backends: readonly Backend[];
   filter?: Partial<CellSpec>;
+  /** Multi-value selection applied after `filter`; see {@link MatrixSelection}. */
+  selection?: MatrixSelection;
   /**
    * Forces every selected cell's timed-frame count to this value. Reserved for
    * the smoke test, which measures a single tiny cell and needs only a handful
@@ -737,7 +975,8 @@ export const runMatrix = async (options: {
   const libraries = readLibraryProvenance(LIBRARY_ARMS);
   const allCells = buildMatrix(ADAPTER_CAPABILITIES, options.backends);
   const filtered = options.filter ? applyFilter(allCells, options.filter) : allCells;
-  const cells = options.timedFramesOverride === undefined ? filtered : filtered.map(cell => ({ ...cell, timedFrames: options.timedFramesOverride! }));
+  const selected = options.selection ? applySelection(filtered, options.selection) : filtered;
+  const cells = options.timedFramesOverride === undefined ? selected : selected.map(cell => ({ ...cell, timedFrames: options.timedFramesOverride! }));
 
   if (cells.length === 0) {
     throw new Error('The baseline matrix is empty: no adapter supports the requested backends/filter.');
