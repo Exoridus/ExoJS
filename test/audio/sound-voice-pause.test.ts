@@ -58,6 +58,26 @@ const setupSourceSpy = (): { sources: MockBufferSource[]; restore: () => void } 
   return { sources, restore: (): void => spy.mockRestore() };
 };
 
+const setupPannerSpy = (): { panners: PannerNode[]; restore: () => void } => {
+  const ctx = getAudioContext();
+  const panners: PannerNode[] = [];
+  const spy = vi.spyOn(ctx, 'createPanner').mockImplementation(() => {
+    const node = {
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      positionX: makeParam(),
+      positionY: makeParam(),
+      positionZ: makeParam(),
+      orientationX: makeParam(),
+      orientationY: makeParam(),
+      orientationZ: makeParam(),
+    } as unknown as PannerNode;
+    panners.push(node);
+    return node;
+  });
+  return { panners, restore: (): void => spy.mockRestore() };
+};
+
 /** A voice over the sprite window [2, 3] of a 10s buffer. */
 const playClipVoice = (manager: AudioManager, sound: Sound): SoundVoice & Pausable => manager.play(sound.sprite('hit')) as SoundVoice & Pausable;
 
@@ -322,6 +342,7 @@ describe('SoundVoice — Pausable', () => {
 
   test('a paused voice keeps its spatial routing and pans correctly after resume', () => {
     const factory = setupSourceSpy();
+    const panners = setupPannerSpy();
     const manager = new AudioManager();
     const sound = new Sound(createAudioBufferStub(), { sprites: { hit: { start: 2, end: 3 } } });
     const voice = playClipVoice(manager, sound);
@@ -330,10 +351,14 @@ describe('SoundVoice — Pausable', () => {
     voice.position = { x: 50, y: 20 }; // inserts the panner while paused
     voice.resume();
 
-    // The fresh source is wired into the panner, not straight to the output.
-    expect(factory.sources[1].connect).toHaveBeenCalledTimes(1);
+    // Asserted on the ARGUMENT, not the call count: wiring the fresh source
+    // straight to the output gain instead would be exactly one `connect` too,
+    // so a count alone would wave a broken route through.
+    expect(panners.panners).toHaveLength(1);
+    expect(factory.sources[1].connect).toHaveBeenCalledWith(panners.panners[0]);
     expect(voice.ended).toBe(false);
 
+    panners.restore();
     factory.restore();
     sound.destroy();
   });
