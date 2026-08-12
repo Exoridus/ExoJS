@@ -220,6 +220,25 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
   interruption. `remove()` cancels a pending handler in either case — including
   a replay queued but not yet run — and nothing fires once the manager is
   destroyed.
+- **`Extension.install(app)` and `ExtensionDisposer` — extensions have a
+  lifetime of their own.** An extension descriptor may now carry an
+  `install(app)` hook for whatever the `renderers`/`assets`/`serializers`
+  arrays cannot express: an app-level `System`, a subscription on an
+  application signal, a debug overlay next to the canvas, a worker, an
+  observer. It runs once per `Application` as the final construction step —
+  every core manager and every materialised binding already exists — with
+  dependencies installed ahead of their dependents, and may return an
+  `ExtensionDisposer` (a synchronous `() => void`). The `Application` holds
+  those disposers and runs them in **reverse installation order**: in
+  `destroy()`, after scene teardown and before any subsystem a disposer might
+  still reach for is released; and in the constructor's rollback, so a
+  construction step that throws after some extensions installed no longer
+  strands them. Each disposer is guarded on its own — one that throws is
+  logged and neither the disposers behind it nor the remaining teardown
+  stages are cut short. Per-application state belongs in the `install`
+  closure, never on the descriptor, which stays a shared frozen singleton.
+  An extension's lifetime is exactly its application's: there is no runtime
+  `unregister`, and no scene-level scope.
 
 ### Changed
 
@@ -382,6 +401,12 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
   with a `time` offset at or past its clip end now returns an already-ended
   `NoopVoice` — the same answer every other out-of-range play gives — instead
   of throwing.
+- **BREAKING — `Extension.systems` and `ApplicationSystemBinding` removed.**
+  A system binding’s `create(app)` was exactly `install: app => { app.systems.add(system) }`,
+  down to the reverse-order destruction `SystemRegistry` performs either way —
+  two hooks running at the same moment with the same argument. Contribute an
+  app-level system from `install(app)` instead; unlike a binding, the same
+  closure can also undo it via the returned `ExtensionDisposer`.
 - **BREAKING — `Scene.onLoad`/`Scene.onUnload` removed.** Redundant with
   `SceneDirector.onStartScene`/`onStopScene` and the overridable
   `load()`/`unload()` methods themselves; replaced in spirit by the new

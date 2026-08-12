@@ -3,8 +3,9 @@ import { TweenManager } from '#animation/TweenManager';
 import { coreAssetBindings } from '#assets/coreAssetBindings';
 import { Loader, type LoaderOptions } from '#assets/Loader';
 import { AudioManager } from '#audio/AudioManager';
-import type { Extension } from '#extensions/Extension';
-import { materializeApplicationSystems, materializeAssetBindings, materializeRendererBindings, materializeSerializerBindings } from '#extensions/materialize';
+import type { Extension, ExtensionDisposer } from '#extensions/Extension';
+import { disposeExtensions, installExtensions } from '#extensions/lifetime';
+import { materializeAssetBindings, materializeRendererBindings, materializeSerializerBindings } from '#extensions/materialize';
 import { buildSnapshot, type ExtensionSnapshot } from '#extensions/snapshot';
 import type { GamepadDefinition } from '#input/GamepadDefinitions';
 import type { GamepadSlotStrategy } from '#input/InputManager';
@@ -486,6 +487,15 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    */
   private _coreSystems: readonly System[] = [];
 
+  /**
+   * What every {@link Extension.install} run against this application handed
+   * back, in installation order — run in reverse and emptied by
+   * {@link disposeExtensions}. Field-initialised (like {@link _coreSystems})
+   * so the constructor rollback, which can fire mid-installation, always finds
+   * a real list holding exactly the extensions that did install.
+   */
+  private readonly _extensionDisposers: ExtensionDisposer[] = [];
+
   private readonly _updateHandler: () => void;
   private readonly _startupClock: Clock = new Clock();
   private readonly _activeClock: Clock = new Clock();
@@ -726,8 +736,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
       this._coreSystems = [this.input, this.interaction, this._audio, this.tweens, this.animations, this._rendering];
 
-      // Every core manager exists by this point, so app-system bindings can capture references to them.
-      materializeApplicationSystems(this, this._snapshot.systems);
+      // The last construction step, so `install(app)` sees a complete
+      // application — every manager and every materialised binding already in
+      // place, so an installer may add its own systems and capture references
+      // to the core managers. Its mirror image is the first step of teardown,
+      // in both `_disposeManagedResources` and the rollback below.
+      installExtensions(this, this._snapshot.extensions, this._extensionDisposers);
     } catch (error) {
       // The caller gets no instance, so this is the only chance to release
       // what was built. The original failure is what propagates — rollback
@@ -739,12 +753,13 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
-   * Release every subsystem a failed constructor had already built. Without
-   * it, a throw from any construction step — most realistically an extension
-   * binding in `materializeApplicationSystems()`, the last one — strands the
-   * platform adapter, loader, backend, rendering context, input, interaction
-   * and scene director with no owner: the caller never receives an
-   * `Application` and so can never call {@link Application.destroy}.
+   * Release every subsystem a failed constructor had already built, and undo
+   * every {@link Extension.install} that had already run. Without it, a throw
+   * from any construction step — most realistically an extension's own
+   * `install()`, the last one — strands the platform adapter, loader, backend, rendering context,
+   * input, interaction and scene director with no owner: the caller never
+   * receives an `Application` and so can never call
+   * {@link Application.destroy}.
    *
    * `constructed` covers the members that may or may not exist yet, in reverse
    * construction order. The field-initialised members are handled directly:
@@ -764,10 +779,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * a director reached through this path has not navigated: no active scope,
    * no retained scopes, so its teardown reduces to destroying its own
    * Signals. That is not an absolute guarantee, though: an extension's
-   * `ApplicationSystemBinding.create(app)` — invoked from
-   * `materializeApplicationSystems`, the last construction step, with the
-   * live `app` — could itself call `app.scenes.preload()` before a later
-   * binding throws, leaving a preloaded scope (and its in-flight `load()`)
+   * `install(app)` — the last construction step, invoked with the live `app`
+   * — could itself call `app.scenes.preload()` before a later extension's
+   * `install` throws, leaving a preloaded scope (and its in-flight `load()`)
    * for this fire-and-forget teardown to race. It is *not* a substitute
    * for {@link Application._disposeManagedResources}, which awaits
    * `scenes._dispose()` precisely because by then there is scene state to
@@ -820,11 +834,18 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this._releaseDom();
     });
 
-    // Application systems materialised before the failure go first: they are
-    // the last thing constructed, and their own `destroy()` may read the core
-    // managers. Those managers are registered here too but are owned by the
-    // Application, so unregister them and let `constructed` destroy each
-    // exactly once — same reason `_disposeManagedResources` does it.
+    // Extensions that did install go first — installation is the last
+    // construction step, so undoing it is the first thing rollback owes them.
+    // Not wrapped in `attempt`: `disposeExtensions` guards every disposer on
+    // its own and never rethrows.
+    disposeExtensions(this._extensionDisposers);
+
+    // Application systems materialised before the failure go next: they are
+    // the last thing constructed before installation, and their own
+    // `destroy()` may read the core managers. Those managers are registered
+    // here too but are owned by the Application, so unregister them and let
+    // `constructed` destroy each exactly once — same reason
+    // `_disposeManagedResources` does it.
     attempt(() => {
       for (const system of [...this._coreSystems].reverse()) {
         this.systems._removeCoreSystem(system);
@@ -1791,6 +1812,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * for it — including a still-pending `Scene.unload()` — before any
    * dependency is destroyed.
    *
+   * Every extension goes down with the application: the disposers
+   * {@link Extension.install} returned run in reverse installation order,
+   * after scene teardown and before any subsystem they might still reach for
+   * is released. An extension's lifetime is exactly this application's — there
+   * is no uninstall short of it.
+   *
    * The returned Promise **never rejects**: teardown failures go to
    * {@link Application.onError} and the log, exactly as they did when this was
    * a fire-and-forget chain, and the remaining stages still run. Awaiting it
@@ -1866,9 +1893,10 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * @internal Awaited teardown, in order: `scenes` fully disposed first
    * (active + every retained + every preloaded scope, plus any teardown a
    * fire-and-forget {@link Application.stop} left running, including each
-   * one's own async `unload()`) — then every other owned subsystem, then
-   * clocks, then Signals. See {@link Application.destroy}'s doc comment for
-   * why scenes go first.
+   * one's own async `unload()`) — then the extension disposers, in reverse
+   * installation order — then every other owned subsystem, then clocks, then
+   * Signals. See {@link Application.destroy}'s doc comment for why scenes go
+   * first.
    */
   private async _disposeManagedResources(): Promise<void> {
     try {
@@ -1876,6 +1904,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     } catch (error) {
       logger.error('Application.destroy() failed to fully dispose SceneDirector.', { source: 'Application', ...(error instanceof Error && { error }) });
     }
+
+    // Extensions installed last, so they are undone first — while the loader,
+    // backend, audio and their own systems are all still alive for a disposer
+    // to unhook from. Scenes go ahead of even this, because a scene may hold
+    // whatever an extension installed.
+    disposeExtensions(this._extensionDisposers);
 
     this.loader.destroy();
 
