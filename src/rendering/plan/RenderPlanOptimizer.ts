@@ -1,5 +1,5 @@
-import type { DrawCommand } from './RenderCommand';
-import { RenderEntryKind } from './RenderCommand';
+import type { DrawCommand, MaterialKey } from './RenderCommand';
+import { forcesBatchFlush, RenderEntryKind } from './RenderCommand';
 import type { RenderPlan } from './RenderPlan';
 import type { DrawScopeEntry, GroupScope, ScopeEntry } from './RenderScope';
 
@@ -15,16 +15,15 @@ export class RenderPlanOptimizer {
 
   private static _optimizeGroup(scope: GroupScope): void {
     if (scope.hasMixedZ) {
-      const indexed = scope.entries.map((entry, index) => ({ entry, index }));
-
-      indexed.sort((left, right) => {
-        return left.entry.zIndex - right.entry.zIndex || left.entry.seq - right.entry.seq || left.index - right.index;
-      });
-
-      for (let i = 0; i < indexed.length; i++) {
-        // In-bounds: i < indexed.length, and entries was the source of indexed.
-        scope.entries[i] = indexed[i]!.entry;
-      }
+      // Sorted in place, with no index tiebreak. `seq` is unique within a scope —
+      // `RenderPlanBuilder._reserveEntryPlacement` advances `_nextSeq` past every
+      // placement and the retained-replay path mirrors that — so the comparator is
+      // already a total order and an index tiebreak can never be reached; even if
+      // it could, `Array.prototype.sort` is stable as of ES2019. The wrapper the
+      // sort used to run over cost one `{ entry, index }` object per entry plus one
+      // array and one writeback loop per frame, on a path no gate protects: every
+      // scope with a `zIndex` pays it every frame.
+      scope.entries.sort((left, right) => left.zIndex - right.zIndex || left.seq - right.seq);
     }
 
     this._applyMaterialGrouping(scope);
@@ -47,12 +46,17 @@ export class RenderPlanOptimizer {
     }
 
     // Two O(1) prechecks that make the whole segment scan disappear in the
-    // common case. The scan can only ever move a draw when the scope holds more
-    // than one material AND is allowed to reorder; without both, every segment
-    // walks its draws, allocates the per-z buckets, and then bails. A scope with
-    // a single material is by far the most frequent shape, so gating here — not
-    // deep inside `_overlapAwareGroup` — is what actually removes the cost.
-    if (scope.hasMixedMaterial && !scope.preserveDrawOrder) {
+    // common case. The scan can only ever save a draw call when the scope holds
+    // draws that would flush against each other AND is allowed to reorder;
+    // without both, every segment walks its draws, allocates the per-z buckets,
+    // and then bails. Gating here — not deep inside `_overlapAwareGroup` — is
+    // what actually removes the cost.
+    //
+    // The flag is `hasMixedPipeline`, not "more than one material key": a scope
+    // over two atlases with one shader differs in `bindKey` on every second draw
+    // and still batches into a single draw call, so scanning it every frame buys
+    // a reorder worth exactly zero draw calls.
+    if (scope.hasMixedPipeline && !scope.preserveDrawOrder) {
       let segStart = 0;
 
       for (let i = 0; i <= n; i++) {
@@ -78,19 +82,24 @@ export class RenderPlanOptimizer {
    * scope unconditionally — unlike the reordering above, this is not an
    * optimization the plan can go without.
    *
-   * The previous material is carried as its two numeric key fields rather than a
-   * `${pipelineKey}:${bindKey}` string, so the walk allocates nothing per draw.
+   * The break condition is {@link forcesBatchFlush}, matching the batcher: a run
+   * ends where the batcher would actually flush. Breaking on any `bindKey` change
+   * instead would split a default-path run over several atlases into single-draw
+   * groups that carry no batch boundary at all, fragmenting the player's
+   * transform upload for nothing.
+   *
+   * The comparison runs against the run's FIRST draw, not its immediate
+   * predecessor: `forcesBatchFlush` is not transitive across the default/custom
+   * path boundary, and the first draw is the conservative anchor.
    */
   private static _assignGroupIndices(scope: GroupScope): void {
     let nextGroupIndex = 1;
-    let hasPrev = false;
-    let prevPipelineKey = 0;
-    let prevBindKey = 0;
+    let prev: MaterialKey | null = null;
     let prevZ = 0;
 
     for (const entry of scope.entries) {
       if (entry.kind !== RenderEntryKind.Draw) {
-        hasPrev = false;
+        prev = null;
 
         continue;
       }
@@ -98,11 +107,9 @@ export class RenderPlanOptimizer {
       const material = entry.command.material;
       const z = entry.zIndex;
 
-      if (!hasPrev || material.pipelineKey !== prevPipelineKey || material.bindKey !== prevBindKey || z !== prevZ) {
+      if (prev === null || z !== prevZ || forcesBatchFlush(prev, material)) {
         nextGroupIndex++;
-        hasPrev = true;
-        prevPipelineKey = material.pipelineKey;
-        prevBindKey = material.bindKey;
+        prev = material;
         prevZ = z;
       }
 
@@ -150,19 +157,27 @@ export class RenderPlanOptimizer {
   }
 
   private static _overlapAwareGroup(zGroup: DrawScopeEntry[], entries: ScopeEntry[], segStart: number, segEnd: number): void {
-    // Bucket the z-group by material. The bucket index is a nested
-    // pipelineKey -> bindKey -> bucket map rather than a `${pipelineKey}:${bindKey}`
-    // string key: both ids come from monotonically growing intern registries
-    // with no documented upper bound, so a bit-packed composite would be a
-    // latent collision, and a string key would allocate once per draw.
-    // `keyGroups` keeps the buckets in first-seen order, which is the order the
-    // single-string map iterated in and the order the reorder below picks its
-    // one winning bucket from.
+    // Bucket the z-group by what would make the batcher flush between two draws,
+    // which is what a reorder can save — see `forcesBatchFlush`. Default-path
+    // draws all collapse into their pipeline's single `-1` sub-bucket regardless
+    // of texture, because the 16 texture slots batch them as they are; only a
+    // draw carrying its own Material splits further, by its `bindKey`. The
+    // sentinel also keeps the two paths apart, so a default-path `pipelineKey`
+    // (`rendererId * 31 + blendMode`) colliding with a Material's interned one
+    // cannot merge buckets that must not batch together.
+    //
+    // The index is a nested pipelineKey -> bindKey -> bucket map rather than a
+    // `${pipelineKey}:${bindKey}` string key: both ids come from monotonically
+    // growing intern registries with no documented upper bound, so a bit-packed
+    // composite would be a latent collision, and a string key would allocate once
+    // per draw. `keyGroups` keeps the buckets in first-seen order, which is the
+    // order the reorder below picks its one winning bucket from.
     const bucketIndex = new Map<number, Map<number, DrawScopeEntry[]>>();
     const keyGroups: DrawScopeEntry[][] = [];
 
     for (const draw of zGroup) {
       const material = draw.command.material;
+      const bindSubKey = material.ownMaterial ? material.bindKey : -1;
       let byBindKey = bucketIndex.get(material.pipelineKey);
 
       if (byBindKey === undefined) {
@@ -170,12 +185,12 @@ export class RenderPlanOptimizer {
         bucketIndex.set(material.pipelineKey, byBindKey);
       }
 
-      const bucket = byBindKey.get(material.bindKey);
+      const bucket = byBindKey.get(bindSubKey);
 
       if (bucket === undefined) {
         const created = [draw];
 
-        byBindKey.set(material.bindKey, created);
+        byBindKey.set(bindSubKey, created);
         keyGroups.push(created);
       } else {
         bucket.push(draw);
@@ -260,9 +275,9 @@ export class RenderPlanOptimizer {
         continue;
       }
 
-      const midMaterial = mid.command.material;
-
-      if (midMaterial.pipelineKey === groupMaterial.pipelineKey && midMaterial.bindKey === groupMaterial.bindKey) {
+      // A draw the moved run would batch with anyway is not an obstacle — same
+      // criterion the buckets were built on.
+      if (!forcesBatchFlush(groupMaterial, mid.command.material)) {
         continue;
       }
 

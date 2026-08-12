@@ -1277,6 +1277,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
         shaderId: -1,
         pipelineKey: 0,
         bindKey: 0,
+        ownMaterial: false,
       },
       minX: 0,
       minY: 0,

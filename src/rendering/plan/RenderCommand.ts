@@ -39,7 +39,47 @@ export interface MaterialKey {
   shaderId: number;
   pipelineKey: number;
   bindKey: number;
+  /**
+   * Whether the keys came from a {@link Material} the drawable carries (custom
+   * path) rather than from the conservative default-path derivation. Decides how
+   * much of the key {@link forcesBatchFlush} reads — see there.
+   */
+  ownMaterial: boolean;
 }
+
+/**
+ * Whether a draw with material key `next` forces the batcher to flush when it
+ * directly follows a draw with key `prev`.
+ *
+ * This — not "the two keys differ" — is what the plan optimizer buckets and
+ * gates on, because a flush is what actually costs a draw call. On the default
+ * sprite path a pure `bindKey` change is a texture change, which the 16 texture
+ * slots absorb without a flush (`WebGl2SpriteRenderer._renderDefault` flushes on
+ * `batchFull || blendModeChanged || slotExhausted || materialSwitch`); only the
+ * pipeline — renderer identity plus blend mode — forces one. A draw carrying its
+ * own {@link Material} runs the custom path, where any material switch flushes,
+ * so there both keys count, as does the crossing between the two paths.
+ *
+ * The remaining default-path flush cause, slot exhaustion, is deliberately not
+ * modelled: tracking a scope's distinct textures costs a hash op per draw, which
+ * is exactly the per-draw bookkeeping the gate exists to avoid, and a scope past
+ * 16 textures gains nothing measurable from pulling a single bucket together.
+ *
+ * @internal
+ */
+export const forcesBatchFlush = (prev: MaterialKey, next: MaterialKey): boolean =>
+  materialKeyForcesFlush(prev.pipelineKey, prev.bindKey, prev.ownMaterial, next);
+
+/**
+ * {@link forcesBatchFlush} against a previous key held as loose fields rather
+ * than an object — the shape the plan builder keeps on a scope, where snapshotting
+ * the first draw's key into three primitives avoids retaining a pooled
+ * {@link MaterialKey} across the frame. Same rule, one definition.
+ *
+ * @internal
+ */
+export const materialKeyForcesFlush = (prevPipelineKey: number, prevBindKey: number, prevOwnMaterial: boolean, next: MaterialKey): boolean =>
+  prevPipelineKey !== next.pipelineKey || prevOwnMaterial !== next.ownMaterial || (next.ownMaterial && prevBindKey !== next.bindKey);
 
 /** @internal */
 export interface DrawCommand {
@@ -178,6 +218,7 @@ export const makeMaterialKey = (drawable: Drawable, backend: RenderBackend | nul
       shaderId: -1,
       pipelineKey: 0,
       bindKey: 0,
+      ownMaterial: false,
     },
     drawable,
     backend,
@@ -203,7 +244,8 @@ export const writeMaterialKeyInto = (target: MaterialKey, drawable: Drawable, ba
   target.textureId = textureId;
   target.shaderId = shaderId;
   target.pipelineKey = material !== null ? material.pipelineKey : rendererId * 31 + blendMode;
-  target.bindKey = material !== null ? material.bindKey : rendererId * 31 + (textureId > 0 ? textureId : 0);
+  target.bindKey = material !== null ? material.bindKey : rendererId * 31 + Math.max(textureId, 0);
+  target.ownMaterial = material !== null;
 
   return target;
 };
@@ -223,6 +265,7 @@ export const copyMaterialKeyInto = (target: MaterialKey, source: MaterialKey): M
   target.shaderId = source.shaderId;
   target.pipelineKey = source.pipelineKey;
   target.bindKey = source.bindKey;
+  target.ownMaterial = source.ownMaterial;
 
   return target;
 };

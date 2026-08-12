@@ -6,7 +6,7 @@ import type { RenderNode } from '#rendering/RenderNode';
 import { BlendModes, isAdvancedBlendMode } from '#rendering/types';
 import type { View } from '#rendering/View';
 
-import { type DrawCommand, RenderEntryKind } from './RenderCommand';
+import { type DrawCommand, materialKeyForcesFlush, RenderEntryKind } from './RenderCommand';
 import { MutableRenderPlan, type RenderPlan } from './RenderPlan';
 import {
   type BarrierScope,
@@ -58,12 +58,15 @@ interface MutableGroupScope extends GroupScope {
   _nextSeq: number;
   firstZ: number | null;
   /**
-   * First-draw material of this scope, the `hasMixedMaterial` counterpart of
+   * First-draw material of this scope, the `hasMixedPipeline` counterpart of
    * {@link MutableGroupScope.firstZ}. `firstPipelineKey === null` means "no draw
-   * seen yet"; `firstBindKey` is only meaningful once it is set.
+   * seen yet"; `firstBindKey`/`firstOwnMaterial` are only meaningful once it is
+   * set. Held as primitives rather than as the {@link MaterialKey} object,
+   * because that object is pooled and reused.
    */
   firstPipelineKey: number | null;
   firstBindKey: number;
+  firstOwnMaterial: boolean;
 }
 
 /**
@@ -410,7 +413,7 @@ export class RenderPlanBuilder {
     //     and paint the scope in the wrong order.
     //   - `_nextSeq`: a later normally-emitted sibling (e.g. a nested Container)
     //     in the same scope must not collide with a replayed slot's seq.
-    // The matching `hasMixedMaterial` fold needs no mirror here: it hangs off
+    // The matching `hasMixedPipeline` fold needs no mirror here: it hangs off
     // `_pushDrawEntry` below, which this path already goes through.
     const scope = this._currentScope();
 
@@ -596,7 +599,7 @@ export class RenderPlanBuilder {
       kind: RenderEntryKind.Group,
       entries: [],
       hasMixedZ: false,
-      hasMixedMaterial: false,
+      hasMixedPipeline: false,
       preserveDrawOrder: false,
       transformNode: null,
       retainedInstructions: null,
@@ -605,6 +608,7 @@ export class RenderPlanBuilder {
       firstZ: null,
       firstPipelineKey: null,
       firstBindKey: 0,
+      firstOwnMaterial: false,
     };
 
     this._groupPool[this._groupPoolCursor] = scope;
@@ -612,7 +616,7 @@ export class RenderPlanBuilder {
 
     scope.entries.length = 0;
     scope.hasMixedZ = false;
-    scope.hasMixedMaterial = false;
+    scope.hasMixedPipeline = false;
     scope.preserveDrawOrder = preserveDrawOrder;
     scope.transformNode = null;
     scope.retainedInstructions = null;
@@ -621,6 +625,7 @@ export class RenderPlanBuilder {
     scope.firstZ = null;
     scope.firstPipelineKey = null;
     scope.firstBindKey = 0;
+    scope.firstOwnMaterial = false;
 
     return scope;
   }
@@ -655,7 +660,7 @@ export class RenderPlanBuilder {
   }
 
   /**
-   * Fold a draw's material into the scope's `hasMixedMaterial` flag. Lives in
+   * Fold a draw's material into the scope's `hasMixedPipeline` flag. Lives in
    * {@link _pushDrawEntry} rather than beside the `firstZ`/`hasMixedZ` updates
    * because materials exist on draws only: `_pushDrawEntry` is the single funnel
    * every draw entry — freshly collected or retained-replayed — passes through,
@@ -668,8 +673,12 @@ export class RenderPlanBuilder {
     if (scope.firstPipelineKey === null) {
       scope.firstPipelineKey = material.pipelineKey;
       scope.firstBindKey = material.bindKey;
-    } else if (!scope.hasMixedMaterial && (scope.firstPipelineKey !== material.pipelineKey || scope.firstBindKey !== material.bindKey)) {
-      scope.hasMixedMaterial = true;
+      scope.firstOwnMaterial = material.ownMaterial;
+    } else if (
+      !scope.hasMixedPipeline &&
+      materialKeyForcesFlush(scope.firstPipelineKey, scope.firstBindKey, scope.firstOwnMaterial, material)
+    ) {
+      scope.hasMixedPipeline = true;
     }
   }
 

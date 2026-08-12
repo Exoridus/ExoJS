@@ -247,6 +247,7 @@ export class Drawable extends RenderNode {
         shaderId: -1,
         pipelineKey: 0,
         bindKey: 0,
+        ownMaterial: false,
       },
       this,
       backend,
