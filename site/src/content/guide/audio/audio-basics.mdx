@@ -58,13 +58,43 @@ A `Sound` is a data descriptor that holds a decoded buffer; each `app.audio.play
 
 Browsers require a user gesture before Web Audio starts. ExoJS handles this automatically: the `AudioContext` is created on first use and resumed (un-suspended) on the first `mousedown`, `touchstart`, or `touchend` event observed on `document`.
 
-`app.audio.play(asset, ...)` always returns a `Voice` immediately, even while audio is still locked. Stream and sound playback is deferred and starts automatically on that first gesture, so you can call `play()` in `init` and keep the returned voice — there is no separate "start on click" step beyond the gesture the browser already requires. Check `app.audio.locked` to know whether the gesture has happened yet; `app.audio.onUnlock` fires once when it does.
+`app.audio.play(asset, ...)` always returns a `Voice` immediately, even while audio is still locked — but what that voice does depends on the asset:
+
+| Asset | Played while locked |
+| --- | --- |
+| `AudioStream` | **Deferred.** The media element owns its own playhead, so it is simply told to play on the unlock gesture. Call `play()` in `init` and keep the voice. |
+| `Sound` | **Skipped.** Returns an already-ended voice; nothing is heard. |
+| `AudioGenerator` | **Skipped.** Same. |
+
+A `Sound` or generator cannot be deferred honestly: a suspended `AudioContext`'s clock stands still, so every source scheduled while locked lands on the same instant and the whole backlog would fire simultaneously the moment audio unlocks. Skipping is the only behaviour that never produces a burst of stacked sound effects.
+
+So start such playback from the unlock gesture — this is the canonical pattern:
+
+```ts
+import { type Application, Sound } from '@codexo/exojs';
+
+declare const application: Application;
+declare const music: Sound;
+
+application.audio.onUnlock.add(() => application.audio.play(music, { loop: true }));
+```
+
+`onUnlock` runs **every handler exactly once, as soon as audio is usable** — it is a "run this when you can" hook, not a plain one-shot event, so *when* you subscribe does not matter:
+
+- Subscribe while audio is already unlocked and the handler runs right away (on a microtask). A scene loaded mid-session behaves like one loaded at startup.
+- Subscribe while audio is locked and it waits for the next unlock. That includes a **re**-lock: an iOS audio-session interruption or a bfcache restore drops the context back to `suspended`, and a handler registered inside that window still fires when audio returns.
+- A handler that has already run is never fired again by a later unlock — looping music started here does not stack a second copy after every interruption.
+- `remove()` cancels a pending handler either way, so a scene can subscribe in `init` and clean up in `unload`. Nothing fires once the owning `Application` is destroyed.
+
+Check `app.audio.locked` to know whether the gesture has happened yet, and gate one-shot effects on it:
 
 ```ts
 if (this.app.audio.locked) {
-    // still waiting for the first user gesture; the queued voice will auto-start
+    return; // still waiting for the first user gesture — playing a Sound here does nothing
 }
 ```
+
+The first skipped play logs one warning per `AudioManager`; further ones stay quiet until audio unlocks, so a menu full of click sounds cannot flood the console.
 
 <Callout type="warning" title="Audio needs a user gesture">
 Browsers won't start audio until the user interacts with the page. Trigger the first sound or music from a click, tap, or key press — the embedded examples below ask for a click for exactly this reason.
@@ -106,8 +136,8 @@ declare const application: Application;
 declare const stream: AudioStream;
 type StreamVoice = Voice & Seekable & Pausable & Loopable & RatePitched;
 
-// A SoundVoice is Seekable + Loopable + RatePitched + Spatializable.
-// An AudioStreamVoice adds Pausable on top of those.
+// Both a SoundVoice and an AudioStreamVoice are
+// Seekable + Pausable + Loopable + RatePitched + Spatializable.
 const streamVoice = application.audio.play(stream, { loop: true }) as StreamVoice;
 
 streamVoice.seek(10);        // Seekable: jump to 10s
@@ -116,10 +146,16 @@ streamVoice.duration;        // total length in seconds
 streamVoice.loop = false;    // Loopable
 streamVoice.playbackRate = 1.5; // RatePitched: 0.1..20
 streamVoice.detune = 1200;   // RatePitched: cents (one octave up)
-streamVoice.pause();         // Pausable (streams only)
+streamVoice.pause();         // Pausable
 streamVoice.resume();
 streamVoice.paused;          // boolean
 ```
+
+<Callout type="note" title="Pausing a Sound is a restart, not a freeze">
+A `Sound` plays through an `AudioBufferSourceNode`, which can be neither repositioned nor halted in place. `pause()` therefore reads the playhead and throws the source away; `resume()` starts a fresh one at exactly that offset. The offset is sample-exact, but the restart is not phase-continuous — on sustained tonal material (a held pad, a synth drone) the seam can be audible as a small click. Percussive and ambient material hides it. An `AudioStream` has no such caveat: the media element really does freeze.
+</Callout>
+
+Because `SoundVoice` is `Pausable`, `scene.audio` freezes buffer sounds along with everything else: `app.scenes.pause()` pauses voices registered with `when: 'active'`, and scene retention (`suspend()`/`restore()`) pauses and reinstates whatever was playing.
 
 For "one voice at a time" scenarios like voice-over lines, `Sound`'s play options also accept a `replace` flag (`app.audio.play(sound, { replace: true })`) that stops all other pooled voices of that sound before starting this one.
 
@@ -217,15 +253,21 @@ Buses have independent `volume` (0..2), `muted`, and `pan` controls, plus a filt
 A `Sound` can define named sub-regions ("sprites") on the descriptor — useful when you bake several effects into a single file and want to address them by name rather than by offset:
 
 ```ts
-import { Sound } from '@codexo/exojs';
+import { type Application, Sound } from '@codexo/exojs';
 
+declare const application: Application;
 declare const sound: Sound;
 
 sound.defineSprite('impact', { start: 0.5, end: 0.8 });
-sound.defineSprite('whoosh', { start: 1.2, end: 1.6 });
+sound.defineSprite('whoosh', { start: 1.2, end: 1.6, loop: true });
+
+// `sprite(name)` is the playback side: it returns a `Sound` over that window.
+application.audio.play(sound.sprite('impact'));
 ```
 
 Sprites can also be declared up front via the `sprites` constructor option. They are part of the `Sound` descriptor's data; clip ranges are validated against the buffer duration when defined.
+
+`sound.sprite(name)` is the named counterpart of `sound.clip(offset, duration)` — both return a `Sound` sharing the parent's decoded buffer, so they play through `app.audio.play()` like any other sound and carry their own voice pool and playback defaults (a sprite's `loop` flag becomes the sub-sound's `loop`). The sub-sound is memoized per name, so the pool really is shared across every play of that sprite; it is discarded when the name is redefined or removed. Looking up a name that was never defined throws.
 
 ## Examples
 

@@ -1,4 +1,6 @@
+import { AudioManager } from '#audio/AudioManager';
 import type { Pausable, Playable, Voice } from '#audio/Playable';
+import { Sound } from '#audio/Sound';
 import type { Application } from '#core/Application';
 import { SceneAudio } from '#core/scene/SceneAudio';
 import { SceneAvailability } from '#core/SceneAvailability';
@@ -356,5 +358,85 @@ describe('SceneAudio — dormancy gate widens to Ready/Suspended, rejects Destro
     const audio = new SceneAudio(app, () => SceneState.Destroyed);
 
     expect(() => audio.play(fakePlayable)).toThrow(/destroy/i);
+  });
+
+  // ME-41: SceneAudio detects pausable voices by duck-typing `pause`/`resume`.
+  // The mocks above satisfy that by construction, so they cannot catch a real
+  // voice type that never implemented `Pausable` — which is exactly how every
+  // `Sound` ambience kept playing through scene.pause()/suspend(). These two
+  // drive a real AudioManager and a real Sound.
+  describe('with a real Sound voice', () => {
+    const makeRealSetup = (): { app: Application; sound: Sound; audio: SceneAudio } => {
+      const manager = new AudioManager();
+      const sound = new Sound({ duration: 10 } as AudioBuffer);
+      const app = { audio: manager } as unknown as Application;
+
+      return { app, sound, audio: new SceneAudio(app, () => SceneState.Active) };
+    };
+
+    test('suspend()/restore() pause and resume a Sound voice', () => {
+      const { app, sound, audio } = makeRealSetup();
+      const voice = audio.play(sound, { loop: true }) as Voice & Pausable;
+
+      expect(voice.paused).toBe(false);
+
+      audio.suspend();
+      expect(voice.paused).toBe(true);
+      expect(voice.ended).toBe(false);
+
+      audio.restore();
+      expect(voice.paused).toBe(false);
+
+      voice.stop();
+      sound.destroy();
+      app.audio.destroy();
+    });
+
+    // The two features interact: suspend() freezes a looping ambience, other
+    // code keeps triggering the same Sound while the scene is dormant, and the
+    // pool picks the frozen voice as its eviction victim (it looks oldest under
+    // FIFO and closest-to-end under LRU, because its bookkeeping ages against
+    // the running context clock). restore() then skips it — it is `ended`, not
+    // `paused` — and the ambience is silently gone.
+    test('a suspended ambience survives pool pressure and comes back on restore', () => {
+      const manager = new AudioManager();
+      const sound = new Sound({ duration: 10 } as AudioBuffer, { poolSize: 2 });
+      const app = { audio: manager } as unknown as Application;
+      const audio = new SceneAudio(app, () => SceneState.Active);
+
+      const ambience = audio.play(sound, { loop: true }) as Voice & Pausable;
+
+      audio.suspend();
+      expect(ambience.paused).toBe(true);
+
+      for (let i = 0; i < 4; i++) {
+        manager.play(sound);
+      }
+
+      expect(ambience.ended).toBe(false);
+
+      audio.restore();
+      expect(ambience.paused).toBe(false);
+      expect(ambience.ended).toBe(false);
+
+      ambience.stop();
+      sound.destroy();
+      manager.destroy();
+    });
+
+    test('pause()/resume() honour the `when: active` policy for a Sound voice', () => {
+      const { app, sound, audio } = makeRealSetup();
+      const voice = audio.play(sound, { loop: true, when: SceneAvailability.Active }) as Voice & Pausable;
+
+      audio.pause();
+      expect(voice.paused).toBe(true);
+
+      audio.resume();
+      expect(voice.paused).toBe(false);
+
+      voice.stop();
+      sound.destroy();
+      app.audio.destroy();
+    });
   });
 });

@@ -25,7 +25,6 @@
     "test/audio/filters/worklet-effect.test.ts": 6,
     "test/audio/sound-pool.test.ts": 2,
     "test/audio/sound-voice.test.ts": 4,
-    "test/audio/sound.test.ts": 5,
     "test/audio/voice-despatialization.test.ts": 3,
     "test/audio/voice-spatial.test.ts": 12,
     "test/audio/worklet/register-worklet.test.ts": 2,

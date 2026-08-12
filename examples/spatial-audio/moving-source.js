@@ -15,7 +15,8 @@ function linearAttenuation(distance) {
 }
 class MovingSourceScene extends Scene {
     sound;
-    voice;
+    voice = null;
+    source = { x: 0, y: 0 };
     listener;
     angle = 0;
     graphics;
@@ -38,7 +39,7 @@ class MovingSourceScene extends Scene {
         this.label = new Text('', { fillColor: Color.white, fontSize: 17 });
         this.label.setPosition(20, 20);
         // Shown while the browser still blocks audio (`app.audio.locked`); the
-        // first click or keypress unlocks it and the queued loop starts.
+        // first click or keypress unlocks it and the loop starts.
         this.tapPrompt = new Text('Click or press any key to start audio', { fillColor: Color.white, fontSize: 22, align: 'center' })
             .setAnchor(0.5, 0.5)
             .setPosition(width / 2, height - 48);
@@ -47,31 +48,36 @@ class MovingSourceScene extends Scene {
             status: 'Click or press any key to start…',
             hint: 'The source orbits the listener automatically — listen for it sweeping left to right.',
         });
-        // Core defers playback until the AudioContext unlocks on the first
-        // gesture, then starts automatically — just call play().
+        this.source.x = this.listener.x + ORBIT_X;
+        this.source.y = this.listener.y;
+        // A Sound played while audio is still locked is a no-op: a suspended
+        // AudioContext's clock stands still, so nothing can be scheduled
+        // honestly. Start the loop from the unlock gesture instead. Subscribing
+        // is safe even if audio unlocked earlier — onUnlock replays.
         // play() returns the narrow Voice interface; Sound voices are spatializable.
-        this.voice = app.audio.play(this.sound, {
-            loop: true,
-            volume: 1,
-            position: { x: this.listener.x + ORBIT_X, y: this.listener.y },
-            distanceModel: 'linear',
-            refDistance: REF_DISTANCE,
-            maxDistance: MAX_DISTANCE,
-            rolloffFactor: 1,
+        app.audio.onUnlock.add(() => {
+            this.voice = app.audio.play(this.sound, {
+                loop: true,
+                volume: 1,
+                position: this.source,
+                distanceModel: 'linear',
+                refDistance: REF_DISTANCE,
+                maxDistance: MAX_DISTANCE,
+                rolloffFactor: 1,
+            });
+            this.hud.setStatus('Source orbiting the listener');
         });
-        this.hud.setStatus('Source orbiting the listener');
     }
     update(delta) {
         this.angle += delta.seconds * 1.1;
-        const position = {
-            x: this.listener.x + Math.cos(this.angle) * ORBIT_X,
-            y: this.listener.y + Math.sin(this.angle) * ORBIT_Y,
-        };
-        this.voice.position = position;
+        this.source.x = this.listener.x + Math.cos(this.angle) * ORBIT_X;
+        this.source.y = this.listener.y + Math.sin(this.angle) * ORBIT_Y;
+        if (this.voice)
+            this.voice.position = this.source;
     }
     draw(context) {
         const app = this.app;
-        const source = this.voice.position ?? { x: 0, y: 0 };
+        const source = this.source;
         const dx = source.x - this.listener.x;
         const dy = source.y - this.listener.y;
         const dist = Math.sqrt(dx * dx + dy * dy);

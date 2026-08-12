@@ -533,11 +533,14 @@ describe('BaseVoice — deferred bus connect while the bus is not yet set up', (
     const ctx = getAudioContext();
     const destination = ctx.destination;
 
-    // A bus constructed while the context is suspended has no input node yet.
+    // A bus constructed while the context is suspended has no input node yet,
+    // and only the (one-shot) ready signal ever gives it one — so it stays that
+    // way even after the context itself runs again.
     const originalState = ctx.state;
     ctx.state = 'suspended';
     const bus = new AudioBus('deferred', { parent: null });
     expect(bus._getInputNode()).toBeNull();
+    ctx.state = originalState;
 
     const sound = new Sound(createAudioBufferStub());
     const output = captureVoiceOutput();
@@ -546,12 +549,11 @@ describe('BaseVoice — deferred bus connect while the bus is not yet set up', (
     // Routed to the destination for now (bus is still locked).
     expect(output.node!.connect).toHaveBeenCalledWith(destination);
 
-    // The bus comes online once the context becomes ready: dispatching
+    // The bus comes online once the ready signal fires: dispatching
     // onAudioContextReady runs the bus's own pending setup handler first
     // (registered in its constructor), then the voice's deferred reconnect
     // handler (registered via `bus.onceSetup` in `_connectTail`), which now
     // finds a real input node and rewires the tail onto it.
-    ctx.state = originalState;
     onAudioContextReady.dispatch(ctx);
 
     expect(bus._getInputNode()).not.toBeNull();
@@ -564,10 +566,11 @@ describe('BaseVoice — deferred bus connect while the bus is not yet set up', (
     sound.destroy();
   });
 
-  // AU3: many short voices played before the first user gesture must not pile
-  // deferred-reconnect closures onto the global unlock signal, and a voice that
-  // ends before unlock must drop its pending reconnect from the bus.
-  test('pre-unlock voices queue their deferred reconnect on the bus (not the global signal), and drop it on stop() (AU3)', () => {
+  // AU3: many short voices routed into a bus that has not been set up yet must
+  // not pile deferred-reconnect closures onto the global unlock signal, and a
+  // voice that ends before the bus comes online must drop its pending
+  // reconnect from the bus.
+  test('voices queue their deferred reconnect on the bus (not the global signal), and drop it on stop() (AU3)', () => {
     const factory = setupSourceSpy();
     const manager = new AudioManager();
     const ctx = getAudioContext();
@@ -575,6 +578,7 @@ describe('BaseVoice — deferred bus connect while the bus is not yet set up', (
     const originalState = ctx.state;
     ctx.state = 'suspended';
     const bus = new AudioBus('deferred-accumulation', { parent: null });
+    ctx.state = originalState;
 
     const pendingCount = (): number => (bus as unknown as { _pendingSetup: unknown[] | null })._pendingSetup?.length ?? 0;
     const signalCountBefore = onAudioContextReady.count;
@@ -587,11 +591,10 @@ describe('BaseVoice — deferred bus connect while the bus is not yet set up', (
     expect(pendingCount()).toBe(3);
     expect(onAudioContextReady.count).toBe(signalCountBefore);
 
-    // Ending the voices before unlock unsubscribes their queued reconnects.
+    // Ending the voices before the bus comes online unsubscribes their queued reconnects.
     for (const voice of voices) voice.stop();
     expect(pendingCount()).toBe(0);
 
-    ctx.state = originalState;
     factory.restore();
     bus.destroy();
     sound.destroy();

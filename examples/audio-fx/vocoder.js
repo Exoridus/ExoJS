@@ -55,9 +55,13 @@ class VocoderScene extends Scene {
         panel.addButton({ label: 'Speak', onClick: () => this.speak() });
         app.input.onPointerTap.add(() => this.speak());
         // The carrier is a sustained saw tone shaped by the voice envelope.
-        // Core defers playback until the AudioContext unlocks on the first
-        // gesture, then starts the carrier automatically.
-        app.audio.play(new AudioGenerator({ frequency: 110, type: 'sawtooth' }), { volume: 0.45 });
+        // An oscillator played while audio is still locked is a no-op — it is
+        // ephemeral and cannot be deferred — so start it from the unlock
+        // gesture. Subscribing is safe even if audio unlocked earlier:
+        // onUnlock replays.
+        app.audio.onUnlock.add(() => {
+            app.audio.play(new AudioGenerator({ frequency: 110, type: 'sawtooth' }), { volume: 0.45 });
+        });
         this.hud.setStatus('Ready — pick a phrase and speak.');
     }
     speak() {

@@ -1,3 +1,4 @@
+import { getAudioContext } from '#audio/audio-context';
 import { AudioManager } from '#audio/AudioManager';
 import { NoopVoice } from '#audio/NoopVoice';
 import { Sound } from '#audio/Sound';
@@ -36,9 +37,17 @@ describe('Sound seamless surface', () => {
     expect(sound.duration).toBe(0);
   });
 
-  test('clip() throws on an unloaded Sound', () => {
+  test('clip() on an unloaded Sound binds to it and fills in when the payload lands', () => {
     const sound = new Sound(null);
-    expect(() => sound.clip(0, 1)).toThrow(/not.*loaded/i);
+    const clip = sound.clip(0, 1);
+
+    expect(clip.audioBuffer).toBeNull();
+    expect(clip.duration).toBe(0);
+
+    sound._setBuffer(bufferStub(5));
+
+    expect(clip.audioBuffer?.duration).toBe(5);
+    expect(clip.duration).toBe(1);
   });
 
   test('has a reusable LoadState', () => {
@@ -48,6 +57,10 @@ describe('Sound seamless surface', () => {
 });
 
 describe('Sound.play before load', () => {
+  // Playback is skipped outright while audio is locked, which would answer
+  // before the load-state check ever runs. These cases are about the
+  // *post-unlock* answer, so make sure a running context exists.
+  beforeEach(() => getAudioContext());
   afterEach(() => logger._resetOnce());
 
   test('playing a loading sound returns NoopVoice and warns "not yet loaded"', () => {
@@ -93,7 +106,7 @@ describe('Sound.play before load', () => {
 
     let voice: unknown;
     expect(() => {
-      voice = sound._createSpriteVoice(manager, 'hit', {});
+      voice = manager.play(sound.sprite('hit'), {});
     }).not.toThrow();
     expect(voice).toBeInstanceOf(NoopVoice);
   });

@@ -87,6 +87,94 @@ describe('Sound.clip', () => {
     clip.destroy();
   });
 
+  // NEU-O1: the asset layer heals a Sound in place (`_evictBuffer` /
+  // `_setBuffer`, identity preserved), so a sub-Sound that snapshotted the
+  // buffer would keep the evicted one alive and play stale data after a reload.
+  test('a clip follows the parent through evict + reload instead of pinning the old buffer', () => {
+    const factory = setupSourceSpy();
+    const manager = new AudioManager();
+    const original = makeBuffer(2);
+    const sound = new Sound(original);
+    const clip = sound.clip(0.5, 1);
+
+    sound._evictBuffer();
+    const reloaded = makeBuffer(2);
+    sound._setBuffer(reloaded);
+
+    manager.play(clip);
+
+    expect(factory.sources[0].buffer).toBe(reloaded);
+    expect(factory.sources[0].buffer).not.toBe(original);
+    expect(clip.audioBuffer).toBe(reloaded);
+
+    factory.restore();
+    clip.destroy();
+  });
+
+  test('a sprite sub-Sound follows the parent through evict + reload', () => {
+    const factory = setupSourceSpy();
+    const manager = new AudioManager();
+    const original = makeBuffer(2);
+    const sound = new Sound(original, { sprites: { hit: { start: 0.5, end: 1.5 } } });
+    const hit = sound.sprite('hit');
+
+    sound._evictBuffer();
+    const reloaded = makeBuffer(2);
+    sound._setBuffer(reloaded);
+
+    manager.play(hit);
+
+    expect(factory.sources[0].buffer).toBe(reloaded);
+
+    factory.restore();
+    sound.destroy();
+  });
+
+  test('a clip reports no duration while its parent is evicted, and recovers on reload', () => {
+    const sound = new Sound(makeBuffer(2));
+    const clip = sound.clip(0.5, 1);
+
+    sound._evictBuffer();
+    expect(clip.audioBuffer).toBeNull();
+    expect(clip.duration).toBe(0);
+
+    sound._setBuffer(makeBuffer(2));
+    expect(clip.duration).toBe(1);
+
+    clip.destroy();
+  });
+
+  test('a clip mirrors the parent load state instead of claiming to be ready', () => {
+    const sound = new Sound(null);
+    sound._loadState.begin();
+    const clip = sound.clip(0, 1);
+
+    expect(clip.loadState).toBe('loading');
+    expect(clip.ready).toBe(false);
+
+    sound._setBuffer(makeBuffer(2));
+    sound._loadState.settle(sound);
+
+    expect(clip.loadState).toBe('ready');
+    expect(clip.duration).toBe(1);
+  });
+
+  test('clip() on a not-yet-loaded sound is allowed and binds to the parent', () => {
+    const sound = new Sound(null);
+
+    expect(() => sound.clip(0, 1)).not.toThrow();
+  });
+
+  test('a nested clip stays inside its parent window', () => {
+    const sound = new Sound(makeBuffer(4));
+    const outer = sound.clip(1, 2); // [1, 3]
+    const inner = outer.clip(0.5, 5); // [1.5, 3] — capped by the outer window
+
+    expect(inner.duration).toBe(1.5);
+
+    sound.destroy();
+  });
+
   test('clip inherits the parent default volume/loop settings', () => {
     const sound = new Sound(makeBuffer(2), { volume: 0.5, loop: true });
     const clip = sound.clip(0, 1);

@@ -16,7 +16,7 @@ The listener and every source sit on one plane (Z=0), panned with the Web Audio 
 
 ## The listener
 
-The [`AudioListener`](/ExoJS/en/api/audio-listener/) is a singleton at `app.audio.listener`. Set its position directly or point it at a target that updates every frame:
+The [`AudioListener`](/ExoJS/en/api/audio-listener/) lives at `app.audio.listener` — one per `Application`, not one per process. Set its position directly or point it at a target that updates every frame:
 
 ```ts
 import { type Application, SceneNode } from '@codexo/exojs';
@@ -270,11 +270,13 @@ const voice = application.audio.play(waterfall, {
 
 ## Sounds per frame
 
-Spatial updates happen automatically — each frame the `AudioManager` updates the listener from its target and ticks every spatial `Voice`, writing the resolved position to the Web Audio `PannerNode`. You do not need to call any per-frame update on spatial sources: pass `position` in `PlayOptions` at play time, set it live on the returned `Voice`, or call `voice.follow(node)`, and the engine handles the rest.
+Spatial updates happen automatically — each frame the `AudioManager` updates the listener from its target and ticks every spatial `Voice`, writing the resolved position (relative to that application's listener) to the Web Audio `PannerNode`. You do not need to call any per-frame update on spatial sources: pass `position` in `PlayOptions` at play time, set it live on the returned `Voice`, or call `voice.follow(node)`, and the engine handles the rest.
 
 ## Browser constraints
 
 The Web Audio `PannerNode` maps to 3D space. ExoJS sets Z=0 for both listener and sources and uses forward=-Z with up=+Y, which produces correct left/right panning for 2D scenes. The elevation axis (up/down) is unused — all audio is co-planar with the listener.
+
+`AudioContext.listener`, though, is a property of the process-wide `AudioContext`: there is exactly one, shared by every `Application`. ExoJS therefore pins it at the origin and pans each voice by its offset from *its own* application's `app.audio.listener` — so two applications in one page each keep their own viewpoint instead of overwriting one another every frame. Distance, attenuation and the distance model are unaffected; the only observable difference is that `app.audio.spatial.teleportThreshold` is measured on the source-to-listener offset, so warping the listener snaps every spatial voice rather than snapping one listener.
 
 ExoJS uses the panner's `equalpower` model for 2D spatialisation. If you need deterministic non-spatial left/right balance, keep sounds non-spatial (`position = null`) and use bus-level `pan` instead.
 

@@ -460,18 +460,33 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
     }>;
     const t = this._audioContext.currentTime;
     const settings = this._manager.spatial;
+
+    // Written RELATIVE to this manager's own listener, which is virtual — the
+    // real `AudioContext.listener` is process-wide and stays pinned at the
+    // origin, so two Applications cannot fight over it (see
+    // {@link AudioListener}). With the listener at the origin the offset vector
+    // is all a panner needs: distance, attenuation and the distance model come
+    // out mathematically identical to writing absolute positions.
+    const listenerPosition = this._manager.listener.position;
+    const relativeX = x - listenerPosition.x;
+    const relativeY = y - listenerPosition.y;
+
     if (panner.positionX) {
       // Route through the smoothing layer (setTargetAtTime + epsilon-skip +
       // teleport-snap) to eliminate per-frame zipper noise on moving sources (AU4).
-      this._smoothX.write(panner.positionX, x, t, settings);
-      this._smoothY.write(panner.positionY!, y, t, settings);
+      // This now also carries listener motion, which used to be smoothed once
+      // centrally on the listener's own params.
+      this._smoothX.write(panner.positionX, relativeX, t, settings);
+      this._smoothY.write(panner.positionY!, relativeY, t, settings);
       this._smoothZ.write(panner.positionZ!, 0, t, settings);
     } else if (panner.setPosition) {
       // Legacy AudioParam-less API: snap only (no smoothing available).
-      panner.setPosition(x, y, 0);
+      panner.setPosition(relativeX, relativeY, 0);
     }
 
     this._writeOrientation();
+    // Doppler stays in ABSOLUTE world coordinates: it projects both velocities
+    // onto the true line of sight and never touches a panner position param.
     this._tickDoppler(x, y, t, settings);
   }
 

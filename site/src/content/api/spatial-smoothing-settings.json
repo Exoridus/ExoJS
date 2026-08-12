@@ -131,7 +131,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Position jump (world units) treated as a teleport: the param snaps with setValueAtTime instead of ramping. Default DEFAULT_TELEPORT_THRESHOLD."
+          "description": "Position jump (world units) treated as a teleport: the param snaps with setValueAtTime instead of ramping. Default DEFAULT_TELEPORT_THRESHOLD. Measured on the **source-to-listener offset**, not on either absolute position — voices are panned relative to their own application's AudioListener, which is virtual. Practically: warping the listener is a teleport for every spatial voice at once (each snaps its own panner), and a source that warps *together with* the listener does not cross the threshold at all, because its offset never changed."
         }
       ],
       "paragraphs": [],

@@ -242,10 +242,14 @@ describe('AudioManager', () => {
     vi.resetModules();
     const fakeCtx = makeFakeAudioContext();
     const fakeSignal = new Signal<[AudioContext]>();
+    // Readiness has to move with the signal: the real `onAudioContextReady`
+    // only ever dispatches while the context reports 'running', and
+    // `AudioManager` reads the live state rather than trusting the dispatch.
+    let ready = false;
 
     vi.doMock('#audio/audio-context', () => ({
       getAudioContext: () => fakeCtx,
-      isAudioContextReady: () => false,
+      isAudioContextReady: () => ready,
       onAudioContextReady: fakeSignal,
     }));
 
@@ -258,6 +262,7 @@ describe('AudioManager', () => {
     // registration order — master/music/sound buses, the listener, and
     // finally AudioManager's own onUnlock-forwarding handler (see
     // AudioManager.ts constructor, registered last).
+    ready = true;
     fakeSignal.dispatch(fakeCtx);
 
     expect(onUnlock).toHaveBeenCalledTimes(1);

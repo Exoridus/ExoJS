@@ -412,7 +412,7 @@ describe('SoundVoice — capabilities', () => {
     const sound = new Sound(createAudioBufferStub(10));
     sound.defineSprite('hit', { start: 2, end: 3 });
 
-    sound._createSpriteVoice(manager, 'hit');
+    manager.play(sound.sprite('hit'));
 
     expect(factory.sources[0].loopStart).toBe(2);
     expect(factory.sources[0].loopEnd).toBe(3);
@@ -427,7 +427,7 @@ describe('SoundVoice — capabilities', () => {
     const sound = new Sound(createAudioBufferStub(10));
     sound.defineSprite('hit', { start: 2, end: 3, loop: true });
 
-    const voice = sound._createSpriteVoice(manager, 'hit') as SoundVoice;
+    const voice = manager.play(sound.sprite('hit')) as SoundVoice;
     const first = factory.sources[0];
 
     // A looping start passes no duration, so nothing bounds the source yet.
@@ -460,7 +460,7 @@ describe('SoundVoice — capabilities', () => {
     const sound = new Sound(createAudioBufferStub(10));
     sound.defineSprite('hit', { start: 2, end: 3, loop: true });
 
-    const voice = sound._createSpriteVoice(manager, 'hit') as SoundVoice;
+    const voice = manager.play(sound.sprite('hit')) as SoundVoice;
 
     setCurrentTime(0.25);
     voice.loop = false;
@@ -485,7 +485,7 @@ describe('SoundVoice — capabilities', () => {
     const sound = new Sound(createAudioBufferStub(10));
     sound.defineSprite('hit', { start: 2, end: 3, loop: true });
 
-    const voice = sound._createSpriteVoice(manager, 'hit') as SoundVoice;
+    const voice = manager.play(sound.sprite('hit')) as SoundVoice;
 
     setCurrentTime(2.5); // 2.5 passes through the 1s clip
     expect(voice.time).toBeCloseTo(0.5, 6);
@@ -511,7 +511,7 @@ describe('SoundVoice — capabilities', () => {
     const sound = new Sound(createAudioBufferStub(10));
     sound.defineSprite('hit', { start: 2, end: 3 });
 
-    const voice = sound._createSpriteVoice(manager, 'hit') as SoundVoice;
+    const voice = manager.play(sound.sprite('hit')) as SoundVoice;
     voice.seek(voice.duration);
 
     expect(factory.sources).toHaveLength(2);

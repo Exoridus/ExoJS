@@ -1,8 +1,14 @@
 /**
- * Shared position-smoothing layer for spatial audio. Both the
- * {@link AudioListener} and every spatial {@link BaseVoice} write their
- * per-frame `positionX/Y/Z` (and, in future, orientation) `AudioParam`s through
- * this layer instead of calling `setValueAtTime` directly every frame.
+ * Shared position-smoothing layer for spatial audio. Every spatial
+ * {@link BaseVoice} writes its per-frame `positionX/Y/Z` and orientation
+ * `AudioParam`s through this layer instead of calling `setValueAtTime` directly
+ * every frame.
+ *
+ * The {@link AudioListener} does not: it is virtual, and the real WebAudio
+ * listener stays pinned at the origin, so listener motion reaches the mix as
+ * part of each voice's relative position and is smoothed there — see
+ * {@link SpatialSmoothingSettings.teleportThreshold} for the one place that
+ * distinction is observable.
  *
  * Writing a raw stepwise value each frame produces audible zipper noise on fast
  * movement (expert-review finding AU4). Instead each param is:
@@ -49,6 +55,13 @@ export interface SpatialSmoothingSettings {
    * Position jump (world units) treated as a teleport: the param snaps with
    * `setValueAtTime` instead of ramping. Default
    * {@link DEFAULT_TELEPORT_THRESHOLD}.
+   *
+   * Measured on the **source-to-listener offset**, not on either absolute
+   * position — voices are panned relative to their own application's
+   * {@link AudioListener}, which is virtual. Practically: warping the listener
+   * is a teleport for every spatial voice at once (each snaps its own panner),
+   * and a source that warps *together with* the listener does not cross the
+   * threshold at all, because its offset never changed.
    */
   teleportThreshold: number;
   /**

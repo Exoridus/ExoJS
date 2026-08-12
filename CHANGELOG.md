@@ -195,6 +195,31 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
   `SequenceAction` string patterns gain shorthand aliases: `Ctrl` for
   `Control`, `Cmd`/`Command`/`Super` for `Meta`, `Opt` for `Alt`, `Esc` for
   `Escape`.
+- **`Sound.sprite(name)` — the public way to play a named audio sprite.**
+  Sprite definitions (`defineSprite`/`setSprites`/the `sprites` option) had no
+  public playback path at all: the only way to reach one was the `@internal`
+  `Sound._createSpriteVoice`. `sprite(name)` is the named counterpart of
+  `clip(offset, duration)` — it returns a `Sound` over that window, sharing the
+  parent's decoded buffer, so it plays through `app.audio.play()` like any other
+  sound. The result is memoized per name (one shared voice pool per sprite,
+  rather than a fresh pool per call) and discarded when the name is redefined,
+  removed, or the sound is destroyed. An undefined name throws.
+- **`AudioManager.onUnlock` runs every handler exactly once, as soon as audio is
+  usable.** It is the documented home for playback that cannot be deferred past
+  the autoplay gesture, so it now answers the question subscribers are actually
+  asking rather than behaving as a plain one-shot event. Subscribing while audio
+  is already unlocked replays the handler on a microtask — a scene loaded after
+  the user's first click no longer stays silent forever. Subscribing while audio
+  is locked registers it for the next unlock, **including a re-lock** (an iOS
+  audio-session interruption, a bfcache restore), which the previous
+  "has it ever dispatched" test got wrong in both directions: it replayed into a
+  suspended context, and a manager constructed inside that window had a
+  permanently dead `onUnlock` because the global ready signal was already spent.
+  A handler that has already run is never fired again by a later unlock, so
+  looping music started here does not stack a second copy after every
+  interruption. `remove()` cancels a pending handler in either case — including
+  a replay queued but not yet run — and nothing fires once the manager is
+  destroyed.
 - **`Extension.install(app)` and `ExtensionDisposer` — extensions have a
   lifetime of their own.** An extension descriptor may now carry an
   `install(app)` hook for whatever the `renderers`/`assets`/`serializers`
@@ -352,6 +377,30 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
 
 ### Removed
 
+- **BREAKING — playing a `Sound` before the autoplay unlock is now a no-op.**
+  `SoundVoice` started its buffer source in its own constructor with
+  `source.start(0, offset)`. A suspended `AudioContext`'s `currentTime` stands
+  still, so every sound played before the first user gesture was scheduled at
+  the _same_ instant and the whole backlog fired simultaneously on the unlock —
+  while the docs claimed such voices were "deferred". `AudioManager.play()` now
+  returns an already-ended `NoopVoice` for a `Sound` played while
+  `AudioManager.locked`, matching what `AudioGenerator` already did, and warns
+  once per `AudioManager` (re-armed when audio unlocks, so a menu full of click
+  sounds cannot flood the console). `AudioStream` keeps its deferral — a media
+  element owns its own playhead and can honestly be told to play later. Start
+  buffer/generator playback from `app.audio.onUnlock`:
+  `app.audio.onUnlock.add(() => app.audio.play(music, { loop: true }))`.
+- **BREAKING — `Sound.clip()` no longer throws on a not-yet-loaded sound.** It
+  used to require a decoded buffer because it snapshotted one; a clip is now
+  bound to the sound it was cut from and resolves the buffer at playback time,
+  so there is nothing left to require. Code relying on the throw as a
+  load-completion assertion should check `sound.ready` (or `await sound.loaded`)
+  instead.
+- **BREAKING — `Sound._createSpriteVoice` removed.** The `@internal` second
+  playback path is gone; `Sound.sprite(name)` replaces it. Playing a sprite
+  with a `time` offset at or past its clip end now returns an already-ended
+  `NoopVoice` — the same answer every other out-of-range play gives — instead
+  of throwing.
 - **BREAKING — `Extension.systems` and `ApplicationSystemBinding` removed.**
   A system binding’s `create(app)` was exactly `install: app => { app.systems.add(system) }`,
   down to the reverse-order destruction `SystemRegistry` performs either way —
@@ -387,6 +436,62 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
 
 ### Fixed
 
+- **A paused voice is no longer the pool's preferred eviction victim.** A paused
+  `SoundVoice` stays in the pool while its bookkeeping ages against the still
+  running context clock, so `FirstInFirstOut` saw the oldest entry and
+  `LeastRecentlyUsed` the one with the least time left — and picked it. A scene
+  that suspended a looping ambience, then let other code keep triggering the
+  same `Sound`, had that ambience evicted and silently dropped, because
+  `SceneAudio.restore()` passes over a voice that is `ended` rather than
+  `paused`. Victim selection now considers unpaused voices first and falls back
+  to a paused one only when the pool holds nothing else.
+- **Pausing a voice whose source had already played out no longer strands it.**
+  `onended` is an asynchronous task, so a source can be past its window end
+  while the callback is still in flight; `pause()` retires the source and clears
+  that callback, which left the voice permanently `paused` with `ended === false`
+  — holding its pool slot, the manager's voice registry entry and its place in
+  `SceneAudio`'s suspended set, with nothing left that could finish it.
+  `pause()` now ends such a voice instead.
+- **`AudioManager.destroy()` drops its subscription to the global
+  `onAudioContextReady`**, like `AudioBus` and `AudioListener` already did. A
+  handler that throws during that dispatch terminates the dispatch itself, so a
+  destroyed `Application` could otherwise prevent a live one's buses from ever
+  being set up.
+- **Each `Application` now gets its own spatial listener.**
+  `AudioContext.listener` belongs to the process-wide `AudioContext`, so two
+  `Application`s writing their absolute world position into it every frame
+  simply overwrote each other — last writer per frame won, and both mixes
+  panned against whichever ticked last. The real WebAudio listener is now
+  pinned at the origin (orientation unchanged) and every spatial voice writes
+  its panner position **relative** to its own manager's `AudioListener`.
+  Distance, attenuation and the distance model are mathematically identical,
+  and the Doppler path is untouched (it always worked in absolute world
+  coordinates in JS). Two consequences worth knowing: listener motion is now
+  smoothed per voice rather than once centrally (the central
+  `SmoothedAudioParam`s on `AudioListener` are gone), and
+  `app.audio.spatial.teleportThreshold` is measured on the source-to-listener
+  offset — a listener warp snaps every spatial voice, and a source warping
+  together with the listener no longer crosses the threshold at all.
+- **Scene pause now actually stops `Sound` playback.** `SceneAudio` detects
+  pausable voices by duck-typing `pause`/`resume`, and `AudioStreamVoice` was
+  the only implementation of `Pausable` — so every buffer-backed ambience or
+  loop kept playing straight through `scene.pause()` and retention
+  `suspend()`. `SoundVoice` now implements `Pausable`: `pause()` reads the
+  playhead and retires the buffer source (which can be neither repositioned
+  nor halted in place), `resume()` starts a fresh one at exactly that offset,
+  and `time`/`paused` report the frozen state. Every operation that would
+  otherwise rebuild the source — `seek`, `loop`, `playbackRate`, `detune`, the
+  per-frame Doppler tick — stays inert while paused. Note the honest limit:
+  resume is sample-exact but not phase-continuous, so on sustained tonal
+  material the seam can be audible.
+- **A `Sound.clip()`/`Sound.sprite()` sub-sound now survives eviction and
+  reload.** Both used to snapshot the parent's `AudioBuffer` at creation time,
+  while the asset layer heals a `Sound` **in place** (identity preserved). A
+  clip taken before an evict/reload cycle therefore pinned the evicted buffer in
+  memory — defeating the eviction — and went on playing stale audio afterwards.
+  Sub-sounds are now bound to the sound they were cut from and read its buffer
+  at playback time: they follow it through evict and reload, report its
+  `loadState`/`audioBuffer`, and report `duration: 0` while it has no payload.
 - **`SceneInteraction.suspend()`/`resume()`** now actually detach/reattach
   observed roots and captures (previously no-op stubs) — a retained scene no
   longer keeps receiving pointer dispatch alongside whichever scene is now

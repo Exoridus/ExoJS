@@ -13,6 +13,104 @@ import type { Sound, SoundPlayOptions } from './Sound';
 import { createSpatialSmoothingSettings, type SpatialSmoothingSettings } from './spatial-smoothing';
 
 /**
+ * The signal behind {@link AudioManager.onUnlock}. A plain one-shot `Signal`
+ * would be a trap here: `onUnlock` is the documented place to start playback
+ * that cannot be deferred past the autoplay gesture, so it has to answer the
+ * question every subscriber is really asking — *"run this as soon as audio is
+ * usable"* — no matter when they ask.
+ *
+ * The contract is therefore: **every handler runs exactly once, as soon as
+ * audio is usable.**
+ * - Subscribing while audio is already usable replays the handler on a
+ *   microtask (never synchronously inside `add()`, so the ordering matches an
+ *   ordinary dispatch).
+ * - Subscribing while audio is locked — including a *re*-lock after an earlier
+ *   unlock — registers the handler for the next unlock.
+ * - {@link UnlockSignal._unlock} clears the handler list after dispatching, so
+ *   a later unlock cannot fire an already-run handler a second time. Without
+ *   that, every iOS audio-session interruption would start the menu music
+ *   again on top of the copy still playing.
+ *
+ * Deciding on the *live* lock state rather than on "has this ever dispatched"
+ * is what keeps the re-lock window honest: replaying into a suspended context
+ * would hand the handler a `play()` that answers with silence and a warning
+ * recommending this very signal.
+ *
+ * `remove()` cancels either case, including a replay already queued but not yet
+ * run, and `destroy()` cancels everything — the same disposal guarantee
+ * {@link AudioBus.onceSetup} gives through its returned disposer.
+ * @internal
+ */
+class UnlockSignal extends Signal {
+  /**
+   * Handlers whose replay microtask is queued but has not run yet. A replayed
+   * handler is deliberately never registered in the base `Signal` — it must
+   * fire once, not on the next unlock as well — which would leave `remove()`
+   * and `destroy()` nothing to find, so the pending set is what they cancel
+   * against. Without it a scene that subscribes in `init` and unsubscribes in
+   * `unload` still starts music for a scene that is already gone, and a
+   * handler surviving `destroy()` calls `play()` on a destroyed manager, which
+   * throws unobserved out of the microtask.
+   */
+  private readonly _pendingReplays = new Set<() => void>();
+  private _disposed = false;
+
+  public override add(handler: () => void): this {
+    if (this._disposed) {
+      return this;
+    }
+
+    if (isAudioContextReady()) {
+      if (!this._pendingReplays.has(handler)) {
+        this._pendingReplays.add(handler);
+        queueMicrotask((): void => {
+          // Cancelled by `remove()`/`destroy()` between `add()` and this task.
+          if (this._pendingReplays.delete(handler)) {
+            handler();
+          }
+        });
+      }
+
+      return this;
+    }
+
+    return super.add(handler);
+  }
+
+  public override remove(handler: () => void): this {
+    this._pendingReplays.delete(handler);
+
+    return super.remove(handler);
+  }
+
+  public override destroy(): void {
+    this._disposed = true;
+    this._pendingReplays.clear();
+    super.destroy();
+  }
+
+  /**
+   * Identical to {@link UnlockSignal.add} — this signal already guarantees at
+   * most one call per handler, so there is no second dispatch for a `once`
+   * wrapper to protect against. Delegating also keeps `remove(handler)`
+   * working, which the base `once` (whose wrapper hides the handler) does not.
+   */
+  public override once(handler: () => void): this {
+    return this.add(handler);
+  }
+
+  /**
+   * Fire every handler waiting for this unlock, then drop them: each runs
+   * exactly once, and a later lock/unlock cycle starts from an empty list.
+   * @internal
+   */
+  public _unlock(): void {
+    this.dispatch();
+    this.clear();
+  }
+}
+
+/**
  * Per-{@link Application} owner of the audio mix: three pre-configured
  * {@link AudioBus} instances (`master` ← `music` + `sound`), a single
  * {@link AudioListener} for spatial audio, and a registry of any extra busses
@@ -39,11 +137,34 @@ export class AudioManager {
   public readonly spatial: SpatialSmoothingSettings = createSpatialSmoothingSettings();
   /**
    * Fires once when the AudioContext transitions to "running" — i.e. the first
-   * user gesture unlocks audio under the browser's autoplay policy. Check
-   * {@link AudioManager.locked} for the current state; sounds played while
-   * locked are deferred and start automatically on that gesture.
+   * user gesture unlocks audio under the browser's autoplay policy. This is the
+   * canonical place to start anything that must play as soon as audio is
+   * available:
+   *
+   * ```ts
+   * app.audio.onUnlock.add(() => app.audio.play(music, { loop: true }));
+   * ```
+   *
+   * Every handler runs **exactly once, as soon as audio is usable**, whenever
+   * it subscribes: already unlocked replays it on a microtask, still locked
+   * (including a re-lock after an earlier unlock — an iOS audio-session
+   * interruption, a bfcache restore) registers it for the next unlock. A
+   * handler that has already run is never fired again by a later unlock, so
+   * looping music started here does not stack a second copy after an
+   * interruption. `remove()` cancels either case, and nothing fires once the
+   * manager is destroyed.
+   *
+   * Check {@link AudioManager.locked} for the current state. See
+   * {@link AudioManager.play} for what each asset kind does when played before
+   * the gesture.
    */
-  public readonly onUnlock = new Signal();
+  public readonly onUnlock: Signal;
+  /**
+   * The same object as {@link AudioManager.onUnlock}, kept at its concrete type
+   * so the internal `_unlock()` edge is reachable without a cast — `onUnlock`
+   * is deliberately published as a plain {@link Signal}.
+   */
+  private readonly _unlockSignal: UnlockSignal;
 
   private readonly _registered = new Map<string, AudioBus>();
   private readonly _spatial = new Set<SpatialVoice>();
@@ -56,8 +177,30 @@ export class AudioManager {
   private readonly _voices = new Set<Voice>();
   private _muteOnHidden = false;
   private _destroyed = false;
+  /**
+   * Whether the "played while locked" warning has already been issued for this
+   * manager. Throttled per manager rather than per call: a menu can fire dozens
+   * of click sounds a second while audio is still locked, and every one of them
+   * would produce the identical message — one line names the problem, a flood
+   * buries it (and every other log the developer is reading). Re-armed by
+   * {@link AudioManager.preUpdate} once the context runs, so a context that
+   * drops back to suspended later (an iOS audio-session interruption, a bfcache
+   * restore) reports its own first occurrence again.
+   */
+  private _lockedWarningIssued = false;
+  /**
+   * Whether this manager has already seen the current run of usable audio.
+   * Drives the locked→unlocked edge that fires {@link AudioManager.onUnlock};
+   * reset the moment the context is observed suspended again, so the next
+   * unlock is a fresh edge.
+   */
+  private _unlockObserved = false;
+  private readonly _onAudioContextReady = (): void => this._syncLockState();
 
   public constructor() {
+    this._unlockSignal = new UnlockSignal();
+    this.onUnlock = this._unlockSignal;
+
     this.master = new AudioBus('master', { parent: null });
     this.music = new AudioBus('music', { parent: this.master });
     this.sound = new AudioBus('sound', { parent: this.master });
@@ -68,17 +211,27 @@ export class AudioManager {
     this._registered.set('music', this.music);
     this._registered.set('sound', this.sound);
 
-    if (isAudioContextReady()) {
-      // The shared context is already running — this manager was constructed
-      // after the one-shot ready signal fired (e.g. a second Application in
-      // the same process; the buses above would otherwise consume the signal
-      // before this handler registers). Dispatch the unlock on a microtask so
-      // subscribers registered right after construction still observe it.
-      queueMicrotask(() => this.onUnlock.dispatch());
-    } else {
-      onAudioContextReady.add((): void => {
-        this.onUnlock.dispatch();
-      });
+    // Two sources for the unlock edge, deliberately:
+    //
+    // - `onAudioContextReady` is the fast one — it fires synchronously inside
+    //   the unlock gesture, so playback starts on the same tick as the click.
+    //   But it is a documented ONE-SHOT (`readyDispatched`): it cannot report a
+    //   context that drops back to suspended and is resumed again, and it is
+    //   already spent for any manager constructed after the first gesture.
+    //   Subscribing to it while already running would therefore only leak a
+    //   handler that can never fire.
+    // - `preUpdate` closes both gaps by polling the transition. It already
+    //   reads `isAudioContextReady()` every frame to re-arm the locked-playback
+    //   warning, so this adds no work — and unlike the signal it keeps working
+    //   across arbitrarily many lock cycles.
+    //
+    // There is no per-transition stream to subscribe to instead: audio-context
+    // keeps its `statechange` listener module-private and uses it only to
+    // re-arm the gesture listeners.
+    this._unlockObserved = isAudioContextReady();
+
+    if (!this._unlockObserved) {
+      onAudioContextReady.add(this._onAudioContextReady);
     }
   }
 
@@ -101,11 +254,41 @@ export class AudioManager {
 
   /**
    * `true` while audio is blocked by the browser's autoplay policy — no user
-   * gesture has resumed the AudioContext yet. Voices played while locked are
-   * deferred (streams) or skipped (generators) until that gesture.
+   * gesture has resumed the AudioContext yet.
+   *
+   * What a play call does while locked depends on the asset: an
+   * {@link AudioStream} is deferred and starts on the gesture, because a media
+   * element owns its own playhead and can simply be told to play later. A
+   * {@link Sound} or an {@link AudioGenerator} is **skipped** — it returns an
+   * already-ended voice and never makes a sound. Neither can be deferred
+   * honestly: a suspended context's `currentTime` stands still, so every
+   * source scheduled while locked lands on the same instant and the entire
+   * backlog would fire simultaneously on the gesture.
+   *
+   * Start such playback from {@link AudioManager.onUnlock} instead.
    */
   public get locked(): boolean {
     return !isAudioContextReady();
+  }
+
+  /**
+   * Report the first play call this manager skipped because audio was still
+   * locked, then stay quiet until audio unlocks — see
+   * {@link AudioManager._lockedWarningIssued} for why it is throttled.
+   * @internal Called by the {@link Playable} implementations that skip.
+   */
+  public _warnPlaybackWhileLocked(asset: string): void {
+    if (this._lockedWarningIssued) {
+      return;
+    }
+
+    this._lockedWarningIssued = true;
+    logger.warn(
+      `AudioManager.play() was called while audio is still locked by the browser's autoplay policy; the ${asset} was skipped. ` +
+        'Start playback from the unlock gesture instead — `app.audio.onUnlock.add(() => app.audio.play(music, { loop: true }))` — ' +
+        'or gate it on `app.audio.locked`. Further skipped plays are not reported until audio unlocks.',
+      { source: 'AudioManager' },
+    );
   }
 
   /**
@@ -125,6 +308,16 @@ export class AudioManager {
    * const voice = app.audio.play(shootSfx);
    * // Later:
    * voice.stop();
+   * ```
+   *
+   * While audio is still locked by the browser's autoplay policy
+   * ({@link AudioManager.locked}), a {@link Sound} or {@link AudioGenerator}
+   * play call is a **no-op**: it returns an already-ended voice and warns once.
+   * An {@link AudioStream} is deferred and starts on the unlock gesture. Start
+   * the former from {@link AudioManager.onUnlock}:
+   *
+   * ```ts
+   * app.audio.onUnlock.add(() => app.audio.play(music, { loop: true }));
    * ```
    *
    * Throws once the manager has been destroyed — see {@link AudioManager.destroy}.
@@ -173,6 +366,7 @@ export class AudioManager {
 
   /** {@link SystemMethods.preUpdate} phase, at {@link SystemOrder.CoreAudio}. The frame delta is unused here (hence `_delta`). */
   public preUpdate(_delta: Time): void {
+    this._syncLockState();
     this.listener._tick();
     // Tick spatial voices and prune ended ones.
     for (const voice of this._spatial) {
@@ -209,6 +403,37 @@ export class AudioManager {
   /** Internal: drop a voice that has ended. Called from the voice's own teardown. */
   public _unregisterVoice(voice: Voice): void {
     this._voices.delete(voice);
+  }
+
+  /**
+   * Observe the current autoplay-lock state and act on a transition: fire
+   * {@link AudioManager.onUnlock} on the locked→unlocked edge, and re-arm the
+   * one-shot locked-playback warning while audio is usable so a later re-lock
+   * reports its own first occurrence.
+   *
+   * Called from the frame tick and from the global ready signal — see the
+   * constructor for why both are needed. Idempotent: only an actual edge
+   * dispatches.
+   */
+  private _syncLockState(): void {
+    if (this._destroyed) {
+      return;
+    }
+
+    if (!isAudioContextReady()) {
+      this._unlockObserved = false;
+
+      return;
+    }
+
+    this._lockedWarningIssued = false;
+
+    if (this._unlockObserved) {
+      return;
+    }
+
+    this._unlockObserved = true;
+    this._unlockSignal._unlock();
   }
 
   /** Internal: called by Application when visibility changes. */
@@ -280,6 +505,16 @@ export class AudioManager {
     // Set before the drain so nothing can start new playback from an `onEnd`
     // handler, which is also what bounds the loop below.
     this._destroyed = true;
+
+    // Silence the unlock path first: a queued replay or a handler still waiting
+    // for the gesture would otherwise call `play()` on this very manager after
+    // it has gone terminal. Dropping the global subscription matters beyond
+    // this manager — a handler that throws inside `onAudioContextReady`'s
+    // dispatch terminates that dispatch outright, so a dead Application could
+    // otherwise stop a live one's buses from ever being set up. Symmetric with
+    // `AudioBus.destroy` and `AudioListener.destroy`.
+    onAudioContextReady.remove(this._onAudioContextReady);
+    this._unlockSignal.destroy();
 
     const failures: unknown[] = [];
 
