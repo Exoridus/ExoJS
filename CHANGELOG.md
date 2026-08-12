@@ -195,6 +195,25 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
   `SequenceAction` string patterns gain shorthand aliases: `Ctrl` for
   `Control`, `Cmd`/`Command`/`Super` for `Meta`, `Opt` for `Alt`, `Esc` for
   `Escape`.
+- **`Extension.install(app)` and `ExtensionDisposer` — extensions have a
+  lifetime of their own.** An extension descriptor may now carry an
+  `install(app)` hook for whatever the `renderers`/`assets`/`serializers`/
+  `systems` arrays cannot express: a subscription on an application signal, a
+  debug overlay next to the canvas, a worker, an observer. It runs once per
+  `Application` as the final construction step — every core manager, every
+  materialised binding and every extension system already exists — with
+  dependencies installed ahead of their dependents, and may return an
+  `ExtensionDisposer` (a synchronous `() => void`). The `Application` holds
+  those disposers and runs them in **reverse installation order**: in
+  `destroy()`, after scene teardown and before any subsystem a disposer might
+  still reach for is released; and in the constructor's rollback, so a
+  construction step that throws after some extensions installed no longer
+  strands them. Each disposer is guarded on its own — one that throws is
+  logged and neither the disposers behind it nor the remaining teardown
+  stages are cut short. Per-application state belongs in the `install`
+  closure, never on the descriptor, which stays a shared frozen singleton.
+  An extension's lifetime is exactly its application's: there is no runtime
+  `unregister`, and no scene-level scope.
 
 ### Changed
 

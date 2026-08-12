@@ -24,6 +24,9 @@ const myExtension: Extension = {
     renderers: [], // RendererBinding[] — drawable type → renderer factory
     assets: [], // AssetBinding[] — asset type + lookup keys → loader-local handler
     serializers: [], // SerializerBinding[] — node type ↔ serialize/deserialize pair
+    install(app) {
+        /* anything the arrays cannot express; return a disposer to undo it */
+    },
 };
 ```
 
@@ -33,7 +36,7 @@ Every field except `id` is optional, so the smallest possible extension is just 
 - **`assets`** — an `AssetBinding` maps an asset constructor, its `AssetDefinitions` type, and optional file suffixes to a loader-local `AssetHandler` factory. This is how `@codexo/exojs-tiled` teaches the `Loader` about `.tmj` files.
 - **`serializers`** — a `SerializerBinding` maps a custom `SceneNode` type to a `NodeSerializer`, so your node type survives [`Scene.serialize`/`deserialize`](/ExoJS/en/guide/runtime/serialization-and-prefabs/).
 
-Bindings are **pure descriptors** — no active renderer, no GPU resources, no side effects until their `create(...)` is called once per backend/loader during `Application` construction.
+Bindings are **pure descriptors** — no active renderer, no GPU resources, no side effects until their `create(...)` is called once per backend/loader during `Application` construction. `install` is the escape hatch for the rest — see [Lifetime](#lifetime-install-and-dispose) below.
 
 ## Equipping an application
 
@@ -63,6 +66,52 @@ The selection is flattened once per `Application`, at construction, into an immu
 
 <Callout type="pitfall" title="An id collision means a duplicate install">
 Two *different* objects under the same id throw. That is not a bug to work around — it is how a snapshot surfaces two copies (or mismatched versions) of your package in one dependency tree. Keep your descriptor a single module-level singleton.
+</Callout>
+
+## Lifetime: install and dispose
+
+The binding arrays cover contributions the engine knows how to materialise for you. `install(app)` covers the rest: a subscription on an application signal, a debug overlay next to the canvas, a worker, an observer. It runs once per `Application`, as the **final** construction step — every core manager, every materialised binding and every system from `systems` already exists — and dependencies listed in `dependencies` are installed before their dependents.
+
+Return a function to undo it. The application holds those disposers and runs them in **reverse installation order** when it goes down:
+
+```ts
+import { Application } from '@codexo/exojs';
+import type { Extension } from '@codexo/exojs/extensions';
+
+const frameCounterExtension: Extension = {
+    id: 'com.example.frame-counter',
+    install(app) {
+        const readout = document.createElement('output');
+
+        document.body.append(readout);
+
+        const onFrame = (): void => {
+            readout.value = `${app.frameCount} frames`;
+        };
+
+        app.onFrame.add(onFrame);
+
+        // Everything the install did, undone — nothing else.
+        return () => {
+            app.onFrame.remove(onFrame);
+            readout.remove();
+        };
+    },
+};
+
+// `install` runs here; its disposer runs inside `app.destroy()`.
+const app = new Application({ extensions: [frameCounterExtension] });
+```
+
+Four rules follow from where in the lifecycle those two calls sit:
+
+- **Per-application state lives in the closure, never on the descriptor.** The descriptor is a shared, frozen singleton — the same object equips as many applications as you hand it to, and each gets its own `install` call and its own disposer.
+- **An extension's lifetime is its application's lifetime.** There is no `unregister` and no scene-level scope: extensions equip an *application*, not a scene. A contribution that should come and go with a scene belongs on `scene.systems` or in the scene's own `track` scope.
+- **Disposers are synchronous.** `Application.destroy()` does not await them. Asynchronous work that must be stopped belongs behind an `AbortSignal` your extension owns and aborts from the disposer.
+- **A throwing disposer is contained.** It is reported through the log and the remaining disposers — and the rest of the engine's teardown — still run.
+
+<Callout type="pitfall" title="A throwing install() must clean up after itself">
+If `install` throws, construction is aborted and every extension installed *before* it is disposed in reverse order. But the failing one never returned a disposer, so whatever it had already done is beyond the engine's reach. Do the fallible work first and take ownership of resources last, or wrap the body in your own `try`/`catch`.
 </Callout>
 
 ## Typesafe renderer registration
