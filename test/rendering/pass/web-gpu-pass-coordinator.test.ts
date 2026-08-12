@@ -328,6 +328,33 @@ describe('WebGpuPassCoordinator', () => {
     }
   });
 
+  test('discardPass drops the open pass without ending or submitting it', () => {
+    const root = new RenderTarget(64, 64, true);
+    const { backend, passEncoder, submit } = createMockBackend(root);
+    const coordinator = new WebGpuPassCoordinator(backend);
+
+    try {
+      coordinator.acquirePass();
+      coordinator.markPassDraws();
+
+      coordinator.discardPass();
+
+      // Teardown semantics: the recorded draws must not reach the queue at all,
+      // which is what separates this from endPass().
+      expect(passEncoder.end).not.toHaveBeenCalled();
+      expect(submit).not.toHaveBeenCalled();
+      expect(coordinator.hasActivePass).toBe(false);
+      expect(coordinator.passHasDraws).toBe(false);
+
+      // Idempotent, and a later acquire opens a genuinely fresh pass.
+      coordinator.discardPass();
+      expect(coordinator.acquirePass()).not.toBeNull();
+    } finally {
+      coordinator.endPass();
+      root.destroy();
+    }
+  });
+
   test('passHasDraws survives a redundant acquire of the already-open pass', () => {
     const root = new RenderTarget(64, 64, true);
     const { backend } = createMockBackend(root);

@@ -216,6 +216,25 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     return this._active;
   }
 
+  /**
+   * Drop the open pass WITHOUT ending or submitting it. For teardown paths only,
+   * where the recorded draws must not reach the queue at all: backend destroy,
+   * and device-loss teardown, where the encoder belongs to the dead device.
+   *
+   * Leaving `_active` set is the failure this exists to prevent. The coordinator
+   * instance outlives a device-loss recovery, and {@link acquirePass}
+   * short-circuits on an already-open pass — so a pass left open across the
+   * teardown would be handed back to the RESTORED device, which would then
+   * record every later frame into the dead device's encoder, silently and for
+   * the rest of the session. Operations on a lost device do not throw, so
+   * nothing would surface the breakage.
+   * @internal
+   */
+  public discardPass(): void {
+    this._active = null;
+    this._passHasDraws = false;
+  }
+
   /** End and submit the active GPU pass, if any. Idempotent. */
   public endPass(): void {
     const active = this._active;

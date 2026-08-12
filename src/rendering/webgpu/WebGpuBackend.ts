@@ -864,6 +864,11 @@ export class WebGpuBackend implements RenderBackend {
     this.onDeviceRestored.destroy();
     this.onRenderError.destroy();
     this._setActiveRenderer(null);
+    // A renderer switch no longer ends the pass, so `_setActiveRenderer(null)`
+    // can leave one open here. Drop it rather than submit it: the teardown below
+    // destroys the very buffers those draws bind, and the frame's pixels have
+    // nowhere left to go.
+    this._passCoordinatorInstance?.discardPass();
     this.rendererRegistry.destroy();
     this._destroyManagedTextures();
     this._renderTexturePool.destroy();
@@ -1860,6 +1865,13 @@ export class WebGpuBackend implements RenderBackend {
     // Disconnect renderers so they release pipelines / buffers / bind
     // groups tied to the dead device. They reconnect during _initialize().
     this.rendererRegistry.disconnect();
+
+    // Whatever those flushes recorded — and anything a renderer switch left
+    // open before the loss — belongs to the dead device. The coordinator
+    // survives recovery and `acquirePass` short-circuits on an open pass, so a
+    // pass left set here would be handed to the RESTORED device and every later
+    // frame would record into the dead encoder. Drop it, never submit it.
+    this._passCoordinatorInstance?.discardPass();
 
     if (this._maskCompositorConnected) {
       this._maskCompositor.disconnect();
