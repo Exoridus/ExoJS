@@ -66,6 +66,11 @@ const vertexStrideWords = vertexStrideBytes / 4; // 5 floats per vertex
 const initialVertexCapacity = 256;
 const initialIndexCapacity = 384;
 const initialNodeCapacity = 32;
+// One short line of text is already ~64 quads, so that floor made almost
+// every real retained draw pay several doubling steps (a fresh GL buffer plus
+// a CPU index fill each). 1024 quads is 12 KiB and covers normal text scenes
+// in one allocation, well inside the 16384-quad Uint16 vertex-index ceiling.
+const initialRetainedQuadCapacity = 1024;
 
 type ShaderType = 'sdf' | 'msdf' | 'color';
 
@@ -860,7 +865,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       return this._retainedQuadIndexBuffer;
     }
 
-    let capacity = Math.max(this._retainedQuadCapacity, 64);
+    let capacity = Math.max(this._retainedQuadCapacity, initialRetainedQuadCapacity);
 
     while (capacity < quadCount) capacity *= 2;
 

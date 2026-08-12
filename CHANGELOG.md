@@ -460,6 +460,14 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
   `Container` itself — the paint-order snapshot skips the sort entirely while
   every sibling shares a `zIndex` — invalidated by each structural mutator, and
   by a child's `zIndex` write for the paint order alone.
+- **The retained-text quad-index buffer starts at 1024 quads, not 64.** 64
+  quads is roughly one short line of text, so effectively every real text
+  draw triggered several doubling steps to reach a usable size — each one a
+  fresh buffer allocation plus a CPU index fill (plus, since growth now ends
+  an open pass first, an extra submit). 1024 quads is 12 KiB and covers
+  normal text scenes in a single allocation, in both `WebGpuTextRenderer` and
+  `WebGl2TextRenderer`; the hard ceiling stays at 16384 quads (the `Uint16`
+  vertex-index limit).
 
 ### Fixed
 

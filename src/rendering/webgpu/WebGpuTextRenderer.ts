@@ -62,6 +62,12 @@ const alignIndexBytes = (indexCount: number): number => (indexCount * Uint16Arra
 const initialVertexCapacity = 256;
 const initialIndexCapacity = 384;
 const initialNodeCapacity = 32;
+// One short line of text is already ~64 quads, so that floor made almost
+// every real retained draw pay several doubling steps (createBuffer + a CPU
+// index fill + writeBuffer each, plus — since the pass-open growth guard —
+// an extra submit). 1024 quads is 12 KiB and covers normal text scenes in
+// one allocation, well inside the 16384-quad Uint16 vertex-index ceiling.
+const initialRetainedQuadCapacity = 1024;
 
 // FrameUniforms: 7 × vec4<f32> = 112 bytes (projection + group mat3x3,
 // column-major, + device-pixel snap viewport rect)
@@ -1524,7 +1530,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       coordinator.endPass();
     }
 
-    let capacity = Math.max(this._retainedQuadIndexCapacity, 64);
+    let capacity = Math.max(this._retainedQuadIndexCapacity, initialRetainedQuadCapacity);
 
     while (capacity < quadCount) capacity *= 2;
 
