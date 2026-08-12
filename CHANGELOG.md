@@ -426,6 +426,14 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
 
 ### Performance
 
+- **WebGPU text flushes share one render pass and one submit.** The WebGPU text
+  renderer rewrote its shared vertex, index and node-data buffers from offset 0
+  on every flush, and ended (submitted) the render pass at the tail of each one
+  to keep those writes from landing under draws already recorded. A frame that
+  alternates sprites and text therefore cost one pass and one submit per text
+  flush. Each flush now appends at pass-scoped cursors and adds the base at bind
+  time, so the whole frame collapses to a single pass again. A capacity growth
+  and a projection rewrite remain real pass boundaries.
 - **`Container` caches its paint order and child-index lookups.**
   `InteractionManager` re-sorted every container's children on every single
   hit-test call, and `getChildIndex()` did a linear `indexOf` scan on every
