@@ -14,7 +14,8 @@ export type ArchetypeId =
   | 'split-screen'
   | 'mixed-blend'
   | 'mixed-material'
-  | 'mixed-material-atlased';
+  | 'mixed-material-atlased'
+  | 'instanced-batch';
 
 /** Structural definition of a scene archetype, independent of any engine or backend. */
 export interface ArchetypeSpec {
@@ -89,6 +90,20 @@ export interface ArchetypeSpec {
   readonly materialCount?: number;
   /** Run length (in leaf index space) of one material plateau; see {@link materialCount}. */
   readonly materialRunLength?: number;
+  /**
+   * Instances per explicit `RenderingContext.drawBatch` submission. Setting it
+   * switches the scene away from a sprite tree entirely: the archetype builds
+   * `ceil(nodeCount / batchSize)` {@link RenderBatch}es over one shared geometry
+   * and issues one `drawBatch` call each, per frame.
+   *
+   * ExoJS-ONLY, like `viewCount` and `materialCount`, and more strictly so: an
+   * explicit instanced-submission API has no Pixi counterpart at all, so the
+   * competitor arm renders the equivalent sprite scene instead and its numbers
+   * carry NO cross-arm meaning on this archetype. It exists to measure the
+   * immediate batch path's per-call CPU and submit cost, which no scene-graph
+   * archetype reaches.
+   */
+  readonly batchSize?: number;
 }
 
 /** One matrix cell: a single (engine, config, backend, archetype, node count) combination to measure. */
