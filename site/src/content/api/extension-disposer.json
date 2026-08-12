@@ -1,0 +1,72 @@
+{
+  "title": "ExtensionDisposer",
+  "description": "Undoes one Extension.install call, for the one Application that call was made against. Returned by `install`, held by that Application, and invoked exactly once during its teardown. Must be synchronous — Application.destroy does not await it. Work that genuinely cannot finish synchronously belongs behind an AbortSignal the extension owns, aborted from here.",
+  "symbol": "ExtensionDisposer",
+  "kind": "type",
+  "subsystem": "extensions",
+  "importPath": "@codexo/exojs/extensions",
+  "tier": "advanced",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Undoes one Extension.install call, for the one Application that call was made against. Returned by `install`, held by that Application, and invoked exactly once during its teardown.",
+        "Must be synchronous — Application.destroy does not await it. Work that genuinely cannot finish synchronously belongs behind an AbortSignal the extension owns, aborted from here."
+      ],
+      "importLine": "import { ExtensionDisposer } from '@codexo/exojs/extensions'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "ExtensionDisposer",
+          "signature": "() => void",
+          "signatureTokens": [
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/extensions/Extension.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/extensions/Extension.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/extensions/Extension.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/extensions/Extension.ts"
+}

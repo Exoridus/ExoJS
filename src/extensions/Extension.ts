@@ -158,18 +158,16 @@ export interface SerializerBinding<T extends SceneNode = SceneNode> {
 }
 
 /**
- * Produces an app-level {@link System} for one {@link Application} instance,
- * or `undefined` to opt out for that instance. `create(app)` runs once per
- * Application, after every core manager already exists on `app` — safe to
- * read {@link Application.input}, {@link Application.interaction}, etc. The
- * returned system is registered on {@link Application.systems} exactly like
- * a user-added system, including reverse-order destruction. Extensions never
- * inject scene-level systems or augment scenes — app-level only.
+ * Undoes one {@link Extension.install} call, for the one {@link Application}
+ * that call was made against. Returned by `install`, held by that Application,
+ * and invoked exactly once during its teardown.
+ *
+ * Must be synchronous — {@link Application.destroy} does not await it. Work
+ * that genuinely cannot finish synchronously belongs behind an
+ * {@link AbortSignal} the extension owns, aborted from here.
  * @advanced
  */
-export interface ApplicationSystemBinding {
-  create(app: Application): System | undefined;
-}
+export type ExtensionDisposer = () => void;
 
 /**
  * An ExoJS extension: an immutable descriptor that contributes renderer bindings,
@@ -178,6 +176,11 @@ export interface ApplicationSystemBinding {
  * it, via {@link ApplicationOptions.extensions} — that is the only way an
  * extension takes effect, so what an application can do is readable at its
  * construction rather than inferred from which modules were imported.
+ *
+ * The descriptor is a shared, frozen singleton: the same object equips any
+ * number of Applications. Per-application state therefore never belongs on it
+ * — it belongs in the closure {@link Extension.install} opens, which is also
+ * what the returned {@link ExtensionDisposer} closes over.
  * @advanced
  */
 export interface Extension {
@@ -186,5 +189,30 @@ export interface Extension {
   readonly renderers?: readonly RendererBinding[];
   readonly assets?: readonly AssetBinding[];
   readonly serializers?: readonly SerializerBinding[];
-  readonly systems?: readonly ApplicationSystemBinding[];
+  /**
+   * Set this application up for whatever the binding arrays cannot express — an
+   * app-level {@link System} on {@link Application.systems}, a subscription on
+   * {@link Application.onResize}, a `MutationObserver`, a worker, a debug
+   * overlay appended next to the canvas.
+   *
+   * Runs once per Application, as the final construction step: every core
+   * manager and every materialised binding already exists, and dependencies
+   * listed in {@link Extension.dependencies} are installed first.
+   *
+   * Return an {@link ExtensionDisposer} to undo it. The Application holds the
+   * disposers of everything it installed and runs them in reverse installation
+   * order — during {@link Application.destroy}, or, if a later construction
+   * step throws, during that constructor's rollback. Return nothing when there
+   * is nothing to undo. A disposer that throws is reported and the remaining
+   * ones still run.
+   *
+   * An extension's lifetime is its Application's lifetime: there is no
+   * uninstall at runtime, and no scene-level scope — extensions equip an
+   * application, not a scene.
+   *
+   * `install` throwing aborts construction, and whatever it had already done
+   * before throwing is its own to undo: the disposer it never returned cannot
+   * be run for it.
+   */
+  install?(app: Application): ExtensionDisposer | void;
 }

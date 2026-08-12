@@ -13,7 +13,7 @@ describe('ExtensionSnapshot', () => {
     expect(EMPTY_SNAPSHOT.extensions).toHaveLength(0);
     expect(EMPTY_SNAPSHOT.renderers).toHaveLength(0);
     expect(EMPTY_SNAPSHOT.assets).toHaveLength(0);
-    expect(EMPTY_SNAPSHOT.systems).toHaveLength(0);
+    expect(EMPTY_SNAPSHOT.serializers).toHaveLength(0);
   });
 
   it('buildSnapshot flattens renderer bindings from multiple extensions', () => {
@@ -41,24 +41,6 @@ describe('ExtensionSnapshot', () => {
     };
     const snapshot = buildSnapshot([extA, extB]);
     expect(snapshot.assets).toHaveLength(2);
-  });
-
-  it('buildSnapshot flattens system bindings from multiple extensions', () => {
-    const binding1 = { create: () => undefined };
-    const binding2 = { create: () => undefined };
-    const extA: Extension = { id: 'a', systems: [binding1] };
-    const extB: Extension = { id: 'b', systems: [binding2] };
-    const snapshot = buildSnapshot([extA, extB]);
-    expect(snapshot.systems).toHaveLength(2);
-    expect(snapshot.systems[0]).toBe(binding1);
-    expect(snapshot.systems[1]).toBe(binding2);
-  });
-
-  it('buildSnapshot freezes system bindings', () => {
-    const binding = { create: () => undefined };
-    const ext: Extension = { id: 'frozen-systems', systems: [binding] };
-    buildSnapshot([ext]);
-    expect(Object.isFrozen(binding)).toBe(true);
   });
 
   it('buildSnapshot de-duplicates same id + same object (no-op)', () => {
