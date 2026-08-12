@@ -96,6 +96,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
   private _stencilLoadOp: GPULoadOp = 'load';
   private _stencilRef = 0;
   private _active: WebGpuActiveRenderPass | null = null;
+  private _passHasDraws = false;
 
   public constructor(backend: WebGpuPassBackend) {
     this._backend = backend;
@@ -116,6 +117,35 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
   /** The open GPU pass, or `null` when none is open. @internal */
   public get activePass(): WebGpuActiveRenderPass | null {
     return this._active;
+  }
+
+  /**
+   * Whether the open pass holds draws recorded by anyone — this renderer or
+   * another one. The pass survives a renderer switch, so a renderer's own
+   * cursors no longer answer "would mutating a resource now retroactively
+   * change a draw already in this pass": the draw may belong to a renderer that
+   * flushed earlier into the same pass.
+   *
+   * The contract deliberately stops at a boolean. Guards against a *shared*
+   * resource being mutated under recorded draws (the transform storage buffer,
+   * managed texture content) need only "does this pass hold any draw" — never
+   * "whose". Every "is it mine" question is answered locally, by comparing
+   * against {@link activePass} by identity.
+   * @internal
+   */
+  public get passHasDraws(): boolean {
+    return this._passHasDraws;
+  }
+
+  /**
+   * Record that a draw was encoded into the open pass. Called by every renderer
+   * at the site that bumps `stats.drawCalls`. A no-op with no pass open.
+   * @internal
+   */
+  public markPassDraws(): void {
+    if (this._active !== null) {
+      this._passHasDraws = true;
+    }
   }
 
   /**
@@ -158,6 +188,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     const encoder = backend.device.createCommandEncoder({ label: 'pass-coordinator:command-encoder' });
     const pass = encoder.beginRenderPass(descriptor);
 
+    this._passHasDraws = false;
     backend.stats.renderPasses++;
 
     const scissor = backend.getScissorRect();
@@ -185,6 +216,25 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     return this._active;
   }
 
+  /**
+   * Drop the open pass WITHOUT ending or submitting it. For teardown paths only,
+   * where the recorded draws must not reach the queue at all: backend destroy,
+   * and device-loss teardown, where the encoder belongs to the dead device.
+   *
+   * Leaving `_active` set is the failure this exists to prevent. The coordinator
+   * instance outlives a device-loss recovery, and {@link acquirePass}
+   * short-circuits on an already-open pass — so a pass left open across the
+   * teardown would be handed back to the RESTORED device, which would then
+   * record every later frame into the dead device's encoder, silently and for
+   * the rest of the session. Operations on a lost device do not throw, so
+   * nothing would surface the breakage.
+   * @internal
+   */
+  public discardPass(): void {
+    this._active = null;
+    this._passHasDraws = false;
+  }
+
   /** End and submit the active GPU pass, if any. Idempotent. */
   public endPass(): void {
     const active = this._active;
@@ -194,6 +244,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     }
 
     this._active = null;
+    this._passHasDraws = false;
     active.pass.end();
     this._backend.submit(active.encoder.finish());
   }
@@ -258,6 +309,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
 
     const active = this.acquirePass();
     this._stencil.draw(active.pass, active.targetFormat, true, shape, transform, active.view);
+    this.markPassDraws();
     this.endPass();
 
     this._stencilWriteInProgress = false;
@@ -288,6 +340,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
 
     const active = this.acquirePass();
     this._stencil.draw(active.pass, active.targetFormat, false, entry.shape, entry.transform, active.view);
+    this.markPassDraws();
     this.endPass();
 
     this._stencilWriteInProgress = false;

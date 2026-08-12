@@ -582,9 +582,24 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     const stencil = backend._passCoordinator.stencilActive;
     const frameBindGroup = this._getFrameBindGroup(device);
 
+    const coordinator = backend._passCoordinator;
+
+    // The pass survives a renderer switch, so it can still hold another
+    // renderer's draws. Resolving an atlas bind group below syncs a dirty glyph
+    // page on the queue timeline, ahead of the deferred submit, which would
+    // retroactively change a recorded draw sampling that same atlas.
+    if (coordinator.passHasDraws) {
+      for (const batch of batches) {
+        if (backend._textureUploadWouldMutate(batch.atlasTexture)) {
+          coordinator.endPass();
+          break;
+        }
+      }
+    }
+
     // The coordinator owns the GPU pass (load/clear resolution, pass count and
     // scissor are applied there) and ends + submits it below.
-    const pass = backend._passCoordinator.acquirePass().pass;
+    const pass = coordinator.acquirePass().pass;
 
     pass.setVertexBuffer(0, this._vertexBuffer);
     pass.setIndexBuffer(this._indexBuffer!, 'uint16');
@@ -603,11 +618,12 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
         lastTexture = batch.atlasTexture;
       }
       pass.drawIndexed(batch.indexCount, 1, batch.firstIndex, 0, 0);
+      coordinator.markPassDraws();
       backend.stats.batches++;
       backend.stats.drawCalls++;
     }
 
-    backend._passCoordinator.endPass();
+    coordinator.endPass();
 
     this._resetFrameState();
   }
@@ -1217,6 +1233,15 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     // page — see `_tryRecordRetainedBatch`'s `[batch.atlasTexture]`), never a
     // `RenderTexture`; the payload's shared type is wider only because other
     // renderers can target one.
+    // Same-frame atlas-mutation guard: syncing a dirty glyph page below lands on
+    // the queue timeline ahead of the deferred submit, retroactively changing
+    // draws already recorded into the open pass — from any renderer, since the
+    // pass survives a renderer switch.
+    if (coordinator.passHasDraws && backend._textureUploadWouldMutate(payload.textures[0]!)) {
+      coordinator.endPass();
+      state.drawsInPass = null;
+    }
+
     const textureBindGroup = this._getTexBindGroup(device, backend, payload.textures[0]! as Texture);
     const frameBindGroup = this._getTextReplayBindGroup(state, device);
     const indexBuffer = this._ensureRetainedQuadIndexBuffer(device, data.quadCount);
@@ -1232,6 +1257,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     pass.drawIndexed(data.quadCount * 6, 1, 0, 0, 0);
 
     state.drawsInPass = active;
+    coordinator.markPassDraws();
     backend.stats.batches++;
     backend.stats.drawCalls++;
   }

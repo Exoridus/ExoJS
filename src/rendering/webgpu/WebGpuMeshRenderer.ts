@@ -394,6 +394,11 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   // pass object on every acquire, so a pass ended by anyone else (a target
   // switch, a stencil clip, another renderer) is distinguished automatically.
   private _instancedBatchPass: WebGpuActiveRenderPass | null = null;
+  // The open pass this renderer has actually RECORDED draws into — set only
+  // after a draw is encoded, by both the immediate-batch path and `flush()`.
+  // `_instancedBatchPass` alone cannot answer that: it is set when the cursors
+  // are bound to a pass, which happens before anything is recorded.
+  private _ownDrawsPass: WebGpuActiveRenderPass | null = null;
   private _instancedBatchUniformSlots = 0;
   private readonly _instancedBatchUniformBuffersInPass = new Set<GPUBuffer>();
   private _instancedNodeIndexBuffer: GPUBuffer | null = null;
@@ -539,6 +544,12 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
     this._syncInstancedBatchPass(active);
 
+    // Two predicates, deliberately different. `ownDraws` gates the hazards
+    // against buffers only THIS renderer binds; `passHasDraws` gates the two
+    // shared ones (transform storage, managed texture content), because the
+    // pass survives a renderer switch and the draw at risk may be a sprite's.
+    const ownDraws = this._ownDrawsPass === active;
+
     // Sized for everything this pass has taken SO FAR plus this batch, captured
     // before the guard below may reset the cursors. Sizing to the single batch
     // that remains after a reopen would peg both buffers at one batch forever:
@@ -552,17 +563,16 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // Every reallocation below frees a buffer an earlier draw in this pass still
     // references, and every write below lands ahead of the whole submit; both
     // are answered by ending (submitting) the pass and reopening with fresh
-    // slices. With no earlier draw of ours in the pass there is nothing to
-    // protect, so the common single-batch case never splits.
+    // slices. With no earlier draw in the pass there is nothing to protect, so
+    // the common single-batch case never splits.
     if (
-      this._instancedNodeIndexFrameBytes > 0 &&
-      (geometryWouldRewrite ||
-        backend._textureUploadWouldMutate(texture) ||
-        backend._transformStorageWouldGrow(maxNodeIndex + 1) ||
-        this._instancedNodeIndexWouldGrow(targetNodeIndexBytes) ||
-        this._instancedUniformWouldGrow(targetUniformSlots) ||
-        (attributeBytes > 0 && !this._instancedAttributeArena.fits(attributeBytes)) ||
-        (uniformPlan !== null && this._instancedBatchUniformWriteWouldAlias(uniformPlan)))
+      (coordinator.passHasDraws && (backend._textureUploadWouldMutate(texture) || backend._transformStorageWouldGrow(maxNodeIndex + 1))) ||
+      (ownDraws &&
+        (geometryWouldRewrite ||
+          this._instancedNodeIndexWouldGrow(targetNodeIndexBytes) ||
+          this._instancedUniformWouldGrow(targetUniformSlots) ||
+          (attributeBytes > 0 && !this._instancedAttributeArena.fits(attributeBytes)) ||
+          (uniformPlan !== null && this._instancedBatchUniformWriteWouldAlias(uniformPlan))))
     ) {
       active = this._reopenInstancedBatchPass(backend);
     }
@@ -620,6 +630,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     pass.setIndexBuffer(staticGeometry.indexBuffer, 'uint16');
     pass.drawIndexed(staticGeometry.indexCount, count);
 
+    this._ownDrawsPass = active;
+    coordinator.markPassDraws();
     backend.stats.batches++;
     backend.stats.drawCalls++;
   }
@@ -646,6 +658,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   /** Drop the pass association so the next sync restarts every cursor. */
   private _resetInstancedBatchPass(): void {
     this._instancedBatchPass = null;
+    this._ownDrawsPass = null;
     this._instancedNodeIndexFrameBytes = 0;
     this._instancedBatchUniformSlots = 0;
     this._instancedBatchUniformBuffersInPass.clear();
@@ -704,13 +717,18 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       return;
     }
 
+    const coordinator = backend._passCoordinator;
+
     // Phases 2-4 below rewrite the shared vertex/index/uniform and instanced
-    // node-index buffers from offset 0, and may reallocate them. Immediate
-    // `drawInstancedBatch` draws left in the open pass still read those exact
-    // buffers, and `queue.writeBuffer` lands ahead of the whole submit — so end
-    // (submit) that pass before touching anything.
-    if (this._instancedBatchPass !== null && this._instancedBatchPass === backend._passCoordinator.activePass) {
-      backend._passCoordinator.endPass();
+    // node-index buffers from offset 0, and may reallocate them. Draws of OURS
+    // left in the open pass — from `drawInstancedBatch` or from an earlier
+    // flush — still read those exact buffers, and `queue.writeBuffer` lands
+    // ahead of the whole submit, so end (submit) that pass before touching
+    // anything. Another renderer's draws in the pass are not at risk here: none
+    // of these buffers is shared, and the pass now survives a renderer switch
+    // precisely so they can stay.
+    if (this._ownDrawsPass !== null && this._ownDrawsPass === coordinator.activePass) {
+      coordinator.endPass();
     }
 
     this._resetInstancedBatchPass();
@@ -868,11 +886,23 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       device.queue.writeBuffer(this._uniformBuffer!, 0, defaultUniformData, 0, defaultUniformBytes);
     }
 
+    // Any draw still in the open pass at this point belongs to ANOTHER renderer
+    // (ours were submitted above). The loop below resolves textures and the
+    // shared transform storage — both can mutate a resource that draw already
+    // reads, and both land on the queue timeline ahead of the deferred submit.
+    // Checking costs two walks over the draw calls, so it only runs when there
+    // is something to protect: a mesh-only frame skips it entirely.
+    if (coordinator.passHasDraws && (this._flushWouldMutateTexture(backend) || backend._transformStorageWouldGrow(this._maxInstancedNodeIndex() + 1))) {
+      coordinator.endPass();
+    }
+
     // Phase 5: single render pass with one drawIndexed per mesh, switching
     // pipeline+bind groups between default and custom paths as needed. The
     // coordinator owns the GPU pass (load/clear resolution, pass count and
-    // scissor are applied there) and ends + submits it below.
-    const pass = backend._passCoordinator.acquirePass().pass;
+    // scissor are applied there); it stays OPEN afterwards so a following
+    // sprite/text flush merges into the same submit.
+    const active = coordinator.acquirePass();
+    const pass = active.pass;
 
     const renderTargetFormat = backend.renderTargetFormat;
     // A clip scope flushes the active renderer on push/pop, so every draw call
@@ -1029,6 +1059,14 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
         const cursor = customDrawCursors.get(dc.customShader) ?? 0;
         pass.setBindGroup(0, resources.meshUniformBindGroup, [cursor * meshUniformAlignment]);
 
+        // This draw reads the material's user-uniform buffer for as long as the
+        // pass stays open — which it now does past the end of this flush. A
+        // later `drawInstancedBatch` with the same material consults exactly
+        // this set before writing that buffer.
+        if (resources.userUniformBuffer !== null) {
+          this._instancedBatchUniformBuffersInPass.add(resources.userUniformBuffer);
+        }
+
         if (dc.texture !== lastTexture) {
           lastTexture = dc.texture;
           pass.setBindGroup(1, this._getOrCreateMeshTextureBindGroup(resources, backend, dc.texture));
@@ -1047,8 +1085,17 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       backend.stats.drawCalls++;
     }
 
-    backend._passCoordinator.endPass();
-    this._resetInstancedBatchPass();
+    // The pass stays open. Its cursors carry the flush's own consumption
+    // forward so a following `drawInstancedBatch` in the same pass appends
+    // AFTER these draws' slices instead of overwriting the bytes they read:
+    // `_instancedNodeIndexFrameBytes` was advanced per batch by
+    // `_uploadInstancedNodeIndices`, and `instancedDrawCursor` is the number of
+    // instanced-uniform slots taken.
+    this._instancedBatchPass = active;
+    this._ownDrawsPass = active;
+    this._instancedBatchUniformSlots = instancedDrawCursor;
+    this._instancedAttributeArena.syncPass(active);
+    coordinator.markPassDraws();
 
     this._resetFrame();
   }
@@ -1392,6 +1439,50 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     return length;
   }
 
+  /**
+   * Highest transform-storage slot the instanced batches of this flush will
+   * reference, or `-1` when none does. Walks the same batching decision the
+   * draw loop makes, so the answer matches the `getTransformStorageBuffer`
+   * calls it will issue; the default and custom paths bake their transforms
+   * into vertices and touch no slot at all.
+   */
+  private _maxInstancedNodeIndex(): number {
+    let max = -1;
+
+    for (let i = 0; i < this._drawCallCount; i++) {
+      const batchLength = this._getStaticBatchLength(i);
+
+      if (batchLength < 2) {
+        continue;
+      }
+
+      for (let j = 0; j < batchLength; j++) {
+        // batchLength is bounded so i + j stays < _drawCallCount, and a static
+        // batch candidate always carries a command.
+        const nodeIndex = this._drawCalls[i + j]!.command!.nodeIndex >>> 0;
+
+        if (nodeIndex > max) {
+          max = nodeIndex;
+        }
+      }
+
+      i += batchLength - 1;
+    }
+
+    return max;
+  }
+
+  /** Whether any texture this flush binds would be re-uploaded or resized when synced. */
+  private _flushWouldMutateTexture(backend: WebGpuBackend): boolean {
+    for (let i = 0; i < this._drawCallCount; i++) {
+      if (backend._textureUploadWouldMutate(this._drawCalls[i]!.texture)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   private _isStaticBatchCandidate(drawCall: MeshDrawCall): boolean {
     const command = drawCall.command;
 
@@ -1715,9 +1806,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // may re-upload mutated content on the queue timeline before the deferred
     // submit, retroactively changing draws already in the open pass. End it
     // first so those draws keep their pre-mutation content.
-    let activePass = coordinator.activePass;
-
-    if (activePass !== null && state.drawsInPass === activePass && backend._textureUploadWouldMutate(texture)) {
+    if (coordinator.passHasDraws && backend._textureUploadWouldMutate(texture)) {
       coordinator.endPass();
       state.drawsInPass = null;
     }
@@ -1728,7 +1817,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     const view = backend.view;
 
     if (state.uboView !== view || state.uboViewUpdateId !== view.updateId) {
-      activePass = coordinator.activePass;
+      const activePass = coordinator.activePass;
 
       if (activePass !== null && state.drawsInPass === activePass) {
         coordinator.endPass();
@@ -1764,6 +1853,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     pass.drawIndexed(geometry.indexCount, payload.instanceCount);
 
     state.drawsInPass = active;
+    coordinator.markPassDraws();
     backend.stats.batches++;
     backend.stats.drawCalls++;
   }

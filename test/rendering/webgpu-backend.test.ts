@@ -2343,6 +2343,84 @@ describe('WebGpuBackend', () => {
     }
   });
 
+  test('destroy drops an open render pass instead of leaving it on the coordinator', async () => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const app = {
+        canvas: environment.canvas,
+        options: {
+          canvas: { width: 128, height: 128 },
+          clearColor: Color.black,
+        },
+      } as unknown as Application;
+      const manager = new WebGpuBackend(app);
+
+      installCoreAndParticleRenderers(manager);
+
+      await manager.initialize();
+
+      // A renderer switch no longer ends the pass, so destroy() can be reached
+      // with one open — which used to be impossible, because switching to a
+      // null renderer ended it.
+      manager._passCoordinator.acquirePass();
+
+      expect(manager._passCoordinator.hasActivePass).toBe(true);
+
+      manager.destroy();
+
+      expect(manager._passCoordinator.hasActivePass).toBe(false);
+    } finally {
+      environment.restore();
+    }
+  });
+
+  test('device-loss teardown drops the open pass so the restored device does not inherit it', async () => {
+    const environment = createMockWebGpuEnvironment();
+    let manager: WebGpuBackend | null = null;
+
+    try {
+      const app = {
+        canvas: environment.canvas,
+        options: {
+          canvas: { width: 128, height: 128 },
+          clearColor: Color.black,
+        },
+      } as unknown as Application;
+
+      manager = new WebGpuBackend(app);
+      installCoreAndParticleRenderers(manager);
+
+      await manager.initialize();
+
+      const restored = vi.fn();
+
+      manager.onDeviceRestored.add(restored);
+
+      const deadPass = manager._passCoordinator.acquirePass();
+
+      environment.simulateDeviceLost({ message: 'gpu removed' });
+      await Promise.resolve();
+
+      await vi.waitFor(
+        () => {
+          expect(restored).toHaveBeenCalledTimes(1);
+        },
+        { timeout: 5000, interval: 25 },
+      );
+
+      // The coordinator survives recovery and acquirePass short-circuits on an
+      // already-open pass. Inheriting the dead device's pass would record every
+      // later frame into an encoder that can never be submitted — silently,
+      // since operations on a lost device do not throw.
+      expect(manager._passCoordinator.hasActivePass).toBe(false);
+      expect(manager._passCoordinator.acquirePass()).not.toBe(deadPass);
+    } finally {
+      manager?.destroy();
+      environment.restore();
+    }
+  });
+
   test('exhausting all device-recovery attempts reports an aggregated error instead of failing silently', async () => {
     const environment = createMockWebGpuEnvironment();
 

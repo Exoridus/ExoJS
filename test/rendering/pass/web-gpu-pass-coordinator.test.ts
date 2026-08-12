@@ -297,6 +297,84 @@ describe('WebGpuPassCoordinator', () => {
     }
   });
 
+  test('passHasDraws tracks recorded draws for the lifetime of one pass', () => {
+    const root = new RenderTarget(64, 64, true);
+    const { backend } = createMockBackend(root);
+    const coordinator = new WebGpuPassCoordinator(backend);
+
+    try {
+      // No pass open: marking is a no-op rather than staging state for the pass
+      // that happens to open next.
+      coordinator.markPassDraws();
+      expect(coordinator.passHasDraws).toBe(false);
+
+      coordinator.acquirePass();
+      expect(coordinator.passHasDraws).toBe(false);
+
+      coordinator.markPassDraws();
+      expect(coordinator.passHasDraws).toBe(true);
+
+      // Ending clears it, and the next pass starts empty — this is what lets a
+      // renderer read "does the open pass hold anyone's draws" without knowing
+      // which renderer split it.
+      coordinator.endPass();
+      expect(coordinator.passHasDraws).toBe(false);
+
+      coordinator.acquirePass();
+      expect(coordinator.passHasDraws).toBe(false);
+    } finally {
+      coordinator.endPass();
+      root.destroy();
+    }
+  });
+
+  test('discardPass drops the open pass without ending or submitting it', () => {
+    const root = new RenderTarget(64, 64, true);
+    const { backend, passEncoder, submit } = createMockBackend(root);
+    const coordinator = new WebGpuPassCoordinator(backend);
+
+    try {
+      coordinator.acquirePass();
+      coordinator.markPassDraws();
+
+      coordinator.discardPass();
+
+      // Teardown semantics: the recorded draws must not reach the queue at all,
+      // which is what separates this from endPass().
+      expect(passEncoder.end).not.toHaveBeenCalled();
+      expect(submit).not.toHaveBeenCalled();
+      expect(coordinator.hasActivePass).toBe(false);
+      expect(coordinator.passHasDraws).toBe(false);
+
+      // Idempotent, and a later acquire opens a genuinely fresh pass.
+      coordinator.discardPass();
+      expect(coordinator.acquirePass()).not.toBeNull();
+    } finally {
+      coordinator.endPass();
+      root.destroy();
+    }
+  });
+
+  test('passHasDraws survives a redundant acquire of the already-open pass', () => {
+    const root = new RenderTarget(64, 64, true);
+    const { backend } = createMockBackend(root);
+    const coordinator = new WebGpuPassCoordinator(backend);
+
+    try {
+      coordinator.acquirePass();
+      coordinator.markPassDraws();
+
+      // acquirePass is idempotent; it must not reset the flag, or the very next
+      // renderer to open the pass would think it is empty and skip its guards.
+      coordinator.acquirePass();
+
+      expect(coordinator.passHasDraws).toBe(true);
+    } finally {
+      coordinator.endPass();
+      root.destroy();
+    }
+  });
+
   test('acquirePass applies the active scissor rect when non-empty', () => {
     const root = new RenderTarget(64, 64, true);
     const scissorRect = { x: 1, y: 2, width: 8, height: 4 };

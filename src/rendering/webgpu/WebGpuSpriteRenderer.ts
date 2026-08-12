@@ -351,9 +351,6 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   private _writtenViewUpdateId = -1;
   private _hasWrittenProjection = false;
   private readonly _stagedGroupData = new Float32Array(16);
-  // The open pass replayed retained batches were last recorded into — feeds
-  // the "does the open pass already hold draws?" checks alongside the arena.
-  private _lastReplayPass: WebGpuActiveRenderPass | null = null;
 
   private _device: GPUDevice | null = null;
   private _shaderModule: GPUShaderModule | null = null;
@@ -528,7 +525,6 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     this._writtenView = null;
     this._writtenViewUpdateId = -1;
     this._hasWrittenProjection = false;
-    this._lastReplayPass = null;
     this._uniformBuffer = null;
     this._pipelineLayout = null;
     this._customBaseTextureLayout = null;
@@ -722,7 +718,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
       // Open the coordinator's pass (idempotent — consecutive flushes reuse it)
       // and reserve a fresh slice of the instance arena for this batch.
-      let active = backend._passCoordinator.acquirePass();
+      const coordinator = backend._passCoordinator;
+      let active = coordinator.acquirePass();
 
       this._instanceArena.syncPass(active);
       this._syncUniformHazardPass(active);
@@ -738,14 +735,17 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       // deferred submit, retroactively changing draws already recorded into this
       // open pass. End (submit) the pass first so those draws capture the
       // pre-mutation content, then reopen and re-upload into the fresh slice.
-      if (this._instanceArena.cursor > 0 && this._batchWouldMutateTexture(backend)) {
+      // The texture cache is shared, so the endangered draw need not be one of
+      // ours — the pass survives a renderer switch. Same for the storage guard
+      // below; both ask the coordinator, not this renderer's own cursor.
+      if (coordinator.passHasDraws && this._batchWouldMutateTexture(backend)) {
         active = this._reopenPass(backend);
       }
 
       // Resolving the transform storage may reallocate (and free) its GPU buffer;
       // earlier batches in this open pass still reference the old one, so end the
       // pass first when it already holds batches, then reopen with a fresh slice.
-      if (this._instanceArena.cursor > 0 && backend._transformStorageWouldGrow(needCount)) {
+      if (coordinator.passHasDraws && backend._transformStorageWouldGrow(needCount)) {
         active = this._reopenPass(backend);
       }
 
@@ -802,6 +802,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
         this._uniformBuffersInPass.add(customResources!.userUniformBuffer!);
       }
 
+      coordinator.markPassDraws();
       backend.stats.batches++;
       backend.stats.drawCalls++;
     } else if (backend.clearRequested) {
@@ -1062,17 +1063,16 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     }
 
     const coordinator = backend._passCoordinator;
-    let activePass = coordinator.activePass;
-    const passHasDraws =
-      activePass !== null && ((this._instanceArena.cursor > 0 && this._instanceArena.tracksPass(activePass)) || this._lastReplayPass === activePass);
 
     // Same-frame texture mutation guard: resolving the bindings below
     // re-uploads mutated content on the queue timeline BEFORE the deferred
     // submit, which would retroactively change draws already recorded into
     // the open pass. End (submit) the pass first so they keep the
     // pre-mutation content — the `_batchWouldMutateTexture` hazard, applied
-    // to the recorded texture list.
-    if (passHasDraws) {
+    // to the recorded texture list. The texture cache is shared and the pass
+    // survives a renderer switch, so any recorded draw is at risk, not just
+    // one of ours.
+    if (coordinator.passHasDraws) {
       for (const texture of payload.textures) {
         if (backend._textureUploadWouldMutate(texture)) {
           coordinator.endPass();
@@ -1109,7 +1109,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     }
 
     if (uboDirty) {
-      activePass = coordinator.activePass;
+      const activePass = coordinator.activePass;
 
       if (activePass !== null && bundle.drawsInPass === activePass) {
         // Rewriting the UBO would retroactively re-project this bundle's
@@ -1138,7 +1138,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     pass.drawIndexed(indicesPerSprite, payload.instanceCount, 0, 0, 0);
 
     bundle.drawsInPass = active;
-    this._lastReplayPass = active;
+    coordinator.markPassDraws();
     backend.stats.batches++;
     backend.stats.drawCalls++;
   }

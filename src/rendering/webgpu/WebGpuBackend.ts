@@ -423,7 +423,7 @@ export class WebGpuBackend implements RenderBackend {
       // mirroring the renderers' flush-time `wouldGrow` guard (which runs too
       // late here — `reserve` frees the buffer before any renderer flushes).
       if (this._passCoordinatorInstance?.hasActivePass === true && storage.wouldGrow(reserveCount)) {
-        this._flushActiveRenderer();
+        this._flushActiveRendererAndEndPass();
       }
 
       storage.reserve(this._device, reserveCount, this._accountant);
@@ -493,7 +493,7 @@ export class WebGpuBackend implements RenderBackend {
     // top-level render() calls. Top-level plans (depth back to 0) keep their rows
     // so cross-call batching survives to the frame-end flush.
     if (this._drawPlanDepth > 0) {
-      this._flushActiveRenderer();
+      this._flushActiveRendererAndEndPass();
       this._getTransformStorage().buffer.rewindTo(planBase, planHash);
     }
 
@@ -579,7 +579,7 @@ export class WebGpuBackend implements RenderBackend {
       this._poisonActiveRetainedCaptures();
     }
 
-    this._flushActiveRenderer();
+    this._flushActiveRendererAndEndPass();
     this._stats.renderPasses++;
     pass.execute(this);
 
@@ -599,7 +599,7 @@ export class WebGpuBackend implements RenderBackend {
     assertLiveRenderTarget(nextRenderTarget);
 
     if (this._renderTarget !== nextRenderTarget) {
-      this._flushActiveRenderer();
+      this._flushActiveRendererAndEndPass();
 
       if (this._renderTarget !== this._rootRenderTarget) {
         this._unsubscribeRenderTarget(this._renderTarget);
@@ -617,7 +617,7 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   public pushScissorRect(bounds: Rectangle): this {
-    this._flushActiveRenderer();
+    this._flushActiveRendererAndEndPass();
 
     this._clipBoundsStack.push(bounds.clone());
 
@@ -651,7 +651,7 @@ export class WebGpuBackend implements RenderBackend {
       this._poisonActiveRetainedCaptures();
     }
 
-    this._flushActiveRenderer();
+    this._flushActiveRendererAndEndPass();
     this._setActiveRenderer(null);
 
     if (!this._maskCompositorConnected) {
@@ -677,7 +677,7 @@ export class WebGpuBackend implements RenderBackend {
       this._poisonActiveRetainedCaptures();
     }
 
-    this._flushActiveRenderer();
+    this._flushActiveRendererAndEndPass();
     this._setActiveRenderer(null);
 
     if (!this._backdropBlendCompositorConnected) {
@@ -715,7 +715,7 @@ export class WebGpuBackend implements RenderBackend {
       return this;
     }
 
-    this._flushActiveRenderer();
+    this._flushActiveRendererAndEndPass();
 
     const removedClip = this._clipBoundsStack.pop();
 
@@ -737,7 +737,7 @@ export class WebGpuBackend implements RenderBackend {
     // per-target depth/stencil attachment across the clip scope's passes and
     // draws the shape silhouette into the stencil aspect. Content renderers
     // select stencil-enabled pipeline variants while the clip is in effect.
-    this._flushActiveRenderer();
+    this._flushActiveRendererAndEndPass();
     this._setActiveRenderer(null);
     this._passCoordinator.pushStencilClip(shape, transform);
 
@@ -749,7 +749,7 @@ export class WebGpuBackend implements RenderBackend {
       return this;
     }
 
-    this._flushActiveRenderer();
+    this._flushActiveRendererAndEndPass();
     this._setActiveRenderer(null);
     this._passCoordinator.popStencilClip();
 
@@ -803,7 +803,7 @@ export class WebGpuBackend implements RenderBackend {
     // flush forced one draw call per render() call (each render() re-applies the
     // same camera view), defeating cross-call batching.
     if (this._renderTarget.view !== view) {
-      this._flushActiveRenderer();
+      this._flushActiveRendererAndEndPass();
     }
     this._renderTarget.setView(view);
 
@@ -825,7 +825,7 @@ export class WebGpuBackend implements RenderBackend {
     // The open pass is always the currently bound target, so this is precisely
     // the target the clear applies to.
     if (this._passCoordinatorInstance?.hasActivePass === true) {
-      this._flushActiveRenderer();
+      this._flushActiveRendererAndEndPass();
     }
 
     this._clearRequested = true;
@@ -846,7 +846,7 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     if (this._renderer) {
-      this._flushActiveRenderer();
+      this._flushActiveRendererAndEndPass();
     } else if (this._clearRequested) {
       // No active renderer but a clear is pending: open an empty coordinator
       // pass so createColorAttachment consumes the clear state once.
@@ -864,6 +864,11 @@ export class WebGpuBackend implements RenderBackend {
     this.onDeviceRestored.destroy();
     this.onRenderError.destroy();
     this._setActiveRenderer(null);
+    // A renderer switch no longer ends the pass, so `_setActiveRenderer(null)`
+    // can leave one open here. Drop it rather than submit it: the teardown below
+    // destroys the very buffers those draws bind, and the frame's pixels have
+    // nowhere left to go.
+    this._passCoordinatorInstance?.discardPass();
     this.rendererRegistry.destroy();
     this._destroyManagedTextures();
     this._renderTexturePool.destroy();
@@ -1087,21 +1092,33 @@ export class WebGpuBackend implements RenderBackend {
     return rect;
   }
 
+  /**
+   * Hand the draw stream to `renderer`, draining the outgoing one first. The
+   * GPU pass is NOT ended: a renderer switch is a batching boundary, not a
+   * submit boundary, so a mixed sprite/mesh scene records both renderers' draws
+   * into one pass instead of paying a pass plus a `queue.submit` per
+   * alternation. What the pass end used to buy — every renderer's hazard guards
+   * only ever seeing its own draws — is replaced by
+   * `WebGpuPassCoordinator.passHasDraws`, which the guards against SHARED
+   * resources (transform storage growth, managed texture re-upload) consult
+   * instead of their own cursors.
+   */
   private _setActiveRenderer(renderer: Renderer | null): void {
     if (this._renderer !== renderer) {
-      this._flushActiveRenderer();
+      this._renderer?.flush();
       this._renderer = renderer;
     }
   }
 
-  private _flushActiveRenderer(): void {
+  private _flushActiveRendererAndEndPass(): void {
     this._renderer?.flush();
     // Ending the active GPU pass — and thus `queue.submit` — is centralized here
-    // so it happens only at genuine boundaries (renderer switch, render-target /
-    // view / scissor / stencil change, compositor, execute, plan / frame end),
-    // NOT once per batch flush. Instanced renderers record consecutive batch
-    // flushes into the same open pass (via WebGpuInstanceArena) and no longer end
-    // it themselves, collapsing thousands of per-draw submits into one per frame.
+    // so it happens only at genuine boundaries (render-target / view / scissor /
+    // stencil change, compositor, execute, plan / frame end), NOT once per batch
+    // flush and not on a renderer switch. Instanced renderers record consecutive
+    // batch flushes into the same open pass (via WebGpuInstanceArena) and no
+    // longer end it themselves, collapsing thousands of per-draw submits into
+    // one per frame.
     this._passCoordinatorInstance?.endPass();
   }
 
@@ -1849,6 +1866,13 @@ export class WebGpuBackend implements RenderBackend {
     // groups tied to the dead device. They reconnect during _initialize().
     this.rendererRegistry.disconnect();
 
+    // Whatever those flushes recorded — and anything a renderer switch left
+    // open before the loss — belongs to the dead device. The coordinator
+    // survives recovery and `acquirePass` short-circuits on an open pass, so a
+    // pass left set here would be handed to the RESTORED device and every later
+    // frame would record into the dead encoder. Drop it, never submit it.
+    this._passCoordinatorInstance?.discardPass();
+
     if (this._maskCompositorConnected) {
       this._maskCompositor.disconnect();
       this._maskCompositorConnected = false;
@@ -2457,7 +2481,7 @@ export class WebGpuBackend implements RenderBackend {
       // code destroys a texture mid-frame between two same-frame render() calls;
       // never called from within a renderer flush, so this is not reentrant.
       if (this._passCoordinatorInstance?.hasActivePass === true) {
-        this._flushActiveRenderer();
+        this._flushActiveRendererAndEndPass();
       }
 
       state.texture.destroy();

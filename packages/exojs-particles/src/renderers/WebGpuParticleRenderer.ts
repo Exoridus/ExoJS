@@ -231,7 +231,17 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
 
       const mode = system.renderMode;
       const resources = this._getOrCreateResources(mode, device);
-      const pipeline = this._getPipeline(resources, drawCall.blendMode, backend.renderTargetFormat, backend._passCoordinator.stencilActive);
+      const coordinator = backend._passCoordinator;
+
+      // The pass survives a renderer switch, so it can still hold another
+      // renderer's draws. Resolving the texture binding below syncs dirty
+      // content on the queue timeline, ahead of the deferred submit, which
+      // would retroactively change a recorded draw sampling that same texture.
+      if (coordinator.passHasDraws && backend._textureUploadWouldMutate(drawCall.texture)) {
+        coordinator.endPass();
+      }
+
+      const pipeline = this._getPipeline(resources, drawCall.blendMode, backend.renderTargetFormat, coordinator.stencilActive);
       const textureBinding = backend.getTextureBinding(drawCall.texture);
       const textureBindGroup = device.createBindGroup({
         layout: this._textureBindGroupLayout!,
@@ -275,7 +285,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
       // One coordinator-owned pass per drawcall: each system's writeBuffers
       // target offset 0, so the pass must be submitted before the next system
       // overwrites those buffers. acquirePass/endPass preserve that 1:1 ratio.
-      const pass = backend._passCoordinator.acquirePass().pass;
+      const pass = coordinator.acquirePass().pass;
 
       pass.setBindGroup(0, uniformBindGroup);
       pass.setPipeline(pipeline);
@@ -298,10 +308,11 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
         pass.draw(resources.instanced ? resources.indexCount : drawCount, instanceCount, 0, 0);
       }
 
+      coordinator.markPassDraws();
       backend.stats.batches++;
       backend.stats.drawCalls++;
 
-      backend._passCoordinator.endPass();
+      coordinator.endPass();
     }
 
     this._drawCallCount = 0;
