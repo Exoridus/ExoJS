@@ -434,6 +434,15 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
   flush. Each flush now appends at pass-scoped cursors and adds the base at bind
   time, so the whole frame collapses to a single pass again. A capacity growth
   and a projection rewrite remain real pass boundaries.
+- **WebGPU tile chunks cost one render pass per frame, not one per flush.** The
+  tile-chunk renderer rewrote its shared instance buffer from offset 0 and ended
+  (submitted) the render pass at the tail of every flush, so a frame that broke
+  the tile batch N times — a tileset change, a blend-mode change, an interleaved
+  actor — paid N render passes and N `queue.submit` calls. Each flush now appends
+  at a pass-scoped cursor and binds its own sub-range, so those flushes merge
+  into one pass and one submit. The pass still ends where it must: a capacity
+  growth, a projection rewrite, and the shared transform-storage / texture-upload
+  hazards.
 - **`Container` caches its paint order and child-index lookups.**
   `InteractionManager` re-sorted every container's children on every single
   hit-test call, and `getChildIndex()` did a linear `indexOf` scan on every
