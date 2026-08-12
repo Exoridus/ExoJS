@@ -175,6 +175,14 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 // shader receives mesh transforms via the auto-bound u_mesh uniform block.
 const vertexStrideBytes = 20;
 const wordsPerVertex = vertexStrideBytes / 4;
+/**
+ * Byte size of `indexCount` uint16 indices, rounded up to 4. `GPUQueue.writeBuffer`
+ * rejects byte counts and offsets that are not a multiple of 4, so index sub-ranges
+ * within the shared buffer are laid out on 4-byte boundaries — which also satisfies
+ * `setIndexBuffer`'s weaker 2-byte offset requirement.
+ */
+const alignIndexBytes = (indexCount: number): number => (indexCount * Uint16Array.BYTES_PER_ELEMENT + 3) & ~3;
+
 const tintByteLength = 32; // vec4 tint + vec4 flags (only flags.x used)
 const transformUniformByteLength = 128; // mat3x3<f32> projection (48B) + mat3x3<f32> group (48B) + vec4<f32> flags (16B) + vec4<f32> snap viewport (16B)
 
@@ -414,6 +422,14 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   // wrote at (for the draw + retained record).
   private _instancedNodeIndexFrameBytes = 0;
   private _instancedNodeIndexByteOffset = 0;
+  // Pass-scoped write cursors into the shared default-path buffers, in the same
+  // scope and for the same reason as the node-index cursor above: consecutive
+  // `flush()` calls now record into ONE open pass and ONE submit, so a flush
+  // that rewrote these from offset 0 would have the earlier flush's draws read
+  // the later flush's bytes. Reset together with the pass association.
+  private _defaultVertexPassBytes = 0;
+  private _defaultIndexPassBytes = 0;
+  private _defaultUniformPassSlots = 0;
   private _instancedTransformBindGroup: GPUBindGroup | null = null;
   private _instancedTransformStorageBuffer: GPUBuffer | null = null;
   private _instancedTintStorageBuffer: GPUBuffer | null = null;
@@ -650,6 +666,9 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     this._instancedBatchPass = active;
     this._instancedNodeIndexFrameBytes = 0;
     this._instancedBatchUniformSlots = 0;
+    this._defaultVertexPassBytes = 0;
+    this._defaultIndexPassBytes = 0;
+    this._defaultUniformPassSlots = 0;
     this._instancedBatchUniformBuffersInPass.clear();
     this._instancedAttributeArena.resetPass();
     this._instancedAttributeArena.syncPass(active);
@@ -661,6 +680,9 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     this._ownDrawsPass = null;
     this._instancedNodeIndexFrameBytes = 0;
     this._instancedBatchUniformSlots = 0;
+    this._defaultVertexPassBytes = 0;
+    this._defaultIndexPassBytes = 0;
+    this._defaultUniformPassSlots = 0;
     this._instancedBatchUniformBuffersInPass.clear();
     this._instancedAttributeArena.resetPass();
   }
@@ -719,22 +741,11 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
     const coordinator = backend._passCoordinator;
 
-    // Phases 2-4 below rewrite the shared vertex/index/uniform and instanced
-    // node-index buffers from offset 0, and may reallocate them. Draws of OURS
-    // left in the open pass — from `drawInstancedBatch` or from an earlier
-    // flush — still read those exact buffers, and `queue.writeBuffer` lands
-    // ahead of the whole submit, so end (submit) that pass before touching
-    // anything. Another renderer's draws in the pass are not at risk here: none
-    // of these buffers is shared, and the pass now survives a renderer switch
-    // precisely so they can stay.
-    if (this._ownDrawsPass !== null && this._ownDrawsPass === coordinator.activePass) {
-      coordinator.endPass();
-    }
-
-    this._resetInstancedBatchPass();
-
-    // Phase 1: compute layout offsets (default vs. custom paths use separate
-    // buffers, so default offsets are independent of custom offsets).
+    // Phase 1: compute layout offsets RELATIVE TO THIS FLUSH (default vs. custom
+    // paths use separate buffers, so default offsets are independent of custom
+    // offsets). The pass base offsets resolved below are added at bind time, so
+    // the CPU staging arrays stay flush-local and only the GPU buffers carry the
+    // whole pass.
     let defaultVertices = 0;
     let defaultIndices = 0;
     const customVertexCursors = new Map<Material, number>(); // running vertex count per material
@@ -758,21 +769,69 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       }
     }
 
-    // Phase 2: ensure capacities for the totals (default path).
-    this._ensureVertexCapacity(defaultVertices);
-    this._ensureIndexCapacity(defaultIndices);
-
     // Default-path uniform buffer holds (tint vec4 + flags vec4) per draw call;
     // each custom-shader resource manages its own.
-    const defaultDrawCalls = this._drawCallCount - this._totalCustomDraws();
-    this._ensureUniformCapacity(defaultDrawCalls);
-    this._ensureInstancedUniformCapacity(this._drawCallCount);
-    // Every instanced batch in this flush gets a distinct node-index sub-range;
-    // size the buffer to the flush total upfront (an upper bound — not every
-    // draw is instanced) so no mid-loop realloc invalidates a written range. The
-    // cursor is already 0: the guard above ended any pass holding immediate
-    // batches, which resets it.
-    this._ensureInstancedNodeIndexCapacity(this._drawCallCount);
+    const customDraws = this._totalCustomDraws();
+    const defaultDrawCalls = this._drawCallCount - customDraws;
+    const defaultVertexBytes = defaultVertices * vertexStrideBytes;
+    const defaultIndexBytes = alignIndexBytes(defaultIndices);
+    // Upper bounds: not every draw call becomes an instanced batch, and each
+    // instanced batch takes one uniform slot plus one node index per instance.
+    const nodeIndexBytes = this._drawCallCount * Uint32Array.BYTES_PER_ELEMENT;
+
+    // Phases 3-4 below write into the shared vertex/index/uniform and instanced
+    // node-index buffers, and may reallocate them. Draws of OURS left in the
+    // open pass — from `drawInstancedBatch` or from an earlier flush — still
+    // read those exact buffers, and `queue.writeBuffer` lands ahead of the whole
+    // submit, so this flush must APPEND at the pass cursors rather than rewrite
+    // from offset 0. Ending the pass is the fallback for the two cases appending
+    // cannot cover: a reallocation (which frees the buffer those draws read),
+    // and a custom-material draw (whose per-material buffers are still rewritten
+    // from 0, see phase 3b). Another renderer's draws in the pass are not at
+    // risk here: none of these buffers is shared, and the pass now survives a
+    // renderer switch precisely so they can stay.
+    const ownDrawsInPass = this._ownDrawsPass !== null && this._ownDrawsPass === coordinator.activePass;
+    // Sized for everything this pass has taken SO FAR plus this flush, captured
+    // BEFORE the guard below may reset the cursors — and used to size the buffers
+    // even when it does split. Sizing to the lone flush that remains after a
+    // split would peg every buffer at one flush forever: the guard would split,
+    // the split would shrink the requirement back, the capacity would never
+    // ratchet, and every flush would open its own pass. (Same failure mode, and
+    // the same fix, as the immediate batch path's target sizing.)
+    const targetVertexBytes = this._defaultVertexPassBytes + defaultVertexBytes;
+    const targetIndexBytes = this._defaultIndexPassBytes + defaultIndexBytes;
+    const targetUniformSlots = this._defaultUniformPassSlots + defaultDrawCalls;
+    const targetNodeIndexBytes = this._instancedNodeIndexFrameBytes + nodeIndexBytes;
+    const targetInstancedUniformSlots = this._instancedBatchUniformSlots + this._drawCallCount;
+
+    if (
+      ownDrawsInPass &&
+      (customDraws > 0 ||
+        this._flushAppendWouldGrow(targetVertexBytes, targetIndexBytes, targetUniformSlots, targetNodeIndexBytes, targetInstancedUniformSlots))
+    ) {
+      coordinator.endPass();
+      this._resetInstancedBatchPass();
+    } else if (!ownDrawsInPass) {
+      // No draws of ours are held by the open pass (it was ended by a boundary,
+      // or never opened), so every cursor restarts.
+      this._resetInstancedBatchPass();
+    }
+
+    const vertexBase = this._defaultVertexPassBytes;
+    const indexBase = this._defaultIndexPassBytes;
+    const uniformSlotBase = this._defaultUniformPassSlots;
+    const instancedUniformSlotBase = this._instancedBatchUniformSlots;
+
+    // Phase 2: ensure capacities for the pass totals (default path). The staging
+    // arrays are sized to this flush; the GPU buffers to the pre-split targets.
+    this._ensureVertexCapacity(defaultVertices, targetVertexBytes);
+    this._ensureIndexCapacity(defaultIndices, targetIndexBytes);
+    this._ensureUniformCapacity(targetUniformSlots);
+    this._ensureInstancedUniformCapacity(targetInstancedUniformSlots);
+    // Every instanced batch in this pass gets a distinct node-index sub-range;
+    // size the buffer to the pass total upfront so no mid-loop realloc
+    // invalidates a written range.
+    this._ensureInstancedNodeIndexCapacity(this._drawCallCount, targetNodeIndexBytes);
 
     // Phase 3: pack default-path vertex/index/uniform data.
     const defaultUniformBytes = defaultDrawCalls * this._uniformAlignment;
@@ -871,27 +930,27 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       this._uploadUserUniforms(material, resources);
     }
 
-    // Phase 4: single writeBuffer per resource for the default path.
+    // Phase 4: single writeBuffer per resource for the default path, at this
+    // flush's sub-range within the pass.
     if (defaultVertices > 0) {
-      device.queue.writeBuffer(this._vertexBuffer!, 0, this._vertexData, 0, defaultVertices * vertexStrideBytes);
-      device.queue.writeBuffer(
-        this._indexBuffer!,
-        0,
-        this._packedIndexData.buffer,
-        this._packedIndexData.byteOffset,
-        (defaultIndices * Uint16Array.BYTES_PER_ELEMENT + 3) & ~3,
-      );
+      device.queue.writeBuffer(this._vertexBuffer!, vertexBase, this._vertexData, 0, defaultVertexBytes);
+      device.queue.writeBuffer(this._indexBuffer!, indexBase, this._packedIndexData.buffer, this._packedIndexData.byteOffset, defaultIndexBytes);
     }
     if (defaultUniformData !== null) {
-      device.queue.writeBuffer(this._uniformBuffer!, 0, defaultUniformData, 0, defaultUniformBytes);
+      device.queue.writeBuffer(this._uniformBuffer!, uniformSlotBase * this._uniformAlignment, defaultUniformData, 0, defaultUniformBytes);
     }
 
-    // Any draw still in the open pass at this point belongs to ANOTHER renderer
-    // (ours were submitted above). The loop below resolves textures and the
-    // shared transform storage — both can mutate a resource that draw already
-    // reads, and both land on the queue timeline ahead of the deferred submit.
-    // Checking costs two walks over the draw calls, so it only runs when there
-    // is something to protect: a mesh-only frame skips it entirely.
+    // Any draw still in the open pass at this point may belong to ANOTHER
+    // renderer, or to an earlier flush of ours that this one appended after. The
+    // loop below resolves textures and the shared transform storage — both can
+    // mutate a resource such a draw already reads, and both land on the queue
+    // timeline ahead of the deferred submit. Checking costs two walks over the
+    // draw calls, so it only runs when there is something to protect.
+    //
+    // Ending the pass here does NOT rewind the cursors: this flush's bytes are
+    // already written at base offsets, and its draws (recorded below into the
+    // freshly opened pass) still read them there. Rewinding would let a later
+    // append overwrite bytes those draws read.
     if (coordinator.passHasDraws && (this._flushWouldMutateTexture(backend) || backend._transformStorageWouldGrow(this._maxInstancedNodeIndex() + 1))) {
       coordinator.endPass();
     }
@@ -942,9 +1001,11 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
           const nodeIndexByteOffset = this._instancedNodeIndexByteOffset;
           const storage = backend.getTransformStorageBuffer(maxNodeIndex + 1);
 
-          this._writeInstancedUniformSlot(instancedDrawCursor, backend, dc.premultiplySample);
+          const instancedUniformSlot = instancedUniformSlotBase + instancedDrawCursor;
+
+          this._writeInstancedUniformSlot(instancedUniformSlot, backend, dc.premultiplySample);
           pass.setBindGroup(0, this._getOrCreateInstancedTransformBindGroup(storage.buffer, storage.tintBuffer), [
-            instancedDrawCursor * this._uniformAlignment,
+            instancedUniformSlot * this._uniformAlignment,
           ]);
 
           if (dc.texture !== lastTexture) {
@@ -1015,15 +1076,15 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
           lastTexture = null;
         }
 
-        pass.setBindGroup(0, this._uniformBindGroup, [defaultDrawCursor * this._uniformAlignment]);
+        pass.setBindGroup(0, this._uniformBindGroup, [(uniformSlotBase + defaultDrawCursor) * this._uniformAlignment]);
 
         if (dc.texture !== lastTexture) {
           lastTexture = dc.texture;
           pass.setBindGroup(1, this._getTextureBindGroup(backend, dc.texture));
         }
 
-        pass.setVertexBuffer(0, this._vertexBuffer, dc.vertexByteOffset);
-        pass.setIndexBuffer(this._indexBuffer!, 'uint16', dc.indexByteOffset);
+        pass.setVertexBuffer(0, this._vertexBuffer, vertexBase + dc.vertexByteOffset);
+        pass.setIndexBuffer(this._indexBuffer!, 'uint16', indexBase + dc.indexByteOffset);
         pass.drawIndexed(dc.indexCount);
 
         defaultDrawCursor++;
@@ -1086,14 +1147,17 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     }
 
     // The pass stays open. Its cursors carry the flush's own consumption
-    // forward so a following `drawInstancedBatch` in the same pass appends
-    // AFTER these draws' slices instead of overwriting the bytes they read:
-    // `_instancedNodeIndexFrameBytes` was advanced per batch by
-    // `_uploadInstancedNodeIndices`, and `instancedDrawCursor` is the number of
-    // instanced-uniform slots taken.
+    // forward so a following `drawInstancedBatch` OR flush in the same pass
+    // appends AFTER these draws' slices instead of overwriting the bytes they
+    // read. `_instancedNodeIndexFrameBytes` was advanced per batch by
+    // `_uploadInstancedNodeIndices`; the rest is this flush's base plus what it
+    // consumed.
     this._instancedBatchPass = active;
     this._ownDrawsPass = active;
-    this._instancedBatchUniformSlots = instancedDrawCursor;
+    this._instancedBatchUniformSlots = instancedUniformSlotBase + instancedDrawCursor;
+    this._defaultVertexPassBytes = vertexBase + defaultVertexBytes;
+    this._defaultIndexPassBytes = indexBase + defaultIndexBytes;
+    this._defaultUniformPassSlots = uniformSlotBase + defaultDrawCalls;
     this._instancedAttributeArena.syncPass(active);
     coordinator.markPassDraws();
 
@@ -1672,6 +1736,23 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     return requiredBytes > this._instancedNodeIndexBufferCapacity;
   }
 
+  /**
+   * Whether sizing the shared buffers to the pass totals a flush would reach by
+   * appending reallocates any of them. Reallocation destroys the buffer the draws
+   * already recorded into the open pass read, so the caller must end that pass
+   * (which zeroes the cursors) instead of appending. All arguments are pass
+   * totals, not this flush's deltas.
+   */
+  private _flushAppendWouldGrow(vertexBytes: number, indexBytes: number, uniformSlots: number, nodeIndexBytes: number, instancedUniformSlots: number): boolean {
+    return (
+      vertexBytes > this._vertexBufferCapacity ||
+      indexBytes > this._indexBufferCapacity ||
+      uniformSlots * this._uniformAlignment > this._uniformBufferCapacity ||
+      this._instancedNodeIndexWouldGrow(nodeIndexBytes) ||
+      this._instancedUniformWouldGrow(instancedUniformSlots)
+    );
+  }
+
   /** Whether sizing the instanced uniform buffer to `slots` would free the current one. */
   private _instancedUniformWouldGrow(slots: number): boolean {
     return slots * this._uniformAlignment > this._instancedUniformBufferCapacity;
@@ -2152,11 +2233,17 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     entry.version = entry.geometry.version;
   }
 
-  private _ensureVertexCapacity(vertexCount: number): void {
-    const requiredBytes = vertexCount * vertexStrideBytes;
+  /**
+   * Size the CPU staging buffer for `vertexCount` vertices and the GPU buffer for
+   * `requiredBytes`. The two differ once a flush appends into a pass an earlier
+   * flush already drew into: staging only holds this flush's vertices, while the
+   * buffer must also keep the sub-range those earlier draws still read.
+   */
+  private _ensureVertexCapacity(vertexCount: number, requiredBytes = vertexCount * vertexStrideBytes): void {
+    const stagingBytes = vertexCount * vertexStrideBytes;
 
-    if (requiredBytes > this._vertexData.byteLength) {
-      const byteLength = Math.max(requiredBytes, this._vertexData.byteLength === 0 ? vertexStrideBytes : this._vertexData.byteLength * 2);
+    if (stagingBytes > this._vertexData.byteLength) {
+      const byteLength = Math.max(stagingBytes, this._vertexData.byteLength === 0 ? vertexStrideBytes : this._vertexData.byteLength * 2);
       this._vertexData = new ArrayBuffer(byteLength);
       this._float32View = new Float32Array(this._vertexData);
       this._uint32View = new Uint32Array(this._vertexData);
@@ -2173,15 +2260,16 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     }
   }
 
-  private _ensureIndexCapacity(indexCount: number): void {
+  /** Staging/GPU split as in {@link _ensureVertexCapacity}. */
+  private _ensureIndexCapacity(indexCount: number, requiredBytes = alignIndexBytes(indexCount)): void {
     // GPUQueue.writeBuffer requires the byte count to be a multiple of 4.
     // Round up: odd Uint16 counts (e.g. a 3-index triangle) would otherwise
     // produce 6-byte writes which the WebGPU validation layer rejects.
-    const requiredBytes = (indexCount * Uint16Array.BYTES_PER_ELEMENT + 3) & ~3;
+    const stagingBytes = alignIndexBytes(indexCount);
 
-    if (this._packedIndexData.length * Uint16Array.BYTES_PER_ELEMENT < requiredBytes) {
+    if (this._packedIndexData.length * Uint16Array.BYTES_PER_ELEMENT < stagingBytes) {
       this._packedIndexData = new Uint16Array(
-        Math.max(requiredBytes / Uint16Array.BYTES_PER_ELEMENT, this._packedIndexData.length === 0 ? 2 : this._packedIndexData.length * 2),
+        Math.max(stagingBytes / Uint16Array.BYTES_PER_ELEMENT, this._packedIndexData.length === 0 ? 2 : this._packedIndexData.length * 2),
       );
     }
 
@@ -2196,12 +2284,12 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     }
   }
 
-  private _ensureUniformCapacity(drawCallCount: number): void {
-    if (drawCallCount === 0) {
+  private _ensureUniformCapacity(slotCount: number): void {
+    if (slotCount === 0) {
       return;
     }
 
-    const requiredBytes = drawCallCount * this._uniformAlignment;
+    const requiredBytes = slotCount * this._uniformAlignment;
 
     if (requiredBytes > this._uniformBufferCapacity) {
       this._uniformBuffer?.destroy();
