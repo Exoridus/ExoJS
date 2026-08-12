@@ -676,8 +676,76 @@ const runBaselineCell = async (cell: CellSpec): Promise<CellResult> => {
   return runCell(adapter, cell, canvas);
 };
 
+/**
+ * Split-phase entry points used ONLY by the CPU-profiling mode
+ * (`driver.ts::profileCell`). `runCell` is unusable for profiling because a
+ * single `page.evaluate` covers engine init, scene construction, warmup, the
+ * timed frames AND teardown — a profile taken across it is dominated by
+ * one-shot setup cost and says nothing about the per-frame path. Splitting the
+ * cell into `setup` / `frames` / `dispose` lets the Node driver start the CDP
+ * sampler between setup and frames, so the captured profile contains the frame
+ * loop and nothing else.
+ *
+ * Frames run SYNCHRONOUSLY here (a straight loop, no `requestAnimationFrame`)
+ * on purpose: rAF pacing would inject idle time between frames and dilute the
+ * sample density over exactly the code under study. This makes the phase
+ * unsuitable for wall-clock reporting — it is never used for one — but ideal
+ * for attributing self time.
+ */
+const profileState: { adapter: EngineAdapter | null; frame: number } = { adapter: null, frame: 0 };
+
+const profileSetup = async (cell: CellSpec, warmupFrames: number): Promise<void> => {
+  const archetype = ARCHETYPES.find(candidate => candidate.id === cell.archetype);
+
+  if (archetype === undefined) {
+    throw new Error(`Unknown archetype '${cell.archetype}'.`);
+  }
+
+  const canvas = freshStageCanvas();
+  const adapter = await resolveAdapter(cell.engine, cell.config);
+
+  await adapter.init(canvas, cell.backend);
+  adapter.buildScene(archetype, cell.nodeCount, SEED);
+
+  for (let frame = 0; frame < warmupFrames; frame++) {
+    adapter.mutate(frame);
+    adapter.renderFrame();
+  }
+
+  profileState.adapter = adapter;
+  profileState.frame = warmupFrames;
+};
+
+const profileFrames = (count: number): number => {
+  const adapter = profileState.adapter;
+
+  if (adapter === null) {
+    throw new Error('__profileFrames was called before __profileSetup.');
+  }
+
+  const startedAt = performance.now();
+
+  for (let i = 0; i < count; i++) {
+    adapter.mutate(profileState.frame++);
+    adapter.renderFrame();
+  }
+
+  return performance.now() - startedAt;
+};
+
+const profileDispose = (): void => {
+  profileState.adapter?.teardown();
+  profileState.adapter = null;
+};
+
 declare global {
   var __runBaselineCell: ((cell: CellSpec) => Promise<CellResult>) | undefined;
+  var __profileSetup: ((cell: CellSpec, warmupFrames: number) => Promise<void>) | undefined;
+  var __profileFrames: ((count: number) => number) | undefined;
+  var __profileDispose: (() => void) | undefined;
 }
 
 globalThis.__runBaselineCell = runBaselineCell;
+globalThis.__profileSetup = profileSetup;
+globalThis.__profileFrames = profileFrames;
+globalThis.__profileDispose = profileDispose;

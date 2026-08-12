@@ -69,6 +69,61 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   // wall-clock comparison — a competitor arm renders it as an ordinary
   // single-view static-heavy scene instead.
   { id: 'split-screen', nodeCounts: SCALING_COUNTS, nestingDepth: 4, textureCount: 1, mutationFraction: 0, cullingEnabled: false, viewCount: 4 },
+  // State-churn archetypes. `batch-breaking` already covers ONE batch-breaking
+  // axis (texture-slot exhaustion); these two cover the other two axes a real
+  // mixed scene hits — blend mode, and (ExoJS-only) custom material — because
+  // both engines' sprite batchers treat them as hard flush boundaries:
+  //   - ExoJS WebGL2: `WebGl2SpriteRenderer._renderDefault` flushes on
+  //     `blendModeChanged`; `_renderCustom` flushes on material OR base-texture
+  //     change (WebGl2SpriteRenderer.ts:507-564).
+  //   - Pixi 8: `Batcher.add` starts a new batch when `blendMode` differs from
+  //     the current batch's.
+  //
+  // `blendRunLength: 64` (not 1) is deliberate: alternating blend modes per
+  // sprite would flush per sprite on any batcher and would measure nothing but
+  // flush overhead. A 64-leaf plateau produces a realistic "a few hundred state
+  // switches per frame" scene whose draw-call count the report records, so the
+  // measured CPU cost can be read per batch rather than per node.
+  { id: 'mixed-blend', nodeCounts: GPU_BOUND_COUNTS, nestingDepth: 2, textureCount: 4, mutationFraction: 0, cullingEnabled: false, blendModeCount: 4, blendRunLength: 64 },
+  // Identical to `mixed-blend` in every field EXCEPT `materialCount`, so the
+  // delta between the two rows on the ExoJS arm is exactly the custom-material
+  // path's cost. NOT a cross-arm comparison: the Pixi arm cannot express
+  // per-sprite custom shaders and renders this as plain `mixed-blend` (see
+  // `ArchetypeSpec.materialCount`).
+  {
+    id: 'mixed-material',
+    nodeCounts: GPU_BOUND_COUNTS,
+    nestingDepth: 2,
+    textureCount: 4,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    blendModeCount: 4,
+    blendRunLength: 64,
+    materialCount: 4,
+    materialRunLength: 64,
+  },
+  // ATLAS CONTROLS. Each is byte-for-byte its partner archetype with
+  // `textureCount: 1` — i.e. exactly the scene a runtime texture-atlas packer
+  // would produce if it merged that partner's N distinct base textures into a
+  // single atlas page and rewrote every sprite's UV frame. Nothing else about
+  // the scene changes (node count, nesting, blend plateaus, materials), so the
+  // measured delta `partner - atlased` IS the upper bound on what a runtime
+  // atlas packer could buy on this hardware, with no modelling or estimation in
+  // between. `textureCount: 1` is the ideal case (zero packing waste, one page,
+  // no per-frame repack cost), so the delta is an upper bound, never a forecast.
+  { id: 'batch-breaking-atlased', nodeCounts: GPU_BOUND_COUNTS, nestingDepth: 2, textureCount: 1, mutationFraction: 0, cullingEnabled: false },
+  {
+    id: 'mixed-material-atlased',
+    nodeCounts: GPU_BOUND_COUNTS,
+    nestingDepth: 2,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    blendModeCount: 4,
+    blendRunLength: 64,
+    materialCount: 4,
+    materialRunLength: 64,
+  },
 ];
 
 /**

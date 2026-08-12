@@ -4,8 +4,8 @@ import { resolve } from 'node:path';
 // graph — the `@codexo/exojs-physics` source arm — is loaded lazily via a
 // dynamic `import()` inside `runPhysicsDomain`, so a rendering run never pays for it.
 import type { PhysicsAdapter, PhysicsCellResult, PhysicsCellSpec } from './physics';
-import type { ArchetypeId, Backend, CellResult, CellSpec } from './rendering';
-import { runMatrix, writeReport } from './rendering';
+import type { ArchetypeId, Backend, CellResult, CellSpec, MatrixSelection } from './rendering';
+import { profileCell, runMatrix, writeReport } from './rendering';
 import { parseArgs } from './shared/args';
 import { createCheckpointWriter } from './shared/checkpoint';
 
@@ -22,6 +22,20 @@ const DEFAULT_PHYSICS_OUT_DIR = '.workspace/output/physics/';
 /** Backends run when `--backend` is not given. `buildMatrix` gates each to the adapters that support it. */
 const DEFAULT_BACKENDS: readonly Backend[] = ['webgl2', 'webgpu'];
 
+/** Split a comma-separated CLI list into trimmed, non-empty values, or `undefined` when the flag was absent. */
+const parseList = (raw: string | undefined): string[] | undefined => {
+  if (raw === undefined) {
+    return undefined;
+  }
+
+  const values = raw
+    .split(',')
+    .map(value => value.trim())
+    .filter(value => value.length > 0);
+
+  return values.length > 0 ? values : undefined;
+};
+
 /** Parse and validate the `--domain` selector (defaults to `rendering`). */
 const resolveDomain = (raw: string | undefined): Domain => {
   if (raw === undefined) {
@@ -33,6 +47,65 @@ const resolveDomain = (raw: string | undefined): Domain => {
   }
 
   throw new Error(`--domain must be one of [${DOMAINS.join(', ')}] (got '${raw}').`);
+};
+
+/**
+ * `--profile` mode: run the SELECTED cells under the V8 CPU sampler and print
+ * self time by source file and by function, instead of measuring wall clock.
+ *
+ * This answers a different question than the matrix does. The matrix says how
+ * expensive a frame is; the profile says WHICH code made it expensive, which is
+ * the only way to tell an optimisation candidate that would move a real number
+ * from one that would not. Output is deliberately printed rather than written
+ * into `results.*`: a profile is not a comparable datapoint and must never end
+ * up in the same table as one.
+ */
+const runProfileMode = async (
+  args: Map<string, string>,
+  selection: { engines?: string[]; configs?: string[]; archetypes?: ArchetypeId[]; nodeCounts?: number[] },
+  backends: readonly Backend[],
+): Promise<void> => {
+  const frames = Number.parseInt(args.get('profile-frames') ?? '200', 10);
+  const topRows = Number.parseInt(args.get('profile-top') ?? '25', 10);
+  const engines = selection.engines ?? ['exojs'];
+  const configs = selection.configs ?? ['current'];
+  const archetypes = selection.archetypes ?? (['static-heavy'] as ArchetypeId[]);
+  const nodeCounts = selection.nodeCounts ?? [25_000];
+
+  for (const backend of backends) {
+    for (const engine of engines) {
+      for (const config of configs) {
+        for (const archetype of archetypes) {
+          for (const nodeCount of nodeCounts) {
+            const outcome = await profileCell({
+              spec: { engine, config, backend, archetype, nodeCount, timedFrames: frames, warmupFrames: 30 },
+              frames,
+            });
+
+            console.log(
+              `\n=== CPU profile: engine=${engine} config=${config} backend=${backend} archetype=${archetype} n=${nodeCount} ===\n` +
+                `  ${outcome.frames} synchronous frames in ${outcome.wallMs.toFixed(1)}ms wall (${(outcome.wallMs / outcome.frames).toFixed(3)}ms/frame), ` +
+                `${outcome.totalSelfMs.toFixed(1)}ms attributed self time; adapter="${outcome.provenance.adapter}"`,
+            );
+
+            console.log('\n  -- self time by FILE --');
+
+            for (const file of outcome.byFile.slice(0, topRows)) {
+              console.log(`    ${file.selfPercent.toFixed(1).padStart(5)}%  ${(file.selfMs / outcome.frames).toFixed(4).padStart(9)} ms/frame  ${file.source}`);
+            }
+
+            console.log('\n  -- self time by FUNCTION --');
+
+            for (const row of outcome.rows.slice(0, topRows)) {
+              console.log(
+                `    ${row.selfPercent.toFixed(1).padStart(5)}%  ${(row.selfMs / outcome.frames).toFixed(4).padStart(9)} ms/frame  ${row.functionName || '(anonymous)'}  @ ${row.source}`,
+              );
+            }
+          }
+        }
+      }
+    }
+  }
 };
 
 /** Run the rendering benchmark domain end-to-end and write its report artifacts. */
@@ -51,23 +124,32 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
   // Partial<CellSpec> it accepts).
   const filter: { -readonly [K in keyof CellSpec]?: CellSpec[K] } = {};
 
-  if (archetypeArg !== undefined) {
-    filter.archetype = archetypeArg as ArchetypeId;
-  }
-
-  if (engineArg !== undefined) {
-    filter.engine = engineArg;
-  }
-
-  if (nodesArg !== undefined) {
-    const nodeCount = Number.parseInt(nodesArg, 10);
+  // `--archetype`, `--engine`, `--config` and `--nodes` each accept a
+  // COMMA-SEPARATED list. A single value behaves exactly as before; a list
+  // routes through `MatrixSelection` so one invocation — and therefore ONE
+  // browser session per arm — can cover several archetypes/arms at once. Before
+  // this, comparing two archetypes meant two process launches, i.e. two
+  // sessions, which the same-session rule forbids for a cross-arm claim.
+  const archetypes = parseList(archetypeArg) as ArchetypeId[] | undefined;
+  const engines = parseList(engineArg);
+  const configs = parseList(args.get('config'));
+  const nodeCounts = parseList(nodesArg)?.map(value => {
+    const nodeCount = Number.parseInt(value, 10);
 
     if (Number.isNaN(nodeCount)) {
-      throw new Error(`--nodes must be an integer (got '${nodesArg}').`);
+      throw new Error(`--nodes must be an integer or a comma-separated list of integers (got '${nodesArg}').`);
     }
 
-    filter.nodeCount = nodeCount;
-  }
+    return nodeCount;
+  });
+
+  const selection: MatrixSelection = {
+    ...(engines !== undefined && { engines }),
+    ...(configs !== undefined && { configs }),
+    ...(archetypes !== undefined && { archetypes }),
+    ...(nodeCounts !== undefined && { nodeCounts }),
+  };
+  const hasSelection = Object.keys(selection).length > 0;
 
   // `--frames` overrides EVERY cell's
   // timed-frame count regardless of node count, so a smoke/spot-check run can
@@ -89,14 +171,29 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
     timedFramesOverride = frames;
   }
 
-  const isSubset = backendArg !== undefined || archetypeArg !== undefined || nodesArg !== undefined || engineArg !== undefined || timedFramesOverride !== undefined;
+  if (args.get('profile') !== undefined) {
+    await runProfileMode(
+      args,
+      {
+        ...(engines !== undefined && { engines }),
+        ...(configs !== undefined && { configs }),
+        ...(archetypes !== undefined && { archetypes }),
+        ...(nodeCounts !== undefined && { nodeCounts }),
+      },
+      backends,
+    );
+
+    return;
+  }
+
+  const isSubset = backendArg !== undefined || hasSelection || timedFramesOverride !== undefined;
 
   if (isSubset) {
     console.warn('SUBSET RUN — not a reportable comparison (see the same-session rule).');
   }
 
   console.log(
-    `Running rendering benchmark: backends=[${backends.join(', ')}]${engineArg ? `, engine=${engineArg}` : ''}${archetypeArg ? `, archetype=${archetypeArg}` : ''}${nodesArg ? `, nodes=${nodesArg}` : ''}${timedFramesOverride !== undefined ? `, frames=${timedFramesOverride} (OVERRIDE — thin sampling, not reportable)` : ''}`,
+    `Running rendering benchmark: backends=[${backends.join(', ')}]${engines ? `, engine=[${engines.join(', ')}]` : ''}${configs ? `, config=[${configs.join(', ')}]` : ''}${archetypes ? `, archetype=[${archetypes.join(', ')}]` : ''}${nodeCounts ? `, nodes=[${nodeCounts.join(', ')}]` : ''}${timedFramesOverride !== undefined ? `, frames=${timedFramesOverride} (OVERRIDE — thin sampling, not reportable)` : ''}`,
   );
 
   // Incremental, crash-safe checkpoint: each cell is persisted the instant it
@@ -106,7 +203,8 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
 
   const data = await runMatrix({
     backends,
-    ...(isSubset && { filter }),
+    filter,
+    ...(hasSelection && { selection }),
     ...(timedFramesOverride !== undefined && { timedFramesOverride }),
     onCellResult: result => checkpoint.append(result),
   });

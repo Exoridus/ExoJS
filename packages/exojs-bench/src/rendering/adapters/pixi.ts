@@ -34,6 +34,14 @@ const WOBBLE_AMPLITUDE = 2;
 /** Phase step per frame for the mutation wobble. */
 const WOBBLE_SPEED = 0.15;
 
+/**
+ * Pixi blend-mode names matching, one-to-one and in the same order, the ExoJS
+ * arm's `CYCLED_BLEND_MODES` (Normal / Additive / Multiply / Screen). All four
+ * are fixed-function GPU blend equations on both engines, so a leaf assigned
+ * index `k` costs each arm the same kind of state change.
+ */
+const CYCLED_BLEND_MODES = ['normal', 'add', 'multiply', 'screen'] as const;
+
 /** A pre-selected leaf sprite and its resting grid position — the only nodes `mutate` disturbs. */
 interface MutableLeaf {
   readonly sprite: Sprite;
@@ -179,6 +187,16 @@ export const createPixiAdapter = (): EngineAdapter => {
       // Shared, canonical mutation selection — the SAME helper the ExoJS arm
       // routes through, so both arms select the byte-for-byte identical index set
       // and the harness's cross-arm determinism assertion holds.
+      // Blend-mode plateaus, computed by the SAME formula as the ExoJS arm
+      // (`adapters/exojs.ts`), so both arms hand the identical mode to the
+      // identical leaf index. `spec.materialCount` is deliberately IGNORED here:
+      // Pixi 8 has no per-Sprite custom-shader API, so the `mixed-material`
+      // archetype renders on this arm as plain `mixed-blend` — disclosed in
+      // `ArchetypeSpec.materialCount` and in the report's Methodology, never
+      // presented as a like-for-like row.
+      const blendModeCount = Math.max(1, Math.min(spec.blendModeCount ?? 1, CYCLED_BLEND_MODES.length));
+      const blendRunLength = Math.max(1, spec.blendRunLength ?? 1);
+
       const selectedIndices = selectMutationIndices(nodeCount, spec.mutationFraction, seed);
       const selectedSet = new Set(selectedIndices);
       const leaves: MutableLeaf[] = [];
@@ -190,6 +208,10 @@ export const createPixiAdapter = (): EngineAdapter => {
         const sprite = new Sprite(textures[Math.floor(i / spine.length) % textures.length]!);
 
         sprite.cullable = spec.cullingEnabled;
+
+        if (blendModeCount > 1) {
+          sprite.blendMode = CYCLED_BLEND_MODES[Math.floor(i / blendRunLength) % blendModeCount]!;
+        }
 
         // `overdraw` stacks nodeCount full-viewport quads at the origin (anchor
         // defaults to (0,0)/top-left on both engines) for genuine fill-bound
