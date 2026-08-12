@@ -53,10 +53,10 @@ class UnlockSignal extends Signal {
    * throws unobserved out of the microtask.
    */
   private readonly _pendingReplays = new Set<() => void>();
-  private _destroyed = false;
+  private _disposed = false;
 
   public override add(handler: () => void): this {
-    if (this._destroyed) {
+    if (this._disposed) {
       return this;
     }
 
@@ -84,7 +84,7 @@ class UnlockSignal extends Signal {
   }
 
   public override destroy(): void {
-    this._destroyed = true;
+    this._disposed = true;
     this._pendingReplays.clear();
     super.destroy();
   }
@@ -158,7 +158,13 @@ export class AudioManager {
    * {@link AudioManager.play} for what each asset kind does when played before
    * the gesture.
    */
-  public readonly onUnlock: Signal = new UnlockSignal();
+  public readonly onUnlock: Signal;
+  /**
+   * The same object as {@link AudioManager.onUnlock}, kept at its concrete type
+   * so the internal `_unlock()` edge is reachable without a cast — `onUnlock`
+   * is deliberately published as a plain {@link Signal}.
+   */
+  private readonly _unlockSignal: UnlockSignal;
 
   private readonly _registered = new Map<string, AudioBus>();
   private readonly _spatial = new Set<SpatialVoice>();
@@ -192,6 +198,9 @@ export class AudioManager {
   private readonly _onAudioContextReady = (): void => this._syncLockState();
 
   public constructor() {
+    this._unlockSignal = new UnlockSignal();
+    this.onUnlock = this._unlockSignal;
+
     this.master = new AudioBus('master', { parent: null });
     this.music = new AudioBus('music', { parent: this.master });
     this.sound = new AudioBus('sound', { parent: this.master });
@@ -424,7 +433,7 @@ export class AudioManager {
     }
 
     this._unlockObserved = true;
-    (this.onUnlock as UnlockSignal)._unlock();
+    this._unlockSignal._unlock();
   }
 
   /** Internal: called by Application when visibility changes. */
@@ -505,7 +514,7 @@ export class AudioManager {
     // otherwise stop a live one's buses from ever being set up. Symmetric with
     // `AudioBus.destroy` and `AudioListener.destroy`.
     onAudioContextReady.remove(this._onAudioContextReady);
-    this.onUnlock.destroy();
+    this._unlockSignal.destroy();
 
     const failures: unknown[] = [];
 
