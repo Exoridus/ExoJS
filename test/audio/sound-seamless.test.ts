@@ -36,9 +36,17 @@ describe('Sound seamless surface', () => {
     expect(sound.duration).toBe(0);
   });
 
-  test('clip() throws on an unloaded Sound', () => {
+  test('clip() on an unloaded Sound binds to it and fills in when the payload lands', () => {
     const sound = new Sound(null);
-    expect(() => sound.clip(0, 1)).toThrow(/not.*loaded/i);
+    const clip = sound.clip(0, 1);
+
+    expect(clip.audioBuffer).toBeNull();
+    expect(clip.duration).toBe(0);
+
+    sound._setBuffer(bufferStub(5));
+
+    expect(clip.audioBuffer?.duration).toBe(5);
+    expect(clip.duration).toBe(1);
   });
 
   test('has a reusable LoadState', () => {

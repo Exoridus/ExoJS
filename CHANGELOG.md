@@ -342,6 +342,12 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
 
 ### Removed
 
+- **BREAKING — `Sound.clip()` no longer throws on a not-yet-loaded sound.** It
+  used to require a decoded buffer because it snapshotted one; a clip is now
+  bound to the sound it was cut from and resolves the buffer at playback time,
+  so there is nothing left to require. Code relying on the throw as a
+  load-completion assertion should check `sound.ready` (or `await sound.loaded`)
+  instead.
 - **BREAKING — `Sound._createSpriteVoice` removed.** The `@internal` second
   playback path is gone; `Sound.sprite(name)` replaces it. Playing a sprite
   with a `time` offset at or past its clip end now returns an already-ended
@@ -376,6 +382,14 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
 
 ### Fixed
 
+- **A `Sound.clip()`/`Sound.sprite()` sub-sound now survives eviction and
+  reload.** Both used to snapshot the parent's `AudioBuffer` at creation time,
+  while the asset layer heals a `Sound` **in place** (identity preserved). A
+  clip taken before an evict/reload cycle therefore pinned the evicted buffer in
+  memory — defeating the eviction — and went on playing stale audio afterwards.
+  Sub-sounds are now bound to the sound they were cut from and read its buffer
+  at playback time: they follow it through evict and reload, report its
+  `loadState`/`audioBuffer`, and report `duration: 0` while it has no payload.
 - **`SceneInteraction.suspend()`/`resume()`** now actually detach/reattach
   observed roots and captures (previously no-op stubs) — a retained scene no
   longer keeps receiving pointer dispatch alongside whichever scene is now

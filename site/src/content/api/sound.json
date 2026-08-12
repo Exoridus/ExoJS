@@ -279,7 +279,7 @@
             }
           ],
           "returnType": "Sound",
-          "description": "Return a new Sound that plays only the [offset, offset + duration] sub-range (seconds) of this sound's buffer — an audio atlas / sprite-sheet clip. The clip shares the same decoded AudioBuffer (no extra memory) and inherits this sound's default playback + spatial settings, including its own independent voice pool."
+          "description": "Return a new Sound that plays only the [offset, offset + duration] sub-range (seconds) of this sound — an audio atlas / sprite-sheet clip. The clip does not copy anything: it reads the decoded AudioBuffer from the sound it was cut from at playback time, so it follows that sound through eviction and reload. It inherits this sound's default playback + spatial settings and gets its own independent voice pool. Available before the sound has loaded, and on a clip of a clip (the nested window is capped by the outer one)."
         },
         {
           "name": "defineSprite",
@@ -765,7 +765,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The underlying decoded audio data, or null for a deferred handle whose payload hasn't finished loading yet. Useful for sharing a single decoded buffer across multiple Sound instances."
+          "description": "The underlying decoded audio data, or null for a deferred handle whose payload hasn't finished loading yet. Useful for sharing a single decoded buffer across multiple Sound instances. A Sound.clip / Sound.sprite reports the buffer its root currently holds, so it turns null while the root is evicted and picks the new one up on reload."
         },
         {
           "name": "duration",
@@ -786,7 +786,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Playable duration in seconds — the full buffer, or the clip span for a Sound.clip."
+          "description": "Playable duration in seconds — the full buffer, or the clip span for a Sound.clip / Sound.sprite. 0 while no buffer is loaded."
         },
         {
           "name": "error",
@@ -869,7 +869,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Load lifecycle of this sound. Directly constructed sounds are 'ready'; deferred handles returned by loader.get('theme.ogg') / loader.get(Asset.type('sound', src)) start 'loading' and become 'ready' once the payload fills in, or 'failed' when the load errors."
+          "description": "Load lifecycle of this sound. Directly constructed sounds are 'ready'; deferred handles returned by loader.get('theme.ogg') / loader.get(Asset.type('sound', src)) start 'loading' and become 'ready' once the payload fills in, or 'failed' when the load errors. A Sound.clip / Sound.sprite reports its root's lifecycle — it has no payload of its own to load."
         },
         {
           "name": "poolSize",
