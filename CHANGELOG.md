@@ -204,11 +204,22 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
   sound. The result is memoized per name (one shared voice pool per sprite,
   rather than a fresh pool per call) and discarded when the name is redefined,
   removed, or the sound is destroyed. An undefined name throws.
-- **`AudioManager.onUnlock` replays for late subscribers.** It is the documented
-  home for playback that cannot be deferred past the autoplay gesture, so a
-  scene loaded _after_ the user's first click used to subscribe to a one-shot
-  signal that had already fired and stay silent forever. Subscribing once audio
-  is unlocked now runs the handler on a microtask instead.
+- **`AudioManager.onUnlock` runs every handler exactly once, as soon as audio is
+  usable.** It is the documented home for playback that cannot be deferred past
+  the autoplay gesture, so it now answers the question subscribers are actually
+  asking rather than behaving as a plain one-shot event. Subscribing while audio
+  is already unlocked replays the handler on a microtask — a scene loaded after
+  the user's first click no longer stays silent forever. Subscribing while audio
+  is locked registers it for the next unlock, **including a re-lock** (an iOS
+  audio-session interruption, a bfcache restore), which the previous
+  "has it ever dispatched" test got wrong in both directions: it replayed into a
+  suspended context, and a manager constructed inside that window had a
+  permanently dead `onUnlock` because the global ready signal was already spent.
+  A handler that has already run is never fired again by a later unlock, so
+  looping music started here does not stack a second copy after every
+  interruption. `remove()` cancels a pending handler in either case — including
+  a replay queued but not yet run — and nothing fires once the manager is
+  destroyed.
 
 ### Changed
 
@@ -400,6 +411,27 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
 
 ### Fixed
 
+- **A paused voice is no longer the pool's preferred eviction victim.** A paused
+  `SoundVoice` stays in the pool while its bookkeeping ages against the still
+  running context clock, so `FirstInFirstOut` saw the oldest entry and
+  `LeastRecentlyUsed` the one with the least time left — and picked it. A scene
+  that suspended a looping ambience, then let other code keep triggering the
+  same `Sound`, had that ambience evicted and silently dropped, because
+  `SceneAudio.restore()` passes over a voice that is `ended` rather than
+  `paused`. Victim selection now considers unpaused voices first and falls back
+  to a paused one only when the pool holds nothing else.
+- **Pausing a voice whose source had already played out no longer strands it.**
+  `onended` is an asynchronous task, so a source can be past its window end
+  while the callback is still in flight; `pause()` retires the source and clears
+  that callback, which left the voice permanently `paused` with `ended === false`
+  — holding its pool slot, the manager's voice registry entry and its place in
+  `SceneAudio`'s suspended set, with nothing left that could finish it.
+  `pause()` now ends such a voice instead.
+- **`AudioManager.destroy()` drops its subscription to the global
+  `onAudioContextReady`**, like `AudioBus` and `AudioListener` already did. A
+  handler that throws during that dispatch terminates the dispatch itself, so a
+  destroyed `Application` could otherwise prevent a live one's buses from ever
+  being set up.
 - **Each `Application` now gets its own spatial listener.**
   `AudioContext.listener` belongs to the process-wide `AudioContext`, so two
   `Application`s writing their absolute world position into it every frame

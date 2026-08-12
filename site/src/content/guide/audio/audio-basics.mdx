@@ -79,6 +79,13 @@ declare const music: Sound;
 application.audio.onUnlock.add(() => application.audio.play(music, { loop: true }));
 ```
 
+`onUnlock` runs **every handler exactly once, as soon as audio is usable** — it is a "run this when you can" hook, not a plain one-shot event, so *when* you subscribe does not matter:
+
+- Subscribe while audio is already unlocked and the handler runs right away (on a microtask). A scene loaded mid-session behaves like one loaded at startup.
+- Subscribe while audio is locked and it waits for the next unlock. That includes a **re**-lock: an iOS audio-session interruption or a bfcache restore drops the context back to `suspended`, and a handler registered inside that window still fires when audio returns.
+- A handler that has already run is never fired again by a later unlock — looping music started here does not stack a second copy after every interruption.
+- `remove()` cancels a pending handler either way, so a scene can subscribe in `init` and clean up in `unload`. Nothing fires once the owning `Application` is destroyed.
+
 Check `app.audio.locked` to know whether the gesture has happened yet, and gate one-shot effects on it:
 
 ```ts
