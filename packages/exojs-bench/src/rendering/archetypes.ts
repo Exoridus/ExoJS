@@ -112,6 +112,16 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   // between. `textureCount: 1` is the ideal case (zero packing waste, one page,
   // no per-frame repack cost), so the delta is an upper bound, never a forecast.
   { id: 'batch-breaking-atlased', nodeCounts: GPU_BOUND_COUNTS, nestingDepth: 2, textureCount: 1, mutationFraction: 0, cullingEnabled: false },
+  // The only archetype that leaves the scene graph behind: it drives
+  // `RenderingContext.drawBatch` directly, the explicit instanced-submission
+  // path, which every other archetype misses entirely. `batchSize: 64` mirrors
+  // the blend/material plateaus — one call per 64 instances puts a few hundred
+  // `drawBatch` calls in a 25k frame, the shape a data-driven renderer (tiles,
+  // bullets, grass) actually produces. Per-call overhead is exactly what this
+  // measures: on WebGPU that path used to end and submit its own render pass per
+  // call, so the frame cost scaled with the CALL count rather than the instance
+  // count. ExoJS-only — see `ArchetypeSpec.batchSize`.
+  { id: 'instanced-batch', nodeCounts: GPU_BOUND_COUNTS, nestingDepth: 1, textureCount: 1, mutationFraction: 0, cullingEnabled: false, batchSize: 64 },
   {
     id: 'mixed-material-atlased',
     nodeCounts: GPU_BOUND_COUNTS,

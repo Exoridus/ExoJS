@@ -1,9 +1,12 @@
 import { Application } from '#core/Application';
 import { Color } from '#core/Color';
+import { Matrix } from '#math/Matrix';
 import { Container } from '#rendering/Container';
+import { Geometry } from '#rendering/geometry/Geometry';
 import { ShaderSource } from '#rendering/material/ShaderSource';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import { RenderBackendType } from '#rendering/RenderBackendType';
+import { RenderBatch } from '#rendering/RenderBatch';
 import { RetainedContainer } from '#rendering/RetainedContainer';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { spriteVertexGlsl } from '#rendering/sprite/spriteMaterialSources';
@@ -14,6 +17,49 @@ import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { mutationSignature, selectMutationIndices } from '../../shared/mutation';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
+
+/**
+ * One SPRITE_SIZE quad in local space, the single geometry every instance of the
+ * `instanced-batch` archetype draws. Position + texcoord + vertex color, matching
+ * the default mesh material's vertex layout so the batch needs no custom shader
+ * (the archetype measures submission overhead, not fragment work).
+ */
+const createBatchQuad = (): Geometry => {
+  const stride = 20;
+  const corners: ReadonlyArray<readonly [number, number, number, number]> = [
+    [0, 0, 0, 0],
+    [SPRITE_SIZE, 0, 1, 0],
+    [SPRITE_SIZE, SPRITE_SIZE, 1, 1],
+    [0, 0, 0, 0],
+    [SPRITE_SIZE, SPRITE_SIZE, 1, 1],
+    [0, SPRITE_SIZE, 0, 1],
+  ];
+  const buffer = new ArrayBuffer(corners.length * stride);
+  const view = new DataView(buffer);
+
+  for (const [index, [x, y, u, v]] of corners.entries()) {
+    const base = index * stride;
+
+    view.setFloat32(base + 0, x, true);
+    view.setFloat32(base + 4, y, true);
+    view.setFloat32(base + 8, u, true);
+    view.setFloat32(base + 12, v, true);
+    view.setUint8(base + 16, 255);
+    view.setUint8(base + 17, 255);
+    view.setUint8(base + 18, 255);
+    view.setUint8(base + 19, 255);
+  }
+
+  return new Geometry({
+    attributes: [
+      { name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 },
+      { name: 'a_texcoord', size: 2, type: 'f32', normalized: false, offset: 8 },
+      { name: 'a_color', size: 4, type: 'u8', normalized: true, offset: 16 },
+    ],
+    vertexData: buffer,
+    stride,
+  });
+};
 
 /** Fixed design-space viewport the harness canvas renders (see `page/index.html`). */
 const VIEWPORT_WIDTH = 1280;
@@ -167,6 +213,69 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
    * `renderFrame` falls back to the ordinary single-view render.
    */
   let views: View[] = [];
+  /**
+   * The `instanced-batch` archetype's explicit submissions (`spec.batchSize`,
+   * see `EngineAdapter.ts`). Empty for every other archetype, in which case
+   * `renderFrame` renders the scene tree as usual.
+   */
+  let batches: RenderBatch[] = [];
+  let batchGeometry: Geometry | null = null;
+
+  /** Drop the `instanced-batch` scene so a rebuild (or teardown) leaks no GPU resources. */
+  const releaseBatchScene = (): void => {
+    for (const batch of batches) {
+      batch.destroy();
+    }
+
+    batches = [];
+    batchGeometry?.destroy();
+    batchGeometry = null;
+  };
+
+  /**
+   * Build the `instanced-batch` scene: `nodeCount` instances of one shared quad,
+   * laid out on the same grid the sprite archetypes use, split into
+   * `ceil(nodeCount / batchSize)` explicit submissions. The instance count is
+   * what varies with `nodeCount`; the CALL count is what the archetype puts
+   * under load.
+   */
+  const buildBatchScene = (spec: ArchetypeSpec, nodeCount: number): void => {
+    const batchSize = Math.max(1, spec.batchSize ?? 1);
+    const columns = Math.max(1, Math.ceil(Math.sqrt(nodeCount)));
+    const rows = Math.max(1, Math.ceil(nodeCount / columns));
+    const cellWidth = (VIEWPORT_WIDTH - 2 * GRID_MARGIN) / columns;
+    const cellHeight = (VIEWPORT_HEIGHT - 2 * GRID_MARGIN) / rows;
+    const transform = new Matrix();
+    const tint = Color.white;
+
+    batchGeometry = createBatchQuad();
+
+    let current: RenderBatch | null = null;
+
+    for (let i = 0; i < nodeCount; i++) {
+      if (i % batchSize === 0) {
+        current = new RenderBatch(batchGeometry);
+        batches.push(current);
+      }
+
+      const x = GRID_MARGIN + (i % columns) * cellWidth + cellWidth / 2;
+      const y = GRID_MARGIN + Math.floor(i / columns) * cellHeight + cellHeight / 2;
+
+      // `add` copies the transform and tint, so one scratch Matrix suffices.
+      transform.set(1, 0, x, 0, 1, y);
+      current!.add(transform, tint);
+    }
+
+    root = null;
+    mutableLeaves = [];
+    mutableIndices = [];
+
+    for (const view of views) {
+      view.destroy();
+    }
+
+    views = [];
+  };
 
   return {
     engine: 'exojs',
@@ -210,6 +319,18 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
 
       for (let t = 0; t < spec.textureCount; t++) {
         textures.push(createDistinctTexture(t, spec.textureCount));
+      }
+
+      releaseBatchScene();
+
+      // `instanced-batch` leaves the scene graph behind entirely: nodeCount
+      // instances are laid out on the same grid every other archetype uses, but
+      // submitted as ceil(nodeCount / batchSize) explicit drawBatch calls over one
+      // shared geometry. No spine, no leaves, nothing to mutate.
+      if (spec.batchSize !== undefined && spec.batchSize > 0) {
+        buildBatchScene(spec, nodeCount);
+
+        return;
       }
 
       // State-churn dimensions (see `ArchetypeSpec.blendModeCount` /
@@ -372,7 +493,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
     },
 
     renderFrame(): void {
-      if (app === null || root === null) {
+      if (app === null) {
         throw new Error('renderFrame was called before buildScene.');
       }
 
@@ -383,6 +504,24 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       // `split-screen` view — see `buildScene`/`views`), flush the batch.
       backend.resetStats();
       backend.clear();
+
+      // `instanced-batch`: one explicit submission per batch, no scene walk.
+      // The trailing flush below is what ends the frame — drawBatch leaves the
+      // backend's pass open so consecutive calls share one submit, which is the
+      // property this archetype exists to measure.
+      if (batches.length > 0) {
+        for (const batch of batches) {
+          app.rendering.drawBatch(batch);
+        }
+
+        backend.flush();
+
+        return;
+      }
+
+      if (root === null) {
+        throw new Error('renderFrame was called before buildScene.');
+      }
 
       if (views.length > 0) {
         // Multi-view replay: each additional view re-issues the retained
@@ -400,6 +539,8 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
     },
 
     teardown(): void {
+      releaseBatchScene();
+
       if (root !== null) {
         root.destroy();
         root = null;

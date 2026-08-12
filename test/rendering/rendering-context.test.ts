@@ -688,7 +688,7 @@ describe('RenderingContext.drawGeometry', () => {
 });
 
 describe('RenderingContext.drawBatch', () => {
-  test('submits a single instanced draw and flushes', () => {
+  test('submits a single instanced draw without flushing', () => {
     const { backend, drawInstanced, instancedDraws, getFlushCallCount } = createMockBackend();
     const context = new RenderingContext(backend);
     const geometry = createStandardGeometry();
@@ -702,7 +702,10 @@ describe('RenderingContext.drawBatch', () => {
     expect(drawInstanced).toHaveBeenCalledTimes(1);
     expect(instancedDraws).toHaveLength(1);
     expect(instancedDraws[0].count).toBe(3);
-    expect(getFlushCallCount()).toBe(1);
+    // `drawInstanced` records the draw rather than queueing it, so there is
+    // nothing to drain. The flush this path used to issue only ended the GPU
+    // pass, costing one `queue.submit` per batch.
+    expect(getFlushCallCount()).toBe(0);
 
     batch.destroy();
     geometry.destroy();

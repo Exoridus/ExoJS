@@ -96,6 +96,14 @@ const coloredQuad = (x0: number, y0: number, x1: number, y1: number, rgba: RgbaT
 // whole surface, top-left origin.
 const screenView = (): View => new View(canvasSize / 2, canvasSize / 2, canvasSize, canvasSize);
 
+// The immediate batch path keeps one render pass open across `drawBatch` calls,
+// but the shared buffers each batch slices (node indices, instanced uniform
+// slots) only ratchet up to a frame's worth of batches over the first frames —
+// growing them mid-pass would free buffers earlier draws still bind, so the
+// renderer splits the pass instead and sizes up for next time. Steady state is
+// what the pass count is asserted on, so run the same frame a few times first.
+const settleFrames = 3;
+
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 interface DrawCall {
@@ -227,6 +235,9 @@ describe('WebGPU RenderingContext.drawGeometry', () => {
         backend.resetStats();
         backend.clear(Color.black);
         context.drawBatch(batch, { view: screenView() });
+        // drawBatch leaves the pass open so consecutive batches share one
+        // submit; end the frame explicitly before reading the canvas back.
+        backend.flush();
         validationError = await device.popErrorScope();
       } catch (error) {
         if (isDeviceLoss(error)) {
@@ -260,13 +271,13 @@ describe('WebGPU RenderingContext.drawGeometry', () => {
     const backend = await setupBackend();
     const context = new RenderingContext(backend);
     const geometry = coloredQuad(0, 0, 16, 16, [255, 255, 255, 255]);
-    // Two batches take DISTINCT ranges of the shared transform buffer, but both
-    // upload their node indices at byte offset 0 of the one shared index buffer
-    // (unlike the flush path, which advances a per-frame cursor for exactly this
-    // reason). That is safe only because drawBatch submits per call, so each
-    // write lands on the queue timeline ahead of its own draw. If that ever
-    // stops holding, the first batch renders the second's transforms and this
-    // test goes red.
+    // Two batches take DISTINCT ranges of the shared transform buffer AND
+    // distinct sub-ranges of the one shared node-index buffer. Both draws land
+    // in the same open pass and therefore the same submit, and
+    // `queue.writeBuffer` is ordered against that submit rather than against the
+    // individual draws inside it — so writing both index ranges at offset 0
+    // would make the first batch render the second's transforms, and this test
+    // is what catches it.
     const first = new RenderBatch(geometry).add(new Matrix(1, 0, 0, 0, 1, 0), new Color(255, 0, 0));
     const second = new RenderBatch(geometry).add(new Matrix(1, 0, 40, 0, 1, 40), new Color(0, 255, 0));
 
@@ -280,8 +291,20 @@ describe('WebGPU RenderingContext.drawGeometry', () => {
       try {
         backend.resetStats();
         backend.clear(Color.black);
-        context.drawBatch(first, { view: screenView() });
-        context.drawBatch(second, { view: screenView() });
+        // ONE view instance for both calls: `setView` flushes on a view CHANGE,
+        // and a fresh View object per call would count as one.
+        const view = screenView();
+
+        for (let frame = 0; frame < settleFrames; frame++) {
+          backend.resetStats();
+          backend.clear(Color.black);
+          context.drawBatch(first, { view });
+          context.drawBatch(second, { view });
+          // drawBatch leaves the pass open so consecutive batches share one
+          // submit; end the frame explicitly before reading the canvas back.
+          backend.flush();
+        }
+
         validationError = await device.popErrorScope();
       } catch (error) {
         if (isDeviceLoss(error)) {
@@ -296,6 +319,10 @@ describe('WebGPU RenderingContext.drawGeometry', () => {
 
       expect(validationError).toBeNull();
       expect(backend.stats.drawCalls).toBe(2);
+      // Both batches share ONE render pass (and one submit). drawBatch used to
+      // end the pass per call, so a scene issuing N batches paid N passes and N
+      // submits per frame.
+      expect(backend.stats.renderPasses).toBe(1);
 
       const readPixel = readWebGpuPixels(backend, canvasSize);
 
@@ -304,6 +331,81 @@ describe('WebGPU RenderingContext.drawGeometry', () => {
     } finally {
       first.destroy();
       second.destroy();
+      geometry.destroy();
+      context.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('many drawBatch calls in one frame merge into a single render pass', async ctx => {
+    const backend = await setupBackend();
+    const context = new RenderingContext(backend);
+    const geometry = coloredQuad(0, 0, 8, 8, [255, 255, 255, 255]);
+    // Six batches on a diagonal, spaced so every 8x8 tile fits the 64x64 canvas
+    // without overlapping. Each takes its own transform-buffer range,
+    // node-index sub-range and instanced-uniform slot; if any of those three
+    // cursors were reset per call instead of per pass, the earlier draws would
+    // read the last batch's data and the diagonal would collapse onto one tile.
+    const batchCount = 6;
+    const batchStride = 10;
+    const batches = Array.from({ length: batchCount }, (_, i) =>
+      new RenderBatch(geometry).add(new Matrix(1, 0, i * batchStride, 0, 1, i * batchStride), new Color(255, 255, 255)),
+    );
+
+    try {
+      const device = getBackendDevice(backend);
+
+      device.pushErrorScope('validation');
+
+      let validationError: GPUError | null;
+
+      try {
+        backend.resetStats();
+        backend.clear(Color.black);
+
+        // ONE view instance for every call: `setView` flushes on a view CHANGE,
+        // and a fresh View object per call would count as one.
+        const view = screenView();
+
+        for (let frame = 0; frame < settleFrames; frame++) {
+          backend.resetStats();
+          backend.clear(Color.black);
+
+          for (const batch of batches) {
+            context.drawBatch(batch, { view });
+          }
+
+          // drawBatch leaves the pass open so consecutive batches share one
+          // submit; end the frame explicitly before reading the canvas back.
+          backend.flush();
+        }
+
+        validationError = await device.popErrorScope();
+      } catch (error) {
+        if (isDeviceLoss(error)) {
+          // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+          ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+          return;
+        }
+
+        throw error;
+      }
+
+      expect(validationError).toBeNull();
+      expect(backend.stats.drawCalls).toBe(batchCount);
+      expect(backend.stats.renderPasses).toBe(1);
+
+      const readPixel = readWebGpuPixels(backend, canvasSize);
+
+      for (let i = 0; i < batchCount; i++) {
+        expectPixelNear(readPixel(i * batchStride + 4, i * batchStride + 4), [255, 255, 255, 255]);
+      }
+    } finally {
+      for (const batch of batches) {
+        batch.destroy();
+      }
+
       geometry.destroy();
       context.destroy();
       backend.destroy();
@@ -365,6 +467,9 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
         backend.resetStats();
         backend.clear(Color.black);
         context.drawBatch(batch, { view: screenView() });
+        // drawBatch leaves the pass open so consecutive batches share one
+        // submit; end the frame explicitly before reading the canvas back.
+        backend.flush();
         validationError = await device.popErrorScope();
       } catch (error) {
         if (isDeviceLoss(error)) {

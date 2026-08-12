@@ -186,7 +186,7 @@ export class RetainedPlanCache {
       drawable: undefined as unknown as Drawable,
       seq: 0,
       zIndex: 0,
-      material: { rendererId: 0, blendMode: BlendModes.Normal, textureId: -1, shaderId: -1, pipelineKey: 0, bindKey: 0 },
+      material: { rendererId: 0, blendMode: BlendModes.Normal, textureId: -1, shaderId: -1, pipelineKey: 0, bindKey: 0, ownMaterial: false },
       minX: 0,
       minY: 0,
       maxX: 0,

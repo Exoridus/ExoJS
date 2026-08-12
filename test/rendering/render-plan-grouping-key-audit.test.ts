@@ -17,11 +17,12 @@
  *    blendMode, geometry identity, and texture identity directly, so the
  *    optimizer's pipelineKey:bindKey grouping is redundant-but-aligned.
  *
- * 3. Default-path sprite texture grouping is deliberately conservative:
- *    every distinct texture → distinct textureId → distinct bindKey →
- *    distinct groupIndex. The sprite renderer can merge up to 16 textures
- *    via slot rotation at runtime, but the optimizer cannot cheaply replicate
- *    that capacity-aware state. Texture-slot coalescing is renderer-owned.
+ * 3. Default-path sprite texture grouping follows the batcher: a distinct
+ *    texture yields a distinct bindKey but the SAME groupIndex, because the
+ *    sprite renderer rotates up to 16 textures through its slots without a
+ *    flush. Splitting on bindKey there would mark a batch boundary the batcher
+ *    never takes. The remaining renderer-owned cause, slot exhaustion past 16
+ *    textures, is still not modelled by the optimizer.
  *
  * 4. Custom-material sprite base texture is renderer-owned: the material's
  *    bindKey encodes the material's own extra textures (material.textures /
@@ -37,7 +38,9 @@
  * Hard boundaries preserved by the optimizer:
  *   - Barrier entries (filter/mask/cacheAsBitmap effects)
  *   - Group scope entries (nested containers)
- *   - Material key (pipelineKey:bindKey) changes
+ *   - Material changes that force the batcher to flush (`forcesBatchFlush`):
+ *     pipelineKey, crossing between the default and custom paths, and — on the
+ *     custom path only — bindKey
  *   - z-index changes
  *   Render-target changes, scissor/stencil changes, and texture-slot
  *   exhaustion are renderer-owned and are not the optimizer's concern.
@@ -47,7 +50,8 @@ import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import { ShaderSource } from '#rendering/material/ShaderSource';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
-import { type DrawCommand, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import { type DrawCommand, materialKeyForcesFlush, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import type { RenderPlan } from '#rendering/plan/RenderPlan';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
 import type { GroupScope } from '#rendering/plan/RenderScope';
@@ -116,6 +120,7 @@ const mkMat = (pipelineKey: number, bindKey: number, overrides: Partial<DrawComm
   shaderId: -1,
   pipelineKey,
   bindKey,
+  ownMaterial: false,
   ...overrides,
 });
 
@@ -123,7 +128,7 @@ const createDrawEntry = (
   drawable: Drawable,
   pipelineKey: number,
   bindKey: number,
-  overrides: { zIndex?: number; textureId?: number; rendererId?: number; shaderId?: number } = {},
+  overrides: { zIndex?: number; textureId?: number; rendererId?: number; shaderId?: number; ownMaterial?: boolean } = {},
 ) => ({
   kind: RenderEntryKind.Draw as const,
   seq: 0,
@@ -138,7 +143,8 @@ const createDrawEntry = (
       textureId: overrides.textureId,
       rendererId: overrides.rendererId,
       shaderId: overrides.shaderId,
-    }),
+      ownMaterial: overrides.ownMaterial ?? false,
+    } as Partial<DrawCommand['material']>),
     minX: 0,
     minY: 0,
     maxX: 16,
@@ -147,14 +153,13 @@ const createDrawEntry = (
 });
 
 /**
- * Mirrors the `hasMixedMaterial` flag RenderPlanBuilder maintains incrementally
+ * Mirrors the `hasMixedPipeline` flag RenderPlanBuilder maintains incrementally
  * while collecting, so hand-built scopes behave like collected ones. The
  * optimizer skips material grouping outright when the flag is false, so a
  * fixture that forgot it would silently test nothing.
  */
-const deriveHasMixedMaterial = (entries: readonly object[]): boolean => {
-  let firstPipelineKey: number | null = null;
-  let firstBindKey = 0;
+const deriveHasMixedPipeline = (entries: readonly object[]): boolean => {
+  let first: DrawCommand['material'] | null = null;
 
   for (const entry of entries) {
     const candidate = entry as { kind: RenderEntryKind; command?: DrawCommand };
@@ -163,12 +168,11 @@ const deriveHasMixedMaterial = (entries: readonly object[]): boolean => {
       continue;
     }
 
-    const { pipelineKey, bindKey } = candidate.command.material;
+    const material = candidate.command.material;
 
-    if (firstPipelineKey === null) {
-      firstPipelineKey = pipelineKey;
-      firstBindKey = bindKey;
-    } else if (firstPipelineKey !== pipelineKey || firstBindKey !== bindKey) {
+    if (first === null) {
+      first = material;
+    } else if (materialKeyForcesFlush(first.pipelineKey, first.bindKey, first.ownMaterial, material)) {
       return true;
     }
   }
@@ -176,37 +180,31 @@ const deriveHasMixedMaterial = (entries: readonly object[]): boolean => {
   return false;
 };
 
-const createPlan = (entries: object[]) => {
+const createPlan = (entries: object[]): RenderPlan => {
   const { backend, destroy } = createBuildBackend();
 
   try {
-    return {
-      passes: [
-        {
-          target: null as unknown,
-          view: backend.view,
-          clearColor: null as unknown,
-          root: {
-            kind: RenderEntryKind.Group as const,
-            entries: entries as GroupScope['entries'],
-            hasMixedZ: false,
-            hasMixedMaterial: deriveHasMixedMaterial(entries),
-            preserveDrawOrder: false,
-          },
-        },
-      ],
-      nodeCount: 0,
-      reset() {
-        this.passes.length = 0;
-        this.nodeCount = 0;
-      },
+    const scope: GroupScope = {
+      kind: RenderEntryKind.Group,
+      entries: entries as GroupScope['entries'],
+      hasMixedZ: false,
+      hasMixedPipeline: deriveHasMixedPipeline(entries),
+      preserveDrawOrder: false,
+      transformNode: null,
+      retainedInstructions: null,
+      retainedRecordTarget: null,
     };
+
+    return {
+      passes: [{ target: null, view: backend.view, clearColor: null, root: scope }],
+      nodeCount: 0,
+    } as unknown as RenderPlan;
   } finally {
     destroy();
   }
 };
 
-const getGroupIndices = (plan: ReturnType<typeof createPlan>) =>
+const getGroupIndices = (plan: RenderPlan) =>
   plan.passes[0].root.entries
     .filter((e: unknown) => (e as { kind: RenderEntryKind }).kind === RenderEntryKind.Draw)
     .map((e: unknown) => (e as { command: DrawCommand }).command.groupIndex ?? 0);
@@ -257,11 +255,39 @@ describe('render plan grouping key audit', () => {
       expect(gi0).not.toBe(gi1);
     });
 
-    test('different bindKey always breaks grouping even with the same pipelineKey', () => {
+    test('a bindKey change alone does NOT break grouping on the default path', () => {
+      // Default path: bindKey is the texture identity, and the sprite batcher
+      // rotates 16 of those through its slots without flushing.
       const a = new AuditDrawable();
       const b = new AuditDrawable();
 
       const plan = createPlan([createDrawEntry(a, 100, 200), createDrawEntry(b, 100, 999)]);
+
+      RenderPlanOptimizer.optimize(plan);
+
+      const [gi0, gi1] = getGroupIndices(plan);
+
+      expect(gi0).toBe(gi1);
+    });
+
+    test('a bindKey change breaks grouping between draws carrying their own material', () => {
+      const a = new AuditDrawable();
+      const b = new AuditDrawable();
+
+      const plan = createPlan([createDrawEntry(a, 100, 200, { ownMaterial: true }), createDrawEntry(b, 100, 999, { ownMaterial: true })]);
+
+      RenderPlanOptimizer.optimize(plan);
+
+      const [gi0, gi1] = getGroupIndices(plan);
+
+      expect(gi0).not.toBe(gi1);
+    });
+
+    test('crossing between the default and custom paths breaks grouping on its own', () => {
+      const a = new AuditDrawable();
+      const b = new AuditDrawable();
+
+      const plan = createPlan([createDrawEntry(a, 100, 200), createDrawEntry(b, 100, 200, { ownMaterial: true })]);
 
       RenderPlanOptimizer.optimize(plan);
 
@@ -330,13 +356,12 @@ describe('render plan grouping key audit', () => {
       }
     });
 
-    test('different textures produce different groupIndices (texture-slot coalescing is renderer-owned)', () => {
-      // For the default path, bindKey = rendererId * 31 + textureId.
-      // Different textures → different textureIds → different bindKeys →
-      // different groupIndices. This is deliberately conservative: the sprite
-      // renderer can merge up to 16 textures via slot rotation at runtime, but
-      // the optimizer cannot cheaply know the renderer's slot capacity.
-      // Texture-slot coalescing is intentionally renderer-owned.
+    test('different textures share a groupIndex (the batcher rotates slots without flushing)', () => {
+      // For the default path, bindKey = rendererId * 31 + textureId, so different
+      // textures give different bindKeys — but the sprite renderer absorbs a
+      // texture change into one of its 16 slots and does not flush, so the two
+      // draws stay in one group. Only slot exhaustion past 16 textures would
+      // cost a draw call, and that remains renderer-owned.
       const { backend, destroy } = createBuildBackend();
 
       try {
@@ -351,9 +376,8 @@ describe('render plan grouping key audit', () => {
         const cmds = buildOptimizedDrawCommands(root, backend);
 
         expect(cmds).toHaveLength(2);
-        // Conservative split by design.
-        expect(cmds[0].groupIndex).not.toBe(cmds[1].groupIndex);
-        // bindKey encodes the texture identity.
+        expect(cmds[0].groupIndex).toBe(cmds[1].groupIndex);
+        // bindKey still encodes the texture identity — it just costs no flush.
         expect(cmds[0].material.bindKey).not.toBe(cmds[1].material.bindKey);
 
         texA.destroy();
@@ -646,7 +670,7 @@ describe('render plan grouping key audit', () => {
           kind: RenderEntryKind.Group as const,
           entries: [createDrawEntry(nested, 100, 200)],
           hasMixedZ: false,
-          hasMixedMaterial: false,
+          hasMixedPipeline: false,
           preserveDrawOrder: false,
         },
       };

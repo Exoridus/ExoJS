@@ -76,14 +76,19 @@ export interface GroupScope {
   entries: ScopeEntry[];
   hasMixedZ: boolean;
   /**
-   * `true` once this scope has seen two draws whose materials differ in
-   * `pipelineKey` or `bindKey`. Maintained incrementally while the plan is
-   * collected, exactly like {@link GroupScope.hasMixedZ}, and read by
-   * {@link RenderPlanOptimizer} to skip the material-grouping pass outright:
-   * with a single material the pass provably cannot reorder anything, so the
-   * per-draw bookkeeping it would otherwise allocate is pure waste.
+   * `true` once this scope has seen two draws that would force the batcher to
+   * flush between them on material grounds — see `forcesBatchFlush`. Maintained
+   * incrementally while the plan is collected, exactly like
+   * {@link GroupScope.hasMixedZ}, and read by {@link RenderPlanOptimizer} to skip
+   * the material-grouping pass outright: when no draw pairing in the scope costs
+   * a flush, reordering provably saves no draw call, so the per-draw bookkeeping
+   * the pass would allocate is pure waste.
+   *
+   * Deliberately NOT "the material keys differ": a plain sprite scope over two
+   * atlases differs in `bindKey` on every second draw and still batches into one
+   * draw call, because the 16 texture slots absorb the change.
    */
-  hasMixedMaterial: boolean;
+  hasMixedPipeline: boolean;
   preserveDrawOrder: boolean;
   /**
    * The transform-group boundary node whose world matrix scopes this group's

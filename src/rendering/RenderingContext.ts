@@ -493,9 +493,15 @@ export class RenderingContext implements DrawContext {
    * it for many like items (tiles, bullets, procedural instances) where
    * {@link drawGeometry} would issue one draw call each.
    *
-   * Like {@link drawGeometry}, the batch is flushed at once and lands in call
-   * order relative to the surrounding {@link render} calls. An empty batch is a
-   * no-op.
+   * The batch is recorded at once and lands in call order relative to the
+   * surrounding {@link render} calls. An empty batch is a no-op.
+   *
+   * `drawInstanced` records the draw immediately rather than queueing it, so
+   * this path leaves the backend's pass open: consecutive `drawBatch` calls
+   * merge into one GPU render pass and one submit instead of paying a pass plus
+   * a submit each. Ordering is unaffected — a renderer switch, a target/view
+   * change, or the end of the frame still closes the pass, and each batch takes
+   * its own slice of every shared buffer it writes.
    *
    * With no {@link RenderBatch.material material} the batch renders through the
    * default mesh material (per-instance tint over the geometry's vertex colors).
@@ -518,15 +524,19 @@ export class RenderingContext implements DrawContext {
     this._renderedViews.add(view);
     const mesh = (this._batchMesh ??= new ImmediateMesh());
 
-    // Set the view first (setView only flushes when the view actually changes;
-    // correctness rests on the trailing flush() below and on any renderer switch
-    // flushing its pending batch), configure the pooled geometry/look source,
-    // then submit a single instanced draw over the batch's per-instance
-    // transforms/tints and flush it immediately.
+    // Set the view first (setView only flushes when the view actually changes),
+    // configure the pooled geometry/look source, then record a single instanced
+    // draw over the batch's per-instance transforms/tints.
+    //
+    // No trailing flush: `drawInstanced` goes straight to the backend's mesh
+    // renderer, which records the draw rather than queueing it, so there is
+    // nothing pending to drain — the flush only ever ended the GPU pass, one
+    // submit per `drawBatch`. Anything that must not merge into that pass
+    // (renderer switch, target/view/scissor/stencil change, frame end) closes it
+    // on its own.
     this._backend.setView(view);
     mesh.configureBatchSource(batch.geometry, batch.material);
     this._backend.drawInstanced(mesh, batch._instanceTransforms, batch._instanceTints, batch.count, batch._instanceView);
-    this._backend.flush();
   }
 
   /** Per-frame render counters. Convenience over backend.stats. */

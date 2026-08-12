@@ -45,6 +45,7 @@ const material = (key: number): MaterialKey => ({
   shaderId: -1,
   pipelineKey: key,
   bindKey: key,
+  ownMaterial: false,
 });
 
 // One coalescing group: every command shares the same groupIndex/material key,

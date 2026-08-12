@@ -34,6 +34,7 @@ const material = (key: number): MaterialKey => ({
   shaderId: -1,
   pipelineKey: key,
   bindKey: key,
+  ownMaterial: false,
 });
 
 const createDrawCommand = (drawable: Drawable, nodeIndex: number): DrawCommand => ({
