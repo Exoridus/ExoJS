@@ -25,12 +25,14 @@ describe('trivial device-family mappings', () => {
 
     expect(mapping.family).toBe(GamepadMappingFamily.JoyConLeft);
     expect(buttonsByIndex.get(0)).toBe(GamepadButton.South);
-    expect(buttonsByIndex.get(4)).toBe(GamepadButton.LeftShoulder);
-    expect(buttonsByIndex.get(5)).toBe(GamepadButton.RightShoulder);
-    expect(buttonsByIndex.get(8)).toBe(GamepadButton.Select); // Minus
+    expect(buttonsByIndex.get(4)).toBe(GamepadButton.Paddle1); // SL — SDL LEFT_PADDLE1
+    expect(buttonsByIndex.get(5)).toBe(GamepadButton.Paddle3); // SR — SDL LEFT_PADDLE2
+    expect(buttonsByIndex.get(6)).toBe(GamepadButton.LeftTrigger); // ZL
+    expect(buttonsByIndex.get(8)).toBe(GamepadButton.LeftShoulder); // L
+    expect(buttonsByIndex.get(9)).toBe(GamepadButton.Select); // Minus
     expect(buttonsByIndex.get(10)).toBe(GamepadButton.LeftStick); // stick click
     expect(buttonsByIndex.get(16)).toBe(GamepadButton.Capture);
-    expect(buttonsByIndex.has(9)).toBe(false); // no Start/Plus on solo left Joy-Con
+    expect(buttonsByIndex.has(7)).toBe(false); // no ZR on solo left Joy-Con
 
     const axisChannels = new Set(mapping.axes.map(axis => axis.channel));
     expect(axisChannels.has(GamepadAxis.LeftStickX)).toBe(true);
@@ -44,12 +46,14 @@ describe('trivial device-family mappings', () => {
 
     expect(mapping.family).toBe(GamepadMappingFamily.JoyConRight);
     expect(buttonsByIndex.get(0)).toBe(GamepadButton.South);
-    expect(buttonsByIndex.get(4)).toBe(GamepadButton.LeftShoulder);
-    expect(buttonsByIndex.get(5)).toBe(GamepadButton.RightShoulder);
+    expect(buttonsByIndex.get(4)).toBe(GamepadButton.Paddle4); // SL — SDL RIGHT_PADDLE2
+    expect(buttonsByIndex.get(5)).toBe(GamepadButton.Paddle2); // SR — SDL RIGHT_PADDLE1
+    expect(buttonsByIndex.get(7)).toBe(GamepadButton.RightTrigger); // ZR
+    expect(buttonsByIndex.get(8)).toBe(GamepadButton.RightShoulder); // R
     expect(buttonsByIndex.get(9)).toBe(GamepadButton.Start); // Plus
     expect(buttonsByIndex.get(10)).toBe(GamepadButton.LeftStick); // stick click
     expect(buttonsByIndex.get(16)).toBe(GamepadButton.Guide); // Home
-    expect(buttonsByIndex.has(8)).toBe(false); // no Minus/Capture on solo right Joy-Con
+    expect(buttonsByIndex.has(6)).toBe(false); // no ZL on solo right Joy-Con
 
     const axisChannels = new Set(mapping.axes.map(axis => axis.channel));
     expect(axisChannels.has(GamepadAxis.LeftStickX)).toBe(true);

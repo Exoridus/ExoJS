@@ -173,7 +173,11 @@ export namespace GamepadButton {
   /**
    * First paddle / extra button.
    *
-   * Written by {@link SteamDeckGamepadMapping} (L4) only. Xbox Elite paddles
+   * Upper-left slot — SDL's `SDL_GAMEPAD_BUTTON_LEFT_PADDLE1`.
+   *
+   * Written by {@link SteamDeckGamepadMapping} (L4) and by
+   * {@link JoyConLeftGamepadMapping} (the SL rail button — see that class for
+   * why a rail button is a paddle rather than a shoulder). Xbox Elite paddles
    * do **not** reach this channel: the Windows path is XInput, whose
    * `XINPUT_GAMEPAD` struct carries no paddle bits, and no browser mapper
    * emits them. Reaching them needs WebHID and a custom `GamepadDefinition`.
@@ -182,21 +186,30 @@ export namespace GamepadButton {
   /**
    * Second paddle / extra button.
    *
-   * Written by {@link SteamDeckGamepadMapping} (R4) only — see
+   * Upper-right slot — SDL's `SDL_GAMEPAD_BUTTON_RIGHT_PADDLE1`.
+   *
+   * Written by {@link SteamDeckGamepadMapping} (R4) and by
+   * {@link JoyConRightGamepadMapping} (the SR rail button) — see
    * {@link Paddle1} for why Xbox Elite paddles are absent.
    */
   export const Paddle2 = button(21);
   /**
    * Third paddle / extra button.
    *
-   * Written by {@link SteamDeckGamepadMapping} (L5) only — see
+   * Lower-left slot — SDL's `SDL_GAMEPAD_BUTTON_LEFT_PADDLE2`.
+   *
+   * Written by {@link SteamDeckGamepadMapping} (L5) and by
+   * {@link JoyConLeftGamepadMapping} (the SR rail button) — see
    * {@link Paddle1} for why Xbox Elite paddles are absent.
    */
   export const Paddle3 = button(22);
   /**
    * Fourth paddle / extra button.
    *
-   * Written by {@link SteamDeckGamepadMapping} (R5) only — see
+   * Lower-right slot — SDL's `SDL_GAMEPAD_BUTTON_RIGHT_PADDLE2`.
+   *
+   * Written by {@link SteamDeckGamepadMapping} (R5) and by
+   * {@link JoyConRightGamepadMapping} (the SL rail button) — see
    * {@link Paddle1} for why Xbox Elite paddles are absent.
    */
   export const Paddle4 = button(23);
