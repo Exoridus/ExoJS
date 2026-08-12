@@ -591,6 +591,13 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
   uniform and instanced buffers they read — a destroyed-buffer validation
   error whenever something later submitted that pass. `onDisconnect()` now
   ends its own open pass first when it holds the renderer's draws.
+- **`WebGpuTextRenderer`'s shared retained quad-index buffer no longer grows
+  out from under a still-open pass.** The grow branch of
+  `_ensureRetainedQuadIndexBuffer()` destroyed the current buffer
+  unconditionally; an earlier retained replay in the same still-open pass
+  could already have a draw bound to it, so freeing it invalidated the whole
+  merged command buffer at the next submit. Growth now ends the open pass
+  first when it already holds draws.
 
 ### Docs
 

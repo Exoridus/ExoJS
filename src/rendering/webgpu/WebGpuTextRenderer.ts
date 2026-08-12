@@ -1365,7 +1365,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
 
     const textureBindGroup = this._getTexBindGroup(device, backend, payload.textures[0]! as Texture);
     const frameBindGroup = this._getTextReplayBindGroup(state, device);
-    const indexBuffer = this._ensureRetainedQuadIndexBuffer(device, data.quadCount);
+    const indexBuffer = this._ensureRetainedQuadIndexBuffer(device, data.quadCount, coordinator);
 
     const active = coordinator.acquirePass();
     const pass = active.pass;
@@ -1511,9 +1511,17 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
    * renderer, exactly like `WebGpuNineSliceSpriteRenderer`'s static per-quad
    * index buffer serves every nine-slice instance.
    */
-  private _ensureRetainedQuadIndexBuffer(device: GPUDevice, quadCount: number): GPUBuffer {
+  private _ensureRetainedQuadIndexBuffer(device: GPUDevice, quadCount: number, coordinator: WebGpuBackend['_passCoordinator']): GPUBuffer {
     if (this._retainedQuadIndexBuffer !== null && this._retainedQuadIndexCapacity >= quadCount) {
       return this._retainedQuadIndexBuffer;
+    }
+
+    // Growing below destroys the current buffer. An earlier retained replay
+    // in this same still-open pass may still have a draw bound to it, and
+    // the pass no longer ends at the tail of a replay call — end it first so
+    // that draw reaches the queue against a live buffer.
+    if (this._retainedQuadIndexBuffer !== null && coordinator.passHasDraws) {
+      coordinator.endPass();
     }
 
     let capacity = Math.max(this._retainedQuadIndexCapacity, 64);
