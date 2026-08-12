@@ -409,26 +409,29 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
 
     const coordinator = backend._passCoordinator;
-    const willDraw =
-      this._quadIndex > 0 && !maskClipsAll && this._instanceBuffer !== null && this._indexBuffer !== null && this._currentBlendMode !== null && this._currentTexture !== null;
 
     // The pass survives a renderer switch, so it can hold ANOTHER renderer's
     // draws by the time this flush runs. Resolving the shared transform storage
     // below may free the buffer those draws bind, and syncing the tileset
     // texture may re-upload content they sample — both land on the queue
     // timeline ahead of the deferred submit. End (submit) the pass first so
-    // they keep what they were recorded against.
+    // they keep what they were recorded against. Only the conditions this check
+    // actually needs are repeated from the draw condition below: hoisting the
+    // whole predicate into a boolean would cost the narrowing the draw block
+    // relies on.
     if (
-      willDraw &&
+      this._quadIndex > 0 &&
+      !maskClipsAll &&
+      this._currentTexture !== null &&
       coordinator.passHasDraws &&
-      (backend._textureUploadWouldMutate(this._currentTexture!) || backend._transformStorageWouldGrow(this._maxNodeIndex + 1))
+      (backend._textureUploadWouldMutate(this._currentTexture) || backend._transformStorageWouldGrow(this._maxNodeIndex + 1))
     ) {
       coordinator.endPass();
     }
 
     const pass = coordinator.acquirePass().pass;
 
-    if (willDraw) {
+    if (this._quadIndex > 0 && !maskClipsAll && this._instanceBuffer !== null && this._indexBuffer !== null && this._currentBlendMode !== null && this._currentTexture !== null) {
       device.queue.writeBuffer(this._instanceBuffer, 0, this._instanceData, 0, this._quadIndex * instanceStrideBytes);
 
       const storage = backend.getTransformStorageBuffer(this._maxNodeIndex + 1);
