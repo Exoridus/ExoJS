@@ -6,11 +6,11 @@
   "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 8,
+  "memberCount": 9,
   "counts": {
     "constructors": 1,
     "methods": 2,
-    "properties": 5,
+    "properties": 6,
     "events": 0
   },
   "sections": [
@@ -286,6 +286,27 @@
           "params": [],
           "returnType": null,
           "description": "Console generation this instance was built for."
+        },
+        {
+          "name": "layout",
+          "signature": "layout: GamepadMappingLayout",
+          "signatureTokens": [
+            {
+              "text": "layout",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadMappingLayout",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Index space this mapping's button and axis indices are written against. Defaults to GamepadMappingLayout.Standard. A mapping that encodes raw HID report order must declare GamepadMappingLayout.Raw, so resolveGamepadDefinition can discard it when the browser reports the same device as already standard-normalised."
         },
         {
           "name": "promptLabels",

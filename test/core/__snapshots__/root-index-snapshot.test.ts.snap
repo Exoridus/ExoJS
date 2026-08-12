@@ -76,6 +76,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "GamepadButton",
   "GamepadMapping",
   "GamepadMappingFamily",
+  "GamepadMappingLayout",
   "GamepadPromptLayouts",
   "GenericDualAnalogGamepadMapping",
   "Geometry",

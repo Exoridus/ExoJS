@@ -1,5 +1,6 @@
 import { ArcadeStickGamepadMapping } from './ArcadeStickGamepadMapping';
 import type { GamepadMapping } from './GamepadMapping';
+import { GamepadMappingLayout } from './GamepadMapping';
 import { GenericDualAnalogGamepadMapping } from './GenericDualAnalogGamepadMapping';
 import { JoyConLeftGamepadMapping } from './JoyConLeftGamepadMapping';
 import { JoyConRightGamepadMapping } from './JoyConRightGamepadMapping';
@@ -35,6 +36,9 @@ export type GamepadDefinitionResult =
  * `productKey` is the colon-joined pair (`"045e:028e"`), used as a compact lookup key.
  * `name` is the human-readable portion of the id with the vendor/product tokens removed,
  * or `null` when the id contained only identifiers.
+ * `mapping` is the browser's own verdict, verbatim — `"standard"` when it has
+ * normalised the device into the W3C layout, `""` when it hands the raw HID
+ * report through.
  */
 export interface GamepadDescriptor {
   id: string;
@@ -44,6 +48,7 @@ export interface GamepadDescriptor {
   productId: string | null;
   productKey: string | null;
   name: string | null;
+  mapping: BrowserGamepad['mapping'];
 }
 
 /**
@@ -199,6 +204,7 @@ export const parseGamepadDescriptor = (gamepad: BrowserGamepad): GamepadDescript
     productId,
     productKey,
     name: parseName(label),
+    mapping: gamepad.mapping,
   };
 };
 
@@ -215,11 +221,37 @@ export const resolveDefinition = (definition: GamepadDefinition, descriptor: Gam
 };
 
 /**
+ * Discards a {@link GamepadMappingLayout.Raw} mapping when the browser reports
+ * the device as already standard-normalised.
+ *
+ * A raw mapping encodes one device's unnormalised HID report order, so routing
+ * standard indices through it produces silently wrong channels — the Steam Deck
+ * expects its face cluster at 3-6, which a standard-mapped pad puts at 0-3. The
+ * resolved family and name are kept: the device is still what the definition
+ * says it is, and its prompt labels are a property of the hardware, not of the
+ * index space the browser chose to report it in. Prompt UIs should keep gating
+ * on {@link GamepadMapping.hasChannel}, which now honestly answers `false` for
+ * the paddles the generic layout has no room for.
+ */
+const withStandardLayoutGuard = (resolved: ResolvedGamepadDefinition, descriptor: GamepadDescriptor): ResolvedGamepadDefinition => {
+  if (descriptor.mapping !== 'standard' || resolved.mapping.layout !== GamepadMappingLayout.Raw) {
+    return resolved;
+  }
+
+  return {
+    ...resolved,
+    mapping: new GenericDualAnalogGamepadMapping([], resolved.mapping.promptLabels, resolved.mapping.family),
+  };
+};
+
+/**
  * Resolves the best-matching {@link ResolvedGamepadDefinition} for a connected gamepad.
  *
  * Iterates `definitions` in order — exact product IDs first, then vendor fallbacks,
  * then a generic catch-all — and returns the first match. Falls back to
- * {@link GenericDualAnalogGamepadMapping} when no definition matches.
+ * {@link GenericDualAnalogGamepadMapping} when no definition matches, and
+ * replaces a matched {@link GamepadMappingLayout.Raw} mapping with the generic
+ * layout when the browser reports `mapping: "standard"` for the device.
  *
  * @example
  * const resolved = resolveGamepadDefinition(navigator.getGamepads()[0]!);
@@ -235,7 +267,7 @@ export const resolveGamepadDefinition = (
     const resolvedDefinition = resolveDefinition(definition, descriptor);
 
     if (resolvedDefinition) {
-      return resolvedDefinition;
+      return withStandardLayoutGuard(resolvedDefinition, descriptor);
     }
   }
 
@@ -311,7 +343,10 @@ const exactDeviceDefinitions: GamepadDefinition[] = [
 const vendorFallbackDefinitions: GamepadDefinition[] = [
   createStaticGamepadDefinition('Microsoft Controller', () => new XboxGamepadMapping(), '045e'),
   createStaticGamepadDefinition('Sony Controller', () => new PlayStationGamepadMapping(), '054c'),
-  createStaticGamepadDefinition('Valve Controller', () => new SteamDeckGamepadMapping(), '28de'),
+  // Deliberately generic, not the Steam Deck layout: that layout is raw HID
+  // order for one specific device, and handing it to any unrecognised Valve
+  // product would route every channel through the wrong index.
+  createStaticGamepadDefinition('Valve Controller', () => new GenericDualAnalogGamepadMapping(), '28de'),
 ];
 
 const genericFallbackDefinition = createStaticGamepadDefinition('Generic Gamepad', () => new GenericDualAnalogGamepadMapping());

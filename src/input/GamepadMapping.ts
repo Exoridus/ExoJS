@@ -21,6 +21,22 @@ export enum GamepadMappingFamily {
 }
 
 /**
+ * Which index space a {@link GamepadMapping}'s button and axis indices live in.
+ *
+ * Almost every mapping is written against the W3C "standard" layout the browser
+ * normalises known devices into. A `Raw` mapping instead encodes a device's
+ * unnormalised HID report order, which is only correct while the browser leaves
+ * that device unnormalised — see {@link SteamDeckGamepadMapping}, the one
+ * built-in mapping in that category.
+ */
+export enum GamepadMappingLayout {
+  /** Indices follow the W3C standard layout. */
+  Standard = 'standard',
+  /** Indices follow the device's raw HID report order. */
+  Raw = 'raw',
+}
+
+/**
  * Abstract translation layer between the browser's raw {@link https://developer.mozilla.org/en-US/docs/Web/API/Gamepad Gamepad API}
  * indices and ExoJS-canonical channel buffers.
  *
@@ -32,6 +48,16 @@ export enum GamepadMappingFamily {
 export abstract class GamepadMapping {
   /** Identifies the device family this mapping targets. */
   public abstract readonly family: GamepadMappingFamily;
+
+  /**
+   * Index space this mapping's button and axis indices are written against.
+   *
+   * Defaults to {@link GamepadMappingLayout.Standard}. A mapping that encodes
+   * raw HID report order must declare {@link GamepadMappingLayout.Raw}, so
+   * `resolveGamepadDefinition` can discard it when the browser reports the same
+   * device as already standard-normalised.
+   */
+  public readonly layout: GamepadMappingLayout = GamepadMappingLayout.Standard;
 
   /** Ordered list of buttons, indexed by the Gamepad API button index. */
   public readonly buttons: readonly GamepadButton[];
