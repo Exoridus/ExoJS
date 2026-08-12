@@ -1,0 +1,180 @@
+{
+  "title": "RendererBinding",
+  "description": "Binds one or more drawable constructors to a renderer factory. Pure descriptor — no active renderer, no GPU resources, no side effects until `create` is called once per backend during Application construction. `targets` must contain at least one entry. All targets share the single renderer instance produced by `create`. Returning `undefined` from `create` means the backend is unsupported; the entire binding is skipped for that backend.",
+  "symbol": "RendererBinding",
+  "kind": "interface",
+  "subsystem": "extensions",
+  "importPath": "@codexo/exojs/extensions",
+  "tier": "advanced",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 1,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Binds one or more drawable constructors to a renderer factory. Pure descriptor — no active renderer, no GPU resources, no side effects until `create` is called once per backend during Application construction.",
+        "`targets` must contain at least one entry. All targets share the single renderer instance produced by `create`. Returning `undefined` from `create` means the backend is unsupported; the entire binding is skipped for that backend."
+      ],
+      "importLine": "import { RendererBinding } from '@codexo/exojs/extensions'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "create",
+          "signature": "create(backend: RenderBackend): Renderer<RenderBackend, Target> | undefined",
+          "signatureTokens": [
+            {
+              "text": "create",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "backend",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderBackend",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Renderer",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderBackend",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Target",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "backend",
+              "type": "RenderBackend",
+              "optional": false
+            }
+          ],
+          "returnType": "Renderer<RenderBackend, Target> | undefined",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "targets",
+          "signature": "targets: readonly DrawableConstructor<Target>[]",
+          "signatureTokens": [
+            {
+              "text": "targets",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DrawableConstructor",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Target",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/extensions/Extension.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/extensions/Extension.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/extensions/Extension.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/extensions/Extension.ts"
+}

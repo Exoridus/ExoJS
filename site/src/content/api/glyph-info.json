@@ -1,0 +1,331 @@
+{
+  "title": "GlyphInfo",
+  "description": "Cached glyph data stored in an atlas page after rasterization.",
+  "symbol": "GlyphInfo",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 13,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 13,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Cached glyph data stored in an atlas page after rasterization."
+      ],
+      "importLine": "import { GlyphInfo } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "advance",
+          "signature": "advance: number",
+          "signatureTokens": [
+            {
+              "text": "advance",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Horizontal advance in pixels (how far to move the cursor)."
+        },
+        {
+          "name": "ascent",
+          "signature": "ascent: number",
+          "signatureTokens": [
+            {
+              "text": "ascent",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Distance from the quad top to the glyph ascent line in pixels."
+        },
+        {
+          "name": "height",
+          "signature": "height: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Quad render height in pixels."
+        },
+        {
+          "name": "page",
+          "signature": "page: number",
+          "signatureTokens": [
+            {
+              "text": "page",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Which AtlasPage within the atlas holds this glyph."
+        },
+        {
+          "name": "uvBottom",
+          "signature": "uvBottom: number",
+          "signatureTokens": [
+            {
+              "text": "uvBottom",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "UV bottom edge (0..1)."
+        },
+        {
+          "name": "uvLeft",
+          "signature": "uvLeft: number",
+          "signatureTokens": [
+            {
+              "text": "uvLeft",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "UV left edge (0..1)."
+        },
+        {
+          "name": "uvRight",
+          "signature": "uvRight: number",
+          "signatureTokens": [
+            {
+              "text": "uvRight",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "UV right edge (0..1)."
+        },
+        {
+          "name": "uvTop",
+          "signature": "uvTop: number",
+          "signatureTokens": [
+            {
+              "text": "uvTop",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "UV top edge (0..1)."
+        },
+        {
+          "name": "width",
+          "signature": "width: number",
+          "signatureTokens": [
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Quad render width in pixels (full SDF tile in sdf mode; glyph only in canvas mode)."
+        },
+        {
+          "name": "x",
+          "signature": "x: number",
+          "signatureTokens": [
+            {
+              "text": "x",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Atlas X position (pixels, top-left of slot)."
+        },
+        {
+          "name": "xBearing",
+          "signature": "xBearing?: number",
+          "signatureTokens": [
+            {
+              "text": "xBearing",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "X offset applied to the quad relative to the cursor position. Non-zero in SDF mode to account for the left SDF padding."
+        },
+        {
+          "name": "y",
+          "signature": "y: number",
+          "signatureTokens": [
+            {
+              "text": "y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Atlas Y position (pixels, top-left of slot)."
+        },
+        {
+          "name": "yBearing",
+          "signature": "yBearing?: number",
+          "signatureTokens": [
+            {
+              "text": "yBearing",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Y offset applied to the quad relative to the line top. Non-zero in SDF mode to account for the top SDF padding."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/text/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/text/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/types.ts"
+}

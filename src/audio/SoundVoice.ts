@@ -134,15 +134,43 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
    *
    * The offset is sample-exact but the restart is not phase-continuous: on
    * sustained tonal material the seam can be audible.
+   *
+   * A voice whose source has already played out ends here instead of pausing —
+   * see {@link SoundVoice._reachedWindowEnd}.
    */
   public pause(): void {
     if (this._ended || this._paused) return;
+
+    // `onended` is an asynchronous task in a real browser, so a source can be
+    // past its window end while the callback is still in flight. Retiring it
+    // clears that callback, so pausing here would strand the voice as
+    // permanently paused-but-not-ended: holding its pool slot, its entry in the
+    // manager's voice registry, and its place in `SceneAudio._suspended`, with
+    // nothing left that could ever finish it. It is over — end it properly.
+    if (this._reachedWindowEnd()) {
+      this._finish();
+
+      return;
+    }
 
     // Read the playhead before the flag flips — `time` reports the frozen
     // value once `_paused` is set.
     this._pausedAt = this._window.base + this.time;
     this._paused = true;
     this._retireSource();
+  }
+
+  /**
+   * Whether the running source has already played past the end of its window.
+   * Only meaningful for a non-looping voice — a looping source is bounded by
+   * nothing and wraps forever.
+   */
+  private _reachedWindowEnd(): boolean {
+    if (this._loop) return false;
+
+    const elapsed = (this._audioContext.currentTime - this._startedAt) * this._playbackRate;
+
+    return this._offsetAtStart + elapsed >= this._window.end;
   }
 
   public resume(): void {

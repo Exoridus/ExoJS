@@ -1,0 +1,234 @@
+{
+  "title": "ColorGradient",
+  "description": "Piecewise-linear color gradient sampled by lifetime ratio `t` in `[0, 1]`. Keyframes are stored sorted by `t`; sampling outside the range returns the nearest endpoint color. Like Curve, the last accessed segment is cached so monotonically advancing `t` is O(1) amortised. Two output paths: - evaluate — writes into a `Color` instance (own scratch by default). - evaluateRgba — returns the packed `0xAABBGGRR` u32 directly, skipping the Color object. Use this in tight per-particle inner loops that write into a `Uint32Array` instance buffer.",
+  "symbol": "ColorGradient",
+  "kind": "class",
+  "subsystem": "particles",
+  "importPath": "@codexo/exojs-particles",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 1,
+    "methods": 2,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Piecewise-linear color gradient sampled by lifetime ratio `t` in `[0, 1]`. Keyframes are stored sorted by `t`; sampling outside the range returns the nearest endpoint color. Like Curve, the last accessed segment is cached so monotonically advancing `t` is O(1) amortised.",
+        "Two output paths: - evaluate — writes into a `Color` instance (own scratch by default). - evaluateRgba — returns the packed `0xAABBGGRR` u32 directly, skipping the Color object. Use this in tight per-particle inner loops that write into a `Uint32Array` instance buffer."
+      ],
+      "importLine": "import { ColorGradient } from '@codexo/exojs-particles'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(keys: readonly ColorGradientKey[]): ColorGradient",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "keys",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ColorGradientKey",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ColorGradient",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "keys",
+              "type": "readonly ColorGradientKey[]",
+              "optional": false
+            }
+          ],
+          "returnType": "ColorGradient",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "evaluate",
+          "signature": "evaluate(t: number, out: Color): Color",
+          "signatureTokens": [
+            {
+              "text": "evaluate",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "out",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "t",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "out",
+              "type": "Color",
+              "optional": false
+            }
+          ],
+          "returnType": "Color",
+          "description": ""
+        },
+        {
+          "name": "evaluateRgba",
+          "signature": "evaluateRgba(t: number): number",
+          "signatureTokens": [
+            {
+              "text": "evaluateRgba",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "t",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Returns the gradient sample at t packed into a single 32-bit RGBA integer (0xAABBGGRR). Avoids the Color object on the hot path; suitable for direct write into a Uint32Array instance buffer."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-particles/src/distributions/ColorGradient.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/distributions/ColorGradient.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-particles/src/distributions/ColorGradient.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/distributions/ColorGradient.ts"
+}

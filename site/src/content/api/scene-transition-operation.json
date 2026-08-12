@@ -1,0 +1,79 @@
+{
+  "title": "SceneTransitionOperation",
+  "description": "What kind of navigation a SceneTransitionSession is running for. Read via SceneTransitionContext.operation.",
+  "symbol": "SceneTransitionOperation",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "What kind of navigation a SceneTransitionSession is running for. Read via SceneTransitionContext.operation."
+      ],
+      "importLine": "import { SceneTransitionOperation } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "SceneTransitionOperation",
+          "signature": "\"change\" | \"restore\" | \"unload\"",
+          "signatureTokens": [
+            {
+              "text": "\"change\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"restore\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"unload\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/SceneTransition.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTransition.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/SceneTransition.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTransition.ts"
+}

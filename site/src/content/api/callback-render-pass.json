@@ -1,0 +1,348 @@
+{
+  "title": "CallbackRenderPass",
+  "description": "Runs a user callback as one pass. The callback receives a PassContext scoped to the active target: `pass.render(node)`, `pass.clear(color)`, `pass.drawGeometry(...)`, `pass.renderTo(...)`, and `pass.backend` for raw draws. Set `options.target` to redirect the callback's output into an off-screen RenderTexture (immediate-mode \"scene\" → texture); inside that redirect every `pass.*` verb operates on the texture. To run a low-level BackendRenderPass inside a pipeline, bridge it here: `new CallbackRenderPass((pass) => pass.backend.execute(myBackendPass))`. `view`/`target`/`clear` are fixed at construction; the off-screen redirect is built once and reused every frame (no per-frame allocation). `execute` is not re-entrant — a callback must not re-run the same pass instance; the reentrancy guard keeps the redirect's active context from being clobbered. If your callback closes over owned GPU resources, subclass RenderPass instead so you can override `destroy()`.",
+  "symbol": "CallbackRenderPass",
+  "kind": "class",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 1,
+    "methods": 3,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Runs a user callback as one pass. The callback receives a PassContext scoped to the active target: `pass.render(node)`, `pass.clear(color)`, `pass.drawGeometry(...)`, `pass.renderTo(...)`, and `pass.backend` for raw draws. Set `options.target` to redirect the callback's output into an off-screen RenderTexture (immediate-mode \"scene\" → texture); inside that redirect every `pass.*` verb operates on the texture.",
+        "To run a low-level BackendRenderPass inside a pipeline, bridge it here: `new CallbackRenderPass((pass) => pass.backend.execute(myBackendPass))`.",
+        "`view`/`target`/`clear` are fixed at construction; the off-screen redirect is built once and reused every frame (no per-frame allocation). `execute` is not re-entrant — a callback must not re-run the same pass instance; the reentrancy guard keeps the redirect's active context from being clobbered. If your callback closes over owned GPU resources, subclass RenderPass instead so you can override `destroy()`."
+      ],
+      "importLine": "import { CallbackRenderPass } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(callback: (pass: PassContext) => void, options?: CallbackRenderPassOptions): CallbackRenderPass",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "callback",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "pass",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PassContext",
+              "kind": "type"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CallbackRenderPassOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CallbackRenderPass",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "callback",
+              "type": "(pass: PassContext) => void",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "CallbackRenderPassOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "CallbackRenderPass",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Release resources this pass allocated internally. No-op by default; idempotent. Never frees injected scene nodes or caller-provided RenderTextures — those are owned by the caller / scene."
+        },
+        {
+          "name": "execute",
+          "signature": "execute(context: RenderingContext): void",
+          "signatureTokens": [
+            {
+              "text": "execute",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderingContext",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "context",
+              "type": "RenderingContext",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Run this pass against context. The active render target is the canvas unless a parent redirected it. Called directly, this runs **regardless of enabled** — enabled is evaluated by the containing RenderPipeline, not self-checked here. Subclasses must not begin execute with if (!this.enabled)."
+        },
+        {
+          "name": "resize",
+          "signature": "resize(_width: number, _height: number): void",
+          "signatureTokens": [
+            {
+              "text": "resize",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "_width",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "_height",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "_width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "_height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "React to a surface / target size change. No-op by default; size-dependent passes (effects with scratch targets) override. Called by RenderPipeline.resize, which the caller wires to app.onResize."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "enabled",
+          "signature": "enabled: boolean",
+          "signatureTokens": [
+            {
+              "text": "enabled",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "When false, the containing RenderPipeline skips this pass during execute. Default true. Evaluated by the parent — a direct execute call runs the pass regardless."
+        },
+        {
+          "name": "label",
+          "signature": "label: string",
+          "signatureTokens": [
+            {
+              "text": "label",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Debug label (inspector / logging). Defaults to the constructor name. Display only — not an identity."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/CallbackRenderPass.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/CallbackRenderPass.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/CallbackRenderPass.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/CallbackRenderPass.ts"
+}

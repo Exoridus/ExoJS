@@ -1,0 +1,406 @@
+{
+  "title": "SystemRegistry",
+  "description": "Phase-dispatching registry of Systems, shared by `Scene` (as `scene.systems`) and `Application` (as `app.systems`). Each system participates only in the scheduler phases it implements (`preUpdate`/`fixedUpdate`/`update`/`draw`); within a phase, systems run in ascending `order` (ties keep registration order) and are destroyed in reverse registration order when the registry is destroyed. SystemRegistrationOptions.before/SystemRegistrationOptions.after layer a dependency graph on top of `order`, additive rather than a replacement: `order`/registration sequence still decide ties among registrations the graph doesn't relate to each other. A `before`/`after` reference to a system outside the current phase — a different phase, or never registered — is silently a no-op there, not an error. A cycle throws once the affected phase list is next sorted. Structural mutations are frame-scoped: a system added during a frame — whether from outside or from another system's own callback — does not participate in any phase until the *next* frame, in any phase. Removing a system during a callback marks it inactive immediately, so it is skipped by every later phase and every later fixed step in the *same* frame; the structural delete and the single SystemRegistry.onRemove dispatch are finalized at the frame boundary. Outside a frame — before the first SystemRegistry._beginFrame or after its matching SystemRegistry._endFrame — `add()`/`remove()` apply immediately.",
+  "symbol": "SystemRegistry",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 8,
+  "counts": {
+    "constructors": 1,
+    "methods": 4,
+    "properties": 1,
+    "events": 2
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Phase-dispatching registry of Systems, shared by `Scene` (as `scene.systems`) and `Application` (as `app.systems`). Each system participates only in the scheduler phases it implements (`preUpdate`/`fixedUpdate`/`update`/`draw`); within a phase, systems run in ascending `order` (ties keep registration order) and are destroyed in reverse registration order when the registry is destroyed.",
+        "SystemRegistrationOptions.before/SystemRegistrationOptions.after layer a dependency graph on top of `order`, additive rather than a replacement: `order`/registration sequence still decide ties among registrations the graph doesn't relate to each other. A `before`/`after` reference to a system outside the current phase — a different phase, or never registered — is silently a no-op there, not an error. A cycle throws once the affected phase list is next sorted.",
+        "Structural mutations are frame-scoped: a system added during a frame — whether from outside or from another system's own callback — does not participate in any phase until the *next* frame, in any phase. Removing a system during a callback marks it inactive immediately, so it is skipped by every later phase and every later fixed step in the *same* frame; the structural delete and the single SystemRegistry.onRemove dispatch are finalized at the frame boundary. Outside a frame — before the first SystemRegistry._beginFrame or after its matching SystemRegistry._endFrame — `add()`/`remove()` apply immediately."
+      ],
+      "importLine": "import { SystemRegistry } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): SystemRegistry",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SystemRegistry",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "SystemRegistry",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "add",
+          "signature": "add(system: T, options?: SystemRegistrationOptions): T",
+          "signatureTokens": [
+            {
+              "text": "add",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "system",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SystemRegistrationOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "system",
+              "type": "T",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "SystemRegistrationOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "T",
+          "description": "Register system, returning it unchanged for fluent capture (const world = app.systems.add(new PhysicsWorld())). Adding the same object twice is a no-op. See the class docs for buffering timing."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Destroy every remaining registered system exactly once, in reverse registration order, then clear the registry. A system already removed via SystemRegistry.remove — even if not yet structurally finalized — is not destroyed: remove() never destroys. Each system is destroyed under its own guard and the clear-and-reset tail always runs, so one throwing system can neither skip the systems after it nor leave the registry live. Systems are the extension seam, which makes a throwing destroy() the case to expect rather than a remote one. Failures are logged, never propagated — including in development, where DestroyScope.destroy rethrows an AggregateError instead. The difference is the caller: Application._disposeManagedResources invokes this method unguarded, part-way through an ordered teardown, so a throw here would strand the rendering context, audio, input, backend, platform and clocks that come after it — reinstating the very leak this guard closes."
+        },
+        {
+          "name": "has",
+          "signature": "has(system: System): boolean",
+          "signatureTokens": [
+            {
+              "text": "has",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "system",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "System",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "system",
+              "type": "System",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Whether system is currently registered and eligible to run — false for a not-yet-eligible buffered add or an already-removed system."
+        },
+        {
+          "name": "remove",
+          "signature": "remove(system: System): boolean",
+          "signatureTokens": [
+            {
+              "text": "remove",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "system",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "System",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "system",
+              "type": "System",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Remove system without destroying it — never destroys. Returns true if it was registered. See the class docs for the exact timing of structural cleanup and SystemRegistry.onRemove."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "size",
+          "signature": "size: number",
+          "signatureTokens": [
+            {
+              "text": "size",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Number of systems currently registered and eligible to run."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "events",
+      "title": "Events",
+      "members": [
+        {
+          "name": "onAdd",
+          "signature": "onAdd: Signal<[system]>",
+          "signatureTokens": [
+            {
+              "text": "onAdd",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "system",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Dispatched when a system structurally enters the registry (immediately, or at the frame boundary for a buffered add)."
+        },
+        {
+          "name": "onRemove",
+          "signature": "onRemove: Signal<[system]>",
+          "signatureTokens": [
+            {
+              "text": "onRemove",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "system",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Dispatched when a system structurally leaves the registry (immediately, or at the frame boundary for a buffered remove)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/SystemRegistry.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SystemRegistry.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/SystemRegistry.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SystemRegistry.ts"
+}

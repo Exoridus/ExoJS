@@ -1,0 +1,125 @@
+{
+  "title": "ViewFollowOptions",
+  "description": "Options for View.follow.",
+  "symbol": "ViewFollowOptions",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for View.follow."
+      ],
+      "importLine": "import { ViewFollowOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "lerp",
+          "signature": "lerp?: number",
+          "signatureTokens": [
+            {
+              "text": "lerp",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Interpolation factor in [0, 1]. 1 snaps instantly; lower values smooth the camera. Defaults to 1."
+        },
+        {
+          "name": "offsetX",
+          "signature": "offsetX?: number",
+          "signatureTokens": [
+            {
+              "text": "offsetX",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Horizontal offset in world units applied after following the target."
+        },
+        {
+          "name": "offsetY",
+          "signature": "offsetY?: number",
+          "signatureTokens": [
+            {
+              "text": "offsetY",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Vertical offset in world units applied after following the target."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/View.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/View.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/View.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/View.ts"
+}

@@ -1,0 +1,230 @@
+{
+  "title": "GamepadDescriptor",
+  "description": "Parsed metadata extracted from a browser `Gamepad.id` string. `vendorId` and `productId` are four-hex-digit strings (e.g. `\"045e\"`, `\"028e\"`). `productKey` is the colon-joined pair (`\"045e:028e\"`), used as a compact lookup key. `name` is the human-readable portion of the id with the vendor/product tokens removed, or `null` when the id contained only identifiers.",
+  "symbol": "GamepadDescriptor",
+  "kind": "interface",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 7,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Parsed metadata extracted from a browser `Gamepad.id` string.",
+        "`vendorId` and `productId` are four-hex-digit strings (e.g. `\"045e\"`, `\"028e\"`). `productKey` is the colon-joined pair (`\"045e:028e\"`), used as a compact lookup key. `name` is the human-readable portion of the id with the vendor/product tokens removed, or `null` when the id contained only identifiers."
+      ],
+      "importLine": "import { GamepadDescriptor } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "id",
+          "signature": "id: string",
+          "signatureTokens": [
+            {
+              "text": "id",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "index",
+          "signature": "index: number",
+          "signatureTokens": [
+            {
+              "text": "index",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "label",
+          "signature": "label: string",
+          "signatureTokens": [
+            {
+              "text": "label",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "name",
+          "signature": "name: string | null",
+          "signatureTokens": [
+            {
+              "text": "name",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "productId",
+          "signature": "productId: string | null",
+          "signatureTokens": [
+            {
+              "text": "productId",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "productKey",
+          "signature": "productKey: string | null",
+          "signatureTokens": [
+            {
+              "text": "productKey",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "vendorId",
+          "signature": "vendorId: string | null",
+          "signatureTokens": [
+            {
+              "text": "vendorId",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/GamepadDefinitions.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadDefinitions.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/GamepadDefinitions.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadDefinitions.ts"
+}

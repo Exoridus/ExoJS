@@ -1,0 +1,79 @@
+{
+  "title": "DecompressFormat",
+  "description": "Compression formats supported by the native `DecompressionStream`.",
+  "symbol": "DecompressFormat",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Compression formats supported by the native `DecompressionStream`."
+      ],
+      "importLine": "import { DecompressFormat } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "DecompressFormat",
+          "signature": "\"gzip\" | \"deflate\" | \"deflate-raw\"",
+          "signatureTokens": [
+            {
+              "text": "\"gzip\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"deflate\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"deflate-raw\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/Codec.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Codec.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/Codec.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Codec.ts"
+}

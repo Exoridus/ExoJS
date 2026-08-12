@@ -1,0 +1,150 @@
+{
+  "title": "TremoloEffectOptions",
+  "description": "Construction options for TremoloEffect.",
+  "symbol": "TremoloEffectOptions",
+  "kind": "interface",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs-audio-fx",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for TremoloEffect."
+      ],
+      "importLine": "import { TremoloEffectOptions } from '@codexo/exojs-audio-fx'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "autoPan",
+          "signature": "autoPan?: boolean",
+          "signatureTokens": [
+            {
+              "text": "autoPan",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "When true the same LFO also drives a StereoPannerNode.pan (amplitude = depth), sweeping the signal left and right in synchrony with the tremolo pulsing. This option is read-only after construction. Default false."
+        },
+        {
+          "name": "depth",
+          "signature": "depth?: number",
+          "signatureTokens": [
+            {
+              "text": "depth",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Modulation depth, 0..1. Determines the amplitude of the LFO that modulates tremoloGain.gain. The base gain is 1 - depth; adding the LFO (peak = depth) makes the gain oscillate between 1 - 2 * depth and 1. At depth=0 the effect is transparent; at depth=0.5 the gain briefly reaches zero at the trough; at depth>0.5 the gain goes negative (phase inversion at the trough). Default 0.7."
+        },
+        {
+          "name": "rateHz",
+          "signature": "rateHz?: number",
+          "signatureTokens": [
+            {
+              "text": "rateHz",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "LFO oscillation rate in Hz controlling the speed of the tremolo pulse. Range 0..20, default 5."
+        },
+        {
+          "name": "wet",
+          "signature": "wet?: number",
+          "signatureTokens": [
+            {
+              "text": "wet",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Dry/wet mix, 0..1. The dry level is automatically 1 - wet. Default 1."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-audio-fx/src/effects/TremoloEffect.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/TremoloEffect.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-audio-fx/src/effects/TremoloEffect.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/TremoloEffect.ts"
+}

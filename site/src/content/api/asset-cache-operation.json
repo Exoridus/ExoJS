@@ -1,0 +1,103 @@
+{
+  "title": "AssetCacheOperation",
+  "description": "The cache operation that failed. Carried by AssetCacheError.operation so callers can branch on the failure class — a failed `save` is a degraded cache write, a failed `connect` means the whole store is unavailable.",
+  "symbol": "AssetCacheOperation",
+  "kind": "type",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The cache operation that failed. Carried by AssetCacheError.operation so callers can branch on the failure class — a failed `save` is a degraded cache write, a failed `connect` means the whole store is unavailable."
+      ],
+      "importLine": "import { AssetCacheOperation } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "AssetCacheOperation",
+          "signature": "\"connect\" | \"load\" | \"save\" | \"delete\" | \"clear\" | \"delete-storage\"",
+          "signatureTokens": [
+            {
+              "text": "\"connect\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"load\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"save\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"delete\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"clear\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"delete-storage\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/AssetCacheError.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetCacheError.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/AssetCacheError.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetCacheError.ts"
+}

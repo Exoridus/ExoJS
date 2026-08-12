@@ -253,6 +253,73 @@ describe('SoundVoice — Pausable', () => {
     sound.destroy();
   });
 
+  // In a real browser `onended` is delivered as an asynchronous task, so a
+  // source can be past its window end while the callback is still in flight.
+  // `pause()` retires the source and clears `onended` — which used to strand
+  // the voice as permanently `paused` with `ended === false`, holding its pool
+  // slot, its entry in the manager's voice registry and its place in
+  // `SceneAudio._suspended` forever. The mocks here never auto-fire `onended`,
+  // which is exactly that in-flight window.
+  test('pausing a source that already reached its window end finishes the voice instead', () => {
+    const factory = setupSourceSpy();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub(), { sprites: { hit: { start: 2, end: 3 } } });
+    const voice = playClipVoice(manager, sound);
+    const onEnd = vi.fn();
+    voice.onEnd.add(onEnd);
+
+    // The 1s clip has fully elapsed; the browser has not delivered `onended`.
+    setCurrentTime(1.5);
+    expect(voice.ended).toBe(false);
+
+    voice.pause();
+
+    expect(voice.ended).toBe(true);
+    expect(voice.paused).toBe(false);
+    // `_finish` is what releases the pool slot and the manager registry.
+    expect(onEnd).toHaveBeenCalledTimes(1);
+
+    factory.restore();
+    sound.destroy();
+  });
+
+  test('a late onended can no longer resurrect or double-finish the voice', () => {
+    const factory = setupSourceSpy();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub(), { sprites: { hit: { start: 2, end: 3 } } });
+    const voice = playClipVoice(manager, sound);
+    const onEnd = vi.fn();
+    voice.onEnd.add(onEnd);
+
+    setCurrentTime(1.5);
+    voice.pause();
+
+    // Whatever the browser had queued arrives now.
+    factory.sources[0].onended?.();
+
+    expect(voice.ended).toBe(true);
+    expect(onEnd).toHaveBeenCalledTimes(1);
+
+    factory.restore();
+    sound.destroy();
+  });
+
+  test('a looping voice is never mistaken for one that reached its end', () => {
+    const factory = setupSourceSpy();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub(), { sprites: { hit: { start: 2, end: 3, loop: true } } });
+    const voice = playClipVoice(manager, sound);
+
+    setCurrentTime(50); // many wraps through the 1s clip
+    voice.pause();
+
+    expect(voice.ended).toBe(false);
+    expect(voice.paused).toBe(true);
+
+    factory.restore();
+    sound.destroy();
+  });
+
   test('a paused voice keeps its spatial routing and pans correctly after resume', () => {
     const factory = setupSourceSpy();
     const manager = new AudioManager();

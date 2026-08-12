@@ -1,0 +1,192 @@
+{
+  "title": "GamepadPromptControl",
+  "description": "Named controls that can appear in an in-game prompt or button-hint UI. Intentionally a subset of GamepadButton channels — covers the controls a typical prompt overlay needs to label, including the composite `'DPad'` token which has no single channel equivalent. The names retain a `'Button'` prefix on the face cluster for compatibility with prompt artwork file names.",
+  "symbol": "GamepadPromptControl",
+  "kind": "type",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Named controls that can appear in an in-game prompt or button-hint UI.",
+        "Intentionally a subset of GamepadButton channels — covers the controls a typical prompt overlay needs to label, including the composite `'DPad'` token which has no single channel equivalent. The names retain a `'Button'` prefix on the face cluster for compatibility with prompt artwork file names."
+      ],
+      "importLine": "import { GamepadPromptControl } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "GamepadPromptControl",
+          "signature": "\"DPad\" | \"DPadUp\" | \"DPadDown\" | \"DPadLeft\" | \"DPadRight\" | \"ButtonNorth\" | \"ButtonWest\" | \"ButtonEast\" | \"ButtonSouth\" | \"LeftShoulder\" | \"RightShoulder\" | \"LeftTrigger\" | \"RightTrigger\" | \"Select\" | \"Start\" | \"LeftStick\" | \"RightStick\"",
+          "signatureTokens": [
+            {
+              "text": "\"DPad\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"DPadUp\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"DPadDown\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"DPadLeft\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"DPadRight\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"ButtonNorth\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"ButtonWest\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"ButtonEast\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"ButtonSouth\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"LeftShoulder\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"RightShoulder\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"LeftTrigger\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"RightTrigger\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"Select\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"Start\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"LeftStick\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"RightStick\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/GamepadPromptLayouts.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadPromptLayouts.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/GamepadPromptLayouts.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadPromptLayouts.ts"
+}

@@ -1,0 +1,226 @@
+{
+  "title": "CacheRequest",
+  "description": "All the information a CacheStrategy needs to resolve a single asset. Bundles the target factory, cache namespace, lookup key, the fetch parameters, and any factory-specific options into one value so strategies remain stateless.",
+  "symbol": "CacheRequest",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 7,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "All the information a CacheStrategy needs to resolve a single asset.",
+        "Bundles the target factory, cache namespace, lookup key, the fetch parameters, and any factory-specific options into one value so strategies remain stateless."
+      ],
+      "importLine": "import { CacheRequest } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "factory",
+          "signature": "factory: CacheRequestFactory",
+          "signatureTokens": [
+            {
+              "text": "factory",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheRequestFactory",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "key",
+          "signature": "key: string",
+          "signatureTokens": [
+            {
+              "text": "key",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The per-asset lookup key (typically the alias)."
+        },
+        {
+          "name": "options",
+          "signature": "options?: unknown",
+          "signatureTokens": [
+            {
+              "text": "options",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Type-specific options forwarded to factory.create."
+        },
+        {
+          "name": "reportCacheError",
+          "signature": "reportCacheError?: (error: AssetCacheError) => void",
+          "signatureTokens": [
+            {
+              "text": "reportCacheError",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "error",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetCacheError",
+              "kind": "type"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Diagnostic sink for cache failures the strategy degrades instead of propagating (a full quota, an unreadable store). Supplied by the caller that issued this request — Loader passes one that feeds its own onCacheError — so a degraded write is reported to whoever asked for the asset and to nobody else. Request-scoped rather than a signal on the strategy: strategies are stateless policy objects and may legitimately be shared between several loaders, which a per-instance subscription would cross-wire (and keep alive past the subscriber's own teardown). Absent when the caller wants no diagnostics — never assume it is set."
+        },
+        {
+          "name": "requestOptions",
+          "signature": "requestOptions: RequestInit",
+          "signatureTokens": [
+            {
+              "text": "requestOptions",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RequestInit",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "storageName",
+          "signature": "storageName: string",
+          "signatureTokens": [
+            {
+              "text": "storageName",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The binding/factory storage namespace used for cache lookups."
+        },
+        {
+          "name": "url",
+          "signature": "url: string",
+          "signatureTokens": [
+            {
+              "text": "url",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The fully resolved URL to fetch from the network if the cache misses."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/CacheStrategy.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CacheStrategy.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/CacheStrategy.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CacheStrategy.ts"
+}

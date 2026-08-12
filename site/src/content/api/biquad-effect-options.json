@@ -1,0 +1,175 @@
+{
+  "title": "BiquadEffectOptions",
+  "description": "Construction options for BiquadEffect.",
+  "symbol": "BiquadEffectOptions",
+  "kind": "interface",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for BiquadEffect."
+      ],
+      "importLine": "import { BiquadEffectOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "detune",
+          "signature": "detune?: number",
+          "signatureTokens": [
+            {
+              "text": "detune",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fine frequency offset in cents. Default 0."
+        },
+        {
+          "name": "frequency",
+          "signature": "frequency?: number",
+          "signatureTokens": [
+            {
+              "text": "frequency",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Center / cutoff frequency in Hz. Range 0..nyquist. Default 1000."
+        },
+        {
+          "name": "gain",
+          "signature": "gain?: number",
+          "signatureTokens": [
+            {
+              "text": "gain",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Gain in dB — only used by peaking, lowshelf, highshelf. Default 0."
+        },
+        {
+          "name": "resonance",
+          "signature": "resonance?: number",
+          "signatureTokens": [
+            {
+              "text": "resonance",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Quality factor (resonance / bandwidth). Default 1."
+        },
+        {
+          "name": "type",
+          "signature": "type?: BiquadFilterType",
+          "signatureTokens": [
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BiquadFilterType",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Filter response. Default 'lowpass'."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/audio/BiquadEffect.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/BiquadEffect.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/audio/BiquadEffect.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/BiquadEffect.ts"
+}

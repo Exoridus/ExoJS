@@ -1,0 +1,295 @@
+{
+  "title": "MeshOptions",
+  "description": "Construction-time options for a Mesh. Provide the geometry in exactly one of two forms: - **Convenience form** — a flat `vertices` array of (x, y) pairs in local space, with optional `uvs`, per-vertex `colors`, and `indices`. This is the simplest path: `new Mesh({ vertices })`. - **Geometry form** — a Geometry object whose standard attributes (`a_position`/`position`, `a_texcoord`/`texcoord`, `a_color`/`color`) are read into the mesh: `new Mesh({ geometry })`. The geometry must use the `triangle-list` topology. Supplying both `vertices` and `geometry`, or neither, throws. When present, `uvs` must match the vertex count (as (u, v) pairs) and `colors` must supply one packed-RGBA8 u32 per vertex. `indices` are optional — if absent, the vertex stream is drawn as a flat triangle list (3*N vertices = N triangles). A texture is optional; a textured mesh samples it at the supplied UVs while an untextured mesh paints solid vertex colors only. Validation is enforced at construction; any mismatch throws. For custom shaders/uniforms/textures, attach a MeshMaterial.",
+  "symbol": "MeshOptions",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 7,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction-time options for a Mesh.",
+        "Provide the geometry in exactly one of two forms:",
+        "- **Convenience form** — a flat `vertices` array of (x, y) pairs in local space, with optional `uvs`, per-vertex `colors`, and `indices`. This is the simplest path: `new Mesh({ vertices })`. - **Geometry form** — a Geometry object whose standard attributes (`a_position`/`position`, `a_texcoord`/`texcoord`, `a_color`/`color`) are read into the mesh: `new Mesh({ geometry })`. The geometry must use the `triangle-list` topology.",
+        "Supplying both `vertices` and `geometry`, or neither, throws.",
+        "When present, `uvs` must match the vertex count (as (u, v) pairs) and `colors` must supply one packed-RGBA8 u32 per vertex. `indices` are optional — if absent, the vertex stream is drawn as a flat triangle list (3*N vertices = N triangles). A texture is optional; a textured mesh samples it at the supplied UVs while an untextured mesh paints solid vertex colors only.",
+        "Validation is enforced at construction; any mismatch throws.",
+        "For custom shaders/uniforms/textures, attach a MeshMaterial."
+      ],
+      "importLine": "import { MeshOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "colors",
+          "signature": "colors?: Uint32Array<ArrayBufferLike>",
+          "signatureTokens": [
+            {
+              "text": "colors",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Uint32Array",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBufferLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "geometry",
+          "signature": "geometry?: Geometry",
+          "signatureTokens": [
+            {
+              "text": "geometry",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Geometry",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Interleaved geometry source; mutually exclusive with vertices."
+        },
+        {
+          "name": "indices",
+          "signature": "indices?: Uint16Array<ArrayBufferLike>",
+          "signatureTokens": [
+            {
+              "text": "indices",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Uint16Array",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBufferLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "material",
+          "signature": "material?: MeshMaterial",
+          "signatureTokens": [
+            {
+              "text": "material",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MeshMaterial",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Custom look (shader/uniforms/textures/blendMode); null uses the default mesh material."
+        },
+        {
+          "name": "texture",
+          "signature": "texture?: Texture | RenderTexture | null",
+          "signatureTokens": [
+            {
+              "text": "texture",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderTexture",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "uvs",
+          "signature": "uvs?: Float32Array<ArrayBufferLike>",
+          "signatureTokens": [
+            {
+              "text": "uvs",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Float32Array",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBufferLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "vertices",
+          "signature": "vertices?: Float32Array<ArrayBufferLike>",
+          "signatureTokens": [
+            {
+              "text": "vertices",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Float32Array",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBufferLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/mesh/Mesh.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/mesh/Mesh.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/mesh/Mesh.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/mesh/Mesh.ts"
+}

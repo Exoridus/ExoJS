@@ -1,0 +1,100 @@
+{
+  "title": "LutFilterOptions",
+  "description": "Construction options for LutFilter.",
+  "symbol": "LutFilterOptions",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for LutFilter."
+      ],
+      "importLine": "import { LutFilterOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "mode",
+          "signature": "mode?: LutMode",
+          "signatureTokens": [
+            {
+              "text": "mode",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LutMode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Storage mode of the LUT texture. - '1d' — texture is N×1, indexed by the source pixel's red channel. Used for palette mapping and indexed-color effects. - '3d' — texture is N²×N, indexed by the full source RGB. Used for color grading, tone mapping, film emulation. Default '3d'."
+        },
+        {
+          "name": "size",
+          "signature": "size?: number",
+          "signatureTokens": [
+            {
+              "text": "size",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Size N of a 3D LUT (cube edge length). Common values: 8, 16, 17, 32, 33. Ignored for 1D mode. Default 17 (matches DaVinci/OBS export defaults)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/filters/LutFilter.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/LutFilter.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/filters/LutFilter.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/LutFilter.ts"
+}

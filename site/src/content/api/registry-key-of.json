@@ -1,0 +1,91 @@
+{
+  "title": "RegistryKeyOf",
+  "description": "Every string key registered in a `SceneRegistryShape` — the type of a valid `change()`/`restore()` key-based navigation target.",
+  "symbol": "RegistryKeyOf",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Every string key registered in a `SceneRegistryShape` — the type of a valid `change()`/`restore()` key-based navigation target."
+      ],
+      "importLine": "import { RegistryKeyOf } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "RegistryKeyOf",
+          "signature": "Extract<keyof Registry, string>",
+          "signatureTokens": [
+            {
+              "text": "Extract",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "keyof",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Registry",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/SceneTypes.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTypes.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/SceneTypes.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTypes.ts"
+}

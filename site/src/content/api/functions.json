@@ -1,0 +1,1432 @@
+{
+  "title": "Functions & Constants",
+  "description": "Free functions and constants exported from @codexo/exojs.",
+  "symbol": "Functions",
+  "kind": "namespace",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 27,
+  "counts": {
+    "constructors": 0,
+    "methods": 18,
+    "properties": 9,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "overview",
+      "title": "Overview",
+      "members": [],
+      "paragraphs": [
+        "Free functions and constants exported from @codexo/exojs. Import any of them directly, for example `import { clamp } from '@codexo/exojs'`."
+      ],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "functions",
+      "title": "Functions",
+      "members": [
+        {
+          "name": "clamp",
+          "signature": "clamp(value: number, min: number, max: number): number",
+          "signatureTokens": [
+            {
+              "text": "clamp",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "min",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "max",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "value",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "min",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "max",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Clamp value to the closed interval [min, max]."
+        },
+        {
+          "name": "createRenderStats",
+          "signature": "createRenderStats(): RenderStats",
+          "signatureTokens": [
+            {
+              "text": "createRenderStats",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderStats",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "RenderStats",
+          "description": "Allocate a zeroed RenderStats object for the first frame."
+        },
+        {
+          "name": "crossFade",
+          "signature": "crossFade(from: Voice, to: Voice, durationMs: number, options: CrossFadeOptions): Promise<void>",
+          "signatureTokens": [
+            {
+              "text": "crossFade",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "from",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Voice",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "to",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Voice",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "durationMs",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CrossFadeOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "from",
+              "type": "Voice",
+              "optional": false
+            },
+            {
+              "name": "to",
+              "type": "Voice",
+              "optional": false
+            },
+            {
+              "name": "durationMs",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "CrossFadeOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<void>",
+          "description": "Cross-fade from one playing Voice to another over durationMs. Ramps to up to toVolume and from down to silence. By default from is stopped when the fade finishes; pass stopAfter: false to keep it alive. Both voices must already be playing — start the incoming voice (typically at volume 0) before calling: ts const next = app.audio.play(track, { volume: 0 }); await crossFade(current, next, 1000);  Returns a Promise that resolves once durationMs elapses."
+        },
+        {
+          "name": "decodeAudioData",
+          "signature": "decodeAudioData(arrayBuffer: ArrayBuffer): Promise<AudioBuffer>",
+          "signatureTokens": [
+            {
+              "text": "decodeAudioData",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "arrayBuffer",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBuffer",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioBuffer",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "arrayBuffer",
+              "type": "ArrayBuffer",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<AudioBuffer>",
+          "description": "Decode raw audio bytes into an AudioBuffer using the shared OfflineAudioContext. The context's sample rate matches the live AudioContext when one exists, else defaults to 44.1 kHz — decoding never forces a live context into existence. Note: on some older mobile WebKit versions decodeAudioData requires a running (live) context — decoding may fail with a browser-level error rather than an ExoJS-shaped error in those environments."
+        },
+        {
+          "name": "defineAsset",
+          "signature": "defineAsset(descriptor: DefineAssetDescriptor<Result, Options>): AssetBinding<Result, Options>",
+          "signatureTokens": [
+            {
+              "text": "defineAsset",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "descriptor",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DefineAssetDescriptor",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Result",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Options",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetBinding",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Result",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Options",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "descriptor",
+              "type": "DefineAssetDescriptor<Result, Options>",
+              "optional": false
+            }
+          ],
+          "returnType": "AssetBinding<Result, Options>",
+          "description": "Declare a built-in asset type in one place. For a **leaf-capable** type — one with a SeamlessAdapter (resource) or isValue: true (value) — this registers its placeholder strategy and suffix→type inference GLOBALLY at import time, so a loader-free Assets.from resolves it before any Application exists. A **non-leaf** resource type (isValue: false and no adapter — e.g. bmFont, font) has no placeholder strategy, so it is deliberately NOT registered globally: its bare path cannot be inferred and must be declared via Asset.type(...) or an explicit config. Its extensions still travel on the returned binding for the per-Loader map. The returned AssetBinding flows through the unchanged materializeAssetBindings path exactly like any extension package's binding — defineAsset adds no second per-loader registration channel."
+        },
+        {
+          "name": "formatShaderError",
+          "signature": "formatShaderError(source: string, infoLog: string): string",
+          "signatureTokens": [
+            {
+              "text": "formatShaderError",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "infoLog",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "infoLog",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "string",
+          "description": "Format a driver info log against its shader source: parses ERROR: 0:<line>: (ANGLE/Mesa GLSL) and WGSL :<line>:<col> positions, and returns the raw log plus a numbered source excerpt (±2 lines, > marker on each failing line). Falls back to the raw log verbatim when no line references parse (or none of them land inside source)."
+        },
+        {
+          "name": "getAudioContext",
+          "signature": "getAudioContext(): AudioContext",
+          "signatureTokens": [
+            {
+              "text": "getAudioContext",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioContext",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "AudioContext",
+          "description": "Return the global singleton AudioContext, creating it if it does not yet exist. Also starts interaction-unlock monitoring so the context will resume on the first user gesture. Throws if AudioContext is not available in the current environment."
+        },
+        {
+          "name": "getOfflineAudioContext",
+          "signature": "getOfflineAudioContext(): OfflineAudioContext",
+          "signatureTokens": [
+            {
+              "text": "getOfflineAudioContext",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OfflineAudioContext",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "OfflineAudioContext",
+          "description": "Return the shared singleton OfflineAudioContext used for audio decoding. Its sample rate matches the live AudioContext when one already exists, otherwise a 44.1 kHz default is used. Never creates a live AudioContext — decoding before the first user gesture must not spawn a suspended context (AU2); buffers resample transparently on playback if the rates differ."
+        },
+        {
+          "name": "inRange",
+          "signature": "inRange(value: number, min: number, max: number): boolean",
+          "signatureTokens": [
+            {
+              "text": "inRange",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "min",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "max",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "value",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "min",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "max",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Return true when value lies within [min, max] (inclusive, regardless of whether min < max)."
+        },
+        {
+          "name": "isAdvancedBlendMode",
+          "signature": "isAdvancedBlendMode(mode: BlendModes): boolean",
+          "signatureTokens": [
+            {
+              "text": "isAdvancedBlendMode",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "mode",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BlendModes",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "mode",
+              "type": "BlendModes",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Returns true for blend modes that require the backdrop-aware compositor (shader-side blend + GPU texture copy). Modes 0–4 use fixed-function blending and return false. Modes 5–17 return true."
+        },
+        {
+          "name": "isAudioContextReady",
+          "signature": "isAudioContextReady(): boolean",
+          "signatureTokens": [
+            {
+              "text": "isAudioContextReady",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "boolean",
+          "description": "Return true if the global AudioContext has been created and is currently in the running state. Safe to call before getAudioContext; returns false if no context exists yet."
+        },
+        {
+          "name": "isPowerOfTwo",
+          "signature": "isPowerOfTwo(value: number): boolean",
+          "signatureTokens": [
+            {
+              "text": "isPowerOfTwo",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "value",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Return true when value is a non-zero power of two."
+        },
+        {
+          "name": "keyboardChannelFromCode",
+          "signature": "keyboardChannelFromCode(code: string): Keyboard | undefined",
+          "signatureTokens": [
+            {
+              "text": "keyboardChannelFromCode",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "code",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Keyboard",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "code",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "Keyboard | undefined",
+          "description": "Resolve a KeyboardEvent.code to its Keyboard channel, or undefined for a key ExoJS does not track (media and IME/language keys, and the empty code a soft keyboard reports). This is the single seam between the platform's physical-key identity and the engine's channel model — see Keyboard for what \"physical\" means here and why keyCode is never used. For a modifier this returns the SIDE-SPECIFIC channel ('ShiftLeft' → Keyboard.ShiftLeft), never the aggregate — InputManager writes the aggregate channel alongside it on every keydown/keyup. Useful in a rebinding UI that has a raw DOM event rather than an engine channel; InputManager.onKeyDown already reports the resolved channel."
+        },
+        {
+          "name": "lerp",
+          "signature": "lerp(startValue: number, endValue: number, ratio: number): number",
+          "signatureTokens": [
+            {
+              "text": "lerp",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "startValue",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "endValue",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ratio",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "startValue",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "endValue",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "ratio",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Linear interpolation between startValue and endValue at normalized ratio ∈ [0, 1]."
+        },
+        {
+          "name": "registerAudioWorkletProcessor",
+          "signature": "registerAudioWorkletProcessor(audioContext: BaseAudioContext, processorName: string, source: string): Promise<void>",
+          "signatureTokens": [
+            {
+              "text": "registerAudioWorkletProcessor",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "audioContext",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BaseAudioContext",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "processorName",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "audioContext",
+              "type": "BaseAudioContext",
+              "optional": false
+            },
+            {
+              "name": "processorName",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<void>",
+          "description": "Registers an AudioWorkletProcessor (defined by source) with the given AudioContext under processorName. Idempotent: subsequent calls with the same context+name return immediately. Concurrent calls (race-condition protection) share a single in-flight registration promise. Source is bundled at build time as a JavaScript string and turned into a Blob URL at runtime — no separate worklet asset file is shipped."
+        },
+        {
+          "name": "registerSerializer",
+          "signature": "registerSerializer(typeName: string, ctor: SceneNodeConstructor<T>, serializer: NodeSerializer<T>, registry: SerializationRegistry): void",
+          "signatureTokens": [
+            {
+              "text": "registerSerializer",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "typeName",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ctor",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneNodeConstructor",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "serializer",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NodeSerializer",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "registry",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SerializationRegistry",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "typeName",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "ctor",
+              "type": "SceneNodeConstructor<T>",
+              "optional": false
+            },
+            {
+              "name": "serializer",
+              "type": "NodeSerializer<T>",
+              "optional": false
+            },
+            {
+              "name": "registry",
+              "type": "SerializationRegistry",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Register a custom NodeSerializer. Defaults to the defaultSerializationRegistry; pass app.serializers to register the type only for that Application (it stays isolated from other apps and from the global registry, resolving through the fallback chain). Use this to make your own SceneNode subclasses serializable. Delegate to a base type's behaviour by composing with the framework helpers, or register a fully custom serializer. ts registerSerializer('PowerUp', PowerUp, { write: (node) => ({ kind: node.kind }), read: (data) => new PowerUp(typeof data.kind === 'string' ? data.kind : ''), }); "
+        },
+        {
+          "name": "resetRenderStats",
+          "signature": "resetRenderStats(stats: RenderStats): RenderStats",
+          "signatureTokens": [
+            {
+              "text": "resetRenderStats",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "stats",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderStats",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderStats",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "stats",
+              "type": "RenderStats",
+              "optional": false
+            }
+          ],
+          "returnType": "RenderStats",
+          "description": "Advance the frame counter and zero all per-frame accumulators in place. Call once at the start of each render tick before recording new data. Note: RenderStats.gpuMemoryBytes is intentionally **not** reset here. It is a running total of live GPU resources owned by the backend's resource accountant, which persists across frames; zeroing it each tick would make it read 0 after the first frame."
+        },
+        {
+          "name": "sign",
+          "signature": "sign(value: number): number",
+          "signatureTokens": [
+            {
+              "text": "sign",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "value",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Return the sign of value as -1, 0, or 1. Unlike Math.sign, returns 0 only for strict zero (not -0)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "constants",
+      "title": "Constants",
+      "members": [
+        {
+          "name": "buildInfo",
+          "signature": "buildInfo: BuildInfo",
+          "signatureTokens": [
+            {
+              "text": "buildInfo",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BuildInfo",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "INSTANCE_TRANSFORM_GLSL",
+          "signature": "INSTANCE_TRANSFORM_GLSL: \"\\nin vec2 a_position;\\nin vec2 a_texcoord;\\nin vec4 a_color;\\nin uint a_nodeIndex;\\n\\nuniform mat3 u_projection;\\nuniform mat3 u_group;\\nuniform vec4 u_viewport;\\nuniform sampler2D u_transforms;\\nuniform sampler2D u_tintTexture;\\n\\nvec2 exoInstanceClipPosition(vec2 localPosition, uint nodeIndex) {\\n    int row = int(nodeIndex);\\n    vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0); // a, b, c, d\\n    vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0); // tx, ty, snapMode, 0\\n    // mat3() takes columns, the engine's Matrix is row-major — hence the\\n    // interleave. Yields | a b tx ; c d ty ; 0 0 1 |.\\n    mat3 transform = mat3(\\n        m0.x, m0.z, 0.0,\\n        m0.y, m0.w, 0.0,\\n        m1.x, m1.y, 1.0\\n    );\\n\\n    vec2 clip = (u_projection * u_group * transform * vec3(localPosition, 1.0)).xy;\\n\\n    // Render-only pixel snapping (m1.z: 0 = none, non-zero = snap origin). Snap\\n    // the instance ORIGIN's device-pixel position and rigid-shift the primitive\\n    // by the same delta. floor(x + 0.5) matches the CPU Math.round policy;\\n    // GLSL round() is undefined at .5.\\n    if (m1.z != 0.0) {\\n        vec2 originClip = (u_projection * u_group * vec3(m1.x, m1.y, 1.0)).xy;\\n        vec2 originDevice = u_viewport.xy + (originClip * 0.5 + 0.5) * u_viewport.zw;\\n        clip += (floor(originDevice + 0.5) - originDevice) * 2.0 / max(u_viewport.zw, vec2(1.0));\\n    }\\n\\n    return clip;\\n}\\n\\nvec4 exoInstanceTint(uint nodeIndex) {\\n    return texelFetch(u_tintTexture, ivec2(0, int(nodeIndex)), 0);\\n}\\n\"",
+          "signatureTokens": [
+            {
+              "text": "INSTANCE_TRANSFORM_GLSL",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"\\nin vec2 a_position;\\nin vec2 a_texcoord;\\nin vec4 a_color;\\nin uint a_nodeIndex;\\n\\nuniform mat3 u_projection;\\nuniform mat3 u_group;\\nuniform vec4 u_viewport;\\nuniform sampler2D u_transforms;\\nuniform sampler2D u_tintTexture;\\n\\nvec2 exoInstanceClipPosition(vec2 localPosition, uint nodeIndex) {\\n    int row = int(nodeIndex);\\n    vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0); // a, b, c, d\\n    vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0); // tx, ty, snapMode, 0\\n    // mat3() takes columns, the engine's Matrix is row-major — hence the\\n    // interleave. Yields | a b tx ; c d ty ; 0 0 1 |.\\n    mat3 transform = mat3(\\n        m0.x, m0.z, 0.0,\\n        m0.y, m0.w, 0.0,\\n        m1.x, m1.y, 1.0\\n    );\\n\\n    vec2 clip = (u_projection * u_group * transform * vec3(localPosition, 1.0)).xy;\\n\\n    // Render-only pixel snapping (m1.z: 0 = none, non-zero = snap origin). Snap\\n    // the instance ORIGIN's device-pixel position and rigid-shift the primitive\\n    // by the same delta. floor(x + 0.5) matches the CPU Math.round policy;\\n    // GLSL round() is undefined at .5.\\n    if (m1.z != 0.0) {\\n        vec2 originClip = (u_projection * u_group * vec3(m1.x, m1.y, 1.0)).xy;\\n        vec2 originDevice = u_viewport.xy + (originClip * 0.5 + 0.5) * u_viewport.zw;\\n        clip += (floor(originDevice + 0.5) - originDevice) * 2.0 / max(u_viewport.zw, vec2(1.0));\\n    }\\n\\n    return clip;\\n}\\n\\nvec4 exoInstanceTint(uint nodeIndex) {\\n    return texelFetch(u_tintTexture, ivec2(0, int(nodeIndex)), 0);\\n}\\n\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "GLSL ES 3.00 form of the instanced-batch contract. Insert it directly after the #version 300 es directive of a custom material's **vertex** shader; it declares no precision qualifier, relying on the vertex stage's default highp for floats. Declares the engine-supplied inputs (a_position, a_texcoord, a_color, a_nodeIndex) and uniforms, and exposes two helpers: - vec2 exoInstanceClipPosition(vec2 localPosition, uint nodeIndex) — maps a local-space vertex of the current instance to clip space, including pixel snapping. Returns clip space rather than world space because snapping is defined in device pixels and needs the projection, group matrix and viewport together. - vec4 exoInstanceTint(uint nodeIndex) — the instance's tint, to be passed through to the fragment stage. Unused declarations are stripped at link time; a batch shader that ignores texcoords or vertex colors needs no further ceremony."
+        },
+        {
+          "name": "INSTANCE_TRANSFORM_WGSL",
+          "signature": "INSTANCE_TRANSFORM_WGSL: \"\\nstruct ExoTransformSlot {\\n    m0: vec4<f32>,\\n    m1: vec4<f32>,\\n};\\n\\nstruct ExoTransformUniforms {\\n    projection: mat3x3<f32>,\\n    group: mat3x3<f32>,\\n    flags: vec4<f32>,\\n    viewport: vec4<f32>,        // device-pixel snap rect (x, y, width, height)\\n};\\n\\n@group(0) @binding(0) var<uniform> exoUniforms: ExoTransformUniforms;\\n@group(0) @binding(1) var<storage, read> exoTransforms: array<ExoTransformSlot>;\\n@group(0) @binding(2) var<storage, read> exoTints: array<u32>;\\n\\nfn exoInstanceClipPosition(localPosition: vec2<f32>, nodeIndex: u32) -> vec2<f32> {\\n    // Shared slot convention: m0 = (a, b, c, d), m1 = (tx, ty, snapMode, 0).\\n    let slot = exoTransforms[nodeIndex];\\n    let world = vec3<f32>(\\n        slot.m0.x * localPosition.x + slot.m0.y * localPosition.y + slot.m1.x,\\n        slot.m0.z * localPosition.x + slot.m0.w * localPosition.y + slot.m1.y,\\n        1.0\\n    );\\n\\n    var clip = (exoUniforms.projection * exoUniforms.group * world).xy;\\n\\n    // Render-only pixel snapping (slot.m1.z: 0 = none, non-zero = snap origin).\\n    // floor(x + 0.5) matches the CPU Math.round policy; WGSL round() is\\n    // half-to-even.\\n    if (slot.m1.z != 0.0) {\\n        let originClip = (exoUniforms.projection * exoUniforms.group * vec3<f32>(slot.m1.x, slot.m1.y, 1.0)).xy;\\n        let originDevice = exoUniforms.viewport.xy + (originClip * 0.5 + vec2<f32>(0.5)) * exoUniforms.viewport.zw;\\n        clip = clip + (floor(originDevice + vec2<f32>(0.5)) - originDevice) * 2.0 / max(exoUniforms.viewport.zw, vec2<f32>(1.0));\\n    }\\n\\n    return clip;\\n}\\n\\nfn exoInstanceTint(nodeIndex: u32) -> vec4<f32> {\\n    return unpack4x8unorm(exoTints[nodeIndex]);\\n}\\n\"",
+          "signatureTokens": [
+            {
+              "text": "INSTANCE_TRANSFORM_WGSL",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"\\nstruct ExoTransformSlot {\\n    m0: vec4<f32>,\\n    m1: vec4<f32>,\\n};\\n\\nstruct ExoTransformUniforms {\\n    projection: mat3x3<f32>,\\n    group: mat3x3<f32>,\\n    flags: vec4<f32>,\\n    viewport: vec4<f32>,        // device-pixel snap rect (x, y, width, height)\\n};\\n\\n@group(0) @binding(0) var<uniform> exoUniforms: ExoTransformUniforms;\\n@group(0) @binding(1) var<storage, read> exoTransforms: array<ExoTransformSlot>;\\n@group(0) @binding(2) var<storage, read> exoTints: array<u32>;\\n\\nfn exoInstanceClipPosition(localPosition: vec2<f32>, nodeIndex: u32) -> vec2<f32> {\\n    // Shared slot convention: m0 = (a, b, c, d), m1 = (tx, ty, snapMode, 0).\\n    let slot = exoTransforms[nodeIndex];\\n    let world = vec3<f32>(\\n        slot.m0.x * localPosition.x + slot.m0.y * localPosition.y + slot.m1.x,\\n        slot.m0.z * localPosition.x + slot.m0.w * localPosition.y + slot.m1.y,\\n        1.0\\n    );\\n\\n    var clip = (exoUniforms.projection * exoUniforms.group * world).xy;\\n\\n    // Render-only pixel snapping (slot.m1.z: 0 = none, non-zero = snap origin).\\n    // floor(x + 0.5) matches the CPU Math.round policy; WGSL round() is\\n    // half-to-even.\\n    if (slot.m1.z != 0.0) {\\n        let originClip = (exoUniforms.projection * exoUniforms.group * vec3<f32>(slot.m1.x, slot.m1.y, 1.0)).xy;\\n        let originDevice = exoUniforms.viewport.xy + (originClip * 0.5 + vec2<f32>(0.5)) * exoUniforms.viewport.zw;\\n        clip = clip + (floor(originDevice + vec2<f32>(0.5)) - originDevice) * 2.0 / max(exoUniforms.viewport.zw, vec2<f32>(1.0));\\n    }\\n\\n    return clip;\\n}\\n\\nfn exoInstanceTint(nodeIndex: u32) -> vec4<f32> {\\n    return unpack4x8unorm(exoTints[nodeIndex]);\\n}\\n\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "WGSL form of the instanced-batch contract, for the WebGPU backend. Insert it at the top of a custom material's shader source. Declares the engine-owned @group(0) bindings and exposes the same two helpers as INSTANCE_TRANSFORM_GLSL. Because WGSL has no global vertex inputs, both take the node index explicitly — which is also why the GLSL helpers take it as a parameter, so a material's two shader bodies read alike: - exoInstanceClipPosition(localPosition: vec2<f32>, nodeIndex: u32) -> vec2<f32> - exoInstanceTint(nodeIndex: u32) -> vec4<f32> The vertex entry point must take @location(6) nodeIndex: u32 in its input struct; @location(0..2) carry position, texcoord and color as in the GLSL form."
+        },
+        {
+          "name": "logger",
+          "signature": "logger: Logger",
+          "signatureTokens": [
+            {
+              "text": "logger",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Logger",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "maxPointers",
+          "signature": "maxPointers: 16",
+          "signatureTokens": [
+            {
+              "text": "maxPointers",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "16",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Maximum number of simultaneous tracked pointers (mouse / touch / pen)."
+        },
+        {
+          "name": "onAudioContextReady",
+          "signature": "onAudioContextReady: AudioContextReadySignal",
+          "signatureTokens": [
+            {
+              "text": "onAudioContextReady",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioContextReadySignal",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Signal that dispatches once the global AudioContext enters the running state. Handles browser autoplay-policy by listening for user-interaction events (mousedown, touchstart, touchend) and resuming a suspended context automatically. This is a one-shot \"became ready at least once\" contract: it never dispatches a second time, even if the context later drops back to 'suspended' (an iOS audio-session interruption, a bfcache restore, ...) and is subsequently resumed again. Use isAudioContextReady to check the *current* running state at any point; the interaction-gesture monitoring itself re-arms internally on every such suspension so audio keeps working across it, independent of whether this signal fires again."
+        },
+        {
+          "name": "pointerSlotSize",
+          "signature": "pointerSlotSize: 16",
+          "signatureTokens": [
+            {
+              "text": "pointerSlotSize",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "16",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Number of channel slots reserved per pointer. 16 pointers × 16 slots = 256 (fills the Pointers category exactly)."
+        },
+        {
+          "name": "SERIALIZATION_VERSION",
+          "signature": "SERIALIZATION_VERSION: 1",
+          "signatureTokens": [
+            {
+              "text": "SERIALIZATION_VERSION",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "1",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Current scene-serialization format version. Written into every SerializedScene and checked on deserialize so saved data can outlive the code that produced it (see the migration chain in migrate)."
+        },
+        {
+          "name": "TAU",
+          "signature": "TAU: number",
+          "signatureTokens": [
+            {
+              "text": "TAU",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "τ = 2π, the full-circle radian constant."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    }
+  ]
+}

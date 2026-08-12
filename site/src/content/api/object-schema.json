@@ -1,0 +1,83 @@
+{
+  "title": "ObjectSchema",
+  "description": "A developer-declared mapping from object `type`/class strings to the property shape an object of that type is expected to carry. Supplied as the type parameter to ObjectLayer to unlock the typed accessors (ObjectLayer.byType, ObjectLayer.where).",
+  "symbol": "ObjectSchema",
+  "kind": "type",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A developer-declared mapping from object `type`/class strings to the property shape an object of that type is expected to carry. Supplied as the type parameter to ObjectLayer to unlock the typed accessors (ObjectLayer.byType, ObjectLayer.where)."
+      ],
+      "importLine": "import { ObjectSchema } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "ObjectSchema",
+          "signature": "Record<string, TileProperties>",
+          "signatureTokens": [
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileProperties",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/ObjectLayer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/ObjectLayer.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/ObjectLayer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/ObjectLayer.ts"
+}

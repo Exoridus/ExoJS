@@ -1,0 +1,601 @@
+{
+  "title": "Flags",
+  "description": "Type-safe bitfield utility for managing sets of numeric enum flags. `T` should be a numeric const-enum or a type whose values are `number`. Internally stores the combined flags as a single 32-bit integer. Pass the enum TYPE as `T`, not `typeof MyEnum` — the reverse mapping of a numeric enum object carries string values and does not satisfy the constraint. Rest-argument methods (push, remove, has) allocate an array per call. On hot paths use the mask forms (addMask, removeMask, hasMask, popMask) with a pre-combined mask instead.",
+  "symbol": "Flags",
+  "kind": "class",
+  "subsystem": "math",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 12,
+  "counts": {
+    "constructors": 1,
+    "methods": 10,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Type-safe bitfield utility for managing sets of numeric enum flags.",
+        "`T` should be a numeric const-enum or a type whose values are `number`. Internally stores the combined flags as a single 32-bit integer.",
+        "Pass the enum TYPE as `T`, not `typeof MyEnum` — the reverse mapping of a numeric enum object carries string values and does not satisfy the constraint.",
+        "Rest-argument methods (push, remove, has) allocate an array per call. On hot paths use the mask forms (addMask, removeMask, hasMask, popMask) with a pre-combined mask instead."
+      ],
+      "importLine": "import { Flags } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(flags: number[]): Flags<T>",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "flags",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Flags",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "flags",
+              "type": "number[]",
+              "optional": false
+            }
+          ],
+          "returnType": "Flags<T>",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "addMask",
+          "signature": "addMask(mask: number): this",
+          "signatureTokens": [
+            {
+              "text": "addMask",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "mask",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "mask",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Set every bit of mask (bitwise OR). Mutates in place and returns this for chaining. Prefer this over push on hot paths: a rest parameter allocates an array on every call, and the scene graph's transform invalidation runs one of these per ancestor per mutation."
+        },
+        {
+          "name": "clear",
+          "signature": "clear(): this",
+          "signatureTokens": [
+            {
+              "text": "clear",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "has",
+          "signature": "has(flags: V[]): boolean",
+          "signatureTokens": [
+            {
+              "text": "has",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "flags",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "V",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "flags",
+              "type": "V[]",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Return true when **any** of the supplied flags are currently set (bitwise OR test). Allocates a rest array and a closure per call — use hasMask on hot paths."
+        },
+        {
+          "name": "hasMask",
+          "signature": "hasMask(mask: number): boolean",
+          "signatureTokens": [
+            {
+              "text": "hasMask",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "mask",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "mask",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Return true when **any** bit of mask is currently set. Allocation-free counterpart of has."
+        },
+        {
+          "name": "pop",
+          "signature": "pop(flag: V): boolean",
+          "signatureTokens": [
+            {
+              "text": "pop",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "flag",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "V",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "flag",
+              "type": "V",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Remove flag and return true if it was active before removal, false otherwise. Useful for one-shot consumption of a flag."
+        },
+        {
+          "name": "popMask",
+          "signature": "popMask(mask: number): boolean",
+          "signatureTokens": [
+            {
+              "text": "popMask",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "mask",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "mask",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Clear every bit of mask and return whether any of them was set before. Allocation-free counterpart of pop."
+        },
+        {
+          "name": "push",
+          "signature": "push(flags: V[]): this",
+          "signatureTokens": [
+            {
+              "text": "push",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "flags",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "V",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "flags",
+              "type": "V[]",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Set one or more flags (bitwise OR). Mutates in place and returns this for chaining. Allocates a rest array per call — use addMask on hot paths."
+        },
+        {
+          "name": "remove",
+          "signature": "remove(flags: V[]): this",
+          "signatureTokens": [
+            {
+              "text": "remove",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "flags",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "V",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "flags",
+              "type": "V[]",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Clear one or more flags (bitwise AND NOT). Mutates in place and returns this for chaining. Allocates a rest array per call — use removeMask on hot paths."
+        },
+        {
+          "name": "removeMask",
+          "signature": "removeMask(mask: number): this",
+          "signatureTokens": [
+            {
+              "text": "removeMask",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "mask",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "mask",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Clear every bit of mask (bitwise AND NOT). Mutates in place and returns this for chaining. Allocation-free counterpart of remove."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "value",
+          "signature": "value: number",
+          "signatureTokens": [
+            {
+              "text": "value",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Current combined bitmask of all active flags."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/math/Flags.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/math/Flags.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/math/Flags.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/math/Flags.ts"
+}

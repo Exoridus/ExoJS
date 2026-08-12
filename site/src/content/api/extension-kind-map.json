@@ -1,0 +1,449 @@
+{
+  "title": "ExtensionKindMap",
+  "description": "Type-level twin of the runtime `extensionKindRegistry`: file suffix → asset type, for bare-string path inference in `Assets.from()`/`get()`/`load()`. Restricted to LEAF-CAPABLE types, exactly mirroring the runtime `registerExtensionKind` calls made by `defineAsset`. This is the single declaration-merging surface for bare-path suffix inference: ```ts declare module '@codexo/exojs' { interface ExtensionKindMap { 'atlas.json': 'spriteAtlas'; } } ```",
+  "symbol": "ExtensionKindMap",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 19,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 19,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Type-level twin of the runtime `extensionKindRegistry`: file suffix → asset type, for bare-string path inference in `Assets.from()`/`get()`/`load()`. Restricted to LEAF-CAPABLE types, exactly mirroring the runtime `registerExtensionKind` calls made by `defineAsset`. This is the single declaration-merging surface for bare-path suffix inference: ```ts declare module '@codexo/exojs' { interface ExtensionKindMap { 'atlas.json': 'spriteAtlas'; } } ```"
+      ],
+      "importLine": "import { ExtensionKindMap } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "aac",
+          "signature": "aac: \"sound\"",
+          "signatureTokens": [
+            {
+              "text": "aac",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"sound\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "avif",
+          "signature": "avif: \"texture\"",
+          "signatureTokens": [
+            {
+              "text": "avif",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"texture\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "bin",
+          "signature": "bin: \"binary\"",
+          "signatureTokens": [
+            {
+              "text": "bin",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"binary\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "csv",
+          "signature": "csv: \"csv\"",
+          "signatureTokens": [
+            {
+              "text": "csv",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"csv\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "gif",
+          "signature": "gif: \"texture\"",
+          "signatureTokens": [
+            {
+              "text": "gif",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"texture\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "jpeg",
+          "signature": "jpeg: \"texture\"",
+          "signatureTokens": [
+            {
+              "text": "jpeg",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"texture\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "jpg",
+          "signature": "jpg: \"texture\"",
+          "signatureTokens": [
+            {
+              "text": "jpg",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"texture\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "json",
+          "signature": "json: \"json\"",
+          "signatureTokens": [
+            {
+              "text": "json",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"json\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "m4a",
+          "signature": "m4a: \"sound\"",
+          "signatureTokens": [
+            {
+              "text": "m4a",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"sound\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "mp3",
+          "signature": "mp3: \"sound\"",
+          "signatureTokens": [
+            {
+              "text": "mp3",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"sound\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "ogg",
+          "signature": "ogg: \"sound\"",
+          "signatureTokens": [
+            {
+              "text": "ogg",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"sound\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "png",
+          "signature": "png: \"texture\"",
+          "signatureTokens": [
+            {
+              "text": "png",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"texture\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "srt",
+          "signature": "srt: \"srt\"",
+          "signatureTokens": [
+            {
+              "text": "srt",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"srt\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "txt",
+          "signature": "txt: \"text\"",
+          "signatureTokens": [
+            {
+              "text": "txt",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"text\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "vtt",
+          "signature": "vtt: \"vtt\"",
+          "signatureTokens": [
+            {
+              "text": "vtt",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"vtt\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "wasm",
+          "signature": "wasm: \"wasm\"",
+          "signatureTokens": [
+            {
+              "text": "wasm",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"wasm\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "wav",
+          "signature": "wav: \"sound\"",
+          "signatureTokens": [
+            {
+              "text": "wav",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"sound\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "webp",
+          "signature": "webp: \"texture\"",
+          "signatureTokens": [
+            {
+              "text": "webp",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"texture\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "xml",
+          "signature": "xml: \"xml\"",
+          "signatureTokens": [
+            {
+              "text": "xml",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"xml\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/AssetDefinitions.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetDefinitions.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/AssetDefinitions.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetDefinitions.ts"
+}

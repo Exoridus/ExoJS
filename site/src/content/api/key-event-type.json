@@ -1,0 +1,71 @@
+{
+  "title": "KeyEventType",
+  "description": "Keyboard phase delivered to a focused node.",
+  "symbol": "KeyEventType",
+  "kind": "type",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Keyboard phase delivered to a focused node."
+      ],
+      "importLine": "import { KeyEventType } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "KeyEventType",
+          "signature": "\"keydown\" | \"keyup\"",
+          "signatureTokens": [
+            {
+              "text": "\"keydown\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"keyup\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/KeyEvent.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/KeyEvent.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/KeyEvent.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/KeyEvent.ts"
+}

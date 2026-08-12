@@ -1,0 +1,250 @@
+{
+  "title": "RepeatingSpriteOptions",
+  "description": "Constructor options for RepeatingSprite.",
+  "symbol": "RepeatingSpriteOptions",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 8,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 8,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Constructor options for RepeatingSprite."
+      ],
+      "importLine": "import { RepeatingSpriteOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "fitX",
+          "signature": "fitX?: RepeatFit",
+          "signatureTokens": [
+            {
+              "text": "fitX",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RepeatFit",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How the horizontal repeat fits the destination span. Default: 'round'."
+        },
+        {
+          "name": "fitY",
+          "signature": "fitY?: RepeatFit",
+          "signatureTokens": [
+            {
+              "text": "fitY",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RepeatFit",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How the vertical repeat fits the destination span. Default: 'round'."
+        },
+        {
+          "name": "height",
+          "signature": "height?: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Destination height in local units. Defaults to source height."
+        },
+        {
+          "name": "modeX",
+          "signature": "modeX?: RepeatMode",
+          "signatureTokens": [
+            {
+              "text": "modeX",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RepeatMode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Horizontal repeat mode. Default: 'repeat'."
+        },
+        {
+          "name": "modeY",
+          "signature": "modeY?: RepeatMode",
+          "signatureTokens": [
+            {
+              "text": "modeY",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RepeatMode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Vertical repeat mode. Default: 'repeat'."
+        },
+        {
+          "name": "offsetX",
+          "signature": "offsetX?: number",
+          "signatureTokens": [
+            {
+              "text": "offsetX",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Horizontal scroll offset in source-pixel units. Default: 0."
+        },
+        {
+          "name": "offsetY",
+          "signature": "offsetY?: number",
+          "signatureTokens": [
+            {
+              "text": "offsetY",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Vertical scroll offset in source-pixel units. Default: 0."
+        },
+        {
+          "name": "width",
+          "signature": "width?: number",
+          "signatureTokens": [
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Destination width in local units. Defaults to source width."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/sprite/repeatingSpritePlan.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/sprite/repeatingSpritePlan.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/sprite/repeatingSpritePlan.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/sprite/repeatingSpritePlan.ts"
+}

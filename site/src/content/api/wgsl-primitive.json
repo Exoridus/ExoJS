@@ -1,0 +1,97 @@
+{
+  "title": "WgslPrimitive",
+  "description": "WGSL primitive types accepted in WgslUniformField declarations. The codegen emits matching WGSL field declarations; the writeUniforms implementation must produce bytes in the layout WGSL expects (see https://www.w3.org/TR/WGSL/#alignment-and-size). Common pitfalls: - `vec2<f32>` aligns to 8 bytes; pad with `f32` or use `vec4<f32>`. - `vec3<f32>` aligns to 16 bytes (so does `vec4<f32>`); avoid `vec3` for tight packing. For now the supported subset covers what the built-in modules need. Add more types here as new modules require them.",
+  "symbol": "WgslPrimitive",
+  "kind": "type",
+  "subsystem": "particles",
+  "importPath": "@codexo/exojs-particles",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "WGSL primitive types accepted in WgslUniformField declarations. The codegen emits matching WGSL field declarations; the writeUniforms implementation must produce bytes in the layout WGSL expects (see https://www.w3.org/TR/WGSL/#alignment-and-size).",
+        "Common pitfalls: - `vec2<f32>` aligns to 8 bytes; pad with `f32` or use `vec4<f32>`. - `vec3<f32>` aligns to 16 bytes (so does `vec4<f32>`); avoid `vec3` for tight packing.",
+        "For now the supported subset covers what the built-in modules need. Add more types here as new modules require them."
+      ],
+      "importLine": "import { WgslPrimitive } from '@codexo/exojs-particles'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "WgslPrimitive",
+          "signature": "\"f32\" | \"i32\" | \"u32\" | \"vec2<f32>\" | \"vec4<f32>\"",
+          "signatureTokens": [
+            {
+              "text": "\"f32\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"i32\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"u32\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"vec2<f32>\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"vec4<f32>\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-particles/src/modules/WgslContribution.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/WgslContribution.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-particles/src/modules/WgslContribution.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/WgslContribution.ts"
+}

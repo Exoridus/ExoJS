@@ -1,0 +1,226 @@
+{
+  "title": "WangSetOptions",
+  "description": "Options for constructing a WangSet.",
+  "symbol": "WangSetOptions",
+  "kind": "interface",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for constructing a WangSet."
+      ],
+      "importLine": "import { WangSetOptions } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "blobMap",
+          "signature": "blobMap: Record<number, number> | ReadonlyMap<number, number>",
+          "signatureTokens": [
+            {
+              "text": "blobMap",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyMap",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Map from Wang bitmask to local tile ID within the tileset. For blob mode (8-neighbor), keys are 0–255; the 47 valid combinations of the blob encoding must be covered at minimum. For edge mode (4-neighbor), keys are 0–15. Accepts either a ReadonlyMap or a plain Record<number, number>."
+        },
+        {
+          "name": "members",
+          "signature": "members?: Iterable<number, any, any>",
+          "signatureTokens": [
+            {
+              "text": "members",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Iterable",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "any",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "any",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Extra local tile IDs that count as belonging to this Wang group, beyond the variant IDs already present as blobMap *values*. Membership is what autoTile / refreshCell use to decide whether a neighbouring cell is \"part of the terrain\". Because every value in blobMap is itself a member, group membership stays stable no matter which variant a cell currently shows — that is what makes incremental refreshCell correct. Add the *base* tile ID you paint with here if it is not already one of the blobMap variants."
+        },
+        {
+          "name": "tilesetIndex",
+          "signature": "tilesetIndex: number",
+          "signatureTokens": [
+            {
+              "text": "tilesetIndex",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Which TileSet contains the Wang tiles (index into the layer's tilesets array)."
+        },
+        {
+          "name": "type",
+          "signature": "type?: \"blob\" | \"edge\"",
+          "signatureTokens": [
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"blob\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"edge\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether this is a blob (8-neighbor, default) or edge (4-neighbor) Wang set."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/WangSet.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/WangSet.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/WangSet.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/WangSet.ts"
+}

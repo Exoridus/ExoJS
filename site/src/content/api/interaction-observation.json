@@ -1,0 +1,108 @@
+{
+  "title": "InteractionObservation",
+  "description": "Handle returned by SceneInteraction.observe. Detaches the observed root from interaction dispatch — call InteractionObservation.release (or InteractionObservation.destroy, an alias) when the root no longer needs pointer/focus routing. Idempotent; also released automatically when the owning scene ends permanently.",
+  "symbol": "InteractionObservation",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 2,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Handle returned by SceneInteraction.observe. Detaches the observed root from interaction dispatch — call InteractionObservation.release (or InteractionObservation.destroy, an alias) when the root no longer needs pointer/focus routing. Idempotent; also released automatically when the owning scene ends permanently."
+      ],
+      "importLine": "import { InteractionObservation } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "release",
+          "signature": "release(): void",
+          "signatureTokens": [
+            {
+              "text": "release",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Detach the observed root. Idempotent alias for InteractionObservation.destroy."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/scene/SceneInteraction.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/scene/SceneInteraction.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/scene/SceneInteraction.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/scene/SceneInteraction.ts"
+}

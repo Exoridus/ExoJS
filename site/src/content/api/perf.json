@@ -1,0 +1,266 @@
+{
+  "title": "Perf",
+  "description": "User Timing helpers (`performance.mark`/`measure`), grouped as a namespace so the public API carries no loose `perf*` functions. All methods are safe no-ops where the User Timing API is unavailable.",
+  "symbol": "Perf",
+  "kind": "namespace",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "User Timing helpers (`performance.mark`/`measure`), grouped as a namespace so the public API carries no loose `perf*` functions. All methods are safe no-ops where the User Timing API is unavailable."
+      ],
+      "importLine": "import { Perf } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "clearMarks",
+          "signature": "clearMarks: (name?: string) => void",
+          "signatureTokens": [
+            {
+              "text": "clearMarks",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Remove all marks with the given name, or all marks when name is omitted. No-op when the User Timing API is unavailable."
+        },
+        {
+          "name": "clearMeasures",
+          "signature": "clearMeasures: (name?: string) => void",
+          "signatureTokens": [
+            {
+              "text": "clearMeasures",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Remove all measures with the given name, or all measures when name is omitted. No-op when the User Timing API is unavailable."
+        },
+        {
+          "name": "mark",
+          "signature": "mark: (name: string) => void",
+          "signatureTokens": [
+            {
+              "text": "mark",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Emit a named PerformanceMark at the current instant. No-op when the User Timing API is unavailable."
+        },
+        {
+          "name": "measure",
+          "signature": "measure: (name: string, startMark: string, endMark?: string) => PerformanceMeasure | undefined",
+          "signatureTokens": [
+            {
+              "text": "measure",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "startMark",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "endMark",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PerformanceMeasure",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Record a PerformanceMeasure between two marks. - When endMark is omitted the measurement runs from startMark to *now*. - Returns the created PerformanceMeasure, or undefined if the API is unavailable or either mark was never emitted."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/Perf.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Perf.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/Perf.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Perf.ts"
+}

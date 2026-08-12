@@ -1,0 +1,113 @@
+{
+  "title": "ResolvedGamepadDefinition",
+  "description": "The fully resolved product of running a GamepadDefinition against a connected gamepad — bundles the original descriptor, the resolved display name, and the chosen GamepadMapping together for use by Gamepad.",
+  "symbol": "ResolvedGamepadDefinition",
+  "kind": "interface",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The fully resolved product of running a GamepadDefinition against a connected gamepad — bundles the original descriptor, the resolved display name, and the chosen GamepadMapping together for use by Gamepad."
+      ],
+      "importLine": "import { ResolvedGamepadDefinition } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "descriptor",
+          "signature": "descriptor: GamepadDescriptor",
+          "signatureTokens": [
+            {
+              "text": "descriptor",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadDescriptor",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "mapping",
+          "signature": "mapping: GamepadMapping",
+          "signatureTokens": [
+            {
+              "text": "mapping",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadMapping",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "name",
+          "signature": "name: string",
+          "signatureTokens": [
+            {
+              "text": "name",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/GamepadDefinitions.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadDefinitions.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/GamepadDefinitions.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadDefinitions.ts"
+}

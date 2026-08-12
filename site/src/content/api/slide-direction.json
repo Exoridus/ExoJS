@@ -1,0 +1,87 @@
+{
+  "title": "SlideDirection",
+  "description": "The edge the outgoing content exits toward — see SlideSceneTransitionOptions.direction.",
+  "symbol": "SlideDirection",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The edge the outgoing content exits toward — see SlideSceneTransitionOptions.direction."
+      ],
+      "importLine": "import { SlideDirection } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "SlideDirection",
+          "signature": "\"left\" | \"right\" | \"up\" | \"down\"",
+          "signatureTokens": [
+            {
+              "text": "\"left\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"right\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"up\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"down\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/transitions/SlideSceneTransition.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/transitions/SlideSceneTransition.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/transitions/SlideSceneTransition.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/transitions/SlideSceneTransition.ts"
+}

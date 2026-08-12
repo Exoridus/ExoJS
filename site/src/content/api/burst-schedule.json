@@ -1,0 +1,92 @@
+{
+  "title": "BurstSchedule",
+  "description": "Burst trigger schedule. The module fires at `time` seconds (since registration), spawning `count` particles in one frame.",
+  "symbol": "BurstSchedule",
+  "kind": "interface",
+  "subsystem": "particles",
+  "importPath": "@codexo/exojs-particles",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Burst trigger schedule. The module fires at `time` seconds (since registration), spawning `count` particles in one frame."
+      ],
+      "importLine": "import { BurstSchedule } from '@codexo/exojs-particles'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "count",
+          "signature": "count: number",
+          "signatureTokens": [
+            {
+              "text": "count",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "time",
+          "signature": "time: number",
+          "signatureTokens": [
+            {
+              "text": "time",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-particles/src/modules/BurstSpawn.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/BurstSpawn.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-particles/src/modules/BurstSpawn.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/BurstSpawn.ts"
+}

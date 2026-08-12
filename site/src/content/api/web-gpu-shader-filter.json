@@ -1,0 +1,284 @@
+{
+  "title": "WebGpuShaderFilter",
+  "description": "A high-level Filter subclass that renders the input texture through a user-provided WGSL fragment shader on the **WebGPU** backend. For the WebGL2 backend use WebGl2ShaderFilter. ## Usage ```ts const filter = new WebGpuShaderFilter({ fragmentSource: ` @group(0) @binding(0) var<uniform> uResolution: vec2<f32>; @group(0) @binding(1) var uTexture: texture_2d<f32>; @group(0) @binding(2) var uSampler: sampler; @fragment fn main(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> { return textureSample(uTexture, uSampler, vUv); } `, uniforms: { uTime: 0.0 }, }); // Update uniforms each frame: filter.uniforms.uTime = performance.now() / 1000; sprite.filters = [filter]; ``` ## Auto-bound uniforms (group 0) - `@binding(0)` — `var<uniform> uResolution: vec2<f32>` (output dimensions) - `@binding(1)` — `var uTexture: texture_2d<f32>` (filter input) - `@binding(2)` — `var uSampler: sampler` ## User uniforms (group 1) All non-texture user uniforms are packed into a single uniform buffer at `@binding(0)`. Each member occupies a 16-byte aligned slot (conservative alignment). Declare your WGSL struct to match this layout. Texture/RenderTexture uniforms are bound as separate entries starting at `@binding(1)` (texture) and `@binding(N+1)` (sampler), in declaration order.",
+  "symbol": "WebGpuShaderFilter",
+  "kind": "class",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 1,
+    "methods": 2,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A high-level Filter subclass that renders the input texture through a user-provided WGSL fragment shader on the **WebGPU** backend.",
+        "For the WebGL2 backend use WebGl2ShaderFilter.",
+        "## Usage",
+        "```ts const filter = new WebGpuShaderFilter({ fragmentSource: ` @group(0) @binding(0) var<uniform> uResolution: vec2<f32>; @group(0) @binding(1) var uTexture: texture_2d<f32>; @group(0) @binding(2) var uSampler: sampler;",
+        "@fragment fn main(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> { return textureSample(uTexture, uSampler, vUv); } `, uniforms: { uTime: 0.0 }, });",
+        "// Update uniforms each frame: filter.uniforms.uTime = performance.now() / 1000; sprite.filters = [filter]; ```",
+        "## Auto-bound uniforms (group 0)",
+        "- `@binding(0)` — `var<uniform> uResolution: vec2<f32>` (output dimensions) - `@binding(1)` — `var uTexture: texture_2d<f32>` (filter input) - `@binding(2)` — `var uSampler: sampler`",
+        "## User uniforms (group 1)",
+        "All non-texture user uniforms are packed into a single uniform buffer at `@binding(0)`. Each member occupies a 16-byte aligned slot (conservative alignment). Declare your WGSL struct to match this layout.",
+        "Texture/RenderTexture uniforms are bound as separate entries starting at `@binding(1)` (texture) and `@binding(N+1)` (sampler), in declaration order."
+      ],
+      "importLine": "import { WebGpuShaderFilter } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: WebGpuShaderFilterOptions): WebGpuShaderFilter",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "WebGpuShaderFilterOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "WebGpuShaderFilter",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "WebGpuShaderFilterOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "WebGpuShaderFilter",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "apply",
+          "signature": "apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture): void",
+          "signatureTokens": [
+            {
+              "text": "apply",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "backend",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderBackend",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "input",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderTexture",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "output",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderTexture",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "backend",
+              "type": "RenderBackend",
+              "optional": false
+            },
+            {
+              "name": "input",
+              "type": "RenderTexture",
+              "optional": false
+            },
+            {
+              "name": "output",
+              "type": "RenderTexture",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Execute the WGSL shader pass: flush uniforms, build bind groups, and render the input texture into output. Throws if the active backend is not WebGPU — use WebGl2ShaderFilter on WebGL2."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Release any GPU-side resources held by this filter (uniform buffers, pipelines, intermediate textures). Default is a no-op for stateless filters; subclasses with state (BlurFilter, ColorFilter) override."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "uniforms",
+          "signature": "uniforms: Record<string, ShaderFilterUniformValue>",
+          "signatureTokens": [
+            {
+              "text": "uniforms",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShaderFilterUniformValue",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Mutable map of uniform values. Set values via property assignment; they are flushed to the GPU before each apply(). filter.uniforms.uTime = 1.234; filter.uniforms.uColor = [1, 0.5, 0, 1]; // vec4"
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/filters/WebGpuShaderFilter.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/WebGpuShaderFilter.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/filters/WebGpuShaderFilter.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/WebGpuShaderFilter.ts"
+}

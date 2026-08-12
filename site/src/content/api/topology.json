@@ -1,0 +1,71 @@
+{
+  "title": "Topology",
+  "description": "Primitive topology used when drawing this geometry.",
+  "symbol": "Topology",
+  "kind": "type",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Primitive topology used when drawing this geometry."
+      ],
+      "importLine": "import { Topology } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "Topology",
+          "signature": "\"triangle-list\" | \"triangle-strip\"",
+          "signatureTokens": [
+            {
+              "text": "\"triangle-list\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"triangle-strip\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/geometry/GeometryAttribute.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/geometry/GeometryAttribute.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/geometry/GeometryAttribute.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/geometry/GeometryAttribute.ts"
+}

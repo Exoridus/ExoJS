@@ -1,0 +1,168 @@
+{
+  "title": "AutoTileOptions",
+  "description": "Options for autoTile and refreshCell.",
+  "symbol": "AutoTileOptions",
+  "kind": "interface",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for autoTile and refreshCell."
+      ],
+      "importLine": "import { AutoTileOptions } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "matchFn",
+          "signature": "matchFn?: (localTileId: number, tilesetIndex: number, x: number, y: number) => boolean",
+          "signatureTokens": [
+            {
+              "text": "matchFn",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "localTileId",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "tilesetIndex",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "When provided, only cells for which matchFn returns true are treated as part of the Wang group. The function receives the cell's localTileId, tilesetIndex, and tile coordinates (x, y). If omitted, group membership defaults to WangSet.isMember on the cell's localTileId (and a matching tilesetIndex). That default is *variant-stable* — every autotiled variant counts as a member — which is what makes refreshCell correct. If you supply a matchFn for use with refreshCell, it MUST likewise be variant-stable (independent of the currently-rendered variant), e.g. keyed on a separate logical-terrain grid or a tile property."
+        },
+        {
+          "name": "wrapBorder",
+          "signature": "wrapBorder?: boolean",
+          "signatureTokens": [
+            {
+              "text": "wrapBorder",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "When true (default), out-of-bounds neighbors are treated as though they belong to the Wang group, so border tiles fill correctly to the layer edge. Set to false to leave border tiles visually open."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/autoTile.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/autoTile.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/autoTile.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/autoTile.ts"
+}

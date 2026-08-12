@@ -1,0 +1,357 @@
+{
+  "title": "LdtkLayerInstance",
+  "description": "A layer instance within a level.",
+  "symbol": "LdtkLayerInstance",
+  "kind": "interface",
+  "subsystem": "ldtk",
+  "importPath": "@codexo/exojs-ldtk",
+  "tier": "stable",
+  "memberCount": 11,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 11,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A layer instance within a level."
+      ],
+      "importLine": "import { LdtkLayerInstance } from '@codexo/exojs-ldtk'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "autoLayerTiles",
+          "signature": "autoLayerTiles?: readonly LdtkTileData[]",
+          "signatureTokens": [
+            {
+              "text": "autoLayerTiles",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LdtkTileData",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Auto-computed tiles for AutoLayer (and IntGrid + auto-rules) layer types."
+        },
+        {
+          "name": "entityInstances",
+          "signature": "entityInstances?: readonly LdtkEntityInstance[]",
+          "signatureTokens": [
+            {
+              "text": "entityInstances",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LdtkEntityInstance",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Entity instances for Entities layer type."
+        },
+        {
+          "name": "gridTiles",
+          "signature": "gridTiles?: readonly LdtkTileData[]",
+          "signatureTokens": [
+            {
+              "text": "gridTiles",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LdtkTileData",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Placed tiles for Tiles layer type."
+        },
+        {
+          "name": "iid",
+          "signature": "iid: string",
+          "signatureTokens": [
+            {
+              "text": "iid",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Globally unique instance id (UUID string)."
+        },
+        {
+          "name": "intGridCsv",
+          "signature": "intGridCsv?: readonly number[]",
+          "signatureTokens": [
+            {
+              "text": "intGridCsv",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Flat CSV array of IntGrid values for IntGrid layer type. Index = y * __cWid + x. 0 = empty cell."
+        },
+        {
+          "name": "layerDefUid",
+          "signature": "layerDefUid: number",
+          "signatureTokens": [
+            {
+              "text": "layerDefUid",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "UID of the layer definition."
+        },
+        {
+          "name": "levelId",
+          "signature": "levelId: number",
+          "signatureTokens": [
+            {
+              "text": "levelId",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "UID of the parent level."
+        },
+        {
+          "name": "opacity",
+          "signature": "opacity?: number",
+          "signatureTokens": [
+            {
+              "text": "opacity",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Layer opacity in [0, 1]."
+        },
+        {
+          "name": "pxOffsetX",
+          "signature": "pxOffsetX?: number",
+          "signatureTokens": [
+            {
+              "text": "pxOffsetX",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Horizontal pixel offset applied to the layer."
+        },
+        {
+          "name": "pxOffsetY",
+          "signature": "pxOffsetY?: number",
+          "signatureTokens": [
+            {
+              "text": "pxOffsetY",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Vertical pixel offset applied to the layer."
+        },
+        {
+          "name": "visible",
+          "signature": "visible: boolean",
+          "signatureTokens": [
+            {
+              "text": "visible",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-ldtk/src/LdtkData.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-ldtk/src/LdtkData.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-ldtk/src/LdtkData.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-ldtk/src/LdtkData.ts"
+}

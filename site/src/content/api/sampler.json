@@ -1,0 +1,378 @@
+{
+  "title": "Sampler",
+  "description": "WebGL2 sampler object wrapper that controls texture filtering and wrapping. Creates a `WebGLSampler` on construction and updates its parameters whenever `scaleMode` or `wrapMode` changes. Bind the sampler to a texture unit with bind before issuing draw calls. Note: `premultiplyAlpha`, `generateMipMap`, and `flipY` are pixel-store parameters handled at texture upload time; this class only manages filter and wrap state.",
+  "symbol": "Sampler",
+  "kind": "class",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 8,
+  "counts": {
+    "constructors": 1,
+    "methods": 4,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "WebGL2 sampler object wrapper that controls texture filtering and wrapping.",
+        "Creates a `WebGLSampler` on construction and updates its parameters whenever `scaleMode` or `wrapMode` changes. Bind the sampler to a texture unit with bind before issuing draw calls. Note: `premultiplyAlpha`, `generateMipMap`, and `flipY` are pixel-store parameters handled at texture upload time; this class only manages filter and wrap state."
+      ],
+      "importLine": "import { Sampler } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(gl: WebGL2RenderingContext, options: SamplerOptions): Sampler",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "gl",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "WebGL2RenderingContext",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SamplerOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Sampler",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "gl",
+              "type": "WebGL2RenderingContext",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "SamplerOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "Sampler",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "bind",
+          "signature": "bind(textureUnit: number): this",
+          "signatureTokens": [
+            {
+              "text": "bind",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "textureUnit",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "textureUnit",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Bind this sampler to textureUnit for the next draw call. Must be called each time the active texture unit changes."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "setScaleMode",
+          "signature": "setScaleMode(scaleMode: ScaleModes): this",
+          "signatureTokens": [
+            {
+              "text": "setScaleMode",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "scaleMode",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ScaleModes",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "scaleMode",
+              "type": "ScaleModes",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setWrapMode",
+          "signature": "setWrapMode(wrapMode: WrapModes): this",
+          "signatureTokens": [
+            {
+              "text": "setWrapMode",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "wrapMode",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "WrapModes",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "wrapMode",
+              "type": "WrapModes",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "sampler",
+          "signature": "sampler: WebGLSampler | null",
+          "signatureTokens": [
+            {
+              "text": "sampler",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "WebGLSampler",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "scaleMode",
+          "signature": "scaleMode: ScaleModes",
+          "signatureTokens": [
+            {
+              "text": "scaleMode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ScaleModes",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "wrapMode",
+          "signature": "wrapMode: WrapModes",
+          "signatureTokens": [
+            {
+              "text": "wrapMode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "WrapModes",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/texture/Sampler.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/Sampler.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/texture/Sampler.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/Sampler.ts"
+}

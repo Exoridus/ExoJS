@@ -1,0 +1,255 @@
+{
+  "title": "SystemMethods",
+  "description": "The four scheduler phases a System may participate in, one per dispatch stage of the Application frame loop: pre-simulation sync, fixed-timestep simulation, variable-rate update, and rendering. Every phase must be synchronous. The registry dispatches them on the frame path and never awaits a result, so an `async` phase is a compile error (see Synchronous) and, for callers the type system cannot reach, a thrown error in every build. Asynchronous work belongs in the owning scene's Scene.load.",
+  "symbol": "SystemMethods",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 4,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The four scheduler phases a System may participate in, one per dispatch stage of the Application frame loop: pre-simulation sync, fixed-timestep simulation, variable-rate update, and rendering.",
+        "Every phase must be synchronous. The registry dispatches them on the frame path and never awaits a result, so an `async` phase is a compile error (see Synchronous) and, for callers the type system cannot reach, a thrown error in every build. Asynchronous work belongs in the owning scene's Scene.load."
+      ],
+      "importLine": "import { SystemMethods } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "draw",
+          "signature": "draw?(context: RenderingContext): Synchronous",
+          "signatureTokens": [
+            {
+              "text": "draw",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderingContext",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Synchronous",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "context",
+              "type": "RenderingContext",
+              "optional": false
+            }
+          ],
+          "returnType": "Synchronous",
+          "description": "Render into context. Called once per frame, after SystemMethods.update."
+        },
+        {
+          "name": "fixedUpdate",
+          "signature": "fixedUpdate?(step: Time): Synchronous",
+          "signatureTokens": [
+            {
+              "text": "fixedUpdate",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "step",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Time",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Synchronous",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "step",
+              "type": "Time",
+              "optional": false
+            }
+          ],
+          "returnType": "Synchronous",
+          "description": "Advance by one fixed-timestep step (Application.fixedTimeStep). Called zero or more times per frame, after SystemMethods.preUpdate and before SystemMethods.update."
+        },
+        {
+          "name": "preUpdate",
+          "signature": "preUpdate?(delta: Time): Synchronous",
+          "signatureTokens": [
+            {
+              "text": "preUpdate",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "delta",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Time",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Synchronous",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "delta",
+              "type": "Time",
+              "optional": false
+            }
+          ],
+          "returnType": "Synchronous",
+          "description": "Advance by the variable frame delta, *before* this frame's fixed steps. Called once per frame, ahead of every other phase. This is where per-frame state has to be brought in sync with the incoming frame so the simulation sees it: the engine's own input, interaction, audio, tween and rendering systems all run here. Anything that must be current *before* physics runs belongs in this phase — a system reading input in SystemMethods.update would see the previous frame's snapshot, because update runs after the fixed steps."
+        },
+        {
+          "name": "update",
+          "signature": "update?(delta: Time): Synchronous",
+          "signatureTokens": [
+            {
+              "text": "update",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "delta",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Time",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Synchronous",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "delta",
+              "type": "Time",
+              "optional": false
+            }
+          ],
+          "returnType": "Synchronous",
+          "description": "Advance by the variable frame delta. Called once per frame, after fixed steps."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/System.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/System.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/System.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/System.ts"
+}

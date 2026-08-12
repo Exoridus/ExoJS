@@ -1,0 +1,167 @@
+{
+  "title": "MouseJointOptions",
+  "description": "Construction options for a MouseJoint.",
+  "symbol": "MouseJointOptions",
+  "kind": "interface",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for a MouseJoint."
+      ],
+      "importLine": "import { MouseJointOptions } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "body",
+          "signature": "body: PhysicsBody",
+          "signatureTokens": [
+            {
+              "text": "body",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBody",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The body to drag."
+        },
+        {
+          "name": "dampingRatio",
+          "signature": "dampingRatio?: number",
+          "signatureTokens": [
+            {
+              "text": "dampingRatio",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Soft-spring damping ratio. Default 0.7."
+        },
+        {
+          "name": "hertz",
+          "signature": "hertz?: number",
+          "signatureTokens": [
+            {
+              "text": "hertz",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Soft-spring frequency in Hz (higher = snappier). Default 5."
+        },
+        {
+          "name": "maxForce",
+          "signature": "maxForce?: number",
+          "signatureTokens": [
+            {
+              "text": "maxForce",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Maximum pulling force — clamps the per-step impulse so heavy bodies lag. Default Infinity."
+        },
+        {
+          "name": "target",
+          "signature": "target: VectorLike",
+          "signatureTokens": [
+            {
+              "text": "target",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "VectorLike",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "World point to pull the body toward — also the grab point on the body at creation."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/joints/MouseJoint.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/joints/MouseJoint.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/joints/MouseJoint.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/joints/MouseJoint.ts"
+}

@@ -1,0 +1,1000 @@
+{
+  "title": "Tilemap Functions",
+  "description": "Free functions and constants exported from @codexo/exojs-tilemap.",
+  "symbol": "Tilemap Functions",
+  "kind": "namespace",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "stable",
+  "memberCount": 11,
+  "counts": {
+    "constructors": 0,
+    "methods": 9,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "overview",
+      "title": "Overview",
+      "members": [],
+      "paragraphs": [
+        "Free functions and constants exported from @codexo/exojs-tilemap. Import any of them directly, for example `import { autoTile } from '@codexo/exojs-tilemap'`."
+      ],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "functions",
+      "title": "Functions",
+      "members": [
+        {
+          "name": "autoTile",
+          "signature": "autoTile(layer: TileLayer, wangSet: WangSet, options?: AutoTileOptions): void",
+          "signatureTokens": [
+            {
+              "text": "autoTile",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "layer",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileLayer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "wangSet",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "WangSet",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AutoTileOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "layer",
+              "type": "TileLayer",
+              "optional": false
+            },
+            {
+              "name": "wangSet",
+              "type": "WangSet",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "AutoTileOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "void",
+          "description": "Apply Wang autotiling to layer using wangSet. Iterates every cell in the layer. For each cell that belongs to the Wang group, computes a neighbor bitmask and looks up the correct local tile ID from WangSet.blobMap. The layer is mutated in place; cells whose computed bitmask has no mapping in the blobMap are left unchanged. The function performs two passes (snapshot then write) so neighbor tests always reflect the pre-call state regardless of processing order. **Group membership.** With no matchFn, a cell belongs to the group when its tilesetIndex matches WangSet.tilesetIndex and its localTileId is a member of the set. Membership covers every variant the set can produce, so re-running autoTile (or refreshCell) on already-autotiled data is stable. Paint with a tile ID that is a member (a blobMap value, or one listed in WangSetOptions.members). **Blob mode bitmask (bit positions):**  1 | 2 | 4 8 | -- | 16 32 | 64 | 128  Diagonal bits (1, 4, 32, 128) are only set when both adjacent cardinals are also set (the \"corner dependency\" rule that reduces 256 raw combinations to 47 valid blob states). **Edge mode bitmask (bit positions):** Top=1, Right=2, Bottom=4, Left=8."
+        },
+        {
+          "name": "buildTileCollisionGeometry",
+          "signature": "buildTileCollisionGeometry(layer: TileLayer, options: TileCollisionOptions): TileCollisionGeometry",
+          "signatureTokens": [
+            {
+              "text": "buildTileCollisionGeometry",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "layer",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileLayer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileCollisionOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileCollisionGeometry",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "layer",
+              "type": "TileLayer",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "TileCollisionOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "TileCollisionGeometry",
+          "description": "Extract collision geometry from a tile layer's per-tile import('./types').TileDefinition.collision shapes. Every placed tile in region is resolved back to its tileset definition, and each collision shape is transformed from tile-local pixel space into layer pixel space (+Y down) — applying the tile's flip/rotation transform, the tileset draw offset, and the layer's pixel offset, so the geometry lands exactly where the tile is drawn. Shapes that end up covering exactly one whole tile cell are collected into an occupancy grid and merged into as few TileCollisionRects as a greedy pass manages — a 200×200 solid region becomes one rectangle instead of 40 000. Cells only merge with neighbours whose source object carries the same type string, so a water run never fuses into an adjacent solid run. Everything else (partial boxes, ellipses, polygons, polylines, points, rotated geometry) passes through individually as a TileCollisionShape. This package has no physics dependency and builds no bodies: the result is plain geometry. Turning it into colliders is a short loop in application code."
+        },
+        {
+          "name": "createSampledChunkSource",
+          "signature": "createSampledChunkSource(layer: TileLayer, options: SampledChunkSourceOptions): ChunkSource",
+          "signatureTokens": [
+            {
+              "text": "createSampledChunkSource",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "layer",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileLayer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SampledChunkSourceOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ChunkSource",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "layer",
+              "type": "TileLayer",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "SampledChunkSourceOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "ChunkSource",
+          "description": "Build a import('./ChunkStreamer').ChunkStreamer-ready ChunkSource from a caller-supplied sampling function — the generic mechanism behind procedurally generated tile content (noise, a heightmap, or any other per-tile-coordinate scalar function). This module intentionally has no opinion on the sampling algorithm itself (SampledChunkSourceOptions.sample/mapValueToTile are both required, not defaulted) — pick or write whatever generation function fits your game. layer supplies the target chunk grid (TileLayer.chunkWidth/ chunkHeight) and the tileset list tiles are packed against (TileLayer.tilesets) — the same TileLayer you'll construct the ChunkStreamer with."
+        },
+        {
+          "name": "createWorkerSampledChunkSource",
+          "signature": "createWorkerSampledChunkSource(layer: TileLayer, options: WorkerSampledChunkSourceOptions): ChunkSource & { destroy: unknown }",
+          "signatureTokens": [
+            {
+              "text": "createWorkerSampledChunkSource",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "layer",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileLayer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "WorkerSampledChunkSourceOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ChunkSource",
+              "kind": "type"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "layer",
+              "type": "TileLayer",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "WorkerSampledChunkSourceOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "ChunkSource & { destroy: unknown }",
+          "description": "Build a import('./ChunkStreamer').ChunkStreamer-ready ChunkSource that samples off the main thread via a Web Worker — the async counterpart to import('./SampledChunkSource').createSampledChunkSource, for sampling functions expensive enough to want off-thread execution. Unlike the synchronous provider, sampling logic cannot be passed as a live function — functions cannot cross a postMessage boundary. Instead WorkerSampledChunkSourceOptions.workerSource is a self-contained worker script string; see its documentation for the protocol. The returned value's destroy() MUST be called when done with it (e.g. alongside your ChunkStreamer.destroy() call) — the underlying Worker is a real resource that leaks otherwise. ChunkSource itself has no lifecycle hook, so this is not automatic. Implementation note: workerSource is Blob-URL'd into a real Worker (new Blob([workerSource]) → URL.createObjectURL → new Worker(url)) — the same technique import('@codexo/exojs').WorkletEffect already uses for AudioWorklet processors. This is bundler-agnostic (no special config needed in Vite/webpack/etc.) but requires a Content-Security-Policy that permits blob: in worker-src (or script-src as a fallback) if your deployment sets one."
+        },
+        {
+          "name": "packTile",
+          "signature": "packTile(tilesetIndex: number, localTileId: number, transform: TileTransform): number",
+          "signatureTokens": [
+            {
+              "text": "packTile",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "tilesetIndex",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "localTileId",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "transform",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileTransform",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "tilesetIndex",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "localTileId",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "transform",
+              "type": "TileTransform",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Encode a tileset-local tile reference and transform into a packed word. The localTileId is stored as (localTileId + 1) so that a packed value of 0 cleanly represents an empty cell, while tile 0 from tileset 0 with identity transform is stored as 1 (non-zero). Returns 0 for an empty cell. Public so chunk-provider authors (e.g. a format adapter or procedural generator) can build a ChunkPayload's tiles array without duplicating this encoding."
+        },
+        {
+          "name": "refreshCell",
+          "signature": "refreshCell(layer: TileLayer, x: number, y: number, wangSet: WangSet, options?: AutoTileOptions): void",
+          "signatureTokens": [
+            {
+              "text": "refreshCell",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "layer",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileLayer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "wangSet",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "WangSet",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AutoTileOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "layer",
+              "type": "TileLayer",
+              "optional": false
+            },
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "wangSet",
+              "type": "WangSet",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "AutoTileOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "void",
+          "description": "Incrementally re-autotile a single cell and its eight neighbours after an edit, instead of re-running autoTile over the whole layer. A cell's blob/edge mask depends only on its immediate neighbours, so painting or erasing cell (x, y) can change the variant of that cell and of the (up to) eight cells that have it as a neighbour — but nothing further out. This recomputes exactly that 3×3 neighbourhood, touching only the 1–4 chunks it spans (and rebuilding geometry only for chunks whose tiles actually change). For a paint operation this is O(1) work versus autoTile's O(width·height). Membership is read live from the layer, so the membership test MUST be variant-stable: the default (WangSet.isMember) is, and any custom matchFn you pass must be too (see AutoTileOptions.matchFn). Typical editor use: write the painted tile with layer.setTileAt(...) using a member tile ID, then call refreshCell(layer, x, y, wangSet)."
+        },
+        {
+          "name": "tileToChunkCoord",
+          "signature": "tileToChunkCoord(tx: number, ty: number, chunkW: number, chunkH: number): ChunkCoord",
+          "signatureTokens": [
+            {
+              "text": "tileToChunkCoord",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "tx",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ty",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "chunkW",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "chunkH",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ChunkCoord",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "tx",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "ty",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "chunkW",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "chunkH",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "ChunkCoord",
+          "description": "Convert tile coordinates to chunk coordinates given a chunk size."
+        },
+        {
+          "name": "tileToLocalInChunk",
+          "signature": "tileToLocalInChunk(tx: number, ty: number, chunkW: number, chunkH: number): { lx: number; ly: number }",
+          "signatureTokens": [
+            {
+              "text": "tileToLocalInChunk",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "tx",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ty",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "chunkW",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "chunkH",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "lx",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ly",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "tx",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "ty",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "chunkW",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "chunkH",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "{ lx: number; ly: number }",
+          "description": "Convert tile coordinates to local-in-chunk coordinates."
+        },
+        {
+          "name": "unpackTile",
+          "signature": "unpackTile(packed: number): { localTileId: number; tilesetIndex: number; transform: TileTransform } | null",
+          "signatureTokens": [
+            {
+              "text": "unpackTile",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "packed",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "localTileId",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "tilesetIndex",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "transform",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileTransform",
+              "kind": "type"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "packed",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "{ localTileId: number; tilesetIndex: number; transform: TileTransform } | null",
+          "description": "Decode a packed word into its components. Returns null for an empty cell (packed === 0)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "constants",
+      "title": "Constants",
+      "members": [
+        {
+          "name": "TILE_TRANSFORM_IDENTITY",
+          "signature": "TILE_TRANSFORM_IDENTITY: Readonly<TileTransform>",
+          "signatureTokens": [
+            {
+              "text": "TILE_TRANSFORM_IDENTITY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileTransform",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The identity transform: no flip, no diagonal."
+        },
+        {
+          "name": "tilemapExtension",
+          "signature": "tilemapExtension: Extension",
+          "signatureTokens": [
+            {
+              "text": "tilemapExtension",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Extension",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Default immutable tilemap extension descriptor. Registers the WebGL2/WebGPU tile chunk renderers (renderers) and the TileMapNode scene serializer (serializers); it carries no asset bindings — there is no generic on-disk tilemap format in this slice, so format adapters (e.g. @codexo/exojs-tiled) own loading and depend on this descriptor to pull in rendering. Install + register directly for procedural / hand-built maps (extensions: [tilemapExtension] plus a TileMap built via the runtime), or receive it transitively through a format adapter's dependencies. Pass it to the application that should have it via ApplicationOptions.extensions."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    }
+  ]
+}

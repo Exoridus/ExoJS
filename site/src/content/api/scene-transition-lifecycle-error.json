@@ -1,0 +1,251 @@
+{
+  "title": "SceneTransitionLifecycleError",
+  "description": "Thrown when a SceneTransitionSession or SceneTransitionEnvironment violates the transition lifecycle contract: - `'commit-reentrant'` — SceneTransitionEnvironment.commit was called a second time on the same session. Dev-mode only; a production build no-ops the second call instead of throwing. - `'done-before-commit'` — the session reported SceneTransitionSession.done `true` while SceneTransitionEnvironment.committed was still `false`. Always thrown, dev and production — the navigation aborts and the session is destroyed. - `'aborted'` — the owning `SceneDirector` was destroyed while this session was still active. Always thrown.",
+  "symbol": "SceneTransitionLifecycleError",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 1,
+    "methods": 0,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Thrown when a SceneTransitionSession or SceneTransitionEnvironment violates the transition lifecycle contract: - `'commit-reentrant'` — SceneTransitionEnvironment.commit was called a second time on the same session. Dev-mode only; a production build no-ops the second call instead of throwing. - `'done-before-commit'` — the session reported SceneTransitionSession.done `true` while SceneTransitionEnvironment.committed was still `false`. Always thrown, dev and production — the navigation aborts and the session is destroyed. - `'aborted'` — the owning `SceneDirector` was destroyed while this session was still active. Always thrown."
+      ],
+      "importLine": "import { SceneTransitionLifecycleError } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(reason: \"commit-reentrant\" | \"done-before-commit\" | \"aborted\"): SceneTransitionLifecycleError",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "reason",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"commit-reentrant\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"done-before-commit\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"aborted\"",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneTransitionLifecycleError",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "reason",
+              "type": "\"commit-reentrant\" | \"done-before-commit\" | \"aborted\"",
+              "optional": false
+            }
+          ],
+          "returnType": "SceneTransitionLifecycleError",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "cause",
+          "signature": "cause?: unknown",
+          "signatureTokens": [
+            {
+              "text": "cause",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "message",
+          "signature": "message: string",
+          "signatureTokens": [
+            {
+              "text": "message",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "name",
+          "signature": "name: string",
+          "signatureTokens": [
+            {
+              "text": "name",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "reason",
+          "signature": "reason: \"commit-reentrant\" | \"done-before-commit\" | \"aborted\"",
+          "signatureTokens": [
+            {
+              "text": "reason",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"commit-reentrant\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"done-before-commit\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"aborted\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "stack",
+          "signature": "stack?: string",
+          "signatureTokens": [
+            {
+              "text": "stack",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/SceneTransition.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTransition.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/SceneTransition.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTransition.ts"
+}

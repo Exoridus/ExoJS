@@ -1,0 +1,42 @@
+{
+  "title": "FontRegistry",
+  "description": "Open interface for compile-time font-family autocomplete via declaration merging. Register loaded font families in your app's `.d.ts`: ```ts declare module 'exojs' { interface FontRegistry { 'Kenney Future': true; } } ```",
+  "symbol": "FontRegistry",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Open interface for compile-time font-family autocomplete via declaration merging. Register loaded font families in your app's `.d.ts`:",
+        "```ts declare module 'exojs' { interface FontRegistry { 'Kenney Future': true; } } ```"
+      ],
+      "importLine": "import { FontRegistry } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/text/TextStyle.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/TextStyle.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/text/TextStyle.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/TextStyle.ts"
+}

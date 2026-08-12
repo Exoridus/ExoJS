@@ -1,0 +1,72 @@
+{
+  "title": "GamepadSlotStrategy",
+  "description": "Strategy used by InputManager when assigning physical gamepads to slot indices in InputManager.gamepads. - `'sticky'` (default): each physical pad keeps its slot until a new pad fills an empty slot. A disconnect leaves a gap; reconnect later fills the lowest empty slot. Best for player-stable-binding semantics. - `'compact'`: on disconnect, higher-numbered slots shift down to keep `gamepads[0..N-1]` densely populated. Good for \"the first N pads are the N players\" workflows.",
+  "symbol": "GamepadSlotStrategy",
+  "kind": "type",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Strategy used by InputManager when assigning physical gamepads to slot indices in InputManager.gamepads.",
+        "- `'sticky'` (default): each physical pad keeps its slot until a new pad fills an empty slot. A disconnect leaves a gap; reconnect later fills the lowest empty slot. Best for player-stable-binding semantics. - `'compact'`: on disconnect, higher-numbered slots shift down to keep `gamepads[0..N-1]` densely populated. Good for \"the first N pads are the N players\" workflows."
+      ],
+      "importLine": "import { GamepadSlotStrategy } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "GamepadSlotStrategy",
+          "signature": "\"sticky\" | \"compact\"",
+          "signatureTokens": [
+            {
+              "text": "\"sticky\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"compact\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/InputManager.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/InputManager.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/InputManager.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/InputManager.ts"
+}

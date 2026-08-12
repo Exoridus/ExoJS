@@ -1,0 +1,75 @@
+{
+  "title": "SceneActionMapOptions",
+  "description": "Availability policy for a scene-owned ActionMap.",
+  "symbol": "SceneActionMapOptions",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Availability policy for a scene-owned ActionMap."
+      ],
+      "importLine": "import { SceneActionMapOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "when",
+          "signature": "when?: SceneAvailability",
+          "signatureTokens": [
+            {
+              "text": "when",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneAvailability",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Visible scene states in which this map may sample. Default: 'active'."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/scene/SceneInputs.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/scene/SceneInputs.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/scene/SceneInputs.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/scene/SceneInputs.ts"
+}

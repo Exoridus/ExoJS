@@ -1,0 +1,150 @@
+{
+  "title": "AudioInputOptions",
+  "description": "Options for AudioInput.open — forwarded to `getUserMedia` audio constraints.",
+  "symbol": "AudioInputOptions",
+  "kind": "interface",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for AudioInput.open — forwarded to `getUserMedia` audio constraints."
+      ],
+      "importLine": "import { AudioInputOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "autoGainControl",
+          "signature": "autoGainControl?: boolean",
+          "signatureTokens": [
+            {
+              "text": "autoGainControl",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Enable browser automatic gain control."
+        },
+        {
+          "name": "deviceId",
+          "signature": "deviceId?: string",
+          "signatureTokens": [
+            {
+              "text": "deviceId",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Specific input device id (from enumerateDevices)."
+        },
+        {
+          "name": "echoCancellation",
+          "signature": "echoCancellation?: boolean",
+          "signatureTokens": [
+            {
+              "text": "echoCancellation",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Enable browser echo cancellation. Default: browser default."
+        },
+        {
+          "name": "noiseSuppression",
+          "signature": "noiseSuppression?: boolean",
+          "signatureTokens": [
+            {
+              "text": "noiseSuppression",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Enable browser noise suppression."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/audio/AudioInput.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioInput.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/audio/AudioInput.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioInput.ts"
+}

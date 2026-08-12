@@ -1,0 +1,1551 @@
+{
+  "title": "SceneNode",
+  "description": "Transform-bearing leaf in the scene-graph hierarchy. Carries position, rotation, scale, skew and origin. Implements Collidable so any node can participate directly in the SAT collision pipeline via its AABB or rotated/skewed quad. The normalized `anchor` convenience that derives `origin` from a layout box lives on Drawable: it needs a box to measure, which a node that carries no geometry of its own does not have. Transform state is dirty-flag-cached: position/rotation/scale/skew/origin mutations invalidate the local transform; either kind of mutation also invalidates the global transform (own + descendants) and the bounds rect for this node and every Container ancestor up the parent chain. The caches rebuild lazily on the next read. Collision and hit-testing take the cheaper AABB path when the node's *world* box is axis-aligned (its own and any inherited rotation compose to a multiple of 90° with no skew) and the oriented-quad SAT path otherwise. The public `isAlignedBox` getter reports that predicate for this node's own rotation only. `_invalidate*` methods are exported as `public` for friend-class access from Container and InteractionManager; treat them as `@internal`. Subclasses: Container (carries children), RenderNode (carries draw payloads).",
+  "symbol": "SceneNode",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 41,
+  "counts": {
+    "constructors": 1,
+    "methods": 22,
+    "properties": 18,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Transform-bearing leaf in the scene-graph hierarchy. Carries position, rotation, scale, skew and origin. Implements Collidable so any node can participate directly in the SAT collision pipeline via its AABB or rotated/skewed quad.",
+        "The normalized `anchor` convenience that derives `origin` from a layout box lives on Drawable: it needs a box to measure, which a node that carries no geometry of its own does not have.",
+        "Transform state is dirty-flag-cached: position/rotation/scale/skew/origin mutations invalidate the local transform; either kind of mutation also invalidates the global transform (own + descendants) and the bounds rect for this node and every Container ancestor up the parent chain. The caches rebuild lazily on the next read.",
+        "Collision and hit-testing take the cheaper AABB path when the node's *world* box is axis-aligned (its own and any inherited rotation compose to a multiple of 90° with no skew) and the oriented-quad SAT path otherwise. The public `isAlignedBox` getter reports that predicate for this node's own rotation only.",
+        "`_invalidate*` methods are exported as `public` for friend-class access from Container and InteractionManager; treat them as `@internal`.",
+        "Subclasses: Container (carries children), RenderNode (carries draw payloads)."
+      ],
+      "importLine": "import { SceneNode } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): SceneNode",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneNode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "SceneNode",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "collidesWith",
+          "signature": "collidesWith(target: Collidable): CollisionResponse | null",
+          "signatureTokens": [
+            {
+              "text": "collidesWith",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "target",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Collidable",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CollisionResponse",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "target",
+              "type": "Collidable",
+              "optional": false
+            }
+          ],
+          "returnType": "CollisionResponse | null",
+          "description": "Compute a full CollisionResponse between this shape and target. Returns null in two cases: - the shapes do not overlap, **or** - the specific shape-pair combination does not support response generation (e.g. Line against any shape, Ellipse against Ellipse or Polygon). Use intersectsWith for a universal boolean overlap check that works across all supported shape pairs."
+        },
+        {
+          "name": "contains",
+          "signature": "contains(x: number, y: number): boolean",
+          "signatureTokens": [
+            {
+              "text": "contains",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Hit-test the world-space point (x, y) against this node. For world-axis-aligned nodes (own and inherited rotation a multiple of 90° and no skew) the AABB equals the oriented box, so the cheap getBounds test is exact. For rotated or skewed nodes the point is mapped back into local space with the inverse of the global transform and tested against the untransformed getLocalBounds — i.e. a true oriented-box test. This is the exact inverse of the forward map that getBounds and the renderer use to place the node's corners, so picking matches the rendered quad instead of over-reporting hits in the empty AABB corners of a rotated node."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Release this node's pooled state (transform, bounds, flags) and unlink it from its parent. The unlink comes first and is what makes a bare destroy() safe. A node left in its parent's child list bumps no revision, so every cache keyed on that revision — a Container's retained draw slots, a RetainedContainer's recorded GPU instruction set — would keep replaying the dead node's last captured frame. Removing it stamps the parent structure-dirty, which drops those captures, and runs the node's regular detach cleanup (bounds cascade, interaction/focus deregistration, stage clearing) while this node's own state is still intact. Container.removeChild is a no-op for a node it does not hold, so the already-correct removeChild()-then-destroy() order costs nothing more than the null check here. The destroyed flag is raised before the unlink so detach-time observers (e.g. focus, which suppresses onBlur on a destroyed node) see a node that is going away rather than one merely being reparented."
+        },
+        {
+          "name": "getBounds",
+          "signature": "getBounds(out?: Rectangle): Rectangle",
+          "signatureTokens": [
+            {
+              "text": "getBounds",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "out",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Rectangle",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Rectangle",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "out",
+              "type": "Rectangle",
+              "optional": true
+            }
+          ],
+          "returnType": "Rectangle",
+          "description": "Axis-aligned bounding box of this node in its GLOBAL-transform space. That is world space for ordinary nodes, but GROUP-LOCAL space for nodes inside an engaged RetainedContainer transform group (the group matrix is applied on the GPU, not here) — this is deliberate and matches the rendering convention. For a true world-space extent of such a node, lift this rect by the group's getWorldTransform matrix. Pass out to receive a copy you own. Without it the return value is this node's **cached** rectangle, rebuilt in place whenever the transform or the local extent changes — retaining it across frames hands you a value that silently moves. The cache is why the no-arg form does not allocate: this runs per node per frame for culling and hit-testing."
+        },
+        {
+          "name": "getGlobalTransform",
+          "signature": "getGlobalTransform(): Matrix",
+          "signatureTokens": [
+            {
+              "text": "getGlobalTransform",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Matrix",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "Matrix",
+          "description": ""
+        },
+        {
+          "name": "getLocalBounds",
+          "signature": "getLocalBounds(): ReadonlyRectangle",
+          "signatureTokens": [
+            {
+              "text": "getLocalBounds",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyRectangle",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "ReadonlyRectangle",
+          "description": "This node's untransformed extent in its own local coordinate space. Returns the LIVE internal rectangle, not a copy: it is read on hot paths (updateBounds re-reads it on every transform-dirty recompute, i.e. potentially every frame for a moving node), so copying it here would add a per-frame allocation. It is therefore typed as a ReadonlyRectangle — reads are unchanged, writes are rejected at compile time. Writing to it directly would skip the bounds/content invalidation the engine needs, leaving culling, hit-testing and retained render fragments on a stale extent. A custom Drawable that owns its own size sets it through _setLocalBounds, which writes and invalidates in one step."
+        },
+        {
+          "name": "getNormals",
+          "signature": "getNormals(): Vector[]",
+          "signatureTokens": [
+            {
+              "text": "getNormals",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": "Vector[]",
+          "description": "Return the outward-facing edge normals used by the SAT solver. The array should be cached and reused across calls."
+        },
+        {
+          "name": "getTransform",
+          "signature": "getTransform(): Matrix",
+          "signatureTokens": [
+            {
+              "text": "getTransform",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Matrix",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "Matrix",
+          "description": ""
+        },
+        {
+          "name": "getWorldTransform",
+          "signature": "getWorldTransform(): Matrix",
+          "signatureTokens": [
+            {
+              "text": "getWorldTransform",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Matrix",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "Matrix",
+          "description": "The node's TRUE world-space transform, composed through every transform-group boundary (RetainedContainer) in the ancestor chain. getGlobalTransform deliberately stops at the nearest engaged boundary (descendants resolve group-RELATIVE transforms; the renderer multiplies the group matrix back in on the GPU), so it is the right space for rendering but the wrong one for spatial queries. Use THIS accessor whenever a real world position/orientation is needed — picking, spatial audio, physics, world-space math against nodes outside the group. Without any engaged boundary ancestor it returns the exact getGlobalTransform matrix (same instance, no extra work). With one, it lazily caches groupLocal × groupWorld and revalidates on read via version/stamp compares — including runtime space flips such as RetainedContainer's deep-barrier sub-branch escape."
+        },
+        {
+          "name": "intersectsWith",
+          "signature": "intersectsWith(target: Collidable): boolean",
+          "signatureTokens": [
+            {
+              "text": "intersectsWith",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "target",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Collidable",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "target",
+              "type": "Collidable",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Test whether this shape overlaps target using a fast boolean algorithm (no penetration depth or normal computed). Prefer this over collidesWith when only the yes/no result is needed."
+        },
+        {
+          "name": "inView",
+          "signature": "inView(view: View): boolean",
+          "signatureTokens": [
+            {
+              "text": "inView",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "view",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "View",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "view",
+              "type": "View",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": ""
+        },
+        {
+          "name": "move",
+          "signature": "move(x: number, y: number): this",
+          "signatureTokens": [
+            {
+              "text": "move",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "project",
+          "signature": "project(axis: Vector, result: Interval): Interval",
+          "signatureTokens": [
+            {
+              "text": "project",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "axis",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "result",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Interval",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Interval",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "axis",
+              "type": "Vector",
+              "optional": false
+            },
+            {
+              "name": "result",
+              "type": "Interval",
+              "optional": false
+            }
+          ],
+          "returnType": "Interval",
+          "description": "Project this shape onto axis and write the scalar min/max into interval. Used internally by the SAT solver."
+        },
+        {
+          "name": "rotate",
+          "signature": "rotate(degrees: number): this",
+          "signatureTokens": [
+            {
+              "text": "rotate",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "degrees",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "degrees",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setOrigin",
+          "signature": "setOrigin(x: number, y: number): this",
+          "signatureTokens": [
+            {
+              "text": "setOrigin",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setPosition",
+          "signature": "setPosition(x: number, y: number): this",
+          "signatureTokens": [
+            {
+              "text": "setPosition",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setRotation",
+          "signature": "setRotation(degrees: number): this",
+          "signatureTokens": [
+            {
+              "text": "setRotation",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "degrees",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "degrees",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setScale",
+          "signature": "setScale(x: number, y: number): this",
+          "signatureTokens": [
+            {
+              "text": "setScale",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setSkew",
+          "signature": "setSkew(x: number, y: number): this",
+          "signatureTokens": [
+            {
+              "text": "setSkew",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "updateBounds",
+          "signature": "updateBounds(): this",
+          "signatureTokens": [
+            {
+              "text": "updateBounds",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "updateParentTransform",
+          "signature": "updateParentTransform(): this",
+          "signatureTokens": [
+            {
+              "text": "updateParentTransform",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "updateTransform",
+          "signature": "updateTransform(): this",
+          "signatureTokens": [
+            {
+              "text": "updateTransform",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "collisionType",
+          "signature": "collisionType: CollisionType",
+          "signatureTokens": [
+            {
+              "text": "collisionType",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CollisionType",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "flags",
+          "signature": "flags: Flags<SceneNodeTransformFlags>",
+          "signatureTokens": [
+            {
+              "text": "flags",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Flags",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneNodeTransformFlags",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "name",
+          "signature": "name: string | null",
+          "signatureTokens": [
+            {
+              "text": "name",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Optional human-readable identity for this node. Defaults to null. Purely a label the engine never interprets: useful for debugging, find-by-name lookups, prefab references, and as a stable key when merging serialized state back onto an existing tree. Not required to be unique."
+        },
+        {
+          "name": "cullable",
+          "signature": "cullable: boolean",
+          "signatureTokens": [
+            {
+              "text": "cullable",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "When false, this node is never culled by the viewport check and is always considered in-view. Defaults to true."
+        },
+        {
+          "name": "cullArea",
+          "signature": "cullArea: Rectangle | null",
+          "signatureTokens": [
+            {
+              "text": "cullArea",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Rectangle",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Custom rectangle used for viewport cull intersection test. When set, replaces the default node bounds in cull checks. Set to null to restore default bounds-based culling."
+        },
+        {
+          "name": "destroyed",
+          "signature": "destroyed: boolean",
+          "signatureTokens": [
+            {
+              "text": "destroyed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true once destroy has run on this node. A destroyed node has released its pooled resources (transform/bounds), has been unlinked from its parent, renders nothing, and must not be reused or re-attached. The render plan skips a destroyed node, so even one handed straight to a renderer as a detached root contributes nothing."
+        },
+        {
+          "name": "isAlignedBox",
+          "signature": "isAlignedBox: boolean",
+          "signatureTokens": [
+            {
+              "text": "isAlignedBox",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "origin",
+          "signature": "origin: ObservableVector",
+          "signatureTokens": [
+            {
+              "text": "origin",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ObservableVector",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "parent",
+          "signature": "parent: Container | null",
+          "signatureTokens": [
+            {
+              "text": "parent",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Container",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "position",
+          "signature": "position: ObservableVector",
+          "signatureTokens": [
+            {
+              "text": "position",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ObservableVector",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "rotation",
+          "signature": "rotation: number",
+          "signatureTokens": [
+            {
+              "text": "rotation",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Rotation angle in degrees. Wraps via trimRotation on assignment."
+        },
+        {
+          "name": "scale",
+          "signature": "scale: ObservableVector",
+          "signatureTokens": [
+            {
+              "text": "scale",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ObservableVector",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "skewX",
+          "signature": "skewX: number",
+          "signatureTokens": [
+            {
+              "text": "skewX",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Horizontal skew angle in degrees. Shears the node along the X axis (positive values lean the top edge right). Combines correctly with rotation and scale."
+        },
+        {
+          "name": "skewY",
+          "signature": "skewY: number",
+          "signatureTokens": [
+            {
+              "text": "skewY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Vertical skew angle in degrees. Shears the node along the Y axis (positive values lean the left edge downward). Combines correctly with rotation and scale."
+        },
+        {
+          "name": "visible",
+          "signature": "visible: boolean",
+          "signatureTokens": [
+            {
+              "text": "visible",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "x",
+          "signature": "x: number",
+          "signatureTokens": [
+            {
+              "text": "x",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "y",
+          "signature": "y: number",
+          "signatureTokens": [
+            {
+              "text": "y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "zIndex",
+          "signature": "zIndex: number",
+          "signatureTokens": [
+            {
+              "text": "zIndex",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/SceneNode.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneNode.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/SceneNode.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneNode.ts"
+}

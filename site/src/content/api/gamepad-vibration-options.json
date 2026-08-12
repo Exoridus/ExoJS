@@ -1,0 +1,146 @@
+{
+  "title": "GamepadVibrationOptions",
+  "description": "Effect parameters for Gamepad.vibrate.",
+  "symbol": "GamepadVibrationOptions",
+  "kind": "interface",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Effect parameters for Gamepad.vibrate."
+      ],
+      "importLine": "import { GamepadVibrationOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "duration",
+          "signature": "duration: number",
+          "signatureTokens": [
+            {
+              "text": "duration",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Duration in milliseconds."
+        },
+        {
+          "name": "startDelay",
+          "signature": "startDelay?: number",
+          "signatureTokens": [
+            {
+              "text": "startDelay",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Delay before rumble starts in ms. Default 0."
+        },
+        {
+          "name": "strongMagnitude",
+          "signature": "strongMagnitude?: number",
+          "signatureTokens": [
+            {
+              "text": "strongMagnitude",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "High-frequency rumble intensity 0..1. Default 1."
+        },
+        {
+          "name": "weakMagnitude",
+          "signature": "weakMagnitude?: number",
+          "signatureTokens": [
+            {
+              "text": "weakMagnitude",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Low-frequency rumble intensity 0..1. Default 1."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/Gamepad.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/Gamepad.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/Gamepad.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/Gamepad.ts"
+}

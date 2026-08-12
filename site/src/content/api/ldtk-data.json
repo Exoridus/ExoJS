@@ -1,0 +1,262 @@
+{
+  "title": "LdtkData",
+  "description": "Root LDtk JSON document (`*.ldtk`).",
+  "symbol": "LdtkData",
+  "kind": "interface",
+  "subsystem": "ldtk",
+  "importPath": "@codexo/exojs-ldtk",
+  "tier": "stable",
+  "memberCount": 8,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 8,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Root LDtk JSON document (`*.ldtk`)."
+      ],
+      "importLine": "import { LdtkData } from '@codexo/exojs-ldtk'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "bgColor",
+          "signature": "bgColor?: string",
+          "signatureTokens": [
+            {
+              "text": "bgColor",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "defaultGridSize",
+          "signature": "defaultGridSize?: number",
+          "signatureTokens": [
+            {
+              "text": "defaultGridSize",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "defs",
+          "signature": "defs: LdtkDefs",
+          "signatureTokens": [
+            {
+              "text": "defs",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LdtkDefs",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "jsonVersion",
+          "signature": "jsonVersion: string",
+          "signatureTokens": [
+            {
+              "text": "jsonVersion",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "LDtk JSON format version string (e.g. \"1.5.3\")."
+        },
+        {
+          "name": "levels",
+          "signature": "levels: readonly LdtkLevel[]",
+          "signatureTokens": [
+            {
+              "text": "levels",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LdtkLevel",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Levels not organised into worlds. Always populated for pre-multi-world documents; kept EMPTY (per the LDtk spec's backward-compatibility rule) when worlds is used instead — read levels via worlds[].levels in that case, or use import('./ldtkLevelEntries').getLdtkLevelEntries (or simply import('./LdtkMap').LdtkMap.levels / import('./LdtkMap').LdtkMap.getLevelByName) to get \"all levels, in order\" regardless of which shape the document uses."
+        },
+        {
+          "name": "worldGridHeight",
+          "signature": "worldGridHeight?: number",
+          "signatureTokens": [
+            {
+              "text": "worldGridHeight",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "worldGridWidth",
+          "signature": "worldGridWidth?: number",
+          "signatureTokens": [
+            {
+              "text": "worldGridWidth",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "worlds",
+          "signature": "worlds?: readonly LdtkWorldData[]",
+          "signatureTokens": [
+            {
+              "text": "worlds",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LdtkWorldData",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Worlds, present and non-empty only when the project has \"Multi-Worlds\" enabled in its advanced settings. Absent or empty for the (overwhelmingly common) single-world case, in which levels live directly in the root levels array instead. defs is NOT duplicated per-world — it stays declared once at the document root regardless of this field."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-ldtk/src/LdtkData.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-ldtk/src/LdtkData.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-ldtk/src/LdtkData.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-ldtk/src/LdtkData.ts"
+}

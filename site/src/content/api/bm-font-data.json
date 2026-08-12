@@ -1,0 +1,199 @@
+{
+  "title": "BmFontData",
+  "description": "Parsed representation of a BMFont (.fnt) descriptor.",
+  "symbol": "BmFontData",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Parsed representation of a BMFont (.fnt) descriptor."
+      ],
+      "importLine": "import { BmFontData } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "base",
+          "signature": "base: number",
+          "signatureTokens": [
+            {
+              "text": "base",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Baseline position from the top of the line in font units."
+        },
+        {
+          "name": "chars",
+          "signature": "chars: Map<number, BmFontChar>",
+          "signatureTokens": [
+            {
+              "text": "chars",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Map",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BmFontChar",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Code-point → glyph metrics."
+        },
+        {
+          "name": "kernings",
+          "signature": "kernings: Map<string, number>",
+          "signatureTokens": [
+            {
+              "text": "kernings",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Map",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Kerning pairs — key \"${first},${second}\", value = pixel adjustment. Negative values pull glyphs together; positive push them apart."
+        },
+        {
+          "name": "lineHeight",
+          "signature": "lineHeight: number",
+          "signatureTokens": [
+            {
+              "text": "lineHeight",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Full line height in font units."
+        },
+        {
+          "name": "pages",
+          "signature": "pages: string[]",
+          "signatureTokens": [
+            {
+              "text": "pages",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Texture file names for each atlas page (relative paths)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/text/BmFont.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/BmFont.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/text/BmFont.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/BmFont.ts"
+}

@@ -1,0 +1,125 @@
+{
+  "title": "RingModulatorEffectOptions",
+  "description": "Construction options for RingModulatorEffect.",
+  "symbol": "RingModulatorEffectOptions",
+  "kind": "interface",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs-audio-fx",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for RingModulatorEffect."
+      ],
+      "importLine": "import { RingModulatorEffectOptions } from '@codexo/exojs-audio-fx'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "frequency",
+          "signature": "frequency?: number",
+          "signatureTokens": [
+            {
+              "text": "frequency",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Carrier oscillator frequency in Hz. Range 0..20000, default 440. Lower frequencies (1–60 Hz) produce tremolo-like pulsing; mid-range values (100–1000 Hz) give the characteristic robotic ring-mod sound; high values shift sidebands above the audible fundamental."
+        },
+        {
+          "name": "waveform",
+          "signature": "waveform?: OscillatorType",
+          "signatureTokens": [
+            {
+              "text": "waveform",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OscillatorType",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Carrier oscillator waveform shape. Default 'sine'. Any OscillatorType is accepted ('sine', 'square', 'sawtooth', 'triangle'). Non-sine shapes introduce additional harmonic content into both sidebands."
+        },
+        {
+          "name": "wet",
+          "signature": "wet?: number",
+          "signatureTokens": [
+            {
+              "text": "wet",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Dry/wet mix, 0..1. The dry level is automatically 1 - wet. Default 1.0 (fully wet / ring-modulated). Set to 0.5 for an equal mix of dry and ring-modulated signal."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-audio-fx/src/effects/RingModulatorEffect.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/RingModulatorEffect.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-audio-fx/src/effects/RingModulatorEffect.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/RingModulatorEffect.ts"
+}

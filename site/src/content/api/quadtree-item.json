@@ -1,0 +1,92 @@
+{
+  "title": "QuadtreeItem",
+  "description": "An item stored in a Quadtree. Carries an axis-aligned bounding box and an arbitrary `payload`.",
+  "symbol": "QuadtreeItem",
+  "kind": "interface",
+  "subsystem": "math",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "An item stored in a Quadtree. Carries an axis-aligned bounding box and an arbitrary `payload`."
+      ],
+      "importLine": "import { QuadtreeItem } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "bounds",
+          "signature": "bounds: Rectangle",
+          "signatureTokens": [
+            {
+              "text": "bounds",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Rectangle",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "payload",
+          "signature": "payload: T",
+          "signatureTokens": [
+            {
+              "text": "payload",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/math/Quadtree.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/math/Quadtree.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/math/Quadtree.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/math/Quadtree.ts"
+}

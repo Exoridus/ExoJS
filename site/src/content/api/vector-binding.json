@@ -1,0 +1,75 @@
+{
+  "title": "VectorBinding",
+  "description": "A two-dimensional binding with at least one source.",
+  "symbol": "VectorBinding",
+  "kind": "type",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A two-dimensional binding with at least one source."
+      ],
+      "importLine": "import { VectorBinding } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "VectorBinding",
+          "signature": "AtLeastOne<VectorBindingShape>",
+          "signatureTokens": [
+            {
+              "text": "AtLeastOne",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "VectorBindingShape",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/actions/VectorAction.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/VectorAction.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/actions/VectorAction.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/VectorAction.ts"
+}

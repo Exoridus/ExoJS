@@ -1,0 +1,100 @@
+{
+  "title": "GamepadButtonOptions",
+  "description": "Construction options for a GamepadButton.",
+  "symbol": "GamepadButtonOptions",
+  "kind": "interface",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for a GamepadButton."
+      ],
+      "importLine": "import { GamepadButtonOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "invert",
+          "signature": "invert?: boolean",
+          "signatureTokens": [
+            {
+              "text": "invert",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Negate the raw value before threshold comparison. Default false."
+        },
+        {
+          "name": "threshold",
+          "signature": "threshold?: number",
+          "signatureTokens": [
+            {
+              "text": "threshold",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Activation threshold in 0..1 — values at or below this read as 0 (deadzone). Default 0.2."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/GamepadButton.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadButton.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/GamepadButton.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadButton.ts"
+}

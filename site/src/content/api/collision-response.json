@@ -1,0 +1,197 @@
+{
+  "title": "CollisionResponse",
+  "description": "Result of a successful Collidable.collidesWith call. Contains the two participating shapes, the penetration depth, containment flags, and the minimum-translation vectors (normal + vector) needed to separate them.",
+  "symbol": "CollisionResponse",
+  "kind": "interface",
+  "subsystem": "math",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 7,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Result of a successful Collidable.collidesWith call. Contains the two participating shapes, the penetration depth, containment flags, and the minimum-translation vectors (normal + vector) needed to separate them."
+      ],
+      "importLine": "import { CollisionResponse } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "overlap",
+          "signature": "overlap: number",
+          "signatureTokens": [
+            {
+              "text": "overlap",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Penetration depth — the minimum distance to move the shapes apart."
+        },
+        {
+          "name": "projectionN",
+          "signature": "projectionN: Vector",
+          "signatureTokens": [
+            {
+              "text": "projectionN",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Unit normal of the minimum-translation axis."
+        },
+        {
+          "name": "projectionV",
+          "signature": "projectionV: Vector",
+          "signatureTokens": [
+            {
+              "text": "projectionV",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Minimum-translation vector: projectionN scaled by overlap."
+        },
+        {
+          "name": "shapeA",
+          "signature": "shapeA: Collidable",
+          "signatureTokens": [
+            {
+              "text": "shapeA",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Collidable",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "shapeAinB",
+          "signature": "shapeAinB: boolean",
+          "signatureTokens": [
+            {
+              "text": "shapeAinB",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true when shapeA is fully contained within shapeB."
+        },
+        {
+          "name": "shapeB",
+          "signature": "shapeB: Collidable",
+          "signatureTokens": [
+            {
+              "text": "shapeB",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Collidable",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "shapeBinA",
+          "signature": "shapeBinA: boolean",
+          "signatureTokens": [
+            {
+              "text": "shapeBinA",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true when shapeB is fully contained within shapeA."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/math/Collision.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/math/Collision.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/math/Collision.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/math/Collision.ts"
+}

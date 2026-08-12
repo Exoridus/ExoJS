@@ -1,0 +1,98 @@
+{
+  "title": "SerializedNode",
+  "description": "Plain-old-JSON description of a single scene-graph node. Always carries a `type` tag (the registered type name) plus an open set of common transform/visual fields and type-specific fields. Every field is JSON-serialisable; runtime-only state (caches, dirty flags, matrices, signals, GPU resources) is never present. Common fields are written by the framework and omitted when they hold their default value, so a freshly-constructed node serialises to `{ type }` alone.",
+  "symbol": "SerializedNode",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Plain-old-JSON description of a single scene-graph node.",
+        "Always carries a `type` tag (the registered type name) plus an open set of common transform/visual fields and type-specific fields. Every field is JSON-serialisable; runtime-only state (caches, dirty flags, matrices, signals, GPU resources) is never present.",
+        "Common fields are written by the framework and omitted when they hold their default value, so a freshly-constructed node serialises to `{ type }` alone."
+      ],
+      "importLine": "import { SerializedNode } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "name",
+          "signature": "name?: string",
+          "signatureTokens": [
+            {
+              "text": "name",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Optional node identity (SceneNode.name); omitted when null."
+        },
+        {
+          "name": "type",
+          "signature": "type: string",
+          "signatureTokens": [
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Registered type name, e.g. \"Container\", \"Sprite\", \"Text\"."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/serialization/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/serialization/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/serialization/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/serialization/types.ts"
+}

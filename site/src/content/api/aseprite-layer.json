@@ -1,0 +1,197 @@
+{
+  "title": "AsepriteLayer",
+  "description": "A single layer entry in the Aseprite JSON metadata (`meta.layers`). Only `name` is guaranteed. `opacity` and `blendMode` describe an image layer's compositing and can both be absent (a group layer has neither), and `color`/`data` carry the layer's editor user data when it was set. `group` names the enclosing group layer and is absent at the top level, so the flat array encodes the layer tree by parent name.",
+  "symbol": "AsepriteLayer",
+  "kind": "interface",
+  "subsystem": "aseprite",
+  "importPath": "@codexo/exojs-aseprite",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A single layer entry in the Aseprite JSON metadata (`meta.layers`).",
+        "Only `name` is guaranteed. `opacity` and `blendMode` describe an image layer's compositing and can both be absent (a group layer has neither), and `color`/`data` carry the layer's editor user data when it was set. `group` names the enclosing group layer and is absent at the top level, so the flat array encodes the layer tree by parent name."
+      ],
+      "importLine": "import { AsepriteLayer } from '@codexo/exojs-aseprite'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "blendMode",
+          "signature": "blendMode?: string",
+          "signatureTokens": [
+            {
+              "text": "blendMode",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "color",
+          "signature": "color?: string",
+          "signatureTokens": [
+            {
+              "text": "color",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Layer colour tag from the editor, as #RRGGBBAA."
+        },
+        {
+          "name": "data",
+          "signature": "data?: string",
+          "signatureTokens": [
+            {
+              "text": "data",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Free-form user data attached to the layer in the editor."
+        },
+        {
+          "name": "group",
+          "signature": "group?: string",
+          "signatureTokens": [
+            {
+              "text": "group",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Name of the enclosing group layer; absent for a top-level layer."
+        },
+        {
+          "name": "name",
+          "signature": "name: string",
+          "signatureTokens": [
+            {
+              "text": "name",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "opacity",
+          "signature": "opacity?: number",
+          "signatureTokens": [
+            {
+              "text": "opacity",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Layer opacity in [0, 255] (Aseprite's own scale, not [0, 1])."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-aseprite/src/AsepriteData.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-aseprite/src/AsepriteData.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-aseprite/src/AsepriteData.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-aseprite/src/AsepriteData.ts"
+}

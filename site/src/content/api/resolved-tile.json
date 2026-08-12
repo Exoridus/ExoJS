@@ -1,0 +1,113 @@
+{
+  "title": "ResolvedTile",
+  "description": "A fully resolved, format-independent tile reference returned by queries. Materialised on-demand from the packed storage; never stored as a per-cell heap object.",
+  "symbol": "ResolvedTile",
+  "kind": "interface",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "advanced",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A fully resolved, format-independent tile reference returned by queries. Materialised on-demand from the packed storage; never stored as a per-cell heap object."
+      ],
+      "importLine": "import { ResolvedTile } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "localTileId",
+          "signature": "localTileId: number",
+          "signatureTokens": [
+            {
+              "text": "localTileId",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "0-based tile index within the tileset."
+        },
+        {
+          "name": "tileset",
+          "signature": "tileset: TileSet",
+          "signatureTokens": [
+            {
+              "text": "tileset",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileSet",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The owning tileset (already resolved from source-format GID)."
+        },
+        {
+          "name": "transform",
+          "signature": "transform: TileTransform",
+          "signatureTokens": [
+            {
+              "text": "transform",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileTransform",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Orientation transform for this placed tile."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/types.ts"
+}

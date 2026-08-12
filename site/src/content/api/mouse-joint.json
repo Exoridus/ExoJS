@@ -1,0 +1,253 @@
+{
+  "title": "MouseJoint",
+  "description": "Softly pulls a single body's grab point toward a movable **target** point (typically the mouse cursor). The grab point is fixed on the body at creation; update target each frame to drag. A soft constraint bounded by maxForce — solved in the sub-step loop, warm-started. Internally the \"other\" body is a private static ground sentinel, so this is a single-body constraint that touches only the dragged body.",
+  "symbol": "MouseJoint",
+  "kind": "class",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 8,
+  "counts": {
+    "constructors": 1,
+    "methods": 0,
+    "properties": 7,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Softly pulls a single body's grab point toward a movable **target** point (typically the mouse cursor). The grab point is fixed on the body at creation; update target each frame to drag. A soft constraint bounded by maxForce — solved in the sub-step loop, warm-started. Internally the \"other\" body is a private static ground sentinel, so this is a single-body constraint that touches only the dragged body."
+      ],
+      "importLine": "import { MouseJoint } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: MouseJointOptions): MouseJoint",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MouseJointOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MouseJoint",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "MouseJointOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "MouseJoint",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "bodyA",
+          "signature": "bodyA: PhysicsBody",
+          "signatureTokens": [
+            {
+              "text": "bodyA",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBody",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "First constrained body."
+        },
+        {
+          "name": "bodyB",
+          "signature": "bodyB: PhysicsBody",
+          "signatureTokens": [
+            {
+              "text": "bodyB",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBody",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Second constrained body."
+        },
+        {
+          "name": "dampingRatio",
+          "signature": "dampingRatio: number",
+          "signatureTokens": [
+            {
+              "text": "dampingRatio",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Soft-spring damping ratio."
+        },
+        {
+          "name": "enabled",
+          "signature": "enabled: boolean",
+          "signatureTokens": [
+            {
+              "text": "enabled",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "When false, the joint is skipped by the solver (but still tracked by the world)."
+        },
+        {
+          "name": "hertz",
+          "signature": "hertz: number",
+          "signatureTokens": [
+            {
+              "text": "hertz",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Soft-spring frequency in Hz."
+        },
+        {
+          "name": "maxForce",
+          "signature": "maxForce: number",
+          "signatureTokens": [
+            {
+              "text": "maxForce",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Maximum pulling force."
+        },
+        {
+          "name": "target",
+          "signature": "target: VectorLike",
+          "signatureTokens": [
+            {
+              "text": "target",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "VectorLike",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The world point the body is pulled toward. Reassigning wakes the body so a drag tracks live."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/joints/MouseJoint.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/joints/MouseJoint.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/joints/MouseJoint.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/joints/MouseJoint.ts"
+}

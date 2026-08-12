@@ -1,0 +1,71 @@
+{
+  "title": "AnyShape",
+  "description": "Discriminated union of the concrete shape kinds. Narrow via the literal `shape.type` discriminant (`'circle'` → CircleShape, `'polygon'` → PolygonShape) — no `as` casts needed. BoxShape is a PolygonShape subclass and carries `type: 'polygon'`.",
+  "symbol": "AnyShape",
+  "kind": "type",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Discriminated union of the concrete shape kinds. Narrow via the literal `shape.type` discriminant (`'circle'` → CircleShape, `'polygon'` → PolygonShape) — no `as` casts needed. BoxShape is a PolygonShape subclass and carries `type: 'polygon'`."
+      ],
+      "importLine": "import { AnyShape } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "AnyShape",
+          "signature": "CircleShape | PolygonShape",
+          "signatureTokens": [
+            {
+              "text": "CircleShape",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PolygonShape",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/shapes/AnyShape.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/shapes/AnyShape.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/shapes/AnyShape.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/shapes/AnyShape.ts"
+}

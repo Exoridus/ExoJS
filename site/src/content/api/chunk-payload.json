@@ -1,0 +1,113 @@
+{
+  "title": "ChunkPayload",
+  "description": "A chunk payload ready to install into a import('./TileLayer').TileLayer via import('./TileLayer').TileLayer._adoptChunk — the same shape import('./TileChunk').TileChunk's constructor accepts as its `source` parameter, named and exported so provider authors have a type to import instead of matching an inline shape.",
+  "symbol": "ChunkPayload",
+  "kind": "interface",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "advanced",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A chunk payload ready to install into a import('./TileLayer').TileLayer via import('./TileLayer').TileLayer._adoptChunk — the same shape import('./TileChunk').TileChunk's constructor accepts as its `source` parameter, named and exported so provider authors have a type to import instead of matching an inline shape."
+      ],
+      "importLine": "import { ChunkPayload } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "height",
+          "signature": "height: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "tiles",
+          "signature": "tiles: Uint32Array",
+          "signatureTokens": [
+            {
+              "text": "tiles",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Uint32Array",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "width",
+          "signature": "width: number",
+          "signatureTokens": [
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/ChunkSource.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/ChunkSource.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/ChunkSource.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/ChunkSource.ts"
+}

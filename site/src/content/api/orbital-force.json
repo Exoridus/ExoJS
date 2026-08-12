@@ -1,0 +1,509 @@
+{
+  "title": "OrbitalForce",
+  "description": "Applies a tangential acceleration around a center point — perpendicular to the radial vector `(particle − center)`. Combined with an attract / repel module that controls the radial distance, this produces orbital, spiral, or vortex motion. `angularSpeed` is the target angular velocity in radians/second. The effective tangential acceleration scales with `radius * angularSpeed`, so distant particles get pushed harder (matching uniform circular motion). Positive values orbit counter-clockwise, negative clockwise. Use cases: galactic spirals, smoke vortices around an attractor, wind eddies. Layer with AttractToPoint for stable orbits. GPU-eligible.",
+  "symbol": "OrbitalForce",
+  "kind": "class",
+  "subsystem": "particles",
+  "importPath": "@codexo/exojs-particles",
+  "tier": "stable",
+  "memberCount": 9,
+  "counts": {
+    "constructors": 1,
+    "methods": 5,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Applies a tangential acceleration around a center point — perpendicular to the radial vector `(particle − center)`. Combined with an attract / repel module that controls the radial distance, this produces orbital, spiral, or vortex motion.",
+        "`angularSpeed` is the target angular velocity in radians/second. The effective tangential acceleration scales with `radius * angularSpeed`, so distant particles get pushed harder (matching uniform circular motion). Positive values orbit counter-clockwise, negative clockwise.",
+        "Use cases: galactic spirals, smoke vortices around an attractor, wind eddies. Layer with AttractToPoint for stable orbits.",
+        "GPU-eligible."
+      ],
+      "importLine": "import { OrbitalForce } from '@codexo/exojs-particles'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(x: number, y: number, angularSpeed: number): OrbitalForce",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "angularSpeed",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OrbitalForce",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "angularSpeed",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "OrbitalForce",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "apply",
+          "signature": "apply(system: ParticleSystem, dt: number): void",
+          "signatureTokens": [
+            {
+              "text": "apply",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "system",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ParticleSystem",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "dt",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "system",
+              "type": "ParticleSystem",
+              "optional": false
+            },
+            {
+              "name": "dt",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Optional cleanup hook called from ParticleSystem.destroy."
+        },
+        {
+          "name": "uploadTextures",
+          "signature": "uploadTextures?(device: GPUDevice, textures: ReadonlyMap<string, GPUTexture>): void",
+          "signatureTokens": [
+            {
+              "text": "uploadTextures",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "device",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GPUDevice",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "textures",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyMap",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GPUTexture",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "device",
+              "type": "GPUDevice",
+              "optional": false
+            },
+            {
+              "name": "textures",
+              "type": "ReadonlyMap<string, GPUTexture>",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Upload texture data (Curve/ColorGradient lookup tables) to the GPU at compile time. Receives the GPUDevice and a map of texture bindings keyed by the name in WgslContribution.textures. Called once after pipeline creation. Required when wgsl declares textures."
+        },
+        {
+          "name": "wgsl",
+          "signature": "wgsl(): WgslContribution",
+          "signatureTokens": [
+            {
+              "text": "wgsl",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "WgslContribution",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "WgslContribution",
+          "description": "Override to declare a GPU contribution. Returning a WgslContribution makes this module GPU-eligible; omitting (or returning undefined) forces CPU mode for any system that uses this module."
+        },
+        {
+          "name": "writeUniforms",
+          "signature": "writeUniforms(view: DataView, offset: number): void",
+          "signatureTokens": [
+            {
+              "text": "writeUniforms",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "view",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DataView",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "offset",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "view",
+              "type": "DataView",
+              "optional": false
+            },
+            {
+              "name": "offset",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Write this module's current uniform values into the shared uniform buffer at byteOffset. Layout must match the field declarations returned by wgsl (in the same order). Receives the current frame dt (seconds). Modules tracking accumulated time (e.g. noise/turbulence) should advance their internal counter here to stay in sync when running in GPU mode (where apply is not called). Required when wgsl declares uniforms. Called every frame by the system before dispatching compute."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "angularSpeed",
+          "signature": "angularSpeed: number",
+          "signatureTokens": [
+            {
+              "text": "angularSpeed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "x",
+          "signature": "x: number",
+          "signatureTokens": [
+            {
+              "text": "x",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "y",
+          "signature": "y: number",
+          "signatureTokens": [
+            {
+              "text": "y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-particles/src/modules/OrbitalForce.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/OrbitalForce.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-particles/src/modules/OrbitalForce.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/OrbitalForce.ts"
+}

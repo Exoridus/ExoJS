@@ -1,0 +1,92 @@
+{
+  "title": "SensorEvent",
+  "description": "Immutable per-dispatch snapshot for a sensor overlap. `sensor` is the sensor-flagged collider; `other` is the collider that entered/left it. When both colliders are sensors, the lower-id collider is reported as `sensor`.",
+  "symbol": "SensorEvent",
+  "kind": "interface",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Immutable per-dispatch snapshot for a sensor overlap. `sensor` is the sensor-flagged collider; `other` is the collider that entered/left it. When both colliders are sensors, the lower-id collider is reported as `sensor`."
+      ],
+      "importLine": "import { SensorEvent } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "other",
+          "signature": "other: Collider",
+          "signatureTokens": [
+            {
+              "text": "other",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Collider",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "sensor",
+          "signature": "sensor: Collider",
+          "signatureTokens": [
+            {
+              "text": "sensor",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Collider",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/events.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/events.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/events.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/events.ts"
+}

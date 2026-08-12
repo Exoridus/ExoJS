@@ -1,0 +1,120 @@
+{
+  "title": "LdtkToTileMapOptions",
+  "description": "Options for ldtkToTileMap.",
+  "symbol": "LdtkToTileMapOptions",
+  "kind": "interface",
+  "subsystem": "ldtk",
+  "importPath": "@codexo/exojs-ldtk",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for ldtkToTileMap."
+      ],
+      "importLine": "import { LdtkToTileMapOptions } from '@codexo/exojs-ldtk'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "source",
+          "signature": "source?: string",
+          "signatureTokens": [
+            {
+              "text": "source",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Source URL of the loaded .ldtk file, used as LdtkMap.source. Defaults to an empty string when omitted (e.g. programmatic / test usage)."
+        },
+        {
+          "name": "tilesets",
+          "signature": "tilesets?: ReadonlyMap<number, TileSet>",
+          "signatureTokens": [
+            {
+              "text": "tilesets",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyMap",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileSet",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Pre-loaded runtime TileSets keyed by LDtk tileset UID. When provided, tile layers are populated with tile data from gridTiles / autoLayerTiles. Without this map, tile layers are created with the correct dimensions but no tiles are placed — only entity and object layers carry data. Populate via import('./loadLdtkMap').loadLdtkMap for asset-loading flows, or pass a hand-crafted map for testing."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-ldtk/src/ldtkToTileMap.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-ldtk/src/ldtkToTileMap.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-ldtk/src/ldtkToTileMap.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-ldtk/src/ldtkToTileMap.ts"
+}

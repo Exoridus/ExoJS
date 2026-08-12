@@ -1,0 +1,265 @@
+{
+  "title": "ChunkStreamer",
+  "description": "Drives TileLayer._adoptChunk/TileLayer._evictChunk calls from a View's position: chunks near the view are requested from a ChunkSource and installed; chunks that scroll far enough away are evicted. Works on both unbounded and bounded layers (a bounded-but-large layer still benefits from not keeping every chunk resident at once) — for a bounded layer, the wanted range is clamped to TileLayer.chunkRange. Touches only the TileLayer data layer — import('./TileLayerNode').TileLayerNode reacts to `_adoptChunk`/`_evictChunk` on its own via a structural listener, so this class has no rendering dependency and no reference to any scene node. Tracks its own resident set (chunks *this instance* has loaded), never touching chunks that predate its attachment or were installed by another source. Tick it from your update loop, like import('./TileAnimator').TileAnimator: ```ts const streamer = new ChunkStreamer(layer, mySource, view); scene.systems.add({ update: () => streamer.update() }); ```",
+  "symbol": "ChunkStreamer",
+  "kind": "class",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "advanced",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 1,
+    "methods": 2,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Drives TileLayer._adoptChunk/TileLayer._evictChunk calls from a View's position: chunks near the view are requested from a ChunkSource and installed; chunks that scroll far enough away are evicted. Works on both unbounded and bounded layers (a bounded-but-large layer still benefits from not keeping every chunk resident at once) — for a bounded layer, the wanted range is clamped to TileLayer.chunkRange.",
+        "Touches only the TileLayer data layer — import('./TileLayerNode').TileLayerNode reacts to `_adoptChunk`/`_evictChunk` on its own via a structural listener, so this class has no rendering dependency and no reference to any scene node.",
+        "Tracks its own resident set (chunks *this instance* has loaded), never touching chunks that predate its attachment or were installed by another source.",
+        "Tick it from your update loop, like import('./TileAnimator').TileAnimator:",
+        "```ts const streamer = new ChunkStreamer(layer, mySource, view); scene.systems.add({ update: () => streamer.update() }); ```"
+      ],
+      "importLine": "import { ChunkStreamer } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(layer: TileLayer, source: ChunkSource, view: View, options?: ChunkStreamerOptions): ChunkStreamer",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "layer",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileLayer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ChunkSource",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "view",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "View",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ChunkStreamerOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ChunkStreamer",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "layer",
+              "type": "TileLayer",
+              "optional": false
+            },
+            {
+              "name": "source",
+              "type": "ChunkSource",
+              "optional": false
+            },
+            {
+              "name": "view",
+              "type": "View",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "ChunkStreamerOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "ChunkStreamer",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Evict every chunk this instance has loaded and stop responding to update. Does not affect chunks predating attachment or installed by another source. Idempotent."
+        },
+        {
+          "name": "update",
+          "signature": "update(): void",
+          "signatureTokens": [
+            {
+              "text": "update",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Recompute the wanted chunk set from the view's current position; evict own-resident chunks that fell outside unloadRadius, then request chunks newly inside loadRadius. The very first call loads the entire initial wanted set unbudgeted; every later call is capped at ChunkStreamerOptions.maxChunkLoadsPerFrame. No-op once destroyed."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "residentCount",
+          "signature": "residentCount: number",
+          "signatureTokens": [
+            {
+              "text": "residentCount",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Number of chunks this instance currently has resident in the layer."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/ChunkStreamer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/ChunkStreamer.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/ChunkStreamer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/ChunkStreamer.ts"
+}

@@ -1,0 +1,505 @@
+{
+  "title": "MeshParticles",
+  "description": "One caller-supplied mesh per particle, drawn as a single instanced draw. The cheap counterpart to `RibbonParticles`: the relationship stays one particle, one instance, and the per-instance data is byte-identical to `QuadParticles`'s — instanceAttributes, filled by the same writer. Only the shape changes. That is what makes this mode **GPU-eligible** without touching the compute pipeline: the pipeline emits precisely that layout, so a system on the GPU path binds its instance buffer directly and never calls build. **The mesh rides in its own vertex buffer**, alongside the per-instance one. The shader is fixed and shared, so any number of `MeshParticles` compile one program per backend regardless of how many distinct shapes they draw, and a mesh is limited only by what a vertex buffer holds. **Mutating the mesh works.** Its vertices are read into a normalised `(x, y, u, v)` table — the shader binds fixed names, a caller's geometry may use any — and re-read whenever the geometry's `version` changes. Edit the geometry in place, call `invalidate()` on it, and the next draw picks it up. Changing the vertex *count* is equally fine. **Atlas frames still work.** The mesh's own UVs are treated exactly like the quad's 0..1 corners: the shader mixes them across the particle's resolved frame (`uv = mix(uvMin, uvMax, meshUV)`), so `system.frames` plus a per-particle `textureIndex` selects a frame the same way. A geometry with **no texcoord attribute** therefore carries UV `(0, 0)` on every vertex and the mix degenerates to `uvMin` — the whole mesh samples the single texel at the frame's top-left corner, which on the default 1×1 white texture is exactly \"untextured, tinted by the particle's `color`\". **Sizing is the mesh's own.** Unlike the quad, which derives its footprint from the texture frame, a mesh particle's footprint is whatever its vertex positions say, in system-local units, multiplied by the per-particle `scaleX`/`scaleY`. The texture only supplies colour.",
+  "symbol": "MeshParticles",
+  "kind": "class",
+  "subsystem": "particles",
+  "importPath": "@codexo/exojs-particles",
+  "tier": "stable",
+  "memberCount": 14,
+  "counts": {
+    "constructors": 1,
+    "methods": 5,
+    "properties": 8,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "One caller-supplied mesh per particle, drawn as a single instanced draw.",
+        "The cheap counterpart to `RibbonParticles`: the relationship stays one particle, one instance, and the per-instance data is byte-identical to `QuadParticles`'s — instanceAttributes, filled by the same writer. Only the shape changes. That is what makes this mode **GPU-eligible** without touching the compute pipeline: the pipeline emits precisely that layout, so a system on the GPU path binds its instance buffer directly and never calls build.",
+        "**The mesh rides in its own vertex buffer**, alongside the per-instance one. The shader is fixed and shared, so any number of `MeshParticles` compile one program per backend regardless of how many distinct shapes they draw, and a mesh is limited only by what a vertex buffer holds.",
+        "**Mutating the mesh works.** Its vertices are read into a normalised `(x, y, u, v)` table — the shader binds fixed names, a caller's geometry may use any — and re-read whenever the geometry's `version` changes. Edit the geometry in place, call `invalidate()` on it, and the next draw picks it up. Changing the vertex *count* is equally fine.",
+        "**Atlas frames still work.** The mesh's own UVs are treated exactly like the quad's 0..1 corners: the shader mixes them across the particle's resolved frame (`uv = mix(uvMin, uvMax, meshUV)`), so `system.frames` plus a per-particle `textureIndex` selects a frame the same way. A geometry with **no texcoord attribute** therefore carries UV `(0, 0)` on every vertex and the mix degenerates to `uvMin` — the whole mesh samples the single texel at the frame's top-left corner, which on the default 1×1 white texture is exactly \"untextured, tinted by the particle's `color`\".",
+        "**Sizing is the mesh's own.** Unlike the quad, which derives its footprint from the texture frame, a mesh particle's footprint is whatever its vertex positions say, in system-local units, multiplied by the per-particle `scaleX`/`scaleY`. The texture only supplies colour."
+      ],
+      "importLine": "import { MeshParticles } from '@codexo/exojs-particles'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: MeshParticlesOptions): MeshParticles",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MeshParticlesOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MeshParticles",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "MeshParticlesOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "MeshParticles",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "_ensureCapacity",
+          "signature": "_ensureCapacity(byteLength: number): void",
+          "signatureTokens": [
+            {
+              "text": "_ensureCapacity",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "byteLength",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "byteLength",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Grow the scratch buffer to hold at least byteLength. Grow-only: a shrinking particle count reuses the larger buffer rather than reallocating, matching the renderers' existing buffer policy."
+        },
+        {
+          "name": "_onBufferGrown",
+          "signature": "_onBufferGrown(data: ArrayBuffer): void",
+          "signatureTokens": [
+            {
+              "text": "_onBufferGrown",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "data",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBuffer",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "data",
+              "type": "ArrayBuffer",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Re-create typed-array views after _ensureCapacity reallocates."
+        },
+        {
+          "name": "_setCount",
+          "signature": "_setCount(count: number): void",
+          "signatureTokens": [
+            {
+              "text": "_setCount",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "count",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "count",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Record the element count produced by a build."
+        },
+        {
+          "name": "build",
+          "signature": "build(system: ParticleSystem): void",
+          "signatureTokens": [
+            {
+              "text": "build",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "system",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ParticleSystem",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "system",
+              "type": "ParticleSystem",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Fill the scratch buffer from system's current SoA state."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Optional cleanup, called from ParticleSystem.destroy."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "dataLayout",
+          "signature": "dataLayout: ParticleBufferLayout",
+          "signatureTokens": [
+            {
+              "text": "dataLayout",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ParticleBufferLayout",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Per-instance layout, byte-identical to the quad's and to the compute output."
+        },
+        {
+          "name": "gpuEligible",
+          "signature": "gpuEligible: true",
+          "signatureTokens": [
+            {
+              "text": "gpuEligible",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "true",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether this mode can run while the system is in GPU compute mode. Mirrors UpdateModule.wgsl(): a mode that cannot forces the whole system onto the CPU path, silently and observably via ParticleSystem.gpuMode. A GPU-eligible mode's layout must match what the compute pipeline emits into gpuState.instanceBuffer — the shared 40-byte per-instance layout (instanceAttributes). QuadParticles and MeshParticles both declare exactly that layout and differ only in the shape they expand it into, which is why both are eligible without the compute shader knowing either."
+        },
+        {
+          "name": "instanced",
+          "signature": "instanced: true",
+          "signatureTokens": [
+            {
+              "text": "instanced",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "true",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Draw model. true issues an instanced draw, false a plain draw over the built vertex buffer. Declared here because a layout carries topology but has no instancing concept."
+        },
+        {
+          "name": "mesh",
+          "signature": "mesh: Geometry",
+          "signatureTokens": [
+            {
+              "text": "mesh",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Geometry",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The geometry this mode was constructed with — the shape one particle draws. Owned by the caller: destroy leaves it alone, so one mesh can back several modes."
+        },
+        {
+          "name": "vertexGeometry",
+          "signature": "vertexGeometry: Geometry",
+          "signatureTokens": [
+            {
+              "text": "vertexGeometry",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Geometry",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The normalised mesh the executors bind as the per-vertex buffer: the caller's mesh reduced to (x, y, u, v) per vertex, keeping its topology and index list. Owned by this mode and disposed with it."
+        },
+        {
+          "name": "count",
+          "signature": "count: number",
+          "signatureTokens": [
+            {
+              "text": "count",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Element count of the draw call this mode's last build produced. Draw-model relative: instance count when instanced, vertex count otherwise. Do not assume one meaning."
+        },
+        {
+          "name": "data",
+          "signature": "data: ArrayBuffer",
+          "signatureTokens": [
+            {
+              "text": "data",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBuffer",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The buffer the renderer uploads. Valid until the next build."
+        },
+        {
+          "name": "material",
+          "signature": "material: Material",
+          "signatureTokens": [
+            {
+              "text": "material",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Material",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Shader pair plus uniforms/textures for this mode."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-particles/src/renderModes/MeshParticles.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/renderModes/MeshParticles.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-particles/src/renderModes/MeshParticles.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/renderModes/MeshParticles.ts"
+}

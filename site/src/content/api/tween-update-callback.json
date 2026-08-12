@@ -1,0 +1,83 @@
+{
+  "title": "TweenUpdateCallback",
+  "description": "Callback fired on every update during the active phase of a tween. Receives the eased progress in 0..1, after applying the easing function and accounting for yoyo direction.",
+  "symbol": "TweenUpdateCallback",
+  "kind": "type",
+  "subsystem": "animation",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Callback fired on every update during the active phase of a tween. Receives the eased progress in 0..1, after applying the easing function and accounting for yoyo direction."
+      ],
+      "importLine": "import { TweenUpdateCallback } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "TweenUpdateCallback",
+          "signature": "(progress: number) => void",
+          "signatureTokens": [
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "progress",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/animation/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/animation/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/animation/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/animation/types.ts"
+}

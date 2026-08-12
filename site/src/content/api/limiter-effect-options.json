@@ -1,0 +1,200 @@
+{
+  "title": "LimiterEffectOptions",
+  "description": "Construction options for LimiterEffect.",
+  "symbol": "LimiterEffectOptions",
+  "kind": "interface",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs-audio-fx",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for LimiterEffect."
+      ],
+      "importLine": "import { LimiterEffectOptions } from '@codexo/exojs-audio-fx'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "attack",
+          "signature": "attack?: number",
+          "signatureTokens": [
+            {
+              "text": "attack",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Time in seconds for the limiter to engage after the signal exceeds the threshold. Range 0..1, default 0.003."
+        },
+        {
+          "name": "knee",
+          "signature": "knee?: number",
+          "signatureTokens": [
+            {
+              "text": "knee",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Width in dB of the transition region around the threshold (soft knee). Range 0..40, default 0 (hard knee). Raise it for a gentler transition into limiting."
+        },
+        {
+          "name": "ratio",
+          "signature": "ratio?: number",
+          "signatureTokens": [
+            {
+              "text": "ratio",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Input-to-output dB ratio above the threshold. Range 1..20, default 20 (brick-wall). Lower it for a softer, more compressor-like limiter."
+        },
+        {
+          "name": "release",
+          "signature": "release?: number",
+          "signatureTokens": [
+            {
+              "text": "release",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Time in seconds for the limiter to release after the signal drops below the threshold. Range 0..1, default 0.25."
+        },
+        {
+          "name": "threshold",
+          "signature": "threshold?: number",
+          "signatureTokens": [
+            {
+              "text": "threshold",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Threshold in dBFS above which limiting is applied. Range −60..0, default −3."
+        },
+        {
+          "name": "wet",
+          "signature": "wet?: number",
+          "signatureTokens": [
+            {
+              "text": "wet",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Dry/wet mix, 0..1. The dry level is automatically 1 - wet. Default 1.0. A limiter is typically used fully wet, but exposing this allows parallel processing workflows."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-audio-fx/src/effects/LimiterEffect.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/LimiterEffect.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-audio-fx/src/effects/LimiterEffect.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/LimiterEffect.ts"
+}

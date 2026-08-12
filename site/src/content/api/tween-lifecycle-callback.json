@@ -1,0 +1,71 @@
+{
+  "title": "TweenLifecycleCallback",
+  "description": "Callback fired at one of the tween lifecycle points (start, complete, each repeat cycle). No arguments — use a closure to access related state.",
+  "symbol": "TweenLifecycleCallback",
+  "kind": "type",
+  "subsystem": "animation",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Callback fired at one of the tween lifecycle points (start, complete, each repeat cycle). No arguments — use a closure to access related state."
+      ],
+      "importLine": "import { TweenLifecycleCallback } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "TweenLifecycleCallback",
+          "signature": "() => void",
+          "signatureTokens": [
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/animation/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/animation/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/animation/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/animation/types.ts"
+}

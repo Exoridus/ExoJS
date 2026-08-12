@@ -1,0 +1,523 @@
+{
+  "title": "Tiled Functions",
+  "description": "Free functions and constants exported from @codexo/exojs-tiled.",
+  "symbol": "Tiled Functions",
+  "kind": "namespace",
+  "subsystem": "tiled",
+  "importPath": "@codexo/exojs-tiled",
+  "tier": "stable",
+  "memberCount": 9,
+  "counts": {
+    "constructors": 0,
+    "methods": 4,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "overview",
+      "title": "Overview",
+      "members": [],
+      "paragraphs": [
+        "Free functions and constants exported from @codexo/exojs-tiled. Import any of them directly, for example `import { createTiledLayer } from '@codexo/exojs-tiled'`."
+      ],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "functions",
+      "title": "Functions",
+      "members": [
+        {
+          "name": "createTiledLayer",
+          "signature": "createTiledLayer(data: TiledLayerData): TiledLayer",
+          "signatureTokens": [
+            {
+              "text": "createTiledLayer",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "data",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TiledLayerData",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TiledLayer",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "data",
+              "type": "TiledLayerData",
+              "optional": false
+            }
+          ],
+          "returnType": "TiledLayer",
+          "description": "Constructs the appropriate TiledLayer subclass for data.type."
+        },
+        {
+          "name": "resolveTiledObjectAlignment",
+          "signature": "resolveTiledObjectAlignment(alignment: TiledObjectAlignment | undefined, orientation: TiledOrientation): TiledResolvedObjectAlignment",
+          "signatureTokens": [
+            {
+              "text": "resolveTiledObjectAlignment",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "alignment",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TiledObjectAlignment",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "orientation",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TiledOrientation",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TiledResolvedObjectAlignment",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "alignment",
+              "type": "TiledObjectAlignment | undefined",
+              "optional": false
+            },
+            {
+              "name": "orientation",
+              "type": "TiledOrientation",
+              "optional": false
+            }
+          ],
+          "returnType": "TiledResolvedObjectAlignment",
+          "description": "Resolve a tileset's objectalignment into a concrete alignment for tile objects on a map of the given orientation. Tiled's default ('unspecified', and an absent field) is orientation dependent: 'bottom' on an isometric map and 'bottomleft' on every other orientation, including staggered and hexagonal."
+        },
+        {
+          "name": "tiledObjectAnchorOffset",
+          "signature": "tiledObjectAnchorOffset(alignment: TiledResolvedObjectAlignment, width: number, height: number): { x: number; y: number }",
+          "signatureTokens": [
+            {
+              "text": "tiledObjectAnchorOffset",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "alignment",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TiledResolvedObjectAlignment",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "width",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "height",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "alignment",
+              "type": "TiledResolvedObjectAlignment",
+              "optional": false
+            },
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "{ x: number; y: number }",
+          "description": "Offset of a tile object's stored x/y anchor from the top-left corner of its width × height bounding box, for an already-resolved alignment. Subtract this from the stored position to obtain the corner: cornerX = object.x - offset.x."
+        },
+        {
+          "name": "tiledWangSetToWangSet",
+          "signature": "tiledWangSetToWangSet(wangSet: TiledWangSetData, tilesetIndex: number): WangSet | null",
+          "signatureTokens": [
+            {
+              "text": "tiledWangSetToWangSet",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "wangSet",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TiledWangSetData",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "tilesetIndex",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "WangSet",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "wangSet",
+              "type": "TiledWangSetData",
+              "optional": false
+            },
+            {
+              "name": "tilesetIndex",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "WangSet | null",
+          "description": "Best-effort conversion of a TiledWangSetData to a runtime WangSet from @codexo/exojs-tilemap. ## Supported types - **'corner'** — Maps the four corner positions of each wangtile to the four corner bits of the 8-bit blob mask and returns a WangSet of type 'blob'. Only color index > 0 in the Tiled wangid is treated as \"this terrain\"; color index 0 means unset (not this terrain). Tiled corner wangid position → WangSet blob bit mapping: - wangid[7] (top-left) → bit 0 (value 1) - wangid[1] (top-right) → bit 2 (value 4) - wangid[5] (bottom-left) → bit 5 (value 32) - wangid[3] (bottom-right) → bit 7 (value 128) This is a best-effort conversion accurate for the common **single-color** corner terrain (blob-style). Multi-color terrains are accepted but only the presence/absence of any color (> 0 = set) is used; which specific color is set is ignored. - **'edge'** — Maps the four edge positions to the 4-bit edge mask and returns a WangSet of type 'edge'. Tiled edge wangid position → WangSet edge bit mapping: - wangid[0] (top) → bit 0 (value 1) - wangid[2] (right) → bit 1 (value 2) - wangid[4] (bottom) → bit 2 (value 4) - wangid[6] (left) → bit 3 (value 8) - **'mixed' / unknown** — Returns null; mixed wangsets interleave corner and edge semantics in a way that cannot be faithfully represented by a single blob or edge mask without additional heuristics."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "constants",
+      "title": "Constants",
+      "members": [
+        {
+          "name": "TILED_OBJECT_ALIGNMENTS",
+          "signature": "TILED_OBJECT_ALIGNMENTS: readonly TiledObjectAlignment[]",
+          "signatureTokens": [
+            {
+              "text": "TILED_OBJECT_ALIGNMENTS",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TiledObjectAlignment",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Every value Tiled accepts for a tileset's objectalignment."
+        },
+        {
+          "name": "tiledBuildInfo",
+          "signature": "tiledBuildInfo: TiledBuildInfo",
+          "signatureTokens": [
+            {
+              "text": "tiledBuildInfo",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TiledBuildInfo",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "tiledExtension",
+          "signature": "tiledExtension: Extension",
+          "signatureTokens": [
+            {
+              "text": "tiledExtension",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Extension",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Default immutable Tiled extension descriptor. Registers two asset bindings: - tiledRuntimeMapBinding — loader.load(Asset.type('tileMap', 'world.tmj')) → returns a format-independent runtime TileMap (common case). - tiledSourceBinding — loader.load(Asset.type('tiledSource', 'world.tmj')) → returns the raw parsed TiledMap source model (advanced/diagnostic). Depends on tilemapExtension so that snapshot construction always materialises the generic tilemap runtime before the Tiled adapter. Pass it to the application that should have it via ApplicationOptions.extensions."
+        },
+        {
+          "name": "tiledRuntimeMapBinding",
+          "signature": "tiledRuntimeMapBinding: AssetBinding<TileMap, TiledLoadOptions>",
+          "signatureTokens": [
+            {
+              "text": "tiledRuntimeMapBinding",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetBinding",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileMap",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TiledLoadOptions",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Declarative asset binding for the runtime TileMap produced from a .tmj Tiled map file. This is the common-case binding: loader.load(Asset.type('tileMap', 'world.tmj')) fetches and validates the TMJ, resolves external .tsj tilesets, loads tileset textures via the sub-load loader.load(Asset.type('tiledSource', source)), and synchronously converts the parsed TiledMap source model into a format-independent runtime TileMap via TiledMap.toTileMap. The sub-load flow guarantees that calling both load(TileMap) and load(TiledMap) for the same URL shares the Loader's cached TiledMap (no duplicate JSON fetches). Claiming the tmj extension enables the auto-routing shorthand loader.load('world.tmj') — the ExtensionKindMap augmentation in this package maps the tmj suffix to the 'tileMap' type."
+        },
+        {
+          "name": "tiledSourceBinding",
+          "signature": "tiledSourceBinding: AssetBinding<TiledMap, TiledLoadOptions>",
+          "signatureTokens": [
+            {
+              "text": "tiledSourceBinding",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetBinding",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TiledMap",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TiledLoadOptions",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Declarative asset binding for TiledMap. loader.load(Asset.type('tiledSource', 'world.tmj')) resolves through this binding, but no extensions are claimed, so a plain loader.load('world.tmj') does not resolve to TiledMap. The .tmj extension (and generic .json Tiled loading) is reserved for the format-independent TileMap runtime asset binding. The type name is tiledSource, not tiledMap: the runtime binding next to it is called tileMap, and two descriptor strings one letter apart is a typo that resolves to the wrong asset type instead of failing."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    }
+  ]
+}

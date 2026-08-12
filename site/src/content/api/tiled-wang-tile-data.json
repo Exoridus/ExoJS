@@ -1,0 +1,106 @@
+{
+  "title": "TiledWangTileData",
+  "description": "One wang-tile entry within a wangset's `wangtiles` array. `tileid` is the local tile id within the owning tileset. `wangid` is an 8-element array of color indices (1-based; 0 = unset) whose positions correspond to (in order): top, top-right, right, bottom-right, bottom, bottom-left, left, top-left.",
+  "symbol": "TiledWangTileData",
+  "kind": "interface",
+  "subsystem": "tiled",
+  "importPath": "@codexo/exojs-tiled",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "One wang-tile entry within a wangset's `wangtiles` array.",
+        "`tileid` is the local tile id within the owning tileset.",
+        "`wangid` is an 8-element array of color indices (1-based; 0 = unset) whose positions correspond to (in order): top, top-right, right, bottom-right, bottom, bottom-left, left, top-left."
+      ],
+      "importLine": "import { TiledWangTileData } from '@codexo/exojs-tiled'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "tileid",
+          "signature": "tileid: number",
+          "signatureTokens": [
+            {
+              "text": "tileid",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "wangid",
+          "signature": "wangid: readonly number[]",
+          "signatureTokens": [
+            {
+              "text": "wangid",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tiled/src/data.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/data.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tiled/src/data.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/data.ts"
+}

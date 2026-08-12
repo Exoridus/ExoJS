@@ -1,0 +1,95 @@
+{
+  "title": "TextureSource",
+  "description": "Anything the rendering pipeline can sample as a texture source: a loaded image, an offscreen canvas, a playing video, or `null` when no source has been assigned yet.",
+  "symbol": "TextureSource",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Anything the rendering pipeline can sample as a texture source: a loaded image, an offscreen canvas, a playing video, or `null` when no source has been assigned yet."
+      ],
+      "importLine": "import { TextureSource } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "TextureSource",
+          "signature": "HTMLImageElement | HTMLCanvasElement | HTMLVideoElement | ImageBitmap | null",
+          "signatureTokens": [
+            {
+              "text": "HTMLImageElement",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "HTMLCanvasElement",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "HTMLVideoElement",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ImageBitmap",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/types.ts"
+}

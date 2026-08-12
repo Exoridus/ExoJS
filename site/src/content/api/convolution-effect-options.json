@@ -1,0 +1,158 @@
+{
+  "title": "ConvolutionEffectOptions",
+  "description": "Construction options for ConvolutionEffect.",
+  "symbol": "ConvolutionEffectOptions",
+  "kind": "interface",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs-audio-fx",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for ConvolutionEffect."
+      ],
+      "importLine": "import { ConvolutionEffectOptions } from '@codexo/exojs-audio-fx'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "gain",
+          "signature": "gain?: number",
+          "signatureTokens": [
+            {
+              "text": "gain",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Optional makeup gain multiplier applied to the wet path. Useful when the IR is very quiet or very loud and normalize is off. Range 0..4, default 1."
+        },
+        {
+          "name": "impulse",
+          "signature": "impulse?: AudioBuffer | Sound",
+          "signatureTokens": [
+            {
+              "text": "impulse",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioBuffer",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Sound",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Impulse response. Accepts a decoded AudioBuffer or a Sound (its audioBuffer is used). If omitted the effect runs dry (passthrough) until ConvolutionEffect.setImpulse is called."
+        },
+        {
+          "name": "normalize",
+          "signature": "normalize?: boolean",
+          "signatureTokens": [
+            {
+              "text": "normalize",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Maps to ConvolverNode.normalize. When true the browser applies an equal-power normalization pass on the IR so different IRs play at a consistent perceived loudness. Default true (the Web Audio spec default). **Note:** the Web Audio spec only respects normalize if it is set *before* buffer is assigned. This class always writes normalize first. Changing normalize at runtime while an IR is loaded re-assigns the buffer so the new value takes effect."
+        },
+        {
+          "name": "wet",
+          "signature": "wet?: number",
+          "signatureTokens": [
+            {
+              "text": "wet",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Dry/wet mix, 0..1. The dry level is automatically 1 - wet. Default 1.0."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-audio-fx/src/effects/ConvolutionEffect.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/ConvolutionEffect.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-audio-fx/src/effects/ConvolutionEffect.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/ConvolutionEffect.ts"
+}

@@ -1,0 +1,71 @@
+{
+  "title": "SequenceBinding",
+  "description": "A binding accepted by SequenceAction: a `'>'`-separated, `'+'`-joined, `'|'`-alternated string pattern (`'Down>Down+Right>Right'`, `'A+B|C>D'`), or an InputSequence array of steps directly.",
+  "symbol": "SequenceBinding",
+  "kind": "type",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A binding accepted by SequenceAction: a `'>'`-separated, `'+'`-joined, `'|'`-alternated string pattern (`'Down>Down+Right>Right'`, `'A+B|C>D'`), or an InputSequence array of steps directly."
+      ],
+      "importLine": "import { SequenceBinding } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "SequenceBinding",
+          "signature": "string | InputSequence",
+          "signatureTokens": [
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputSequence",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/actions/SequenceAction.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/SequenceAction.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/actions/SequenceAction.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/SequenceAction.ts"
+}

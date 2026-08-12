@@ -1,0 +1,71 @@
+{
+  "title": "RepeatFit",
+  "description": "How a `'repeat'` or `'mirror-repeat'` run fits its destination span exactly.",
+  "symbol": "RepeatFit",
+  "kind": "type",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "How a `'repeat'` or `'mirror-repeat'` run fits its destination span exactly."
+      ],
+      "importLine": "import { RepeatFit } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "RepeatFit",
+          "signature": "\"clip\" | \"round\"",
+          "signatureTokens": [
+            {
+              "text": "\"clip\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"round\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/texture/repeat.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/repeat.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/texture/repeat.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/repeat.ts"
+}

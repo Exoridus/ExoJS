@@ -1,0 +1,304 @@
+{
+  "title": "AssetLoaderContext",
+  "description": "Context object passed to custom asset-type load handlers bound via `bindAsset` / `defineAsset`. The `fetch*` helpers route through the loader's configured cache strategy and IDB stores, giving custom handlers the same caching behaviour as built-in asset types.",
+  "symbol": "AssetLoaderContext",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 0,
+    "methods": 3,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Context object passed to custom asset-type load handlers bound via `bindAsset` / `defineAsset`.",
+        "The `fetch*` helpers route through the loader's configured cache strategy and IDB stores, giving custom handlers the same caching behaviour as built-in asset types."
+      ],
+      "importLine": "import { AssetLoaderContext } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "fetchArrayBuffer",
+          "signature": "fetchArrayBuffer(source: string): Promise<ArrayBuffer>",
+          "signatureTokens": [
+            {
+              "text": "fetchArrayBuffer",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBuffer",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<ArrayBuffer>",
+          "description": "Fetches source as an ArrayBuffer, routing through the loader's cache/IDB."
+        },
+        {
+          "name": "fetchJson",
+          "signature": "fetchJson(source: string): Promise<T>",
+          "signatureTokens": [
+            {
+              "text": "fetchJson",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<T>",
+          "description": "Fetches source as parsed JSON, routing through the loader's cache/IDB. Supply T to narrow the return type at the call site."
+        },
+        {
+          "name": "fetchText",
+          "signature": "fetchText(source: string): Promise<string>",
+          "signatureTokens": [
+            {
+              "text": "fetchText",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<string>",
+          "description": "Fetches source as UTF-8 text, routing through the loader's cache/IDB."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "identityKey",
+          "signature": "identityKey: string",
+          "signatureTokens": [
+            {
+              "text": "identityKey",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The identity key for this load — id:<typeId>:<discriminator>. Useful for diagnostics; also equals the key used for in-flight dedup."
+        },
+        {
+          "name": "loader",
+          "signature": "loader: Loader",
+          "signatureTokens": [
+            {
+              "text": "loader",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Loader",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The owning Loader instance."
+        },
+        {
+          "name": "signal",
+          "signature": "signal?: AbortSignal",
+          "signatureTokens": [
+            {
+              "text": "signal",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AbortSignal",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Cancellation signal for the load this handler invocation belongs to. It aborts once no claim scope needs the result any more — a scene torn down mid-navigation, or a LoadingQueue.cancel call. The fetch* helpers below already forward it, so a handler built out of them needs no extra work. Forward it explicitly to any fetching or decoding the handler performs itself; undefined means the caller started this load without a cancellation channel."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/Loader.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Loader.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/Loader.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Loader.ts"
+}

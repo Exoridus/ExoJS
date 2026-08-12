@@ -1,0 +1,155 @@
+{
+  "title": "TextPageQuads",
+  "description": "Per-page quad geometry for a single text node, consumed by the text renderer for both Text and BitmapText.",
+  "symbol": "TextPageQuads",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Per-page quad geometry for a single text node, consumed by the text renderer for both Text and BitmapText."
+      ],
+      "importLine": "import { TextPageQuads } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "indices",
+          "signature": "indices: Uint16Array",
+          "signatureTokens": [
+            {
+              "text": "indices",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Uint16Array",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Index buffer: 6 indices × quadCount."
+        },
+        {
+          "name": "pageIndex",
+          "signature": "pageIndex: number",
+          "signatureTokens": [
+            {
+              "text": "pageIndex",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Atlas page index."
+        },
+        {
+          "name": "quadCount",
+          "signature": "quadCount: number",
+          "signatureTokens": [
+            {
+              "text": "quadCount",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "uvs",
+          "signature": "uvs: Float32Array",
+          "signatureTokens": [
+            {
+              "text": "uvs",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Float32Array",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "UV coordinates: [u, v] × 4 vertices × quadCount."
+        },
+        {
+          "name": "vertices",
+          "signature": "vertices: Float32Array",
+          "signatureTokens": [
+            {
+              "text": "vertices",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Float32Array",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Vertex positions: [x, y] × 4 vertices × quadCount."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/text/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/text/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/types.ts"
+}

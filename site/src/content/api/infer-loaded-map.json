@@ -1,0 +1,64 @@
+{
+  "title": "InferLoadedMap",
+  "description": "Maps each key of a catalog DEFINITION record to its resolved runtime resource type. Keyed on CatalogEntry, not `AssetInput`: a materialized catalog may have been defined with bare path strings, which `AssetInput` (configs and `Asset` descriptors only) does not cover — the loader consumes the already materialized leaves and must not re-validate the definition entries.",
+  "symbol": "InferLoadedMap",
+  "kind": "type",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Maps each key of a catalog DEFINITION record to its resolved runtime resource type.",
+        "Keyed on CatalogEntry, not `AssetInput`: a materialized catalog may have been defined with bare path strings, which `AssetInput` (configs and `Asset` descriptors only) does not cover — the loader consumes the already materialized leaves and must not re-validate the definition entries."
+      ],
+      "importLine": "import { InferLoadedMap } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "InferLoadedMap",
+          "signature": "mapped",
+          "signatureTokens": [
+            {
+              "text": "mapped",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/Loader.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Loader.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/Loader.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Loader.ts"
+}

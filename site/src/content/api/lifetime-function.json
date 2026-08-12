@@ -1,0 +1,123 @@
+{
+  "title": "LifetimeFunction",
+  "description": "Lifetime-parameterised function that produces a deterministic `T` for a given lifetime ratio `t` in `[0, 1]`. Used by per-frame update modules that interpolate over particle lifetime — `ColorOverLifetime` (ColorGradient), `ScaleOverLifetime` (Curve), etc. Mutable-target rule: same as Distribution — pass your own scratch via `out` for hot loops, omit for one-off calls.",
+  "symbol": "LifetimeFunction",
+  "kind": "interface",
+  "subsystem": "particles",
+  "importPath": "@codexo/exojs-particles",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 1,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Lifetime-parameterised function that produces a deterministic `T` for a given lifetime ratio `t` in `[0, 1]`. Used by per-frame update modules that interpolate over particle lifetime — `ColorOverLifetime` (ColorGradient), `ScaleOverLifetime` (Curve), etc.",
+        "Mutable-target rule: same as Distribution — pass your own scratch via `out` for hot loops, omit for one-off calls."
+      ],
+      "importLine": "import { LifetimeFunction } from '@codexo/exojs-particles'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "evaluate",
+          "signature": "evaluate(t: number, out?: T): T",
+          "signatureTokens": [
+            {
+              "text": "evaluate",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "out",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "t",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "out",
+              "type": "T",
+              "optional": true
+            }
+          ],
+          "returnType": "T",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-particles/src/distributions/Distribution.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/distributions/Distribution.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-particles/src/distributions/Distribution.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/distributions/Distribution.ts"
+}

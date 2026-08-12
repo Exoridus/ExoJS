@@ -1,0 +1,2283 @@
+{
+  "title": "InputManager",
+  "description": "Owns the unified input pipeline for an Application: keyboard events, pointer (mouse/touch/pen) events with multi-touch slot management, gamepad polling with mapping detection, mouse-wheel events, canvas-focus tracking, and high-level gesture recognition (pinch / rotate / long-press). All raw inputs are written into a shared `Float32Array` channel buffer. Bind input listeners via the onTrigger / onActive / onStart / onStop factory methods (or via Gamepad.onTrigger-style methods on individual pads), or subscribe to the signal-style notifications (`onKeyDown`, `onPointerDown`, `onGamepadConnected`, `onAnyGamepadButtonDown`, …). Driven each frame by Application.update's internal prepare stage (first, ahead of interaction/audio/tweens/rendering); constructed automatically — you do not instantiate this class yourself.",
+  "symbol": "InputManager",
+  "kind": "class",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 40,
+  "counts": {
+    "constructors": 1,
+    "methods": 9,
+    "properties": 8,
+    "events": 22
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Owns the unified input pipeline for an Application: keyboard events, pointer (mouse/touch/pen) events with multi-touch slot management, gamepad polling with mapping detection, mouse-wheel events, canvas-focus tracking, and high-level gesture recognition (pinch / rotate / long-press).",
+        "All raw inputs are written into a shared `Float32Array` channel buffer. Bind input listeners via the onTrigger / onActive / onStart / onStop factory methods (or via Gamepad.onTrigger-style methods on individual pads), or subscribe to the signal-style notifications (`onKeyDown`, `onPointerDown`, `onGamepadConnected`, `onAnyGamepadButtonDown`, …).",
+        "Driven each frame by Application.update's internal prepare stage (first, ahead of interaction/audio/tweens/rendering); constructed automatically — you do not instantiate this class yourself."
+      ],
+      "importLine": "import { InputManager } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(app: Application): InputManager",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "app",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputManager",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "app",
+              "type": "Application",
+              "optional": false
+            }
+          ],
+          "returnType": "InputManager",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "attach",
+          "signature": "attach(map: ActionMap<T>): ActionMap<T>",
+          "signatureTokens": [
+            {
+              "text": "attach",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "map",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ActionMap",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ActionMap",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "map",
+              "type": "ActionMap<T>",
+              "optional": false
+            }
+          ],
+          "returnType": "ActionMap<T>",
+          "description": "Start updating map every frame for the application's lifetime. Attaching a map that is already attached elsewhere moves it here. Call ActionMap.detach to stop, or use scene.inputs.attach for a map that should die with its scene."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "getGamepad",
+          "signature": "getGamepad(slot: 0 | 1 | 2 | 3): Gamepad",
+          "signatureTokens": [
+            {
+              "text": "getGamepad",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "slot",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "0",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "1",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "2",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "3",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Gamepad",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "slot",
+              "type": "0 | 1 | 2 | 3",
+              "optional": false
+            }
+          ],
+          "returnType": "Gamepad",
+          "description": "Direct accessor for a single gamepad slot. Equivalent to app.input.gamepads[slot] but reads more clearly at call sites."
+        },
+        {
+          "name": "getPrimaryPointerPosition",
+          "signature": "getPrimaryPointerPosition(): PointLike | null",
+          "signatureTokens": [
+            {
+              "text": "getPrimaryPointerPosition",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "PointLike | null",
+          "description": "Returns the canvas-relative position of the primary pointer (isPrimary = true), or the first non-cancelled pointer if no primary is found. Returns null when no active pointer is present. Used by debug layers to show cursor info."
+        },
+        {
+          "name": "onActive",
+          "signature": "onActive(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: InputBindingOptions): InputBinding",
+          "signatureTokens": [
+            {
+              "text": "onActive",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "channel",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputChannel",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputChannel",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "callback",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputBindingOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputBinding",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "channel",
+              "type": "InputChannel | readonly InputChannel[]",
+              "optional": false
+            },
+            {
+              "name": "callback",
+              "type": "(value: number) => void",
+              "optional": true
+            },
+            {
+              "name": "options",
+              "type": "InputBindingOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "InputBinding",
+          "description": "Register a callback fired every frame while any of channels is active. The callback is optional: with none, this just creates a binding, which is the idiomatic way to poll an input per frame — read InputBinding.active / InputBinding.value in your own update() instead of tracking held-state in a callback."
+        },
+        {
+          "name": "onStart",
+          "signature": "onStart(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: InputBindingOptions): InputBinding",
+          "signatureTokens": [
+            {
+              "text": "onStart",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "channel",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputChannel",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputChannel",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "callback",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputBindingOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputBinding",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "channel",
+              "type": "InputChannel | readonly InputChannel[]",
+              "optional": false
+            },
+            {
+              "name": "callback",
+              "type": "(value: number) => void",
+              "optional": true
+            },
+            {
+              "name": "options",
+              "type": "InputBindingOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "InputBinding",
+          "description": "Register a callback fired once when any of channels becomes active. Manual lifecycle — call .unbind() on the returned binding to detach."
+        },
+        {
+          "name": "onStop",
+          "signature": "onStop(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: InputBindingOptions): InputBinding",
+          "signatureTokens": [
+            {
+              "text": "onStop",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "channel",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputChannel",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputChannel",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "callback",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputBindingOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputBinding",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "channel",
+              "type": "InputChannel | readonly InputChannel[]",
+              "optional": false
+            },
+            {
+              "name": "callback",
+              "type": "(value: number) => void",
+              "optional": true
+            },
+            {
+              "name": "options",
+              "type": "InputBindingOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "InputBinding",
+          "description": "Register a callback fired once when all of channels become inactive."
+        },
+        {
+          "name": "onTrigger",
+          "signature": "onTrigger(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: InputBindingOptions): InputBinding",
+          "signatureTokens": [
+            {
+              "text": "onTrigger",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "channel",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputChannel",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputChannel",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "callback",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputBindingOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputBinding",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "channel",
+              "type": "InputChannel | readonly InputChannel[]",
+              "optional": false
+            },
+            {
+              "name": "callback",
+              "type": "(value: number) => void",
+              "optional": true
+            },
+            {
+              "name": "options",
+              "type": "InputBindingOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "InputBinding",
+          "description": "Register a callback fired when the input is released within InputBindingOptions.threshold ms of activation (a \"tap\")."
+        },
+        {
+          "name": "preUpdate",
+          "signature": "preUpdate(delta: Time): void",
+          "signatureTokens": [
+            {
+              "text": "preUpdate",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "delta",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Time",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "delta",
+              "type": "Time",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "SystemMethods.preUpdate phase, registered on app.systems by the Application at SystemOrder.CoreInput — ahead of every other core system, so this frame's snapshot is current before anything simulates. Polls the gamepad API, drains queued keyboard/pointer/wheel deltas into the channel buffer, fires the corresponding Signals, then evaluates each registered binding. delta is also the clock a pending long-press matures on — see GestureRecognizer.update."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "canvasFocused",
+          "signature": "canvasFocused: boolean",
+          "signatureTokens": [
+            {
+              "text": "canvasFocused",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "connectedGamepadCount",
+          "signature": "connectedGamepadCount: number",
+          "signatureTokens": [
+            {
+              "text": "connectedGamepadCount",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Number of slots currently occupied by a physical gamepad."
+        },
+        {
+          "name": "connectedGamepads",
+          "signature": "connectedGamepads: readonly Gamepad[]",
+          "signatureTokens": [
+            {
+              "text": "connectedGamepads",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Gamepad",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Subset of gamepads containing only currently connected pads, in slot order."
+        },
+        {
+          "name": "firstConnectedGamepad",
+          "signature": "firstConnectedGamepad: Gamepad | null",
+          "signatureTokens": [
+            {
+              "text": "firstConnectedGamepad",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Gamepad",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "First connected gamepad in slot order, or null when no pads are attached."
+        },
+        {
+          "name": "gamepads",
+          "signature": "gamepads: readonly [Gamepad, Gamepad, Gamepad, Gamepad]",
+          "signatureTokens": [
+            {
+              "text": "gamepads",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Gamepad",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Gamepad",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Gamepad",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Gamepad",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Always-4 array of Gamepad slot mailboxes. Each entry exists for the application's full lifetime; check pad.connected for hardware presence. Listeners attached to a slot survive disconnect/reconnect."
+        },
+        {
+          "name": "gamepadSlotStrategy",
+          "signature": "gamepadSlotStrategy: GamepadSlotStrategy",
+          "signatureTokens": [
+            {
+              "text": "gamepadSlotStrategy",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadSlotStrategy",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The slot strategy active for this InputManager."
+        },
+        {
+          "name": "hasGamepad",
+          "signature": "hasGamepad: boolean",
+          "signatureTokens": [
+            {
+              "text": "hasGamepad",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true when at least one slot is occupied by a physical gamepad."
+        },
+        {
+          "name": "pointersInCanvas",
+          "signature": "pointersInCanvas: boolean",
+          "signatureTokens": [
+            {
+              "text": "pointersInCanvas",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "events",
+      "title": "Events",
+      "members": [
+        {
+          "name": "onAnyGamepadAxisChange",
+          "signature": "onAnyGamepadAxisChange: Signal<[Gamepad, GamepadAxis, number]>",
+          "signatureTokens": [
+            {
+              "text": "onAnyGamepadAxisChange",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Gamepad",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadAxis",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires whenever any pad reports an axis value change."
+        },
+        {
+          "name": "onAnyGamepadButtonDown",
+          "signature": "onAnyGamepadButtonDown: Signal<[Gamepad, GamepadButton, number]>",
+          "signatureTokens": [
+            {
+              "text": "onAnyGamepadButtonDown",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Gamepad",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButton",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires whenever any pad reports a button press transition."
+        },
+        {
+          "name": "onAnyGamepadButtonUp",
+          "signature": "onAnyGamepadButtonUp: Signal<[Gamepad, GamepadButton, number]>",
+          "signatureTokens": [
+            {
+              "text": "onAnyGamepadButtonUp",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Gamepad",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButton",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires whenever any pad reports a button release transition."
+        },
+        {
+          "name": "onAnyGamepadReassigned",
+          "signature": "onAnyGamepadReassigned: Signal<[Gamepad, fromSlot]>",
+          "signatureTokens": [
+            {
+              "text": "onAnyGamepadReassigned",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Gamepad",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "fromSlot",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires when a 'compact'-strategy disconnect shifts a higher-numbered slot's pad into a lower one. Dispatched once per moved pad with the destination slot and the slot index it came from."
+        },
+        {
+          "name": "onCanvasFocusChange",
+          "signature": "onCanvasFocusChange: Signal<[focused]>",
+          "signatureTokens": [
+            {
+              "text": "onCanvasFocusChange",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "focused",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "onContextMenu",
+          "signature": "onContextMenu: Signal<[ContextMenuRequest]>",
+          "signatureTokens": [
+            {
+              "text": "onContextMenu",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ContextMenuRequest",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires whenever the platform's single native contextmenu event fires — right-click, the keyboard context-menu key, Shift+F10, and (on most touch browsers) a long-press all funnel through that one event, so there is exactly one source to listen to here regardless of which of them the user used. Independent of whether the browser's own menu was suppressed — see InputApplicationOptions.allowNativeContextMenu. This is the engine-wide fallback: it fires unconditionally, with no regard for the scene graph, so it is the right place for an application-level menu that should appear no matter what — or nothing — was under the pointer. Fires even when the request has no pointer to attribute itself to (a keyboard-only session that has never moved a mouse) — see ContextMenuRequest's doc comment for why the request carries its own coordinates instead of forcing the contract onto a Pointer. A request over a specific interactive node additionally bubbles as a scene-graph contextmenu InteractionEvent (see InteractionManager), which only fires when a node is actually hit and can be stopped with InteractionEvent.stopPropagation; use that one for a per-node menu instead. Do not confuse either with GestureRecognizer.onLongPress — a separate, purely informational touch/mouse-hold signal that never triggers this one on its own."
+        },
+        {
+          "name": "onGamepadConnected",
+          "signature": "onGamepadConnected: Signal<[Gamepad]>",
+          "signatureTokens": [
+            {
+              "text": "onGamepadConnected",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Gamepad",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires when a physical pad connects to any slot."
+        },
+        {
+          "name": "onGamepadDisconnected",
+          "signature": "onGamepadDisconnected: Signal<[Gamepad]>",
+          "signatureTokens": [
+            {
+              "text": "onGamepadDisconnected",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Gamepad",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires when a physical pad disconnects from any slot."
+        },
+        {
+          "name": "onKeyDown",
+          "signature": "onKeyDown: Signal<[number]>",
+          "signatureTokens": [
+            {
+              "text": "onKeyDown",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires once per physical key press with the key's channel. OS auto-repeat while a key is held does not fire again, so this matches the down transition an action's pressed reports rather than diverging from it. Read the channel buffer (or an action) to know a key is still held."
+        },
+        {
+          "name": "onKeyUp",
+          "signature": "onKeyUp: Signal<[number]>",
+          "signatureTokens": [
+            {
+              "text": "onKeyUp",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "onLongPress",
+          "signature": "onLongPress: Signal<[pointer]>",
+          "signatureTokens": [
+            {
+              "text": "onLongPress",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "pointer",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires when a pointer has been held without significant movement for ≥ 500 ms of ENGINE time — frame deltas summed across the frames this manager actually ran, not wall-clock time. A hold therefore freezes while the active scene is paused and while the application is stopped, and resumes from where it left off; it never completes in the background."
+        },
+        {
+          "name": "onMouseWheel",
+          "signature": "onMouseWheel: Signal<[deltaX, deltaY]>",
+          "signatureTokens": [
+            {
+              "text": "onMouseWheel",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "deltaX",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "deltaY",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires once per frame in which the wheel moved, with the accumulated offset for that frame. deltaY is the usual scroll axis; deltaX carries horizontal wheels and trackpad swipes. Both are normalized out of the event's deltaMode, so a line- or page-mode wheel arrives in the same units as a pixel-mode one. The values are plain numbers rather than a Vector on purpose: the offset is reset to zero right after dispatch, so a shared instance would be stale by the time a listener that kept it read it again."
+        },
+        {
+          "name": "onPinch",
+          "signature": "onPinch: Signal<[scale, centerX, centerY]>",
+          "signatureTokens": [
+            {
+              "text": "onPinch",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "scale",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "centerX",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "centerY",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires on every two-touch-pointer move where the distance between them changed. scale > 1 = spreading, < 1 = pinching; the center is the midpoint between the two pointers, in the same coordinate space as Pointer.position. The center arrives as two numbers rather than a Vector on purpose — a shared instance would be overwritten by the next gesture entry in the same frame."
+        },
+        {
+          "name": "onPointerCancel",
+          "signature": "onPointerCancel: Signal<[pointer, x, y]>",
+          "signatureTokens": [
+            {
+              "text": "onPointerCancel",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "pointer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "onPointerDown",
+          "signature": "onPointerDown: Signal<[pointer, x, y]>",
+          "signatureTokens": [
+            {
+              "text": "onPointerDown",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "pointer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "onPointerEnter",
+          "signature": "onPointerEnter: Signal<[pointer, x, y]>",
+          "signatureTokens": [
+            {
+              "text": "onPointerEnter",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "pointer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Every pointer signal below carries the phase's own (x, y) explicitly, in design pixels, alongside the pointer — an immutable snapshot rather than a temporary rewind of Pointer.position. pointer.x/ pointer.y always read the pointer's live, current position instead (see Pointer.position's doc comment); use the x/y parameters for the position a specific phase actually happened at."
+        },
+        {
+          "name": "onPointerLeave",
+          "signature": "onPointerLeave: Signal<[pointer, x, y]>",
+          "signatureTokens": [
+            {
+              "text": "onPointerLeave",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "pointer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "onPointerMove",
+          "signature": "onPointerMove: Signal<[pointer, x, y]>",
+          "signatureTokens": [
+            {
+              "text": "onPointerMove",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "pointer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "onPointerSwipe",
+          "signature": "onPointerSwipe: Signal<[pointer, x, y]>",
+          "signatureTokens": [
+            {
+              "text": "onPointerSwipe",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "pointer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "onPointerTap",
+          "signature": "onPointerTap: Signal<[pointer, x, y]>",
+          "signatureTokens": [
+            {
+              "text": "onPointerTap",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "pointer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "onPointerUp",
+          "signature": "onPointerUp: Signal<[pointer, x, y]>",
+          "signatureTokens": [
+            {
+              "text": "onPointerUp",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "pointer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "onRotate",
+          "signature": "onRotate: Signal<[angleDelta, centerX, centerY]>",
+          "signatureTokens": [
+            {
+              "text": "onRotate",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "angleDelta",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "centerX",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "centerY",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires on every two-touch-pointer move where the angle between them changed. angleDelta is in radians; the center is the midpoint between the two pointers — see onPinch for why it is not a Vector."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/InputManager.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/InputManager.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/InputManager.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/InputManager.ts"
+}

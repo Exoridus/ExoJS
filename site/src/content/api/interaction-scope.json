@@ -1,0 +1,138 @@
+{
+  "title": "InteractionScope",
+  "description": "Handle returned by SceneInteraction.scope. While active, pointer hit-testing and Tab traversal are confined to the scoped root's subtree. Call InteractionScope.release (or InteractionScope.destroy, an alias) to end the scope — nested scopes restore whichever scope was active before this one, regardless of release order. Idempotent; also released automatically when the owning scene ends permanently.",
+  "symbol": "InteractionScope",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 2,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Handle returned by SceneInteraction.scope. While active, pointer hit-testing and Tab traversal are confined to the scoped root's subtree. Call InteractionScope.release (or InteractionScope.destroy, an alias) to end the scope — nested scopes restore whichever scope was active before this one, regardless of release order. Idempotent; also released automatically when the owning scene ends permanently."
+      ],
+      "importLine": "import { InteractionScope } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "release",
+          "signature": "release(): void",
+          "signatureTokens": [
+            {
+              "text": "release",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "End this scope. Idempotent alias for InteractionScope.destroy."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "active",
+          "signature": "active: boolean",
+          "signatureTokens": [
+            {
+              "text": "active",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true until this scope is released."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/scene/SceneInteraction.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/scene/SceneInteraction.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/scene/SceneInteraction.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/scene/SceneInteraction.ts"
+}

@@ -1,0 +1,330 @@
+{
+  "title": "LdtkMap",
+  "description": "A parsed LDtk world document: holds the raw JSON data and the converted runtime TileMap for each level. `LdtkMap` is the parsed source model. Each LDtk level is independently convertible to a format-independent `TileMap`; access them via levels (by document order) or by name via getLevelByName. Construction is cheap — the runtime `TileMap[]` is supplied externally (built by import('./ldtkToTileMap').ldtkToTileMap). The map does **not** own tileset textures; those remain in the Loader cache.",
+  "symbol": "LdtkMap",
+  "kind": "class",
+  "subsystem": "ldtk",
+  "importPath": "@codexo/exojs-ldtk",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 1,
+    "methods": 2,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A parsed LDtk world document: holds the raw JSON data and the converted runtime TileMap for each level.",
+        "`LdtkMap` is the parsed source model. Each LDtk level is independently convertible to a format-independent `TileMap`; access them via levels (by document order) or by name via getLevelByName.",
+        "Construction is cheap — the runtime `TileMap[]` is supplied externally (built by import('./ldtkToTileMap').ldtkToTileMap). The map does **not** own tileset textures; those remain in the Loader cache."
+      ],
+      "importLine": "import { LdtkMap } from '@codexo/exojs-ldtk'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(source: string, data: LdtkData, levels: readonly TileMap[]): LdtkMap",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "data",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LdtkData",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "levels",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileMap",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LdtkMap",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "data",
+              "type": "LdtkData",
+              "optional": false
+            },
+            {
+              "name": "levels",
+              "type": "readonly TileMap[]",
+              "optional": false
+            }
+          ],
+          "returnType": "LdtkMap",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Destroy all owned runtime TileMaps. Is idempotent. Does NOT destroy tileset textures (Loader-owned) or any SceneNodes — the application is responsible for those."
+        },
+        {
+          "name": "getLevelByName",
+          "signature": "getLevelByName(identifier: string): TileMap | undefined",
+          "signatureTokens": [
+            {
+              "text": "getLevelByName",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "identifier",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileMap",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "identifier",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "TileMap | undefined",
+          "description": "Find a level's runtime TileMap by the LDtk level identifier, or undefined when no level with that name exists. Searches across import('./ldtkLevelEntries').getLdtkLevelEntries's flattened level set rather than data.levels directly, so this works for both single-world and multi-world documents — data.levels alone is empty for the latter. The lookup is O(n) in the number of levels."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "data",
+          "signature": "data: LdtkData",
+          "signatureTokens": [
+            {
+              "text": "data",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LdtkData",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The raw parsed LDtk document."
+        },
+        {
+          "name": "levels",
+          "signature": "levels: readonly TileMap[]",
+          "signatureTokens": [
+            {
+              "text": "levels",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileMap",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Runtime TileMaps — one per LDtk level, in document order. The index here corresponds to import('./ldtkLevelEntries').getLdtkLevelEntries(data)[i], not data.levels[i] — the latter is empty for multi-world documents, where levels live under data.worlds[].levels instead. loadLdtkMap fully resolves external .ldtkl levels before conversion, so every entry here is always a fully converted TileMap."
+        },
+        {
+          "name": "source",
+          "signature": "source: string",
+          "signatureTokens": [
+            {
+              "text": "source",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Resolved URL this map was loaded from."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-ldtk/src/LdtkMap.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-ldtk/src/LdtkMap.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-ldtk/src/LdtkMap.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-ldtk/src/LdtkMap.ts"
+}

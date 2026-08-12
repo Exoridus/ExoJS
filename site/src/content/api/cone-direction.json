@@ -1,0 +1,379 @@
+{
+  "title": "ConeDirection",
+  "description": "Random unit vector inside a cone, scaled by a speed magnitude. The cone is centred on `directionAngle` (in radians, 0 = +X, π/2 = +Y for screen-down coordinates) and spans `±halfAngle` radians around it. Speed is sampled uniformly in `[minSpeed, maxSpeed]`. Use for emission cones, explosions, fountain spread — anywhere the direction has a preferred axis with bounded variance.",
+  "symbol": "ConeDirection",
+  "kind": "class",
+  "subsystem": "particles",
+  "importPath": "@codexo/exojs-particles",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 1,
+    "methods": 2,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Random unit vector inside a cone, scaled by a speed magnitude.",
+        "The cone is centred on `directionAngle` (in radians, 0 = +X, π/2 = +Y for screen-down coordinates) and spans `±halfAngle` radians around it. Speed is sampled uniformly in `[minSpeed, maxSpeed]`.",
+        "Use for emission cones, explosions, fountain spread — anywhere the direction has a preferred axis with bounded variance."
+      ],
+      "importLine": "import { ConeDirection } from '@codexo/exojs-particles'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(directionAngle: number, halfAngle: number, minSpeed: number, maxSpeed: number): ConeDirection",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "directionAngle",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "halfAngle",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "minSpeed",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "maxSpeed",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ConeDirection",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "directionAngle",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "halfAngle",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "minSpeed",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "maxSpeed",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "ConeDirection",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "sample",
+          "signature": "sample(out: Vector): Vector",
+          "signatureTokens": [
+            {
+              "text": "sample",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "out",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "out",
+              "type": "Vector",
+              "optional": false
+            }
+          ],
+          "returnType": "Vector",
+          "description": ""
+        },
+        {
+          "name": "omni",
+          "signature": "omni(minSpeed: number, maxSpeed: number): ConeDirection",
+          "signatureTokens": [
+            {
+              "text": "omni",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "minSpeed",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "maxSpeed",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ConeDirection",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "minSpeed",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "maxSpeed",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "ConeDirection",
+          "description": "Convenience: omnidirectional emission (full circle, 0..2π)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "directionAngle",
+          "signature": "directionAngle: number",
+          "signatureTokens": [
+            {
+              "text": "directionAngle",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "halfAngle",
+          "signature": "halfAngle: number",
+          "signatureTokens": [
+            {
+              "text": "halfAngle",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "maxSpeed",
+          "signature": "maxSpeed: number",
+          "signatureTokens": [
+            {
+              "text": "maxSpeed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "minSpeed",
+          "signature": "minSpeed: number",
+          "signatureTokens": [
+            {
+              "text": "minSpeed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-particles/src/distributions/ConeDirection.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/distributions/ConeDirection.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-particles/src/distributions/ConeDirection.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/distributions/ConeDirection.ts"
+}

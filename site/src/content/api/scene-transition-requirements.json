@@ -1,0 +1,116 @@
+{
+  "title": "SceneTransitionRequirements",
+  "description": "Render resources a SceneTransitionSession needs, declared once up front via SceneTransition.getRequirements so the Director can provision them before the session's first frame.",
+  "symbol": "SceneTransitionRequirements",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Render resources a SceneTransitionSession needs, declared once up front via SceneTransition.getRequirements so the Director can provision them before the session's first frame."
+      ],
+      "importLine": "import { SceneTransitionRequirements } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "currentFrame",
+          "signature": "currentFrame: \"none\" | \"texture\" | \"direct\"",
+          "signatureTokens": [
+            {
+              "text": "currentFrame",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"none\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"texture\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"direct\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "'direct': the live surface draws straight to the screen, no texture. 'texture': the live surface renders into a pooled offscreen texture every frame instead. 'none': no live-surface resource at all."
+        },
+        {
+          "name": "outgoingFrame",
+          "signature": "outgoingFrame: \"none\" | \"snapshot\"",
+          "signatureTokens": [
+            {
+              "text": "outgoingFrame",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"none\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"snapshot\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "A one-time snapshot of the outgoing scene's render surface, captured once before the session starts. 'none' (the common case) requests nothing."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/SceneTransition.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTransition.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/SceneTransition.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTransition.ts"
+}

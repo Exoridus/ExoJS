@@ -1,0 +1,134 @@
+{
+  "title": "LineLike",
+  "description": "Structural type for any object that describes a line segment via start and end coordinates.",
+  "symbol": "LineLike",
+  "kind": "interface",
+  "subsystem": "math",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Structural type for any object that describes a line segment via start and end coordinates."
+      ],
+      "importLine": "import { LineLike } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "fromX",
+          "signature": "fromX: number",
+          "signatureTokens": [
+            {
+              "text": "fromX",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "fromY",
+          "signature": "fromY: number",
+          "signatureTokens": [
+            {
+              "text": "fromY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "toX",
+          "signature": "toX: number",
+          "signatureTokens": [
+            {
+              "text": "toX",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "toY",
+          "signature": "toY: number",
+          "signatureTokens": [
+            {
+              "text": "toY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/math/LineLike.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/math/LineLike.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/math/LineLike.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/math/LineLike.ts"
+}

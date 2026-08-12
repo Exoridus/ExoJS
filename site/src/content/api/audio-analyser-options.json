@@ -1,0 +1,175 @@
+{
+  "title": "AudioAnalyserOptions",
+  "description": "Construction options for AudioAnalyser.",
+  "symbol": "AudioAnalyserOptions",
+  "kind": "interface",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs-audio-fx",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for AudioAnalyser."
+      ],
+      "importLine": "import { AudioAnalyserOptions } from '@codexo/exojs-audio-fx'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "fftSize",
+          "signature": "fftSize?: number",
+          "signatureTokens": [
+            {
+              "text": "fftSize",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "FFT window size; must be a power of two between 32 and 32768. Default 2048."
+        },
+        {
+          "name": "maxDecibels",
+          "signature": "maxDecibels?: number",
+          "signatureTokens": [
+            {
+              "text": "maxDecibels",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Maximum dBFS rendered by the byte-domain spectrum getters. Default -30."
+        },
+        {
+          "name": "minDecibels",
+          "signature": "minDecibels?: number",
+          "signatureTokens": [
+            {
+              "text": "minDecibels",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Minimum dBFS rendered by the byte-domain spectrum getters. Default -100."
+        },
+        {
+          "name": "smoothingTimeConstant",
+          "signature": "smoothingTimeConstant?: number",
+          "signatureTokens": [
+            {
+              "text": "smoothingTimeConstant",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Time-domain smoothing constant in 0..1 applied between successive analyses. Default 0.8."
+        },
+        {
+          "name": "source",
+          "signature": "source?: AudioAnalyserSource",
+          "signatureTokens": [
+            {
+              "text": "source",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioAnalyserSource",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Optional initial source. Equivalent to analyser.source = value after construction; provided for ergonomic one-shot construction. The setter remains usable for runtime source switches."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-audio-fx/src/AudioAnalyser.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/AudioAnalyser.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-audio-fx/src/AudioAnalyser.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/AudioAnalyser.ts"
+}

@@ -1,0 +1,580 @@
+{
+  "title": "Quadtree",
+  "description": "Generic recursive spatial index used by the engine's `InteractionManager` to accelerate per-frame hit-testing of scene nodes. Items are inserted with their axis-aligned bounding box; the tree automatically subdivides into four quadrants (NW/NE/SW/SE) when a node accumulates more than `maxItems` entries and the current depth is below `maxDepth`. Items that span multiple quadrants are kept at the current node rather than duplicated. The tree is persistent: `insert` and `remove` modify the tree in place without full rebuilds. Call `clear()` for bulk reset, or `destroy()` to release all memory including child rectangles.",
+  "symbol": "Quadtree",
+  "kind": "class",
+  "subsystem": "math",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 1,
+    "methods": 6,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Generic recursive spatial index used by the engine's `InteractionManager` to accelerate per-frame hit-testing of scene nodes.",
+        "Items are inserted with their axis-aligned bounding box; the tree automatically subdivides into four quadrants (NW/NE/SW/SE) when a node accumulates more than `maxItems` entries and the current depth is below `maxDepth`. Items that span multiple quadrants are kept at the current node rather than duplicated.",
+        "The tree is persistent: `insert` and `remove` modify the tree in place without full rebuilds. Call `clear()` for bulk reset, or `destroy()` to release all memory including child rectangles."
+      ],
+      "importLine": "import { Quadtree } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(bounds: Rectangle, maxItems: number, maxDepth: number, depth: number): Quadtree<T>",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "bounds",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Rectangle",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "maxItems",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "maxDepth",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "depth",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Quadtree",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "bounds",
+              "type": "Rectangle",
+              "optional": false
+            },
+            {
+              "name": "maxItems",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "maxDepth",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "depth",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "Quadtree<T>",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "clear",
+          "signature": "clear(): void",
+          "signatureTokens": [
+            {
+              "text": "clear",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Remove all items and collapse all child nodes. Child Quadtree instances are retained but reset."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "insert",
+          "signature": "insert(item: QuadtreeItem<T>): void",
+          "signatureTokens": [
+            {
+              "text": "insert",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "item",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "QuadtreeItem",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "item",
+              "type": "QuadtreeItem<T>",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Insert item into the tree. If this node is full and below maxDepth, it subdivides first. Items whose bounds span multiple child quadrants are stored at the current node to avoid duplication."
+        },
+        {
+          "name": "queryPoint",
+          "signature": "queryPoint(x: number, y: number, results: QuadtreeItem<T>[]): QuadtreeItem<T>[]",
+          "signatureTokens": [
+            {
+              "text": "queryPoint",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "results",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "QuadtreeItem",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "QuadtreeItem",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "results",
+              "type": "QuadtreeItem<T>[]",
+              "optional": false
+            }
+          ],
+          "returnType": "QuadtreeItem<T>[]",
+          "description": "Returns all items whose bounds contain the point (x, y). The optional results parameter allows callers to provide a pre-allocated array that will be reused across calls. The array is **appended to** (not replaced), so callers should reset it (e.g. buf.length = 0) before passing it in when a fresh result set is needed. The same array reference is returned. Omitting results allocates a new array on every call. For hot paths (e.g. per-frame hit-testing) prefer passing a persistent buffer to avoid allocation pressure."
+        },
+        {
+          "name": "queryRect",
+          "signature": "queryRect(rect: Rectangle, results: QuadtreeItem<T>[]): QuadtreeItem<T>[]",
+          "signatureTokens": [
+            {
+              "text": "queryRect",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "rect",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Rectangle",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "results",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "QuadtreeItem",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "QuadtreeItem",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "rect",
+              "type": "Rectangle",
+              "optional": false
+            },
+            {
+              "name": "results",
+              "type": "QuadtreeItem<T>[]",
+              "optional": false
+            }
+          ],
+          "returnType": "QuadtreeItem<T>[]",
+          "description": "Return all items whose bounds overlap the axis-aligned rect. Same reuse semantics as queryPoint: pass a persistent buffer and reset it (buf.length = 0) before each call to avoid allocations on hot paths."
+        },
+        {
+          "name": "remove",
+          "signature": "remove(item: QuadtreeItem<T>): boolean",
+          "signatureTokens": [
+            {
+              "text": "remove",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "item",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "QuadtreeItem",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "item",
+              "type": "QuadtreeItem<T>",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Remove the first occurrence of item from this subtree by object identity. Returns true if the item was found and removed, false otherwise. This is an O(n) walk of every node in the affected subtree; prefer clear() for bulk removal."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/math/Quadtree.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/math/Quadtree.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/math/Quadtree.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/math/Quadtree.ts"
+}

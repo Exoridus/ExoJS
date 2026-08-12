@@ -1,0 +1,76 @@
+{
+  "title": "InputAlternation",
+  "description": "One SequenceAction step (or the whole binding a ChordAction accepts) satisfied by any ONE of several alternatives rather than requiring all of them — the array-form equivalent of a `'|'`-separated group of `'+'`-joined chord tokens, e.g. `'A+B|C'`. Every alternative is wrapped in its own array, even a single-channel one (`[[A], [B, C]]`), so this shape is never ambiguous with a plain InputChord (`[A, B]`, meaning \"A and B required together\", not \"A or B\"): an InputChord's entries are bare channels, an InputAlternation's are themselves channel arrays. Mixing the two shapes within one step — some entries bare, some nested — is rejected.",
+  "symbol": "InputAlternation",
+  "kind": "type",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "One SequenceAction step (or the whole binding a ChordAction accepts) satisfied by any ONE of several alternatives rather than requiring all of them — the array-form equivalent of a `'|'`-separated group of `'+'`-joined chord tokens, e.g. `'A+B|C'`.",
+        "Every alternative is wrapped in its own array, even a single-channel one (`[[A], [B, C]]`), so this shape is never ambiguous with a plain InputChord (`[A, B]`, meaning \"A and B required together\", not \"A or B\"): an InputChord's entries are bare channels, an InputAlternation's are themselves channel arrays. Mixing the two shapes within one step — some entries bare, some nested — is rejected."
+      ],
+      "importLine": "import { InputAlternation } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "InputAlternation",
+          "signature": "readonly InputChord[]",
+          "signatureTokens": [
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputChord",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/actions/pattern.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/pattern.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/actions/pattern.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/pattern.ts"
+}

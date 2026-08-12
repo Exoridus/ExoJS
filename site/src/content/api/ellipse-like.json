@@ -1,0 +1,134 @@
+{
+  "title": "EllipseLike",
+  "description": "Structural type for any object that describes an axis-aligned ellipse via a centre point and half-radii.",
+  "symbol": "EllipseLike",
+  "kind": "interface",
+  "subsystem": "math",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Structural type for any object that describes an axis-aligned ellipse via a centre point and half-radii."
+      ],
+      "importLine": "import { EllipseLike } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "rx",
+          "signature": "rx: number",
+          "signatureTokens": [
+            {
+              "text": "rx",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Horizontal half-radius."
+        },
+        {
+          "name": "ry",
+          "signature": "ry: number",
+          "signatureTokens": [
+            {
+              "text": "ry",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Vertical half-radius."
+        },
+        {
+          "name": "x",
+          "signature": "x: number",
+          "signatureTokens": [
+            {
+              "text": "x",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "y",
+          "signature": "y: number",
+          "signatureTokens": [
+            {
+              "text": "y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/math/EllipseLike.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/math/EllipseLike.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/math/EllipseLike.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/math/EllipseLike.ts"
+}

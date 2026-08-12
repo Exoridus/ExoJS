@@ -1,0 +1,423 @@
+{
+  "title": "ShaderUniform",
+  "description": "Metadata and current value for a single GLSL uniform variable. Populated by the backend during Shader.connect. The `dirty` flag is set to `true` on construction and on every setValue call; the backend clears it via markClean after uploading the value to the GPU. Array-type uniform names have their index suffix stripped (e.g. `uColors[0]` becomes `uColors`).",
+  "symbol": "ShaderUniform",
+  "kind": "class",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 10,
+  "counts": {
+    "constructors": 1,
+    "methods": 2,
+    "properties": 7,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Metadata and current value for a single GLSL uniform variable.",
+        "Populated by the backend during Shader.connect. The `dirty` flag is set to `true` on construction and on every setValue call; the backend clears it via markClean after uploading the value to the GPU. Array-type uniform names have their index suffix stripped (e.g. `uColors[0]` becomes `uColors`)."
+      ],
+      "importLine": "import { ShaderUniform } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(index: number, type: number, size: number, name: string, data: TypedArray): ShaderUniform",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "index",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "size",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "data",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TypedArray",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShaderUniform",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "index",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "type",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "size",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "data",
+              "type": "TypedArray",
+              "optional": false
+            }
+          ],
+          "returnType": "ShaderUniform",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "setValue",
+          "signature": "setValue(value: TypedArray): this",
+          "signatureTokens": [
+            {
+              "text": "setValue",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TypedArray",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "value",
+              "type": "TypedArray",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Copy value into the internal typed-array buffer and mark the uniform dirty. The backend will upload the new value to the GPU on the next Shader.sync call."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "index",
+          "signature": "index: number",
+          "signatureTokens": [
+            {
+              "text": "index",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Zero-based index of this uniform within the shader program."
+        },
+        {
+          "name": "name",
+          "signature": "name: string",
+          "signatureTokens": [
+            {
+              "text": "name",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "GLSL uniform name with array suffixes stripped."
+        },
+        {
+          "name": "size",
+          "signature": "size: number",
+          "signatureTokens": [
+            {
+              "text": "size",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Number of elements for array uniforms; 1 for scalar uniforms."
+        },
+        {
+          "name": "type",
+          "signature": "type: number",
+          "signatureTokens": [
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "WebGL2 GLenum type token (e.g. gl.FLOAT_MAT4)."
+        },
+        {
+          "name": "dirty",
+          "signature": "dirty: boolean",
+          "signatureTokens": [
+            {
+              "text": "dirty",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the value has changed since the last markClean call."
+        },
+        {
+          "name": "propName",
+          "signature": "propName: string",
+          "signatureTokens": [
+            {
+              "text": "propName",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The leaf segment of a dot-separated uniform name. For top-level uniforms this equals name; for struct members (e.g. uLight.color) it returns only the field name (color)."
+        },
+        {
+          "name": "value",
+          "signature": "value: TypedArray",
+          "signatureTokens": [
+            {
+              "text": "value",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TypedArray",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/shader/ShaderUniform.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/shader/ShaderUniform.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/shader/ShaderUniform.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/shader/ShaderUniform.ts"
+}

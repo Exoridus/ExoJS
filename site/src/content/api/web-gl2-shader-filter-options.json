@@ -1,0 +1,168 @@
+{
+  "title": "WebGl2ShaderFilterOptions",
+  "description": "",
+  "symbol": "WebGl2ShaderFilterOptions",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [],
+      "importLine": "import { WebGl2ShaderFilterOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "autoUpgrade",
+          "signature": "autoUpgrade?: boolean",
+          "signatureTokens": [
+            {
+              "text": "autoUpgrade",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Auto-upgrade legacy GLSL ES 1.00 fragment shader source to GLSL ES 3.00. Default true — accepts both Shadertoy/ISF/legacy shaders and modern 3.00 shaders interchangeably. Set to false if you want strict 3.00 input (will fail to compile if given 1.00-style code). Useful for CI/linting setups that want to catch legacy shader code as bugs. Note: only the fragment shader is upgraded. If you supply a 1.00-style vertex shader via vertexSource, you will get a compile error that must be fixed manually."
+        },
+        {
+          "name": "fragmentSource",
+          "signature": "fragmentSource?: string",
+          "signatureTokens": [
+            {
+              "text": "fragmentSource",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "GLSL fragment shader source. Required. The shader receives these auto-bound uniforms: uniform sampler2D uTexture; // the filter's input uniform vec2 uResolution; // output dimensions And these auto-bound varyings: in vec2 vUv; // 0..1 across the quad"
+        },
+        {
+          "name": "uniforms",
+          "signature": "uniforms?: Record<string, ShaderFilterUniformValue>",
+          "signatureTokens": [
+            {
+              "text": "uniforms",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShaderFilterUniformValue",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Initial uniform values. Can be updated at runtime by writing to the uniforms property: filter.uniforms.uTime = performance.now() / 1000;"
+        },
+        {
+          "name": "vertexSource",
+          "signature": "vertexSource?: string",
+          "signatureTokens": [
+            {
+              "text": "vertexSource",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "GLSL vertex shader source. Optional; defaults to a pass-through fullscreen-quad shader."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/filters/WebGl2ShaderFilter.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/WebGl2ShaderFilter.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/filters/WebGl2ShaderFilter.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/WebGl2ShaderFilter.ts"
+}

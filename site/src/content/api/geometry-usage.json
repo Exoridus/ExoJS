@@ -1,0 +1,80 @@
+{
+  "title": "GeometryUsage",
+  "description": "GPU buffer ownership strategy used by geometry-aware render paths. - `static` — immutable after creation; eligible for shared batched buffers. - `dynamic` — occasionally mutated; backend should keep a dedicated buffer. - `stream` — mutated every frame; backend should treat as immediate data.",
+  "symbol": "GeometryUsage",
+  "kind": "type",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "GPU buffer ownership strategy used by geometry-aware render paths.",
+        "- `static` — immutable after creation; eligible for shared batched buffers. - `dynamic` — occasionally mutated; backend should keep a dedicated buffer. - `stream` — mutated every frame; backend should treat as immediate data."
+      ],
+      "importLine": "import { GeometryUsage } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "GeometryUsage",
+          "signature": "\"static\" | \"dynamic\" | \"stream\"",
+          "signatureTokens": [
+            {
+              "text": "\"static\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"dynamic\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"stream\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/geometry/GeometryAttribute.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/geometry/GeometryAttribute.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/geometry/GeometryAttribute.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/geometry/GeometryAttribute.ts"
+}

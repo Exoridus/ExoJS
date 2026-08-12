@@ -1,0 +1,170 @@
+{
+  "title": "TiledTilesetResources",
+  "description": "Loader-resolved resources for a TiledTileset: the absolute image URL(s) and the Texture instance(s) loaded for them. All textures are owned by the `Loader` cache — a TiledTileset never destroys them.",
+  "symbol": "TiledTilesetResources",
+  "kind": "interface",
+  "subsystem": "tiled",
+  "importPath": "@codexo/exojs-tiled",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Loader-resolved resources for a TiledTileset: the absolute image URL(s) and the Texture instance(s) loaded for them. All textures are owned by the `Loader` cache — a TiledTileset never destroys them."
+      ],
+      "importLine": "import { TiledTilesetResources } from '@codexo/exojs-tiled'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "imageUrl",
+          "signature": "imageUrl?: string",
+          "signatureTokens": [
+            {
+              "text": "imageUrl",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Resolved URL of the tileset's atlas TiledTilesetData.image, or undefined for a collection-of-images tileset."
+        },
+        {
+          "name": "source",
+          "signature": "source?: string",
+          "signatureTokens": [
+            {
+              "text": "source",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Resolved URL of the external .tsj file, or undefined for an embedded tileset."
+        },
+        {
+          "name": "texture",
+          "signature": "texture?: Texture",
+          "signatureTokens": [
+            {
+              "text": "texture",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Texture loaded for imageUrl."
+        },
+        {
+          "name": "tileTextures",
+          "signature": "tileTextures?: ReadonlyMap<number, Texture>",
+          "signatureTokens": [
+            {
+              "text": "tileTextures",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyMap",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Textures loaded for collection-of-images TiledTileData.image entries, keyed by local tile id."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tiled/src/TiledTileset.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/TiledTileset.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tiled/src/TiledTileset.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/TiledTileset.ts"
+}

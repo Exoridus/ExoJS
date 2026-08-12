@@ -1,0 +1,188 @@
+{
+  "title": "LdtkWorldData",
+  "description": "A single world in a multi-world LDtk project (`root.worlds[]`, populated when the project has \"Multi-Worlds\" enabled in its advanced settings). Each world owns its own levels; `defs` (tilesets/layers/entity definitions) is declared once at the document root and shared by every world rather than duplicated per-world — see LdtkData.defs.",
+  "symbol": "LdtkWorldData",
+  "kind": "interface",
+  "subsystem": "ldtk",
+  "importPath": "@codexo/exojs-ldtk",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A single world in a multi-world LDtk project (`root.worlds[]`, populated when the project has \"Multi-Worlds\" enabled in its advanced settings). Each world owns its own levels; `defs` (tilesets/layers/entity definitions) is declared once at the document root and shared by every world rather than duplicated per-world — see LdtkData.defs."
+      ],
+      "importLine": "import { LdtkWorldData } from '@codexo/exojs-ldtk'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "identifier",
+          "signature": "identifier: string",
+          "signatureTokens": [
+            {
+              "text": "identifier",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Human-readable world identifier (unique within the project)."
+        },
+        {
+          "name": "iid",
+          "signature": "iid: string",
+          "signatureTokens": [
+            {
+              "text": "iid",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Globally unique instance id (UUID string)."
+        },
+        {
+          "name": "levels",
+          "signature": "levels: readonly LdtkLevel[]",
+          "signatureTokens": [
+            {
+              "text": "levels",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LdtkLevel",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Levels belonging to this world, in document order."
+        },
+        {
+          "name": "worldGridHeight",
+          "signature": "worldGridHeight: number",
+          "signatureTokens": [
+            {
+              "text": "worldGridHeight",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Height of the world grid in pixels."
+        },
+        {
+          "name": "worldGridWidth",
+          "signature": "worldGridWidth: number",
+          "signatureTokens": [
+            {
+              "text": "worldGridWidth",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Width of the world grid in pixels."
+        },
+        {
+          "name": "worldLayout",
+          "signature": "worldLayout: LdtkWorldLayout",
+          "signatureTokens": [
+            {
+              "text": "worldLayout",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LdtkWorldLayout",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How this world's levels are spatially organised."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-ldtk/src/LdtkData.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-ldtk/src/LdtkData.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-ldtk/src/LdtkData.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-ldtk/src/LdtkData.ts"
+}

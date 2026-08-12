@@ -1,0 +1,287 @@
+{
+  "title": "ParticleBufferLayout",
+  "description": "Describes the interleaved buffer a render mode's `build()` fills each frame. Deliberately not a `Geometry`. A `Geometry` requires a position attribute, requires that attribute to carry at least two components, and validates any index list against the vertex count implied by its `vertexData` — three rules that are meaningful for geometry and meaningless for a per-instance record. Satisfying them used to cost the instanced modes a zero-filled placeholder buffer that was never uploaded, sized purely to keep the index check quiet. What is checked here is the subset that protects a real GPU binding: a positive stride, at least one attribute, unique names, and ranges that neither overlap each other nor reach past the stride. A layout is a description rather than a resource: it owns no GPU handle and needs no disposal.",
+  "symbol": "ParticleBufferLayout",
+  "kind": "class",
+  "subsystem": "particles",
+  "importPath": "@codexo/exojs-particles",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 1,
+    "methods": 0,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Describes the interleaved buffer a render mode's `build()` fills each frame.",
+        "Deliberately not a `Geometry`. A `Geometry` requires a position attribute, requires that attribute to carry at least two components, and validates any index list against the vertex count implied by its `vertexData` — three rules that are meaningful for geometry and meaningless for a per-instance record. Satisfying them used to cost the instanced modes a zero-filled placeholder buffer that was never uploaded, sized purely to keep the index check quiet.",
+        "What is checked here is the subset that protects a real GPU binding: a positive stride, at least one attribute, unique names, and ranges that neither overlap each other nor reach past the stride.",
+        "A layout is a description rather than a resource: it owns no GPU handle and needs no disposal."
+      ],
+      "importLine": "import { ParticleBufferLayout } from '@codexo/exojs-particles'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: ParticleBufferLayoutOptions): ParticleBufferLayout",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ParticleBufferLayoutOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ParticleBufferLayout",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "ParticleBufferLayoutOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "ParticleBufferLayout",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "attributes",
+          "signature": "attributes: readonly GeometryAttribute[]",
+          "signatureTokens": [
+            {
+              "text": "attributes",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GeometryAttribute",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "indices",
+          "signature": "indices: Uint16Array<ArrayBufferLike> | Uint32Array<ArrayBufferLike> | null",
+          "signatureTokens": [
+            {
+              "text": "indices",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Uint16Array",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBufferLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Uint32Array",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBufferLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "stride",
+          "signature": "stride: number",
+          "signatureTokens": [
+            {
+              "text": "stride",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "topology",
+          "signature": "topology: Topology",
+          "signatureTokens": [
+            {
+              "text": "topology",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Topology",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "usage",
+          "signature": "usage: GeometryUsage",
+          "signatureTokens": [
+            {
+              "text": "usage",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GeometryUsage",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "indexCount",
+          "signature": "indexCount: number",
+          "signatureTokens": [
+            {
+              "text": "indexCount",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Elements one draw consumes from indices, or 0 when there are none."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-particles/src/renderModes/ParticleBufferLayout.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/renderModes/ParticleBufferLayout.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-particles/src/renderModes/ParticleBufferLayout.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/renderModes/ParticleBufferLayout.ts"
+}

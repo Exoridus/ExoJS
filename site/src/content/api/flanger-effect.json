@@ -1,0 +1,328 @@
+{
+  "title": "FlangerEffect",
+  "description": "Flanger effect using native WebAudio nodes (no worklet required). A flanger is a very short LFO-modulated delay (1–10 ms) with a feedback loop. Unlike a chorus — which uses longer delays without feedback to produce thickening — the flanger's feedback reinforces phase cancellation, creating the characteristic sweeping comb-filter \"jet-plane\" sound as notches and peaks slide up and down the spectrum. Node graph: ``` inputGain ┬── dryGain ─────────────────────────┐ │ ├── outputGain └──▶ delayNode ──▶ wetGain ───────────┘ ↑ │ feedbackGain ◀─┘ lfoOscillator ── lfoGain (depth in seconds) ──▶ delayNode.delayTime ``` Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`; `feedbackGain.gain = feedback`; `lfoGain.gain = depthMs / 1000`.",
+  "symbol": "FlangerEffect",
+  "kind": "class",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs-audio-fx",
+  "tier": "stable",
+  "memberCount": 10,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 8,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Flanger effect using native WebAudio nodes (no worklet required).",
+        "A flanger is a very short LFO-modulated delay (1–10 ms) with a feedback loop. Unlike a chorus — which uses longer delays without feedback to produce thickening — the flanger's feedback reinforces phase cancellation, creating the characteristic sweeping comb-filter \"jet-plane\" sound as notches and peaks slide up and down the spectrum.",
+        "Node graph: ``` inputGain ┬── dryGain ─────────────────────────┐ │ ├── outputGain └──▶ delayNode ──▶ wetGain ───────────┘ ↑ │ feedbackGain ◀─┘",
+        "lfoOscillator ── lfoGain (depth in seconds) ──▶ delayNode.delayTime ```",
+        "Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`; `feedbackGain.gain = feedback`; `lfoGain.gain = depthMs / 1000`."
+      ],
+      "importLine": "import { FlangerEffect } from '@codexo/exojs-audio-fx'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: FlangerEffectOptions): FlangerEffect",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FlangerEffectOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FlangerEffect",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "FlangerEffectOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "FlangerEffect",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Disconnects all audio nodes and releases resources. Must be called when the effect is no longer needed."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "delayMs",
+          "signature": "delayMs: number",
+          "signatureTokens": [
+            {
+              "text": "delayMs",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Base delay time in milliseconds. Range 0.5..20, default 3."
+        },
+        {
+          "name": "depthMs",
+          "signature": "depthMs: number",
+          "signatureTokens": [
+            {
+              "text": "depthMs",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "LFO modulation depth in milliseconds (peak deviation from base delay). Range 0..10, default 2."
+        },
+        {
+          "name": "feedback",
+          "signature": "feedback: number",
+          "signatureTokens": [
+            {
+              "text": "feedback",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Feedback amount — fraction of delay output fed back to delay input. Range 0..0.95, default 0.5."
+        },
+        {
+          "name": "inputNode",
+          "signature": "inputNode: AudioNode",
+          "signatureTokens": [
+            {
+              "text": "inputNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioNode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The node where audio enters this effect. Throws if the audio context is not yet initialized."
+        },
+        {
+          "name": "outputNode",
+          "signature": "outputNode: AudioNode",
+          "signatureTokens": [
+            {
+              "text": "outputNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioNode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The node where audio exits this effect. Throws if the audio context is not yet initialized."
+        },
+        {
+          "name": "rateHz",
+          "signature": "rateHz: number",
+          "signatureTokens": [
+            {
+              "text": "rateHz",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "LFO oscillation rate in Hz. Range 0..10, default 0.25."
+        },
+        {
+          "name": "ready",
+          "signature": "ready: Promise<void>",
+          "signatureTokens": [
+            {
+              "text": "ready",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Resolves when the effect is fully initialized. Defaults to immediately-resolved for sync effects."
+        },
+        {
+          "name": "wet",
+          "signature": "wet: number",
+          "signatureTokens": [
+            {
+              "text": "wet",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Wet (flanged) mix level, 0..1. The dry level is automatically 1 - wet. Default 0.5."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-audio-fx/src/effects/FlangerEffect.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/FlangerEffect.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-audio-fx/src/effects/FlangerEffect.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/FlangerEffect.ts"
+}

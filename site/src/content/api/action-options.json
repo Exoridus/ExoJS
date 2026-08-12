@@ -1,0 +1,124 @@
+{
+  "title": "ActionOptions",
+  "description": "Options shared by every action.",
+  "symbol": "ActionOptions",
+  "kind": "interface",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options shared by every action."
+      ],
+      "importLine": "import { ActionOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "gamepadSlot",
+          "signature": "gamepadSlot?: 0 | 2 | 1 | 3",
+          "signatureTokens": [
+            {
+              "text": "gamepadSlot",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "0",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "2",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "1",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "3",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Resolve gamepad channels against this slot (0..3) instead of the primary pad. Non-gamepad channels are unaffected."
+        },
+        {
+          "name": "threshold",
+          "signature": "threshold?: number",
+          "signatureTokens": [
+            {
+              "text": "threshold",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Magnitude a channel's value must exceed to count as active — see the concrete action kind's own active/pressed/triggered semantics (for example ButtonAction.active). Defaults to 0. Distinct from a gamepad's device-level deadzone, which is applied before the value ever reaches the channel buffer."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/actions/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/actions/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/types.ts"
+}

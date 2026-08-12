@@ -1,0 +1,125 @@
+{
+  "title": "ChunkStreamerOptions",
+  "description": "Options for a ChunkStreamer. All optional.",
+  "symbol": "ChunkStreamerOptions",
+  "kind": "interface",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "advanced",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for a ChunkStreamer. All optional."
+      ],
+      "importLine": "import { ChunkStreamerOptions } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "loadRadius",
+          "signature": "loadRadius?: number",
+          "signatureTokens": [
+            {
+              "text": "loadRadius",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Chunks within this many chunk-units (Chebyshev distance to the visible chunk range) of the view are loaded. Default 1."
+        },
+        {
+          "name": "maxChunkLoadsPerFrame",
+          "signature": "maxChunkLoadsPerFrame?: number",
+          "signatureTokens": [
+            {
+              "text": "maxChunkLoadsPerFrame",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Maximum number of new chunk loads issued per ChunkStreamer.update call, after the very first call (which loads the entire initial wanted set unbudgeted, so the starting view never pops in). Default 8."
+        },
+        {
+          "name": "unloadRadius",
+          "signature": "unloadRadius?: number",
+          "signatureTokens": [
+            {
+              "text": "unloadRadius",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Own-resident chunks beyond this many chunk-units of the view are evicted. Must be >= loadRadius — the gap between the two is deliberate hysteresis that prevents load/unload thrashing when the view sits near a chunk boundary. Default 2."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/ChunkStreamer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/ChunkStreamer.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/ChunkStreamer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/ChunkStreamer.ts"
+}

@@ -1,0 +1,100 @@
+{
+  "title": "CrossFadeSceneTransitionOptions",
+  "description": "Options for CrossFadeSceneTransition.",
+  "symbol": "CrossFadeSceneTransitionOptions",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for CrossFadeSceneTransition."
+      ],
+      "importLine": "import { CrossFadeSceneTransitionOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "duration",
+          "signature": "duration?: number",
+          "signatureTokens": [
+            {
+              "text": "duration",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Blend duration in ms, counted from the moment the switch commits (not from session start). Default 220."
+        },
+        {
+          "name": "easing",
+          "signature": "easing?: EasingFunction",
+          "signatureTokens": [
+            {
+              "text": "easing",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "EasingFunction",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Default Ease.linear."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/transitions/CrossFadeSceneTransition.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/transitions/CrossFadeSceneTransition.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/transitions/CrossFadeSceneTransition.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/transitions/CrossFadeSceneTransition.ts"
+}

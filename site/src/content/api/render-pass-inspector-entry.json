@@ -1,0 +1,188 @@
+{
+  "title": "RenderPassInspectorEntry",
+  "description": "Snapshot of one drawable's filter chain at the moment the inspector collected it. Held by reference inside RenderPassInspectorLayer for the duration of one frame; replaced on the next update.",
+  "symbol": "RenderPassInspectorEntry",
+  "kind": "interface",
+  "subsystem": "debug",
+  "importPath": "@codexo/exojs/debug",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Snapshot of one drawable's filter chain at the moment the inspector collected it. Held by reference inside RenderPassInspectorLayer for the duration of one frame; replaced on the next update."
+      ],
+      "importLine": "import { RenderPassInspectorEntry } from '@codexo/exojs/debug'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "cachedAsBitmap",
+          "signature": "cachedAsBitmap: boolean",
+          "signatureTokens": [
+            {
+              "text": "cachedAsBitmap",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the drawable is bitmap-cached (cached drawables apply filters once, not per frame)."
+        },
+        {
+          "name": "drawableLabel",
+          "signature": "drawableLabel: string",
+          "signatureTokens": [
+            {
+              "text": "drawableLabel",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Constructor name of the inspected drawable (e.g. Sprite, Container)."
+        },
+        {
+          "name": "filters",
+          "signature": "filters: readonly Filter[]",
+          "signatureTokens": [
+            {
+              "text": "filters",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Filter",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Filter instances currently attached, in execution order."
+        },
+        {
+          "name": "hasMask",
+          "signature": "hasMask: boolean",
+          "signatureTokens": [
+            {
+              "text": "hasMask",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the drawable has a mask attached (mask passes count toward total)."
+        },
+        {
+          "name": "height",
+          "signature": "height: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Bounding-box height as the filter pipeline sees it (ceil)."
+        },
+        {
+          "name": "width",
+          "signature": "width: number",
+          "signatureTokens": [
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Bounding-box width as the filter pipeline sees it (ceil)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/debug/RenderPassInspectorLayer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/debug/RenderPassInspectorLayer.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/debug/RenderPassInspectorLayer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/debug/RenderPassInspectorLayer.ts"
+}

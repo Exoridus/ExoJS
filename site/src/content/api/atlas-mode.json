@@ -1,0 +1,71 @@
+{
+  "title": "AtlasMode",
+  "description": "Atlas rendering mode. Determines texture format and rasterization strategy. `'sdf'` uses a single-channel R8 DataTexture with EDT-based rasterization. `'color'` uses an RGBA canvas for emoji / colour-font glyphs. MSDF is supported for BitmapText via offline-generated atlases only.",
+  "symbol": "AtlasMode",
+  "kind": "type",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Atlas rendering mode. Determines texture format and rasterization strategy. `'sdf'` uses a single-channel R8 DataTexture with EDT-based rasterization. `'color'` uses an RGBA canvas for emoji / colour-font glyphs. MSDF is supported for BitmapText via offline-generated atlases only."
+      ],
+      "importLine": "import { AtlasMode } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "AtlasMode",
+          "signature": "\"sdf\" | \"color\"",
+          "signatureTokens": [
+            {
+              "text": "\"sdf\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"color\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/text/GlyphAtlas.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/GlyphAtlas.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/text/GlyphAtlas.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/GlyphAtlas.ts"
+}

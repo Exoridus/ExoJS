@@ -1,0 +1,260 @@
+{
+  "title": "DeserializeContext",
+  "description": "Context handed to NodeSerializer.read. Mirror of SerializeContext for the inverse direction: child recursion and asset lookup. The framework applies the common fields after `read` returns, so a serializer only constructs the node and sets its type-specific fields.",
+  "symbol": "DeserializeContext",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 2,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Context handed to NodeSerializer.read. Mirror of SerializeContext for the inverse direction: child recursion and asset lookup. The framework applies the common fields after `read` returns, so a serializer only constructs the node and sets its type-specific fields."
+      ],
+      "importLine": "import { DeserializeContext } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "readNode",
+          "signature": "readNode(data: SerializedNode): SceneNode",
+          "signatureTokens": [
+            {
+              "text": "readNode",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "data",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SerializedNode",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneNode",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "data",
+              "type": "SerializedNode",
+              "optional": false
+            }
+          ],
+          "returnType": "SceneNode",
+          "description": "Fully deserialize a child node (inverse of SerializeContext.writeNode)."
+        },
+        {
+          "name": "resolveAsset",
+          "signature": "resolveAsset(source: string | null | undefined, type: AssetConstructor<T>): T | null",
+          "signatureTokens": [
+            {
+              "text": "resolveAsset",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetConstructor",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "string | null | undefined",
+              "optional": false
+            },
+            {
+              "name": "type",
+              "type": "AssetConstructor<T>",
+              "optional": false
+            }
+          ],
+          "returnType": "T | null",
+          "description": "Resolve a serialized asset source key back to a loaded resource of type, or null if the source is missing/unset or the asset was not pre-loaded (a one-time warning is emitted in the not-loaded case)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "loader",
+          "signature": "loader: Loader | null",
+          "signatureTokens": [
+            {
+              "text": "loader",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Loader",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The loader used to resolve asset references, or null if none is available."
+        },
+        {
+          "name": "version",
+          "signature": "version: number",
+          "signatureTokens": [
+            {
+              "text": "version",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Format version of the document being read (after migration)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/serialization/NodeSerializer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/serialization/NodeSerializer.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/serialization/NodeSerializer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/serialization/NodeSerializer.ts"
+}
