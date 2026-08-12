@@ -129,8 +129,8 @@ declare const application: Application;
 declare const stream: AudioStream;
 type StreamVoice = Voice & Seekable & Pausable & Loopable & RatePitched;
 
-// A SoundVoice is Seekable + Loopable + RatePitched + Spatializable.
-// An AudioStreamVoice adds Pausable on top of those.
+// Both a SoundVoice and an AudioStreamVoice are
+// Seekable + Pausable + Loopable + RatePitched + Spatializable.
 const streamVoice = application.audio.play(stream, { loop: true }) as StreamVoice;
 
 streamVoice.seek(10);        // Seekable: jump to 10s
@@ -139,10 +139,16 @@ streamVoice.duration;        // total length in seconds
 streamVoice.loop = false;    // Loopable
 streamVoice.playbackRate = 1.5; // RatePitched: 0.1..20
 streamVoice.detune = 1200;   // RatePitched: cents (one octave up)
-streamVoice.pause();         // Pausable (streams only)
+streamVoice.pause();         // Pausable
 streamVoice.resume();
 streamVoice.paused;          // boolean
 ```
+
+<Callout type="note" title="Pausing a Sound is a restart, not a freeze">
+A `Sound` plays through an `AudioBufferSourceNode`, which can be neither repositioned nor halted in place. `pause()` therefore reads the playhead and throws the source away; `resume()` starts a fresh one at exactly that offset. The offset is sample-exact, but the restart is not phase-continuous — on sustained tonal material (a held pad, a synth drone) the seam can be audible as a small click. Percussive and ambient material hides it. An `AudioStream` has no such caveat: the media element really does freeze.
+</Callout>
+
+Because `SoundVoice` is `Pausable`, `scene.audio` freezes buffer sounds along with everything else: `app.scenes.pause()` pauses voices registered with `when: 'active'`, and scene retention (`suspend()`/`restore()`) pauses and reinstates whatever was playing.
 
 For "one voice at a time" scenarios like voice-over lines, `Sound`'s play options also accept a `replace` flag (`app.audio.play(sound, { replace: true })`) that stops all other pooled voices of that sound before starting this one.
 

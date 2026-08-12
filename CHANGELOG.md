@@ -400,6 +400,18 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
 
 ### Fixed
 
+- **Scene pause now actually stops `Sound` playback.** `SceneAudio` detects
+  pausable voices by duck-typing `pause`/`resume`, and `AudioStreamVoice` was
+  the only implementation of `Pausable` — so every buffer-backed ambience or
+  loop kept playing straight through `scene.pause()` and retention
+  `suspend()`. `SoundVoice` now implements `Pausable`: `pause()` reads the
+  playhead and retires the buffer source (which can be neither repositioned
+  nor halted in place), `resume()` starts a fresh one at exactly that offset,
+  and `time`/`paused` report the frozen state. Every operation that would
+  otherwise rebuild the source — `seek`, `loop`, `playbackRate`, `detune`, the
+  per-frame Doppler tick — stays inert while paused. Note the honest limit:
+  resume is sample-exact but not phase-continuous, so on sustained tonal
+  material the seam can be audible.
 - **A `Sound.clip()`/`Sound.sprite()` sub-sound now survives eviction and
   reload.** Both used to snapshot the parent's `AudioBuffer` at creation time,
   while the asset layer heals a `Sound` **in place** (identity preserved). A

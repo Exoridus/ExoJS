@@ -1,4 +1,6 @@
+import { AudioManager } from '#audio/AudioManager';
 import type { Pausable, Playable, Voice } from '#audio/Playable';
+import { Sound } from '#audio/Sound';
 import type { Application } from '#core/Application';
 import { SceneAudio } from '#core/scene/SceneAudio';
 import { SceneAvailability } from '#core/SceneAvailability';
@@ -356,5 +358,53 @@ describe('SceneAudio — dormancy gate widens to Ready/Suspended, rejects Destro
     const audio = new SceneAudio(app, () => SceneState.Destroyed);
 
     expect(() => audio.play(fakePlayable)).toThrow(/destroy/i);
+  });
+
+  // ME-41: SceneAudio detects pausable voices by duck-typing `pause`/`resume`.
+  // The mocks above satisfy that by construction, so they cannot catch a real
+  // voice type that never implemented `Pausable` — which is exactly how every
+  // `Sound` ambience kept playing through scene.pause()/suspend(). These two
+  // drive a real AudioManager and a real Sound.
+  describe('with a real Sound voice', () => {
+    const makeRealSetup = (): { app: Application; sound: Sound; audio: SceneAudio } => {
+      const manager = new AudioManager();
+      const sound = new Sound({ duration: 10 } as AudioBuffer);
+      const app = { audio: manager } as unknown as Application;
+
+      return { app, sound, audio: new SceneAudio(app, () => SceneState.Active) };
+    };
+
+    test('suspend()/restore() pause and resume a Sound voice', () => {
+      const { app, sound, audio } = makeRealSetup();
+      const voice = audio.play(sound, { loop: true }) as Voice & Pausable;
+
+      expect(voice.paused).toBe(false);
+
+      audio.suspend();
+      expect(voice.paused).toBe(true);
+      expect(voice.ended).toBe(false);
+
+      audio.restore();
+      expect(voice.paused).toBe(false);
+
+      voice.stop();
+      sound.destroy();
+      app.audio.destroy();
+    });
+
+    test('pause()/resume() honour the `when: active` policy for a Sound voice', () => {
+      const { app, sound, audio } = makeRealSetup();
+      const voice = audio.play(sound, { loop: true, when: SceneAvailability.Active }) as Voice & Pausable;
+
+      audio.pause();
+      expect(voice.paused).toBe(true);
+
+      audio.resume();
+      expect(voice.paused).toBe(false);
+
+      voice.stop();
+      sound.destroy();
+      app.audio.destroy();
+    });
   });
 });

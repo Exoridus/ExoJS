@@ -1,7 +1,7 @@
 import { clamp } from '#math/utils';
 
 import { BaseVoice, type BaseVoiceInit } from './BaseVoice';
-import type { Loopable, RatePitched, Seekable } from './Playable';
+import type { Loopable, Pausable, RatePitched, Seekable } from './Playable';
 
 /** Playback window within the buffer for a {@link SoundVoice}. */
 export interface SoundVoiceWindow {
@@ -31,14 +31,21 @@ export interface SoundVoiceInit extends BaseVoiceInit {
  * `AudioBufferSourceNode`. Each `AudioManager.play(sound)` creates an
  * independent SoundVoice; concurrent plays each get their own.
  *
- * Mixes in {@link Seekable} and {@link Loopable} — both recreate the buffer
- * source at the current position, since a source can be neither repositioned
- * nor re-bounded in place — plus {@link RatePitched} and (via
- * {@link BaseVoice}) {@link Spatializable}.
+ * Mixes in {@link Seekable}, {@link Loopable} and {@link Pausable} — all three
+ * recreate the buffer source at the current position, since a source can be
+ * neither repositioned, re-bounded, nor halted-and-restarted in place — plus
+ * {@link RatePitched} and (via {@link BaseVoice}) {@link Spatializable}.
+ *
+ * **Pause is a stop-and-restart, not a freeze.** `pause()` reads the playhead
+ * and throws the source away; `resume()` starts a fresh one at that offset. The
+ * offset is sample-exact, but the restart is not phase-continuous: the new
+ * source begins a new render quantum, so on sustained tonal material the seam
+ * can be audible as a small click or phase step. Percussive and ambient
+ * material hides it; a held pad may not.
  *
  * @internal
  */
-export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePitched {
+export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePitched, Pausable {
   private readonly _buffer: AudioBuffer;
   private readonly _window: SoundVoiceWindow;
   private _source: AudioBufferSourceNode;
@@ -49,6 +56,15 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
   private _offsetAtStart: number;
   /** `audioContext.currentTime` when the current source started. */
   private _startedAt: number;
+  /**
+   * `true` between {@link SoundVoice.pause} and {@link SoundVoice.resume}. While
+   * set there is NO live source: `_source` still points at the retired node so
+   * the field can stay non-nullable, but nothing may be scheduled on it and
+   * nothing may start a replacement until `resume()`.
+   */
+  private _paused = false;
+  /** Buffer offset (absolute seconds) the paused playhead sits at. */
+  private _pausedAt = 0;
 
   public constructor(init: SoundVoiceInit) {
     super(init);
@@ -75,6 +91,8 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
   public get time(): number {
     if (this._ended) return 0;
     const span = this.duration;
+    // Paused: the context clock keeps running, the playhead does not.
+    if (this._paused) return clamp(this._pausedAt - this._window.base, 0, span);
     const elapsed = (this._audioContext.currentTime - this._startedAt) * this._playbackRate;
     let pos = this._offsetAtStart - this._window.base + elapsed;
     if (this._loop && span > 0) {
@@ -91,7 +109,53 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
   public seek(t: number): void {
     if (this._ended) return;
 
-    this._restartSourceAt(this._window.base + clamp(t, 0, this.duration));
+    const offset = this._window.base + clamp(t, 0, this.duration);
+
+    // Paused: move the point playback will resume from. Starting a source here
+    // would make a seek audibly un-pause the voice.
+    if (this._paused) {
+      this._pausedAt = offset;
+      return;
+    }
+
+    this._restartSourceAt(offset);
+  }
+
+  // -------------------------------------------------------------------------
+  // Pausable
+  // -------------------------------------------------------------------------
+
+  /**
+   * Halt playback, keeping the playhead. A buffer source can be neither
+   * repositioned nor stopped-and-restarted, so the running source is retired
+   * outright — with its `onended` cleared first, so the teardown does not
+   * finish the voice — and {@link SoundVoice.resume} starts a fresh one at the
+   * remembered offset.
+   *
+   * The offset is sample-exact but the restart is not phase-continuous: on
+   * sustained tonal material the seam can be audible.
+   */
+  public pause(): void {
+    if (this._ended || this._paused) return;
+
+    // Read the playhead before the flag flips — `time` reports the frozen
+    // value once `_paused` is set.
+    this._pausedAt = this._window.base + this.time;
+    this._paused = true;
+    this._retireSource();
+  }
+
+  public resume(): void {
+    if (this._ended || !this._paused) return;
+
+    this._paused = false;
+    this._source = this._startSource(this._pausedAt);
+    this._offsetAtStart = this._pausedAt;
+    this._startedAt = this._audioContext.currentTime;
+  }
+
+  public get paused(): boolean {
+    return this._paused;
   }
 
   // -------------------------------------------------------------------------
@@ -103,7 +167,10 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
   }
 
   public set loop(value: boolean) {
-    if (this._loop === value || this._ended) {
+    // Paused too: there is no live source to re-bound, and `_startSource`
+    // reads `_loop` when `resume()` builds the replacement, so recording the
+    // flag is all that is needed — and all that is allowed.
+    if (this._loop === value || this._ended || this._paused) {
       this._loop = value;
       return;
     }
@@ -145,7 +212,9 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
 
   public set playbackRate(value: number) {
     const rate = clamp(value, 0.1, 20);
-    if (this._playbackRate === rate || this._ended) {
+    // Paused: no live param to ramp, and no playhead to re-base (`time` is
+    // frozen). The resumed source picks the rate up from `_startSource`.
+    if (this._playbackRate === rate || this._ended || this._paused) {
       this._playbackRate = rate;
       return;
     }
@@ -163,7 +232,7 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
 
   public set detune(value: number) {
     this._detune = value;
-    if (!this._ended) {
+    if (!this._ended && !this._paused) {
       this._source.detune.setTargetAtTime(value, this._audioContext.currentTime, 0.01);
     }
   }
@@ -173,7 +242,10 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
   // -------------------------------------------------------------------------
 
   protected override _applyDopplerRate(ratio: number): void {
-    if (this._ended) return;
+    // Paused: the per-frame spatial tick still runs (the voice is not ended and
+    // stays registered), but there is no live rate param to modulate. The
+    // ratio is recomputed on the next tick after resume anyway.
+    if (this._ended || this._paused) return;
     this._source.playbackRate.setTargetAtTime(this._playbackRate * ratio, this._audioContext.currentTime, 0.01);
   }
 
@@ -189,6 +261,16 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
   }
 
   protected override _teardownSource(): void {
+    this._retireSource();
+  }
+
+  /**
+   * Stop and disconnect the current buffer source, clearing its `onended`
+   * first so retiring it never finishes the voice. Idempotent: an already
+   * stopped or already disconnected node is fine, which is what lets
+   * {@link SoundVoice.pause} and a later `_finish()` both call it.
+   */
+  private _retireSource(): void {
     this._source.onended = null;
     try {
       this._source.stop(0);
@@ -202,17 +284,10 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
    * Retire the running buffer source and start a fresh one at `offset`
    * (absolute buffer seconds), rebasing the playhead bookkeeping. Buffer
    * sources can be neither repositioned nor re-bounded in place, so this is
-   * the only way to change where playback sits or where it must end. The old
-   * source's `onended` is cleared first so the swap does not finish the voice.
+   * the only way to change where playback sits or where it must end.
    */
   private _restartSourceAt(offset: number): void {
-    this._source.onended = null;
-    try {
-      this._source.stop(0);
-    } catch {
-      // already stopped
-    }
-    this._source.disconnect();
+    this._retireSource();
 
     this._source = this._startSource(offset);
     this._offsetAtStart = offset;
