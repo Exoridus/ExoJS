@@ -12,6 +12,7 @@ import type { MockInstance } from 'vitest';
  */
 import { getAudioContext } from '#audio/audio-context';
 import { AudioManager } from '#audio/AudioManager';
+import type { Pausable, Voice } from '#audio/Playable';
 import { Sound, SoundPoolStrategy } from '#audio/Sound';
 
 // ---------------------------------------------------------------------------
@@ -465,6 +466,84 @@ describe('Sound — natural pool cleanup', () => {
     expect(factory.sources[0].stop).toHaveBeenCalledTimes(1);
     expect(factory.sources[1].stop).toHaveBeenCalledTimes(1);
     expect(factory.sources[2].stop).toHaveBeenCalledTimes(1);
+
+    factory.restore();
+    sound.destroy();
+  });
+});
+
+// A paused voice is frozen exactly where a scene pause or retention suspension
+// left it, waiting to be restored — but its pool bookkeeping keeps aging
+// against the still-running context clock. Both strategies would otherwise
+// single it out: FIFO sees the oldest entry, LRU the one with the least time
+// left. Evicting it stops it for good, and `SceneAudio.restore()` skips it
+// afterwards because it is `ended`, not `paused`.
+describe('Sound — paused voices are deprioritized as eviction victims', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  test('FIFO evicts the oldest UNPAUSED voice, not the paused one in front of it', () => {
+    const factory = setupSourceFactory();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub(10), { poolSize: 2 });
+
+    const paused = manager.play(sound) as Voice & Pausable;
+    paused.pause();
+    const playing = manager.play(sound);
+
+    manager.play(sound); // pool is full — someone has to go
+
+    expect(paused.ended).toBe(false);
+    expect(paused.paused).toBe(true);
+    expect(playing.ended).toBe(true);
+
+    factory.restore();
+    sound.destroy();
+  });
+
+  test('LRU skips a paused voice even when its stale bookkeeping looks closest to the end', () => {
+    const factory = setupSourceFactory();
+    const clock = mockCurrentTime(0);
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub(10), {
+      poolSize: 2,
+      poolStrategy: SoundPoolStrategy.LeastRecentlyUsed,
+    });
+
+    const paused = manager.play(sound) as Voice & Pausable;
+    paused.pause();
+
+    // The context clock runs on while the voice is frozen, so its recorded
+    // remaining time shrinks to the smallest in the pool.
+    clock.setTime(9);
+    const playing = manager.play(sound);
+
+    clock.setTime(9.1);
+    manager.play(sound);
+
+    expect(paused.ended).toBe(false);
+    expect(playing.ended).toBe(true);
+
+    clock.restore();
+    factory.restore();
+    sound.destroy();
+  });
+
+  test('an all-paused pool still evicts rather than growing past its size', () => {
+    const factory = setupSourceFactory();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub(10), { poolSize: 2 });
+
+    const first = manager.play(sound) as Voice & Pausable;
+    const second = manager.play(sound) as Voice & Pausable;
+    first.pause();
+    second.pause();
+
+    const third = manager.play(sound);
+
+    // Nothing else could go, so the oldest paused voice is the fallback victim.
+    expect(first.ended).toBe(true);
+    expect(second.ended).toBe(false);
+    expect(third.ended).toBe(false);
 
     factory.restore();
     sound.destroy();

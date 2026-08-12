@@ -654,10 +654,30 @@ export class Sound implements Playable {
     }
   }
 
+  /**
+   * Index of the voice to stop when the pool is at capacity, or `-1` when the
+   * pool is empty.
+   *
+   * Paused voices are considered only as a last resort. A paused voice is not a
+   * stale one — it is frozen exactly where a scene pause or retention
+   * suspension left it, waiting for `resume()` — but its pool bookkeeping
+   * (`startedAt`) keeps aging against the still-running context clock, so both
+   * strategies would otherwise single it out: FIFO sees the oldest entry, LRU
+   * the one with the least time left. Evicting it stops it for good, and
+   * {@link SceneAudio.restore} then passes over it (it is `ended`, not
+   * `paused`), so the ambience never comes back.
+   */
   private _pickEvictionVictim(): number {
+    const unpaused = this._pickVictim(false);
+
+    return unpaused !== -1 ? unpaused : this._pickVictim(true);
+  }
+
+  /** Apply the configured strategy over the candidates, optionally including paused voices. */
+  private _pickVictim(includePaused: boolean): number {
     switch (this._poolStrategy) {
       case SoundPoolStrategy.LeastRecentlyUsed: {
-        return this._pickClosestToEnd();
+        return this._pickClosestToEnd(includePaused);
       }
       case SoundPoolStrategy.LowestPriority:
       // All pooled instances of this Sound share the same priority,
@@ -665,24 +685,36 @@ export class Sound implements Playable {
       // falls through
       case SoundPoolStrategy.FirstInFirstOut:
       default:
-        return 0; // oldest
+        return this._pickOldest(includePaused);
     }
   }
 
-  private _pickClosestToEnd(): number {
+  private _pickOldest(includePaused: boolean): number {
+    for (let i = 0; i < this._activeVoices.length; i++) {
+      const candidate = this._activeVoices[i];
+
+      if (candidate !== undefined && (includePaused || !candidate.voice.paused)) {
+        return i;
+      }
+    }
+
+    return -1;
+  }
+
+  private _pickClosestToEnd(includePaused: boolean): number {
     const now = isAudioContextReady() ? getAudioContext().currentTime : 0;
     let minRemaining = Infinity;
-    let minIndex = 0;
+    let minIndex = -1;
 
     for (let i = 0; i < this._activeVoices.length; i++) {
       const src = this._activeVoices[i];
-      if (src === undefined) {
+      if (src === undefined || (!includePaused && src.voice.paused)) {
         continue;
       }
       const elapsed = now - src.startedAt;
       const remaining = src.effectiveDuration - elapsed;
 
-      if (remaining < minRemaining) {
+      if (minIndex === -1 || remaining < minRemaining) {
         minRemaining = remaining;
         minIndex = i;
       }

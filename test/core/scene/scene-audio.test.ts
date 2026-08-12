@@ -392,6 +392,38 @@ describe('SceneAudio — dormancy gate widens to Ready/Suspended, rejects Destro
       app.audio.destroy();
     });
 
+    // The two features interact: suspend() freezes a looping ambience, other
+    // code keeps triggering the same Sound while the scene is dormant, and the
+    // pool picks the frozen voice as its eviction victim (it looks oldest under
+    // FIFO and closest-to-end under LRU, because its bookkeeping ages against
+    // the running context clock). restore() then skips it — it is `ended`, not
+    // `paused` — and the ambience is silently gone.
+    test('a suspended ambience survives pool pressure and comes back on restore', () => {
+      const manager = new AudioManager();
+      const sound = new Sound({ duration: 10 } as AudioBuffer, { poolSize: 2 });
+      const app = { audio: manager } as unknown as Application;
+      const audio = new SceneAudio(app, () => SceneState.Active);
+
+      const ambience = audio.play(sound, { loop: true }) as Voice & Pausable;
+
+      audio.suspend();
+      expect(ambience.paused).toBe(true);
+
+      for (let i = 0; i < 4; i++) {
+        manager.play(sound);
+      }
+
+      expect(ambience.ended).toBe(false);
+
+      audio.restore();
+      expect(ambience.paused).toBe(false);
+      expect(ambience.ended).toBe(false);
+
+      ambience.stop();
+      sound.destroy();
+      manager.destroy();
+    });
+
     test('pause()/resume() honour the `when: active` policy for a Sound voice', () => {
       const { app, sound, audio } = makeRealSetup();
       const voice = audio.play(sound, { loop: true, when: SceneAvailability.Active }) as Voice & Pausable;
