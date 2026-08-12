@@ -26,14 +26,14 @@ import {
 import { packSnapViewport } from './webgpuSnapViewport';
 import { stencilContentDepthStencilState } from './WebGpuStencilState';
 import {
-  collectScalarUniforms,
+  applyUserUniformUpload,
   collectTextureBindings,
   createUserUniformState,
-  packUserUniforms,
+  planUserUniformUpload,
   resetUserUniformState,
   resolveUserUniformBindGroup,
-  userUniformBufferBytes,
   type UserUniformState,
+  type UserUniformUpload,
 } from './webgpuUserUniforms';
 
 /**
@@ -402,6 +402,13 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   private _customBaseTextureLayout: GPUBindGroupLayout | null = null;
   private _currentMaterial: SpriteMaterial | null = null;
   private _currentBaseTexture: Texture | RenderTexture | null = null;
+  // Material uniform buffers a draw already recorded into the currently open
+  // pass reads from. A batch about to rewrite one of them has to end that pass
+  // first — see the hazard checks in flush(). Keyed to the pass identity so a
+  // pass ended by anyone (the coordinator at a genuine boundary, another
+  // renderer) clears it on the next acquisition.
+  private _uniformHazardPass: WebGpuActiveRenderPass | null = null;
+  private readonly _uniformBuffersInPass = new Set<GPUBuffer>();
   // Local bounds resolved for the sprite currently being packed. Geometry-mode
   // boundary snapping now happens in the vertex shader, so this is always the
   // sprite's logical local bounds; the field lets _packInstance read the value
@@ -706,10 +713,6 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     const scissor = backend.getScissorRect();
     const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
 
-    // A custom-material batch re-uploads its per-material user-uniform buffer at
-    // offset 0 every flush, so two custom flushes must not share one submit; end
-    // the pass after a custom batch (default batches accumulate and are submitted
-    // together at the next genuine boundary).
     const isCustom = this._currentMaterial !== null;
     const willDraw = this._instanceCount > 0 && !maskClipsAll && this._indexBuffer !== null && this._currentBlendMode !== null;
 
@@ -722,6 +725,13 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       let active = backend._passCoordinator.acquirePass();
 
       this._instanceArena.syncPass(active);
+      this._syncUniformHazardPass(active);
+
+      // A custom batch's user uniforms are packed (not uploaded) here, so the
+      // hazard below can be answered before anything is recorded into the pass.
+      const material = this._currentMaterial;
+      const customResources = material === null ? null : this._getOrCreateCustomResources(material, device);
+      const uniformPlan = material === null ? null : planUserUniformUpload(material, customResources!, device, 'sprite:material-user-uniform-buffer');
 
       // A texture this batch samples whose content/size changed since it was last
       // uploaded will have its re-upload land on the queue timeline before the
@@ -729,30 +739,29 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       // open pass. End (submit) the pass first so those draws capture the
       // pre-mutation content, then reopen and re-upload into the fresh slice.
       if (this._instanceArena.cursor > 0 && this._batchWouldMutateTexture(backend)) {
-        backend._passCoordinator.endPass();
-        active = backend._passCoordinator.acquirePass();
-        this._instanceArena.resetPass();
-        this._instanceArena.syncPass(active);
+        active = this._reopenPass(backend);
       }
 
       // Resolving the transform storage may reallocate (and free) its GPU buffer;
       // earlier batches in this open pass still reference the old one, so end the
       // pass first when it already holds batches, then reopen with a fresh slice.
       if (this._instanceArena.cursor > 0 && backend._transformStorageWouldGrow(needCount)) {
-        backend._passCoordinator.endPass();
-        active = backend._passCoordinator.acquirePass();
-        this._instanceArena.resetPass();
-        this._instanceArena.syncPass(active);
+        active = this._reopenPass(backend);
+      }
+
+      // Same shape, for the material's own uniform buffer: this batch is about to
+      // write it at offset 0, and a draw already recorded into the open pass reads
+      // that exact buffer — writes land on the queue timeline ahead of the whole
+      // submit, so the earlier draw would silently pick up this batch's values.
+      if (customResources !== null && uniformPlan !== null && this._uniformWriteWouldAlias(uniformPlan)) {
+        active = this._reopenPass(backend);
       }
 
       if (!this._instanceArena.fits(batchBytes)) {
         // Growing reallocates the arena buffer; end (submit) the pass first so no
         // in-flight draw references the buffer we are about to destroy.
         if (this._instanceArena.cursor > 0) {
-          backend._passCoordinator.endPass();
-          active = backend._passCoordinator.acquirePass();
-          this._instanceArena.resetPass();
-          this._instanceArena.syncPass(active);
+          active = this._reopenPass(backend);
         }
 
         this._instanceArena.grow(device, batchBytes);
@@ -771,7 +780,6 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       const storage = backend.getTransformStorageBuffer(needCount);
       const transformBindGroup = this._getOrCreateTransformBindGroup(device, uniformBuffer, storage.buffer, storage.tintBuffer);
 
-      const material = this._currentMaterial;
       const stencil = backend._passCoordinator.stencilActive;
 
       if (material === null) {
@@ -786,8 +794,12 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
         pass.drawIndexed(indicesPerSprite, this._instanceCount, 0, 0, 0);
       } else {
         pass.pushDebugGroup('SpriteMaterial (custom)');
-        this._drawCustomBatch(pass, device, backend, material, transformBindGroup, stencil, instanceBuffer, offset);
+        this._drawCustomBatch(pass, device, backend, material, customResources!, uniformPlan!, transformBindGroup, stencil, instanceBuffer, offset);
         pass.popDebugGroup();
+
+        // This draw now reads the material's uniform buffer for as long as the
+        // pass stays open, which is what the alias check above consults.
+        this._uniformBuffersInPass.add(customResources!.userUniformBuffer!);
       }
 
       backend.stats.batches++;
@@ -821,12 +833,9 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       }
     }
 
-    // Batch flushes no longer submit; the backend ends the pass at genuine
-    // boundaries. The exception is a custom-material batch, isolated above.
-    if (isCustom) {
-      backend._passCoordinator.endPass();
-    }
-
+    // Batch flushes never submit; the backend ends the pass at genuine
+    // boundaries, and the hazard checks above end it early when this batch would
+    // retroactively change data an already-recorded draw reads.
     this._instanceCount = 0;
     this._maxNodeIndex = 0;
     this._resetSlots();
@@ -899,6 +908,53 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     }
 
     return false;
+  }
+
+  /**
+   * Discard the per-pass uniform-hazard bookkeeping when `active` is a pass this
+   * renderer has not recorded into yet. The pass may have been ended by the
+   * coordinator at a genuine boundary or by another renderer, so pass identity —
+   * not this renderer's own actions — is what the set is keyed to.
+   */
+  private _syncUniformHazardPass(active: WebGpuActiveRenderPass): void {
+    if (this._uniformHazardPass === active) {
+      return;
+    }
+
+    this._uniformHazardPass = active;
+    this._uniformBuffersInPass.clear();
+  }
+
+  /**
+   * End (submit) the open pass and reopen a fresh one, resetting everything
+   * scoped to a single pass: the instance arena's slice and the set of uniform
+   * buffers the pass's draws read.
+   */
+  private _reopenPass(backend: WebGpuBackend): WebGpuActiveRenderPass {
+    backend._passCoordinator.endPass();
+
+    const active = backend._passCoordinator.acquirePass();
+
+    this._instanceArena.resetPass();
+    this._instanceArena.syncPass(active);
+    this._syncUniformHazardPass(active);
+
+    return active;
+  }
+
+  /**
+   * Whether this batch's planned uniform write would land on a buffer a draw
+   * already recorded into the open pass reads. `queue.writeBuffer` is ordered
+   * against the *submit*, not against the individual draws inside it, so the
+   * earlier draw would sample this batch's values. A buffer being replaced
+   * counts too: the apply step destroys the outgrown one.
+   */
+  private _uniformWriteWouldAlias(upload: UserUniformUpload): boolean {
+    if (upload.staleBuffer !== null && this._uniformBuffersInPass.has(upload.staleBuffer)) {
+      return true;
+    }
+
+    return upload.writes && this._uniformBuffersInPass.has(upload.buffer);
   }
 
   /**
@@ -1449,17 +1505,18 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     device: GPUDevice,
     backend: WebGpuBackend,
     material: SpriteMaterial,
+    resources: CustomSpriteResources,
+    uniformUpload: UserUniformUpload,
     transformBindGroup: GPUBindGroup,
     stencil: boolean,
     instanceBuffer: GPUBuffer,
     instanceByteOffset: number,
   ): void {
-    const resources = this._getOrCreateCustomResources(material, device);
     const baseTexture = this._currentBaseTexture ?? Texture.empty;
 
-    // Uploaded only when the material's uniform values changed since the last
-    // frame; a static material issues zero writes here.
-    this._uploadUserUniforms(material, resources, device);
+    // Planned before the pass was settled; the write only happens when the
+    // material's values actually changed since its last upload.
+    applyUserUniformUpload(uniformUpload, resources, device);
 
     const pipeline = this._getOrCreateCustomPipeline(resources, this._currentBlendMode!, backend.renderTargetFormat, stencil, device);
 
@@ -1639,39 +1696,6 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     }
 
     return device.createBindGroupLayout({ label: 'sprite:material-bind-group-layout', entries });
-  }
-
-  private _uploadUserUniforms(material: SpriteMaterial, resources: CustomSpriteResources, device: GPUDevice): void {
-    const scalarValues = collectScalarUniforms(material);
-
-    // Always keep a UBO (even if empty) since binding 0 of the user layout is
-    // fixed. Min size 16 bytes to satisfy WebGPU's minimum buffer size. The
-    // buffer is reused across frames — only (re)created when the slot count
-    // outgrows its capacity.
-    const bufferBytes = userUniformBufferBytes(scalarValues.length);
-    let forceWrite = false;
-
-    if (resources.userUniformBuffer === null || resources.userUniformBufferCapacity < bufferBytes) {
-      resources.userUniformBuffer?.destroy();
-      resources.userUniformBufferCapacity = bufferBytes;
-      resources.userUniformBuffer = device.createBuffer({
-        label: 'sprite:material-user-uniform-buffer',
-        size: bufferBytes,
-        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-      });
-      // A fresh buffer holds undefined contents and voids any bind group that
-      // referenced the old identity.
-      forceWrite = true;
-      resources.userUniform.bindGroup = null;
-      resources.userUniform.bindGroupBuffer = null;
-    }
-
-    // Pack into the reused scratch and upload only when the values changed.
-    if (packUserUniforms(scalarValues, resources.userUniform, forceWrite)) {
-      const data = resources.userUniform.data;
-
-      device.queue.writeBuffer(resources.userUniformBuffer, 0, data.buffer, data.byteOffset, bufferBytes);
-    }
   }
 
   private _getUserBindGroup(material: SpriteMaterial, resources: CustomSpriteResources, backend: WebGpuBackend, device: GPUDevice): GPUBindGroup {

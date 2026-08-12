@@ -90,6 +90,87 @@ export interface UserUniformState {
   bindGroupSamplers: GPUSampler[];
 }
 
+/**
+ * What one batch is about to do to a material's user-uniform buffer, decided
+ * before anything is recorded into the open render pass.
+ *
+ * The upload is split into a plan and an apply step because the write is a
+ * hazard, not a detail: it lands on the queue timeline ahead of the whole
+ * submit, so a draw already recorded into the open pass would read this batch's
+ * values instead of its own. The caller answers that with its pass, then
+ * applies — see {@link planUserUniformUpload} and {@link applyUserUniformUpload}.
+ */
+export interface UserUniformUpload {
+  /** The buffer this batch binds, freshly created when the previous one was too small. */
+  readonly buffer: GPUBuffer;
+  /** Whether the packed bytes differ from what `buffer` already holds. */
+  readonly writes: boolean;
+  /** Byte length the write covers, starting at offset 0. */
+  readonly byteLength: number;
+  /** The outgrown buffer this upload replaces, destroyed by the apply step. */
+  readonly staleBuffer: GPUBuffer | null;
+}
+
+/** The subset of a material's cached GPU resources this module owns. */
+export interface UserUniformResources {
+  userUniformBuffer: GPUBuffer | null;
+  userUniformBufferCapacity: number;
+  readonly userUniform: UserUniformState;
+}
+
+/**
+ * Pack `material`'s scalar uniforms and decide what the upload needs, without
+ * touching the queue: the returned {@link UserUniformUpload} says which buffer
+ * the batch binds and whether the bytes must be re-uploaded at all. A material
+ * whose values did not change since its last upload writes nothing.
+ *
+ * A buffer that outgrew its capacity is replaced here but the old one is NOT
+ * destroyed yet — it may still be read by a draw in the open pass, and the
+ * caller needs {@link UserUniformUpload.staleBuffer} to see that before
+ * {@link applyUserUniformUpload} frees it.
+ */
+export function planUserUniformUpload(material: Material, resources: UserUniformResources, device: GPUDevice, label: string): UserUniformUpload {
+  const scalarValues = collectScalarUniforms(material);
+  // Always keep a UBO (even if empty) since binding 0 of the user layout is
+  // fixed, with WebGPU's 16-byte minimum as the floor.
+  const byteLength = userUniformBufferBytes(scalarValues.length);
+  const needsNewBuffer = resources.userUniformBuffer === null || resources.userUniformBufferCapacity < byteLength;
+  let staleBuffer: GPUBuffer | null = null;
+
+  if (needsNewBuffer) {
+    staleBuffer = resources.userUniformBuffer;
+    resources.userUniformBufferCapacity = byteLength;
+    resources.userUniformBuffer = device.createBuffer({
+      label,
+      size: byteLength,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    // A fresh buffer holds undefined contents and voids any bind group that
+    // referenced the old identity.
+    resources.userUniform.bindGroup = null;
+    resources.userUniform.bindGroupBuffer = null;
+  }
+
+  return {
+    buffer: resources.userUniformBuffer!,
+    // A recreated buffer holds undefined contents, so it always writes.
+    writes: packUserUniforms(scalarValues, resources.userUniform, needsNewBuffer),
+    byteLength,
+    staleBuffer,
+  };
+}
+
+/** Free the outgrown buffer and upload the packed bytes, once the pass is settled. */
+export function applyUserUniformUpload(upload: UserUniformUpload, resources: UserUniformResources, device: GPUDevice): void {
+  upload.staleBuffer?.destroy();
+
+  if (upload.writes) {
+    const data = resources.userUniform.data;
+
+    device.queue.writeBuffer(upload.buffer, 0, data.buffer, data.byteOffset, upload.byteLength);
+  }
+}
+
 /** Fresh, empty {@link UserUniformState} for a newly created material resource bundle. */
 export function createUserUniformState(): UserUniformState {
   return {
