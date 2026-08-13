@@ -335,6 +335,7 @@ jobs:
       # jsdom ratchet — zero them here, this lane only *collects* coverage.
       # No `--` before the args (see the unit-tests step note).
       - name: Browser tests (Chromium WebGL2, new headless)
+        timeout-minutes: 5
         run: >-
           pnpm test:browser:webgl
           --reporter=default --reporter=junit --outputFile.junit=./test-results/browser-webgl.junit.xml
@@ -430,6 +431,7 @@ jobs:
 
       # No `--` before the args (see the unit-tests step note).
       - name: Browser tests (Chromium WebGPU, Mesa lavapipe via xvfb)
+        timeout-minutes: 6
         run: xvfb-run -a pnpm test:browser:webgpu --reporter=default --reporter=junit --outputFile.junit=./test-results/browser-webgpu.junit.xml
 
       - name: Upload test results to Codecov
@@ -500,6 +502,7 @@ jobs:
       # recipe as the Chromium WebGPU lane above. LIBGL_ALWAYS_SOFTWARE points
       # Mesa at llvmpipe so there is something to rasterise on.
       - name: Browser tests (Firefox WebGL2, headed via xvfb)
+        timeout-minutes: 5
         env:
           EXOJS_FIREFOX_CI_HEADED: '1'
           LIBGL_ALWAYS_SOFTWARE: '1'

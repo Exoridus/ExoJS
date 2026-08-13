@@ -254,6 +254,11 @@ export default defineConfig({
         test: {
           name: 'browser-webgl-chromium',
           globals: true,
+          // Browser-level flakes have only reproduced under Vitest's
+          // machine-sized file parallelism. Keep the lanes parallel, but bound
+          // simultaneous contexts consistently across Chromium and Firefox.
+          maxWorkers: 4,
+          bail: 1,
           setupFiles: renderingBrowserSetupFiles,
           include: ['test/rendering/browser/webgl2-*.test.ts'],
           browser: {
@@ -289,6 +294,8 @@ export default defineConfig({
         test: {
           name: 'browser-webgl-firefox',
           globals: true,
+          maxWorkers: 4,
+          bail: 1,
           setupFiles: renderingBrowserSetupFiles,
           include: ['test/rendering/browser/webgl2-*.test.ts'],
           browser: {
@@ -330,6 +337,13 @@ export default defineConfig({
         test: {
           name: 'browser-webgpu',
           globals: true,
+          // Every file creates one or more GPUDevice/command-queue pairs. The
+          // default (up to 12 workers on common developer machines) can outrun
+          // D3D12/WDDM cleanup and make requestDevice() fail transiently with
+          // E_OUTOFMEMORY despite ample system RAM. Four keeps useful browser
+          // parallelism while bounding driver-side resource pressure.
+          maxWorkers: 4,
+          bail: 1,
           setupFiles: renderingBrowserSetupFiles,
           include: ['test/rendering/browser/webgpu-*.test.ts', 'test/rendering/parity/**/*.test.ts'],
           browser: {

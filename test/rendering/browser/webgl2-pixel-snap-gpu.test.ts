@@ -37,6 +37,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { TextureRegion } from '#rendering/texture/TextureRegion';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { readWebGl2Frame } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { type RgbaTuple } from './_pixels';
 
@@ -103,6 +104,10 @@ const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
 
   return [buf[0], buf[1], buf[2], buf[3]];
 };
+
+/** Sample one channel from a top-left-indexed full-frame readback. */
+const readFrameChannel = (frame: Uint8Array, x: number, y: number, channel: number): number =>
+  frame[(Math.floor(y) * canvasSize + Math.floor(x)) * 4 + channel]!;
 
 /** Read a top-left-anchored rect into a flat RGBA array (row-major, top-down). */
 const readRect = (backend: WebGl2Backend, x: number, y: number, w: number, h: number): number[] => {
@@ -343,6 +348,10 @@ describe('WebGL2 GPU pixel snapping — NineSlice geometry seams', () => {
 
       render(backend, root);
 
+      // One frame readback avoids thousands of synchronous one-pixel GPU
+      // stalls while preserving the exact same exhaustive coverage scan.
+      const frame = readWebGl2Frame(backend, canvasSize);
+
       // The row with the most fully-covered green columns is guaranteed interior
       // (full vertical coverage), so its horizontal profile is free of the
       // top/bottom edges — a position-independent way to pick a scan row.
@@ -353,7 +362,7 @@ describe('WebGL2 GPU pixel snapping — NineSlice geometry seams', () => {
         let count = 0;
 
         for (let x = 0; x < canvasSize; x++) {
-          if (readPixel(backend, x, y)[1] > 240) {
+          if (readFrameChannel(frame, x, y, 1) > 240) {
             count++;
           }
         }
@@ -374,7 +383,7 @@ describe('WebGL2 GPU pixel snapping — NineSlice geometry seams', () => {
       let sawBackground = false;
 
       for (let x = 0; x < canvasSize; x++) {
-        const green = readPixel(backend, x, bestRow)[1];
+        const green = readFrameChannel(frame, x, bestRow, 1);
 
         if (green > 240) {
           if (firstGreen < 0) {
@@ -395,7 +404,7 @@ describe('WebGL2 GPU pixel snapping — NineSlice geometry seams', () => {
       // Seam guarantee: the panel body is ONE contiguous green run — no interior
       // background crack where two quads share a snapped edge.
       for (let x = firstGreen; x <= lastGreen; x++) {
-        expect(readPixel(backend, x, bestRow)[1]).toBeGreaterThan(240);
+        expect(readFrameChannel(frame, x, bestRow, 1)).toBeGreaterThan(240);
       }
 
       // Render-only: logical geometry untouched.
@@ -440,6 +449,8 @@ describe('WebGL2 GPU pixel snapping — RepeatingSprite geometry', () => {
 
       render(backend, root);
 
+      const frame = readWebGl2Frame(backend, canvasSize);
+
       // The row with the most fully-covered blue columns is interior (free of the
       // top/bottom edges) — a position-independent scan row.
       let bestRow = 0;
@@ -449,7 +460,7 @@ describe('WebGL2 GPU pixel snapping — RepeatingSprite geometry', () => {
         let count = 0;
 
         for (let x = 0; x < canvasSize; x++) {
-          if (readPixel(backend, x, y)[2] > 240) {
+          if (readFrameChannel(frame, x, y, 2) > 240) {
             count++;
           }
         }
@@ -468,7 +479,7 @@ describe('WebGL2 GPU pixel snapping — RepeatingSprite geometry', () => {
       let sawBackground = false;
 
       for (let x = 0; x < canvasSize; x++) {
-        const blue = readPixel(backend, x, bestRow)[2];
+        const blue = readFrameChannel(frame, x, bestRow, 2);
 
         if (blue > 240) {
           sawSprite = true;
@@ -509,6 +520,8 @@ describe('WebGL2 GPU pixel snapping — RepeatingSprite geometry', () => {
 
       render(backend, root);
 
+      const frame = readWebGl2Frame(backend, canvasSize);
+
       let bestRow = 0;
       let bestCount = -1;
 
@@ -516,7 +529,7 @@ describe('WebGL2 GPU pixel snapping — RepeatingSprite geometry', () => {
         let count = 0;
 
         for (let x = 0; x < canvasSize; x++) {
-          if (readPixel(backend, x, y)[2] > 240) {
+          if (readFrameChannel(frame, x, y, 2) > 240) {
             count++;
           }
         }
@@ -532,7 +545,7 @@ describe('WebGL2 GPU pixel snapping — RepeatingSprite geometry', () => {
       let sawBackground = false;
 
       for (let x = 0; x < canvasSize; x++) {
-        const blue = readPixel(backend, x, bestRow)[2];
+        const blue = readFrameChannel(frame, x, bestRow, 2);
 
         if (blue > 240) {
           if (firstBlue < 0) {
@@ -553,7 +566,7 @@ describe('WebGL2 GPU pixel snapping — RepeatingSprite geometry', () => {
       // Seam guarantee: the panel body is ONE contiguous blue run — no interior
       // background crack where two segments share a snapped edge.
       for (let x = firstBlue; x <= lastBlue; x++) {
-        expect(readPixel(backend, x, bestRow)[2]).toBeGreaterThan(240);
+        expect(readFrameChannel(frame, x, bestRow, 2)).toBeGreaterThan(240);
       }
 
       expect(tiled.width).toBe(42);
