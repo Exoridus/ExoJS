@@ -482,6 +482,16 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
       return false;
     }
 
+    // The viewport is baked into the pass at `acquirePass` and cannot be
+    // rewritten on an open one, so a view invalidated since then would render
+    // this draw through the rectangle the pass was opened with. That makes it a
+    // PASS property rather than a resource of ours: whoever opened the pass —
+    // any renderer — carried the stale viewport into it, so unlike the cursor
+    // checks below this one asks nothing about who owns the recorded draws.
+    if (active.viewUpdateId !== backend.view.updateId) {
+      return true;
+    }
+
     // The rest are renderer-OWNED buffers, so they ask this renderer's own
     // cursors instead: only draws of ours read them. Re-writing the mode's
     // per-vertex geometry from 0 aliases the draws already bound to it, and

@@ -483,6 +483,17 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
   `updateId` exactly as `setViewport` does. A `Rectangle` mutated back to the
   value it already holds still notifies nobody, and `clone()` does not carry
   the callback over.
+- **Particles no longer render through a stale viewport on WebGPU.** A pass
+  carries the viewport it was opened with and cannot be given another one, so
+  moving a camera's viewport between two particle draws that shared a pass made
+  the second draw render into the first one's rectangle — visible in
+  split-screen, picture-in-picture and minimap scenes, where a view renders
+  into a sub-rectangle of the canvas. `WebGpuParticleRenderer` now ends the
+  pass when the view was invalidated after it was opened, as the sprite
+  renderers already did. Unlike their guard this one does not ask whether the
+  recorded draws are its own: the viewport belongs to the pass, so a pass
+  opened by any renderer already carries it. A frame that does not move its
+  camera keeps the same pass and submit counts as before.
 - **A paused voice is no longer the pool's preferred eviction victim.** A paused
   `SoundVoice` stays in the pool while its bookkeeping ages against the still
   running context clock, so `FirstInFirstOut` saw the oldest entry and
