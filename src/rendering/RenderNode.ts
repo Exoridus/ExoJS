@@ -8,6 +8,7 @@ import type { Filter } from '#rendering/filters/Filter';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import { playRenderTree } from '#rendering/plan/playRenderTree';
 import { type RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
+import { RetainedRootRepresentation } from '#rendering/plan/RetainedRootRepresentation';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 
@@ -348,6 +349,7 @@ export abstract class RenderNode extends SceneNode {
   private _cacheAsBitmap = false;
   private _cacheDirty = true;
   private _cacheTexture: RenderTexture | null = null;
+  private _retainedRoot: RetainedRootRepresentation | null = null;
 
   public get filters(): readonly Filter[] {
     return this._filters;
@@ -416,10 +418,15 @@ export abstract class RenderNode extends SceneNode {
       return;
     }
 
-    if (!builder._isViewCullSuppressed && !this.inView(builder.view)) {
-      builder.backend.stats.culledNodes++;
+    if (!builder._isViewCullSuppressed) {
+      if (!this.inView(builder.view)) {
+        builder.backend.stats.culledNodes++;
+        builder._noteViewCulled();
 
-      return;
+        return;
+      }
+
+      builder._noteViewKept(this);
     }
 
     builder.emitNode(this, seq);
@@ -445,6 +452,27 @@ export abstract class RenderNode extends SceneNode {
   /** @internal */
   public _isDrawableForRenderPlan(): boolean {
     return false;
+  }
+
+  /**
+   * @internal — whether this node, when it IS the render root, gets the
+   * automatic persistent render representation. Grouping nodes do
+   * ({@link Container} overrides this); a drawable root is a single draw with
+   * nothing to retain, and a `RetainedContainer` root already owns the
+   * group-level retention tier and must not be wrapped in a second one.
+   */
+  public _supportsRootRetention(): boolean {
+    return false;
+  }
+
+  /**
+   * @internal — the automatic persistent render representation for this node as
+   * a render root, created on first use. Overlapping roots (`render(world)`
+   * plus `render(world.hud)`, mask sub-renders) each own their own; nothing
+   * here is an exclusive owner slot on the subtree.
+   */
+  public _retainedRootRepresentation(): RetainedRootRepresentation {
+    return (this._retainedRoot ??= new RetainedRootRepresentation());
   }
 
   /** @internal */
@@ -599,6 +627,10 @@ export abstract class RenderNode extends SceneNode {
     super.destroy();
 
     this._destroyCacheTexture();
+    // Releases the captured entry records (and their drawable references) plus
+    // the recorded GPU bundle this node owned as a render root.
+    this._retainedRoot?.dispose();
+    this._retainedRoot = null;
     this._cacheBounds.destroy();
     this._cacheSprite?.destroy();
     this._cacheSprite = null;

@@ -36,7 +36,12 @@ describe('structural — Sprite', () => {
       expect(m.batches).toBe(1);
       expect(m.instances).toBe(1000);
       expect(m.visibleNodes).toBe(1000);
-      expect(m.uploadedBufferBytes).toBe(1000 * 32);
+      // Zero, not 1000 * 32: the render root is retained by default, so a steady
+      // frame replays the recorded batch out of the group-owned instance buffer
+      // instead of re-uploading 32 bytes per sprite. The RECORD frame still
+      // uploads them once — that is what the 32-bytes-per-instance shape is now
+      // pinned by in `retained-instruction-equivalence`, byte for byte.
+      expect(m.uploadedBufferBytes).toBe(0);
 
       root.destroy();
     });
@@ -144,7 +149,11 @@ describe('structural — Sprite', () => {
       const m = measureSteadyFrame(harness, root, 2);
 
       expect(m.visibleNodes).toBe(50);
-      expect(m.culledNodes).toBe(50);
+      // `culledNodes` counts cull WORK, and a retained steady frame does none —
+      // the 50 off-screen sprites were dropped at capture and the replay never
+      // revisits them. What the archetype actually asserts is that they are not
+      // DRAWN, which `instances` below pins directly.
+      expect(m.culledNodes).toBe(0);
       expect(m.instances).toBe(50);
 
       root.destroy();

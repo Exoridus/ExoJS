@@ -626,6 +626,19 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     return false;
   }
 
+  /**
+   * @internal — monotonic stamp of this node's composed global matrix, bumped
+   * whenever {@link getGlobalTransform} recomposes it. Read (after calling
+   * `getGlobalTransform()`, which resolves the parent chain first) by consumers
+   * that must observe ancestry-derived transform changes their own revisions do
+   * not see — the render-root case: `_markTransformDirty` stamps UPWARD, so an
+   * ancestor above a render root moves every descendant's world transform
+   * without touching the root's `_transformRevision`.
+   */
+  public get _globalTransformStamp(): number {
+    return this._globalTransformVersion;
+  }
+
   public getGlobalTransform(): Matrix {
     const parent = this._parentNode;
     const boundary = parent !== null && parent._isTransformGroupBoundary && !this._escapesTransformGroup();

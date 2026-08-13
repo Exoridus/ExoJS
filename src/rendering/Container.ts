@@ -454,6 +454,19 @@ export class Container extends RenderNode {
     }
   }
 
+  /**
+   * @internal — a grouping node handed to `render()` gets the automatic
+   * persistent render representation. Two exclusions: a transform-group
+   * boundary ({@link RetainedContainer}) already owns the group-level retention
+   * tier, and wrapping a second one around the same scope would fight it over
+   * the scope's record target; a barrier-bearing root never reaches the plan
+   * builder's group branch at all (it collects through the effect path), so
+   * excluding it here just keeps the predicate honest.
+   */
+  public override _supportsRootRetention(): boolean {
+    return !this._isTransformGroupBoundary && !this._renderPlanHasBarrierEffects();
+  }
+
   /** @internal */
   protected override _collectContent(builder: RenderPlanBuilder): void {
     if (this._childList.length === 0) {

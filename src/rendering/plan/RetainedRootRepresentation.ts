@@ -1,0 +1,252 @@
+import { Bounds } from '#core/Bounds';
+import type { ReadonlyRectangle } from '#math/Rectangle';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import type { View } from '#rendering/View';
+
+import type { ScopeEntry } from './RenderScope';
+import { RetainedGroupFragment } from './RetainedGroupFragment';
+
+/** The render target a product was compiled against (backend-owned identity). */
+type RenderTargetIdentity = RenderBackend['renderTarget'];
+
+/**
+ * The automatic persistent render representation of one **render root** — the
+ * node handed to `RenderingContext.render()` / `renderTo()` / `capture()` or
+ * to `RenderNode.render()`. Created lazily by the node
+ * ({@link RenderNode._retainedRootRepresentation}) and disposed with it.
+ *
+ * It reuses {@link RetainedGroupFragment} as its derived product (the entry
+ * snapshot plus the recorded instruction set) and adds the keys a root needs
+ * that a {@link RetainedContainer} deliberately does not:
+ *
+ * - the subtree's TRANSFORM revision — a plain container has no group matrix and
+ *   no row-patch path, so a descendant move re-collects (same rule
+ *   {@link RetainedPlanCache} already applies to the per-child skip);
+ * - the root's own global-transform stamp — a render root is not a closed
+ *   dependency boundary, so an ancestor ABOVE it moving must invalidate even
+ *   though it stamps none of the root's revisions;
+ * - the backend's render target — compiled products are pass/target-specific;
+ * - the view SELECTION (see {@link isClean}) — per-child culling is view
+ *   dependent even though the captured records are not.
+ *
+ * Unlike a `RetainedContainer` this changes no scene-graph semantics: children
+ * keep world-space transforms, per-child culling, and their own bounds
+ * convention. The representation only decides whether the frame is rebuilt from
+ * the scene graph or replayed.
+ * @internal
+ */
+export class RetainedRootRepresentation {
+  public readonly fragment = new RetainedGroupFragment();
+
+  private _hasCapture = false;
+  private _contentRevision = -1;
+  private _structureRevision = -1;
+  private _transformRevision = -1;
+  private _ancestryStamp = -1;
+  private _backend: RenderBackend | null = null;
+  private _target: RenderTargetIdentity | null = null;
+  private _view: View | null = null;
+  private _viewUpdateId = -1;
+
+  /**
+   * Whether the capturing collect dropped at least one node on the view test.
+   * A capture that culled nothing can be replayed under any view that still
+   * contains {@link _keptBounds}; a capture that culled something cannot,
+   * because a previously-culled node may have entered the new view and no index
+   * exists to find it.
+   */
+  private _culledDuringCapture = true;
+  /** Union of the rects `inView` tested for every kept, cullable node. */
+  private readonly _keptBounds = new Bounds();
+  private _keptEmpty = true;
+
+  // Thrash suppression over the FULL key (see `shouldSuppressCapture`).
+  private _replayedSinceCapture = false;
+  private _wastedCaptures = 0;
+  private _suppressed = false;
+  private _observedContent = -1;
+  private _observedStructure = -1;
+  private _observedTransform = -1;
+  private _observedView: View | null = null;
+  private _observedViewUpdateId = -1;
+
+  /**
+   * Whether the captured product can be replayed as-is this frame.
+   *
+   * The revision/identity keys are exact compares. The view key is not: a
+   * capture whose collect culled nothing stays valid under ANY view that
+   * contains every kept node's cull rect, because then the same set of nodes
+   * passes `inView` and the captured records — world-space bounds, material
+   * keys, baked transform rows — carry no view state of their own (the recorded
+   * batches resolve projection live at replay).
+   */
+  public isClean(
+    contentRevision: number,
+    structureRevision: number,
+    transformRevision: number,
+    ancestryStamp: number,
+    view: View,
+    backend: RenderBackend,
+    target: RenderTargetIdentity | null,
+  ): boolean {
+    if (
+      !this._hasCapture ||
+      this._contentRevision !== contentRevision ||
+      this._structureRevision !== structureRevision ||
+      this._transformRevision !== transformRevision ||
+      this._ancestryStamp !== ancestryStamp ||
+      this._backend !== backend ||
+      this._target !== target
+    ) {
+      return false;
+    }
+
+    if (this._view === view && this._viewUpdateId === view.updateId) {
+      return true;
+    }
+
+    if (this._culledDuringCapture) {
+      return false;
+    }
+
+    return this._keptEmpty || view.getBounds().containsRect(this._keptBounds.getRect());
+  }
+
+  /** The active capture was replayed at least once — it earned its keep. */
+  public markReplayed(): void {
+    this._replayedSinceCapture = true;
+    this.fragment.markReplayed();
+  }
+
+  /**
+   * Decide, on a frame whose key check already failed, whether the snapshot
+   * should be skipped. Mutates the suppression state machine; call exactly once
+   * per such frame, before collecting. Returns `true` to skip the capture.
+   *
+   * Same shape as {@link RetainedGroupFragment.shouldSuppressCapture} but keyed
+   * on the FULL root key including the view: without the view in the observed
+   * tuple, a panning camera over a partly-culled scene would alternate between
+   * suppressed and recovered forever instead of settling.
+   */
+  public shouldSuppressCapture(contentRevision: number, structureRevision: number, transformRevision: number, view: View): boolean {
+    if (this._hasCapture) {
+      if (this._replayedSinceCapture) {
+        this._wastedCaptures = 0;
+
+        return false;
+      }
+
+      this._wastedCaptures++;
+
+      if (this._wastedCaptures < 2) {
+        // Grace: a single wasted capture recaptures immediately (the expected
+        // behaviour for a one-shot mutation).
+        return false;
+      }
+
+      this.invalidate();
+      this._suppressed = true;
+      this._observe(contentRevision, structureRevision, transformRevision, view);
+
+      return true;
+    }
+
+    if (this._suppressed) {
+      if (
+        this._observedContent === contentRevision &&
+        this._observedStructure === structureRevision &&
+        this._observedTransform === transformRevision &&
+        this._observedView === view &&
+        this._observedViewUpdateId === view.updateId
+      ) {
+        // The key stopped moving: this frame would have been clean if a capture
+        // existed. Recover the retained tier now.
+        this._suppressed = false;
+
+        return false;
+      }
+
+      this._observe(contentRevision, structureRevision, transformRevision, view);
+
+      return true;
+    }
+
+    return false;
+  }
+
+  /** Arm cull-union accumulation for the collect that is about to run. */
+  public beginCapture(): void {
+    this._keptBounds.reset();
+    this._keptEmpty = true;
+    this._culledDuringCapture = false;
+  }
+
+  /** A node passed the view test; `rect` is exactly what `inView` compared. */
+  public noteKept(rect: ReadonlyRectangle): void {
+    this._keptBounds.addRect(rect);
+    this._keptEmpty = false;
+  }
+
+  /** A node was dropped by the view test — the capture is view-locked. */
+  public noteCulled(): void {
+    this._culledDuringCapture = true;
+  }
+
+  /** Snapshot the root scope's entries and key the capture. */
+  public commitCapture(
+    contentRevision: number,
+    structureRevision: number,
+    transformRevision: number,
+    ancestryStamp: number,
+    view: View,
+    backend: RenderBackend,
+    target: RenderTargetIdentity | null,
+    entries: readonly ScopeEntry[],
+  ): void {
+    // `true`: nested transform groups are recorded as live re-dispatches, so a
+    // `RetainedContainer` under a render root keeps its own retention tier
+    // untouched (see the snapshot policy in `RetainedGroupFragment`).
+    this.fragment.capture(contentRevision, structureRevision, backend, entries, true);
+
+    this._contentRevision = contentRevision;
+    this._structureRevision = structureRevision;
+    this._transformRevision = transformRevision;
+    this._ancestryStamp = ancestryStamp;
+    this._view = view;
+    this._viewUpdateId = view.updateId;
+    this._backend = backend;
+    this._target = target;
+    this._hasCapture = true;
+    this._replayedSinceCapture = false;
+  }
+
+  /** Drop the capture and its recording; the GPU bundle is kept (grow-only). */
+  public invalidate(): void {
+    this.fragment.invalidate();
+    this._hasCapture = false;
+    this._replayedSinceCapture = false;
+    this._wastedCaptures = 0;
+    this._suppressed = false;
+    this._keptBounds.reset();
+    this._keptEmpty = true;
+    this._culledDuringCapture = true;
+    this._view = null;
+    this._backend = null;
+    this._target = null;
+  }
+
+  /** Release the capture AND the retained GPU resources (node destroy). */
+  public dispose(): void {
+    this.invalidate();
+    this.fragment.dispose();
+    this._keptBounds.destroy();
+  }
+
+  private _observe(contentRevision: number, structureRevision: number, transformRevision: number, view: View): void {
+    this._observedContent = contentRevision;
+    this._observedStructure = structureRevision;
+    this._observedTransform = transformRevision;
+    this._observedView = view;
+    this._observedViewUpdateId = view.updateId;
+  }
+}

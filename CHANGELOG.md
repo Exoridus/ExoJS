@@ -444,6 +444,24 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
 
 ### Performance
 
+- **The default rendering path is retained automatically.** The node handed to
+  `render()`/`renderTo()`/`capture()` now gets a persistent render
+  representation of its own: an unchanged scene under an unchanged view replays
+  the recorded GPU batches in O(batches) instead of rebuilding the whole plan
+  from the scene graph every frame. Nothing changes in how scenes are written —
+  no `compile()`, no `markDirty()`, and plain `Container`s keep their
+  transform, bounds, coordinate and per-child culling semantics exactly.
+  `static-heavy` at 25 000 nodes measured 9.800 ms before and 0.255 ms after
+  (WebGPU, one draw call, same session); at 100 000 nodes it is 0.228 ms against
+  Pixi 8's 0.185 ms. WebGL2 lands at 0.170 ms for 25 000 and 0.168 ms for
+  100 000 — flat in node count. A view change is absorbed as long as the capture
+  culled nothing and every kept node still lies inside the new view rect;
+  otherwise, and on any content, structure, transform or ancestor-transform
+  change, the frame re-collects exactly as before. `RetainedContainer` is
+  unaffected and stays the explicit opt-in for group-local transforms and
+  group-wide culling: a group under a render root keeps its own retention tier,
+  including in-place transform-row patching, because the root defers to it
+  instead of absorbing its entries.
 - **Text batches can span up to eight atlas textures per draw.** WebGPU and
   WebGL2 now assign compatible atlas pages to a small texture-slot table instead
   of ending the batch at every texture change. Mixed-font text with the same

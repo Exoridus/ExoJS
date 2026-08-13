@@ -288,14 +288,23 @@ describe('GPU resource accounting (RenderStats)', () => {
 
         measureFrame(harness, root);
         const uploadedFirst = harness.backend.stats.textureUploadBytes;
-        const vramAfterFirst = harness.backend.stats.gpuMemoryBytes;
 
-        // Drive a couple more idempotent frames to reach a quiescent state.
+        // The render root climbs its retention ladder over the next few frames
+        // (capture, record, splice) and allocates the retained bundle's
+        // group-owned buffers on the way — genuine one-off VRAM growth. Baseline
+        // the running total once that has settled, so this still asserts what it
+        // is about: a quiescent frame adds nothing.
+        measureFrame(harness, root);
+        measureFrame(harness, root);
+        measureFrame(harness, root);
+
+        const vramAtSteadyState = harness.backend.stats.gpuMemoryBytes;
+
         measureFrame(harness, root);
         measureFrame(harness, root);
 
         // VRAM (a running total) is unchanged across idempotent frames…
-        expect(harness.backend.stats.gpuMemoryBytes).toBe(vramAfterFirst);
+        expect(harness.backend.stats.gpuMemoryBytes).toBe(vramAtSteadyState);
         // …the first frame uploaded the content texture…
         expect(uploadedFirst).toBeGreaterThan(0);
         // …and the per-frame upload accumulator has dropped back to zero.

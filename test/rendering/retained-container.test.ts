@@ -10,7 +10,7 @@ import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
 import { RenderPlanPlayer } from '#rendering/plan/RenderPlanPlayer';
 import type { GroupScope, GroupScopeEntry } from '#rendering/plan/RenderScope';
-import { type RetainedFragmentEntry, RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
+import { type RetainedFragmentEntry, type RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { createRenderStats } from '#rendering/RenderStats';
@@ -1106,15 +1106,17 @@ describe('RetainedContainer: alpha/tint staleness guard', () => {
 describe('RetainedContainer: capture suppression under thrash', () => {
   test('continuous per-frame mutation performs a bounded number of captures, then plain collects only', () => {
     const backend = createTestBackend();
-    const captureSpy = vi.spyOn(RetainedGroupFragment.prototype, 'capture');
-
-    captureSpy.mockClear();
     const root = new Container();
     const group = new RetainedContainer();
     const leaf = new LeafDrawable('a');
 
     group.addChild(leaf);
     root.addChild(group);
+
+    // Spied per INSTANCE, not on the prototype: the render root owns a fragment
+    // of its own (the automatic root representation), and its independent
+    // capture cadence would otherwise be counted as this group's.
+    const captureSpy = vi.spyOn(fragmentOf(group), 'capture');
 
     for (let frame = 0; frame < 120; frame++) {
       // A move is patched, not invalidating — thrash the CONTENT channel (a
@@ -1196,15 +1198,15 @@ describe('RetainedContainer: capture suppression under thrash', () => {
 
   test('when mutation stops, the next frame does one full collect + capture and subsequent frames splice', () => {
     const backend = createTestBackend();
-    const captureSpy = vi.spyOn(RetainedGroupFragment.prototype, 'capture');
-
-    captureSpy.mockClear();
     const root = new Container();
     const group = new RetainedContainer();
     const leaf = new LeafDrawable('a');
 
     group.addChild(leaf);
     root.addChild(group);
+
+    // Per-instance spy — see the note in the thrash test above.
+    const captureSpy = vi.spyOn(fragmentOf(group), 'capture');
 
     for (let frame = 0; frame < 8; frame++) {
       leaf.setTint(new Color((frame % 200) + 1, 0, 0)); // content thrash
@@ -1239,15 +1241,15 @@ describe('RetainedContainer: capture suppression under thrash', () => {
 
   test('a single mutation between replays keeps the recapture behavior (no suppression)', () => {
     const backend = createTestBackend();
-    const captureSpy = vi.spyOn(RetainedGroupFragment.prototype, 'capture');
-
-    captureSpy.mockClear();
     const root = new Container();
     const group = new RetainedContainer();
     const leaf = new LeafDrawable('a');
 
     group.addChild(leaf);
     root.addChild(group);
+
+    // Per-instance spy — see the note in the thrash test above.
+    const captureSpy = vi.spyOn(fragmentOf(group), 'capture');
 
     // Steady replay-mutate-replay cadence: every dirty frame recaptures
     // because the previous capture WAS replayed at least once.
