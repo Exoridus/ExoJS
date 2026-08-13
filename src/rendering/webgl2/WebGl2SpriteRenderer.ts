@@ -1,4 +1,5 @@
 import type { ReadonlyRectangle } from '#math/Rectangle';
+import { packedGroupChanged } from '#rendering/affinePacking';
 import type { UniformValue } from '#rendering/material/Material';
 import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import { Shader } from '#rendering/shader/Shader';
@@ -142,7 +143,8 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   private _currentBlendMode: BlendModes | null = null;
   private _currentView: View | null = null;
   private _currentViewId = -1;
-  private _currentGroupTransformId = -1;
+  private _hasWrittenGroup = false;
+  private readonly _writtenGroupData = new Float32Array(9);
 
   private _instanceBuffer: WebGl2RenderBuffer | null = null;
   private _vao: WebGl2VertexArrayObject | null = null;
@@ -304,12 +306,15 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
       this._shader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
     }
 
-    if (this._shader.uniforms.has('u_group') && this._currentGroupTransformId !== backend.renderGroupTransformId) {
-      this._currentGroupTransformId = backend.renderGroupTransformId;
-
+    if (this._shader.uniforms.has('u_group')) {
       const groupTransform = backend.renderGroupTransform;
+      const groupData = groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3;
 
-      this._shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
+      if (!this._hasWrittenGroup || packedGroupChanged(groupData, this._writtenGroupData, 0)) {
+        this._shader.getUniform('u_group').setValue(groupData);
+        this._writtenGroupData.set(groupData);
+        this._hasWrittenGroup = true;
+      }
     }
 
     backend._stageViewportUniform(this._shader);
@@ -494,7 +499,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     this._currentBlendMode = null;
     this._currentView = null;
     this._currentViewId = -1;
-    this._currentGroupTransformId = -1;
+    this._hasWrittenGroup = false;
     this._instanceCount = 0;
     this._maxNodeIndex = 0;
   }

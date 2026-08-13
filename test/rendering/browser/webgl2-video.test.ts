@@ -16,7 +16,9 @@
  * `requestVideoFrameCallback` — empirically, in this headless Chromium
  * configuration `requestVideoFrameCallback` never fires (even with the video
  * attached to the DOM and a `requestAnimationFrame` pump kept alive for the
- * full test), while polling resolves reliably in ~60-100ms. A *second*,
+ * full test). The bounded wait starts before `video.play()`: under full-lane
+ * load that promise can stay pending indefinitely even though isolated runs
+ * decode in under a second. A *second*,
  * dynamic scenario — repainting the source canvas after the first decoded
  * frame and asserting the video texture picks up the new colour — was
  * prototyped and found NOT to be reliably observable within a bounded window
@@ -113,16 +115,35 @@ const createSolidColorVideo = async (color: string, size = 16): Promise<HTMLVide
   video.playsInline = true;
   video.srcObject = stream;
 
-  await video.play();
-
   await new Promise<void>((resolve, reject) => {
-    const timeout = setTimeout(
-      () => reject(new Error(`timed out waiting for decoded video frame (videoWidth=${video.videoWidth}, readyState=${video.readyState})`)),
-      5000,
-    );
+    let settled = false;
+
+    const cleanupFailedPlayback = (): void => {
+      video.pause();
+      stream.getTracks().forEach(track => track.stop());
+      video.srcObject = null;
+    };
+    const fail = (error: unknown): void => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      clearTimeout(timeout);
+      cleanupFailedPlayback();
+      reject(error instanceof Error ? error : new Error(String(error)));
+    };
+    const timeout = setTimeout(() => {
+      fail(new Error(`timed out waiting for video.play() / decoded frame (videoWidth=${video.videoWidth}, readyState=${video.readyState})`));
+    }, 5000);
 
     const poll = (): void => {
+      if (settled) {
+        return;
+      }
+
       if (video.videoWidth > 0 && video.videoHeight > 0 && video.readyState >= 2) {
+        settled = true;
         clearTimeout(timeout);
         resolve();
       } else {
@@ -130,6 +151,10 @@ const createSolidColorVideo = async (color: string, size = 16): Promise<HTMLVide
       }
     };
 
+    // `play()` may stay pending indefinitely under a fully loaded browser lane,
+    // so its promise must live inside the same bounded wait as first-frame
+    // readiness. Polling can still succeed before the play promise settles.
+    void video.play().catch(fail);
     poll();
   });
 

@@ -1,3 +1,4 @@
+import { packedGroupChanged } from '#rendering/affinePacking';
 import { Shader } from '#rendering/shader/Shader';
 import type { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { computeShaderTiling, type RepeatingSpriteQuad } from '#rendering/sprite/repeatingSpritePlan';
@@ -318,18 +319,19 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
 
   private readonly _transformUnitScratch = new Int32Array([transformTextureUnit]);
   private readonly _textureUnitScratch = new Int32Array([0]);
-  private _currentView: unknown = null;
-  private _currentViewId = -1;
-  private _currentGroupTransformId = -1;
+  private _shaderView: unknown = null;
+  private _shaderViewId = -1;
+  private _geoView: unknown = null;
+  private _geoViewId = -1;
+  private _hasWrittenShaderGroup = false;
+  private readonly _writtenShaderGroupData = new Float32Array(9);
+  private _hasWrittenGeoGroup = false;
+  private readonly _writtenGeoGroupData = new Float32Array(9);
 
-  // Retained-replay reusable scratch + dedicated view/group uniform tracking
-  // for the geo shader — kept SEPARATE from the live-flush state above so a
-  // replay never marks the live projection "already staged" and leaves the
-  // shader-path program holding a stale projection.
+  // Retained-replay reusable scratch. Uniform tracking follows the physical
+  // shader programs above: replay and live geometry draws share the geo state,
+  // while the shader path has its own state.
   private readonly _recordTextureScratch: Array<Texture | RenderTexture | null> = [null];
-  private _replayView: unknown = null;
-  private _replayViewId = -1;
-  private _replayGroupTransformId = -1;
 
   public constructor(batchSize: number) {
     super();
@@ -520,27 +522,31 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
 
     const view = backend.view;
 
-    if (this._currentView !== view || this._currentViewId !== view.updateId) {
-      this._currentView = view;
-      this._currentViewId = view.updateId;
-      const proj = view.getTransform().toArray(false);
-      this._shaderPathShader.getUniform('u_projection').setValue(proj);
-      this._geoPathShader.getUniform('u_projection').setValue(proj);
+    if (this._shaderView !== view || this._shaderViewId !== view.updateId) {
+      this._shaderView = view;
+      this._shaderViewId = view.updateId;
+      this._shaderPathShader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
     }
 
-    if (this._currentGroupTransformId !== backend.renderGroupTransformId) {
-      this._currentGroupTransformId = backend.renderGroupTransformId;
+    if (this._geoView !== view || this._geoViewId !== view.updateId) {
+      this._geoView = view;
+      this._geoViewId = view.updateId;
+      this._geoPathShader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
+    }
 
-      const groupTransform = backend.renderGroupTransform;
-      const groupArray = groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3;
+    const groupTransform = backend.renderGroupTransform;
+    const groupData = groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3;
 
-      if (this._shaderPathShader.uniforms.has('u_group')) {
-        this._shaderPathShader.getUniform('u_group').setValue(groupArray);
-      }
+    if (this._shaderPathShader.uniforms.has('u_group') && (!this._hasWrittenShaderGroup || packedGroupChanged(groupData, this._writtenShaderGroupData, 0))) {
+      this._shaderPathShader.getUniform('u_group').setValue(groupData);
+      this._writtenShaderGroupData.set(groupData);
+      this._hasWrittenShaderGroup = true;
+    }
 
-      if (this._geoPathShader.uniforms.has('u_group')) {
-        this._geoPathShader.getUniform('u_group').setValue(groupArray);
-      }
+    if (this._geoPathShader.uniforms.has('u_group') && (!this._hasWrittenGeoGroup || packedGroupChanged(groupData, this._writtenGeoGroupData, 0))) {
+      this._geoPathShader.getUniform('u_group').setValue(groupData);
+      this._writtenGeoGroupData.set(groupData);
+      this._hasWrittenGeoGroup = true;
     }
 
     // Staged unconditionally per flush (cheap vec4) so a viewport change without
@@ -738,25 +744,28 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
 
   /**
    * Stage `u_projection` (live view) and `u_group` (live composed group matrix)
-   * on the geometry-path shader for a retained replay. Dedicated view/group
-   * tracking (not the live-flush stamps) so a replay never suppresses the live
-   * flush's own projection write to the shader-path program.
+   * on the geometry-path shader for a retained replay. Tracking is shared with
+   * live geometry draws because both write the same physical program; the
+   * shader-path program keeps independent state.
    */
   private _stageGeoReplayUniforms(backend: WebGl2Backend): void {
     const view = backend.view;
 
-    if (this._replayView !== view || this._replayViewId !== view.updateId) {
-      this._replayView = view;
-      this._replayViewId = view.updateId;
+    if (this._geoView !== view || this._geoViewId !== view.updateId) {
+      this._geoView = view;
+      this._geoViewId = view.updateId;
       this._geoPathShader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
     }
 
-    if (this._geoPathShader.uniforms.has('u_group') && this._replayGroupTransformId !== backend.renderGroupTransformId) {
-      this._replayGroupTransformId = backend.renderGroupTransformId;
-
+    if (this._geoPathShader.uniforms.has('u_group')) {
       const groupTransform = backend.renderGroupTransform;
+      const groupData = groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3;
 
-      this._geoPathShader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
+      if (!this._hasWrittenGeoGroup || packedGroupChanged(groupData, this._writtenGeoGroupData, 0)) {
+        this._geoPathShader.getUniform('u_group').setValue(groupData);
+        this._writtenGeoGroupData.set(groupData);
+        this._hasWrittenGeoGroup = true;
+      }
     }
 
     backend._stageViewportUniform(this._geoPathShader);
@@ -852,12 +861,12 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     this._geoVao?.destroy();
     this._geoVao = null;
     this._connection = null;
-    this._currentView = null;
-    this._currentViewId = -1;
-    this._currentGroupTransformId = -1;
-    this._replayView = null;
-    this._replayViewId = -1;
-    this._replayGroupTransformId = -1;
+    this._shaderView = null;
+    this._shaderViewId = -1;
+    this._geoView = null;
+    this._geoViewId = -1;
+    this._hasWrittenShaderGroup = false;
+    this._hasWrittenGeoGroup = false;
     this._recordTextureScratch[0] = null;
     this._resetBatchState();
   }

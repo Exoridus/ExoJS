@@ -15,6 +15,7 @@ import {
   BufferTypes,
   BufferUsage,
   createWebGl2ShaderProgram,
+  packedGroupChanged,
   RenderingPrimitives,
   Shader,
   WebGl2RenderBuffer,
@@ -166,7 +167,8 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
   private _currentTexture: Texture | null = null;
   private _currentView: View | null = null;
   private _currentViewId = -1;
-  private _currentGroupTransformId = -1;
+  private _hasWrittenGroup = false;
+  private readonly _writtenGroupData = new Float32Array(9);
 
   private _instanceBuffer: WebGl2RenderBuffer | null = null;
   private _vao: WebGl2VertexArrayObject | null = null;
@@ -375,12 +377,13 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
       this._shader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
     }
 
-    if (this._currentGroupTransformId !== backend.renderGroupTransformId) {
-      this._currentGroupTransformId = backend.renderGroupTransformId;
+    const groupTransform = backend.renderGroupTransform;
+    const groupData = groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3;
 
-      const groupTransform = backend.renderGroupTransform;
-
-      this._shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
+    if (!this._hasWrittenGroup || packedGroupChanged(groupData, this._writtenGroupData, 0)) {
+      this._shader.getUniform('u_group').setValue(groupData);
+      this._writtenGroupData.set(groupData);
+      this._hasWrittenGroup = true;
     }
 
     backend._stageViewportUniform(this._shader);
@@ -545,7 +548,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
     this._currentTexture = null;
     this._currentView = null;
     this._currentViewId = -1;
-    this._currentGroupTransformId = -1;
+    this._hasWrittenGroup = false;
     this._quadIndex = 0;
     this._maxNodeIndex = 0;
   }
