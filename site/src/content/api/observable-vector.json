@@ -252,7 +252,7 @@
           ],
           "params": [],
           "returnType": "this",
-          "description": ""
+          "description": "A detached copy: same components, no owner. A clone is a value, not a second notification channel into the original's owner — mutating it must not invalidate transforms that belong to something else. Matches ObservableSize.clone and Rectangle.clone()."
         },
         {
           "name": "copy",

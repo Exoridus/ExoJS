@@ -1,6 +1,6 @@
 {
   "title": "ObservableSize",
-  "description": "A Size subclass that fires a callback whenever `width` or `height` changes. Used internally by layout-aware types to invalidate cached geometry on dimension mutations. Batch mutations via `set()` fire at most one callback per call.",
+  "description": "A Size subclass that fires a callback whenever `width` or `height` changes. Used internally by layout-aware types to invalidate cached geometry on dimension mutations. Batch mutations via `set()` fire at most one callback per call. Pass `callback = null` for a plain, non-reactive size — that is what `clone()` produces, mirroring ObservableVector's null owner.",
   "symbol": "ObservableSize",
   "kind": "class",
   "subsystem": "math",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "A Size subclass that fires a callback whenever `width` or `height` changes. Used internally by layout-aware types to invalidate cached geometry on dimension mutations.",
-        "Batch mutations via `set()` fire at most one callback per call."
+        "Batch mutations via `set()` fire at most one callback per call. Pass `callback = null` for a plain, non-reactive size — that is what `clone()` produces, mirroring ObservableVector's null owner."
       ],
       "importLine": "import { ObservableSize } from '@codexo/exojs'",
       "sourceLink": null
@@ -31,7 +31,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(callback: () => void, width: number, height: number): ObservableSize",
+          "signature": "new(callback: () => void | null, width: number, height: number): ObservableSize",
           "signatureTokens": [
             {
               "text": "new",
@@ -59,6 +59,14 @@
             },
             {
               "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
               "kind": "keyword"
             },
             {
@@ -109,7 +117,7 @@
           "params": [
             {
               "name": "callback",
-              "type": "() => void",
+              "type": "() => void | null",
               "optional": false
             },
             {
@@ -230,7 +238,7 @@
           ],
           "params": [],
           "returnType": "this",
-          "description": ""
+          "description": "A detached copy: same dimensions, no callback. A clone is a value, not a second observer of the original's owner — mutating it must not invalidate geometry that belongs to something else. Matches Rectangle.clone(), which likewise hands back an object that observes only itself."
         },
         {
           "name": "copy",

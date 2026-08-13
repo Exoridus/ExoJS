@@ -283,7 +283,7 @@ describe('ObservableSize', () => {
   });
 
   describe('clone()', () => {
-    test('produces an independent ObservableSize with the same callback and values', () => {
+    test('produces an independent, callback-free ObservableSize with the same values', () => {
       const callback = vi.fn();
       const size = new ObservableSize(callback, 7, 9);
       const clone = size.clone();
@@ -292,9 +292,15 @@ describe('ObservableSize', () => {
       expect(clone.width).toBe(7);
       expect(clone.height).toBe(9);
 
+      // A clone is a value, not a second observer: mutating it must leave the
+      // original's owner untouched.
       clone.width = 100;
-      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).not.toHaveBeenCalled();
       expect(size.width).toBe(7);
+
+      // The original keeps observing.
+      size.height = 11;
+      expect(callback).toHaveBeenCalledTimes(1);
 
       size.destroy();
       clone.destroy();

@@ -5,12 +5,14 @@ import { Size } from './Size';
  * changes. Used internally by layout-aware types to invalidate cached geometry
  * on dimension mutations.
  *
- * Batch mutations via `set()` fire at most one callback per call.
+ * Batch mutations via `set()` fire at most one callback per call. Pass
+ * `callback = null` for a plain, non-reactive size — that is what `clone()`
+ * produces, mirroring {@link ObservableVector}'s null owner.
  */
 export class ObservableSize extends Size {
-  private readonly _callback: () => void;
+  private readonly _callback: (() => void) | null;
 
-  public constructor(callback: () => void, width = 0, height = 0) {
+  public constructor(callback: (() => void) | null, width = 0, height = 0) {
     super(width, height);
 
     this._callback = callback;
@@ -23,7 +25,7 @@ export class ObservableSize extends Size {
   public override set width(width: number) {
     if (this._width !== width) {
       this._width = width;
-      this._callback();
+      this._callback?.();
     }
   }
 
@@ -34,7 +36,7 @@ export class ObservableSize extends Size {
   public override set height(height: number) {
     if (this._height !== height) {
       this._height = height;
-      this._callback();
+      this._callback?.();
     }
   }
 
@@ -42,7 +44,7 @@ export class ObservableSize extends Size {
     if (this._width !== width || this._height !== height) {
       this._width = width;
       this._height = height;
-      this._callback();
+      this._callback?.();
     }
 
     return this;
@@ -68,7 +70,13 @@ export class ObservableSize extends Size {
     return this.set(size.width, size.height);
   }
 
+  /**
+   * A detached copy: same dimensions, no callback. A clone is a value, not a
+   * second observer of the original's owner — mutating it must not invalidate
+   * geometry that belongs to something else. Matches `Rectangle.clone()`, which
+   * likewise hands back an object that observes only itself.
+   */
   public override clone(): this {
-    return new ObservableSize(this._callback, this._width, this._height) as this;
+    return new ObservableSize(null, this._width, this._height) as this;
   }
 }

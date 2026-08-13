@@ -259,7 +259,7 @@ describe('ObservableVector.divide() override', () => {
 });
 
 describe('ObservableVector.clone()', () => {
-  test('returns a distinct instance with the same owner, channel, and components', () => {
+  test('returns a distinct, owner-free instance with the same components', () => {
     const onChange = vi.fn();
     const owner = { _onObservableChange: onChange };
     const v = new ObservableVector(owner, 3, 1, 2);
@@ -269,8 +269,14 @@ describe('ObservableVector.clone()', () => {
     expect(clone.x).toBe(1);
     expect(clone.y).toBe(2);
 
-    // The clone shares the same owner/channel, so mutating it notifies too.
+    // A clone is a value, not a second notification channel: mutating it must
+    // leave the original's owner untouched.
     clone.x = 9;
+    expect(onChange).not.toHaveBeenCalled();
+    expect(v.x).toBe(1);
+
+    // The original keeps notifying.
+    v.y = 5;
     expect(onChange).toHaveBeenLastCalledWith(3);
   });
 });

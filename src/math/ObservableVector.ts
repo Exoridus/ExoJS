@@ -117,8 +117,14 @@ export class ObservableVector extends AbstractVector {
     return this;
   }
 
+  /**
+   * A detached copy: same components, no owner. A clone is a value, not a
+   * second notification channel into the original's owner — mutating it must
+   * not invalidate transforms that belong to something else. Matches
+   * {@link ObservableSize.clone} and `Rectangle.clone()`.
+   */
   public clone(): this {
-    return new ObservableVector(this._owner, this._channel, this._x, this._y) as this;
+    return new ObservableVector(null, 0, this._x, this._y) as this;
   }
 
   public copy(vector: AbstractVector): this {
