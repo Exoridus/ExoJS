@@ -102,6 +102,76 @@ describe('View.setViewport', () => {
   });
 });
 
+describe('View.viewport — invalidation on direct mutation', () => {
+  // `get viewport` hands out the LIVE rectangle, so a direct write changes what
+  // a backend reads when it opens a render pass. Every backend guard against
+  // "this pass was opened with a different viewport" is keyed on updateId, so a
+  // mutation that leaves updateId alone is invisible to all of them — the write
+  // lands, the guard never fires, and the draw renders through the previous
+  // viewport. These pin that every route to the rectangle moves the counter.
+  const mutations: ReadonlyArray<[string, (view: View) => void]> = [
+    ['viewport.x', view => (view.viewport.x = 0.5)],
+    ['viewport.y', view => (view.viewport.y = 0.5)],
+    ['viewport.width', view => (view.viewport.width = 0.5)],
+    ['viewport.height', view => (view.viewport.height = 0.5)],
+    ['viewport.set', view => view.viewport.set(0.5, 0, 0.5, 1)],
+    ['viewport.copy', view => view.viewport.copy(new Rectangle(0.5, 0, 0.5, 1))],
+    ['viewport.setPosition', view => view.viewport.setPosition(0.5, 0)],
+    ['viewport.setSize', view => view.viewport.setSize(0.5, 1)],
+    // One level down — the leak the accessors above cannot see.
+    ['viewport.position.x', view => (view.viewport.position.x = 0.5)],
+    ['viewport.size.width', view => (view.viewport.size.width = 0.5)],
+    // The API routes, for symmetry.
+    ['setViewport', view => view.setViewport(0.5, 0, 0.5, 1)],
+    ['viewport setter', view => (view.viewport = new Rectangle(0.5, 0, 0.5, 1))],
+  ];
+
+  test.each(mutations)('%s bumps updateId', (_name, mutate) => {
+    const view = new View(0, 0, 100, 100);
+    const before = view.updateId;
+
+    mutate(view);
+
+    expect(view.updateId).not.toBe(before);
+
+    view.destroy();
+  });
+
+  test('a write that changes nothing leaves updateId alone', () => {
+    const view = new View(0, 0, 100, 100);
+
+    view.setViewport(0.5, 0, 0.5, 1);
+
+    const before = view.updateId;
+
+    view.viewport.x = 0.5;
+    view.viewport.set(0.5, 0, 0.5, 1);
+    view.viewport.size.width = 0.5;
+    view.setViewport(0.5, 0, 0.5, 1);
+
+    expect(view.updateId).toBe(before);
+
+    view.destroy();
+  });
+
+  test('reset() restores the full-canvas viewport and bumps updateId even when nothing else changes', () => {
+    const view = new View(10, 20, 100, 200);
+
+    view.setViewport(0.5, 0, 0.5, 1);
+
+    // Same centre and same size, so neither of those reports a change: the
+    // viewport reset is the only mutation left to invalidate on.
+    const before = view.updateId;
+
+    view.reset(10, 20, 100, 200);
+
+    expect(view.viewport.equals(new Rectangle(0, 0, 1, 1))).toBe(true);
+    expect(view.updateId).not.toBe(before);
+
+    view.destroy();
+  });
+});
+
 describe('View — coordinate conversion', () => {
   // Centered camera over an 800×600 design space, matching the default camera.
   const centered = (): View => new View(400, 300, 800, 600);

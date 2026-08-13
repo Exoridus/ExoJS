@@ -73,7 +73,7 @@ export interface ViewOptions {
 export class View implements ObservableVectorOwner {
   private readonly _center: ObservableVector;
   private readonly _size: ObservableSize;
-  private readonly _viewport: Rectangle = new Rectangle(0, 0, 1, 1);
+  private readonly _viewport: Rectangle;
   private readonly _transform: Matrix = new Matrix();
   private readonly _inverseTransform: Matrix = new Matrix();
   private readonly _bounds: Bounds = new Bounds();
@@ -103,6 +103,7 @@ export class View implements ObservableVectorOwner {
   public constructor(centerX: number, centerY: number, width: number, height: number) {
     this._center = new ObservableVector(this, 0, centerX, centerY);
     this._size = new ObservableSize(this._setScalingDirty.bind(this), width, height);
+    this._viewport = new Rectangle(0, 0, 1, 1, this._setDirty.bind(this));
     this._zoomBaseWidth = width;
     this._zoomBaseHeight = height;
     this._flags.addMask(ViewFlags.Transform | ViewFlags.TransformInverse | ViewFlags.BoundingBox);
@@ -181,15 +182,22 @@ export class View implements ObservableVectorOwner {
     this.setRotation(rotation);
   }
 
+  /**
+   * The normalized (0..1) viewport rectangle this camera renders into.
+   *
+   * Returns the LIVE rectangle, and writing to it directly — `view.viewport.x =
+   * 0.5`, `view.viewport.set(…)`, `view.viewport.size.width = …` — is a
+   * supported way to move the viewport: the rectangle reports every mutation
+   * back here, so {@link updateId} advances exactly as it does for
+   * {@link setViewport}. Backends key their "may I keep the open pass" decision
+   * on that counter, and a viewport is a property of the pass as a whole.
+   */
   public get viewport(): Rectangle {
     return this._viewport;
   }
 
   public set viewport(viewport: Rectangle) {
-    if (!this._viewport.equals(viewport)) {
-      this._viewport.copy(viewport);
-      this._setDirty();
-    }
+    this._viewport.copy(viewport);
   }
 
   /**
@@ -254,10 +262,7 @@ export class View implements ObservableVectorOwner {
    * @param height - Height as a fraction of the canvas height.
    */
   public setViewport(x: number, y: number, width: number, height: number): this {
-    if (this._viewport.x !== x || this._viewport.y !== y || this._viewport.width !== width || this._viewport.height !== height) {
-      this._viewport.set(x, y, width, height);
-      this._setDirty();
-    }
+    this._viewport.set(x, y, width, height);
 
     return this;
   }
