@@ -132,6 +132,29 @@ describe('ImageLayerNode parallax', () => {
     expect(node.y).toBe(20);
   });
 
+  it('applies a uniform parallax scale during collection and restores caller scale', () => {
+    const node = new ImageLayerNode(makeLayer({ parallaxScale: 0.5 })).setScale(2, 3);
+    const setScale = vi.spyOn(node, 'setScale');
+
+    collect(node, mockBuilder());
+
+    expect(setScale).toHaveBeenNthCalledWith(1, 1, 1.5);
+    expect(setScale).toHaveBeenLastCalledWith(2, 3);
+    expect(node.scale.x).toBe(2);
+    expect(node.scale.y).toBe(3);
+    expect(node.cullable).toBe(false);
+  });
+
+  it('expands repeat coverage in local space when parallax scaling shrinks the node', () => {
+    const node = new ImageLayerNode(
+      makeLayer({ texture: fakeTexture(64, 64), repeatX: true, parallaxScale: 0.5 }),
+    );
+
+    collect(node, mockBuilder({ bounds: { x: 0, y: 0, width: 160, height: 64 } }));
+
+    expect(spriteOf(node).width).toBe(320);
+  });
+
   it('position is restored to the base offset after _collectContent', () => {
     const node = new ImageLayerNode(
       makeLayer({ offsetX: 10, offsetY: 20, parallaxX: 0.5, parallaxY: 0.5 }),

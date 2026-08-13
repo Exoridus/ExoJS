@@ -135,7 +135,7 @@
         },
         {
           "name": "state",
-          "signature": "state: \"idle\" | \"loading\" | \"ready\" | \"failed\" | \"queued\"",
+          "signature": "state: \"failed\" | \"idle\" | \"loading\" | \"queued\" | \"ready\"",
           "signatureTokens": [
             {
               "text": "state",
@@ -143,6 +143,14 @@
             },
             {
               "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"failed\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
               "kind": "punctuation"
             },
             {
@@ -162,23 +170,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"ready\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"failed\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
               "text": "\"queued\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"ready\"",
               "kind": "keyword"
             }
           ],

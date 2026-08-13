@@ -28,7 +28,7 @@
       "members": [
         {
           "name": "AudioAnalyserSource",
-          "signature": "AudioBus | Voice | MediaStream | AudioNode | null",
+          "signature": "AudioBus | AudioNode | MediaStream | Voice | null",
           "signatureTokens": [
             {
               "text": "AudioBus",
@@ -39,7 +39,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Voice",
+              "text": "AudioNode",
               "kind": "type"
             },
             {
@@ -55,7 +55,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "AudioNode",
+              "text": "Voice",
               "kind": "type"
             },
             {

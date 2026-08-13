@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "instance",
-          "signature": "instance?: SceneInstanceKind | \"all\"",
+          "signature": "instance?: \"all\" | SceneInstanceKind",
           "signatureTokens": [
             {
               "text": "instance",
@@ -45,16 +45,16 @@
               "kind": "punctuation"
             },
             {
-              "text": "SceneInstanceKind",
-              "kind": "type"
+              "text": "\"all\"",
+              "kind": "keyword"
             },
             {
               "text": " | ",
               "kind": "punctuation"
             },
             {
-              "text": "\"all\"",
-              "kind": "keyword"
+              "text": "SceneInstanceKind",
+              "kind": "type"
             }
           ],
           "params": [],

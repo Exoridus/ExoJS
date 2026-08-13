@@ -273,6 +273,8 @@ export interface ObjectLayerOptions {
    * `0.5` = half speed (farther away), `0` = stationary. Default `1`.
    */
   readonly parallaxY?: number;
+  /** Uniform parallax scale around the layer origin. Default `1`. */
+  readonly parallaxScale?: number;
   /**
    * Multiplicative layer tint as a `0xRRGGBB` integer, or `null` for no tint
    * (Tiled `tintcolor`). Default `null`.
@@ -298,7 +300,8 @@ export interface ObjectLayerOptions {
  *
  * The presentation fields the source format attaches to a layer —
  * {@link visible}, {@link opacity}, {@link offsetX}/{@link offsetY},
- * {@link parallaxX}/{@link parallaxY} and {@link tintColor} — are carried
+ * {@link parallaxX}/{@link parallaxY}, {@link parallaxScale}, and
+ * {@link tintColor} — are carried
  * through in full, with any enclosing group layers' contribution already
  * folded in, so an object layer describes the same placement and shading its
  * neighbouring tile and image layers do. Nothing here acts on them: code that
@@ -351,6 +354,8 @@ export class ObjectLayer<S extends ObjectSchema = ObjectSchema> {
   public readonly parallaxX: number;
   /** Parallax scroll factor on the Y axis. See {@link ObjectLayer.parallaxX}. */
   public readonly parallaxY: number;
+  /** Uniform scale applied around the layer origin by consumers that render this data-only layer. */
+  public readonly parallaxScale: number;
   /**
    * Multiplicative layer tint as `0xRRGGBB`, or `null` for no tint. Carried
    * from the source map (including the accumulated tint of any enclosing group
@@ -375,6 +380,10 @@ export class ObjectLayer<S extends ObjectSchema = ObjectSchema> {
     this.offsetY = options.offsetY ?? 0;
     this.parallaxX = options.parallaxX ?? 1;
     this.parallaxY = options.parallaxY ?? 1;
+    this.parallaxScale = options.parallaxScale ?? 1;
+    if (!Number.isFinite(this.parallaxScale) || this.parallaxScale <= 0) {
+      throw new Error('ObjectLayer parallaxScale must be a positive finite number.');
+    }
     this.tintColor = options.tintColor ?? null;
     this.drawOrder = options.drawOrder ?? 'topdown';
     this.properties = options.properties ? Object.freeze({ ...options.properties }) : Object.freeze({});

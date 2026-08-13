@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "extrusion",
-          "signature": "extrusion?: number | TextureRegionInsets",
+          "signature": "extrusion?: TextureRegionInsets | number",
           "signatureTokens": [
             {
               "text": "extrusion",
@@ -45,16 +45,16 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
+              "text": "TextureRegionInsets",
+              "kind": "type"
             },
             {
               "text": " | ",
               "kind": "punctuation"
             },
             {
-              "text": "TextureRegionInsets",
-              "kind": "type"
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],

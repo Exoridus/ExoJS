@@ -695,7 +695,7 @@
         },
         {
           "name": "fromColor",
-          "signature": "fromColor(color: string | Color, size: number): Texture",
+          "signature": "fromColor(color: Color | string, size: number): Texture",
           "signatureTokens": [
             {
               "text": "fromColor",
@@ -714,16 +714,16 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
-              "kind": "keyword"
+              "text": "Color",
+              "kind": "type"
             },
             {
               "text": " | ",
               "kind": "punctuation"
             },
             {
-              "text": "Color",
-              "kind": "type"
+              "text": "string",
+              "kind": "keyword"
             },
             {
               "text": ", ",
@@ -757,7 +757,7 @@
           "params": [
             {
               "name": "color",
-              "type": "string | Color",
+              "type": "Color | string",
               "optional": false
             },
             {

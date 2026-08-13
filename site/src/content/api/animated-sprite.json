@@ -33,7 +33,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(texture: Texture | RenderTexture | null, clips?: Readonly<Record<string, AnimatedSpriteClipDefinition>>): AnimatedSprite",
+          "signature": "new(texture: RenderTexture | Texture | null, clips?: Readonly<Record<string, AnimatedSpriteClipDefinition>>): AnimatedSprite",
           "signatureTokens": [
             {
               "text": "new",
@@ -52,7 +52,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Texture",
+              "text": "RenderTexture",
               "kind": "type"
             },
             {
@@ -60,7 +60,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "RenderTexture",
+              "text": "Texture",
               "kind": "type"
             },
             {
@@ -139,7 +139,7 @@
           "params": [
             {
               "name": "texture",
-              "type": "Texture | RenderTexture | null",
+              "type": "RenderTexture | Texture | null",
               "optional": false
             },
             {
@@ -1889,7 +1889,7 @@
         },
         {
           "name": "setTexture",
-          "signature": "setTexture(texture: Texture | RenderTexture | null): this",
+          "signature": "setTexture(texture: RenderTexture | Texture | null): this",
           "signatureTokens": [
             {
               "text": "setTexture",
@@ -1908,7 +1908,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Texture",
+              "text": "RenderTexture",
               "kind": "type"
             },
             {
@@ -1916,7 +1916,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "RenderTexture",
+              "text": "Texture",
               "kind": "type"
             },
             {
@@ -1943,7 +1943,7 @@
           "params": [
             {
               "name": "texture",
-              "type": "Texture | RenderTexture | null",
+              "type": "RenderTexture | Texture | null",
               "optional": false
             }
           ],
@@ -2399,7 +2399,7 @@
         },
         {
           "name": "cursor",
-          "signature": "cursor: string | null",
+          "signature": "cursor: null | string",
           "signatureTokens": [
             {
               "text": "cursor",
@@ -2410,7 +2410,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
+              "text": "null",
               "kind": "keyword"
             },
             {
@@ -2418,7 +2418,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "null",
+              "text": "string",
               "kind": "keyword"
             }
           ],
@@ -2503,7 +2503,7 @@
         },
         {
           "name": "name",
-          "signature": "name: string | null",
+          "signature": "name: null | string",
           "signatureTokens": [
             {
               "text": "name",
@@ -2514,7 +2514,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
+              "text": "null",
               "kind": "keyword"
             },
             {
@@ -2522,7 +2522,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "null",
+              "text": "string",
               "kind": "keyword"
             }
           ],
@@ -2637,7 +2637,7 @@
         },
         {
           "name": "clipShape",
-          "signature": "clipShape: Rectangle | Geometry | null",
+          "signature": "clipShape: Geometry | Rectangle | null",
           "signatureTokens": [
             {
               "text": "clipShape",
@@ -2648,7 +2648,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Rectangle",
+              "text": "Geometry",
               "kind": "type"
             },
             {
@@ -2656,7 +2656,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Geometry",
+              "text": "Rectangle",
               "kind": "type"
             },
             {
@@ -2724,7 +2724,7 @@
         },
         {
           "name": "currentClip",
-          "signature": "currentClip: string | null",
+          "signature": "currentClip: null | string",
           "signatureTokens": [
             {
               "text": "currentClip",
@@ -2735,7 +2735,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
+              "text": "null",
               "kind": "keyword"
             },
             {
@@ -2743,7 +2743,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "null",
+              "text": "string",
               "kind": "keyword"
             }
           ],
@@ -3201,7 +3201,7 @@
         },
         {
           "name": "texture",
-          "signature": "texture: Texture | RenderTexture | null",
+          "signature": "texture: RenderTexture | Texture | null",
           "signatureTokens": [
             {
               "text": "texture",
@@ -3212,7 +3212,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Texture",
+              "text": "RenderTexture",
               "kind": "type"
             },
             {
@@ -3220,7 +3220,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "RenderTexture",
+              "text": "Texture",
               "kind": "type"
             },
             {

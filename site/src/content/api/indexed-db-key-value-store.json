@@ -31,7 +31,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(nameOrOptions: string | IndexedDbKeyValueStoreOptions): IndexedDbKeyValueStore",
+          "signature": "new(nameOrOptions: IndexedDbKeyValueStoreOptions | string): IndexedDbKeyValueStore",
           "signatureTokens": [
             {
               "text": "new",
@@ -50,16 +50,16 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
-              "kind": "keyword"
+              "text": "IndexedDbKeyValueStoreOptions",
+              "kind": "type"
             },
             {
               "text": " | ",
               "kind": "punctuation"
             },
             {
-              "text": "IndexedDbKeyValueStoreOptions",
-              "kind": "type"
+              "text": "string",
+              "kind": "keyword"
             },
             {
               "text": ")",
@@ -77,7 +77,7 @@
           "params": [
             {
               "name": "nameOrOptions",
-              "type": "string | IndexedDbKeyValueStoreOptions",
+              "type": "IndexedDbKeyValueStoreOptions | string",
               "optional": false
             }
           ],

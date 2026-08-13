@@ -72,7 +72,7 @@
         },
         {
           "name": "productId",
-          "signature": "productId: string | null",
+          "signature": "productId: null | string",
           "signatureTokens": [
             {
               "text": "productId",
@@ -83,7 +83,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
+              "text": "null",
               "kind": "keyword"
             },
             {
@@ -91,7 +91,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "null",
+              "text": "string",
               "kind": "keyword"
             }
           ],
@@ -101,7 +101,7 @@
         },
         {
           "name": "productKey",
-          "signature": "productKey: string | null",
+          "signature": "productKey: null | string",
           "signatureTokens": [
             {
               "text": "productKey",
@@ -112,7 +112,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
+              "text": "null",
               "kind": "keyword"
             },
             {
@@ -120,7 +120,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "null",
+              "text": "string",
               "kind": "keyword"
             }
           ],
@@ -130,7 +130,7 @@
         },
         {
           "name": "vendorId",
-          "signature": "vendorId: string | null",
+          "signature": "vendorId: null | string",
           "signatureTokens": [
             {
               "text": "vendorId",
@@ -141,7 +141,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
+              "text": "null",
               "kind": "keyword"
             },
             {
@@ -149,7 +149,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "null",
+              "text": "string",
               "kind": "keyword"
             }
           ],

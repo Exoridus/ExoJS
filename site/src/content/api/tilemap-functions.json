@@ -827,7 +827,7 @@
         },
         {
           "name": "unpackTile",
-          "signature": "unpackTile(packed: number): { localTileId: number; tilesetIndex: number; transform: TileTransform } | null",
+          "signature": "unpackTile(packed: number): null | { localTileId: number; tilesetIndex: number; transform: TileTransform }",
           "signatureTokens": [
             {
               "text": "unpackTile",
@@ -855,6 +855,14 @@
             },
             {
               "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
               "kind": "punctuation"
             },
             {
@@ -908,14 +916,6 @@
             {
               "text": " }",
               "kind": "punctuation"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "null",
-              "kind": "keyword"
             }
           ],
           "params": [
@@ -925,7 +925,7 @@
               "optional": false
             }
           ],
-          "returnType": "{ localTileId: number; tilesetIndex: number; transform: TileTransform } | null",
+          "returnType": "null | { localTileId: number; tilesetIndex: number; transform: TileTransform }",
           "description": "Decode a packed word into its components. Returns null for an empty cell (packed === 0)."
         }
       ],

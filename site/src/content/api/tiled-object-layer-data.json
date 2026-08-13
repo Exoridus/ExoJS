@@ -55,7 +55,7 @@
         },
         {
           "name": "draworder",
-          "signature": "draworder?: \"topdown\" | \"index\"",
+          "signature": "draworder?: \"index\" | \"topdown\"",
           "signatureTokens": [
             {
               "text": "draworder",
@@ -70,7 +70,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"topdown\"",
+              "text": "\"index\"",
               "kind": "keyword"
             },
             {
@@ -78,7 +78,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"index\"",
+              "text": "\"topdown\"",
               "kind": "keyword"
             }
           ],

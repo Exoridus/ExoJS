@@ -30,11 +30,11 @@
       "members": [
         {
           "name": "CatalogEntry",
-          "signature": "string | Asset<unknown> | AnyAssetConfig",
+          "signature": "AnyAssetConfig | Asset<unknown> | string",
           "signatureTokens": [
             {
-              "text": "string",
-              "kind": "keyword"
+              "text": "AnyAssetConfig",
+              "kind": "type"
             },
             {
               "text": " | ",
@@ -61,8 +61,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "AnyAssetConfig",
-              "kind": "type"
+              "text": "string",
+              "kind": "keyword"
             }
           ],
           "params": [],

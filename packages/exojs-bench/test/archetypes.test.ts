@@ -70,6 +70,19 @@ describe('ARCHETYPES', () => {
     expect(byId['static-heavy']!.mutationFraction).toBe(0);
     expect(byId['dynamic-heavy']!.mutationFraction).toBeGreaterThan(0);
   });
+
+  test('separates retained-recordable mesh switches from array-mesh repacking', () => {
+    const byId = Object.fromEntries(ARCHETYPES.map(a => [a.id, a]));
+    const staticMesh = byId['mixed-sprite-mesh-static']!;
+    const arrayMesh = byId['mixed-sprite-mesh-array']!;
+
+    expect(staticMesh.meshEvery).toBe(64);
+    expect(arrayMesh.meshEvery).toBe(staticMesh.meshEvery);
+    expect(staticMesh.meshRunLength).toBe(4);
+    expect(arrayMesh.meshRunLength).toBe(staticMesh.meshRunLength);
+    expect(staticMesh.meshStorage).toBe('shared-static-geometry');
+    expect(arrayMesh.meshStorage).toBe('array');
+  });
 });
 
 describe('buildMatrix', () => {

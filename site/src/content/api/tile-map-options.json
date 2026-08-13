@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "backgroundColor",
-          "signature": "backgroundColor?: number | null",
+          "signature": "backgroundColor?: null | number",
           "signatureTokens": [
             {
               "text": "backgroundColor",
@@ -45,7 +45,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
+              "text": "null",
               "kind": "keyword"
             },
             {
@@ -53,7 +53,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "null",
+              "text": "number",
               "kind": "keyword"
             }
           ],

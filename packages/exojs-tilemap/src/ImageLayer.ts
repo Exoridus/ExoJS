@@ -26,6 +26,8 @@ export interface ImageLayerOptions {
   readonly parallaxX?: number;
   /** Vertical parallax factor. Default `1`. */
   readonly parallaxY?: number;
+  /** Uniform parallax scale around the layer origin. Default `1`. */
+  readonly parallaxScale?: number;
   /** Tint colour as `0xRRGGBB`, or `null`. Default `null`. */
   readonly tintColor?: number | null;
   /** Whether the image repeats horizontally. Default `false`. */
@@ -76,6 +78,8 @@ export class ImageLayer {
   public readonly parallaxX: number;
   /** Vertical parallax factor. */
   public readonly parallaxY: number;
+  /** Uniform scale applied around the layer origin during parallax rendering. */
+  public readonly parallaxScale: number;
   /** Tint colour as `0xRRGGBB`, or `null`. */
   public readonly tintColor: number | null;
   /** Whether the image repeats horizontally. */
@@ -97,6 +101,10 @@ export class ImageLayer {
     this.offsetY = options.offsetY ?? 0;
     this.parallaxX = options.parallaxX ?? 1;
     this.parallaxY = options.parallaxY ?? 1;
+    this.parallaxScale = options.parallaxScale ?? 1;
+    if (!Number.isFinite(this.parallaxScale) || this.parallaxScale <= 0) {
+      throw new Error('ImageLayer parallaxScale must be a positive finite number.');
+    }
     this.tintColor = options.tintColor ?? null;
     this.repeatX = options.repeatX ?? false;
     this.repeatY = options.repeatY ?? false;

@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(minX: number, maxX: number, minY: number, maxY: number, mode: \"volume\" | \"edge\"): BoxArea",
+          "signature": "new(minX: number, maxX: number, minY: number, maxY: number, mode: \"edge\" | \"volume\"): BoxArea",
           "signatureTokens": [
             {
               "text": "new",
@@ -113,7 +113,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"volume\"",
+              "text": "\"edge\"",
               "kind": "keyword"
             },
             {
@@ -121,7 +121,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"edge\"",
+              "text": "\"volume\"",
               "kind": "keyword"
             },
             {
@@ -160,7 +160,7 @@
             },
             {
               "name": "mode",
-              "type": "\"volume\" | \"edge\"",
+              "type": "\"edge\" | \"volume\"",
               "optional": false
             }
           ],
@@ -318,7 +318,7 @@
         },
         {
           "name": "mode",
-          "signature": "mode: \"volume\" | \"edge\"",
+          "signature": "mode: \"edge\" | \"volume\"",
           "signatureTokens": [
             {
               "text": "mode",
@@ -329,7 +329,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"volume\"",
+              "text": "\"edge\"",
               "kind": "keyword"
             },
             {
@@ -337,7 +337,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"edge\"",
+              "text": "\"volume\"",
               "kind": "keyword"
             }
           ],

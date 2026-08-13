@@ -31,10 +31,10 @@
       "members": [
         {
           "name": "StyleChangeHint",
-          "signature": "\"tint\" | \"layout\" | \"font\"",
+          "signature": "\"font\" | \"layout\" | \"tint\"",
           "signatureTokens": [
             {
-              "text": "\"tint\"",
+              "text": "\"font\"",
               "kind": "keyword"
             },
             {
@@ -50,7 +50,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"font\"",
+              "text": "\"tint\"",
               "kind": "keyword"
             }
           ],

@@ -122,16 +122,41 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   // call, so the frame cost scaled with the CALL count rather than the instance
   // count. ExoJS-only — see `ArchetypeSpec.batchSize`.
   { id: 'instanced-batch', nodeCounts: GPU_BOUND_COUNTS, nestingDepth: 1, textureCount: 1, mutationFraction: 0, cullingEnabled: false, batchSize: 64 },
-  // The only archetype that puts TWO renderers in one frame. Every other one
-  // draws through a single renderer, so the cost of handing the draw stream from
-  // one to the next — a pass end plus a `queue.submit` per switch on WebGPU —
-  // was invisible to the whole matrix. `meshEvery: 64` mirrors the blend and
-  // material plateaus in switch density (a few hundred in a 25k frame, the shape
-  // a real mixed scene of sprites plus custom geometry produces) while keeping
-  // the mesh leaf count low: the default mesh path draws one call per leaf, so
-  // an even sprite/mesh split would measure per-mesh draw-call cost instead of
-  // the switch. ExoJS-only — see `ArchetypeSpec.meshEvery`.
-  { id: 'mixed-sprite-mesh', nodeCounts: GPU_BOUND_COUNTS, nestingDepth: 2, textureCount: 1, mutationFraction: 0, cullingEnabled: false, meshEvery: 64 },
+  // The only archetypes that put TWO renderers in one frame. Every other one
+  // draws through a single renderer, so the cost of handing the draw stream
+  // from one to the next was invisible to the matrix. Both use the same
+  // `meshEvery: 64` switch density and four global mesh leaves per plateau;
+  // their only intentional difference is mesh storage. Leaves are distributed
+  // round-robin over the depth-2 spine, so four global leaves become two
+  // adjacent meshes in each traversal stream. WebGPU needs that run of two
+  // identical static meshes to select its instanced, retained-recordable path.
+  // The shared static geometry case therefore isolates renderer-switch/replay
+  // cost. The array case cannot be retained and instead isolates per-leaf
+  // repacking/residency cost. Keeping distinct
+  // IDs prevents results from the old ambiguous archetype being compared as if
+  // its semantics had not changed. ExoJS-only — see `ArchetypeSpec.meshEvery`.
+  {
+    id: 'mixed-sprite-mesh-static',
+    nodeCounts: GPU_BOUND_COUNTS,
+    nestingDepth: 2,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    meshEvery: 64,
+    meshRunLength: 4,
+    meshStorage: 'shared-static-geometry',
+  },
+  {
+    id: 'mixed-sprite-mesh-array',
+    nodeCounts: GPU_BOUND_COUNTS,
+    nestingDepth: 2,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    meshEvery: 64,
+    meshRunLength: 4,
+    meshStorage: 'array',
+  },
   {
     id: 'mixed-material-atlased',
     nodeCounts: GPU_BOUND_COUNTS,

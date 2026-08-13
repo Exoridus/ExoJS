@@ -30,50 +30,10 @@
       "members": [
         {
           "name": "WidgetAnchor",
-          "signature": "\"top-left\" | \"top\" | \"top-right\" | \"left\" | \"center\" | \"right\" | \"bottom-left\" | \"bottom\" | \"bottom-right\"",
+          "signature": "\"bottom\" | \"bottom-left\" | \"bottom-right\" | \"center\" | \"left\" | \"right\" | \"top\" | \"top-left\" | \"top-right\"",
           "signatureTokens": [
             {
-              "text": "\"top-left\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"top\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"top-right\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"left\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"center\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"right\"",
+              "text": "\"bottom\"",
               "kind": "keyword"
             },
             {
@@ -89,7 +49,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"bottom\"",
+              "text": "\"bottom-right\"",
               "kind": "keyword"
             },
             {
@@ -97,7 +57,47 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"bottom-right\"",
+              "text": "\"center\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"left\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"right\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"top\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"top-left\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"top-right\"",
               "kind": "keyword"
             }
           ],

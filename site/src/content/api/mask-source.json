@@ -32,7 +32,7 @@
       "members": [
         {
           "name": "MaskSource",
-          "signature": "Rectangle | Texture | RenderTexture | RenderNode | null",
+          "signature": "Rectangle | RenderNode | RenderTexture | Texture | null",
           "signatureTokens": [
             {
               "text": "Rectangle",
@@ -43,7 +43,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Texture",
+              "text": "RenderNode",
               "kind": "type"
             },
             {
@@ -59,7 +59,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "RenderNode",
+              "text": "Texture",
               "kind": "type"
             },
             {

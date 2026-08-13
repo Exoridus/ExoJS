@@ -31,10 +31,10 @@
       "members": [
         {
           "name": "DistanceModel",
-          "signature": "\"linear\" | \"inverse\" | \"exponential\"",
+          "signature": "\"exponential\" | \"inverse\" | \"linear\"",
           "signatureTokens": [
             {
-              "text": "\"linear\"",
+              "text": "\"exponential\"",
               "kind": "keyword"
             },
             {
@@ -50,7 +50,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"exponential\"",
+              "text": "\"linear\"",
               "kind": "keyword"
             }
           ],

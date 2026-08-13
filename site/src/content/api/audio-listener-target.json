@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "AudioListenerTarget",
-          "signature": "SceneNode | View | { x: number; y: number } | null",
+          "signature": "SceneNode | View | null | { x: number; y: number }",
           "signatureTokens": [
             {
               "text": "SceneNode",
@@ -43,6 +43,14 @@
             {
               "text": "View",
               "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
             },
             {
               "text": " | ",
@@ -83,14 +91,6 @@
             {
               "text": " }",
               "kind": "punctuation"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "null",
-              "kind": "keyword"
             }
           ],
           "params": [],

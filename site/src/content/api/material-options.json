@@ -110,7 +110,7 @@
         },
         {
           "name": "textures",
-          "signature": "textures?: Record<string, Texture | RenderTexture>",
+          "signature": "textures?: Record<string, RenderTexture | Texture>",
           "signatureTokens": [
             {
               "text": "textures",
@@ -141,7 +141,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Texture",
+              "text": "RenderTexture",
               "kind": "type"
             },
             {
@@ -149,7 +149,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "RenderTexture",
+              "text": "Texture",
               "kind": "type"
             },
             {

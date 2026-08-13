@@ -1,16 +1,16 @@
 {
   "title": "ObjectLayer",
-  "description": "A data-only layer of TileMapObjects — spawn points, trigger zones, collision regions, markers. Object layers are not rendered by the tile renderer; they are parsed and exposed for gameplay use (e.g. building physics colliders, placing entities). The presentation fields the source format attaches to a layer — visible, opacity, offsetX/offsetY, parallaxX/parallaxY and tintColor — are carried through in full, with any enclosing group layers' contribution already folded in, so an object layer describes the same placement and shading its neighbouring tile and image layers do. Nothing here acts on them: code that draws these objects itself is what applies them. Query with query (untyped, fully back-compatible) or, when an ObjectSchema type argument `S` is supplied, with the typed accessors byType, byKind, and where — these narrow `properties` to the developer-declared shape. The schema is **opt-in**: the default type parameter reproduces the original untyped behaviour, so `new ObjectLayer(options)` and `map.getObjectLayer('x')` are unchanged.",
+  "description": "A data-only layer of TileMapObjects — spawn points, trigger zones, collision regions, markers. Object layers are not rendered by the tile renderer; they are parsed and exposed for gameplay use (e.g. building physics colliders, placing entities). The presentation fields the source format attaches to a layer — visible, opacity, offsetX/offsetY, parallaxX/parallaxY, parallaxScale, and tintColor — are carried through in full, with any enclosing group layers' contribution already folded in, so an object layer describes the same placement and shading its neighbouring tile and image layers do. Nothing here acts on them: code that draws these objects itself is what applies them. Query with query (untyped, fully back-compatible) or, when an ObjectSchema type argument `S` is supplied, with the typed accessors byType, byKind, and where — these narrow `properties` to the developer-declared shape. The schema is **opt-in**: the default type parameter reproduces the original untyped behaviour, so `new ObjectLayer(options)` and `map.getObjectLayer('x')` are unchanged.",
   "symbol": "ObjectLayer",
   "kind": "class",
   "subsystem": "tilemap",
   "importPath": "@codexo/exojs-tilemap",
   "tier": "advanced",
-  "memberCount": 21,
+  "memberCount": 22,
   "counts": {
     "constructors": 1,
     "methods": 6,
-    "properties": 14,
+    "properties": 15,
     "events": 0
   },
   "sections": [
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "A data-only layer of TileMapObjects — spawn points, trigger zones, collision regions, markers. Object layers are not rendered by the tile renderer; they are parsed and exposed for gameplay use (e.g. building physics colliders, placing entities).",
-        "The presentation fields the source format attaches to a layer — visible, opacity, offsetX/offsetY, parallaxX/parallaxY and tintColor — are carried through in full, with any enclosing group layers' contribution already folded in, so an object layer describes the same placement and shading its neighbouring tile and image layers do. Nothing here acts on them: code that draws these objects itself is what applies them.",
+        "The presentation fields the source format attaches to a layer — visible, opacity, offsetX/offsetY, parallaxX/parallaxY, parallaxScale, and tintColor — are carried through in full, with any enclosing group layers' contribution already folded in, so an object layer describes the same placement and shading its neighbouring tile and image layers do. Nothing here acts on them: code that draws these objects itself is what applies them.",
         "Query with query (untyped, fully back-compatible) or, when an ObjectSchema type argument `S` is supplied, with the typed accessors byType, byKind, and where — these narrow `properties` to the developer-declared shape. The schema is **opt-in**: the default type parameter reproduces the original untyped behaviour, so `new ObjectLayer(options)` and `map.getObjectLayer('x')` are unchanged."
       ],
       "importLine": "import { ObjectLayer } from '@codexo/exojs-tilemap'",
@@ -100,7 +100,7 @@
       "members": [
         {
           "name": "byKind",
-          "signature": "byKind(kind: K): Extract<RectangleObject<TileProperties>, { kind: K }> | Extract<EllipseObject<TileProperties>, { kind: K }> | Extract<PointObject<TileProperties>, { kind: K }> | Extract<PolygonObject<TileProperties>, { kind: K }> | Extract<PolylineObject<TileProperties>, { kind: K }> | Extract<TileObject<TileProperties>, { kind: K }> | Extract<TextObject<TileProperties>, { kind: K }>[]",
+          "signature": "byKind(kind: K): Extract<EllipseObject<TileProperties>, { kind: K }> | Extract<PointObject<TileProperties>, { kind: K }> | Extract<PolygonObject<TileProperties>, { kind: K }> | Extract<PolylineObject<TileProperties>, { kind: K }> | Extract<RectangleObject<TileProperties>, { kind: K }> | Extract<TextObject<TileProperties>, { kind: K }> | Extract<TileObject<TileProperties>, { kind: K }>[]",
           "signatureTokens": [
             {
               "text": "byKind",
@@ -128,62 +128,6 @@
             },
             {
               "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Extract",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "RectangleObject",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "TileProperties",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "{ ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "kind",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "K",
-              "kind": "type"
-            },
-            {
-              "text": " }",
-              "kind": "punctuation"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": " | ",
               "kind": "punctuation"
             },
             {
@@ -419,7 +363,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "TileObject",
+              "text": "RectangleObject",
               "kind": "type"
             },
             {
@@ -519,6 +463,62 @@
               "kind": "punctuation"
             },
             {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Extract",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileObject",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileProperties",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "kind",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "K",
+              "kind": "type"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
               "text": "[]",
               "kind": "punctuation"
             }
@@ -530,7 +530,7 @@
               "optional": false
             }
           ],
-          "returnType": "Extract<RectangleObject<TileProperties>, { kind: K }> | Extract<EllipseObject<TileProperties>, { kind: K }> | Extract<PointObject<TileProperties>, { kind: K }> | Extract<PolygonObject<TileProperties>, { kind: K }> | Extract<PolylineObject<TileProperties>, { kind: K }> | Extract<TileObject<TileProperties>, { kind: K }> | Extract<TextObject<TileProperties>, { kind: K }>[]",
+          "returnType": "Extract<EllipseObject<TileProperties>, { kind: K }> | Extract<PointObject<TileProperties>, { kind: K }> | Extract<PolygonObject<TileProperties>, { kind: K }> | Extract<PolylineObject<TileProperties>, { kind: K }> | Extract<RectangleObject<TileProperties>, { kind: K }> | Extract<TextObject<TileProperties>, { kind: K }> | Extract<TileObject<TileProperties>, { kind: K }>[]",
           "description": "Objects of the given geometry ObjectKind, narrowed to that geometry's member type (e.g. byKind(ObjectKind.Polygon) yields PolygonObjects with their points). Returns a fresh array."
         },
         {
@@ -965,7 +965,7 @@
         },
         {
           "name": "drawOrder",
-          "signature": "drawOrder: \"topdown\" | \"index\"",
+          "signature": "drawOrder: \"index\" | \"topdown\"",
           "signatureTokens": [
             {
               "text": "drawOrder",
@@ -976,7 +976,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"topdown\"",
+              "text": "\"index\"",
               "kind": "keyword"
             },
             {
@@ -984,7 +984,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"index\"",
+              "text": "\"topdown\"",
               "kind": "keyword"
             }
           ],
@@ -1164,6 +1164,27 @@
           "description": "Layer opacity in [0, 1]."
         },
         {
+          "name": "parallaxScale",
+          "signature": "parallaxScale: number",
+          "signatureTokens": [
+            {
+              "text": "parallaxScale",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Uniform scale applied around the layer origin by consumers that render this data-only layer."
+        },
+        {
           "name": "parallaxX",
           "signature": "parallaxX: number",
           "signatureTokens": [
@@ -1228,7 +1249,7 @@
         },
         {
           "name": "tintColor",
-          "signature": "tintColor: number | null",
+          "signature": "tintColor: null | number",
           "signatureTokens": [
             {
               "text": "tintColor",
@@ -1239,7 +1260,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
+              "text": "null",
               "kind": "keyword"
             },
             {
@@ -1247,7 +1268,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "null",
+              "text": "number",
               "kind": "keyword"
             }
           ],

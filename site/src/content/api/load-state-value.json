@@ -30,8 +30,16 @@
       "members": [
         {
           "name": "LoadStateValue",
-          "signature": "\"idle\" | \"loading\" | \"ready\" | \"failed\"",
+          "signature": "\"failed\" | \"idle\" | \"loading\" | \"ready\"",
           "signatureTokens": [
+            {
+              "text": "\"failed\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
             {
               "text": "\"idle\"",
               "kind": "keyword"
@@ -50,14 +58,6 @@
             },
             {
               "text": "\"ready\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"failed\"",
               "kind": "keyword"
             }
           ],

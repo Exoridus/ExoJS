@@ -592,6 +592,10 @@ describe('TileLayer', () => {
       id: 0, name: 'l', width: 4, height: 4,
       tileWidth: 16, tileHeight: 16, tilesets: [ts], parallaxY: Infinity,
     })).toThrow(/parallax must be finite/);
+    expect(() => new TileLayer({
+      id: 0, name: 'l', width: 4, height: 4,
+      tileWidth: 16, tileHeight: 16, tilesets: [ts], parallaxScale: 0,
+    })).toThrow(/parallaxScale must be a positive finite number/);
   });
 
   it('inBounds check', () => {
@@ -1268,6 +1272,7 @@ describe('TileLayer', () => {
     });
     expect(layer.parallaxX).toBe(1);
     expect(layer.parallaxY).toBe(1);
+    expect(layer.parallaxScale).toBe(1);
   });
 
   it('parallaxX and parallaxY can be set via options', () => {
@@ -1276,9 +1281,11 @@ describe('TileLayer', () => {
       tileWidth: 16, tileHeight: 16, tilesets: [ts],
       parallaxX: 0.5,
       parallaxY: 0.25,
+      parallaxScale: 0.5,
     });
     expect(layer.parallaxX).toBe(0.5);
     expect(layer.parallaxY).toBe(0.25);
+    expect(layer.parallaxScale).toBe(0.5);
   });
 
   it('parallaxX = 0.0 is valid (stationary layer)', () => {

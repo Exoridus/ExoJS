@@ -2374,7 +2374,7 @@
         },
         {
           "name": "cursor",
-          "signature": "cursor: string | null",
+          "signature": "cursor: null | string",
           "signatureTokens": [
             {
               "text": "cursor",
@@ -2385,7 +2385,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
+              "text": "null",
               "kind": "keyword"
             },
             {
@@ -2393,7 +2393,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "null",
+              "text": "string",
               "kind": "keyword"
             }
           ],
@@ -2478,7 +2478,7 @@
         },
         {
           "name": "name",
-          "signature": "name: string | null",
+          "signature": "name: null | string",
           "signatureTokens": [
             {
               "text": "name",
@@ -2489,7 +2489,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
+              "text": "null",
               "kind": "keyword"
             },
             {
@@ -2497,7 +2497,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "null",
+              "text": "string",
               "kind": "keyword"
             }
           ],
@@ -2624,7 +2624,7 @@
         },
         {
           "name": "clipShape",
-          "signature": "clipShape: Rectangle | Geometry | null",
+          "signature": "clipShape: Geometry | Rectangle | null",
           "signatureTokens": [
             {
               "text": "clipShape",
@@ -2635,7 +2635,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Rectangle",
+              "text": "Geometry",
               "kind": "type"
             },
             {
@@ -2643,7 +2643,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Geometry",
+              "text": "Rectangle",
               "kind": "type"
             },
             {
@@ -2661,7 +2661,7 @@
         },
         {
           "name": "colors",
-          "signature": "colors: Readonly<Record<\"normal\" | \"hover\" | \"pressed\" | \"disabled\", Color>>",
+          "signature": "colors: Readonly<Record<\"disabled\" | \"hover\" | \"normal\" | \"pressed\", Color>>",
           "signatureTokens": [
             {
               "text": "colors",
@@ -2688,7 +2688,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"normal\"",
+              "text": "\"disabled\"",
               "kind": "keyword"
             },
             {
@@ -2704,7 +2704,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"pressed\"",
+              "text": "\"normal\"",
               "kind": "keyword"
             },
             {
@@ -2712,7 +2712,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"disabled\"",
+              "text": "\"pressed\"",
               "kind": "keyword"
             },
             {

@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "TileCollisionShapeKind",
-          "signature": "typeof ObjectKind.Rectangle | typeof ObjectKind.Ellipse | typeof ObjectKind.Polygon | typeof ObjectKind.Polyline | typeof ObjectKind.Point",
+          "signature": "typeof ObjectKind.Ellipse | typeof ObjectKind.Point | typeof ObjectKind.Polygon | typeof ObjectKind.Polyline | typeof ObjectKind.Rectangle",
           "signatureTokens": [
             {
               "text": "typeof",
@@ -41,7 +41,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "ObjectKind.Rectangle",
+              "text": "ObjectKind.Ellipse",
               "kind": "type"
             },
             {
@@ -57,7 +57,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "ObjectKind.Ellipse",
+              "text": "ObjectKind.Point",
               "kind": "type"
             },
             {
@@ -105,7 +105,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "ObjectKind.Point",
+              "text": "ObjectKind.Rectangle",
               "kind": "type"
             }
           ],

@@ -30,10 +30,10 @@
       "members": [
         {
           "name": "AtlasMode",
-          "signature": "\"sdf\" | \"color\"",
+          "signature": "\"color\" | \"sdf\"",
           "signatureTokens": [
             {
-              "text": "\"sdf\"",
+              "text": "\"color\"",
               "kind": "keyword"
             },
             {
@@ -41,7 +41,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"color\"",
+              "text": "\"sdf\"",
               "kind": "keyword"
             }
           ],

@@ -59,6 +59,11 @@ export interface TileLayerOptions {
    * `0.5` = half speed (farther away), `0.0` = stationary. Default 1.
    */
   readonly parallaxY?: number;
+  /**
+   * Uniform scale applied together with the camera-relative parallax shift.
+   * `1` keeps the layer at its authored size. Default `1`.
+   */
+  readonly parallaxScale?: number;
   /** Layer class/type string (Tiled `class`). Defaults to `''`. */
   readonly class?: string;
   /**
@@ -110,6 +115,16 @@ interface ResolvedTileLayerOptions {
   readonly offsetY: number;
   readonly parallaxX: number;
   readonly parallaxY: number;
+  readonly parallaxScale: number;
+}
+
+/** Resolve and validate the optional uniform parallax scale. */
+function resolveParallaxScale(value = 1): number {
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new Error('TileLayer parallaxScale must be a positive finite number.');
+  }
+
+  return value;
 }
 
 /**
@@ -152,7 +167,9 @@ function validateTileLayerOptions(options: TileLayerOptions): ResolvedTileLayerO
     throw new Error('TileLayer parallax must be finite numbers.');
   }
 
-  return { chunkWidth, chunkHeight, opacity, offsetX, offsetY, parallaxX, parallaxY };
+  const parallaxScale = resolveParallaxScale(options.parallaxScale);
+
+  return { chunkWidth, chunkHeight, opacity, offsetX, offsetY, parallaxX, parallaxY, parallaxScale };
 }
 
 /**
@@ -226,6 +243,8 @@ export class TileLayer {
    * `1.0` = full camera speed, `0.5` = half speed, `0.0` = stationary.
    */
   public readonly parallaxY: number;
+  /** Uniform scale applied around the layer origin during parallax rendering. */
+  public readonly parallaxScale: number;
 
   /** Layer class/type string (Tiled `class`; may be empty). */
   public readonly class: string;
@@ -258,7 +277,7 @@ export class TileLayer {
    * @throws When dimensions, chunk size, or other options are invalid.
    */
   public constructor(options: TileLayerOptions) {
-    const { chunkWidth, chunkHeight, opacity, offsetX, offsetY, parallaxX, parallaxY } =
+    const { chunkWidth, chunkHeight, opacity, offsetX, offsetY, parallaxX, parallaxY, parallaxScale } =
       validateTileLayerOptions(options);
 
     this.id = options.id;
@@ -276,6 +295,7 @@ export class TileLayer {
     this.offsetY = offsetY;
     this.parallaxX = parallaxX;
     this.parallaxY = parallaxY;
+    this.parallaxScale = parallaxScale;
     this.class = options.class ?? '';
     this.tintColor = options.tintColor ?? null;
     this.properties = options.properties

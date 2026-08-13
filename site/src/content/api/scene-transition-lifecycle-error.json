@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(reason: \"commit-reentrant\" | \"done-before-commit\" | \"aborted\"): SceneTransitionLifecycleError",
+          "signature": "new(reason: \"aborted\" | \"commit-reentrant\" | \"done-before-commit\"): SceneTransitionLifecycleError",
           "signatureTokens": [
             {
               "text": "new",
@@ -49,6 +49,14 @@
               "kind": "punctuation"
             },
             {
+              "text": "\"aborted\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
               "text": "\"commit-reentrant\"",
               "kind": "keyword"
             },
@@ -58,14 +66,6 @@
             },
             {
               "text": "\"done-before-commit\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"aborted\"",
               "kind": "keyword"
             },
             {
@@ -84,7 +84,7 @@
           "params": [
             {
               "name": "reason",
-              "type": "\"commit-reentrant\" | \"done-before-commit\" | \"aborted\"",
+              "type": "\"aborted\" | \"commit-reentrant\" | \"done-before-commit\"",
               "optional": false
             }
           ],
@@ -169,7 +169,7 @@
         },
         {
           "name": "reason",
-          "signature": "reason: \"commit-reentrant\" | \"done-before-commit\" | \"aborted\"",
+          "signature": "reason: \"aborted\" | \"commit-reentrant\" | \"done-before-commit\"",
           "signatureTokens": [
             {
               "text": "reason",
@@ -177,6 +177,14 @@
             },
             {
               "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"aborted\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
               "kind": "punctuation"
             },
             {
@@ -189,14 +197,6 @@
             },
             {
               "text": "\"done-before-commit\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"aborted\"",
               "kind": "keyword"
             }
           ],

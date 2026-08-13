@@ -118,7 +118,7 @@
         },
         {
           "name": "relPath",
-          "signature": "relPath: string | null",
+          "signature": "relPath: null | string",
           "signatureTokens": [
             {
               "text": "relPath",
@@ -129,7 +129,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
+              "text": "null",
               "kind": "keyword"
             },
             {
@@ -137,7 +137,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "null",
+              "text": "string",
               "kind": "keyword"
             }
           ],

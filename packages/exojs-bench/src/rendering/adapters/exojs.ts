@@ -20,17 +20,18 @@ import { mutationSignature, selectMutationIndices } from '../../shared/mutation'
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
 
 /**
- * One mesh leaf for the `mixed-sprite-mesh` archetype: the same SPRITE_SIZE quad
- * a sprite leaf covers, as a flat six-vertex triangle list with full-texture UVs.
- * Deliberately the plainest mesh the renderer has — no material, no indices — so
- * the archetype measures the renderer SWITCH and not mesh-specific work.
+ * One array-backed mesh leaf: the same SPRITE_SIZE quad a sprite leaf covers,
+ * as a flat six-vertex triangle list with full-texture UVs.
  */
-const createLeafMesh = (texture: Texture): Mesh =>
+const createArrayLeafMesh = (texture: Texture): Mesh =>
   new Mesh({
     vertices: new Float32Array([0, 0, SPRITE_SIZE, 0, SPRITE_SIZE, SPRITE_SIZE, 0, 0, SPRITE_SIZE, SPRITE_SIZE, 0, SPRITE_SIZE]),
     uvs: new Float32Array([0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1]),
     texture,
   });
+
+/** One mesh leaf backed by the scene's shared, retained-recordable geometry. */
+const createStaticLeafMesh = (texture: Texture, geometry: Geometry): Mesh => new Mesh({ geometry, texture });
 
 /**
  * One SPRITE_SIZE quad in local space, the single geometry every instance of the
@@ -233,6 +234,8 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
    */
   let batches: RenderBatch[] = [];
   let batchGeometry: Geometry | null = null;
+  /** Shared by every mesh leaf in `mixed-sprite-mesh-static`; absent for the array case. */
+  let sharedMeshGeometry: Geometry | null = null;
 
   /** Drop the `instanced-batch` scene so a rebuild (or teardown) leaks no GPU resources. */
   const releaseBatchScene = (): void => {
@@ -335,6 +338,8 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       }
 
       releaseBatchScene();
+      sharedMeshGeometry?.destroy();
+      sharedMeshGeometry = null;
 
       // `instanced-batch` leaves the scene graph behind entirely: nodeCount
       // instances are laid out on the same grid every other archetype uses, but
@@ -354,6 +359,9 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       const materialCount = Math.max(0, spec.materialCount ?? 0);
       const materialRunLength = Math.max(1, spec.materialRunLength ?? 1);
       const meshEvery = Math.max(0, spec.meshEvery ?? 0);
+      const meshRunLength = Math.max(1, Math.min(spec.meshRunLength ?? 1, meshEvery));
+
+      sharedMeshGeometry = spec.meshStorage === 'shared-static-geometry' ? createBatchQuad() : null;
 
       materials = [];
 
@@ -422,8 +430,15 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
         // scene changes. Left unset, every leaf is a sprite — the pre-existing
         // shape.
         const leafTexture = textures[Math.floor(i / spine.length) % textures.length]!;
-        const isMesh = meshEvery > 0 && i % meshEvery === meshEvery - 1;
-        const leaf: Sprite | Mesh = isMesh ? createLeafMesh(leafTexture) : new Sprite(leafTexture);
+        const isMesh = meshEvery > 0 && i % meshEvery >= meshEvery - meshRunLength;
+
+        let leaf: Sprite | Mesh;
+
+        if (isMesh) {
+          leaf = sharedMeshGeometry === null ? createArrayLeafMesh(leafTexture) : createStaticLeafMesh(leafTexture, sharedMeshGeometry);
+        } else {
+          leaf = new Sprite(leafTexture);
+        }
 
         leaf.cullable = spec.cullingEnabled;
 
@@ -571,6 +586,9 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
         root.destroy();
         root = null;
       }
+
+      sharedMeshGeometry?.destroy();
+      sharedMeshGeometry = null;
 
       for (const texture of textures) {
         texture.destroy();

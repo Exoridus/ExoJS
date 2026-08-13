@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "border",
-          "signature": "border?: number | Partial<NineSliceInsets>",
+          "signature": "border?: Partial<NineSliceInsets> | number",
           "signatureTokens": [
             {
               "text": "border",
@@ -42,14 +42,6 @@
             },
             {
               "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
               "kind": "punctuation"
             },
             {
@@ -67,6 +59,14 @@
             {
               "text": ">",
               "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -125,7 +125,7 @@
         },
         {
           "name": "slices",
-          "signature": "slices: number | Partial<NineSliceInsets>",
+          "signature": "slices: Partial<NineSliceInsets> | number",
           "signatureTokens": [
             {
               "text": "slices",
@@ -133,14 +133,6 @@
             },
             {
               "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
               "kind": "punctuation"
             },
             {
@@ -158,6 +150,14 @@
             {
               "text": ">",
               "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],

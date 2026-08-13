@@ -6,11 +6,11 @@
   "subsystem": "tilemap",
   "importPath": "@codexo/exojs-tilemap",
   "tier": "advanced",
-  "memberCount": 18,
+  "memberCount": 19,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 18,
+    "properties": 19,
     "events": 0
   },
   "sections": [
@@ -246,6 +246,31 @@
           "description": "Opacity 0..1. Default 1."
         },
         {
+          "name": "parallaxScale",
+          "signature": "parallaxScale?: number",
+          "signatureTokens": [
+            {
+              "text": "parallaxScale",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Uniform scale applied together with the camera-relative parallax shift. 1 keeps the layer at its authored size. Default 1."
+        },
+        {
           "name": "parallaxX",
           "signature": "parallaxX?: number",
           "signatureTokens": [
@@ -397,7 +422,7 @@
         },
         {
           "name": "tintColor",
-          "signature": "tintColor?: number | null",
+          "signature": "tintColor?: null | number",
           "signatureTokens": [
             {
               "text": "tintColor",
@@ -412,7 +437,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
+              "text": "null",
               "kind": "keyword"
             },
             {
@@ -420,7 +445,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "null",
+              "text": "number",
               "kind": "keyword"
             }
           ],

@@ -103,7 +103,7 @@ export class TileLayerNode extends Container {
     this.setPosition(layer.offsetX, layer.offsetY);
     this._buildChunkNodes();
 
-    if (!this._layer.bounded || layer.parallaxX !== 1 || layer.parallaxY !== 1) {
+    if (!this._layer.bounded || layer.parallaxX !== 1 || layer.parallaxY !== 1 || layer.parallaxScale !== 1) {
       this.cullable = false;
     }
 
@@ -206,18 +206,36 @@ export class TileLayerNode extends Container {
 
     const layer = this._layer;
 
-    if (layer.parallaxX !== 1 || layer.parallaxY !== 1) {
+    const patchesPosition = layer.parallaxX !== 1 || layer.parallaxY !== 1;
+    const patchesScale = layer.parallaxScale !== 1;
+
+    if (patchesPosition || patchesScale) {
       const camCenter = builder.view.center;
       const prevX = this.x;
       const prevY = this.y;
+      const prevScaleX = this.scale.x;
+      const prevScaleY = this.scale.y;
 
-      this.x = this._baseOffsetX + camCenter.x * (1 - layer.parallaxX);
-      this.y = this._baseOffsetY + camCenter.y * (1 - layer.parallaxY);
+      if (patchesPosition) {
+        this.x = this._baseOffsetX + camCenter.x * (1 - layer.parallaxX);
+        this.y = this._baseOffsetY + camCenter.y * (1 - layer.parallaxY);
+      }
 
-      super._collectContent(builder);
+      if (patchesScale) {
+        this.setScale(prevScaleX * layer.parallaxScale, prevScaleY * layer.parallaxScale);
+      }
 
-      this.x = prevX;
-      this.y = prevY;
+      try {
+        super._collectContent(builder);
+      } finally {
+        if (patchesPosition) {
+          this.setPosition(prevX, prevY);
+        }
+
+        if (patchesScale) {
+          this.setScale(prevScaleX, prevScaleY);
+        }
+      }
     } else {
       super._collectContent(builder);
     }

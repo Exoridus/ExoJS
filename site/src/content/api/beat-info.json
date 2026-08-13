@@ -154,7 +154,7 @@
         },
         {
           "name": "status",
-          "signature": "status: \"provisional\" | \"locked\"",
+          "signature": "status: \"locked\" | \"provisional\"",
           "signatureTokens": [
             {
               "text": "status",
@@ -165,7 +165,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"provisional\"",
+              "text": "\"locked\"",
               "kind": "keyword"
             },
             {
@@ -173,7 +173,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"locked\"",
+              "text": "\"provisional\"",
               "kind": "keyword"
             }
           ],

@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "DataTextureBuffer",
-          "signature": "F extends TextureFormat.R8 | TextureFormat.Rgba8 ? Uint8Array : F extends TextureFormat.R32F | TextureFormat.Rgba32F ? Float32Array : Uint8Array | Float32Array",
+          "signature": "F extends TextureFormat.R8 | TextureFormat.Rgba8 ? Uint8Array : F extends TextureFormat.R32F | TextureFormat.Rgba32F ? Float32Array : Float32Array | Uint8Array",
           "signatureTokens": [
             {
               "text": "F",
@@ -113,7 +113,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Uint8Array",
+              "text": "Float32Array",
               "kind": "type"
             },
             {
@@ -121,7 +121,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Float32Array",
+              "text": "Uint8Array",
               "kind": "type"
             }
           ],

@@ -5,6 +5,7 @@ import { Application, ReflectionKind } from 'typedoc';
 
 import { apiSymbolSchema } from '../src/lib/api-schema';
 import type { ApiCounts, ApiMember, ApiSection, ApiToken, ApiSymbolData } from '../src/lib/api-schema';
+import { sortUnionMembers } from './sort-union-members';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -189,6 +190,7 @@ const toParagraphs = (value: string): string[] =>
 const punct = (text: string): ApiToken => ({ text, kind: 'punctuation' });
 const keyword = (text: string): ApiToken => ({ text, kind: 'keyword' });
 const typeToken = (text: string): ApiToken => ({ text, kind: 'type' });
+const tokensToText = (tokens: ApiToken[]): string => tokens.map(token => token.text).join('');
 
 /** Concatenate token groups, inserting a punctuation separator between them. */
 const joinTokenGroups = (groups: ApiToken[][], separator: string): ApiToken[] => {
@@ -218,8 +220,11 @@ const tokenizeType = (type: any): ApiToken[] => {
             }
             return tokens;
         }
-        case 'union':
-            return type.types?.length ? joinTokenGroups(type.types.map(tokenizeType), ' | ') : [keyword('unknown')];
+        case 'union': {
+            if (!type.types?.length) return [keyword('unknown')];
+            const members = sortUnionMembers(type.types.map(tokenizeType), tokensToText);
+            return joinTokenGroups(members, ' | ');
+        }
         case 'intersection':
             return type.types?.length ? joinTokenGroups(type.types.map(tokenizeType), ' & ') : [keyword('unknown')];
         case 'array':
@@ -281,8 +286,6 @@ const tokenizeType = (type: any): ApiToken[] => {
             return [type.name ? typeToken(type.name) : keyword(type.type ?? 'unknown')];
     }
 };
-
-const tokensToText = (tokens: ApiToken[]): string => tokens.map(token => token.text).join('');
 
 const renderType = (type: any): string => tokensToText(tokenizeType(type));
 

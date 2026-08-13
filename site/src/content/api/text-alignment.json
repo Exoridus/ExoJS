@@ -30,16 +30,8 @@
       "members": [
         {
           "name": "TextAlignment",
-          "signature": "\"left\" | \"center\" | \"right\" | \"justify\"",
+          "signature": "\"center\" | \"justify\" | \"left\" | \"right\"",
           "signatureTokens": [
-            {
-              "text": "\"left\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
             {
               "text": "\"center\"",
               "kind": "keyword"
@@ -49,7 +41,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"right\"",
+              "text": "\"justify\"",
               "kind": "keyword"
             },
             {
@@ -57,7 +49,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"justify\"",
+              "text": "\"left\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"right\"",
               "kind": "keyword"
             }
           ],

@@ -98,7 +98,7 @@
         },
         {
           "name": "value",
-          "signature": "value: string | number | boolean | TiledClassPropertyValueData",
+          "signature": "value: TiledClassPropertyValueData | boolean | number | string",
           "signatureTokens": [
             {
               "text": "value",
@@ -109,7 +109,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
+              "text": "TiledClassPropertyValueData",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
               "kind": "keyword"
             },
             {
@@ -125,16 +133,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "boolean",
+              "text": "string",
               "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "TiledClassPropertyValueData",
-              "kind": "type"
             }
           ],
           "params": [],

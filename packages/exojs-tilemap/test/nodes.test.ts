@@ -159,6 +159,24 @@ describe('TileLayerNode', () => {
     expect(node.y).toBe(20);
   });
 
+  it('parallax scale is applied during collection and restores a caller scale afterwards', () => {
+    const tileset = makeTileset();
+    const layer = new TileLayer({
+      id: 1, name: 'bg', width: 4, height: 4, tileWidth: 32, tileHeight: 32,
+      tilesets: [tileset], parallaxScale: 0.5,
+    });
+    const node = new TileLayerNode(layer).setScale(2, 3);
+    const setScale = vi.spyOn(node, 'setScale');
+
+    (node as unknown as { _collectContent(b: unknown): void })._collectContent({ view: { center: { x: 0, y: 0 } } });
+
+    expect(setScale).toHaveBeenNthCalledWith(1, 1, 1.5);
+    expect(setScale).toHaveBeenLastCalledWith(2, 3);
+    expect(node.scale.x).toBe(2);
+    expect(node.scale.y).toBe(3);
+    expect(node.cullable).toBe(false);
+  });
+
   it('bounded parallax layer opts out of static-bounds culling', () => {
     const tileset = makeTileset();
     const layer = new TileLayer({

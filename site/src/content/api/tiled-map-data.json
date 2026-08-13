@@ -434,7 +434,7 @@
         },
         {
           "name": "version",
-          "signature": "version: string | number",
+          "signature": "version: number | string",
           "signatureTokens": [
             {
               "text": "version",
@@ -445,7 +445,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
+              "text": "number",
               "kind": "keyword"
             },
             {
@@ -453,7 +453,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
+              "text": "string",
               "kind": "keyword"
             }
           ],

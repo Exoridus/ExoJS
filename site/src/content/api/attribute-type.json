@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "AttributeType",
-          "signature": "\"f32\" | \"u8\" | \"u16\" | \"u32\" | \"i32\"",
+          "signature": "\"f32\" | \"i32\" | \"u16\" | \"u32\" | \"u8\"",
           "signatureTokens": [
             {
               "text": "\"f32\"",
@@ -41,7 +41,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"u8\"",
+              "text": "\"i32\"",
               "kind": "keyword"
             },
             {
@@ -65,7 +65,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"i32\"",
+              "text": "\"u8\"",
               "kind": "keyword"
             }
           ],

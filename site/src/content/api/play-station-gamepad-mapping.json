@@ -117,7 +117,7 @@
         },
         {
           "name": "hasChannel",
-          "signature": "hasChannel(channel: GamepadButtonChannel | GamepadAxisChannel): boolean",
+          "signature": "hasChannel(channel: GamepadAxisChannel | GamepadButtonChannel): boolean",
           "signatureTokens": [
             {
               "text": "hasChannel",
@@ -136,7 +136,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "GamepadButtonChannel",
+              "text": "GamepadAxisChannel",
               "kind": "type"
             },
             {
@@ -144,7 +144,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "GamepadAxisChannel",
+              "text": "GamepadButtonChannel",
               "kind": "type"
             },
             {
@@ -163,7 +163,7 @@
           "params": [
             {
               "name": "channel",
-              "type": "GamepadButtonChannel | GamepadAxisChannel",
+              "type": "GamepadAxisChannel | GamepadButtonChannel",
               "optional": false
             }
           ],

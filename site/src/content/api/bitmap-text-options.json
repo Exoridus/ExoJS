@@ -155,7 +155,7 @@
         },
         {
           "name": "fontStyle",
-          "signature": "fontStyle?: \"normal\" | \"italic\"",
+          "signature": "fontStyle?: \"italic\" | \"normal\"",
           "signatureTokens": [
             {
               "text": "fontStyle",
@@ -170,7 +170,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"normal\"",
+              "text": "\"italic\"",
               "kind": "keyword"
             },
             {
@@ -178,7 +178,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"italic\"",
+              "text": "\"normal\"",
               "kind": "keyword"
             }
           ],

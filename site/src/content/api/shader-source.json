@@ -301,7 +301,7 @@
       "members": [
         {
           "name": "glsl",
-          "signature": "glsl: { fragment: string; vertex: string } | null",
+          "signature": "glsl: null | { fragment: string; vertex: string }",
           "signatureTokens": [
             {
               "text": "glsl",
@@ -309,6 +309,14 @@
             },
             {
               "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
               "kind": "punctuation"
             },
             {
@@ -346,14 +354,6 @@
             {
               "text": " }",
               "kind": "punctuation"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "null",
-              "kind": "keyword"
             }
           ],
           "params": [],
@@ -362,7 +362,7 @@
         },
         {
           "name": "wgsl",
-          "signature": "wgsl: string | null",
+          "signature": "wgsl: null | string",
           "signatureTokens": [
             {
               "text": "wgsl",
@@ -373,7 +373,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
+              "text": "null",
               "kind": "keyword"
             },
             {
@@ -381,7 +381,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "null",
+              "text": "string",
               "kind": "keyword"
             }
           ],

@@ -30,10 +30,34 @@
       "members": [
         {
           "name": "AssetCacheOperation",
-          "signature": "\"connect\" | \"load\" | \"save\" | \"delete\" | \"clear\" | \"delete-storage\"",
+          "signature": "\"clear\" | \"connect\" | \"delete\" | \"delete-storage\" | \"load\" | \"save\"",
           "signatureTokens": [
             {
+              "text": "\"clear\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
               "text": "\"connect\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"delete\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"delete-storage\"",
               "kind": "keyword"
             },
             {
@@ -50,30 +74,6 @@
             },
             {
               "text": "\"save\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"delete\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"clear\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"delete-storage\"",
               "kind": "keyword"
             }
           ],

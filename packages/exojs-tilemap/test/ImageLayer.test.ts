@@ -18,6 +18,7 @@ describe('ImageLayer', () => {
     expect(layer.offsetY).toBe(0);
     expect(layer.parallaxX).toBe(1);
     expect(layer.parallaxY).toBe(1);
+    expect(layer.parallaxScale).toBe(1);
     expect(layer.tintColor).toBeNull();
     expect(layer.repeatX).toBe(false);
     expect(layer.repeatY).toBe(false);
@@ -35,6 +36,7 @@ describe('ImageLayer', () => {
       offsetY: -4,
       parallaxX: 0.5,
       parallaxY: 0.25,
+      parallaxScale: 0.75,
       tintColor: 0xff8800,
       repeatX: true,
       repeatY: true,
@@ -49,9 +51,14 @@ describe('ImageLayer', () => {
     expect(layer.offsetY).toBe(-4);
     expect(layer.parallaxX).toBe(0.5);
     expect(layer.parallaxY).toBe(0.25);
+    expect(layer.parallaxScale).toBe(0.75);
     expect(layer.tintColor).toBe(0xff8800);
     expect(layer.repeatX).toBe(true);
     expect(layer.repeatY).toBe(true);
+  });
+
+  it('rejects a non-positive parallax scale', () => {
+    expect(() => new ImageLayer({ id: 1, image: 'bg.png', parallaxScale: 0 })).toThrow(/positive finite number/);
   });
 
   it('properties default to a frozen empty object', () => {

@@ -30,8 +30,40 @@
       "members": [
         {
           "name": "RenderErrorCode",
-          "signature": "\"shader-compile\" | \"shader-link\" | \"pipeline-creation\" | \"validation\" | \"out-of-memory\" | \"internal\" | \"device-recovery-failed\"",
+          "signature": "\"device-recovery-failed\" | \"internal\" | \"out-of-memory\" | \"pipeline-creation\" | \"shader-compile\" | \"shader-link\" | \"validation\"",
           "signatureTokens": [
+            {
+              "text": "\"device-recovery-failed\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"internal\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"out-of-memory\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"pipeline-creation\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
             {
               "text": "\"shader-compile\"",
               "kind": "keyword"
@@ -49,39 +81,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"pipeline-creation\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
               "text": "\"validation\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"out-of-memory\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"internal\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"device-recovery-failed\"",
               "kind": "keyword"
             }
           ],

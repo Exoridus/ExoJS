@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "keyFor",
-          "signature": "keyFor(resource: object | null | undefined): string | null",
+          "signature": "keyFor(resource: null | object | undefined): null | string",
           "signatureTokens": [
             {
               "text": "keyFor",
@@ -49,7 +49,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "object",
+              "text": "null",
               "kind": "keyword"
             },
             {
@@ -57,7 +57,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "null",
+              "text": "object",
               "kind": "keyword"
             },
             {
@@ -77,7 +77,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
+              "text": "null",
               "kind": "keyword"
             },
             {
@@ -85,18 +85,18 @@
               "kind": "punctuation"
             },
             {
-              "text": "null",
+              "text": "string",
               "kind": "keyword"
             }
           ],
           "params": [
             {
               "name": "resource",
-              "type": "object | null | undefined",
+              "type": "null | object | undefined",
               "optional": false
             }
           ],
-          "returnType": "string | null",
+          "returnType": "null | string",
           "description": "Resolve a loaded asset object to the loader source key it was loaded under, or null for runtime-created / unkeyed resources (a one-time warning is emitted in that case)."
         },
         {

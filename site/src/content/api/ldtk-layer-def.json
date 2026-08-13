@@ -6,11 +6,11 @@
   "subsystem": "ldtk",
   "importPath": "@codexo/exojs-ldtk",
   "tier": "stable",
-  "memberCount": 9,
+  "memberCount": 11,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 9,
+    "properties": 11,
     "events": 0
   },
   "sections": [
@@ -180,11 +180,61 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Whether a non-zero parallax factor also scales this layer up/down to simulate depth. Defaults to true (LDtk's own default) when absent. Parsed and validated for round-trip fidelity, but not currently carried onto any runtime layer — the runtime tilemap model has no field for a parallax-driven scale multiplier (unlike parallaxX/parallaxY, which map onto the existing TileLayer/ObjectLayer fields also used by the Tiled adapter), and whether/how to add one is an open decision."
+          "description": "Whether a non-zero parallax factor also scales this layer up/down to simulate depth. Defaults to true (LDtk's own default) when absent. Converted to the runtime layer's uniform parallaxScale multiplier."
+        },
+        {
+          "name": "pxOffsetX",
+          "signature": "pxOffsetX?: number",
+          "signatureTokens": [
+            {
+              "text": "pxOffsetX",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Definition-level horizontal pixel offset, added to each layer instance offset."
+        },
+        {
+          "name": "pxOffsetY",
+          "signature": "pxOffsetY?: number",
+          "signatureTokens": [
+            {
+              "text": "pxOffsetY",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Definition-level vertical pixel offset, added to each layer instance offset."
         },
         {
           "name": "tilesetDefUid",
-          "signature": "tilesetDefUid?: number | null",
+          "signature": "tilesetDefUid?: null | number",
           "signatureTokens": [
             {
               "text": "tilesetDefUid",
@@ -199,7 +249,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
+              "text": "null",
               "kind": "keyword"
             },
             {
@@ -207,7 +257,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "null",
+              "text": "number",
               "kind": "keyword"
             }
           ],

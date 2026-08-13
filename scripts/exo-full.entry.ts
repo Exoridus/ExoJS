@@ -14,9 +14,38 @@ export * from '@codexo/exojs-particles';
 // ── Audio FX ──────────────────────────────────────────────────────────────────
 export * from '@codexo/exojs-audio-fx';
 
-// ── Tilemap (base) — tiled + ldtk re-export the same runtime symbols;
-//    only import once here to avoid duplicate named exports. ──────────────────
-export * from '@codexo/exojs-tilemap';
+// ── Tilemap (base) — value exports only. The package's object-layer
+// `TextStyle` interface collides with core's runtime `TextStyle` class, while
+// type-only exports do not exist on the IIFE global. Tiled + LDtk also
+// re-export these runtime symbols, so import them exactly once here. ──────────
+export {
+  autoTile,
+  buildTileCollisionGeometry,
+  ChunkStreamer,
+  createSampledChunkSource,
+  createWorkerSampledChunkSource,
+  ImageLayer,
+  ImageLayerNode,
+  ObjectKind,
+  ObjectLayer,
+  packTile,
+  refreshCell,
+  TILE_TRANSFORM_IDENTITY,
+  TileAnimator,
+  TileLayer,
+  TileLayerNode,
+  TileMap,
+  TileMapBand,
+  TileMapNode,
+  TileMapView,
+  TilePropertyKind,
+  TileSet,
+  tilemapExtension,
+  tileToChunkCoord,
+  tileToLocalInChunk,
+  unpackTile,
+  WangSet,
+} from '@codexo/exojs-tilemap';
 
 // ── Physics ────────────────────────────────────────────────────────────────────
 export * from '@codexo/exojs-physics';

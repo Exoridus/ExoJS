@@ -1,44 +1,52 @@
 // LDtk → runtime parallax conversion.
 //
 // LDtk's `parallaxFactorX`/`parallaxFactorY` (declared on `defs.layers[]`,
-// range `[-1, 1]`) describe "how much slower this layer scrolls relative to
-// the camera", with `0` — the LDtk default — meaning "no parallax, scrolls at
-// normal camera speed". LDtk itself does not mandate a rendering formula for
-// this value: its own reference implementation (`ldtk-haxe-api`) only carries
-// the raw field through and leaves interpretation to the consuming game.
+// range `[-1, 1]`) use `0` for normal camera speed. The runtime tilemap model
+// uses the opposite convention: `1` is normal speed, and render code derives
+// the camera-relative shift as `camCenter * (1 - parallaxX)`. Therefore the
+// scroll conversion is `runtimeFactor = 1 - ldtkFactor`.
 //
-// The runtime `TileLayer`/`ObjectLayer` model (shared with the Tiled adapter)
-// instead uses `parallaxX`/`parallaxY` with the opposite convention: `1` (the
-// default) means "no parallax, normal camera speed", and render code derives
-// the on-screen shift as `camCenter * (1 - parallaxX)` — see
-// `ChunkStreamer.ts` / `TileLayerNode.ts` / `ImageLayerNode.ts` in
-// `@codexo/exojs-tilemap`. The two conventions share the same "no parallax"
-// origin (LDtk `0` ↔ runtime `1`), so `runtimeFactor = 1 - ldtkFactor` is the
-// direct, order-preserving conversion between them: a layer with a larger
-// LDtk factor lags the camera more, which is exactly a smaller runtime
-// `parallaxX`/`parallaxY`.
+// LDtk's editor applies one uniform scale derived from the horizontal factor:
+// `max(0.01, 1 - parallaxFactorX)`. Scaling happens around the layer origin.
+// When scaling is disabled, the editor offsets the unscaled layer by half its
+// dimensions times the factor so its centre follows the same parallax path.
 
 import type { LdtkData } from './LdtkData';
 
-/** Resolved runtime parallax factors for one LDtk layer instance. */
+/** Resolved runtime parallax transform for one LDtk layer instance. */
 export interface LdtkLayerParallax {
   readonly parallaxX: number;
   readonly parallaxY: number;
+  readonly parallaxScale: number;
+  /** Definition offset plus LDtk's unscaled-parallax centre compensation. */
+  readonly offsetX: number;
+  /** Definition offset plus LDtk's unscaled-parallax centre compensation. */
+  readonly offsetY: number;
 }
 
 /**
- * Resolve the runtime `parallaxX`/`parallaxY` for the layer definition
- * identified by `layerDefUid`, converting from LDtk's `parallaxFactorX`/
- * `parallaxFactorY` convention to the runtime `TileLayer`/`ObjectLayer`
- * convention — see the module doc comment for the formula and why it exists.
- *
- * Falls back to `{ parallaxX: 1, parallaxY: 1 }` (no parallax) when the layer
- * definition cannot be found or declares no parallax factors, matching
- * LDtk's own default.
+ * Resolve the runtime parallax transform for a layer instance. Missing
+ * definitions and factors use LDtk's defaults: no shift and scale `1`.
  */
-export function resolveLdtkLayerParallax(data: LdtkData, layerDefUid: number): LdtkLayerParallax {
-  const layerDef = data.defs.layers.find(def => def.uid === layerDefUid);
+export function resolveLdtkLayerParallax(
+  data: LdtkData,
+  layer: {
+    readonly layerDefUid: number;
+    readonly __cWid: number;
+    readonly __cHei: number;
+    readonly __gridSize: number;
+  },
+): LdtkLayerParallax {
+  const layerDef = data.defs.layers.find(def => def.uid === layer.layerDefUid);
   const factorX = layerDef?.parallaxFactorX ?? 0;
   const factorY = layerDef?.parallaxFactorY ?? 0;
-  return { parallaxX: 1 - factorX, parallaxY: 1 - factorY };
+  const scaling = layerDef?.parallaxScaling ?? true;
+
+  return {
+    parallaxX: 1 - factorX,
+    parallaxY: 1 - factorY,
+    parallaxScale: scaling && factorX !== 0 ? Math.max(0.01, 1 - factorX) : 1,
+    offsetX: (layerDef?.pxOffsetX ?? 0) + (scaling ? 0 : -layer.__cWid * layer.__gridSize * 0.5 * factorX),
+    offsetY: (layerDef?.pxOffsetY ?? 0) + (scaling ? 0 : -layer.__cHei * layer.__gridSize * 0.5 * factorY),
+  };
 }

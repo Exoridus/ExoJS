@@ -61,7 +61,7 @@
         },
         {
           "name": "catch",
-          "signature": "catch(onrejected?: (reason: unknown) => Caught | PromiseLike<Caught> | null): Promise<T | Caught>",
+          "signature": "catch(onrejected?: (reason: unknown) => Caught | PromiseLike<Caught> | null): Promise<Caught | T>",
           "signatureTokens": [
             {
               "text": "catch",
@@ -152,7 +152,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "T",
+              "text": "Caught",
               "kind": "type"
             },
             {
@@ -160,7 +160,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Caught",
+              "text": "T",
               "kind": "type"
             },
             {
@@ -175,7 +175,7 @@
               "optional": true
             }
           ],
-          "returnType": "Promise<T | Caught>",
+          "returnType": "Promise<Caught | T>",
           "description": ""
         },
         {
@@ -259,7 +259,7 @@
         },
         {
           "name": "then",
-          "signature": "then(onfulfilled?: (value: T) => Fulfilled | PromiseLike<Fulfilled> | null, onrejected?: (reason: unknown) => Rejected | PromiseLike<Rejected> | null): Promise<Fulfilled | Rejected>",
+          "signature": "then(onfulfilled?: (value: T) => Fulfilled | PromiseLike<Fulfilled> | null, onrejected?: (reason: unknown) => PromiseLike<Rejected> | Rejected | null): Promise<Fulfilled | Rejected>",
           "signatureTokens": [
             {
               "text": "then",
@@ -370,14 +370,6 @@
               "kind": "punctuation"
             },
             {
-              "text": "Rejected",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
               "text": "PromiseLike",
               "kind": "type"
             },
@@ -392,6 +384,14 @@
             {
               "text": ">",
               "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Rejected",
+              "kind": "type"
             },
             {
               "text": " | ",
@@ -442,7 +442,7 @@
             },
             {
               "name": "onrejected",
-              "type": "(reason: unknown) => Rejected | PromiseLike<Rejected> | null",
+              "type": "(reason: unknown) => PromiseLike<Rejected> | Rejected | null",
               "optional": true
             }
           ],

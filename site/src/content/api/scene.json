@@ -373,7 +373,7 @@
         },
         {
           "name": "load",
-          "signature": "load(_data: Readonly<Data>): void | Promise<void>",
+          "signature": "load(_data: Readonly<Data>): Promise<void> | void",
           "signatureTokens": [
             {
               "text": "load",
@@ -416,14 +416,6 @@
               "kind": "punctuation"
             },
             {
-              "text": "void",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
               "text": "Promise",
               "kind": "type"
             },
@@ -438,6 +430,14 @@
             {
               "text": ">",
               "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
             }
           ],
           "params": [
@@ -447,7 +447,7 @@
               "optional": false
             }
           ],
-          "returnType": "void | Promise<void>",
+          "returnType": "Promise<void> | void",
           "description": "Optional asynchronous loading hook. Runs once per activation, before Scene.init: initial asset loading, activation-data-dependent asset selection, remote/storage reads, or any other work that must complete before synchronous setup. Reach the loader via this.loader (scene lifetime) or this.app.loader (app lifetime). Override in subclass."
         },
         {
@@ -622,7 +622,7 @@
         },
         {
           "name": "unload",
-          "signature": "unload(): void | Promise<void>",
+          "signature": "unload(): Promise<void> | void",
           "signatureTokens": [
             {
               "text": "unload",
@@ -641,14 +641,6 @@
               "kind": "punctuation"
             },
             {
-              "text": "void",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
               "text": "Promise",
               "kind": "type"
             },
@@ -663,10 +655,18 @@
             {
               "text": ">",
               "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
             }
           ],
           "params": [],
-          "returnType": "void | Promise<void>",
+          "returnType": "Promise<void> | void",
           "description": "Optional asynchronous teardown hook for a scene that completed activation successfully and is ending permanently. Use the loader to release assets that are scene-private and not shared with a scene that remains active. Not called for a scene that never completed activation (see the definition spec's failed-activation cleanup). Override in subclass."
         },
         {

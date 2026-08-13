@@ -1412,7 +1412,7 @@
       "members": [
         {
           "name": "backgroundColor",
-          "signature": "backgroundColor: number | null",
+          "signature": "backgroundColor: null | number",
           "signatureTokens": [
             {
               "text": "backgroundColor",
@@ -1423,7 +1423,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
+              "text": "null",
               "kind": "keyword"
             },
             {
@@ -1431,7 +1431,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "null",
+              "text": "number",
               "kind": "keyword"
             }
           ],
@@ -1878,7 +1878,7 @@
         },
         {
           "name": "renderableLayers",
-          "signature": "renderableLayers: readonly TileLayer | ImageLayer[]",
+          "signature": "renderableLayers: readonly ImageLayer | TileLayer[]",
           "signatureTokens": [
             {
               "text": "renderableLayers",
@@ -1897,7 +1897,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "TileLayer",
+              "text": "ImageLayer",
               "kind": "type"
             },
             {
@@ -1905,7 +1905,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "ImageLayer",
+              "text": "TileLayer",
               "kind": "type"
             },
             {

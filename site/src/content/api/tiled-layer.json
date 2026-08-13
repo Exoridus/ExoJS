@@ -377,7 +377,7 @@
         },
         {
           "name": "type",
-          "signature": "type: \"tilelayer\" | \"objectgroup\" | \"imagelayer\" | \"group\"",
+          "signature": "type: \"group\" | \"imagelayer\" | \"objectgroup\" | \"tilelayer\"",
           "signatureTokens": [
             {
               "text": "type",
@@ -388,15 +388,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"tilelayer\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"objectgroup\"",
+              "text": "\"group\"",
               "kind": "keyword"
             },
             {
@@ -412,7 +404,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"group\"",
+              "text": "\"objectgroup\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"tilelayer\"",
               "kind": "keyword"
             }
           ],

@@ -358,7 +358,7 @@
         },
         {
           "name": "setCursor",
-          "signature": "setCursor(cursor: string | HTMLCanvasElement | HTMLImageElement | Texture): this",
+          "signature": "setCursor(cursor: HTMLCanvasElement | HTMLImageElement | Texture | string): this",
           "signatureTokens": [
             {
               "text": "setCursor",
@@ -374,14 +374,6 @@
             },
             {
               "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
               "kind": "punctuation"
             },
             {
@@ -405,6 +397,14 @@
               "kind": "type"
             },
             {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -420,7 +420,7 @@
           "params": [
             {
               "name": "cursor",
-              "type": "string | HTMLCanvasElement | HTMLImageElement | Texture",
+              "type": "HTMLCanvasElement | HTMLImageElement | Texture | string",
               "optional": false
             }
           ],
