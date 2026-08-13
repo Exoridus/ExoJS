@@ -513,6 +513,91 @@ describe('Rectangle', () => {
     });
   });
 
+  describe('onChange owner callback', () => {
+    // Every mutating path is enumerated on purpose. The callback exists so an
+    // owner that hands out its live rectangle can invalidate on a direct write;
+    // a path that skips the notification is a silent hole, and the only way to
+    // pin "there is exactly ONE funnel" is to walk them all.
+    const mutations: ReadonlyArray<[string, (rectangle: Rectangle) => void]> = [
+      ['x', rectangle => (rectangle.x = 5)],
+      ['y', rectangle => (rectangle.y = 5)],
+      ['width', rectangle => (rectangle.width = 5)],
+      ['height', rectangle => (rectangle.height = 5)],
+      ['position', rectangle => (rectangle.position = new Vector(5, 5))],
+      ['size', rectangle => (rectangle.size = new Size(5, 5))],
+      ['setPosition', rectangle => rectangle.setPosition(5, 5)],
+      ['setSize', rectangle => rectangle.setSize(5, 5)],
+      ['set', rectangle => rectangle.set(5, 5, 5, 5)],
+      ['copy', rectangle => rectangle.copy(new Rectangle(5, 5, 5, 5))],
+      ['transform (in place)', rectangle => rectangle.transform(new Matrix().translate(5, 5))],
+      // One level down: the components are reactive too, so a write that
+      // bypasses the accessors above still reaches the owner.
+      ['position.x', rectangle => (rectangle.position.x = 5)],
+      ['size.width', rectangle => (rectangle.size.width = 5)],
+      ['size.set', rectangle => rectangle.size.set(5, 5)],
+    ];
+
+    test.each(mutations)('%s notifies the owner', (_name, mutate) => {
+      const onChange = vi.fn();
+      const rectangle = new Rectangle(0, 0, 1, 1, onChange);
+
+      mutate(rectangle);
+
+      expect(onChange).toHaveBeenCalled();
+    });
+
+    test('defaults to no callback and leaves an unowned rectangle silent', () => {
+      const rectangle = new Rectangle(0, 0, 1, 1);
+
+      expect(() => rectangle.set(2, 3, 4, 5)).not.toThrow();
+    });
+
+    test('writing a component its current value notifies nobody', () => {
+      const onChange = vi.fn();
+      const rectangle = new Rectangle(1, 2, 3, 4, onChange);
+
+      rectangle.x = 1;
+      rectangle.width = 3;
+      rectangle.set(1, 2, 3, 4);
+      rectangle.size.height = 4;
+
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    test('clone() does not carry the callback over to the copy', () => {
+      const onChange = vi.fn();
+      const clone = new Rectangle(0, 0, 1, 1, onChange).clone();
+
+      clone.set(2, 3, 4, 5);
+
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    test('a rectangle copied INTO keeps its own callback and does not inherit the source one', () => {
+      const sourceChange = vi.fn();
+      const targetChange = vi.fn();
+      const source = new Rectangle(1, 2, 3, 4, sourceChange);
+      const target = new Rectangle(0, 0, 0, 0, targetChange);
+
+      target.copy(source);
+      sourceChange.mockClear();
+      target.set(9, 9, 9, 9);
+
+      expect(targetChange).toHaveBeenCalled();
+      expect(sourceChange).not.toHaveBeenCalled();
+    });
+
+    test('destroy() drops the callback so a retained rectangle cannot invalidate a torn-down owner', () => {
+      const onChange = vi.fn();
+      const rectangle = new Rectangle(0, 0, 1, 1, onChange);
+
+      rectangle.destroy();
+      rectangle.set(2, 3, 4, 5);
+
+      expect(onChange).not.toHaveBeenCalled();
+    });
+  });
+
   describe('static temp', () => {
     test('lazily allocates and returns the same instance on subsequent calls', () => {
       const first = Rectangle.temp;

@@ -471,6 +471,18 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
 
 ### Fixed
 
+- **Writing to `view.viewport` directly now invalidates the camera.**
+  `View.viewport` hands out the live `Rectangle`, but its setters only marked
+  the rectangle's own cached edge normals — so `view.viewport.x = 0.5` changed
+  what the backend reads when it opens a render pass while `View.updateId`
+  stood still, and every backend guard keyed on that counter was blind to it.
+  `Rectangle` now takes an optional owner notification, invoked from the single
+  internal point that both its position and its (now observable) size report
+  to; `View` hooks it, so direct writes, `viewport.set(…)`, a write one level
+  down such as `viewport.size.width = …`, and `View.reset()` all advance
+  `updateId` exactly as `setViewport` does. A `Rectangle` mutated back to the
+  value it already holds still notifies nobody, and `clone()` does not carry
+  the callback over.
 - **A paused voice is no longer the pool's preferred eviction victim.** A paused
   `SoundVoice` stays in the pool while its bookkeeping ages against the still
   running context clock, so `FirstInFirstOut` saw the oldest entry and
