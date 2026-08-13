@@ -242,6 +242,12 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
 
 ### Changed
 
+- **BREAKING — `Material` binding schemas are fixed at construction.** Declare
+  every scalar and texture slot through the constructor's `uniforms`/`textures`
+  options. Existing values and texture identities remain live and replaceable,
+  including in-place typed-array mutation; adding/deleting a key or changing a
+  slot between scalar and texture now fails immediately instead of leaving a
+  stale WebGPU bind-group layout.
 - **`WebGpuInstanceArena` renamed `WebGpuPassArena` and exported from
   `renderer-sdk`.** The class stages bytes against a cursor bound to the open
   render pass and knows nothing about instances — the name described its first
@@ -491,6 +497,12 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
 
 ### Fixed
 
+- **Retained `SpriteMaterial` batches now keep live uniforms and material
+  textures on WebGPU and WebGL2.** Retained groups record instance/transform
+  data while resolving material state at replay, deduplicated once per material
+  and render plan. Uniform or texture-value changes stay on the O(batches)
+  instruction tier; blend/sampler structure changes preflight-invalidate the
+  set, entry-replays once with live material keys, and records a replacement.
 - **Text draws past 16384 quads no longer silently corrupt.** `WebGpuTextRenderer`
   and `WebGl2TextRenderer` computed glyph vertex indices as `quadIndex * 4` into a
   `Uint16` index buffer, which wraps once a flush's cumulative quad count reaches

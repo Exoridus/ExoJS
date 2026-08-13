@@ -634,11 +634,13 @@ describe('material grouping', () => {
 
   test('the retained-replay path folds replayed materials into hasMixedPipeline', () => {
     const { backend } = createRuntime();
-    const a = new BoxDrawable('a');
-    const b = new BoxDrawable('b');
+    const mixedA = new KeyedDrawable(100, 100);
+    const mixedB = new KeyedDrawable(200, 200);
+    const uniformA = new KeyedDrawable(100, 100);
+    const uniformB = new KeyedDrawable(100, 100);
 
-    const mixed = new ReplayOnlyContainer([mkSlot(a, 0, 100, 100), mkSlot(b, 1, 200, 200)]);
-    const uniform = new ReplayOnlyContainer([mkSlot(a, 0, 100, 100), mkSlot(b, 1, 100, 100)]);
+    const mixed = new ReplayOnlyContainer([mkSlot(mixedA, 0, 100, 100), mkSlot(mixedB, 1, 200, 200)]);
+    const uniform = new ReplayOnlyContainer([mkSlot(uniformA, 0, 100, 100), mkSlot(uniformB, 1, 100, 100)]);
 
     const builder = RenderPlanBuilder.acquire();
 

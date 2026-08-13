@@ -3,6 +3,13 @@
 import { Matrix } from '#math/Matrix';
 import type { ReadonlyRectangle } from '#math/Rectangle';
 import { affineMat4FloatCount, packAffineMat4, packedGroupChanged } from '#rendering/affinePacking';
+import type { Drawable } from '#rendering/Drawable';
+import {
+  createRetainedMaterialState,
+  isRetainedMaterialState,
+  isRetainedMaterialStateValid,
+  type RetainedMaterialState,
+} from '#rendering/material/RetainedMaterialState';
 import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import type { Sprite } from '#rendering/sprite/Sprite';
 import { buildSpriteTextureSlotWgsl, spriteMaterialPrologueWgsl, spriteMaterialTextureSlots } from '#rendering/sprite/spriteMaterialSources';
@@ -313,11 +320,20 @@ interface CustomSpriteResources {
   // Base-texture slot count the cached shader module and pipeline layout were
   // generated for. Fixed for the custom path, so this only ever asserts.
   textureSlots: number;
+  /** Render-plan token whose retained replay preparation is cached below. */
+  replayEpoch: number;
+  /** Live group(2) resolved once per material/render plan during retained replay. */
+  replayBindGroup: GPUBindGroup | null;
 }
 
 export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> implements WebGpuRetainedBatchReplayer {
-  /** Retained-batch capability flag: the default path records/replays flush-level batches. */
+  /** Retained-batch capability flag: default and live SpriteMaterial batches replay. */
   public readonly _supportsRetainedBatches = true;
+
+  /** Custom SpriteMaterial batches implement the live-material replay contract. @internal */
+  public _canRecordRetainedDrawable(drawable: Drawable): boolean {
+    return (drawable as Sprite).material !== null;
+  }
 
   private readonly _projectionData = new Float32Array(projectionByteLength / Float32Array.BYTES_PER_ELEMENT);
   // View whose transform the projection UBO currently holds, plus its updateId
@@ -828,16 +844,11 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       backend._passCoordinator.acquirePass();
     }
 
-    // Retained capture: while a capture window is
-    // active, additionally stage this batch's exact packed bytes into the
-    // group-owned bundle — the recorded data IS the drawn data, byte-identical
-    // by construction. Custom-material batches are unreplayable (live user
-    // uniforms) and poison the window instead; the recordability
-    // predicate makes that unreachable.
+    // Retained capture: stage the exact packed bytes plus a live material
+    // descriptor. Geometry/transform rows stay recorded; material values and
+    // texture identities are resolved again at replay.
     if (this._instanceCount > 0 && backend._retainedCaptureActive) {
-      if (isCustom) {
-        backend._poisonActiveRetainedCaptures();
-      } else if (this._currentBlendMode !== null) {
+      if (this._currentBlendMode !== null) {
         backend._recordRetainedBatch(
           this,
           this._instanceData,
@@ -846,6 +857,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
           this._currentBlendMode,
           this._activeTextures,
           this._slotCount,
+          null,
+          isCustom ? createRetainedMaterialState(this._currentMaterial!) : null,
         );
       }
     }
@@ -1049,6 +1062,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     const backend = this._backend;
     const device = this._device;
     const bundle = payload.bundle;
+    const materialState = this._retainedMaterialState(payload);
+    const material = materialState?.material ?? null;
 
     if (!backend || !device || this._indexBuffer === null || !bundle.isReady) {
       return;
@@ -1068,6 +1083,11 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     }
 
     const coordinator = backend._passCoordinator;
+    const currentPass = coordinator.activePass;
+
+    if (currentPass !== null) {
+      this._syncUniformHazardPass(currentPass);
+    }
 
     // Same-frame texture mutation guard: resolving the bindings below
     // re-uploads mutated content on the queue timeline BEFORE the deferred
@@ -1089,7 +1109,39 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
     // Resolve the batch textures LIVE through the shared texture-set cache
     // (syncs dirty content, adopts refreshed views/samplers).
-    const textureBindGroup = this._getOrCreateTextureBindGroup(device, backend, payload.textures);
+    const textureBindGroup = this._getOrCreateTextureBindGroup(device, backend, payload.textures, material !== null);
+
+    let customResources: CustomSpriteResources | null = null;
+    let userBindGroup: GPUBindGroup | null = null;
+
+    if (material !== null) {
+      customResources = this._getOrCreateCustomResources(material, device);
+
+      if (customResources.replayEpoch !== backend.renderPlanEpoch || customResources.replayBindGroup === null) {
+        if (coordinator.passHasDraws) {
+          for (const texture of collectTextureBindings(material)) {
+            if (backend._textureUploadWouldMutate(texture)) {
+              coordinator.endPass();
+              this._instanceArena.resetPass();
+              break;
+            }
+          }
+        }
+
+        const uniformPlan = planUserUniformUpload(material, customResources, device, 'sprite:material-user-uniform-buffer');
+
+        if (this._uniformWriteWouldAlias(uniformPlan)) {
+          coordinator.endPass();
+          this._instanceArena.resetPass();
+        }
+
+        applyUserUniformUpload(uniformPlan, customResources, device);
+        customResources.replayBindGroup = this._getUserBindGroup(material, customResources, backend, device);
+        customResources.replayEpoch = backend.renderPlanEpoch;
+      }
+
+      userBindGroup = customResources.replayBindGroup;
+    }
 
     // Group UBO: skip the write while (view, updateId, group bytes) match
     // what the buffer holds; guard the double-replay aliasing case first.
@@ -1135,12 +1187,25 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     const active = coordinator.acquirePass();
     const pass = active.pass;
 
-    pass.setPipeline(this._getPipeline(payload.blendMode, backend.renderTargetFormat, coordinator.stencilActive));
+    this._syncUniformHazardPass(active);
+
+    pass.setPipeline(
+      material === null
+        ? this._getPipeline(payload.blendMode, backend.renderTargetFormat, coordinator.stencilActive)
+        : this._getOrCreateCustomPipeline(customResources!, payload.blendMode, backend.renderTargetFormat, coordinator.stencilActive, device),
+    );
     pass.setBindGroup(0, bundle.getBindGroup(device, this._uniformBindGroupLayout!, true));
     pass.setBindGroup(1, textureBindGroup);
+    if (userBindGroup !== null) {
+      pass.setBindGroup(2, userBindGroup);
+    }
     pass.setVertexBuffer(0, bundle.instanceBuffer, payload.byteOffset);
     pass.setIndexBuffer(this._indexBuffer, 'uint16');
     pass.drawIndexed(indicesPerSprite, payload.instanceCount, 0, 0, 0);
+
+    if (customResources !== null) {
+      this._uniformBuffersInPass.add(customResources.userUniformBuffer!);
+    }
 
     bundle.drawsInPass = active;
     coordinator.markPassDraws();
@@ -1150,6 +1215,17 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
   /** Scratch for the packed group matrix compared at replay (see `_replayRetainedBatch`). */
   private readonly _stagedReplayGroupData = new Float32Array(16);
+
+  /** Structural preflight called for every batch before the set is spliced. @internal */
+  public _validateRetainedBatch(payload: WebGpuRetainedBatchPayload): boolean {
+    const state = this._retainedMaterialState(payload);
+
+    return state === null || isRetainedMaterialStateValid(state);
+  }
+
+  private _retainedMaterialState(payload: WebGpuRetainedBatchPayload): RetainedMaterialState<SpriteMaterial> | null {
+    return isRetainedMaterialState(payload.rendererData) ? (payload.rendererData as RetainedMaterialState<SpriteMaterial>) : null;
+  }
 
   public destroy(): void {
     this.disconnect();
@@ -1584,6 +1660,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       userUniformBufferCapacity: 0,
       userUniform: createUserUniformState(),
       textureSlots: spriteMaterialTextureSlots,
+      replayEpoch: -1,
+      replayBindGroup: null,
     };
 
     this._customMaterials.set(material, resources);
@@ -1707,5 +1785,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     resources.userUniformBuffer = null;
     resources.userUniformBufferCapacity = 0;
     resetUserUniformState(resources.userUniform);
+    resources.replayEpoch = -1;
+    resources.replayBindGroup = null;
   }
 }

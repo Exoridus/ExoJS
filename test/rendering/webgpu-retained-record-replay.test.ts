@@ -30,6 +30,8 @@ import { materializeRendererBindings } from '#extensions/materialize';
 import { Container } from '#rendering/Container';
 import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
 import { GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
+import { ShaderSource } from '#rendering/material/ShaderSource';
+import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import type { RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
 import { RetainedInstructionSet } from '#rendering/plan/RetainedInstructionSet';
 import type { RenderNode } from '#rendering/RenderNode';
@@ -37,6 +39,7 @@ import { createRenderStats } from '#rendering/RenderStats';
 import { RetainedContainer } from '#rendering/RetainedContainer';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
+import { BlendModes } from '#rendering/types';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 import { WebGpuRetainedGroupBundle } from '#rendering/webgpu/WebGpuRetainedGroupResources';
 
@@ -249,6 +252,23 @@ const retainedTransformLabel = 'sprite:retained-transform-buffer';
 const retainedUniformLabel = 'sprite:retained-uniform-buffer';
 const arenaInstanceLabel = 'sprite:instance-buffer';
 const sharedTransformLabel = 'transform:storage-buffer';
+const materialUniformLabel = 'sprite:material-user-uniform-buffer';
+
+const retainedMaterialFragment = `
+struct UserUniforms { color: vec4<f32> };
+@group(2) @binding(0) var<uniform> u_user: UserUniforms;
+
+@fragment
+fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
+  return sampleBase(input.textureSlot, input.texcoord) * u_user.color;
+}
+`.trim();
+
+const createRetainedSpriteMaterial = (): SpriteMaterial =>
+  new SpriteMaterial({
+    shader: new ShaderSource({ wgsl: retainedMaterialFragment }),
+    uniforms: { u_userColor: new Float32Array([1, 0, 0, 1]) },
+  });
 
 const countLabel = (writes: readonly CapturedWrite[], label: string, from = 0): number => {
   let count = 0;
@@ -287,6 +307,83 @@ const buildGroupScene = (texture: Texture, groupCount: number): { root: Containe
 };
 
 describe('WebGPU retained record/replay: fallback ladder + submit collapse', () => {
+  test('SpriteMaterial values stay live on instruction replay and structural state re-records recoverably', async () => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const backend = await createBackend(environment);
+      const texture = createCanvasTexture();
+      const material = createRetainedSpriteMaterial();
+      const group = new RetainedContainer();
+
+      const blends = [BlendModes.Normal, BlendModes.Additive, BlendModes.Multiply] as const;
+
+      for (let i = 0; i < blends.length; i++) {
+        const sprite = new Sprite(texture);
+
+        sprite.material = material;
+        sprite.blendMode = blends[i]!;
+        sprite.setPosition(i * 12, 0);
+        group.addChild(sprite);
+      }
+
+      renderFrame(backend, group); // fragment capture
+      renderFrame(backend, group); // entry replay + instruction recording
+
+      const set = fragmentOf(group).instructions;
+
+      expect(set?.hasRecording).toBe(true);
+
+      renderFrame(backend, group); // first instruction replay
+
+      const instanceMark = environment.writes().length;
+      const submitMark = environment.submitCount();
+      const values = material.uniforms.u_userColor as Float32Array;
+
+      values[0] = 0;
+      values[2] = 1;
+      renderFrame(backend, group);
+
+      // Value mutation remains on the instruction tier: no instance recapture,
+      // exactly one live material upload for the shared material.
+      expect(fragmentOf(group).instructions).toBe(set);
+      expect(countLabel(environment.writes(), retainedInstanceLabel, instanceMark)).toBe(0);
+      expect(countLabel(environment.writes(), materialUniformLabel, instanceMark)).toBe(1);
+      expect(environment.submitCount() - submitMark).toBe(1);
+
+      const staticMark = environment.writes().length;
+
+      renderFrame(backend, group);
+      expect(countLabel(environment.writes(), materialUniformLabel, staticMark)).toBe(0);
+
+      // Blend participates in batch/pipeline structure. Preflight invalidates
+      // before replay, entry-replays once, and records a replacement set.
+      material.blendMode = BlendModes.Additive;
+      const structuralMark = environment.writes().length;
+
+      renderFrame(backend, group);
+
+      expect(fragmentOf(group).instructions).toBe(set);
+      expect(set?.hasRecording).toBe(true);
+      // Normal now resolves to the material's Additive blend and merges with
+      // the explicitly-Additive sprite; the live fallback therefore records
+      // two real batches (Additive + Multiply), not the old three-way split.
+      expect(countLabel(environment.writes(), retainedInstanceLabel, structuralMark)).toBe(2);
+
+      const recoveredMark = environment.writes().length;
+
+      renderFrame(backend, group);
+      expect(countLabel(environment.writes(), retainedInstanceLabel, recoveredMark)).toBe(0);
+
+      group.destroy();
+      material.destroy();
+      texture.destroy();
+      backend.destroy();
+    } finally {
+      environment.restore();
+    }
+  });
+
   test('N cached groups replay in one submit; the uncached path splits at every distinct group matrix', async () => {
     const environment = createMockWebGpuEnvironment();
 

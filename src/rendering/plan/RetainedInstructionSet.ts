@@ -241,14 +241,16 @@ export class RetainedInstructionSet {
 
 /**
  * Structural capability flag for renderers that support flush-level batch
- * recording. v1 opt-in: the sprite renderers' default path only —
- * the concrete backends set `_supportsRetainedBatches = true` on their sprite
- * renderers when they implement the record/replay hooks. Same
+ * recording. Own-material draws require the additional per-draw opt-in below,
+ * so a renderer can support its default path without accidentally promising
+ * live custom-state replay. Same
  * structural-flag convention as `_consumesSharedTransform`.
  * @internal
  */
 export interface RetainedBatchCapableRenderer {
   readonly _supportsRetainedBatches?: boolean;
+  /** Opt an own-material drawable into retained recording. @internal */
+  _canRecordRetainedDrawable?(drawable: Drawable): boolean;
 }
 
 interface BackendWithRendererRegistry {
@@ -258,10 +260,9 @@ interface BackendWithRendererRegistry {
 }
 
 /**
- * The v1 recordability predicate: a captured fragment can be recorded
- * as an instruction set iff every captured draw uses a renderer that opts in
- * via {@link RetainedBatchCapableRenderer}, has no own material (custom
- * uniforms re-upload live at flush and their mutation bumps no revision); and no
+ * A captured fragment can be recorded as an instruction set iff every draw's
+ * renderer opts in via {@link RetainedBatchCapableRenderer}; own-material
+ * draws additionally pass that renderer's live-state capability check; and no
  * barrier record exists anywhere in the fragment (barriers re-dispatch live
  * per frame and cannot interleave with cached batch runs). Nested
  * plain/retained groups recurse. Anything non-recordable stays on the
@@ -296,10 +297,6 @@ const entriesRecordable = (entries: readonly RetainedFragmentEntry[], registry: 
 
     const drawable = entry.drawable;
 
-    if (drawableHasOwnMaterial(drawable)) {
-      return false;
-    }
-
     let renderer: RetainedBatchCapableRenderer | null;
 
     try {
@@ -310,6 +307,10 @@ const entriesRecordable = (entries: readonly RetainedFragmentEntry[], registry: 
     }
 
     if (renderer === null || typeof renderer !== 'object' || renderer._supportsRetainedBatches !== true) {
+      return false;
+    }
+
+    if (drawableHasOwnMaterial(drawable) && renderer._canRecordRetainedDrawable?.(drawable) !== true) {
       return false;
     }
   }

@@ -138,6 +138,8 @@ export interface WebGpuRetainedBatchReplayer extends Renderer {
   _scanRetainedNodeIndexRange(bytes: Uint8Array, range: WebGpuRetainedNodeIndexRange): void;
   /** Rewrite `bytes`' instance node indices in place to group-local (`index - base`). */
   _rebaseRetainedNodeIndices(bytes: Uint8Array, base: number): void;
+  /** Preflight structural live state before any instruction in the set draws. */
+  _validateRetainedBatch?(payload: WebGpuRetainedBatchPayload): boolean;
   /** Replay the batch: live state (pipeline, uniforms, textures), cached data (bytes, transforms). */
   _replayRetainedBatch(payload: WebGpuRetainedBatchPayload): void;
 }
@@ -175,7 +177,7 @@ export class WebGpuRetainedCaptureFrame {
   public totalBytes = 0;
   /**
    * Set when playback inside the window issued work the recorder cannot
-   * replay (non-recordable renderer, custom material, compositor). Should be
+   * replay (non-recordable renderer or compositor). Should be
    * unreachable — the collect-time recordability predicate excludes
    * all of it — but wrong pixels are never an acceptable failure mode, so a
    * poisoned window is dropped and its set permanently vetoed.

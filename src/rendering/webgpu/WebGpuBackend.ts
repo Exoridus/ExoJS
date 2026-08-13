@@ -241,6 +241,7 @@ export class WebGpuBackend implements RenderBackend {
   private _drawPlanDepth = 0;
   private readonly _planBaseStack: number[] = [];
   private readonly _planHashStack: number[] = [];
+  private _renderPlanEpoch = 0;
   // Retained instruction-set record/replay.
   // Active capture windows, innermost last; live bundle registry for
   // device-loss generation bumps; permanently vetoed (poisoned) sets.
@@ -397,8 +398,14 @@ export class WebGpuBackend implements RenderBackend {
     return this._getTransformStorage().buffer.count;
   }
 
+  /** Monotonic render-plan token for per-material replay deduplication. @internal */
+  public get renderPlanEpoch(): number {
+    return this._renderPlanEpoch;
+  }
+
   /** @internal */
   public _beginDrawPlan(nodeCount: number): void {
+    this._renderPlanEpoch++;
     const storage = this._getTransformStorage();
 
     // Do NOT reset the transform buffer here — it is frame-scoped (reset in
@@ -1301,6 +1308,12 @@ export class WebGpuBackend implements RenderBackend {
       }
 
       if (!payload.bundle.isReady) {
+        set.invalidate();
+
+        return false;
+      }
+
+      if (payload.renderer._validateRetainedBatch?.(payload) === false) {
         set.invalidate();
 
         return false;

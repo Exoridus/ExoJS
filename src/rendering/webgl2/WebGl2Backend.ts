@@ -284,6 +284,7 @@ export class WebGl2Backend implements RenderBackend {
   private _drawPlanDepth = 0;
   private readonly _planBaseStack: number[] = [];
   private readonly _planHashStack: number[] = [];
+  private _renderPlanEpoch = 0;
   // Retained instruction-set capture state.
   private readonly _retainedCaptures: RetainedCaptureFrame[] = [];
   private readonly _retainedBundles = new Set<WebGl2RetainedGroupResources>();
@@ -409,8 +410,14 @@ export class WebGl2Backend implements RenderBackend {
     return this._transformBuffer.count;
   }
 
+  /** Monotonic render-plan token for per-material replay deduplication. @internal */
+  public get renderPlanEpoch(): number {
+    return this._renderPlanEpoch;
+  }
+
   /** @internal */
   public _beginDrawPlan(_nodeCount: number): void {
+    this._renderPlanEpoch++;
     // Do NOT reset the transform buffer here — it is frame-scoped (reset in
     // resetStats). The builder already based this plan's node indices at the
     // current buffer count, so writes land in fresh frame-global slots and
@@ -1480,6 +1487,12 @@ export class WebGl2Backend implements RenderBackend {
       const payload = instruction.payload as WebGl2RetainedBatchPayload | null;
 
       if (payload === null || typeof payload !== 'object' || !(payload.bundle instanceof WebGl2RetainedGroupResources)) {
+        return false;
+      }
+
+      if (payload.replayer._validateRetainedBatch?.(payload) === false) {
+        set.invalidate();
+
         return false;
       }
 

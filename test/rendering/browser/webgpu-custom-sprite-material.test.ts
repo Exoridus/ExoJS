@@ -17,12 +17,17 @@ import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
 import { ShaderSource } from '#rendering/material/ShaderSource';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
+import type { RenderNode } from '#rendering/RenderNode';
+import { RetainedContainer } from '#rendering/RetainedContainer';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { spriteMaterialTextureSlots } from '#rendering/sprite/spriteMaterialSources';
 import { Texture } from '#rendering/texture/Texture';
+import { BlendModes } from '#rendering/types';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
+import { readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
+import { expectPixelNear } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
 
 // Fragment-only WGSL: the engine prepends the canonical sprite material
@@ -38,6 +43,18 @@ struct UserUniforms { color: vec4<f32> };
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
   let base = sampleBase(input.textureSlot, input.texcoord);
   return vec4<f32>(base.rgb * u_user.color.rgb, 1.0);
+}
+`.trim();
+
+const materialTextureFragmentWgsl = `
+struct UserUniforms { unused: vec4<f32> };
+@group(2) @binding(0) var<uniform> u_user: UserUniforms;
+@group(2) @binding(1) var u_pattern: texture_2d<f32>;
+@group(2) @binding(2) var u_patternSampler: sampler;
+
+@fragment
+fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
+  return textureSample(u_pattern, u_patternSampler, input.texcoord);
 }
 `.trim();
 
@@ -74,7 +91,155 @@ const createMaterial = (): SpriteMaterial =>
     uniforms: { u_userColor: [1, 0, 0.5, 1] },
   });
 
+const render = async (backend: WebGpuBackend, node: RenderNode): Promise<void> => {
+  backend.resetStats();
+  backend.clear(Color.black);
+  node.render(backend);
+  backend.flush();
+  await getBackendDevice(backend).queue.onSubmittedWorkDone();
+};
+
 describe('custom SpriteMaterial WebGPU browser', () => {
+  test('retained replay keeps uniform values live and recoverably re-records blend changes', async ctx => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+
+    const backend = new WebGpuBackend(makeApp(canvas));
+
+    await backend.initialize();
+    wireCoreRenderers(backend);
+
+    const device = getBackendDevice(backend);
+    const writeBuffer = vi.spyOn(device.queue, 'writeBuffer');
+    const texture = createSolidTexture(255, 255, 255);
+    const values = new Float32Array([1, 0, 0, 1]);
+    const material = new SpriteMaterial({
+      shader: new ShaderSource({ wgsl: customFragmentWgsl }),
+      uniforms: { u_userColor: values },
+    });
+    const group = new RetainedContainer();
+    const sprite = new Sprite(texture);
+
+    sprite.material = material;
+    sprite.setPosition(16, 16);
+    group.addChild(sprite);
+
+    const cleanup = (): void => {
+      group.destroy();
+      material.destroy();
+      texture.destroy();
+      backend.destroy();
+    };
+
+    try {
+      await render(backend, group); // fragment capture
+      await render(backend, group); // instruction recording
+
+      let replay = vi.spyOn(backend, '_replayRetainedBatch');
+
+      await render(backend, group);
+      expect(replay).toHaveBeenCalledTimes(1);
+      expect(backend.stats.drawCalls).toBe(1);
+      expectPixelNear(readWebGpuPixels(backend, 64)(24, 24), [255, 0, 0, 255]);
+
+      material.setUniform('u_userColor', [0, 1, 0, 1]);
+      replay.mockClear();
+      await render(backend, group);
+
+      expect(replay).toHaveBeenCalledTimes(1);
+      expectPixelNear(readWebGpuPixels(backend, 64)(24, 24), [0, 255, 0, 255]);
+
+      values.set([0, 1, 0, 1]);
+      material.setUniform('u_userColor', values);
+      await render(backend, group);
+      values[0] = 0;
+      values[1] = 0;
+      values[2] = 1;
+      replay.mockClear();
+      const writesBeforeMutation = writeBuffer.mock.calls.length;
+      await render(backend, group);
+      expect(replay).toHaveBeenCalledTimes(1);
+      const materialWrites = writeBuffer.mock.calls.slice(writesBeforeMutation).filter(([buffer]) => buffer.label === 'sprite:material-user-uniform-buffer');
+
+      expect(materialWrites).toHaveLength(1);
+      expect(backend.stats.drawCalls).toBe(1);
+      expect(Array.from(new Float32Array(materialWrites[0]![2] as ArrayBuffer).subarray(0, 4))).toEqual([0, 0, 1, 1]);
+      expectPixelNear(readWebGpuPixels(backend, 64)(24, 24), [0, 0, 255, 255]);
+
+      material.blendMode = BlendModes.Additive;
+      replay.mockClear();
+      await render(backend, group);
+      expect(replay).not.toHaveBeenCalled();
+
+      replay.mockRestore();
+      replay = vi.spyOn(backend, '_replayRetainedBatch');
+      await render(backend, group);
+      expect(replay).toHaveBeenCalledTimes(1);
+      replay.mockRestore();
+    } catch (error) {
+      if (error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError')) {
+        cleanup();
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+        return;
+      }
+
+      throw error;
+    } finally {
+      if (!texture.destroyed) cleanup();
+    }
+  });
+
+  test('retained replay resolves a replacement material texture identity live', async () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+
+    const backend = new WebGpuBackend(makeApp(canvas));
+
+    await backend.initialize();
+    wireCoreRenderers(backend);
+
+    const base = createSolidTexture(255, 255, 255);
+    const firstPattern = createSolidTexture(255, 0, 0);
+    const secondPattern = createSolidTexture(0, 255, 0);
+    const material = new SpriteMaterial({
+      shader: new ShaderSource({ wgsl: materialTextureFragmentWgsl }),
+      textures: { u_pattern: firstPattern },
+    });
+    const group = new RetainedContainer();
+    const sprite = new Sprite(base);
+
+    try {
+      sprite.material = material;
+      sprite.setPosition(16, 16);
+      group.addChild(sprite);
+
+      await render(backend, group);
+      await render(backend, group);
+      await render(backend, group);
+      expectPixelNear(readWebGpuPixels(backend, 64)(24, 24), [255, 0, 0, 255]);
+
+      const replay = vi.spyOn(backend, '_replayRetainedBatch');
+
+      material.setTexture('u_pattern', secondPattern);
+      await render(backend, group);
+
+      expect(replay).toHaveBeenCalledTimes(1);
+      expectPixelNear(readWebGpuPixels(backend, 64)(24, 24), [0, 255, 0, 255]);
+      replay.mockRestore();
+    } finally {
+      group.destroy();
+      material.destroy();
+      secondPattern.destroy();
+      firstPattern.destroy();
+      base.destroy();
+      backend.destroy();
+    }
+  });
+
   test('issues an instanced custom-material draw with a user uniform and no validation error', async ctx => {
     const canvas = document.createElement('canvas');
     canvas.width = 64;
