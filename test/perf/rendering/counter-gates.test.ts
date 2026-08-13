@@ -93,15 +93,18 @@ const EXPECTED = {
   // splice regressed to per-node entry replay.
   panRetained: { collect: 1, inView: 1, globalTransform: 2, materialKey: 0, submittedNodes: 1000, culledNodes: 0, drawCalls: 1, batches: 1 },
 
-  // Plain Container, 10 of the 1000 sprites moved every frame. A child move
-  // transform-dirties the container, busting the root's capture key → full
-  // re-collect (1001 visits, 1000 material keys) PLUS the extra world-transform
-  // resolutions the moved sprites' invalidation cascade forces (gt 8022 vs the
-  // 6002 of a pure pan). Pins the dirty-path shape.
+  // Plain Container, 10 of the 1000 sprites moved every frame. A transform-only
+  // move no longer throws the frame away: the moved rows are patched in place and
+  // the recorded batches still splice, so the walk stays at ONE visit.
   //
-  // globalTransform re-pinned 8021 -> 8022 for the same reason as `panPlain`:
-  // the root resolves its own global transform once per build.
-  mutate10: { collect: 1001, inView: 1001, globalTransform: 8022, materialKey: 1000, submittedNodes: 1000, culledNodes: 0, drawCalls: 1, batches: 1 },
+  // Re-pinned from collect 1001 / inView 1001 / gt 8022 / mk 1000, which was the
+  // full re-collect this frame used to pay. The residual globalTransform (2082 vs
+  // the static row's 2) is the reconcile itself: each moved node resolves its own
+  // matrix for the patched row plus the bounds refresh, and the invalidation
+  // cascade resolves a few ancestors — O(k), not O(n). If `collect` climbs back
+  // toward 1001, the row patch stopped engaging and every moving scene regressed
+  // to a full rebuild.
+  mutate10: { collect: 1, inView: 1, globalTransform: 2082, materialKey: 0, submittedNodes: 1000, culledNodes: 0, drawCalls: 1, batches: 1 },
 } as const;
 
 const withHarness = (fn: (harness: WebGl2Harness) => void): void => {
@@ -189,7 +192,7 @@ describe('CPU collect-path shape gate', () => {
     });
   });
 
-  it('mutating 10 of 1000 sprites: dirty path re-collects the container', () => {
+  it('mutating 10 of 1000 sprites: the row patch keeps the frame on the recorded tier', () => {
     withHarness(harness => {
       const root = new Container();
       const sprites = populate(root, SPRITE_COUNT);
@@ -202,8 +205,10 @@ describe('CPU collect-path shape gate', () => {
         }
       };
 
-      // Pins the dirty-path cost: a transform-only move still invalidates the
-      // whole product here, so every node is revisited.
+      // Pins the O(k) reconcile: a transform-only move patches its baked row
+      // instead of invalidating, so the walk must stay at one visit no matter how
+      // many of the 1000 sprites move. A `collect` back at 1001 means the patch
+      // path stopped engaging.
       expectCounters(measureFrameCounters(harness, root, { beforeFrame: mutate }), EXPECTED.mutate10);
 
       for (const sprite of sprites) sprite.destroy();
