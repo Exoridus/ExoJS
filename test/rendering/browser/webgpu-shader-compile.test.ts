@@ -26,8 +26,8 @@
  *  - `WebGpuSpriteRenderer`'s custom-material path and
  *    `WebGpuMeshRenderer._getOrCreateCustomShaderResources` compile
  *    user-authored `material.shader.wgsl` at runtime — there is no
- *    engine-owned fixed string to assert against. `spriteVertexWgsl`, the
- *    fixed prelude those custom-material shaders are prepended with, IS
+ *    engine-owned fixed string to assert against. `spriteMaterialPrologueWgsl`,
+ *    the fixed prelude those custom-material shaders are prepended with, IS
  *    covered below.
  *
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
@@ -35,7 +35,7 @@
  * device mid-test. Run via: pnpm test:browser:webgpu
  */
 
-import { spriteVertexWgsl } from '#rendering/sprite/spriteMaterialSources';
+import { spriteMaterialPrologueWgsl } from '#rendering/sprite/spriteMaterialSources';
 import { compositorShaderSource as backdropBlendCompositorWgsl } from '#rendering/webgpu/WebGpuBackdropBlendCompositor';
 import { mipmapWgsl } from '#rendering/webgpu/WebGpuBackend';
 import { compositorShaderSource as maskCompositorWgsl } from '#rendering/webgpu/WebGpuMaskCompositor';
@@ -66,7 +66,7 @@ const shaders: readonly ShaderEntry[] = [
   ...spriteBatchTextureSlotTiers.map(tier => ({ name: `WebGpuSpriteRenderer (${tier} texture slots)`, source: buildSpriteShaderSource(tier) })),
   { name: 'WebGpuStencilClipper', source: stencilWriteShaderSource },
   { name: 'WebGpuTextRenderer', source: textShaderSource },
-  { name: 'spriteMaterialSources spriteVertexWgsl (custom-material vertex prelude)', source: spriteVertexWgsl },
+  { name: 'spriteMaterialSources spriteMaterialPrologueWgsl (custom-material prelude)', source: spriteMaterialPrologueWgsl },
 ];
 
 // On the software (swiftshader / lavapipe) adapter the WebGPU device can drop

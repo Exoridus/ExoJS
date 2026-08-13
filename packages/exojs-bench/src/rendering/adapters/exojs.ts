@@ -108,11 +108,10 @@ const materialFragmentGlsl = `#version 300 es
 precision mediump float;
 in vec2 v_texcoord;
 in vec4 v_color;
-uniform sampler2D u_texture;
 uniform vec4 u_userColor;
 out vec4 fragColor;
 void main() {
-  fragColor = texture(u_texture, v_texcoord) * v_color * u_userColor;
+  fragColor = sampleBase(v_textureSlot, v_texcoord) * v_color * u_userColor;
 }`;
 
 /** WGSL twin of {@link materialFragmentGlsl} so the same material also runs on the WebGPU backend. */
@@ -122,7 +121,7 @@ struct UserUniforms { color: vec4<f32> };
 
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
-  let base = textureSample(u_texture, u_sampler, input.texcoord);
+  let base = sampleBase(input.textureSlot, input.texcoord);
   return base * input.color * u_user.color;
 }
 `.trim();

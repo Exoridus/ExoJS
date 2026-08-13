@@ -3,7 +3,7 @@ import type { UniformValue } from '#rendering/material/Material';
 import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import { Shader } from '#rendering/shader/Shader';
 import type { Sprite } from '#rendering/sprite/Sprite';
-import { spriteVertexGlsl } from '#rendering/sprite/spriteMaterialSources';
+import { composeSpriteMaterialFragmentGlsl, spriteMaterialTextureSlots, spriteVertexGlsl } from '#rendering/sprite/spriteMaterialSources';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
@@ -50,10 +50,11 @@ import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './
  * rotate through `u_texture0..15`, selected per-instance via `a_textureSlot`,
  * so unrelated sprites merge into one draw. Sprites with a {@link SpriteMaterial}
  * take the custom path: the material's fragment program runs against the same
- * instance buffer, the single base texture binds to unit 0 as `u_texture`, and
- * material uniforms/textures bind once per batch (units 1..7). The custom path
- * keeps instancing but not the opportunistic 16-slot merge — a custom batch
- * breaks on material instance, base texture, blend mode, or buffer capacity.
+ * instance buffer, up to {@link spriteMaterialTextureSlots} base textures
+ * rotate through `u_texture0..7` behind the engine-spliced `sampleBase(slot,
+ * uv)` helper, and material uniforms/textures bind once per batch on the units
+ * above them. A custom batch breaks on material instance, blend mode, base
+ * slot exhaustion, or buffer capacity — no longer on every base-texture switch.
  */
 
 const identityGroupMat3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
@@ -69,12 +70,16 @@ const transformTextureUnit = 16;
 // sprite draw's shader is active, so units stay disjoint in practice, but this
 // still sits clear of it.
 const transformTintTextureUnit = 18;
-// Custom-material texture bindings (base texture on unit 0 + material textures
-// on units 1..7) keep the pre-16-slot cap: the material CONTRACT stays at 7
+// Material texture bindings occupy the units above the custom path's base-slot
+// table (spriteMaterialTextureSlots..+6). The material CONTRACT stays at 7
 // extra textures, matching WebGl2MeshRenderer and the WebGPU sprite renderer.
 // Deliberately decoupled from maxBatchTextures — bumping the default-path
-// batch capacity must not silently widen what materials may request.
-const maxCustomTextureSlots = 8;
+// batch capacity must not silently widen what materials may request. 8 base
+// slots + 7 material textures = 15 fragment units, inside the WebGL2
+// MAX_TEXTURE_IMAGE_UNITS >= 16 guarantee.
+const maxCustomTextureSlots = 7;
+// First texture unit a material's own textures may use.
+const customTextureUnitBase = spriteMaterialTextureSlots;
 const instanceStrideBytes = 32;
 const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
 
@@ -109,6 +114,10 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   // MAX_TEXTURE_IMAGE_UNITS — a defensive floor that WebGL2's >= 16 guarantee
   // means should never actually reduce the batch below maxBatchTextures.
   private _maxTextureSlots = maxBatchTextures;
+  // Effective base-texture slot cap for the CUSTOM path. Smaller than
+  // _maxTextureSlots on purpose: a material's own textures share the fragment
+  // stage's unit budget (see maxCustomTextureSlots).
+  private _maxCustomTextureSlots = spriteMaterialTextureSlots;
 
   // Custom-material state. Compiled fragment programs are cached per material
   // instance; the current batch's material/base-texture decide when to flush.
@@ -120,7 +129,6 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   private readonly _transformUnitScratch: Int32Array = new Int32Array([transformTextureUnit]);
   private readonly _tintUnitScratch: Int32Array = new Int32Array([transformTintTextureUnit]);
   private _currentMaterial: SpriteMaterial | null = null;
-  private _currentBaseTexture: Texture | RenderTexture | null = null;
   // Local bounds resolved for the sprite currently being packed. Geometry-mode
   // boundary snapping now happens in the vertex shader, so this is always the
   // sprite's logical local bounds; the field lets _packInstance read the value
@@ -232,15 +240,8 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
 
       backend._stageViewportUniform(shader);
 
-      // The single base texture binds to unit 0 as `u_texture`.
-      const baseTexture = this._currentBaseTexture;
-
-      if (baseTexture !== null && shader.uniforms.has('u_texture')) {
-        backend.bindTexture(baseTexture, 0);
-        // In-bounds: `_slotScratches` is pre-allocated with `maxBatchTextures` (>= 1) entries.
-        shader.getUniform('u_texture').setValue(this._slotScratches[0]!);
-      }
-
+      // Base textures are already bound to their slot units by _renderCustom;
+      // the sampler uniforms are pinned once when the program is compiled.
       this._bindCustomUniforms(shader, material, backend);
     }
 
@@ -445,6 +446,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     const maxImageUnits = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS) as number;
 
     this._maxTextureSlots = Math.min(maxBatchTextures, maxImageUnits);
+    this._maxCustomTextureSlots = Math.min(spriteMaterialTextureSlots, this._maxTextureSlots);
 
     this._shader.connect(createWebGl2ShaderProgram(gl));
     this._connection = this._createConnection(gl);
@@ -484,7 +486,6 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
 
     this._customShaders.clear();
     this._currentMaterial = null;
-    this._currentBaseTexture = null;
     this._instanceBuffer?.destroy();
     this._instanceBuffer = null;
     this._vao?.destroy();
@@ -536,7 +537,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     this._instanceCount++;
   }
 
-  /** Custom-material path: single base texture on unit 0, instanced. */
+  /** Custom-material path: rotate the base texture through the material slot table, instanced. */
   private _renderCustom(sprite: Sprite, texture: Texture | RenderTexture, material: SpriteMaterial, backend: WebGl2Backend, nodeIndex: number): void {
     // The material owns its blend mode; the sprite's own blendMode overrides it
     // when set away from the default (Normal).
@@ -544,9 +545,9 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     const batchFull = this._instanceCount >= this._batchSize;
     const blendModeChanged = blendMode !== this._currentBlendMode;
     const materialChanged = material !== this._currentMaterial;
-    const textureChanged = texture !== this._currentBaseTexture;
+    const slotExhausted = !this._textureSlots.has(texture) && this._slotCount >= this._maxCustomTextureSlots;
 
-    if (this._instanceCount > 0 && (batchFull || blendModeChanged || materialChanged || textureChanged)) {
+    if (this._instanceCount > 0 && (batchFull || blendModeChanged || materialChanged || slotExhausted)) {
       this.flush();
     }
 
@@ -556,10 +557,19 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     }
 
     this._currentMaterial = material;
-    this._currentBaseTexture = texture;
 
-    // textureSlot word is unused by custom fragments (base binds to unit 0).
-    this._packInstance(sprite, texture, 0, nodeIndex);
+    // Resolve / assign texture slot, exactly as the default path does — the
+    // spliced prologue's sampleBase() dispatches over it per fragment.
+    let slot = this._textureSlots.get(texture);
+
+    if (slot === undefined) {
+      slot = this._slotCount++;
+      this._textureSlots.set(texture, slot);
+      this._activeTextures[slot] = texture;
+      backend.bindTexture(texture, slot);
+    }
+
+    this._packInstance(sprite, texture, slot, nodeIndex);
     this._instanceCount++;
   }
 
@@ -624,11 +634,31 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
 
     // The engine owns the vertex stage: pair the canonical sprite vertex shader
     // with the material's fragment so the corner-expansion / instancing
-    // contract is fixed regardless of the material author.
-    const shader = new Shader(spriteVertexGlsl, glsl.fragment);
+    // contract is fixed regardless of the material author. The fragment gets
+    // the engine's base-texture slot table spliced in, so `sampleBase` and the
+    // `u_texture0..N-1` samplers behind it exist without the author declaring
+    // them.
+    const shader = new Shader(spriteVertexGlsl, composeSpriteMaterialFragmentGlsl(glsl.fragment));
 
     shader.connect(createWebGl2ShaderProgram(gl));
+    // Links the program and populates `shader.uniforms`; the slot samplers can
+    // only be pinned once that table exists (same order as `onConnect`).
     shader.sync();
+
+    // Pin the slot samplers to units 0..N-1. Guarded by `has` (unlike the
+    // default program's strict pinning): a fragment that never calls
+    // `sampleBase` leaves every slot sampler unused, and the GLSL compiler
+    // then drops all of them from the linked program.
+    const samplerUnit = new Int32Array(1);
+
+    for (let i = 0; i < this._maxCustomTextureSlots; i++) {
+      const name = `u_texture${i}`;
+
+      if (shader.uniforms.has(name)) {
+        samplerUnit[0] = i;
+        shader.getUniform(name).setValue(samplerUnit);
+      }
+    }
 
     this._customShaders.set(material, shader);
 
@@ -645,10 +675,11 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   }
 
   private _bindCustomUniforms(shader: Shader, material: SpriteMaterial, backend: WebGl2Backend): void {
-    // Texture bindings take consecutive units starting at 1 (unit 0 belongs to
-    // the sprite's own base texture). Texture-valued uniforms bind first, then
-    // the entries of the material's dedicated `textures` map.
-    let textureSlot = 1;
+    // Texture bindings take consecutive units above the base-texture slot table
+    // (units 0..spriteMaterialTextureSlots-1 belong to the sprites' own base
+    // textures). Texture-valued uniforms bind first, then the entries of the
+    // material's dedicated `textures` map.
+    let textureSlot = customTextureUnitBase;
 
     const uniforms = material.uniforms;
 
@@ -662,13 +693,14 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
       const uniform = shader.getUniform(name);
 
       if (value instanceof Texture || value instanceof RenderTexture) {
-        if (textureSlot >= maxCustomTextureSlots) {
-          throw new Error(`SpriteMaterial requested more than ${maxCustomTextureSlots - 1} texture bindings.`);
+        if (textureSlot >= customTextureUnitBase + maxCustomTextureSlots) {
+          throw new Error(`SpriteMaterial requested more than ${maxCustomTextureSlots} texture bindings.`);
         }
 
         backend.bindTexture(value, textureSlot);
-        // In-bounds: `textureSlot < maxCustomTextureSlots <= maxBatchTextures`
-        // (guarded) and `_slotScratches` has `maxBatchTextures` entries.
+        // In-bounds: `textureSlot < customTextureUnitBase + maxCustomTextureSlots
+        // <= maxBatchTextures` (guarded) and `_slotScratches` has
+        // `maxBatchTextures` entries.
         uniform.setValue(this._slotScratches[textureSlot]!);
         textureSlot++;
       } else {
@@ -683,8 +715,8 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
         continue;
       }
 
-      if (textureSlot >= maxCustomTextureSlots) {
-        throw new Error(`SpriteMaterial requested more than ${maxCustomTextureSlots - 1} texture bindings.`);
+      if (textureSlot >= customTextureUnitBase + maxCustomTextureSlots) {
+        throw new Error(`SpriteMaterial requested more than ${maxCustomTextureSlots} texture bindings.`);
       }
 
       // `name` iterates own keys of `textures`, so the lookup is defined.

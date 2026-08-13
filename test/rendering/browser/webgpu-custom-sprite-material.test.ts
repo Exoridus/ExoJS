@@ -5,7 +5,7 @@
  * against Mesa lavapipe), so this test drives a
  * custom {@link SpriteMaterial} (user uniform) through the real
  * {@link WebGpuSpriteRenderer} and asserts the custom path (group 0 projection +
- * shared transform storage, group 1 base texture, group 2 user UBO) issues an
+ * shared transform storage, group 1 base-texture slot table, group 2 user UBO) issues an
  * instanced draw without raising a GPU validation error, while keeping the
  * 32-byte instance buffer (transform and tint fetched from storage by nodeIndex).
  *
@@ -18,23 +18,25 @@ import { Container } from '#rendering/Container';
 import { ShaderSource } from '#rendering/material/ShaderSource';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import { Sprite } from '#rendering/sprite/Sprite';
+import { spriteMaterialTextureSlots } from '#rendering/sprite/spriteMaterialSources';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { wireCoreRenderers } from './_coreRenderers';
 import { getBackendDevice } from './webgpu-test-helpers';
 
-// Fragment-only WGSL: the engine prepends the canonical sprite vertex module
-// (spriteVertexWgsl), which declares VertexOutput, the group(0) projection, and
-// the group(1) base texture (`u_texture`/`u_sampler`). The author adds the
-// group(2) user UBO and the fragment entry point.
+// Fragment-only WGSL: the engine prepends the canonical sprite material
+// prologue (spriteMaterialPrologueWgsl), which declares VertexOutput, the
+// group(0) projection, the group(1) base-texture slot table and the
+// `sampleBase(slot, uv)` helper. The author adds the group(2) user UBO and the
+// fragment entry point.
 const customFragmentWgsl = `
 struct UserUniforms { color: vec4<f32> };
 @group(2) @binding(0) var<uniform> u_user: UserUniforms;
 
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
-  let base = textureSample(u_texture, u_sampler, input.texcoord);
+  let base = sampleBase(input.textureSlot, input.texcoord);
   return vec4<f32>(base.rgb * u_user.color.rgb, 1.0);
 }
 `.trim();
@@ -133,6 +135,132 @@ describe('custom SpriteMaterial WebGPU browser', () => {
       material.destroy();
       texture.destroy();
       backend.destroy();
+    }
+  });
+
+  // Multi-texture batching gate for the custom path. Before base textures
+  // rotated through the material slot table this frame cost one draw per
+  // sprite; it must now collapse to the plateau of a single instanced draw.
+  test('four distinct base textures under one material collapse to a single draw', async ctx => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+
+    const backend = new WebGpuBackend(makeApp(canvas));
+
+    await backend.initialize();
+    wireCoreRenderers(backend);
+
+    const device = getBackendDevice(backend);
+
+    const textures = [createSolidTexture(200, 0, 0), createSolidTexture(0, 200, 0), createSolidTexture(0, 0, 200), createSolidTexture(200, 200, 0)];
+    const material = createMaterial();
+    const root = new Container();
+
+    textures.forEach((texture, index) => {
+      const sprite = new Sprite(texture);
+
+      sprite.material = material;
+      sprite.setPosition(4 + index * 14, 16);
+      root.addChild(sprite);
+    });
+
+    const cleanup = (): void => {
+      root.destroy();
+      material.destroy();
+      textures.forEach(texture => texture.destroy());
+      backend.destroy();
+    };
+
+    device.pushErrorScope('validation');
+
+    let validationError: GPUError | null;
+
+    try {
+      backend.resetStats();
+      backend.clear(Color.black);
+      root.render(backend);
+      backend.flush();
+      validationError = await device.popErrorScope();
+    } catch (error) {
+      if (error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError')) {
+        cleanup();
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+        return;
+      }
+
+      throw error;
+    }
+
+    try {
+      expect(validationError).toBeNull();
+      expect(backend.stats.drawCalls).toBe(1);
+    } finally {
+      cleanup();
+    }
+  });
+
+  test('base-slot exhaustion breaks the custom-material batch', async ctx => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+
+    const backend = new WebGpuBackend(makeApp(canvas));
+
+    await backend.initialize();
+    wireCoreRenderers(backend);
+
+    const device = getBackendDevice(backend);
+
+    // One more distinct base texture than the custom path's slot table holds.
+    const textures = Array.from({ length: spriteMaterialTextureSlots + 1 }, (_, index) => createSolidTexture(16 * (index + 1), 0, 0));
+    const material = createMaterial();
+    const root = new Container();
+
+    textures.forEach((texture, index) => {
+      const sprite = new Sprite(texture);
+
+      sprite.material = material;
+      sprite.setPosition(2 + index * 6, 16);
+      root.addChild(sprite);
+    });
+
+    const cleanup = (): void => {
+      root.destroy();
+      material.destroy();
+      textures.forEach(texture => texture.destroy());
+      backend.destroy();
+    };
+
+    device.pushErrorScope('validation');
+
+    let validationError: GPUError | null;
+
+    try {
+      backend.resetStats();
+      backend.clear(Color.black);
+      root.render(backend);
+      backend.flush();
+      validationError = await device.popErrorScope();
+    } catch (error) {
+      if (error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError')) {
+        cleanup();
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+        return;
+      }
+
+      throw error;
+    }
+
+    try {
+      expect(validationError).toBeNull();
+      expect(backend.stats.drawCalls).toBe(2);
+    } finally {
+      cleanup();
     }
   });
 });

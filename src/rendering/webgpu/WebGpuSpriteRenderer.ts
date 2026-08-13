@@ -5,7 +5,7 @@ import type { ReadonlyRectangle } from '#math/Rectangle';
 import { affineMat4FloatCount, packAffineMat4, packedGroupChanged } from '#rendering/affinePacking';
 import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import type { Sprite } from '#rendering/sprite/Sprite';
-import { spriteVertexWgsl } from '#rendering/sprite/spriteMaterialSources';
+import { buildSpriteTextureSlotWgsl, spriteMaterialPrologueWgsl, spriteMaterialTextureSlots } from '#rendering/sprite/spriteMaterialSources';
 import { DataTexture } from '#rendering/texture/DataTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
@@ -115,20 +115,6 @@ export const resolveSpriteBatchTextureSlots = (device: GPUDevice): number => {
  * @internal
  */
 export const buildSpriteShaderSource = (textureSlots: number): string => {
-  const textureBindings = Array.from({ length: textureSlots }, (_, slot) => `@group(1) @binding(${slot})\nvar spriteTexture${slot}: texture_2d<f32>;`).join(
-    '\n',
-  );
-  const samplerBindings = Array.from(
-    { length: textureSlots },
-    (_, slot) => `@group(1) @binding(${textureSlots + slot})\nvar spriteSampler${slot}: sampler;`,
-  ).join('\n');
-  // The last slot is the switch default so every u32 value maps to a texture.
-  const sampleCases = Array.from({ length: textureSlots }, (_, slot) =>
-    slot < textureSlots - 1
-      ? `        case ${slot}u: {\n            return textureSampleGrad(spriteTexture${slot}, spriteSampler${slot}, uv, ddx, ddy);\n        }`
-      : `        default: {\n            return textureSampleGrad(spriteTexture${slot}, spriteSampler${slot}, uv, ddx, ddy);\n        }`,
-  ).join('\n');
-
   return `
 struct ProjectionUniforms {
     matrix: mat4x4<f32>,
@@ -150,9 +136,7 @@ var<storage, read> transforms: array<TransformSlot>;
 @group(0) @binding(2)
 var<storage, read> tints: array<u32>;
 
-${textureBindings}
-
-${samplerBindings}
+${buildSpriteTextureSlotWgsl(textureSlots)}
 
 // Per-instance vertex layout (32 bytes per sprite). The four corners
 // of the quad are derived from @builtin(vertex_index) 0..3 inside the
@@ -255,20 +239,11 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
     return output;
 }
 
-fn sampleTexture(slot: u32, uv: vec2<f32>, ddx: vec2<f32>, ddy: vec2<f32>) -> vec4<f32> {
-    switch slot {
-${sampleCases}
-    }
-}
-
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
     // Compute screen-space derivatives in uniform control flow before the
-    // per-slot switch. WGSL requires textureSample (implicit LOD) to run in
-    // uniform control flow, which multi-texture batching breaks because the
-    // slot varies per fragment. textureSampleGrad takes explicit derivatives
-    // and is valid regardless of control-flow uniformity, while preserving
-    // mipmap-correct LOD when sprites use mipmapped textures.
+    // per-slot switch (see buildSpriteTextureSlotWgsl for why sampling takes
+    // explicit derivatives).
     let ddx = dpdx(input.texcoord);
     let ddy = dpdy(input.texcoord);
     let sample = sampleTexture(input.textureSlot, input.texcoord, ddx, ddy);
@@ -287,6 +262,9 @@ const initialBatchCapacity = 32;
 // Deliberately decoupled from the multi-texture batch slot count — bumping the
 // default-path batch tiers must not silently widen the custom-material
 // contract (mirrors the WebGL2 renderer's maxCustomTextureSlots convention).
+// Together with spriteMaterialTextureSlots (8) this keeps a custom pipeline at
+// 15 sampled textures / 15 samplers per fragment stage, inside WebGPU's base
+// limit of 16.
 const maxCustomTextureSlots = 7; // user texture uniforms; group(2) binding 1..N
 const indicesPerSprite = 6;
 // Static index buffer: two triangles forming a quad, vertex IDs 0..3 in
@@ -318,8 +296,8 @@ const maxTextureSetsPerAnchor = 8;
 /**
  * Per-material GPU resources for the custom sprite path, cached against the
  * material instance and released when the material's `_onDispose` fires.
- * group(0) reuses the shared projection UBO; group(1) is the single base
- * texture; group(2) is the user UBO + texture/sampler pairs.
+ * group(0) reuses the shared projection UBO; group(1) is the base-texture slot
+ * table; group(2) is the user UBO + texture/sampler pairs.
  */
 interface CustomSpriteResources {
   shaderModule: GPUShaderModule;
@@ -332,7 +310,9 @@ interface CustomSpriteResources {
   // re-uploaded/rebuilt only when the material's uniform values or bound
   // texture views actually change.
   userUniform: UserUniformState;
-  baseTextureBindGroups: WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView }>;
+  // Base-texture slot count the cached shader module and pipeline layout were
+  // generated for. Fixed for the custom path, so this only ever asserts.
+  textureSlots: number;
 }
 
 export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> implements WebGpuRetainedBatchReplayer {
@@ -385,6 +365,10 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   // GPU bind groups across long sessions). Rebuilt when the backend hands out
   // a new view for any slot; dropped wholesale on disconnect / device loss.
   private _textureSetBindGroups = new WeakMap<Texture | RenderTexture, TextureSetBindGroupEntry[]>();
+  // Same cache, for the custom path's narrower slot table (group(1) laid out
+  // for spriteMaterialTextureSlots instead of the device tier). Kept separate
+  // because the cached bind groups are built against a different layout.
+  private _customTextureSetBindGroups = new WeakMap<Texture | RenderTexture, TextureSetBindGroupEntry[]>();
   private readonly _textureSlots = new Map<Texture | RenderTexture, number>();
   private _slotCount = 0;
   private _instanceCount = 0;
@@ -396,9 +380,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   // Custom-material state. Per-material pipelines/bind groups are cached; the
   // current batch's material/base-texture decide when to flush.
   private readonly _customMaterials = new Map<SpriteMaterial, CustomSpriteResources>();
-  private _customBaseTextureLayout: GPUBindGroupLayout | null = null;
+  private _customTextureBindGroupLayout: GPUBindGroupLayout | null = null;
   private _currentMaterial: SpriteMaterial | null = null;
-  private _currentBaseTexture: Texture | RenderTexture | null = null;
   // Material uniform buffers a draw already recorded into the currently open
   // pass reads from. A batch about to rewrite one of them has to end that pass
   // first — see the hazard checks in flush(). Keyed to the pass identity so a
@@ -422,6 +405,18 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     // resolved once per connection — before the shader module and the
     // group(1) layout are built from it.
     this._maxBatchTextures = resolveSpriteBatchTextureSlots(this._device);
+
+    // The custom-material prologue is generated for a FIXED slot count, so its
+    // group(1) layout must fit inside what the default path already proved
+    // bindable. Every tier resolveSpriteBatchTextureSlots can return is >= it;
+    // this asserts that invariant instead of silently generating a layout the
+    // device cannot satisfy.
+    if (this._maxBatchTextures < spriteMaterialTextureSlots) {
+      throw new Error(
+        `WebGpuSpriteRenderer: device grants only ${this._maxBatchTextures} sprite batch texture slots, below the ${spriteMaterialTextureSlots} the custom-material path requires.`,
+      );
+    }
+
     this._activeTextures = new Array<Texture | RenderTexture | null>(this._maxBatchTextures).fill(null);
     this._shaderModule = this._device.createShaderModule({ label: 'sprite:shader', code: buildSpriteShaderSource(this._maxBatchTextures) });
 
@@ -474,12 +469,25 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       label: 'sprite:pipeline-layout',
       bindGroupLayouts: [this._uniformBindGroupLayout, this._textureBindGroupLayout],
     });
-    // Single base-texture layout for the custom-material path (group 1).
-    this._customBaseTextureLayout = this._device.createBindGroupLayout({
-      label: 'sprite:bind-group-layout:custom-base-texture',
+    // Base-texture slot table for the custom-material path (group 1). Same
+    // shape as the default layout above, sized to the fixed custom slot count.
+    this._customTextureBindGroupLayout = this._device.createBindGroupLayout({
+      label: 'sprite:bind-group-layout:custom-texture',
       entries: [
-        { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
-        { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+        ...Array.from({ length: spriteMaterialTextureSlots }, (_, index) => ({
+          binding: index,
+          visibility: GPUShaderStage.FRAGMENT,
+          texture: {
+            sampleType: 'float' as const,
+          },
+        })),
+        ...Array.from({ length: spriteMaterialTextureSlots }, (_, index) => ({
+          binding: spriteMaterialTextureSlots + index,
+          visibility: GPUShaderStage.FRAGMENT,
+          sampler: {
+            type: 'filtering' as const,
+          },
+        })),
       ],
     });
     this._uniformBuffer = this._device.createBuffer({
@@ -522,12 +530,13 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     // Bind groups and the projection UBO belong to the (possibly lost) device;
     // drop the caches so reconnect rebuilds them against the fresh device.
     this._textureSetBindGroups = new WeakMap<Texture | RenderTexture, TextureSetBindGroupEntry[]>();
+    this._customTextureSetBindGroups = new WeakMap<Texture | RenderTexture, TextureSetBindGroupEntry[]>();
     this._writtenView = null;
     this._writtenViewUpdateId = -1;
     this._hasWrittenProjection = false;
     this._uniformBuffer = null;
     this._pipelineLayout = null;
-    this._customBaseTextureLayout = null;
+    this._customTextureBindGroupLayout = null;
     this._textureBindGroupLayout = null;
     this._uniformBindGroupLayout = null;
     this._shaderModule = null;
@@ -541,7 +550,6 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     this._maxNodeIndex = 0;
     this._currentBlendMode = null;
     this._currentMaterial = null;
-    this._currentBaseTexture = null;
     this._resetSlots();
     this._maxBatchTextures = fallbackSpriteBatchTextureSlots;
     this._activeTextures = new Array<Texture | RenderTexture | null>(fallbackSpriteBatchTextureSlots).fill(null);
@@ -629,7 +637,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     this._instanceCount++;
   }
 
-  /** Custom-material path: single base texture on group(1), instanced. */
+  /** Custom-material path: rotate the base texture through the material slot table on group(1), instanced. */
   private _renderCustom(sprite: Sprite, texture: Texture | RenderTexture, material: SpriteMaterial, backend: WebGpuBackend, nodeIndex: number): void {
     if (material.shader.wgsl === null) {
       throw new Error('SpriteMaterial shader has no `wgsl` source; cannot render through the WebGPU backend.');
@@ -640,21 +648,29 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     const blendMode = sprite.blendMode === BlendModes.Normal ? material.blendMode : sprite.blendMode;
     const blendModeChanged = this._currentBlendMode !== null && blendMode !== this._currentBlendMode;
     const materialChanged = this._currentMaterial !== null && material !== this._currentMaterial;
-    const textureChanged = this._currentBaseTexture !== null && texture !== this._currentBaseTexture;
+    const slotExhausted = !this._textureSlots.has(texture) && this._slotCount >= spriteMaterialTextureSlots;
     const modeSwitch = this._currentMaterial === null && this._instanceCount > 0;
 
-    if (blendModeChanged || materialChanged || textureChanged || modeSwitch) {
+    if (blendModeChanged || materialChanged || slotExhausted || modeSwitch) {
       this.flush();
     }
 
     this._currentBlendMode = blendMode;
     this._currentMaterial = material;
-    this._currentBaseTexture = texture;
     backend.setBlendMode(blendMode);
 
-    // textureSlot word is unused by custom fragments (base binds to group(1)).
+    // Resolve / assign texture slot, exactly as the default path does — the
+    // fragment dispatches over the slot via the prologue's sampleBase().
+    let slot = this._textureSlots.get(texture);
+
+    if (slot === undefined) {
+      slot = this._slotCount++;
+      this._textureSlots.set(texture, slot);
+      this._activeTextures[slot] = texture;
+    }
+
     this._ensureInstanceCapacity(this._instanceCount + 1);
-    this._packInstance(sprite, texture, 0, nodeIndex);
+    this._packInstance(sprite, texture, slot, nodeIndex);
     this._instanceCount++;
   }
 
@@ -842,7 +858,6 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     this._resetSlots();
     this._currentBlendMode = null;
     this._currentMaterial = null;
-    this._currentBaseTexture = null;
   }
 
   /**
@@ -886,14 +901,10 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
   /**
    * Whether any texture the pending batch binds would be re-uploaded or resized
-   * when synced (see {@link WebGpuBackend._textureUploadWouldMutate}). Checks the
-   * custom base texture on the custom path, else every active multi-texture slot.
+   * when synced (see {@link WebGpuBackend._textureUploadWouldMutate}). Both paths
+   * rotate their base textures through the slot table, so the check is the same.
    */
   private _batchWouldMutateTexture(backend: WebGpuBackend): boolean {
-    if (this._currentMaterial !== null) {
-      return this._currentBaseTexture !== null && backend._textureUploadWouldMutate(this._currentBaseTexture);
-    }
-
     for (let i = 0; i < this._slotCount; i++) {
       const texture = this._activeTextures[i];
 
@@ -1294,6 +1305,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     device: GPUDevice,
     backend: WebGpuBackend,
     textures: ReadonlyArray<Texture | RenderTexture | null | undefined>,
+    custom = false,
   ): GPUBindGroup {
     // Slots beyond the active count get the slot-0 texture as a filler so
     // the bind-group layout always sees N valid texture views and samplers.
@@ -1307,7 +1319,10 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     // Bindings are resolved BEFORE the cache lookup on purpose: resolving is
     // what syncs a dirty/mutated texture's content to the GPU, so it must run
     // every flush even when the bind group itself is served from cache.
-    const slotCapacity = this._maxBatchTextures;
+    //
+    // `custom` selects the custom-material slot table (fixed capacity, its own
+    // group(1) layout) instead of the device-tier default one.
+    const slotCapacity = custom ? spriteMaterialTextureSlots : this._maxBatchTextures;
     const fallbackTexture = textures[0] ?? Texture.empty;
     const fallbackBinding = backend.getTextureBinding(fallbackTexture);
     const resolvedTextures = new Array<Texture | RenderTexture>(slotCapacity);
@@ -1324,11 +1339,12 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     // when the full ordered texture set is identical; its bind group is reused
     // while every backend-resolved view is unchanged, and refreshed in place
     // when the backend recreated any slot's GPU texture (new view identity).
-    let entries = this._textureSetBindGroups.get(fallbackTexture);
+    const cache = custom ? this._customTextureSetBindGroups : this._textureSetBindGroups;
+    let entries = cache.get(fallbackTexture);
 
     if (entries === undefined) {
       entries = [];
-      this._textureSetBindGroups.set(fallbackTexture, entries);
+      cache.set(fallbackTexture, entries);
     }
 
     for (const entry of entries) {
@@ -1360,13 +1376,13 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       if (!bindingsMatch) {
         entry.views = resolvedBindings.map(binding => binding.view);
         entry.samplers = resolvedBindings.map(binding => binding.sampler);
-        entry.group = this._buildTextureBindGroup(device, resolvedBindings);
+        entry.group = this._buildTextureBindGroup(device, resolvedBindings, custom);
       }
 
       return entry.group;
     }
 
-    const group = this._buildTextureBindGroup(device, resolvedBindings);
+    const group = this._buildTextureBindGroup(device, resolvedBindings, custom);
 
     entries.push({
       textures: resolvedTextures,
@@ -1382,8 +1398,12 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     return group;
   }
 
-  private _buildTextureBindGroup(device: GPUDevice, resolvedBindings: ReadonlyArray<ReturnType<WebGpuBackend['getTextureBinding']>>): GPUBindGroup {
-    const slotCapacity = this._maxBatchTextures;
+  private _buildTextureBindGroup(
+    device: GPUDevice,
+    resolvedBindings: ReadonlyArray<ReturnType<WebGpuBackend['getTextureBinding']>>,
+    custom: boolean,
+  ): GPUBindGroup {
+    const slotCapacity = custom ? spriteMaterialTextureSlots : this._maxBatchTextures;
     const entries: GPUBindGroupEntry[] = [];
 
     // resolvedBindings always holds one fully-resolved binding per batch slot.
@@ -1402,8 +1422,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     }
 
     return device.createBindGroup({
-      label: 'sprite:texture-bind-group',
-      layout: this._textureBindGroupLayout!,
+      label: custom ? 'sprite:material-texture-bind-group' : 'sprite:texture-bind-group',
+      layout: (custom ? this._customTextureBindGroupLayout : this._textureBindGroupLayout)!,
       entries,
     });
   }
@@ -1506,8 +1526,6 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     instanceBuffer: GPUBuffer,
     instanceByteOffset: number,
   ): void {
-    const baseTexture = this._currentBaseTexture ?? Texture.empty;
-
     // Planned before the pass was settled; the write only happens when the
     // material's values actually changed since its last upload.
     applyUserUniformUpload(uniformUpload, resources, device);
@@ -1516,7 +1534,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, transformBindGroup);
-    pass.setBindGroup(1, this._getCustomBaseTextureBindGroup(resources, backend, baseTexture, device));
+    pass.setBindGroup(1, this._getOrCreateTextureBindGroup(device, backend, this._activeTextures, true));
     pass.setBindGroup(2, this._getUserBindGroup(material, resources, backend, device));
     pass.setVertexBuffer(0, instanceBuffer, instanceByteOffset);
     pass.setIndexBuffer(this._indexBuffer!, 'uint16');
@@ -1527,6 +1545,15 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     const existing = this._customMaterials.get(material);
 
     if (existing !== undefined) {
+      // The slot count is device-derived and fixed per connection (the cache is
+      // dropped on disconnect), so this can only ever hold — it guards against a
+      // future device-dependent slot count silently reusing a stale layout.
+      if (existing.textureSlots !== spriteMaterialTextureSlots) {
+        throw new Error(
+          `WebGpuSpriteRenderer: cached material resources were built for ${existing.textureSlots} base-texture slots, but the pipeline now needs ${spriteMaterialTextureSlots}.`,
+        );
+      }
+
       return existing;
     }
 
@@ -1536,16 +1563,16 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       throw new Error('SpriteMaterial shader has no `wgsl` source; cannot render through the WebGPU backend.');
     }
 
-    // The engine owns the vertex stage: prepend the canonical sprite vertex
-    // module (VertexInput/VertexOutput, group(0) projection + transform storage,
-    // group(1) base texture + sampler) to the material's fragment WGSL.
-    // Routed through the backend so WGSL compilation errors in user-supplied
-    // material shaders surface via backend.onRenderError.
-    const shaderModule = this.getBackend()._createShaderModule(`${spriteVertexWgsl}\n${wgsl}`, 'sprite:material-shader');
+    // The engine owns the vertex stage: prepend the canonical sprite material
+    // prologue (VertexInput/VertexOutput, group(0) projection + transform
+    // storage, the group(1) base-texture slot table and sampleBase) to the
+    // material's fragment WGSL. Routed through the backend so WGSL compilation
+    // errors in user-supplied material shaders surface via backend.onRenderError.
+    const shaderModule = this.getBackend()._createShaderModule(`${spriteMaterialPrologueWgsl}\n${wgsl}`, 'sprite:material-shader');
     const userLayout = this._buildUserBindGroupLayout(device, material);
     const pipelineLayout = device.createPipelineLayout({
       label: 'sprite:material-pipeline-layout',
-      bindGroupLayouts: [this._uniformBindGroupLayout!, this._customBaseTextureLayout!, userLayout],
+      bindGroupLayouts: [this._uniformBindGroupLayout!, this._customTextureBindGroupLayout!, userLayout],
     });
 
     const resources: CustomSpriteResources = {
@@ -1556,7 +1583,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       userUniformBuffer: null,
       userUniformBufferCapacity: 0,
       userUniform: createUserUniformState(),
-      baseTextureBindGroups: new WeakMap(),
+      textureSlots: spriteMaterialTextureSlots,
     };
 
     this._customMaterials.set(material, resources);
@@ -1633,36 +1660,6 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     return pipeline;
   }
 
-  private _getCustomBaseTextureBindGroup(
-    resources: CustomSpriteResources,
-    backend: WebGpuBackend,
-    texture: Texture | RenderTexture,
-    device: GPUDevice,
-  ): GPUBindGroup {
-    // Resolve the binding every call so a mutable base texture uploads its
-    // dirty region before sampling; reuse the cached group only while the
-    // underlying view is unchanged (the backend swaps it on texture resize).
-    const binding = backend.getTextureBinding(texture);
-    const existing = resources.baseTextureBindGroups.get(texture);
-
-    if (existing?.view === binding.view) {
-      return existing.group;
-    }
-
-    const group = device.createBindGroup({
-      label: 'sprite:material-base-texture-bind-group',
-      layout: this._customBaseTextureLayout!,
-      entries: [
-        { binding: 0, resource: binding.view },
-        { binding: 1, resource: binding.sampler },
-      ],
-    });
-
-    resources.baseTextureBindGroups.set(texture, { group, view: binding.view });
-
-    return group;
-  }
-
   private _buildUserBindGroupLayout(device: GPUDevice, material: SpriteMaterial): GPUBindGroupLayout {
     const entries: GPUBindGroupLayoutEntry[] = [];
 
@@ -1710,6 +1707,5 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     resources.userUniformBuffer = null;
     resources.userUniformBufferCapacity = 0;
     resetUserUniformState(resources.userUniform);
-    resources.baseTextureBindGroups = new WeakMap();
   }
 }

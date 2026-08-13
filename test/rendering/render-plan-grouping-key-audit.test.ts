@@ -28,7 +28,9 @@
  *    bindKey encodes the material's own extra textures (material.textures /
  *    texture-valued uniforms), NOT the sprite's base texture (sprite.texture).
  *    Two custom-material sprites sharing a material instance get the same
- *    groupIndex regardless of their base texture.
+ *    groupIndex regardless of their base texture — and the custom path now
+ *    rotates base textures through its own slot table, so that also costs no
+ *    flush until the table is exhausted.
  *
  * 5. The z-split in _assignGroupIndices serves mesh static-batch draw order:
  *    meshes at different z must not coalesce. For sprite renderers the split
@@ -461,9 +463,9 @@ describe('render plan grouping key audit', () => {
       // bindKey regardless of their base texture, so the optimizer gives them
       // the same groupIndex.
       //
-      // The sprite renderer flushes on base-texture change via its own state
-      // machine (_currentBaseTexture tracking) — this boundary is
-      // renderer-owned, not optimizer-owned.
+      // The sprite renderer absorbs a base-texture change into one of its
+      // custom-path slots and only flushes on slot exhaustion — that boundary
+      // is renderer-owned, not optimizer-owned.
       const { backend, destroy } = createBuildBackend();
 
       try {

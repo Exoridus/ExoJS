@@ -192,9 +192,8 @@ describe('WebGL2 GPU pixel snapping — Sprite position mode', () => {
           fragment: `#version 300 es
 precision mediump float;
 in vec2 v_texcoord;
-uniform sampler2D u_texture;
 out vec4 fragColor;
-void main() { fragColor = texture(u_texture, v_texcoord); }`,
+void main() { fragColor = sampleBase(v_textureSlot, v_texcoord); }`,
         },
       }),
     });

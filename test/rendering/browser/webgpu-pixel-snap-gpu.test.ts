@@ -213,7 +213,7 @@ describe('WebGPU GPU pixel snapping — Sprite position mode', () => {
 
   // -------------------------------------------------------------------------
   // Case 1b: a CUSTOM SpriteMaterial snaps identically. A custom material owns
-  // only the fragment stage; the engine prepends `spriteVertexWgsl`, which runs
+  // only the fragment stage; the engine prepends `spriteMaterialPrologueWgsl`, which runs
   // the same origin snap. Before that snap block was ported into the custom
   // vertex module (and `viewport` added to its ProjectionUniforms), custom-
   // material sprites silently lost position snapping once the CPU seam was
@@ -230,7 +230,7 @@ describe('WebGPU GPU pixel snapping — Sprite position mode', () => {
         wgsl: `
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
-  return textureSample(u_texture, u_sampler, input.texcoord);
+  return sampleBase(input.textureSlot, input.texcoord);
 }
 `.trim(),
       }),

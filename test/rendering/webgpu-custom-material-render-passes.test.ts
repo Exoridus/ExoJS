@@ -23,6 +23,7 @@ import { ShaderSource } from '#rendering/material/ShaderSource';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import type { RenderNode } from '#rendering/RenderNode';
 import { Sprite } from '#rendering/sprite/Sprite';
+import { BlendModes } from '#rendering/types';
 import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { createCanvasTexture, createMockBackend, createMockWebGpuEnvironment } from './webgpuMockEnvironment';
@@ -45,7 +46,7 @@ struct UserUniforms { color: vec4<f32> };
 
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
-  let base = textureSample(u_texture, u_sampler, input.texcoord);
+  let base = sampleBase(input.textureSlot, input.texcoord);
   return vec4<f32>(base.rgb * u_user.color.rgb, 1.0);
 }
 `.trim();
@@ -57,7 +58,7 @@ const createMaterial = (color: Float32Array): SpriteMaterial =>
   });
 
 describe('WebGPU custom-material batches and render passes', () => {
-  test('sprites on distinct base textures flush separately but stay in one render pass', async () => {
+  test('sprites on distinct base textures merge into one draw in one render pass', async () => {
     const environment = createMockWebGpuEnvironment();
 
     try {
@@ -76,11 +77,10 @@ describe('WebGPU custom-material batches and render passes', () => {
 
       renderFrame(backend, nodes);
 
-      // The custom path binds one base texture, so three textures are still
-      // three batches — that part is the separate multi-texture question.
-      expect(environment.drawIndexedCount()).toBe(drawMark + 3);
-      // But nothing wrote a buffer an earlier draw reads, so one pass carries
-      // all three.
+      // The custom path rotates base textures through its slot table, so three
+      // distinct textures collapse into a single instanced draw.
+      expect(environment.drawIndexedCount()).toBe(drawMark + 1);
+      // And nothing wrote a buffer an earlier draw reads, so one pass carries it.
       expect(backend.stats.renderPasses).toBe(1);
 
       backend.destroy();
@@ -147,19 +147,27 @@ describe('WebGPU custom-material batches and render passes', () => {
     try {
       const backend = await createMockBackend(environment);
       const material = createMaterial(new Float32Array([1, 0, 0, 1]));
-      const nodes = [new Sprite(createCanvasTexture()), new Sprite(createCanvasTexture()), new Sprite(createCanvasTexture())];
+      const texture = createCanvasTexture();
+      const nodes = [new Sprite(texture), new Sprite(texture), new Sprite(texture)];
+
+      // Distinct blend modes, so each sprite starts a new batch of the SAME
+      // material — a base-texture change no longer does that now that the
+      // custom path rotates base textures through its slot table.
+      nodes[0]!.blendMode = BlendModes.Normal;
+      nodes[1]!.blendMode = BlendModes.Additive;
+      nodes[2]!.blendMode = BlendModes.Multiply;
 
       for (const sprite of nodes) {
         sprite.material = material;
       }
 
-      // Warmup, so the lazy texture uploads are not what splits the pass below.
+      // Warmup, so the lazy texture upload is not what splits the pass below.
       renderFrame(backend, nodes);
 
-      // Each sprite has its own base texture, so rendering the next one flushes
-      // the previous batch. Mutating the uniforms between the second and third
-      // render means the flush of the SECOND batch rewrites the very buffer the
-      // FIRST batch's draw — already recorded into the open pass — reads.
+      // Rendering the next sprite flushes the previous batch. Mutating the
+      // uniforms between the second and third render means the flush of the
+      // SECOND batch rewrites the very buffer the FIRST batch's draw — already
+      // recorded into the open pass — reads.
       backend.resetStats();
       backend.clear(Color.black);
       nodes[0]!.render(backend);
