@@ -743,4 +743,43 @@ describe('buildTextPageQuads', () => {
     // Second quad's indices are offset by 4 (base vertex index).
     expect(Array.from(batch!.indices.slice(6, 12))).toEqual([4, 5, 6, 4, 6, 7]);
   });
+
+  test('does not wrap glyph indices for a single node past the old 16384-quad Uint16 ceiling', () => {
+    // Quad 16384's base vertex index is 16384 * 4 = 65536, one past the last
+    // value a Uint16 can hold (65535): a Uint16Array index buffer stores it
+    // as 65536 & 0xFFFF === 0, silently aliasing quad 0's vertex slot.
+    const quadCount = 16400;
+    const placements = Array.from({ length: quadCount }, (_, i) => makePlacement({ x: i }));
+
+    const [batch] = buildTextPageQuads(placements);
+
+    expect(batch?.quadCount).toBe(quadCount);
+    expect(batch!.indices).toBeInstanceOf(Uint32Array);
+
+    const wrappingQuad = 16384;
+    const wrappingBase = wrappingQuad * 6;
+    const wrappingBaseV = wrappingQuad * 4;
+
+    expect(Array.from(batch!.indices.slice(wrappingBase, wrappingBase + 6))).toEqual([
+      wrappingBaseV,
+      wrappingBaseV + 1,
+      wrappingBaseV + 2,
+      wrappingBaseV,
+      wrappingBaseV + 2,
+      wrappingBaseV + 3,
+    ]);
+
+    const lastQuad = quadCount - 1;
+    const lastBase = lastQuad * 6;
+    const lastBaseV = lastQuad * 4;
+
+    expect(Array.from(batch!.indices.slice(lastBase, lastBase + 6))).toEqual([
+      lastBaseV,
+      lastBaseV + 1,
+      lastBaseV + 2,
+      lastBaseV,
+      lastBaseV + 2,
+      lastBaseV + 3,
+    ]);
+  });
 });

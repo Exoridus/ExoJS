@@ -226,7 +226,7 @@ export function buildTextPageQuads(placements: readonly GlyphPlacement[]): TextP
     const n = pagePlacements.length;
     const vertices = new Float32Array(n * 8);
     const uvs = new Float32Array(n * 8);
-    const indices = new Uint16Array(n * 6);
+    const indices = new Uint32Array(n * 6);
 
     for (let i = 0; i < n; i++) {
       // In-bounds: i < n === pagePlacements.length.

@@ -40,8 +40,8 @@ export interface TextPageQuads {
   readonly vertices: Float32Array;
   /** UV coordinates: [u, v] × 4 vertices × quadCount. */
   readonly uvs: Float32Array;
-  /** Index buffer: 6 indices × quadCount. */
-  readonly indices: Uint16Array;
+  /** Index buffer: 6 indices × quadCount. `Uint32` — a single node's own glyph count can exceed 16384 quads. */
+  readonly indices: Uint32Array;
   readonly quadCount: number;
 }
 
