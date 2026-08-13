@@ -18,11 +18,14 @@ import { Geometry } from '#rendering/geometry/Geometry';
 import { MeshMaterial } from '#rendering/material/MeshMaterial';
 import { ShaderSource } from '#rendering/material/ShaderSource';
 import { Mesh } from '#rendering/mesh/Mesh';
+import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
 import { ScaleModes, WrapModes } from '#rendering/types';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
+import { readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
+import { expectPixelNear } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
 
 // Custom WGSL honouring the mesh contract: group(0) auto-bound mesh uniforms,
@@ -146,6 +149,26 @@ const createQuadGeometry = (size: number): Geometry => {
   });
 };
 
+const countSubmits = (backend: WebGpuBackend, body: () => void): number => {
+  const queue = getBackendDevice(backend).queue;
+  const realSubmit = queue.submit.bind(queue);
+  let count = 0;
+
+  queue.submit = ((buffers: Iterable<GPUCommandBuffer>): undefined => {
+    count++;
+
+    return realSubmit(buffers);
+  }) as GPUQueue['submit'];
+
+  try {
+    body();
+  } finally {
+    queue.submit = realSubmit;
+  }
+
+  return count;
+};
+
 describe('custom MeshMaterial WebGPU browser', () => {
   test('issues a custom-material draw with user uniform + texture and no validation error', async ctx => {
     const canvas = document.createElement('canvas');
@@ -206,6 +229,175 @@ describe('custom MeshMaterial WebGPU browser', () => {
       expect(getTextureBinding).toHaveBeenCalledWith(pattern);
     } finally {
       mesh.destroy();
+      material.destroy();
+      pattern.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('keeps repeated custom-material mesh flushes in one pass without aliasing their buffer slices', async ctx => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+
+    const backend = new WebGpuBackend(makeApp(canvas));
+
+    await backend.initialize();
+    wireCoreRenderers(backend);
+
+    const device = getBackendDevice(backend);
+    const pattern = createPatternTexture();
+    const material = new MeshMaterial({
+      shader: new ShaderSource({ wgsl: customWgsl }),
+      uniforms: { u_userColor: [1, 0, 0, 1] as const },
+      textures: { u_pattern: pattern },
+    });
+    const meshes = Array.from({ length: 4 }, (_, index) => {
+      const mesh = createQuadMesh(10, material);
+
+      mesh.setPosition(index * 14, 32);
+
+      return mesh;
+    });
+    const sprites = Array.from({ length: 4 }, (_, index) => {
+      const sprite = new Sprite(pattern);
+
+      sprite.setPosition(index * 14, 0);
+      sprite.width = 10;
+      sprite.height = 10;
+
+      return sprite;
+    });
+    const trailingSprite = new Sprite(pattern);
+
+    trailingSprite.setPosition(54, 0);
+    trailingSprite.width = 10;
+    trailingSprite.height = 10;
+
+    const renderAlternating = (): void => {
+      backend.resetStats();
+      backend.clear(Color.black);
+
+      for (let i = 0; i < meshes.length; i++) {
+        sprites[i]!.render(backend);
+        meshes[i]!.render(backend);
+      }
+
+      trailingSprite.render(backend);
+      backend.flush();
+    };
+
+    device.pushErrorScope('validation');
+
+    try {
+      // Let the grow-only per-material buffers ratchet to the whole pass. A
+      // capacity growth is a real boundary; the steady state must not be.
+      for (let frame = 0; frame < 3; frame++) {
+        renderAlternating();
+      }
+
+      const submits = countSubmits(backend, renderAlternating);
+      const validationError = await device.popErrorScope();
+
+      expect(validationError).toBeNull();
+      expect(backend.stats.drawCalls).toBe(9);
+      expect(backend.stats.renderPasses).toBe(1);
+      expect(submits).toBe(1);
+
+      const readPixel = readWebGpuPixels(backend, 64);
+
+      for (let i = 0; i < meshes.length; i++) {
+        expectPixelNear(readPixel(i * 14 + 5, 37), [128, 0, 0, 255]);
+      }
+    } catch (error) {
+      if (error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError')) {
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+        return;
+      }
+
+      throw error;
+    } finally {
+      meshes.forEach(mesh => mesh.destroy());
+      sprites.forEach(sprite => sprite.destroy());
+      trailingSprite.destroy();
+      material.destroy();
+      pattern.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('keeps the user-uniform alias boundary when one material changes between mesh flushes', async ctx => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+
+    const backend = new WebGpuBackend(makeApp(canvas));
+
+    await backend.initialize();
+    wireCoreRenderers(backend);
+
+    const device = getBackendDevice(backend);
+    const pattern = createPatternTexture();
+    const material = new MeshMaterial({
+      shader: new ShaderSource({ wgsl: customWgsl }),
+      uniforms: { u_userColor: [1, 0, 0, 1] as const },
+      textures: { u_pattern: pattern },
+    });
+    const first = createQuadMesh(12, material);
+    const second = createQuadMesh(12, material);
+    const separator = new Sprite(pattern);
+
+    first.setPosition(8, 32);
+    second.setPosition(36, 32);
+    separator.setPosition(24, 0);
+    separator.width = 12;
+    separator.height = 12;
+
+    // Warm resources before measuring the one intentional uniform boundary.
+    backend.clear(Color.black);
+    first.render(backend);
+    backend.flush();
+
+    const renderMutationBoundary = (): void => {
+      backend.resetStats();
+      backend.clear(Color.black);
+      first.render(backend);
+      separator.render(backend); // switches renderer and flushes the red mesh
+      material.uniforms.u_userColor = [0, 1, 0, 1];
+      second.render(backend);
+      separator.render(backend); // flushes the green mesh
+      backend.flush();
+    };
+
+    device.pushErrorScope('validation');
+
+    try {
+      const submits = countSubmits(backend, renderMutationBoundary);
+      const validationError = await device.popErrorScope();
+
+      expect(validationError).toBeNull();
+      expect(backend.stats.renderPasses).toBe(2);
+      expect(submits).toBe(2);
+
+      const readPixel = readWebGpuPixels(backend, 64);
+
+      expectPixelNear(readPixel(14, 38), [128, 0, 0, 255]);
+      expectPixelNear(readPixel(42, 38), [0, 128, 0, 255]);
+    } catch (error) {
+      if (error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError')) {
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+        return;
+      }
+
+      throw error;
+    } finally {
+      first.destroy();
+      second.destroy();
+      separator.destroy();
       material.destroy();
       pattern.destroy();
       backend.destroy();

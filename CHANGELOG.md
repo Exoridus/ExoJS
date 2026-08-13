@@ -484,6 +484,12 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
   closed in place, so a following flush (e.g. the sprite flush right after)
   appends into it rather than paying for a pass and a `queue.submit` of its
   own.
+- **Custom WebGPU mesh flushes share one render pass and submit.** Each
+  `MeshMaterial` flush rewrote its per-material vertex, index and mesh-uniform
+  buffers from offset 0, forcing every later flush in the frame to submit the
+  previous pass first. Those buffers now append at per-material pass cursors;
+  capacity growth and a real mid-pass user-uniform mutation remain intentional
+  boundaries.
 - **A fully mask-clipped tile-chunk flush no longer opens (or counts) an
   empty render pass.** `WebGpuTileChunkRenderer.flush()` called
   `acquirePass()` unconditionally, so a flush whose quads were entirely

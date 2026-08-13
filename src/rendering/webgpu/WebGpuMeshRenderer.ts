@@ -29,14 +29,11 @@ import { packSnapViewport } from './webgpuSnapViewport';
 import { stencilContentDepthStencilState } from './WebGpuStencilState';
 import {
   applyUserUniformUpload,
-  collectScalarUniforms,
   collectTextureBindings,
   createUserUniformState,
-  packUserUniforms,
   planUserUniformUpload,
   resetUserUniformState,
   resolveUserUniformBindGroup,
-  userUniformBufferBytes,
   type UserUniformState,
   type UserUniformUpload,
 } from './webgpuUserUniforms';
@@ -297,6 +294,13 @@ interface CustomShaderResources {
   meshUniformBuffer: GPUBuffer | null;
   meshUniformBufferCapacity: number;
   meshUniformBindGroup: GPUBindGroup | null;
+  // Per-material append cursors for the open render pass. Custom materials own
+  // separate vertex/index/uniform buffers, so pass identity — not merely the
+  // renderer's global cursor — decides whether a flush can append safely.
+  passRef: WebGpuActiveRenderPass | null;
+  vertexPassBytes: number;
+  indexPassBytes: number;
+  meshUniformPassSlots: number;
   // User-uniform UBO: buffer reused across frames; the persistent scratch +
   // cached user bind group re-upload/rebuild only on an actual change.
   userUniformBuffer: GPUBuffer | null;
@@ -779,17 +783,12 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // instanced batch takes one uniform slot plus one node index per instance.
     const nodeIndexBytes = this._drawCallCount * Uint32Array.BYTES_PER_ELEMENT;
 
-    // Phases 3-4 below write into the shared vertex/index/uniform and instanced
-    // node-index buffers, and may reallocate them. Draws of OURS left in the
-    // open pass — from `drawInstancedBatch` or from an earlier flush — still
+    // Phases 3-4 below write into renderer-owned buffers. Draws of OURS left in
+    // the open pass — from `drawInstancedBatch` or from an earlier flush — still
     // read those exact buffers, and `queue.writeBuffer` lands ahead of the whole
-    // submit, so this flush must APPEND at the pass cursors rather than rewrite
-    // from offset 0. Ending the pass is the fallback for the two cases appending
-    // cannot cover: a reallocation (which frees the buffer those draws read),
-    // and a custom-material draw (whose per-material buffers are still rewritten
-    // from 0, see phase 3b). Another renderer's draws in the pass are not at
-    // risk here: none of these buffers is shared, and the pass now survives a
-    // renderer switch precisely so they can stay.
+    // submit. Default and per-material custom buffers therefore append at their
+    // pass cursors. Ending the pass is only the fallback for a reallocation or
+    // a changed user-uniform upload that would alias an earlier draw.
     const ownDrawsInPass = this._ownDrawsPass !== null && this._ownDrawsPass === coordinator.activePass;
     // Sized for everything this pass has taken SO FAR plus this flush, captured
     // BEFORE the guard below may reset the cursors — and used to size the buffers
@@ -803,10 +802,52 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     const targetUniformSlots = this._defaultUniformPassSlots + defaultDrawCalls;
     const targetNodeIndexBytes = this._instancedNodeIndexFrameBytes + nodeIndexBytes;
     const targetInstancedUniformSlots = this._instancedBatchUniformSlots + this._drawCallCount;
+    const customTargets = new Map<
+      Material,
+      {
+        vertexBytes: number;
+        indexBytes: number;
+        uniformSlots: number;
+        upload: UserUniformUpload;
+      }
+    >();
+    let customAppendWouldGrow = false;
+    let customUniformWriteWouldAlias = false;
+
+    for (const [material, resources] of this._customShaders) {
+      if (resources.drawCount === 0) {
+        continue;
+      }
+
+      const continuesInActivePass = resources.passRef !== null && resources.passRef === coordinator.activePass;
+      const vertexBase = continuesInActivePass ? resources.vertexPassBytes : 0;
+      const indexBase = continuesInActivePass ? resources.indexPassBytes : 0;
+      const uniformBase = continuesInActivePass ? resources.meshUniformPassSlots : 0;
+      const vertexBytes = vertexBase + resources.totalVertices * vertexStrideBytes;
+      const indexBytes = indexBase + alignIndexBytes(resources.totalIndices);
+      const uniformSlots = uniformBase + resources.drawCount;
+      const upload = planUserUniformUpload(material, resources, device, 'mesh:material-user-uniform-buffer');
+
+      customTargets.set(material, { vertexBytes, indexBytes, uniformSlots, upload });
+
+      if (
+        continuesInActivePass &&
+        (vertexBytes > resources.vertexBufferCapacity ||
+          indexBytes > resources.indexBufferCapacity ||
+          uniformSlots * meshUniformAlignment > resources.meshUniformBufferCapacity)
+      ) {
+        customAppendWouldGrow = true;
+      }
+
+      if (ownDrawsInPass && this._instancedBatchUniformWriteWouldAlias(upload)) {
+        customUniformWriteWouldAlias = true;
+      }
+    }
 
     if (
       ownDrawsInPass &&
-      (customDraws > 0 ||
+      (customAppendWouldGrow ||
+        customUniformWriteWouldAlias ||
         this._flushAppendWouldGrow(targetVertexBytes, targetIndexBytes, targetUniformSlots, targetNodeIndexBytes, targetInstancedUniformSlots))
     ) {
       coordinator.endPass();
@@ -880,13 +921,26 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       }
     }
 
-    // Phase 3b: pack custom-path vertex/index/uniform data per material.
+    // Phase 3b: pack custom-path vertex/index/uniform data per material. CPU
+    // staging remains flush-local; destination offsets append into each
+    // material's slices for the open pass.
+    const customPassBases = new Map<Material, { vertexBytes: number; indexBytes: number; uniformSlots: number }>();
+
     for (const [material, resources] of this._customShaders) {
       if (resources.drawCount === 0) {
         continue;
       }
 
-      this._ensureCustomCapacities(resources);
+      const target = customTargets.get(material)!;
+      const continuesInActivePass = resources.passRef !== null && resources.passRef === coordinator.activePass;
+      const bases = {
+        vertexBytes: continuesInActivePass ? resources.vertexPassBytes : 0,
+        indexBytes: continuesInActivePass ? resources.indexPassBytes : 0,
+        uniformSlots: continuesInActivePass ? resources.meshUniformPassSlots : 0,
+      };
+
+      customPassBases.set(material, bases);
+      this._ensureCustomCapacities(resources, target.vertexBytes, target.indexBytes, target.uniformSlots);
 
       // Pack vertices/indices in local space (no CPU bake).
       let vWritten = 0;
@@ -909,25 +963,25 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
         }
 
         // Write mesh-uniform slot (proj/trans/tint) with dynamic offset.
-        this._writeCustomMeshUniform(material, resources, drawCursor, dc.mesh, backend);
+        this._writeCustomMeshUniform(material, resources, bases.uniformSlots + drawCursor, dc.mesh, backend);
 
         vWritten += dc.vertexCount;
         iWritten += dc.indexCount;
         drawCursor++;
       }
 
-      device.queue.writeBuffer(resources.vertexBuffer!, 0, resources.vertexData, 0, resources.totalVertices * vertexStrideBytes);
+      device.queue.writeBuffer(resources.vertexBuffer!, bases.vertexBytes, resources.vertexData, 0, resources.totalVertices * vertexStrideBytes);
       device.queue.writeBuffer(
         resources.indexBuffer!,
-        0,
+        bases.indexBytes,
         resources.indexData.buffer,
         resources.indexData.byteOffset,
         (resources.totalIndices * Uint16Array.BYTES_PER_ELEMENT + 3) & ~3,
       );
 
-      // Refresh the user uniform UBO from the material — uploaded only when the
-      // uniform values actually changed since the last frame.
-      this._uploadUserUniforms(material, resources);
+      // Planned before the pass boundary was settled. This writes only when
+      // values changed and cannot alias an earlier draw after the guard above.
+      applyUserUniformUpload(target.upload, resources, device);
     }
 
     // Phase 4: single writeBuffer per resource for the default path, at this
@@ -1118,7 +1172,9 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
         }
 
         const cursor = customDrawCursors.get(dc.customShader) ?? 0;
-        pass.setBindGroup(0, resources.meshUniformBindGroup, [cursor * meshUniformAlignment]);
+        const bases = customPassBases.get(dc.customShader)!;
+
+        pass.setBindGroup(0, resources.meshUniformBindGroup, [(bases.uniformSlots + cursor) * meshUniformAlignment]);
 
         // This draw reads the material's user-uniform buffer for as long as the
         // pass stays open — which it now does past the end of this flush. A
@@ -1133,8 +1189,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
           pass.setBindGroup(1, this._getOrCreateMeshTextureBindGroup(resources, backend, dc.texture, dc.customShader.sampler));
         }
 
-        pass.setVertexBuffer(0, resources.vertexBuffer, dc.vertexByteOffset);
-        pass.setIndexBuffer(resources.indexBuffer!, 'uint16', dc.indexByteOffset);
+        pass.setVertexBuffer(0, resources.vertexBuffer, bases.vertexBytes + dc.vertexByteOffset);
+        pass.setIndexBuffer(resources.indexBuffer!, 'uint16', bases.indexBytes + dc.indexByteOffset);
         pass.drawIndexed(dc.indexCount);
 
         pass.popDebugGroup();
@@ -1152,6 +1208,19 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // read. `_instancedNodeIndexFrameBytes` was advanced per batch by
     // `_uploadInstancedNodeIndices`; the rest is this flush's base plus what it
     // consumed.
+    for (const [material, resources] of this._customShaders) {
+      if (resources.drawCount === 0) {
+        continue;
+      }
+
+      const bases = customPassBases.get(material)!;
+
+      resources.passRef = active;
+      resources.vertexPassBytes = bases.vertexBytes + resources.totalVertices * vertexStrideBytes;
+      resources.indexPassBytes = bases.indexBytes + alignIndexBytes(resources.totalIndices);
+      resources.meshUniformPassSlots = bases.uniformSlots + resources.drawCount;
+    }
+
     this._instancedBatchPass = active;
     this._ownDrawsPass = active;
     this._instancedBatchUniformSlots = instancedUniformSlotBase + instancedDrawCursor;
@@ -2419,6 +2488,10 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       meshUniformBuffer: null,
       meshUniformBufferCapacity: 0,
       meshUniformBindGroup: null,
+      passRef: null,
+      vertexPassBytes: 0,
+      indexPassBytes: 0,
+      meshUniformPassSlots: 0,
       userUniformBuffer: null,
       userUniformBufferCapacity: 0,
       userUniform: createUserUniformState(),
@@ -2442,20 +2515,20 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     return resources;
   }
 
-  private _ensureCustomCapacities(resources: CustomShaderResources): void {
+  private _ensureCustomCapacities(resources: CustomShaderResources, targetVertexBytes: number, targetIndexBytes: number, targetUniformSlots: number): void {
     const device = this._device!;
 
-    // Vertex buffer
-    const vertexBytes = resources.totalVertices * vertexStrideBytes;
-    if (vertexBytes > resources.vertexData.byteLength) {
-      const newSize = Math.max(vertexBytes, resources.vertexData.byteLength * 2);
+    // Staging buffers hold this flush; GPU buffers hold the whole open pass.
+    const flushVertexBytes = resources.totalVertices * vertexStrideBytes;
+    if (flushVertexBytes > resources.vertexData.byteLength) {
+      const newSize = Math.max(flushVertexBytes, resources.vertexData.byteLength * 2);
       resources.vertexData = new ArrayBuffer(newSize);
       resources.vertexFloatView = new Float32Array(resources.vertexData);
       resources.vertexUintView = new Uint32Array(resources.vertexData);
     }
-    if (vertexBytes > resources.vertexBufferCapacity) {
+    if (targetVertexBytes > resources.vertexBufferCapacity) {
       resources.vertexBuffer?.destroy();
-      resources.vertexBufferCapacity = Math.max(vertexBytes, resources.vertexBufferCapacity * 2 || vertexStrideBytes);
+      resources.vertexBufferCapacity = Math.max(targetVertexBytes, resources.vertexBufferCapacity * 2 || vertexStrideBytes);
       resources.vertexBuffer = device.createBuffer({
         label: 'mesh:material-vertex-buffer',
         size: resources.vertexBufferCapacity,
@@ -2464,13 +2537,13 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     }
 
     // Index buffer — capacity must be 4-byte aligned for GPUQueue.writeBuffer.
-    const indexBytes = (resources.totalIndices * Uint16Array.BYTES_PER_ELEMENT + 3) & ~3;
-    if (resources.indexData.length * Uint16Array.BYTES_PER_ELEMENT < indexBytes) {
-      resources.indexData = new Uint16Array(Math.max(indexBytes / Uint16Array.BYTES_PER_ELEMENT, resources.indexData.length * 2));
+    const flushIndexBytes = alignIndexBytes(resources.totalIndices);
+    if (resources.indexData.length * Uint16Array.BYTES_PER_ELEMENT < flushIndexBytes) {
+      resources.indexData = new Uint16Array(Math.max(flushIndexBytes / Uint16Array.BYTES_PER_ELEMENT, resources.indexData.length * 2));
     }
-    if (indexBytes > resources.indexBufferCapacity) {
+    if (targetIndexBytes > resources.indexBufferCapacity) {
       resources.indexBuffer?.destroy();
-      resources.indexBufferCapacity = Math.max(indexBytes, resources.indexBufferCapacity * 2 || 4);
+      resources.indexBufferCapacity = Math.max(targetIndexBytes, resources.indexBufferCapacity * 2 || 4);
       resources.indexBuffer = device.createBuffer({
         label: 'mesh:material-index-buffer',
         size: resources.indexBufferCapacity,
@@ -2479,7 +2552,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     }
 
     // Mesh-uniform UBO (proj/trans/tint per draw, 256-byte aligned).
-    const meshUniformBytes = resources.drawCount * meshUniformAlignment;
+    const meshUniformBytes = targetUniformSlots * meshUniformAlignment;
     if (meshUniformBytes > resources.meshUniformBufferCapacity) {
       resources.meshUniformBuffer?.destroy();
       resources.meshUniformBufferCapacity = Math.max(meshUniformBytes, resources.meshUniformBufferCapacity * 2 || meshUniformAlignment);
@@ -2675,39 +2748,6 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     return device.createBindGroupLayout({ label: 'mesh:material-bind-group-layout:user', entries });
   }
 
-  private _uploadUserUniforms(material: Material, resources: CustomShaderResources): void {
-    const device = this._device!;
-    const scalarValues = collectScalarUniforms(material);
-
-    // Always keep a UBO (even if empty) since binding 0 of the user layout is
-    // fixed. Min size 16 bytes to satisfy WebGPU's minimum buffer size. The
-    // buffer is reused across frames — only (re)created on capacity growth.
-    const bufferBytes = userUniformBufferBytes(scalarValues.length);
-    let forceWrite = false;
-
-    if (resources.userUniformBuffer === null || resources.userUniformBufferCapacity < bufferBytes) {
-      resources.userUniformBuffer?.destroy();
-      resources.userUniformBufferCapacity = bufferBytes;
-      resources.userUniformBuffer = device.createBuffer({
-        label: 'mesh:material-user-uniform-buffer',
-        size: bufferBytes,
-        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-      });
-      // A fresh buffer holds undefined contents and voids any bind group that
-      // referenced the old identity.
-      forceWrite = true;
-      resources.userUniform.bindGroup = null;
-      resources.userUniform.bindGroupBuffer = null;
-    }
-
-    // Pack into the reused scratch and upload only when the values changed.
-    if (packUserUniforms(scalarValues, resources.userUniform, forceWrite)) {
-      const data = resources.userUniform.data;
-
-      device.queue.writeBuffer(resources.userUniformBuffer, 0, data.buffer, data.byteOffset, bufferBytes);
-    }
-  }
-
   private _getUserBindGroup(backend: WebGpuBackend, material: Material, resources: CustomShaderResources): GPUBindGroup {
     return resolveUserUniformBindGroup(
       this._device!,
@@ -2737,6 +2777,10 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     resources.indexBufferCapacity = 0;
     resources.meshUniformBufferCapacity = 0;
     resources.userUniformBufferCapacity = 0;
+    resources.passRef = null;
+    resources.vertexPassBytes = 0;
+    resources.indexPassBytes = 0;
+    resources.meshUniformPassSlots = 0;
     resetUserUniformState(resources.userUniform);
   }
 }
