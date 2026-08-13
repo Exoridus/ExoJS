@@ -51,6 +51,8 @@ class MaterialLeaf extends Drawable {
   }
 }
 
+class RetainedMaterialLeaf extends MaterialLeaf {}
+
 class UnregisteredLeaf extends Drawable {
   public constructor() {
     super();
@@ -60,6 +62,7 @@ class UnregisteredLeaf extends Drawable {
 
 // Capability flag carrier: sprite-renderer default path only.
 const flaggedRenderer = { _supportsRetainedBatches: true };
+const retainedMaterialRenderer = { _supportsRetainedBatches: true, _canRecordRetainedDrawable: () => true };
 const unflaggedRenderer = {};
 
 // File-local fake backend (repo convention keeps test harnesses file-local).
@@ -74,6 +77,10 @@ const createTestBackend = (): RenderBackend => {
     renderTarget,
     rendererRegistry: {
       resolve(drawable: Drawable) {
+        if (drawable instanceof RetainedMaterialLeaf) {
+          return retainedMaterialRenderer;
+        }
+
         if (drawable instanceof RecordableLeaf || drawable instanceof MaterialLeaf) {
           return flaggedRenderer;
         }
@@ -202,6 +209,20 @@ describe('recordability predicate: records default-path flagged renderers only',
     const fragment = captureFragment(group, backend);
 
     expect(fragment.isRecordable(backend)).toBe(false);
+
+    group.parent!.destroy();
+    backend.destroy();
+  });
+
+  test('an own-material drawable is recordable only when its renderer opts into the live-state contract', () => {
+    const backend = createTestBackend();
+    const group = new RetainedContainer();
+
+    group.addChild(new RetainedMaterialLeaf());
+
+    const fragment = captureFragment(group, backend);
+
+    expect(fragment.isRecordable(backend)).toBe(true);
 
     group.parent!.destroy();
     backend.destroy();

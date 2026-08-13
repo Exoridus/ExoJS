@@ -12,6 +12,7 @@ import type { BackendRenderPass } from '#rendering/BackendRenderPass';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import { dataTextureBytesPerPixel, estimateTextureBytes, GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
+import type { MaterialSamplerOptions } from '#rendering/material/Material';
 import type { Mesh } from '#rendering/mesh/Mesh';
 import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/RenderCommand';
 import type { ScopeEntry } from '#rendering/plan/RenderScope';
@@ -199,6 +200,8 @@ export class WebGpuBackend implements RenderBackend {
   private readonly _textureStates: Map<Texture | RenderTexture, ManagedWebGpuTextureState> = new Map<Texture | RenderTexture, ManagedWebGpuTextureState>();
   private readonly _textureDestroyHandlers: Map<Texture | RenderTexture, () => void> = new Map<Texture | RenderTexture, () => void>();
   private readonly _textureReleaseHandlers: Map<Texture, () => void> = new Map<Texture, () => void>();
+  /** Device-local material sampler overrides, interned by effective filter/wrap state. */
+  private readonly _materialSamplers = new Map<string, GPUSampler>();
   private readonly _renderTargetDestroyHandlers: Map<RenderTarget, () => void> = new Map<RenderTarget, () => void>();
   private readonly _renderTexturePool: RenderTexturePool = new RenderTexturePool();
   private readonly _clipBoundsStack: Rectangle[] = [];
@@ -241,6 +244,7 @@ export class WebGpuBackend implements RenderBackend {
   private _drawPlanDepth = 0;
   private readonly _planBaseStack: number[] = [];
   private readonly _planHashStack: number[] = [];
+  private _renderPlanEpoch = 0;
   // Retained instruction-set record/replay.
   // Active capture windows, innermost last; live bundle registry for
   // device-loss generation bumps; permanently vetoed (poisoned) sets.
@@ -397,8 +401,14 @@ export class WebGpuBackend implements RenderBackend {
     return this._getTransformStorage().buffer.count;
   }
 
+  /** Monotonic render-plan token for per-material replay deduplication. @internal */
+  public get renderPlanEpoch(): number {
+    return this._renderPlanEpoch;
+  }
+
   /** @internal */
   public _beginDrawPlan(nodeCount: number): void {
+    this._renderPlanEpoch++;
     const storage = this._getTransformStorage();
 
     // Do NOT reset the transform buffer here — it is frame-scoped (reset in
@@ -871,6 +881,7 @@ export class WebGpuBackend implements RenderBackend {
     this._passCoordinatorInstance?.discardPass();
     this.rendererRegistry.destroy();
     this._destroyManagedTextures();
+    this._materialSamplers.clear();
     this._renderTexturePool.destroy();
 
     for (const clipBounds of this._clipBoundsStack) {
@@ -1010,7 +1021,10 @@ export class WebGpuBackend implements RenderBackend {
     return { width: target.width, height: target.height };
   }
 
-  public getTextureBinding(texture: Texture | RenderTexture): {
+  public getTextureBinding(
+    texture: Texture | RenderTexture,
+    samplerOverride: MaterialSamplerOptions | null = null,
+  ): {
     readonly view: GPUTextureView;
     readonly sampler: GPUSampler;
   } {
@@ -1018,7 +1032,7 @@ export class WebGpuBackend implements RenderBackend {
 
     return {
       view: state.view,
-      sampler: state.sampler,
+      sampler: samplerOverride === null ? state.sampler : this._getMaterialSampler(texture, samplerOverride),
     };
   }
 
@@ -1301,6 +1315,12 @@ export class WebGpuBackend implements RenderBackend {
       }
 
       if (!payload.bundle.isReady) {
+        set.invalidate();
+
+        return false;
+      }
+
+      if (payload.renderer._validateRetainedBatch?.(payload) === false) {
         set.invalidate();
 
         return false;
@@ -1857,6 +1877,7 @@ export class WebGpuBackend implements RenderBackend {
     this._textureDestroyHandlers.clear();
     this._textureReleaseHandlers.clear();
     this._textureStates.clear();
+    this._materialSamplers.clear();
 
     // Recycled RenderTexture pool: drop entries — their backing GPUTexture
     // is gone with the dead device.
@@ -2570,6 +2591,31 @@ export class WebGpuBackend implements RenderBackend {
       minFilter: filter,
       mipmapFilter: isFloatData ? 'nearest' : this._getMipmapFilterMode(texture.scaleMode),
     });
+  }
+
+  private _getMaterialSampler(texture: Texture | RenderTexture, options: MaterialSamplerOptions): GPUSampler {
+    // Match the managed-texture path: float32 data textures are non-filterable
+    // unless an optional device feature is requested, which this backend does
+    // not currently expose.
+    const isFloatData = texture instanceof DataTexture && (texture.format === TextureFormat.R32F || texture.format === TextureFormat.Rgba32F);
+    const filter: GPUFilterMode = isFloatData ? 'nearest' : this._getFilterMode(options.scaleMode);
+    const addressMode = this._getAddressMode(options.wrapMode);
+    const key = `${filter}:${addressMode}`;
+    let sampler = this._materialSamplers.get(key);
+
+    if (sampler === undefined) {
+      sampler = this.device.createSampler({
+        label: 'backend:material-sampler',
+        addressModeU: addressMode,
+        addressModeV: addressMode,
+        magFilter: filter,
+        minFilter: filter,
+        mipmapFilter: isFloatData ? 'nearest' : this._getMipmapFilterMode(options.scaleMode),
+      });
+      this._materialSamplers.set(key, sampler);
+    }
+
+    return sampler;
   }
 
   private _getGpuTextureFormat(texture: Texture | RenderTexture): GPUTextureFormat {

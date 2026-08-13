@@ -1,8 +1,7 @@
-import type { MaterialOptions } from '#rendering/material/Material';
+import type { MaterialOptions, MaterialSamplerOptions } from '#rendering/material/Material';
 import { MeshMaterial } from '#rendering/material/MeshMaterial';
 import { ShaderSource } from '#rendering/material/ShaderSource';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
-import type { SamplerOptions } from '#rendering/texture/Sampler';
 import { Texture } from '#rendering/texture/Texture';
 import { BlendModes, ScaleModes, WrapModes } from '#rendering/types';
 
@@ -38,20 +37,14 @@ const createMaterialOptions = (overrides: Partial<MaterialOptions> = {}): Materi
   ...overrides,
 });
 
-const linearClamp: SamplerOptions = {
+const linearClamp: MaterialSamplerOptions = {
   scaleMode: ScaleModes.Linear,
   wrapMode: WrapModes.ClampToEdge,
-  premultiplyAlpha: false,
-  generateMipMap: false,
-  flipY: false,
 };
 
-const nearestRepeat: SamplerOptions = {
+const nearestRepeat: MaterialSamplerOptions = {
   scaleMode: ScaleModes.Nearest,
   wrapMode: WrapModes.Repeat,
-  premultiplyAlpha: false,
-  generateMipMap: false,
-  flipY: false,
 };
 
 describe('ShaderSource', () => {
@@ -138,13 +131,35 @@ describe('Material base', () => {
   });
 
   test('setUniform and setTexture mutate state and return this', () => {
-    const material = new MeshMaterial(createMaterialOptions());
     const texture = new Texture();
+    const replacement = new Texture();
+    const material = new MeshMaterial(createMaterialOptions({ uniforms: { u_time: 0 }, textures: { u_noise: texture } }));
 
     expect(material.setUniform('u_time', 3)).toBe(material);
-    expect(material.setTexture('u_noise', texture)).toBe(material);
+    expect(material.setTexture('u_noise', replacement)).toBe(material);
     expect(material.uniforms.u_time).toBe(3);
-    expect(material.textures.u_noise).toBe(texture);
+    expect(material.textures.u_noise).toBe(replacement);
+  });
+
+  test('fixes binding names and kinds at construction while keeping values live', () => {
+    const material = new MeshMaterial(createMaterialOptions({ uniforms: { u_time: 0, u_pattern: new Texture() }, textures: { u_noise: new Texture() } }));
+
+    expect(() => material.setUniform('u_missing', 1)).toThrow(/fixed binding schema/);
+    expect(() => material.setTexture('u_missing', new Texture())).toThrow(/fixed binding schema/);
+    expect(() => material.setUniform('u_time', new Texture())).toThrow(/cannot change binding kind/);
+    expect(() => material.setUniform('u_pattern', 1)).toThrow(/cannot change binding kind/);
+    expect(() => {
+      material.uniforms.u_missing = 1;
+    }).toThrow();
+    expect(() => {
+      delete material.textures.u_noise;
+    }).toThrow();
+  });
+
+  test('rejects duplicate names across uniform and texture binding maps', () => {
+    expect(() => new MeshMaterial(createMaterialOptions({ uniforms: { u_pattern: new Texture() }, textures: { u_pattern: new Texture() } }))).toThrow(
+      /declared in both/,
+    );
   });
 
   test('destroy invokes dispose callbacks once', () => {
@@ -205,16 +220,16 @@ describe('Material.pipelineKey', () => {
     expect(material.pipelineKey).toBe(initial);
   });
 
-  test('changes with sampler state', () => {
+  test('does not change with sampler binding state', () => {
     const shader = createShaderSource();
     const a = new MeshMaterial({ shader, sampler: linearClamp });
     const b = new MeshMaterial({ shader, sampler: nearestRepeat });
 
-    expect(a.pipelineKey).not.toBe(b.pipelineKey);
+    expect(a.pipelineKey).toBe(b.pipelineKey);
   });
 
   test('does not change when a scalar uniform changes', () => {
-    const material = new MeshMaterial(createMaterialOptions());
+    const material = new MeshMaterial(createMaterialOptions({ uniforms: { u_time: 0 } }));
     const initial = material.pipelineKey;
 
     material.setUniform('u_time', 42);
@@ -231,7 +246,7 @@ describe('Material.bindKey', () => {
   });
 
   test('does not change when a scalar uniform changes', () => {
-    const material = new MeshMaterial(createMaterialOptions());
+    const material = new MeshMaterial(createMaterialOptions({ uniforms: { u_time: 0 } }));
     const initial = material.bindKey;
 
     material.setUniform('u_time', 7);
@@ -240,22 +255,35 @@ describe('Material.bindKey', () => {
     expect(material.bindKey).toBe(initial);
   });
 
-  test('changes when a texture binding is added or swapped', () => {
-    const material = new MeshMaterial(createMaterialOptions());
+  test('changes with sampler state, including in-place mutation', () => {
+    const material = new MeshMaterial(createMaterialOptions({ sampler: { ...linearClamp } }));
+    const initial = material.bindKey;
+
+    material.sampler!.scaleMode = ScaleModes.Nearest;
+    const changed = material.bindKey;
+
+    material.sampler!.scaleMode = ScaleModes.Linear;
+
+    expect(changed).not.toBe(initial);
+    expect(material.bindKey).toBe(initial);
+  });
+
+  test('changes when a declared texture binding is swapped', () => {
+    const material = new MeshMaterial(createMaterialOptions({ textures: { u_noise: new Texture() } }));
     const initial = material.bindKey;
 
     material.setTexture('u_noise', new Texture());
-    const withTexture = material.bindKey;
+    const swappedOnce = material.bindKey;
 
     material.setTexture('u_noise', new Texture());
     const swapped = material.bindKey;
 
-    expect(withTexture).not.toBe(initial);
-    expect(swapped).not.toBe(withTexture);
+    expect(swappedOnce).not.toBe(initial);
+    expect(swapped).not.toBe(swappedOnce);
   });
 
   test('treats a texture-valued uniform as a binding', () => {
-    const material = new MeshMaterial(createMaterialOptions());
+    const material = new MeshMaterial(createMaterialOptions({ uniforms: { u_extraTex: new Texture() } }));
     const initial = material.bindKey;
 
     material.setUniform('u_extraTex', new Texture());
@@ -263,28 +291,13 @@ describe('Material.bindKey', () => {
     expect(material.bindKey).not.toBe(initial);
   });
 
-  test('is independent of insertion order for the same bindings', () => {
-    const shader = createShaderSource();
-    const texA = new Texture();
-    const texB = new Texture();
+  test('keeps the construction-time binding order stable', () => {
+    const material = new MeshMaterial(createMaterialOptions({ textures: { a: new Texture(), b: new Texture() } }));
 
-    const first = new MeshMaterial({ shader });
-    first.setTexture('a', texA);
-    first.setTexture('b', texB);
+    material.setTexture('b', new Texture());
+    material.setTexture('a', new Texture());
 
-    const second = new MeshMaterial({ shader });
-    second.setTexture('b', texB);
-    second.setTexture('a', texA);
-
-    // Same material identity is required for an equal bind key, so compare the
-    // descriptor effect by re-deriving on one instance with swapped order.
-    const ordered = first.bindKey;
-    delete first.textures.a;
-    delete first.textures.b;
-    first.setTexture('b', texB);
-    first.setTexture('a', texA);
-
-    expect(first.bindKey).toBe(ordered);
+    expect(material._bindingSchema.textureNames).toEqual(['a', 'b']);
   });
 
   test('differs between distinct material instances even with equal bindings', () => {

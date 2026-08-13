@@ -386,7 +386,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     this._ensureUniformCapacity(device, targetUniformSlots);
 
     const pipeline = this._getPipeline(resources, drawCall.blendMode, backend.renderTargetFormat, coordinator.stencilActive);
-    const textureBinding = backend.getTextureBinding(drawCall.texture);
+    const textureBinding = backend.getTextureBinding(drawCall.texture, mode.material.sampler);
     const textureBindGroup = device.createBindGroup({
       layout: this._textureBindGroupLayout!,
       entries: [

@@ -434,7 +434,11 @@ export class RenderPlanBuilder {
     command.seq = slot.seq;
     command.zIndex = slot.zIndex;
     command.groupIndex = undefined;
-    command.material = slot.material;
+    // Own-material values and texture identities are live even while the
+    // fragment itself stays clean. Re-derive their key on the entry-replay
+    // fallback so a structural retained invalidation cannot regroup using the
+    // record-time snapshot before the replacement capture is produced.
+    command.material = slot.material.ownMaterial ? slot.drawable._getOrComputeMaterialKey(this.backend) : slot.material;
     command.minX = slot.minX;
     command.minY = slot.minY;
     command.maxX = slot.maxX;

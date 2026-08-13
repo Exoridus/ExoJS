@@ -7,7 +7,7 @@ import { ShaderSource } from '#rendering/material/ShaderSource';
 import { Mesh } from '#rendering/mesh/Mesh';
 import type { RenderNode } from '#rendering/RenderNode';
 import { Texture } from '#rendering/texture/Texture';
-import { BlendModes } from '#rendering/types';
+import { BlendModes, ScaleModes, WrapModes } from '#rendering/types';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import { readWebGl2Pixel } from './_backendSetup';
@@ -209,8 +209,11 @@ describe('custom MeshMaterial WebGL2 browser', () => {
       shader: new ShaderSource({ glsl: { vertex: customVertex, fragment: customFragment } }),
       uniforms: { u_userColor: [1, 0, 0.5, 1] as const },
       textures: { u_pattern: pattern },
+      sampler: { scaleMode: ScaleModes.Nearest, wrapMode: WrapModes.Repeat },
     });
     const mesh = createQuadMesh(16, material);
+    const bindMaterialSampler = vi.spyOn(backend, 'bindMaterialSampler');
+    const unbindMaterialSampler = vi.spyOn(backend, 'unbindMaterialSampler');
 
     try {
       mesh.setPosition(24, 24);
@@ -221,6 +224,8 @@ describe('custom MeshMaterial WebGL2 browser', () => {
       expectPixelNear(readWebGl2Pixel(backend, 32, 32), [128, 0, 64, 255]);
       // Outside the quad stays clear-black.
       expectPixelNear(readWebGl2Pixel(backend, 4, 4), [0, 0, 0, 255]);
+      expect(bindMaterialSampler).toHaveBeenCalledWith(material.sampler, 0);
+      expect(unbindMaterialSampler).toHaveBeenCalledWith(0);
     } finally {
       mesh.destroy();
       material.destroy();

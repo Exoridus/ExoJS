@@ -1,6 +1,6 @@
 /// <reference types="@webgpu/types" />
 
-import type { Material, UniformValue } from '#rendering/material/Material';
+import { isTextureUniformValue, type Material, type UniformValue } from '#rendering/material/Material';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 
@@ -24,25 +24,15 @@ import type { WebGpuBackend } from './WebGpuBackend';
 
 /** Whether a uniform value is a bound texture rather than a scalar/vector. */
 export function isTextureUniform(value: UniformValue): value is Texture | RenderTexture {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'width' in value &&
-    'height' in value &&
-    !(value instanceof Float32Array) &&
-    !(value instanceof Int32Array) &&
-    !Array.isArray(value)
-  );
+  return isTextureUniformValue(value);
 }
 
 /** Scalar/vector/matrix uniforms (texture values excluded) in declaration order. */
 export function collectScalarUniforms(material: Material): Array<Exclude<UniformValue, Texture | RenderTexture>> {
   const result: Array<Exclude<UniformValue, Texture | RenderTexture>> = [];
 
-  for (const value of Object.values(material.uniforms)) {
-    if (!isTextureUniform(value)) {
-      result.push(value);
-    }
+  for (const name of material._bindingSchema.scalarUniformNames) {
+    result.push(material._getUniformValue(name) as Exclude<UniformValue, Texture | RenderTexture>);
   }
 
   return result;
@@ -57,14 +47,12 @@ export function collectScalarUniforms(material: Material): Array<Exclude<Uniform
 export function collectTextureBindings(material: Material): Array<Texture | RenderTexture> {
   const result: Array<Texture | RenderTexture> = [];
 
-  for (const value of Object.values(material.uniforms)) {
-    if (isTextureUniform(value)) {
-      result.push(value);
-    }
+  for (const name of material._bindingSchema.textureUniformNames) {
+    result.push(material._getUniformValue(name) as Texture | RenderTexture);
   }
 
-  for (const texture of Object.values(material.textures)) {
-    result.push(texture);
+  for (const name of material._bindingSchema.textureNames) {
+    result.push(material._getTextureValue(name));
   }
 
   return result;

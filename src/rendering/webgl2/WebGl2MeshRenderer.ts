@@ -5,7 +5,7 @@ import type { Mesh } from '#rendering/mesh/Mesh';
 import { type DrawCommand, RenderEntryKind } from '#rendering/plan/RenderCommand';
 import type { InstanceDataView } from '#rendering/RenderBatch';
 import { Shader } from '#rendering/shader/Shader';
-import { RenderTexture } from '#rendering/texture/RenderTexture';
+import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
 
@@ -249,7 +249,9 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       connection.dynamicInstanceBuffer.upload(instances.data.subarray(0, count * instances.strideFloats));
     }
 
+    this._bindBaseTextureSampler(backend, material);
     vao.drawInstanced(cacheEntry.indexCount, 0, count, RenderingPrimitives.Triangles);
+    this._unbindBaseTextureSampler(backend, material);
 
     backend.stats.batches++;
     backend.stats.drawCalls++;
@@ -490,7 +492,9 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     this._bindInstancedShaderState(first.shader, first.texture, first.material, backend, maxNodeIndex);
     backend.bindVertexArrayObject(vao);
     connection.dynamicNodeIndexBuffer.upload(this._nodeIndexData.subarray(0, count));
+    this._bindBaseTextureSampler(backend, first.material);
     vao.drawInstanced(cacheEntry.indexCount, 0, count, RenderingPrimitives.Triangles);
+    this._unbindBaseTextureSampler(backend, first.material);
 
     backend.stats.batches++;
     backend.stats.drawCalls++;
@@ -559,7 +563,9 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     backend.bindVertexArrayObject(connection.dynamicVao);
     connection.dynamicVertexBuffer.upload(this._float32View.subarray(0, mesh.vertexCount * vertexStrideWords));
     connection.dynamicIndexBuffer.upload(this._indexData.subarray(0, mesh.indexCount));
+    this._bindBaseTextureSampler(backend, draw.material);
     connection.dynamicVao.draw(mesh.indexCount, 0, RenderingPrimitives.Triangles);
+    this._unbindBaseTextureSampler(backend, draw.material);
 
     backend.stats.batches++;
     backend.stats.drawCalls++;
@@ -604,6 +610,18 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     }
 
     shader.sync();
+  }
+
+  private _bindBaseTextureSampler(backend: WebGl2Backend, material: Material | null): void {
+    if (material?.sampler !== null && material?.sampler !== undefined) {
+      backend.bindMaterialSampler(material.sampler, 0);
+    }
+  }
+
+  private _unbindBaseTextureSampler(backend: WebGl2Backend, material: Material | null): void {
+    if (material?.sampler !== null && material?.sampler !== undefined) {
+      backend.unbindMaterialSampler(0);
+    }
   }
 
   // ── Retained-batch record/replay (mesh opt-in) ────────────────────────────
@@ -1209,47 +1227,34 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     // Texture bindings take consecutive slots starting at 1 (slot 0 belongs to
     // the mesh's own `u_texture`). Texture-valued uniforms bind first, then the
     // entries of the material's dedicated `textures` map.
+    for (const name of material._bindingSchema.scalarUniformNames) {
+      if (shader.uniforms.has(name)) {
+        shader.getUniform(name).setValue(this._marshalUniformValue(material._getUniformValue(name) as Exclude<UniformValue, Texture | RenderTexture>));
+      }
+    }
+
     let textureSlot = 1;
 
-    const uniforms = material.uniforms;
-    for (const name in uniforms) {
-      if (!shader.uniforms.has(name)) {
-        continue;
-      }
-
-      // `name` iterates own keys of `uniforms`, so the lookup is defined.
-      const value = uniforms[name]!;
-      const uniform = shader.getUniform(name);
-
-      if (value instanceof Texture || value instanceof RenderTexture) {
-        if (textureSlot >= maxCustomTextureSlots) {
-          throw new Error(`Mesh material requested more than ${maxCustomTextureSlots - 1} texture bindings.`);
-        }
-        backend.bindTexture(value, textureSlot);
-        // In-bounds: `textureSlot < maxCustomTextureSlots` (guarded) and
-        // `_slotScratches` has `maxCustomTextureSlots + 1` pre-allocated entries.
-        uniform.setValue(this._slotScratches[textureSlot]!);
-        textureSlot++;
-      } else {
-        uniform.setValue(this._marshalUniformValue(value));
-      }
+    for (const name of material._bindingSchema.textureUniformNames) {
+      textureSlot = this._bindCustomTexture(shader, name, material._getUniformValue(name) as Texture | RenderTexture, textureSlot, backend);
     }
 
-    const textures = material.textures;
-    for (const name in textures) {
-      if (!shader.uniforms.has(name)) {
-        continue;
-      }
+    for (const name of material._bindingSchema.textureNames) {
+      textureSlot = this._bindCustomTexture(shader, name, material._getTextureValue(name), textureSlot, backend);
+    }
+  }
 
-      if (textureSlot >= maxCustomTextureSlots) {
-        throw new Error(`Mesh material requested more than ${maxCustomTextureSlots - 1} texture bindings.`);
-      }
+  private _bindCustomTexture(shader: Shader, name: string, texture: Texture | RenderTexture, textureSlot: number, backend: WebGl2Backend): number {
+    if (textureSlot >= maxCustomTextureSlots) {
+      throw new Error(`Mesh material requested more than ${maxCustomTextureSlots - 1} texture bindings.`);
+    }
 
-      // `name` iterates own keys of `textures`, so the lookup is defined.
-      backend.bindTexture(textures[name]!, textureSlot);
+    if (shader.uniforms.has(name)) {
+      backend.bindTexture(texture, textureSlot);
       shader.getUniform(name).setValue(this._slotScratches[textureSlot]!);
-      textureSlot++;
     }
+
+    return textureSlot + 1;
   }
 
   private _marshalUniformValue(value: Exclude<UniformValue, Texture | RenderTexture>): Float32Array | Int32Array {

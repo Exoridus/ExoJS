@@ -25,6 +25,9 @@
  * up to {@link spriteMaterialTextureSlots} base textures through the group(1)
  * (WGSL) / unit 0..N-1 (WebGL2) slot table, and the fragment reads its own
  * instance's texture through the engine-provided `sampleBase(slot, uv)` helper.
+ * On WebGPU the value passed as `slot` also carries the engine-owned sample-
+ * premultiplication flag in bit 8; `sampleBase` masks and applies it. Custom
+ * fragments must treat it as opaque and pass it through unchanged.
  * Material uniforms and additional textures bind on top (WebGL2 units
  * {@link spriteMaterialTextureSlots}..N / WGSL group(2)).
  */
@@ -262,7 +265,7 @@ struct TransformSlot {
 struct VertexInput {
     @location(0) localBounds: vec4<f32>,
     @location(3) uvBounds: vec4<f32>,
-    @location(5) textureSlot: u32,
+    @location(5) packedSlotFlags: u32, // bits 0..7 = texture slot, bit 8 = premultiply sample
     @location(6) nodeIndex: u32,
 };
 
@@ -270,8 +273,8 @@ struct VertexOutput {
     @builtin(position) position: vec4<f32>,
     @location(0) texcoord: vec2<f32>,
     @location(1) color: vec4<f32>,
-    // Slot this instance's base texture occupies in the batch's slot table;
-    // pass it to sampleBase() to read the base texture.
+    // Opaque packed slot/flag word. Pass it unchanged to sampleBase(); custom
+    // fragments must not interpret it as a plain slot index.
     @location(2) @interpolate(flat) textureSlot: u32,
 };
 
@@ -347,7 +350,7 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
     output.texcoord = vec2<f32>(u, v);
 
     output.color = vec4<f32>(tint.rgb * tint.a, tint.a);
-    output.textureSlot = input.textureSlot;
+    output.textureSlot = input.packedSlotFlags;
 
     return output;
 }
@@ -408,12 +411,17 @@ ${sampleCases}
 export const spriteMaterialPrologueWgsl = `${spriteVertexWgsl}
 ${buildSpriteTextureSlotWgsl(spriteMaterialTextureSlots)}
 
-// Sample this instance's base texture. \`slot\` is \`input.textureSlot\`; \`uv\` is
-// normally \`input.texcoord\` but may be any coordinate the effect derives from
-// it. Derivatives are taken here, before the per-slot switch, because
+// Sample this instance's base texture. \`packedSlotFlags\` is the opaque
+// \`input.textureSlot\` carrier: bits 0..7 select the texture and bit 8 asks
+// the engine to convert its unpremultiplied sample to premultiplied alpha.
+// \`uv\` is normally \`input.texcoord\` but may be any coordinate the effect
+// derives from it. Derivatives are taken here, before the per-slot switch, because
 // multi-texture batching makes the slot non-uniform across a quad and
 // textureSampleGrad is the only sampling form valid in that control flow.
-fn sampleBase(slot: u32, uv: vec2<f32>) -> vec4<f32> {
-    return sampleTexture(slot, uv, dpdx(uv), dpdy(uv));
+fn sampleBase(packedSlotFlags: u32, uv: vec2<f32>) -> vec4<f32> {
+    let slot = packedSlotFlags & 0xffu;
+    let sample = sampleTexture(slot, uv, dpdx(uv), dpdy(uv));
+    let premultiplySample = ((packedSlotFlags >> 8u) & 1u) == 1u;
+    return select(sample, vec4<f32>(sample.rgb * sample.a, sample.a), premultiplySample);
 }
 `;

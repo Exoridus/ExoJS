@@ -306,8 +306,7 @@ interface CustomShaderResources {
   // texture view it was built from so a mutable texture (DataTexture content
   // update / resize) invalidates it. WeakMap avoids retaining short-lived
   // textures across long sessions.
-  meshTextureBindGroups: WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView }>;
-  sampler: GPUSampler;
+  meshTextureBindGroups: WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView; sampler: GPUSampler }>;
   // Per-frame state, reset in flush().
   drawCount: number;
   totalVertices: number;
@@ -631,7 +630,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       this._instancedBatchUniformBuffersInPass.add(uniformPlan!.buffer);
 
       pass.setPipeline(this._getOrCreateCustomInstancedPipeline(resources, blendMode, renderTargetFormat, stencil, instances));
-      pass.setBindGroup(1, this._getOrCreateMeshTextureBindGroup(resources, backend, texture));
+      pass.setBindGroup(1, this._getOrCreateMeshTextureBindGroup(resources, backend, texture, material!.sampler));
       pass.setBindGroup(2, this._getUserBindGroup(backend, material!, resources));
     }
 
@@ -1131,7 +1130,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
         if (dc.texture !== lastTexture) {
           lastTexture = dc.texture;
-          pass.setBindGroup(1, this._getOrCreateMeshTextureBindGroup(resources, backend, dc.texture));
+          pass.setBindGroup(1, this._getOrCreateMeshTextureBindGroup(resources, backend, dc.texture, dc.customShader.sampler));
         }
 
         pass.setVertexBuffer(0, resources.vertexBuffer, dc.vertexByteOffset);
@@ -2396,14 +2395,6 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       bindGroupLayouts: [this._instancedTransformBindGroupLayout!, meshTextureLayout, userLayout],
     });
 
-    const sampler = device.createSampler({
-      label: 'mesh:material-sampler',
-      magFilter: 'linear',
-      minFilter: 'linear',
-      addressModeU: 'clamp-to-edge',
-      addressModeV: 'clamp-to-edge',
-    });
-
     const initialVertexCount = 64;
     const initialIndexCount = 192;
     const vertexData = new ArrayBuffer(initialVertexCount * vertexStrideBytes);
@@ -2432,7 +2423,6 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       userUniformBufferCapacity: 0,
       userUniform: createUserUniformState(),
       meshTextureBindGroups: new WeakMap(),
-      sampler,
       drawCount: 0,
       totalVertices: 0,
       totalIndices: 0,
@@ -2619,13 +2609,18 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     return pipeline;
   }
 
-  private _getOrCreateMeshTextureBindGroup(resources: CustomShaderResources, backend: WebGpuBackend, texture: Texture | RenderTexture): GPUBindGroup {
+  private _getOrCreateMeshTextureBindGroup(
+    resources: CustomShaderResources,
+    backend: WebGpuBackend,
+    texture: Texture | RenderTexture,
+    samplerOverride: Material['sampler'],
+  ): GPUBindGroup {
     // Always resolve the binding so a mutable base texture uploads its dirty
     // region before sampling; reuse the cached group only while the view holds.
-    const binding = backend.getTextureBinding(texture);
+    const binding = backend.getTextureBinding(texture, samplerOverride);
     const cached = resources.meshTextureBindGroups.get(texture);
 
-    if (cached?.view === binding.view) {
+    if (cached?.view === binding.view && cached.sampler === binding.sampler) {
       return cached.group;
     }
 
@@ -2638,7 +2633,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       ],
     });
 
-    resources.meshTextureBindGroups.set(texture, { group, view: binding.view });
+    resources.meshTextureBindGroups.set(texture, { group, view: binding.view, sampler: binding.sampler });
 
     return group;
   }
@@ -2732,7 +2727,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     resources.userUniformBuffer?.destroy();
     resources.pipelines.clear();
     resources.instancedPipelines.clear();
-    resources.meshTextureBindGroups = new WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView }>();
+    resources.meshTextureBindGroups = new WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView; sampler: GPUSampler }>();
     resources.vertexBuffer = null;
     resources.indexBuffer = null;
     resources.meshUniformBuffer = null;

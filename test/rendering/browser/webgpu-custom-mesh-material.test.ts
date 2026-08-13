@@ -19,6 +19,7 @@ import { MeshMaterial } from '#rendering/material/MeshMaterial';
 import { ShaderSource } from '#rendering/material/ShaderSource';
 import { Mesh } from '#rendering/mesh/Mesh';
 import { Texture } from '#rendering/texture/Texture';
+import { ScaleModes, WrapModes } from '#rendering/types';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { wireCoreRenderers } from './_coreRenderers';
@@ -163,8 +164,10 @@ describe('custom MeshMaterial WebGPU browser', () => {
       shader: new ShaderSource({ wgsl: customWgsl }),
       uniforms: { u_userColor: [1, 0, 0.5, 1] as const },
       textures: { u_pattern: pattern },
+      sampler: { scaleMode: ScaleModes.Nearest, wrapMode: WrapModes.Repeat },
     });
     const mesh = createQuadMesh(16, material);
+    const getTextureBinding = vi.spyOn(backend, 'getTextureBinding');
 
     mesh.setPosition(24, 24);
 
@@ -199,6 +202,8 @@ describe('custom MeshMaterial WebGPU browser', () => {
     try {
       expect(validationError).toBeNull();
       expect(backend.stats.drawCalls).toBeGreaterThan(0);
+      expect(getTextureBinding).toHaveBeenCalledWith(Texture.white, material.sampler);
+      expect(getTextureBinding).toHaveBeenCalledWith(pattern);
     } finally {
       mesh.destroy();
       material.destroy();

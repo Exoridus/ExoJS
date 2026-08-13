@@ -4,11 +4,12 @@ precision highp float;
 // Mirrors WebGpuTextRenderer's WGSL vertex stage exactly: a_position arrives in
 // LOCAL space, and the world transform is read live from the per-node data
 // texture (same texture the fragment stage reads style from) via texelFetch,
-// keyed by a_nodeIndex — the same pattern Sprite/Mesh/NineSlice use for their
+// keyed by the node-index portion of a_packedNodeSlot — the same pattern
+// Sprite/Mesh/NineSlice use for their
 // shared transform buffer, just against Text's own private node-data texture.
 layout(location = 0) in vec2  a_position;   // local-space quad corner
 layout(location = 1) in vec2  a_texcoord;
-layout(location = 2) in float a_nodeIndex;  // row into the per-node data texture (transform + style)
+layout(location = 2) in uint a_packedNodeSlot; // bits 0..23 = node row, bits 24..31 = atlas slot
 
 uniform mat3 u_projection;
 uniform mat3 u_group;
@@ -16,11 +17,12 @@ uniform vec4 u_viewport;
 uniform sampler2D u_nodeData;
 
 flat out int  v_nodeIndex;
+flat out uint v_textureSlot;
      out vec2 v_texcoord;
      out vec2 v_gradUV;
 
 void main(void) {
-    int ni = int(a_nodeIndex);
+    int ni = int(a_packedNodeSlot & 0x00ffffffu);
 
     // texel 0: (a, c, snapMode, tx) — mat3 column-major: col0 + snap flag + translate.x
     // texel 1: (b, d, 0, ty) — mat3 column-major: col1 + translate.y
@@ -52,6 +54,7 @@ void main(void) {
     gl_Position = vec4(clip, 0.0, 1.0);
     v_texcoord  = a_texcoord;
     v_nodeIndex = ni;
+    v_textureSlot = a_packedNodeSlot >> 24u;
 
     vec2 bSize = t9.zw;
     v_gradUV = (bSize.x > 0.0 && bSize.y > 0.0)

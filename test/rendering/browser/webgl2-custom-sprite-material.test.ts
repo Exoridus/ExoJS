@@ -4,9 +4,11 @@ import { Container } from '#rendering/Container';
 import { ShaderSource } from '#rendering/material/ShaderSource';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import type { RenderNode } from '#rendering/RenderNode';
+import { RetainedContainer } from '#rendering/RetainedContainer';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { spriteMaterialTextureSlots, spriteVertexGlsl } from '#rendering/sprite/spriteMaterialSources';
 import { Texture } from '#rendering/texture/Texture';
+import { BlendModes, ScaleModes, WrapModes } from '#rendering/types';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import { readWebGl2Pixel } from './_backendSetup';
@@ -85,6 +87,26 @@ const createSolidTexture = (r: number, g: number, b: number, a = 255, size = 16)
   return new Texture(source);
 };
 
+const createSplitTexture = (): Texture => {
+  const source = document.createElement('canvas');
+
+  source.width = 2;
+  source.height = 2;
+
+  const context = source.getContext('2d');
+
+  if (!context) {
+    throw new Error('2D context is required to create test textures.');
+  }
+
+  context.fillStyle = '#f00';
+  context.fillRect(0, 0, 1, 2);
+  context.fillStyle = '#00f';
+  context.fillRect(1, 0, 1, 2);
+
+  return new Texture(source, { scaleMode: ScaleModes.Linear, generateMipMap: false });
+};
+
 // Custom fragment: samples this instance's base texture through the engine's
 // spliced `sampleBase` helper and modulates it by a user vec4 uniform.
 const tintFragment = `#version 300 es
@@ -117,6 +139,144 @@ const createTintMaterial = (color: readonly [number, number, number, number]): S
   });
 
 describe('custom SpriteMaterial WebGL2 browser', () => {
+  test('material sampler overrides base-texture sampling and mutates live during retained replay', async () => {
+    const backend = await createBackend();
+    const texture = createSplitTexture();
+    const material = createTintMaterial([1, 1, 1, 1]);
+    const group = new RetainedContainer();
+    const sprite = new Sprite(texture);
+
+    try {
+      material.sampler = { scaleMode: ScaleModes.Nearest, wrapMode: WrapModes.ClampToEdge };
+      sprite.material = material;
+      sprite.setPosition(16, 16).setScale(16, 16);
+      group.addChild(sprite);
+
+      render(backend, group);
+      render(backend, group);
+      render(backend, group);
+      expectPixelNear(readWebGl2Pixel(backend, 31, 24), [255, 0, 0, 255]);
+
+      const replay = vi.spyOn(backend, '_replayRetainedBatch');
+
+      material.sampler.scaleMode = ScaleModes.Linear;
+      render(backend, group);
+
+      const blended = readWebGl2Pixel(backend, 31, 24);
+
+      expect(replay).toHaveBeenCalledTimes(1);
+      expect(blended[0]).toBeGreaterThan(100);
+      expect(blended[0]).toBeLessThan(200);
+      expect(blended[2]).toBeGreaterThan(50);
+      expect(blended[2]).toBeLessThan(160);
+      replay.mockRestore();
+    } finally {
+      group.destroy();
+      material.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('retained replay keeps uniform values live and recoverably re-records blend changes', async () => {
+    const backend = await createBackend();
+    const texture = createSolidTexture(255, 255, 255);
+    const values = new Float32Array([1, 0, 0, 1]);
+    const material = createTintMaterial(values as unknown as readonly [number, number, number, number]);
+    const group = new RetainedContainer();
+    const sprite = new Sprite(texture);
+
+    try {
+      sprite.material = material;
+      sprite.setPosition(16, 16);
+      group.addChild(sprite);
+
+      render(backend, group); // fragment capture
+      render(backend, group); // instruction recording
+
+      let replay = vi.spyOn(backend, '_replayRetainedBatch');
+
+      render(backend, group);
+      expect(replay).toHaveBeenCalledTimes(1);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 24), [255, 0, 0, 255]);
+
+      material.setUniform('u_userColor', [0, 1, 0, 1]);
+      replay.mockClear();
+      render(backend, group);
+
+      expect(replay).toHaveBeenCalledTimes(1);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 24), [0, 255, 0, 255]);
+
+      values.set([0, 1, 0, 1]);
+      material.setUniform('u_userColor', values);
+      render(backend, group);
+      values[0] = 0;
+      values[1] = 0;
+      values[2] = 1;
+      replay.mockClear();
+      render(backend, group);
+
+      expect(replay).toHaveBeenCalledTimes(1);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 24), [0, 0, 255, 255]);
+
+      material.blendMode = BlendModes.Additive;
+      replay.mockClear();
+      render(backend, group);
+      expect(replay).not.toHaveBeenCalled();
+
+      replay.mockRestore();
+      replay = vi.spyOn(backend, '_replayRetainedBatch');
+      render(backend, group);
+      expect(replay).toHaveBeenCalledTimes(1);
+      replay.mockRestore();
+    } finally {
+      group.destroy();
+      material.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('retained replay resolves a replacement material texture identity live', async () => {
+    const backend = await createBackend();
+    const base = createSolidTexture(255, 255, 255);
+    const firstPattern = createSolidTexture(255, 0, 0);
+    const secondPattern = createSolidTexture(0, 255, 0);
+    const material = new SpriteMaterial({
+      shader: new ShaderSource({ glsl: { vertex: spriteVertexGlsl, fragment: patternFragment } }),
+      textures: { u_pattern: firstPattern },
+    });
+    const group = new RetainedContainer();
+    const sprite = new Sprite(base);
+
+    try {
+      sprite.material = material;
+      sprite.setPosition(16, 16);
+      group.addChild(sprite);
+
+      render(backend, group);
+      render(backend, group);
+      render(backend, group);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 24), [255, 0, 0, 255]);
+
+      const replay = vi.spyOn(backend, '_replayRetainedBatch');
+
+      material.setTexture('u_pattern', secondPattern);
+      render(backend, group);
+
+      expect(replay).toHaveBeenCalledTimes(1);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 24), [0, 255, 0, 255]);
+      replay.mockRestore();
+    } finally {
+      group.destroy();
+      material.destroy();
+      secondPattern.destroy();
+      firstPattern.destroy();
+      base.destroy();
+      backend.destroy();
+    }
+  });
+
   test('renders a custom fragment sampling the base texture and a user uniform', async () => {
     const backend = await createBackend();
     // Mid-gray base proves the texture is sampled; the per-channel uniform

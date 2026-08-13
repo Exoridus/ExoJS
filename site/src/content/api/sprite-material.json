@@ -1,6 +1,6 @@
 {
   "title": "SpriteMaterial",
-  "description": "Material specialization for Sprite drawables. API shell for the sprite custom-material path; the renderer integration and instancing contract are added in a later phase. The base texture stays on the sprite — this material supplies the fragment program, uniforms, and additional texture bindings.",
+  "description": "Material specialization for Sprite drawables. The base texture stays on the sprite and is sampled through the engine's `sampleBase(slot, uv)` helper, which preserves batching and resolves the backend's premultiplied-alpha convention. The material supplies the custom fragment program, uniforms, additional texture bindings, and blend mode.",
   "symbol": "SpriteMaterial",
   "kind": "class",
   "subsystem": "rendering",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Material specialization for Sprite drawables.",
-        "API shell for the sprite custom-material path; the renderer integration and instancing contract are added in a later phase. The base texture stays on the sprite — this material supplies the fragment program, uniforms, and additional texture bindings."
+        "The base texture stays on the sprite and is sampled through the engine's `sampleBase(slot, uv)` helper, which preserves batching and resolves the backend's premultiplied-alpha convention. The material supplies the custom fragment program, uniforms, additional texture bindings, and blend mode."
       ],
       "importLine": "import { SpriteMaterial } from '@codexo/exojs'",
       "sourceLink": null
@@ -188,7 +188,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Bind a named texture. Equivalent to material.textures[name] = texture, returned this for chaining."
+          "description": "Replace the texture behind a declared slot, returning this for chaining."
         },
         {
           "name": "setUniform",
@@ -256,7 +256,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Set a uniform value. Equivalent to material.uniforms[name] = value, returned this for chaining."
+          "description": "Replace a declared uniform value, returning this for chaining. Unknown names and scalar↔texture kind changes are rejected."
         },
         {
           "name": "from",
@@ -583,7 +583,7 @@
         },
         {
           "name": "sampler",
-          "signature": "sampler: SamplerOptions | null",
+          "signature": "sampler: MaterialSamplerOptions | null",
           "signatureTokens": [
             {
               "text": "sampler",
@@ -594,7 +594,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "SamplerOptions",
+              "text": "MaterialSamplerOptions",
               "kind": "type"
             },
             {
@@ -608,7 +608,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Backend-agnostic sampling state descriptor, or null for the default."
+          "description": "Filter/wrap override for the drawable's base texture, or null to inherit it."
         },
         {
           "name": "shader",
@@ -651,6 +651,48 @@
           "params": [],
           "returnType": null,
           "description": "Which drawable class this material can serve; renderers check compatibility."
+        },
+        {
+          "name": "bindKey",
+          "signature": "bindKey: number",
+          "signatureTokens": [
+            {
+              "text": "bindKey",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Stable bind key: identical ⇒ same bindings (textures unchanged). Derived from this material's identity, base-texture sampler override, and the identities of its bound textures. Changes when a texture is swapped or sampler state changes; drives bind-group/slot reuse."
+        },
+        {
+          "name": "pipelineKey",
+          "signature": "pipelineKey: number",
+          "signatureTokens": [
+            {
+              "text": "pipelineKey",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Stable pipeline key: identical ⇒ same GPU pipeline/program can be used. Derived from shader identity and blend mode, and is independent of the owning material instance so identically configured materials share a pipeline. Drives grouping and the pipeline cache."
         },
         {
           "name": "textures",
@@ -699,7 +741,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Named texture bindings claimed in addition to the drawable's own texture."
+          "description": "Live identities behind the fixed named texture slots."
         },
         {
           "name": "uniforms",
@@ -740,49 +782,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Mutable user uniform values. Mutate between frames to drive animated effects; the renderer reads from this map every draw. material.uniforms.u_time = performance.now() / 1000; material.uniforms.u_color = [1, 0.5, 0, 1];"
-        },
-        {
-          "name": "bindKey",
-          "signature": "bindKey: number",
-          "signatureTokens": [
-            {
-              "text": "bindKey",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Stable bind key: identical ⇒ same bindings (textures unchanged). Derived from this material's identity and the identities of its bound textures. Changes when a texture is swapped; drives bind-group/slot reuse."
-        },
-        {
-          "name": "pipelineKey",
-          "signature": "pipelineKey: number",
-          "signatureTokens": [
-            {
-              "text": "pipelineKey",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Stable pipeline key: identical ⇒ same GPU pipeline/program can be used. Derived from shader identity, blend mode, and sampler state, and is independent of the owning material instance so identically configured materials share a pipeline. Drives grouping and the pipeline cache."
+          "description": "Live user uniform values. Construction declares the fixed set of names and each name's scalar/texture kind; existing values can be replaced between frames and typed arrays can be mutated in place. material.uniforms.u_time = performance.now() / 1000; material.uniforms.u_color = [1, 0.5, 0, 1];"
         }
       ],
       "paragraphs": [],

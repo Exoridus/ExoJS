@@ -1,12 +1,19 @@
 import type { ReadonlyRectangle } from '#math/Rectangle';
 import { packedGroupChanged } from '#rendering/affinePacking';
+import type { Drawable } from '#rendering/Drawable';
 import type { UniformValue } from '#rendering/material/Material';
+import {
+  createRetainedMaterialState,
+  isRetainedMaterialState,
+  isRetainedMaterialStateValid,
+  type RetainedMaterialState,
+} from '#rendering/material/RetainedMaterialState';
 import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import { Shader } from '#rendering/shader/Shader';
 import type { Sprite } from '#rendering/sprite/Sprite';
 import { composeSpriteMaterialFragmentGlsl, spriteMaterialTextureSlots, spriteVertexGlsl } from '#rendering/sprite/spriteMaterialSources';
-import { RenderTexture } from '#rendering/texture/RenderTexture';
-import { Texture } from '#rendering/texture/Texture';
+import type { RenderTexture } from '#rendering/texture/RenderTexture';
+import type { Texture } from '#rendering/texture/Texture';
 import { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
 import type { View } from '#rendering/View';
 
@@ -92,14 +99,17 @@ interface SpriteRendererConnection {
 
 export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> implements WebGl2RetainedBatchReplayer {
   /**
-   * Retained-batch capability opt-in: the DEFAULT
-   * path's flushes can be recorded into a group's instruction set and
-   * replayed from group-owned resources. Custom-material and pixel-snapped
-   * draws are excluded by the plan-level recordability predicate (and
-   * belt-and-braces poisoning below).
+   * Retained-batch capability opt-in: default and live SpriteMaterial flushes
+   * can be recorded into a group's instruction set and replayed from
+   * group-owned resources.
    * @internal
    */
   public readonly _supportsRetainedBatches = true;
+
+  /** Custom SpriteMaterial batches implement the live-material replay contract. @internal */
+  public _canRecordRetainedDrawable(drawable: Drawable): boolean {
+    return (drawable as Sprite).material !== null;
+  }
 
   private readonly _shader: Shader;
   private readonly _batchSize: number;
@@ -130,6 +140,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   private readonly _transformUnitScratch: Int32Array = new Int32Array([transformTextureUnit]);
   private readonly _tintUnitScratch: Int32Array = new Int32Array([transformTintTextureUnit]);
   private _currentMaterial: SpriteMaterial | null = null;
+  private readonly _retainedPreparedEpoch = new WeakMap<SpriteMaterial, number>();
   // Local bounds resolved for the sprite currently being packed. Geometry-mode
   // boundary snapping now happens in the vertex shader, so this is always the
   // sprite's logical local bounds; the field lets _packInstance read the value
@@ -169,16 +180,6 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
 
     const backend = this.getBackend();
     const material = sprite.material;
-
-    // Belt-and-braces for retained recording: the collect-time
-    // recordability predicate excludes custom-material draws from ever arming a
-    // capture (both pixel-snap modes are resolved in-shader and stay recordable).
-    // If one still arrives inside an active capture window, poison the recording
-    // so the resulting set can never validate — degrading to entry replay instead
-    // of wrong pixels.
-    if (backend._isRetainedCapturing && material !== null) {
-      backend._poisonRetainedCaptures();
-    }
 
     // The transform lives in the shared buffer, keyed by the draw command's
     // stable nodeIndex (already packed at the render-group upload boundary).
@@ -244,7 +245,8 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
 
       // Base textures are already bound to their slot units by _renderCustom;
       // the sampler uniforms are pinned once when the program is compiled.
-      this._bindCustomUniforms(shader, material, backend);
+      this._stageCustomUniforms(shader, material);
+      this._bindCustomTextures(shader, material, backend);
     }
 
     // Bind the shared transform buffer texture (one row per nodeIndex) on the
@@ -265,16 +267,15 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     shader.sync();
     backend.bindVertexArrayObject(vao);
     instanceBuffer.upload(this._instanceFloat32.subarray(0, this._instanceCount * wordsPerInstance));
+    this._bindBaseTextureSamplers(backend, material, this._slotCount);
     vao.drawInstanced(4, 0, this._instanceCount, RenderingPrimitives.TriangleStrip);
+    this._unbindBaseTextureSamplers(backend, material, this._slotCount);
     backend.stats.batches++;
     backend.stats.drawCalls++;
 
-    // Retained recording: while a capture window is open,
-    // hand the exact packed instance words of this DEFAULT-path flush to the
-    // backend — byte-identical to what just drew, no duplicated packing
-    // logic. Custom-material batches are never recorded (the render()-time
-    // poison above already invalidated the capture if one slipped through).
-    if (material === null && backend._isRetainedCapturing) {
+    // Retained recording: cache byte-identical instance data and retain only a
+    // live descriptor for custom material state.
+    if (backend._isRetainedCapturing) {
       backend._recordRetainedBatch(
         this,
         this._instanceUint32.subarray(0, this._instanceCount * wordsPerInstance),
@@ -282,6 +283,8 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
         this._currentBlendMode ?? BlendModes.Normal,
         this._activeTextures,
         this._slotCount,
+        null,
+        material === null ? null : createRetainedMaterialState(material),
       );
     }
 
@@ -399,6 +402,8 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     const vao = payload.vao;
     const transformTexture = payload.bundle.transformTexture;
     const tintTexture = payload.bundle.tintTexture;
+    const materialState = this._retainedMaterialState(payload);
+    const material = materialState?.material ?? null;
 
     if (backend === null || vao === null || transformTexture === null || tintTexture === null) {
       // Defensive: a bundle in this state never validates (generation), so a
@@ -413,7 +418,30 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     }
 
     backend.setBlendMode(payload.blendMode);
-    this._stageDefaultViewUniforms(backend);
+    const shader = material === null ? this._shader : this._getOrCreateCustomShader(material, backend.context);
+
+    if (material === null) {
+      this._stageDefaultViewUniforms(backend);
+    } else {
+      if (shader.uniforms.has('u_projection')) {
+        shader.getUniform('u_projection').setValue(backend.view.getTransform().toArray(false));
+      }
+
+      if (shader.uniforms.has('u_group')) {
+        const groupTransform = backend.renderGroupTransform;
+
+        shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
+      }
+
+      backend._stageViewportUniform(shader);
+
+      if (this._retainedPreparedEpoch.get(material) !== backend.renderPlanEpoch) {
+        this._stageCustomUniforms(shader, material);
+        this._retainedPreparedEpoch.set(material, backend.renderPlanEpoch);
+      }
+
+      this._bindCustomTextures(shader, material, backend);
+    }
 
     const textures = payload.textures;
 
@@ -427,19 +455,54 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     // re-binds the shared texture through bindTransformBufferTexture.
     backend.bindTexture(transformTexture, transformTextureUnit);
 
-    if (this._shader.uniforms.has('u_transforms')) {
-      this._shader.getUniform('u_transforms').setValue(this._transformUnitScratch);
+    if (shader.uniforms.has('u_transforms')) {
+      shader.getUniform('u_transforms').setValue(this._transformUnitScratch);
     }
 
     backend.bindTexture(tintTexture, transformTintTextureUnit);
 
-    if (this._shader.uniforms.has('u_tintTexture')) {
-      this._shader.getUniform('u_tintTexture').setValue(this._tintUnitScratch);
+    if (shader.uniforms.has('u_tintTexture')) {
+      shader.getUniform('u_tintTexture').setValue(this._tintUnitScratch);
     }
 
-    this._shader.sync();
+    shader.sync();
     backend.bindVertexArrayObject(vao);
+    this._bindBaseTextureSamplers(backend, material, textures.length);
     vao.drawInstanced(4, 0, payload.instanceCount, RenderingPrimitives.TriangleStrip);
+    this._unbindBaseTextureSamplers(backend, material, textures.length);
+  }
+
+  private _bindBaseTextureSamplers(backend: WebGl2Backend, material: SpriteMaterial | null, slotCount: number): void {
+    const sampler = material?.sampler;
+
+    if (sampler === null || sampler === undefined) {
+      return;
+    }
+
+    for (let slot = 0; slot < slotCount; slot++) {
+      backend.bindMaterialSampler(sampler, slot);
+    }
+  }
+
+  private _unbindBaseTextureSamplers(backend: WebGl2Backend, material: SpriteMaterial | null, slotCount: number): void {
+    if (material?.sampler === null || material?.sampler === undefined) {
+      return;
+    }
+
+    for (let slot = 0; slot < slotCount; slot++) {
+      backend.unbindMaterialSampler(slot);
+    }
+  }
+
+  /** Structural preflight called for every batch before the set is spliced. @internal */
+  public _validateRetainedBatch(payload: WebGl2RetainedBatchPayload): boolean {
+    const state = this._retainedMaterialState(payload);
+
+    return state === null || isRetainedMaterialStateValid(state);
+  }
+
+  private _retainedMaterialState(payload: WebGl2RetainedBatchPayload): RetainedMaterialState<SpriteMaterial> | null {
+    return isRetainedMaterialState(payload.rendererData) ? (payload.rendererData as RetainedMaterialState<SpriteMaterial>) : null;
   }
 
   protected onConnect(backend: WebGl2Backend): void {
@@ -679,54 +742,48 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     return shader;
   }
 
-  private _bindCustomUniforms(shader: Shader, material: SpriteMaterial, backend: WebGl2Backend): void {
-    // Texture bindings take consecutive units above the base-texture slot table
-    // (units 0..spriteMaterialTextureSlots-1 belong to the sprites' own base
-    // textures). Texture-valued uniforms bind first, then the entries of the
-    // material's dedicated `textures` map.
-    let textureSlot = customTextureUnitBase;
-
-    const uniforms = material.uniforms;
-
-    for (const name in uniforms) {
-      if (!shader.uniforms.has(name)) {
-        continue;
-      }
-
-      // `name` iterates own keys of `uniforms`, so the lookup is defined.
-      const value = uniforms[name]!;
-      const uniform = shader.getUniform(name);
-
-      if (value instanceof Texture || value instanceof RenderTexture) {
-        if (textureSlot >= customTextureUnitBase + maxCustomTextureSlots) {
-          throw new Error(`SpriteMaterial requested more than ${maxCustomTextureSlots} texture bindings.`);
-        }
-
-        backend.bindTexture(value, textureSlot);
-        // In-bounds: `textureSlot < customTextureUnitBase + maxCustomTextureSlots
-        // <= maxBatchTextures` (guarded) and `_slotScratches` has
-        // `maxBatchTextures` entries.
-        uniform.setValue(this._slotScratches[textureSlot]!);
-        textureSlot++;
-      } else {
-        uniform.setValue(this._marshalUniformValue(value));
+  private _stageCustomUniforms(shader: Shader, material: SpriteMaterial): void {
+    for (const name of material._bindingSchema.scalarUniformNames) {
+      if (shader.uniforms.has(name)) {
+        shader.getUniform(name).setValue(this._marshalUniformValue(material._getUniformValue(name) as Exclude<UniformValue, Texture | RenderTexture>));
       }
     }
 
-    const textures = material.textures;
+    let textureSlot = customTextureUnitBase;
 
-    for (const name in textures) {
-      if (!shader.uniforms.has(name)) {
-        continue;
-      }
+    for (const name of material._bindingSchema.textureUniformNames) {
+      this._stageCustomTextureUnit(shader, name, textureSlot++);
+    }
 
-      if (textureSlot >= customTextureUnitBase + maxCustomTextureSlots) {
-        throw new Error(`SpriteMaterial requested more than ${maxCustomTextureSlots} texture bindings.`);
-      }
+    for (const name of material._bindingSchema.textureNames) {
+      this._stageCustomTextureUnit(shader, name, textureSlot++);
+    }
+  }
 
-      // `name` iterates own keys of `textures`, so the lookup is defined.
-      backend.bindTexture(textures[name]!, textureSlot);
+  private _stageCustomTextureUnit(shader: Shader, name: string, textureSlot: number): void {
+    if (textureSlot >= customTextureUnitBase + maxCustomTextureSlots) {
+      throw new Error(`SpriteMaterial requested more than ${maxCustomTextureSlots} texture bindings.`);
+    }
+
+    if (shader.uniforms.has(name)) {
       shader.getUniform(name).setValue(this._slotScratches[textureSlot]!);
+    }
+  }
+
+  private _bindCustomTextures(shader: Shader, material: SpriteMaterial, backend: WebGl2Backend): void {
+    let textureSlot = customTextureUnitBase;
+
+    for (const name of material._bindingSchema.textureUniformNames) {
+      if (shader.uniforms.has(name)) {
+        backend.bindTexture(material._getUniformValue(name) as Texture | RenderTexture, textureSlot);
+      }
+      textureSlot++;
+    }
+
+    for (const name of material._bindingSchema.textureNames) {
+      if (shader.uniforms.has(name)) {
+        backend.bindTexture(material._getTextureValue(name), textureSlot);
+      }
       textureSlot++;
     }
   }

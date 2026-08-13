@@ -137,6 +137,8 @@ export interface WebGl2RetainedBatchReplayer {
   _rebaseRetainedNodeIndices(payload: WebGl2RetainedBatchPayload, base: number): void;
   /** Point `payload.vao`'s attributes at the bundle instance buffer, based at `payload.byteOffset`. */
   _configureRetainedVao(payload: WebGl2RetainedBatchPayload): void;
+  /** Preflight structural live state before any instruction in the set draws. */
+  _validateRetainedBatch?(payload: WebGl2RetainedBatchPayload): boolean;
   /** Replay the batch: live state (blend, uniforms, textures), cached data (bytes, transforms). */
   _replayRetainedBatch(payload: WebGl2RetainedBatchPayload): void;
 }

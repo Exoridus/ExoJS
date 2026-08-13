@@ -1,7 +1,6 @@
 #version 300 es
 precision mediump float;
 
-uniform sampler2D u_texture;   // RGB MSDF atlas
 uniform sampler2D u_nodeData;  // RGBA32F per-node data (see WebGl2TextRenderer)
 uniform float     u_pageSize;  // atlas page size in px (for shadow UV conversion)
 
@@ -34,7 +33,7 @@ void main(void) {
   vec2  shadowOffset = tShadow2.xy / u_pageSize;
   float gradVertical = tShadow2.z;
 
-  vec3  msd  = texture(u_texture, v_texcoord).rgb;
+  vec3  msd  = sampleBase(v_textureSlot, v_texcoord).rgb;
   float sd   = median(msd.r, msd.g, msd.b);
   float fill = smoothstep(0.5 - soft, 0.5 + soft, sd);
 
@@ -42,7 +41,7 @@ void main(void) {
     ? smoothstep(outlineMin - soft, outlineMin + soft, sd) * (1.0 - fill)
     : 0.0;
 
-  vec3  shadowMsd = texture(u_texture, v_texcoord - shadowOffset).rgb;
+  vec3  shadowMsd = sampleBase(v_textureSlot, v_texcoord - shadowOffset).rgb;
   float shadowSd  = median(shadowMsd.r, shadowMsd.g, shadowMsd.b);
   float shadow    = smoothstep(0.5 - soft, 0.5 + soft, shadowSd)
                     * shadowAlpha * (1.0 - fill) * (1.0 - outline);
