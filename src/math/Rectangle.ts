@@ -18,11 +18,12 @@ import type { Ellipse } from './Ellipse';
 import { Interval } from './Interval';
 import type { Line } from './Line';
 import type { Matrix } from './Matrix';
+import { ObservableSize } from './ObservableSize';
 import { ObservableVector, type ObservableVectorOwner } from './ObservableVector';
 import type { Polygon } from './Polygon';
 import type { RectangleLike } from './RectangleLike';
 import type { ShapeLike } from './ShapeLike';
-import { Size } from './Size';
+import type { Size } from './Size';
 import { inRange } from './utils';
 import { Vector } from './Vector';
 
@@ -74,6 +75,14 @@ export interface ReadonlyRectangle extends Collidable {
  * `Rectangle.temp` is a shared scratch instance. Edge normals are lazily
  * computed and cached; they are invalidated when position or size mutates.
  *
+ * Position and size are reactive components, so EVERY mutation — the accessors
+ * here, `set`/`copy`, and a write one level down such as `rect.size.width = 5`
+ * — funnels through a single internal notification. Pass `onChange` to be told
+ * about all of them: an owner that hands out its live rectangle uses it to run
+ * whatever invalidation a direct write implies — a camera's viewport rectangle
+ * bumps the camera's update counter this way. {@link clone} deliberately does
+ * not carry the callback over — a copy is a value, not a second owner.
+ *
  * See {@link ReadonlyRectangle} for the read-only view engine APIs hand out
  * when they return a live internal rectangle.
  */
@@ -81,21 +90,35 @@ export class Rectangle implements ShapeLike, ObservableVectorOwner, ReadonlyRect
   public readonly collisionType: CollisionType = CollisionType.Rectangle;
 
   private readonly _position: ObservableVector;
-  private readonly _size: Size;
+  private readonly _size: ObservableSize;
   private _normals: Vector[] | null = null;
   private _normalsDirty = false;
+  private _onChange: (() => void) | null;
 
-  public constructor(x = 0, y = x, width = 0, height = width) {
+  /**
+   * @param x        - Left edge.
+   * @param y        - Top edge. Defaults to `x`.
+   * @param width    - Horizontal extent.
+   * @param height   - Vertical extent. Defaults to `width`.
+   * @param onChange - Owner notification invoked after any mutation. Defaults to `null`.
+   */
+  public constructor(x = 0, y = x, width = 0, height = width, onChange: (() => void) | null = null) {
     this._position = new ObservableVector(this, 0, x, y);
-    this._size = new Size(width, height);
+    this._size = new ObservableSize(this._onObservableChange.bind(this), width, height);
+    this._onChange = onChange;
   }
 
   /**
-   * Receives change notifications from `_position`; marks the cached edge
-   * normals stale so the next {@link getNormals} recomputes them. @internal
+   * The one point every mutation of this rectangle reaches: `_position` and
+   * `_size` both report here. Marks the cached edge normals stale so the next
+   * {@link getNormals} recomputes them, then forwards to the owner callback.
+   *
+   * The reactive components only report on an ACTUAL change, so writing a
+   * component its current value notifies nobody. @internal
    */
   public _onObservableChange(): void {
     this._normalsDirty = true;
+    this._onChange?.();
   }
 
   public get position(): AbstractVector {
@@ -112,7 +135,6 @@ export class Rectangle implements ShapeLike, ObservableVectorOwner, ReadonlyRect
 
   public set x(x: number) {
     this._position.x = x;
-    this._normalsDirty = true;
   }
 
   public get y(): number {
@@ -121,7 +143,6 @@ export class Rectangle implements ShapeLike, ObservableVectorOwner, ReadonlyRect
 
   public set y(y: number) {
     this._position.y = y;
-    this._normalsDirty = true;
   }
 
   public get size(): Size {
@@ -130,7 +151,6 @@ export class Rectangle implements ShapeLike, ObservableVectorOwner, ReadonlyRect
 
   public set size(size: Size) {
     this._size.copy(size);
-    this._normalsDirty = true;
   }
 
   public get width(): number {
@@ -139,7 +159,6 @@ export class Rectangle implements ShapeLike, ObservableVectorOwner, ReadonlyRect
 
   public set width(width: number) {
     this._size.width = width;
-    this._normalsDirty = true;
   }
 
   public get height(): number {
@@ -148,7 +167,6 @@ export class Rectangle implements ShapeLike, ObservableVectorOwner, ReadonlyRect
 
   public set height(height: number) {
     this._size.height = height;
-    this._normalsDirty = true;
   }
 
   public get left(): number {
@@ -169,14 +187,12 @@ export class Rectangle implements ShapeLike, ObservableVectorOwner, ReadonlyRect
 
   public setPosition(x: number, y: number): this {
     this._position.set(x, y);
-    this._normalsDirty = true;
 
     return this;
   }
 
   public setSize(width: number, height: number): this {
     this._size.set(width, height);
-    this._normalsDirty = true;
 
     return this;
   }
@@ -323,6 +339,9 @@ export class Rectangle implements ShapeLike, ObservableVectorOwner, ReadonlyRect
   public destroy(): void {
     this._position.destroy();
     this._size.destroy();
+    // Drop the owner notification along with the reactive components, so a
+    // rectangle retained past its owner's teardown cannot invalidate it again.
+    this._onChange = null;
 
     if (this._normals) {
       this._normals = null;

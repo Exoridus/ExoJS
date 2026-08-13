@@ -20,6 +20,9 @@
  * a cell at the clear colour (uniform ring aliased, so every system draws at the
  * last one's position), and fails here rather than passing as a win.
  *
+ * The last describe covers the other half of that contract — the one hazard
+ * appending CANNOT cover, so the renderer has to end the pass after all.
+ *
  * Run via:  pnpm test:browser:webgpu
  */
 
@@ -29,6 +32,7 @@ import { Time } from '#core/Time';
 import { materializeRendererBindings } from '#extensions/materialize';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
+import { View } from '#rendering/View';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { ApplyForce, particlesExtension, ParticleSystem } from '../../../packages/exojs-particles/src/index';
@@ -344,6 +348,88 @@ describe('WebGPU particle single-pass frame', () => {
       cpuSystem.destroy();
       sprite.destroy();
       trailingSprite.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+});
+
+describe('WebGPU particle viewport invalidation', () => {
+  test('a viewport moved between two particle flushes does NOT let the second draw render through the first viewport', async ctx => {
+    const backend = await setupBackend();
+    const texture = createSolidTexture('#ffffff', 8);
+    // ONE camera object for the whole frame — the viewport moves by mutating it
+    // in place. A `setView` to a different View would end the pass on its own
+    // and prove nothing about the renderer's guard.
+    const view = new View(canvasSize / 2, canvasSize / 2, canvasSize, canvasSize);
+    // Both systems sit at the camera centre, so each lands in the middle of
+    // whichever viewport rectangle its own pass carries: the left half's centre
+    // for the first, the right half's for the second. The viewport is applied
+    // when the pass OPENS and cannot be rewritten on an open one, so a second
+    // draw appended to the first pass paints the left cell instead.
+    const first = createTintedSystem(texture, particleColors[0]!, canvasSize / 2, canvasSize / 2);
+    const second = createTintedSystem(texture, particleColors[1]!, canvasSize / 2, canvasSize / 2);
+    // Present only to switch the active renderer, which flushes the first
+    // particle draw into the pass while the viewport is still the left half.
+    // Parked in a corner, clear of both probes.
+    const switcher = new Sprite(texture);
+
+    switcher.setPosition(8, 8);
+    switcher.width = 8;
+    switcher.height = 8;
+
+    const leftCellX = canvasSize / 4;
+    const rightCellX = (canvasSize * 3) / 4;
+    const cellY = canvasSize / 2;
+
+    const renderFrame = (): void => {
+      backend.resetStats();
+      backend.clear(Color.black);
+      backend.setView(view);
+      view.viewport.set(0, 0, 0.5, 1);
+
+      first.render(backend);
+      // Renderer switch: flushes the first particle draw into the open pass
+      // under the left viewport, then queues the sprite.
+      switcher.render(backend);
+      // Switch back: flushes the sprite into that same pass, queues the second
+      // particle draw.
+      second.render(backend);
+      // The move lands with the second draw queued but not yet recorded, and
+      // with no other renderer left to flush after it — so nothing except the
+      // particle renderer's own guard can end the pass here.
+      view.viewport.set(0.5, 0, 0.5, 1);
+      backend.flush();
+    };
+
+    try {
+      // Warm up so pipelines are compiled and the shared buffers have ratcheted
+      // to the frame's total: a capacity growth ends the pass for its own
+      // reasons and would answer a different question than the one asked here.
+      for (let frame = 0; frame < 3; frame++) {
+        if (!(await renderGuarded(ctx, backend, renderFrame))) {
+          return;
+        }
+      }
+
+      const submits = countSubmits(backend, renderFrame);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
+
+      // Asserted before the counts, so a regression reports the rendered result
+      // rather than the mechanism that produced it. The second draw landing in
+      // the RIGHT cell is the whole point; the first draw still owning the LEFT
+      // one rules out "it just painted everything".
+      expectPixelNear(readPixel(rightCellX, cellY), particleColors[1]!);
+      expectPixelNear(readPixel(leftCellX, cellY), particleColors[0]!);
+
+      // Exactly one extra boundary: the viewport move, and nothing else.
+      expect(backend.stats.renderPasses).toBe(2);
+      expect(submits).toBe(2);
+    } finally {
+      first.destroy();
+      second.destroy();
+      switcher.destroy();
+      view.destroy();
       texture.destroy();
       backend.destroy();
     }
