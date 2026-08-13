@@ -16,7 +16,7 @@ import type { View } from '#rendering/View';
 import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
 import type { WebGpuBackend } from './WebGpuBackend';
 import { getWebGpuBlendState } from './WebGpuBlendState';
-import { WebGpuInstanceArena } from './WebGpuInstanceArena';
+import { WebGpuPassArena } from './WebGpuPassArena';
 import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
 import type {
   WebGpuRetainedBatchPayload,
@@ -393,7 +393,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   // than a single rewritten buffer, because several batches now share one open
   // pass and `queue.writeBuffer` is ordered against the submit, not against the
   // individual draws inside it.
-  private readonly _instancedAttributeArena = new WebGpuInstanceArena('mesh:instanced-attribute-buffer', 0);
+  private readonly _instancedAttributeArena = new WebGpuPassArena('mesh:instanced-attribute-buffer', 0);
   // ── Immediate-batch pass scope ────────────────────────────────────────────
   // `drawInstancedBatch` records into the coordinator's open pass and no longer
   // ends it, so consecutive `drawBatch` calls land in ONE pass and ONE submit.

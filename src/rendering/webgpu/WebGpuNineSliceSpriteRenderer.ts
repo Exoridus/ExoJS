@@ -13,7 +13,7 @@ import type { View } from '#rendering/View';
 import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
 import type { WebGpuBackend } from './WebGpuBackend';
 import { getWebGpuBlendState } from './WebGpuBlendState';
-import { WebGpuInstanceArena } from './WebGpuInstanceArena';
+import { WebGpuPassArena } from './WebGpuPassArena';
 import type { WebGpuActiveRenderPass, WebGpuPassCoordinator } from './WebGpuPassCoordinator';
 import {
   retainedGroupUniformBytes,
@@ -182,7 +182,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
   private _indexBuffer: GPUBuffer | null = null;
   // Frame-scoped append arena: consecutive batch flushes accumulate into one
   // open pass at distinct byte offsets so the frame submits once.
-  private readonly _instanceArena = new WebGpuInstanceArena('nine-slice:instance-buffer', initialBatchCapacity * instanceStrideBytes);
+  private readonly _instanceArena = new WebGpuPassArena('nine-slice:instance-buffer', initialBatchCapacity * instanceStrideBytes);
   private _instanceCapacity = 0;
   private _instanceData: ArrayBuffer = new ArrayBuffer(0);
   private _instanceFloat32 = new Float32Array(this._instanceData);

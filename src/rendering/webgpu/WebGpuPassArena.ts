@@ -3,23 +3,25 @@
 import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
 
 /**
- * A frame-scoped, append-only GPU vertex buffer shared across the multiple batch
- * flushes an instanced renderer records into a single open render pass.
+ * A pass-scoped, append-only GPU buffer shared across the multiple batch flushes
+ * a renderer records into a single open render pass.
  *
  * WebGPU's `queue.writeBuffer` writes land on the queue timeline BEFORE the
- * submit that consumes them, so a renderer that keeps one reused instance buffer
- * and rewrites it at offset 0 on every flush would have every `drawIndexed` in a
- * merged submit read the LAST batch's bytes (aliasing). This arena hands each
- * batch a fresh byte offset within one buffer so all batches in a submit keep
- * their own data. The cursor resets whenever a new pass begins (tracked by the
- * identity of the coordinator's active pass), and capacity only grows.
+ * submit that consumes them, so a renderer that keeps one reused buffer and
+ * rewrites it at offset 0 on every flush would have every draw in a merged
+ * submit read the LAST batch's bytes (aliasing). This arena hands each batch a
+ * fresh byte offset within one buffer so all batches in a submit keep their own
+ * data. The cursor resets whenever a new pass begins (tracked by the identity of
+ * the coordinator's active pass), and capacity only grows.
+ *
+ * The arena is agnostic about what it stages — instance attributes, vertices or
+ * indices all work, as long as the caller keeps its own stride bookkeeping.
  *
  * Growth reallocates the underlying buffer, which must not orphan draws already
  * recorded into the open pass — the caller is responsible for ending (submitting)
  * the pass before {@link grow} whenever {@link cursor} is non-zero.
- * @internal
  */
-export class WebGpuInstanceArena {
+export class WebGpuPassArena {
   private readonly _label: string;
   private readonly _initialBytes: number;
   private _buffer: GPUBuffer | null = null;
@@ -27,6 +29,12 @@ export class WebGpuInstanceArena {
   private _cursorBytes = 0;
   private _pass: WebGpuActiveRenderPass | null = null;
 
+  /**
+   * @param label Debug label for the backing buffer, surfaced in GPU error messages.
+   * @param initialBytes Capacity the first {@link grow} allocates at minimum. Sized
+   *   so a typical frame never reallocates, since growth forces the caller to end
+   *   the open pass.
+   */
   public constructor(label: string, initialBytes: number) {
     this._label = label;
     this._initialBytes = initialBytes;
@@ -101,6 +109,12 @@ export class WebGpuInstanceArena {
     return offset;
   }
 
+  /**
+   * Release the backing buffer and reset the arena to its pre-{@link grow} state.
+   *
+   * Destroys a buffer that draws in an open pass may still bind, so the caller
+   * must have submitted or discarded that pass first.
+   */
   public destroy(): void {
     this._buffer?.destroy();
     this._buffer = null;

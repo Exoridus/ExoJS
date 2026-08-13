@@ -1116,7 +1116,7 @@ export class WebGpuBackend implements RenderBackend {
     // so it happens only at genuine boundaries (render-target / view / scissor /
     // stencil change, compositor, execute, plan / frame end), NOT once per batch
     // flush and not on a renderer switch. Instanced renderers record consecutive
-    // batch flushes into the same open pass (via WebGpuInstanceArena) and no
+    // batch flushes into the same open pass (via WebGpuPassArena) and no
     // longer end it themselves, collapsing thousands of per-draw submits into
     // one per frame.
     this._passCoordinatorInstance?.endPass();

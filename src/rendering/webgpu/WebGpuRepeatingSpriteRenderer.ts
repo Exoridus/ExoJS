@@ -14,7 +14,7 @@ import type { View } from '#rendering/View';
 import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
 import type { WebGpuBackend } from './WebGpuBackend';
 import { getWebGpuBlendState } from './WebGpuBlendState';
-import { WebGpuInstanceArena } from './WebGpuInstanceArena';
+import { WebGpuPassArena } from './WebGpuPassArena';
 import type { WebGpuActiveRenderPass, WebGpuPassCoordinator } from './WebGpuPassCoordinator';
 import {
   retainedGroupUniformBytes,
@@ -288,7 +288,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
   // flushes accumulate into one open pass at distinct byte offsets — the frame
   // submits once instead of once per flush. CPU staging stays per-path (the two
   // layouts differ in stride).
-  private readonly _instanceArena = new WebGpuInstanceArena('repeating-sprite:instance-buffer', initialBatchCapacity * shaderStrideBytes);
+  private readonly _instanceArena = new WebGpuPassArena('repeating-sprite:instance-buffer', initialBatchCapacity * shaderStrideBytes);
 
   // Shader-path CPU staging
   private _shaderInstCapacity = 0;
