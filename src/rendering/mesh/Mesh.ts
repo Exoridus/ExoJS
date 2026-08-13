@@ -5,6 +5,14 @@ import type { MeshMaterial } from '#rendering/material/MeshMaterial';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 
+const maxUint16VertexCount = 0x10000;
+
+const assertImplicitIndexRange = (vertexCount: number): void => {
+  if (vertexCount > maxUint16VertexCount) {
+    throw new Error(`Non-indexed Mesh vertex count ${vertexCount} exceeds the 16-bit implicit-index limit of ${maxUint16VertexCount} vertices.`);
+  }
+};
+
 /**
  * Construction-time options for a {@link Mesh}.
  *
@@ -179,8 +187,12 @@ export class Mesh extends Drawable {
           throw new Error(`Mesh index ${indices[i]!} at position ${i} is out of range for vertex count ${vertexCount}.`);
         }
       }
-    } else if (vertexCount % 3 !== 0) {
-      throw new Error(`Non-indexed Mesh requires a vertex count that is a multiple of 3 (got ${vertexCount}).`);
+    } else {
+      assertImplicitIndexRange(vertexCount);
+
+      if (vertexCount % 3 !== 0) {
+        throw new Error(`Non-indexed Mesh requires a vertex count that is a multiple of 3 (got ${vertexCount}).`);
+      }
     }
 
     this._vertices = vertices;
@@ -286,6 +298,11 @@ export function readGeometry(geometry: Geometry): {
 
   const color = findAttribute(geometry.attributes, colorAttributeNames);
   const vertexCount = geometry.vertexCount;
+
+  if (geometry.indices === null) {
+    assertImplicitIndexRange(vertexCount);
+  }
+
   const { stride } = geometry;
   const source = geometry.vertexData;
   const view = source instanceof Float32Array ? new DataView(source.buffer, source.byteOffset, source.byteLength) : new DataView(source);

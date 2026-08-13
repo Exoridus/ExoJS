@@ -159,6 +159,20 @@ describe('Mesh', () => {
     ).toThrow(/multiple of 3/);
   });
 
+  test('rejects non-indexed meshes beyond the 16-bit implicit-index range', () => {
+    const largestTriangleListVertexCount = 0xffff;
+    const overflowingTriangleListVertexCount = 0x10002;
+    const overflowingGeometry = new Geometry({
+      attributes: [{ name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 }],
+      vertexData: new Float32Array(overflowingTriangleListVertexCount * 2),
+      stride: 8,
+    });
+
+    expect(() => new Mesh({ vertices: new Float32Array(largestTriangleListVertexCount * 2) })).not.toThrow();
+    expect(() => new Mesh({ vertices: new Float32Array(overflowingTriangleListVertexCount * 2) })).toThrow(/16-bit implicit-index limit of 65536 vertices/);
+    expect(() => new Mesh({ geometry: overflowingGeometry })).toThrow(/16-bit implicit-index limit of 65536 vertices/);
+  });
+
   test('texture setter swaps the bound texture', () => {
     const mesh = new Mesh({ vertices: validVertices() });
     const fakeTexture = { width: 1, height: 1 } as unknown as NonNullable<Mesh['texture']>;
