@@ -1,11 +1,13 @@
 import { Bounds } from '#core/Bounds';
 import { SceneNode } from '#core/SceneNode';
+import type { AbstractVector } from '#math/AbstractVector';
 import { Flags } from '#math/Flags';
 import { Matrix } from '#math/Matrix';
 import { ObservableSize } from '#math/ObservableSize';
 import { ObservableVector, type ObservableVectorOwner } from '#math/ObservableVector';
 import type { PointLike } from '#math/PointLike';
 import { Rectangle } from '#math/Rectangle';
+import type { Size } from '#math/Size';
 import { clamp, degreesToRadians, trimRotation } from '#math/utils';
 
 /**
@@ -146,7 +148,7 @@ export class View implements ObservableVectorOwner {
     return this._center;
   }
 
-  public set center(center: ObservableVector) {
+  public set center(center: AbstractVector) {
     this._center.copy(center);
   }
 
@@ -154,7 +156,7 @@ export class View implements ObservableVectorOwner {
     return this._size;
   }
 
-  public set size(size: ObservableSize) {
+  public set size(size: Size) {
     this._size.copy(size);
   }
 

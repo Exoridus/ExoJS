@@ -20,7 +20,7 @@ const toChannel = (value: number): number => clamp(value, 0, 255) | 0;
  * `Float32Array` for upload to GPU buffers; both are invalidated on
  * channel writes and rebuilt lazily.
  */
-export class Color implements Cloneable {
+export class Color implements Cloneable<Color> {
   private _r: number;
   private _g: number;
   private _b: number;

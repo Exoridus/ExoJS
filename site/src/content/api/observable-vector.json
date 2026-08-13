@@ -1,15 +1,15 @@
 {
   "title": "ObservableVector",
-  "description": "An AbstractVector subclass that notifies an owner whenever its components change. Used internally by Rectangle, `SceneNode`, View and other types to invalidate cached state (normals, transforms) on mutation. Instead of a per-instance callback closure, the vector holds a reference to its `owner` plus a numeric `channel` and calls `owner._onObservableChange(channel)` on change. This keeps hot per-node vectors closure-free — a `SceneNode` carries four of these, so dropping the bound closures saves four allocations per node. Pass `owner = null` for a plain, non-reactive vector. Setting individual components (`x`, `y`) notifies only when the value actually changes. Batch mutations via `set()` notify at most once per call.",
+  "description": "An AbstractVector subclass that notifies an owner whenever its components change. Used internally by Rectangle, `SceneNode`, View and other types to invalidate cached state (normals, transforms) on mutation. Instead of a per-instance callback closure, the vector holds a reference to its `owner` plus a numeric `channel` and calls `owner._onObservableChange(channel)` on change. This keeps hot per-node vectors closure-free — a `SceneNode` carries four of these, so dropping the bound closures saves four allocations per node. Pass `owner = null` for a plain, non-reactive vector. Setting individual components (`x`, `y`) notifies only when the value actually changes. Batch mutations via `set()` notify at most once per call. Deliberately has no `clone()`. A clone is a value, not a second notification channel into this vector's owner, so it would have to hand back a plain `Vector` — and importing `Vector` here closes a module-evaluation cycle (`Vector` imports `Rectangle`, which constructs at module scope). Copy explicitly instead: `new Vector(v.x, v.y)`.",
   "symbol": "ObservableVector",
   "kind": "class",
   "subsystem": "math",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 27,
+  "memberCount": 26,
   "counts": {
     "constructors": 1,
-    "methods": 21,
+    "methods": 20,
     "properties": 5,
     "events": 0
   },
@@ -21,7 +21,8 @@
       "paragraphs": [
         "An AbstractVector subclass that notifies an owner whenever its components change. Used internally by Rectangle, `SceneNode`, View and other types to invalidate cached state (normals, transforms) on mutation.",
         "Instead of a per-instance callback closure, the vector holds a reference to its `owner` plus a numeric `channel` and calls `owner._onObservableChange(channel)` on change. This keeps hot per-node vectors closure-free — a `SceneNode` carries four of these, so dropping the bound closures saves four allocations per node. Pass `owner = null` for a plain, non-reactive vector.",
-        "Setting individual components (`x`, `y`) notifies only when the value actually changes. Batch mutations via `set()` notify at most once per call."
+        "Setting individual components (`x`, `y`) notifies only when the value actually changes. Batch mutations via `set()` notify at most once per call.",
+        "Deliberately has no `clone()`. A clone is a value, not a second notification channel into this vector's owner, so it would have to hand back a plain `Vector` — and importing `Vector` here closes a module-evaluation cycle (`Vector` imports `Rectangle`, which constructs at module scope). Copy explicitly instead: `new Vector(v.x, v.y)`."
       ],
       "importLine": "import { ObservableVector } from '@codexo/exojs'",
       "sourceLink": null
@@ -224,35 +225,6 @@
           ],
           "returnType": "this",
           "description": "Add (x, y) to this vector. When y is omitted it defaults to x. Mutates in place and returns this for chaining."
-        },
-        {
-          "name": "clone",
-          "signature": "clone(): this",
-          "signatureTokens": [
-            {
-              "text": "clone",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "this",
-          "description": "A detached copy: same components, no owner. A clone is a value, not a second notification channel into the original's owner — mutating it must not invalidate transforms that belong to something else. Matches ObservableSize.clone and Rectangle.clone()."
         },
         {
           "name": "copy",

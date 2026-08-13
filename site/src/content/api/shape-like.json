@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "clone",
-          "signature": "clone(): this",
+          "signature": "clone(): ShapeLike",
           "signatureTokens": [
             {
               "text": "clone",
@@ -49,12 +49,12 @@
               "kind": "punctuation"
             },
             {
-              "text": "this",
-              "kind": "keyword"
+              "text": "ShapeLike",
+              "kind": "type"
             }
           ],
           "params": [],
-          "returnType": "this",
+          "returnType": "ShapeLike",
           "description": ""
         },
         {
@@ -182,7 +182,7 @@
         },
         {
           "name": "copy",
-          "signature": "copy(source: this): this",
+          "signature": "copy(source: ShapeLike): this",
           "signatureTokens": [
             {
               "text": "copy",
@@ -201,8 +201,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "this",
-              "kind": "keyword"
+              "text": "ShapeLike",
+              "kind": "type"
             },
             {
               "text": ")",
@@ -220,7 +220,7 @@
           "params": [
             {
               "name": "source",
-              "type": "this",
+              "type": "ShapeLike",
               "optional": false
             }
           ],

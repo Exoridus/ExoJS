@@ -1,4 +1,5 @@
 import { ObservableVector } from '#math/ObservableVector';
+import { Vector } from '#math/Vector';
 
 describe('ObservableVector.destroy()', () => {
   // destroy() should not throw
@@ -258,20 +259,23 @@ describe('ObservableVector.divide() override', () => {
   });
 });
 
-describe('ObservableVector.clone()', () => {
-  test('returns a distinct, owner-free instance with the same components', () => {
+describe('ObservableVector has no clone()', () => {
+  test('an explicit Vector copy is detached from the owner', () => {
     const onChange = vi.fn();
     const owner = { _onObservableChange: onChange };
     const v = new ObservableVector(owner, 3, 1, 2);
-    const clone = v.clone();
 
-    expect(clone).not.toBe(v);
-    expect(clone.x).toBe(1);
-    expect(clone.y).toBe(2);
+    // No `clone()` is offered: it could only hand back a plain Vector, and
+    // importing Vector here would close a module-evaluation cycle. Callers copy
+    // explicitly, which also makes the copy's deadness visible at the call site.
+    expect((v as unknown as { clone?: unknown }).clone).toBeUndefined();
 
-    // A clone is a value, not a second notification channel: mutating it must
-    // leave the original's owner untouched.
-    clone.x = 9;
+    const copy = new Vector(v.x, v.y);
+
+    expect(copy.x).toBe(1);
+    expect(copy.y).toBe(2);
+
+    copy.x = 9;
     expect(onChange).not.toHaveBeenCalled();
     expect(v.x).toBe(1);
 

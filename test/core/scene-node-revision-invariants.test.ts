@@ -1,5 +1,6 @@
 import { Color } from '#core/Color';
 import { Rectangle } from '#math/Rectangle';
+import { Vector } from '#math/Vector';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import { Filter } from '#rendering/filters/Filter';
@@ -78,7 +79,7 @@ const cases: readonly MutatorCase[] = [
   // correctly a no-op under the equality-guarded vector setter, so the clone
   // is mutated to a different value first to exercise a real change.
   drawableCase('position setter', 'transform', n => {
-    const next = n.position.clone();
+    const next = new Vector(n.position.x, n.position.y);
 
     next.set(next.x + 10, next.y + 20);
     n.position = next;

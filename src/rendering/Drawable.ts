@@ -1,5 +1,6 @@
 import { Color } from '#core/Color';
 import { SceneNodeVectorChannel } from '#core/SceneNode';
+import type { AbstractVector } from '#math/AbstractVector';
 import { ObservableVector } from '#math/ObservableVector';
 import { drawableHasOwnMaterial, type MaterialKey, writeMaterialKeyInto } from '#rendering/plan/RenderCommand';
 import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
@@ -49,7 +50,7 @@ export class Drawable extends RenderNode {
     return this._anchor;
   }
 
-  public set anchor(anchor: ObservableVector) {
+  public set anchor(anchor: AbstractVector) {
     this._anchor.copy(anchor);
   }
 

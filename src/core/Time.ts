@@ -14,7 +14,7 @@ import type { Cloneable, TimeInterval } from './types';
  * (`Time.milliseconds`, `Time.seconds`, `Time.minutes`, `Time.hours`) are
  * plain `static readonly` numbers, not frozen.
  */
-export class Time implements Cloneable {
+export class Time implements Cloneable<Time> {
   private _milliseconds: number;
 
   public constructor(time = 0, factor: TimeInterval = Time.milliseconds) {
