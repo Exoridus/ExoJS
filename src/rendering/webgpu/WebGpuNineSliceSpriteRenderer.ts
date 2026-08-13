@@ -1,7 +1,7 @@
 /// <reference types="@webgpu/types" />
 
 import { Matrix } from '#math/Matrix';
-import { packAffineMat4 } from '#rendering/affinePacking';
+import { affineMat4FloatCount, packAffineMat4, packedGroupChanged } from '#rendering/affinePacking';
 import type { NineSliceQuad } from '#rendering/sprite/nineSlice';
 import type { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 import { DataTexture } from '#rendering/texture/DataTexture';
@@ -163,13 +163,13 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
 
   private readonly _projectionData = new Float32Array(projectionByteLength / Float32Array.BYTES_PER_ELEMENT);
   // Projection-uniform skip state: a matching (view identity, view.updateId,
-  // group-transform id) triple means the shared UBO already holds this flush's
-  // projection, so the 128-byte write is skipped — static frames issue zero
-  // projection uploads. Mirrors the sprite renderer's redundant-write skip.
+  // group-matrix content) triple means the shared UBO already holds this
+  // flush's projection, so the 128-byte write is skipped — static frames issue
+  // zero projection uploads. Mirrors the sprite renderer's redundant-write skip.
   private _writtenView: View | null = null;
   private _writtenViewUpdateId = -1;
-  private _writtenGroupTransformId = -1;
   private _hasWrittenProjection = false;
+  private readonly _stagedGroupData = new Float32Array(affineMat4FloatCount);
 
   private _device: GPUDevice | null = null;
   private _shaderModule: GPUShaderModule | null = null;
@@ -265,7 +265,6 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
     this._textureBindGroups = new WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView; sampler: GPUSampler }>();
     this._writtenView = null;
     this._writtenViewUpdateId = -1;
-    this._writtenGroupTransformId = -1;
     this._hasWrittenProjection = false;
     this._uniformBuffer = null;
     this._pipelineLayout = null;
@@ -381,12 +380,13 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
     // between merged flushes) would retroactively re-project them; end that pass
     // first. Guarded on the arena tracking the current active pass.
     const activePass = backend._passCoordinator.activePass;
+    const groupChanged = this._groupContentChanged(backend);
 
     if (
       activePass !== null &&
       this._instanceArena.cursor > 0 &&
       this._instanceArena.tracksPass(activePass) &&
-      (activePass.viewUpdateId !== backend.view.updateId || this._writtenGroupTransformId !== backend.renderGroupTransformId)
+      (activePass.viewUpdateId !== backend.view.updateId || groupChanged)
     ) {
       backend._passCoordinator.endPass();
       this._instanceArena.resetPass();
@@ -395,24 +395,17 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
     // ProjectionUniforms layout: mat4x4 projection + mat4x4 group + vec4 snap
     // viewport, packed via the shared canonical (non-transposed) column order.
     // The write is skipped when the UBO already holds this exact (view,
-    // updateId, group-id, snap-rect) state — static frames then issue zero
+    // updateId, group bytes, snap-rect) state — static frames then issue zero
     // projection uploads.
     const view = backend.view;
     const viewportChanged = packSnapViewport(backend, this._projectionData, 32);
 
-    if (
-      !this._hasWrittenProjection ||
-      this._writtenView !== view ||
-      this._writtenViewUpdateId !== view.updateId ||
-      this._writtenGroupTransformId !== backend.renderGroupTransformId ||
-      viewportChanged
-    ) {
+    if (!this._hasWrittenProjection || this._writtenView !== view || this._writtenViewUpdateId !== view.updateId || groupChanged || viewportChanged) {
       packAffineMat4(view.getTransform(), this._projectionData, 0);
       packAffineMat4(backend.renderGroupTransform ?? Matrix.identity, this._projectionData, 16);
 
       this._writtenView = view;
       this._writtenViewUpdateId = view.updateId;
-      this._writtenGroupTransformId = backend.renderGroupTransformId;
       this._hasWrittenProjection = true;
 
       device.queue.writeBuffer(uniformBuffer, 0, this._projectionData.buffer, this._projectionData.byteOffset, this._projectionData.byteLength);
@@ -512,6 +505,16 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
     this._maxNodeIndex = 0;
     this._currentBlendMode = null;
     this._currentTexture = null;
+  }
+
+  private _groupContentChanged(backend: WebGpuBackend): boolean {
+    packAffineMat4(backend.renderGroupTransform ?? Matrix.identity, this._stagedGroupData, 0);
+
+    if (!this._hasWrittenProjection) {
+      return true;
+    }
+
+    return packedGroupChanged(this._stagedGroupData, this._projectionData, affineMat4FloatCount);
   }
 
   public destroy(): void {
