@@ -115,8 +115,15 @@ describe('GPU resource lifetime', () => {
       // release. A backend that forgets a texture on free grows monotonically.
       for (let cycle = 0; cycle < 8; cycle++) {
         const texture = new DataTexture({ width: 32, height: 32, format: TextureFormat.Rgba8 });
+        const { root } = buildSpriteScene({ count: 1, textures: [texture] });
 
-        measureSteadyFrame(harness, buildSpriteScene({ count: 1, textures: [texture] }).root);
+        measureSteadyFrame(harness, root);
+        // The root has to be destroyed too, not just the texture: a render root
+        // owns a retained instruction bundle (group instance/transform buffers)
+        // from its record frame on, and the backend holds it until it is
+        // released. Leaving the root behind is what this cycle is modelling the
+        // absence of — see `NEU-O54` for the undestroyed-root case.
+        root.destroy();
         texture.destroy();
 
         readings.push(harness.backend.stats.gpuMemoryBytes);

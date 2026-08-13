@@ -47,19 +47,34 @@ const SPRITE_COUNT = 1000;
  *          plus the deterministic RenderStats totals (submitted/culled/draws/batches).
  */
 const EXPECTED = {
-  // Plain Container, nothing changes frame-to-frame. The per-Container
-  // retained-plan cache is fully engaged: the root is visited once and all 1000
-  // children are replayed from captured slots — zero child _collect, zero cull,
-  // zero material-key work. This is the O(1)-visit steady state.
-  staticPlain: { collect: 1, inView: 1, globalTransform: 2001, materialKey: 0, submittedNodes: 1000, culledNodes: 0, drawCalls: 1, batches: 1 },
+  // Plain Container, nothing changes frame-to-frame. The automatic render-root
+  // representation is fully engaged: the root is visited once and the frame
+  // replays recorded flush-level batches — zero child _collect, zero cull, zero
+  // material-key work. This is the O(1)-visit steady state.
+  //
+  // globalTransform re-pinned 2001 -> 2 when the render root became retained by
+  // default: the frame no longer runs the player's Phase-1 transform pre-pass
+  // over the 1000 rows, only the root's own matrix resolves. If this climbs back
+  // toward 2001, the root's instruction tier stopped engaging on a static frame.
+  staticPlain: { collect: 1, inView: 1, globalTransform: 2, materialKey: 0, submittedNodes: 1000, culledNodes: 0, drawCalls: 1, batches: 1 },
 
-  // Plain Container with the camera panning every frame. The cache keys
-  // on View.updateId, so a pan busts it and forces a FULL re-collect: 1 root +
+  // Plain Container with the camera panning every frame. A pan changes which
+  // nodes pass the view test, so the frame takes a FULL re-collect: 1 root +
   // 1000 children visited, 1001 cull checks, 1000 material keys. This is the
   // O(n) collect cost — the row that catches "the collect walk regressed to
   // touch every node again". A LOWER number here is an improvement; a HIGHER one
   // (e.g. 2× the visits) is the exact CPU regression that merges silently.
-  panPlain: { collect: 1001, inView: 1001, globalTransform: 6001, materialKey: 1000, submittedNodes: 1000, culledNodes: 0, drawCalls: 1, batches: 1 },
+  //
+  // The root representation does NOT save this frame: its view-reuse test asks
+  // whether every kept node's cull rect still lies inside the new view rect, and
+  // a scene filling the viewport fails that after a single pixel of pan. Closing
+  // it needs a captured, inflated cull rect — recorded as `NEU-O45`. Until then
+  // this row stays the honest O(n) cost of a panning camera.
+  //
+  // globalTransform re-pinned 6001 -> 6002: the root resolves its own global
+  // transform once per build, to observe ancestry-derived moves its revisions do
+  // not see.
+  panPlain: { collect: 1001, inView: 1001, globalTransform: 6002, materialKey: 1000, submittedNodes: 1000, culledNodes: 0, drawCalls: 1, batches: 1 },
 
   // RetainedContainer with the camera panning every frame. The retained fragment
   // is captured view-independently (deliberately omits View.updateId
@@ -79,15 +94,14 @@ const EXPECTED = {
   panRetained: { collect: 1, inView: 1, globalTransform: 2, materialKey: 0, submittedNodes: 1000, culledNodes: 0, drawCalls: 1, batches: 1 },
 
   // Plain Container, 10 of the 1000 sprites moved every frame. A child move
-  // content-dirties the container, busting the retained-plan cache → full re-collect
-  // (1001 visits, 1000 material keys) PLUS the extra world-transform resolutions
-  // the moved sprites' invalidation cascade forces (gt 8021 vs the 6001 of a
-  // pure pan). Pins the dirty-path shape: the early-out-epoch dirty-walk rework
-  // is expected to cut `collect`/`globalTransform` here — update deliberately.
-  // The one resolution below the former 8022: a structural container no longer
-  // folds its own empty local rect into the aggregate, so `updateBounds` stops
-  // resolving the container's world matrix for a rect that contributed nothing.
-  mutate10: { collect: 1001, inView: 1001, globalTransform: 8021, materialKey: 1000, submittedNodes: 1000, culledNodes: 0, drawCalls: 1, batches: 1 },
+  // transform-dirties the container, busting the root's capture key → full
+  // re-collect (1001 visits, 1000 material keys) PLUS the extra world-transform
+  // resolutions the moved sprites' invalidation cascade forces (gt 8022 vs the
+  // 6002 of a pure pan). Pins the dirty-path shape.
+  //
+  // globalTransform re-pinned 8021 -> 8022 for the same reason as `panPlain`:
+  // the root resolves its own global transform once per build.
+  mutate10: { collect: 1001, inView: 1001, globalTransform: 8022, materialKey: 1000, submittedNodes: 1000, culledNodes: 0, drawCalls: 1, batches: 1 },
 } as const;
 
 const withHarness = (fn: (harness: WebGl2Harness) => void): void => {
@@ -188,9 +202,8 @@ describe('CPU collect-path shape gate', () => {
         }
       };
 
-      // Pins the dirty-path cost. The early-out-epoch dirty-walk rework is
-      // expected to LOWER collect/globalTransform here; update EXPECTED.mutate10
-      // deliberately when it lands and confirm the drop is what you intended.
+      // Pins the dirty-path cost: a transform-only move still invalidates the
+      // whole product here, so every node is revisited.
       expectCounters(measureFrameCounters(harness, root, { beforeFrame: mutate }), EXPECTED.mutate10);
 
       for (const sprite of sprites) sprite.destroy();
