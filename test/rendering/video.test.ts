@@ -106,10 +106,19 @@ const createMockVideoElement = (options: MockVideoElementOptions = {}): MockVide
 };
 
 /** A minimal `RenderPlanBuilder` fake — just enough surface for `RenderNode._collect`. */
-const createBuilder = (): { view: View; backend: { stats: { culledNodes: number } }; emitNode: MockInstance } => ({
+const createBuilder = (): {
+  view: View;
+  backend: { stats: { culledNodes: number } };
+  emitNode: MockInstance;
+  _noteViewKept: MockInstance;
+  _noteViewCulled: MockInstance;
+} => ({
   view: new View(0, 0, 1000, 1000),
   backend: { stats: { culledNodes: 0 } },
   emitNode: vi.fn(),
+  // View-selection bookkeeping for the automatic render-root representation.
+  _noteViewKept: vi.fn(),
+  _noteViewCulled: vi.fn(),
 });
 
 describe('Video', () => {

@@ -1265,6 +1265,17 @@ export class WebGpuBackend implements RenderBackend {
    * @internal
    */
   public _replayRetainedBatch(batch: RetainedBatchInstruction): void {
+    // Drain the pending LIVE batch first (WebGL2 parity). The player's ordering
+    // guarantee — a group-transform switch, and therefore a flush, immediately
+    // before the first replay of a spliced scope — only holds for scopes entered
+    // through a transform-group boundary. The automatic render-root
+    // representation splices a scope with no boundary of its own, and
+    // `_setActiveRenderer` below flushes only on a renderer CHANGE, so a pending
+    // sprite batch would otherwise be issued AFTER the replayed batches it was
+    // recorded in front of. Flushing an empty batcher is a cheap early return,
+    // so the repeat cost across a run of replays is nil.
+    this._renderer?.flush();
+
     if (this._deviceLost || this._device === null) {
       return;
     }

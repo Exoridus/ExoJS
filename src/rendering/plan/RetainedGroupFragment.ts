@@ -151,6 +151,9 @@ export class RetainedGroupFragment {
   private readonly _dirtyTransformRows: RenderNode[] = [];
   private _dirtyRowEpoch = nextDirtyRowEpoch++;
 
+  /** Snapshot policy for nested transform groups — see {@link _snapshotInto}. */
+  private _deferTransformGroups = false;
+
   public get hasCapture(): boolean {
     return this._hasCapture;
   }
@@ -341,7 +344,14 @@ export class RetainedGroupFragment {
    * construction). Called by {@link RetainedContainer}
    * right after a full collect of its scope.
    */
-  public capture(contentRevision: number, structureRevision: number, backend: RenderBackend, entries: readonly ScopeEntry[]): void {
+  public capture(
+    contentRevision: number,
+    structureRevision: number,
+    backend: RenderBackend,
+    entries: readonly ScopeEntry[],
+    deferTransformGroups = false,
+  ): void {
+    this._deferTransformGroups = deferTransformGroups;
     // Not clean while the snapshot is being (re)written: an exception
     // mid-snapshot must not leave a half-updated capture looking valid.
     this._hasCapture = false;
@@ -419,6 +429,27 @@ export class RetainedGroupFragment {
         record.maxY = command.maxY;
         target.push(record);
       } else if (entry.kind === RenderEntryKind.Group) {
+        // A snapshot that DEFERS transform groups (the automatic render-root
+        // representation) records a nested boundary as a live re-dispatch
+        // instead of copying its scope: the boundary owns its own retention
+        // tier — capture key, recorded set, in-place transform-row patching —
+        // and swallowing its entries into an outer snapshot would stop its
+        // `_collectContent` from ever running again, silently disabling all of
+        // it. Re-dispatch keeps `RetainedContainer` semantics byte-identical
+        // and costs the outer fragment only its recordability (a re-dispatch
+        // record is a barrier, and barriers cannot interleave with cached batch
+        // runs) — it stays on the entry-replay tier, which is what an outer
+        // scope full of nested groups would replay anyway.
+        if (this._deferTransformGroups && entry.scope.transformNode !== null) {
+          const deferred = this._acquireBarrier();
+
+          deferred.seq = entry.seq;
+          deferred.node = entry.scope.transformNode;
+          target.push(deferred);
+
+          continue;
+        }
+
         const record = this._acquireGroup();
 
         record.seq = entry.seq;

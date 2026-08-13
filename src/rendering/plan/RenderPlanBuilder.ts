@@ -21,6 +21,7 @@ import {
 import type { RetainedFragmentEntry, RetainedFragmentGroup, RetainedGroupFragment } from './RetainedGroupFragment';
 import type { RetainedInstructionSet } from './RetainedInstructionSet';
 import type { RetainedDrawData } from './RetainedPlanCache';
+import type { RetainedRootRepresentation } from './RetainedRootRepresentation';
 
 /**
  * Collect-time view of the backend's retained-batch hooks.
@@ -149,6 +150,21 @@ export class RenderPlanBuilder {
   // collected below. See `_isViewCullSuppressed`.
   private _viewCullSuppression = 0;
 
+  /**
+   * The node this build treats as the retained render root, or `null` when the
+   * root is not eligible. Compared by identity in {@link emitNode}, so the
+   * automatic representation attaches to the root's OWN group scope — the one
+   * that holds its whole subtree — and to nothing else.
+   */
+  private _retentionRoot: RenderNode | null = null;
+  /**
+   * The representation currently accumulating its view-selection facts, or
+   * `null` when this frame will not capture (clean replay, or suppressed).
+   * Gating the accumulation on an actual capture keeps the per-node cull hooks
+   * at one null check on every other frame.
+   */
+  private _trackedRoot: RetainedRootRepresentation | null = null;
+
   public build(root: RenderNode, backend: RenderBackend): RenderPlan {
     this.backend = backend;
     this._view = null;
@@ -160,6 +176,8 @@ export class RenderPlanBuilder {
     this._scopeStack.length = 0;
     this._hasPending = false;
     this._viewCullSuppression = 0;
+    this._retentionRoot = root._supportsRootRetention() ? root : null;
+    this._trackedRoot = null;
     // Base this plan's node indices after whatever earlier render() calls already
     // wrote into the frame-scoped transform buffer, so every draw across all
     // render() calls in the frame references a distinct slot and can batch.
@@ -321,10 +339,105 @@ export class RenderPlanBuilder {
     this._scopeStack.push(groupScope);
 
     try {
-      node._collectForRenderPlan(this);
+      if (node === this._retentionRoot) {
+        this._collectRetainedRoot(node);
+      } else {
+        node._collectForRenderPlan(this);
+      }
     } finally {
       this._scopeStack.pop();
     }
+  }
+
+  /**
+   * Collect the render root through its automatic persistent representation.
+   *
+   * Same ladder a {@link RetainedContainer} climbs — recorded-instruction
+   * splice, then entry replay, then plain collect — over a key that additionally
+   * covers what a root needs and a group does not: the subtree's transform
+   * revision (no group matrix, no row patch), the root's own global-transform
+   * stamp (an ancestor ABOVE the root moves it without stamping its revisions),
+   * the render target, and the view SELECTION. Every gate failure degrades to
+   * today's behaviour, never to wrong pixels.
+   */
+  private _collectRetainedRoot(node: RenderNode): void {
+    const representation = node._retainedRootRepresentation();
+    const view = this.view;
+    const backend = this.backend;
+    const target = backend.renderTarget;
+    const contentRevision = node._contentRevision;
+    const structureRevision = node._structureRevision;
+    const transformRevision = node._transformRevision;
+
+    // Resolve the parent chain BEFORE reading the stamp: `getGlobalTransform`
+    // observes `parent._globalTransformVersion` lazily, so the ancestor move
+    // that never touched this node's revisions only becomes visible here.
+    node.getGlobalTransform();
+
+    const ancestryStamp = node._globalTransformStamp;
+
+    if (representation.isClean(contentRevision, structureRevision, transformRevision, ancestryStamp, view, backend, target)) {
+      const set = representation.fragment.instructions;
+
+      if (set !== null && this._markCurrentScopeRetained(set)) {
+        representation.markReplayed();
+
+        return;
+      }
+
+      this._replayRetainedFragment(representation.fragment.entries);
+      representation.markReplayed();
+      // Record-on-first-clean-frame: this clean playback is the recording
+      // source, so the record cost never lands on a frame whose capture is
+      // about to be invalidated.
+      this._armRetainedRecord(representation.fragment);
+
+      return;
+    }
+
+    if (representation.shouldSuppressCapture(contentRevision, structureRevision, transformRevision, view)) {
+      node._collectForRenderPlan(this);
+
+      return;
+    }
+
+    const previousTracked = this._trackedRoot;
+
+    representation.beginCapture();
+    this._trackedRoot = representation;
+
+    try {
+      node._collectForRenderPlan(this);
+    } finally {
+      this._trackedRoot = previousTracked;
+    }
+
+    representation.commitCapture(contentRevision, structureRevision, transformRevision, ancestryStamp, view, backend, target, this._peekCurrentScopeEntries());
+  }
+
+  /**
+   * @internal — a node was dropped by the view test during a capturing collect.
+   * The capture is then view-LOCKED: a later view could admit that node again
+   * and no index exists to find it, so any view change must re-collect.
+   */
+  public _noteViewCulled(): void {
+    this._trackedRoot?.noteCulled();
+  }
+
+  /**
+   * @internal — a node passed the view test during a capturing collect. Folds
+   * exactly the rect `inView` compared into the capture's kept-union, so a later
+   * view that still contains the union provably admits the same set of nodes.
+   * Nodes that opt out of culling never affect the selection and are skipped.
+   */
+  public _noteViewKept(node: RenderNode): void {
+    const tracked = this._trackedRoot;
+
+    if (tracked === null || !node.cullable) {
+      return;
+    }
+
+    tracked.noteKept(node.cullArea ?? node.getBounds());
   }
 
   public emitDraw(drawable: Drawable, seq?: number): void {
@@ -596,6 +709,8 @@ export class RenderPlanBuilder {
     this._view = null;
     this._nodeIndex = 0;
     this._viewCullSuppression = 0;
+    this._retentionRoot = null;
+    this._trackedRoot = null;
   }
 
   private _acquireGroupScope(preserveDrawOrder: boolean): MutableGroupScope {
