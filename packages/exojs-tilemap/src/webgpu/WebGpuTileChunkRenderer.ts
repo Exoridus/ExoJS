@@ -15,6 +15,7 @@ import {
   DataTexture,
   getWebGpuBlendState,
   packAffineMat4,
+  packedGroupChanged,
   packSnapViewport,
   retainedGroupUniformBytes,
   stencilContentDepthStencilState,
@@ -147,13 +148,20 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
   public readonly _supportsRetainedBatches = true;
 
   private readonly _projectionData = new Float32Array(projectionByteLength / Float32Array.BYTES_PER_ELEMENT);
-  // Projection-uniform skip state: a matching (view identity, view.updateId,
-  // group-transform id) triple means the shared UBO already holds this
-  // flush's projection, so the 128-byte write is skipped.
+  // Projection-uniform skip state: a matching (view identity, view.updateId)
+  // pair AND unchanged group-matrix CONTENT (compared against the packed floats
+  // at [16, 32), staged into `_stagedGroupData` by `_groupContentChanged`) mean
+  // the shared UBO already holds this flush's projection, so the 128-byte write
+  // is skipped.
+  //
+  // Content comparison, not the backend's group-transform id: a projection
+  // rewrite is a PASS boundary below, so a group boundary that restores
+  // byte-identical group bytes must not read as a change — otherwise a retained
+  // group entered and left around tile chunks splits the single-submit frame.
   private _writtenView: View | null = null;
   private _writtenViewUpdateId = -1;
-  private _writtenGroupTransformId = -1;
   private _hasWrittenProjection = false;
+  private readonly _stagedGroupData = new Float32Array(16);
 
   private _device: GPUDevice | null = null;
   private _shaderModule: GPUShaderModule | null = null;
@@ -288,7 +296,6 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     this._currentTexture = null;
     this._writtenView = null;
     this._writtenViewUpdateId = -1;
-    this._writtenGroupTransformId = -1;
     this._hasWrittenProjection = false;
   }
 
@@ -422,15 +429,15 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     // viewport, packed via the shared canonical (non-transposed) column order
     // (same layout as the sprite/nine-slice renderers' group UBO). The write
     // is skipped when the UBO already holds this exact
-    // (view, updateId, group-id, snap-rect) state.
+    // (view, updateId, group bytes, snap-rect) state.
     const view = backend.view;
     const viewportChanged = packSnapViewport(backend, this._projectionData, 32);
     const projectionChanged =
       !this._hasWrittenProjection ||
       this._writtenView !== view ||
       this._writtenViewUpdateId !== view.updateId ||
-      this._writtenGroupTransformId !== backend.renderGroupTransformId ||
-      viewportChanged;
+      viewportChanged ||
+      this._groupContentChanged(backend);
 
     const scissor = backend.getScissorRect();
     const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
@@ -484,7 +491,6 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
 
       this._writtenView = view;
       this._writtenViewUpdateId = view.updateId;
-      this._writtenGroupTransformId = backend.renderGroupTransformId;
       this._hasWrittenProjection = true;
 
       device.queue.writeBuffer(uniformBuffer, 0, this._projectionData.buffer, this._projectionData.byteOffset, this._projectionData.byteLength);
@@ -543,6 +549,22 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     this._maxNodeIndex = 0;
     this._currentBlendMode = null;
     this._currentTexture = null;
+  }
+
+  /**
+   * Whether the packed floats of the active group matrix differ from what the
+   * shared projection UBO currently holds at [16, 32). Stages the packed matrix
+   * into `_stagedGroupData` as a side effect (idempotent — safe to call more
+   * than once per flush).
+   */
+  private _groupContentChanged(backend: WebGpuBackend): boolean {
+    packAffineMat4(backend.renderGroupTransform ?? Matrix.identity, this._stagedGroupData, 0);
+
+    if (!this._hasWrittenProjection) {
+      return true;
+    }
+
+    return packedGroupChanged(this._stagedGroupData, this._projectionData, 16);
   }
 
   public destroy(): void {

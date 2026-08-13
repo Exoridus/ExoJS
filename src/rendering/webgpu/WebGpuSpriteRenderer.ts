@@ -2,7 +2,7 @@
 
 import { Matrix } from '#math/Matrix';
 import type { ReadonlyRectangle } from '#math/Rectangle';
-import { packAffineMat4 } from '#rendering/affinePacking';
+import { affineMat4FloatCount, packAffineMat4, packedGroupChanged } from '#rendering/affinePacking';
 import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import type { Sprite } from '#rendering/sprite/Sprite';
 import { spriteVertexWgsl } from '#rendering/sprite/spriteMaterialSources';
@@ -350,7 +350,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   private _writtenView: View | null = null;
   private _writtenViewUpdateId = -1;
   private _hasWrittenProjection = false;
-  private readonly _stagedGroupData = new Float32Array(16);
+  private readonly _stagedGroupData = new Float32Array(affineMat4FloatCount);
 
   private _device: GPUDevice | null = null;
   private _shaderModule: GPUShaderModule | null = null;
@@ -881,13 +881,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       return true;
     }
 
-    for (let i = 0; i < 16; i++) {
-      if (this._stagedGroupData[i] !== this._projectionData[16 + i]) {
-        return true;
-      }
-    }
-
-    return false;
+    return packedGroupChanged(this._stagedGroupData, this._projectionData, affineMat4FloatCount);
   }
 
   /**

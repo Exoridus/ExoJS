@@ -112,3 +112,27 @@ export function packAffineMat4(matrix: Matrix, out: Float32Array, offset = 0): F
 
   return out;
 }
+
+/**
+ * Whether `staged` — a group matrix just packed by one of the functions above —
+ * differs from the `staged.length` floats `written` already holds at
+ * `writtenOffset` (the group slot of a renderer's projection uniform staging
+ * array).
+ *
+ * Renderers sharing a single per-flush projection UBO must compare group
+ * CONTENT here, never the backend's monotonic group-transform id. Rewriting
+ * that UBO retroactively re-projects draws already recorded into the still-open
+ * render pass, so a projection change is a pass boundary — and a boundary that
+ * merely leaves and re-enters a group, restoring byte-identical group bytes,
+ * would otherwise split the single-submit frame for no visible difference.
+ * @internal
+ */
+export function packedGroupChanged(staged: Float32Array, written: Float32Array, writtenOffset: number): boolean {
+  for (let i = 0; i < staged.length; i++) {
+    if (staged[i] !== written[writtenOffset + i]) {
+      return true;
+    }
+  }
+
+  return false;
+}
