@@ -205,7 +205,7 @@
         },
         {
           "name": "clone",
-          "signature": "clone(): this",
+          "signature": "clone(): Size",
           "signatureTokens": [
             {
               "text": "clone",
@@ -224,13 +224,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "this",
-              "kind": "keyword"
+              "text": "Size",
+              "kind": "type"
             }
           ],
           "params": [],
-          "returnType": "this",
-          "description": ""
+          "returnType": "Size",
+          "description": "A plain, callback-free Size. A clone is a value, not a second observer of this size's owner: mutating the copy must not invalidate geometry that belongs to something else. The return type says so, so a caller cannot mistake the copy for a live one."
         },
         {
           "name": "copy",

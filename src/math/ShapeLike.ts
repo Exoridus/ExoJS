@@ -8,4 +8,4 @@ import type { Collidable } from './Collision';
  * ({@link Circle}, {@link Rectangle}, {@link Polygon}, {@link Ellipse},
  * {@link Line}, {@link Vector}) implement this interface.
  */
-export interface ShapeLike extends Collidable, Cloneable, Destroyable, HasBoundingBox {}
+export interface ShapeLike extends Collidable, Cloneable<ShapeLike>, Destroyable, HasBoundingBox {}

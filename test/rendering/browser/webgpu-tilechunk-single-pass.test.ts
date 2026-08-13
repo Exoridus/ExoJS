@@ -16,6 +16,13 @@
  * the later tile's colour at the later tile's coordinates, leaving its own cell
  * at the black clear.
  *
+ * The second test covers the other half of the same budget: a projection
+ * rewrite is a pass boundary here, so the skip state has to compare group
+ * CONTENT rather than the backend's monotonic group-transform id. A retained
+ * group entered and left around tile chunks restores byte-identical group bytes
+ * while that id advances twice — under an id comparison every boundary split
+ * the frame, at one extra pass and submit per boundary.
+ *
  * Run via:  pnpm test:browser:webgpu
  */
 
@@ -23,6 +30,7 @@ import { TileMapNode } from '@codexo/exojs-tilemap';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
+import { Matrix } from '#math/Matrix';
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import { Sprite } from '#rendering/sprite/Sprite';
@@ -186,6 +194,85 @@ describe('WebGPU tile-chunk single pass', () => {
         const [x, y] = tilePositions[i]!;
 
         expectPixelNear(readPixel(x + tileSize / 2, y + tileSize / 2), hexToRgba(tileColors[i]!));
+      }
+
+      expectPixelNear(readPixel(4, 52), hexToRgba(spriteColor));
+    } finally {
+      nodes.forEach(node => node.destroy());
+      tileTextures.forEach(texture => texture.destroy());
+      trailingSprite.destroy();
+      spriteTexture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('entering and leaving a group that restores identical group bytes costs ONE pass and ONE submit', async ctx => {
+    const backend = await setupBackend();
+    // Three of the four cells; the fourth stays at the black clear.
+    const groupedColors = tileColors.slice(0, 3);
+    const tileTextures: Texture[] = groupedColors.map(color => createSolidTexture(color, tileSize));
+    const nodes = tileTextures.map((texture, i) => {
+      const node = new TileMapNode(singleTileMap(texture));
+      const [x, y] = tilePositions[i]!;
+
+      node.setPosition(x, y);
+
+      return node;
+    });
+
+    // A group sitting at the origin with no transform of its own composes to the
+    // identity — the same matrix the ungrouped draws around it are projected
+    // with. Entering and leaving it therefore restores BYTE-IDENTICAL group
+    // bytes while the backend's group-transform id advances twice, which is
+    // exactly the case the projection skip state must not read as a change: a
+    // rewrite of the shared projection UBO is a pass boundary.
+    const groupTransform = new Matrix();
+
+    const spriteColor = '#ff00ff';
+    const spriteTexture = createSolidTexture(spriteColor, 8);
+    const trailingSprite = new Sprite(spriteTexture);
+
+    trailingSprite.setPosition(0, 48);
+    trailingSprite.width = 8;
+    trailingSprite.height = 8;
+
+    const renderGrouped = (): void => {
+      backend.resetStats();
+      backend.clear(Color.black);
+
+      nodes[0]!.render(backend);
+      backend._setRenderGroupTransform(groupTransform);
+      nodes[1]!.render(backend);
+      backend._setRenderGroupTransform(null);
+      nodes[2]!.render(backend);
+      trailingSprite.render(backend);
+      backend.flush();
+    };
+
+    try {
+      for (let frame = 0; frame < 3; frame++) {
+        if (!(await renderGuarded(ctx, backend, renderGrouped))) {
+          return;
+        }
+      }
+
+      const groupIdBefore = backend.renderGroupTransformId;
+      const submits = countSubmits(backend, renderGrouped);
+
+      // The frame really crossed two group boundaries — without this the
+      // counters below would pass for a frame that never entered a group.
+      expect(backend.renderGroupTransformId - groupIdBefore).toBe(2);
+      // One draw call per tile-chunk flush, plus the trailing sprite.
+      expect(backend.stats.drawCalls).toBe(nodes.length + 1);
+      expect(backend.stats.renderPasses).toBe(1);
+      expect(submits).toBe(1);
+
+      const readPixel = readWebGpuPixels(backend, canvasSize);
+
+      for (let i = 0; i < groupedColors.length; i++) {
+        const [x, y] = tilePositions[i]!;
+
+        expectPixelNear(readPixel(x + tileSize / 2, y + tileSize / 2), hexToRgba(groupedColors[i]!));
       }
 
       expectPixelNear(readPixel(4, 52), hexToRgba(spriteColor));

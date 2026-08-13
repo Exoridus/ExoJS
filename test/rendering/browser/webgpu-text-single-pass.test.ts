@@ -20,11 +20,19 @@
  * leaving its band at the black clear. Collapsing the passes while corrupting the
  * offsets therefore fails the probes, not just the counters.
  *
+ * The second test covers the other half of the same budget: a projection
+ * rewrite is a pass boundary here, so the skip state has to compare group
+ * CONTENT rather than the backend's monotonic group-transform id. A retained
+ * group entered and left around text restores byte-identical group bytes while
+ * that id advances twice — under an id comparison every boundary split the
+ * frame, at one extra pass and submit per boundary.
+ *
  * Run via:  pnpm test:browser:webgpu
  */
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
+import { Matrix } from '#math/Matrix';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { Text } from '#rendering/text/Text';
@@ -249,6 +257,86 @@ describe('WebGPU text single-pass frame', () => {
     } finally {
       texts.forEach(text => text.destroy());
       sprites.forEach(sprite => sprite.destroy());
+      trailingSprite.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('entering and leaving a group that restores identical group bytes costs ONE pass and ONE submit', async ctx => {
+    const backend = await setupBackend();
+    const fillColors: readonly RgbaTuple[] = [
+      [255, 0, 0, 255],
+      [0, 255, 0, 255],
+      [0, 0, 255, 255],
+    ];
+    const texture = createSolidTexture('#ffffff', 8);
+    const texts: Text[] = [];
+
+    for (let i = 0; i < fillColors.length; i++) {
+      const [r, g, b] = fillColors[i]!;
+      const text = new Text('M', { fontSize: 24, fillColor: new Color(r, g, b, 1) });
+
+      text.setPosition(6, i * bandHeight + 4);
+      texts.push(text);
+    }
+
+    // A group sitting at the origin with no transform of its own composes to the
+    // identity — the same matrix the ungrouped draws around it are projected
+    // with. Entering and leaving it therefore restores BYTE-IDENTICAL group
+    // bytes while the backend's group-transform id advances twice, which is
+    // exactly the case the projection skip state must not read as a change: a
+    // rewrite of the single-slot FrameUniforms UBO is a pass boundary.
+    const groupTransform = new Matrix();
+
+    const trailingSprite = new Sprite(texture);
+
+    trailingSprite.setPosition(spriteColumn, canvasSize - 12);
+    trailingSprite.width = 8;
+    trailingSprite.height = 8;
+
+    const renderGrouped = (): void => {
+      backend.resetStats();
+      backend.clear(Color.black);
+
+      texts[0]!.render(backend);
+      backend._setRenderGroupTransform(groupTransform);
+      texts[1]!.render(backend);
+      backend._setRenderGroupTransform(null);
+      texts[2]!.render(backend);
+      trailingSprite.render(backend);
+      backend.flush();
+    };
+
+    try {
+      for (let frame = 0; frame < 3; frame++) {
+        if (!(await renderGuarded(ctx, backend, renderGrouped))) {
+          return;
+        }
+      }
+
+      const groupIdBefore = backend.renderGroupTransformId;
+      const submits = countSubmits(backend, renderGrouped);
+
+      // The frame really crossed two group boundaries — without this the
+      // counters below would pass for a frame that never entered a group.
+      expect(backend.renderGroupTransformId - groupIdBefore).toBe(2);
+      // One draw call per text flush (each group boundary drains the pending
+      // batch), plus the trailing sprite.
+      expect(backend.stats.drawCalls).toBe(texts.length + 1);
+      expect(backend.stats.renderPasses).toBe(1);
+      expect(submits).toBe(1);
+
+      const frame = readWebGpuFrame(backend, canvasSize);
+
+      for (let i = 0; i < fillColors.length; i++) {
+        const sample = strongestBandPixel(frame, i);
+
+        expect(sample, `band ${i} holds no glyph ink`).not.toBeNull();
+        expectPixelNear(sample!, fillColors[i]!);
+      }
+    } finally {
+      texts.forEach(text => text.destroy());
       trailingSprite.destroy();
       texture.destroy();
       backend.destroy();

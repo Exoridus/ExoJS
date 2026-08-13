@@ -21,7 +21,7 @@ let temp: Matrix | null = null;
  * All mutating methods return `this` for chaining. `Matrix.temp` is a shared
  * scratch instance. `Matrix.identity` is a read-only identity constant.
  */
-export class Matrix implements Cloneable {
+export class Matrix implements Cloneable<Matrix> {
   public a: number;
   public b: number;
   public x: number;

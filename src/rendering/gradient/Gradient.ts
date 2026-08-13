@@ -35,7 +35,7 @@ const sortedStopOffset = (left: InternalGradientStop, right: InternalGradientSto
  * Convert a gradient into a sampleable {@link DataTexture} with
  * {@link Gradient.toTexture}; wrap that texture in a `Sprite`/`Mesh` to draw it.
  */
-export abstract class Gradient implements Cloneable, Destroyable {
+export abstract class Gradient implements Cloneable<Gradient>, Destroyable {
   /** Concrete gradient kind, e.g. `'linear'` or `'radial'`. */
   public abstract readonly type: GradientType;
 

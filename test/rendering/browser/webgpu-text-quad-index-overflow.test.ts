@@ -19,9 +19,9 @@
  *
  * Each filler node's OWN glyph count is kept far below 16384 on purpose:
  * `buildTextPageQuads` (`TextLayout.ts`) packs one node's placements into its
- * own `Uint16Array` index range, a separate ceiling from the renderer-level
- * one under test here — a single node with >16384 glyphs would trip both at
- * once and no longer isolate this fix.
+ * own index range, a separate ceiling from the renderer-level one under test
+ * here (now also fixed, see `text-layout.test.ts`) — a single node with
+ * >16384 glyphs would trip both at once and no longer isolate this fix.
  *
  * Run via:  pnpm test:browser:webgpu
  */

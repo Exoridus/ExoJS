@@ -68,7 +68,13 @@ export class ObservableSize extends Size {
     return this.set(size.width, size.height);
   }
 
-  public override clone(): this {
-    return new ObservableSize(this._callback, this._width, this._height) as this;
+  /**
+   * A plain, callback-free {@link Size}. A clone is a value, not a second
+   * observer of this size's owner: mutating the copy must not invalidate
+   * geometry that belongs to something else. The return type says so, so a
+   * caller cannot mistake the copy for a live one.
+   */
+  public override clone(): Size {
+    return new Size(this._width, this._height);
   }
 }

@@ -79,10 +79,18 @@ export interface PlaybackOptions {
  * in-place copy from a same-type source. Implemented by {@link Color},
  * {@link Time}, {@link Vector}, {@link Matrix}, {@link Rectangle}, and
  * other ExoJS value classes.
+ *
+ * `T` is the cloned type and must be named explicitly — TypeScript cannot
+ * infer an interface's implementer, and a default would silently widen every
+ * existing use. It is a lower bound, so an implementer whose subclasses must
+ * each clone to their own type still declares `clone(): this`. Naming a
+ * weaker `T` is the point for observable value types: an observable size
+ * clones to a plain, callback-free {@link Size}, and the signature says so
+ * instead of handing back something that only looks observable.
  */
-export interface Cloneable {
-  clone(): this;
-  copy(source: this): this;
+export interface Cloneable<T> {
+  clone(): T;
+  copy(source: T): this;
 }
 
 /**

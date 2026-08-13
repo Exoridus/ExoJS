@@ -19,7 +19,8 @@ const canvasSize = 48;
 // 5 * 4000 = 20000 filler quads precede the marker — comfortably past the old
 // 16384-quad ceiling — while each individual node's 4000 glyphs stay well
 // under it (a single node with >16384 glyphs would also trip the separate
-// per-node `Uint16Array` ceiling in `buildTextPageQuads`).
+// per-node ceiling in `buildTextPageQuads`, now also fixed — see
+// `text-layout.test.ts`).
 const fillerNodeCount = 5;
 const fillerGlyphsPerNode = 4000;
 

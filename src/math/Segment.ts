@@ -11,7 +11,7 @@ let temp: Segment | null = null;
  *
  * `Segment.temp` is a shared scratch instance.
  */
-export class Segment implements Cloneable {
+export class Segment implements Cloneable<Segment> {
   private readonly _startPoint: Vector;
   private readonly _endPoint: Vector;
 

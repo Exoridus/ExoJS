@@ -500,6 +500,12 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
   spans every batch of a flush, not just one draw. Both renderers' index buffers
   (live and retained) now use `Uint32` (`'uint32'` in WebGPU, `UNSIGNED_INT` in
   WebGL2 — both core, no extension), at the cost of doubling index-buffer memory.
+- **A single `Text`/`BitmapText` node with more than 16384 visible glyphs on
+  one atlas page no longer silently corrupts.** `buildTextPageQuads`
+  (`TextLayout.ts`) packed one node's own glyph placements into a `Uint16`
+  index buffer — a ceiling one layer above the renderer-level fix just above,
+  reachable per node instead of per flush. `TextPageQuads.indices` is now a
+  `Uint32Array`.
 - **Writing to `view.viewport` directly now invalidates the camera.**
   `View.viewport` hands out the live `Rectangle`, but its setters only marked
   the rectangle's own cached edge normals — so `view.viewport.x = 0.5` changed

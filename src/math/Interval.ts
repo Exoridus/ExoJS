@@ -9,7 +9,7 @@ let temp: Interval | null = null;
  * `Interval.temp` provides a shared scratch instance for hot paths.
  * `Interval.zero` is a read-only `[0, 0]` sentinel.
  */
-export class Interval implements Cloneable {
+export class Interval implements Cloneable<Interval> {
   public min: number;
   public max: number;
 

@@ -26,6 +26,12 @@ export interface ObservableVectorOwner {
  *
  * Setting individual components (`x`, `y`) notifies only when the value
  * actually changes. Batch mutations via `set()` notify at most once per call.
+ *
+ * Deliberately has no `clone()`. A clone is a value, not a second notification
+ * channel into this vector's owner, so it would have to hand back a plain
+ * `Vector` — and importing `Vector` here closes a module-evaluation cycle
+ * (`Vector` imports `Rectangle`, which constructs at module scope). Copy
+ * explicitly instead: `new Vector(v.x, v.y)`.
  */
 export class ObservableVector extends AbstractVector {
   private _x: number;
@@ -115,10 +121,6 @@ export class ObservableVector extends AbstractVector {
     }
 
     return this;
-  }
-
-  public clone(): this {
-    return new ObservableVector(this._owner, this._channel, this._x, this._y) as this;
   }
 
   public copy(vector: AbstractVector): this {

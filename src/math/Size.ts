@@ -11,7 +11,7 @@ let temp: Size | null = null;
  * `Size.temp` provides a shared scratch instance. `Size.zero` is a read-only
  * sentinel.
  */
-export class Size implements Cloneable {
+export class Size implements Cloneable<Size> {
   protected _width: number;
   protected _height: number;
 
@@ -78,8 +78,13 @@ export class Size implements Cloneable {
     return this;
   }
 
-  public clone(): this {
-    return new Size(this._width, this._height) as this;
+  /**
+   * A plain, detached copy. Declared as `Size` rather than `this` so
+   * {@link ObservableSize} can hand back a value that carries no callback —
+   * a clone is a value, not a second observer of the original's owner.
+   */
+  public clone(): Size {
+    return new Size(this._width, this._height);
   }
 
   public equals({ width, height }: Partial<Size> = {}): boolean {

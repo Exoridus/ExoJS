@@ -1,7 +1,7 @@
 /// <reference types="@webgpu/types" />
 
 import { Matrix } from '#math/Matrix';
-import { packAffineMat3Std140 } from '#rendering/affinePacking';
+import { affineMat3Std140FloatCount, packAffineMat3Std140, packedGroupChanged } from '#rendering/affinePacking';
 import type { RetainedGroupBundle } from '#rendering/plan/RetainedInstructionSet';
 import type { RenderNode } from '#rendering/RenderNode';
 import type { OwnTransformRowPatcher } from '#rendering/RetainedContainer';
@@ -440,14 +440,21 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
   private _nodePassCount = 0;
 
   // FrameUniforms (projection + group) skip state: a matching (view identity,
-  // view.updateId, group-transform id) triple means the proj UBO already holds
-  // this flush's transform, so the 96-byte write is skipped. Per-node style
-  // data (the storage buffer) is uploaded unconditionally — it genuinely
-  // changes per frame; only the shared projection is elided here.
+  // view.updateId) pair AND unchanged group-matrix CONTENT (compared against
+  // the packed floats at [12, 24), staged into `_stagedGroupData` by
+  // `_groupContentChanged`) mean the proj UBO already holds this flush's
+  // transform, so the 96-byte write is skipped. Per-node style data (the
+  // storage buffer) is uploaded unconditionally — it genuinely changes per
+  // frame; only the shared projection is elided here.
+  //
+  // Content comparison, not the backend's group-transform id: a projection
+  // rewrite is a PASS boundary below, so a group boundary that restores
+  // byte-identical group bytes must not read as a change — otherwise a retained
+  // group entered and left around text splits the single-submit frame.
   private _writtenView: View | null = null;
   private _writtenViewUpdateId = -1;
-  private _writtenGroupTransformId = -1;
   private _hasWrittenProjection = false;
+  private readonly _stagedGroupData = new Float32Array(affineMat3Std140FloatCount);
 
   // CPU-side working arrays
   private _vertexCapacity = initialVertexCapacity;
@@ -504,7 +511,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     // Stage FrameUniforms: projection + group as vec4-padded mat3x3 columns
     // plus the device-pixel snap viewport rect, packed via the shared canonical
     // (non-transposed) column order. The write is skipped when the UBO already
-    // holds this exact (view, updateId, group-id, snap-rect) state — static
+    // holds this exact (view, updateId, group bytes, snap-rect) state — static
     // text then issues zero projection uploads. Whether it changes is decided
     // here but applied below, because a rewrite of this single-slot UBO would
     // retroactively re-project draws of ours already recorded into the open
@@ -515,8 +522,8 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       !this._hasWrittenProjection ||
       this._writtenView !== view ||
       this._writtenViewUpdateId !== view.updateId ||
-      this._writtenGroupTransformId !== backend.renderGroupTransformId ||
-      viewportChanged;
+      viewportChanged ||
+      this._groupContentChanged(backend);
 
     // Build interleaved vertex/index data for all batches in one pass
     const quads = this._pendingQuads;
@@ -639,7 +646,6 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
 
       this._writtenView = view;
       this._writtenViewUpdateId = view.updateId;
-      this._writtenGroupTransformId = backend.renderGroupTransformId;
       this._hasWrittenProjection = true;
 
       device.queue.writeBuffer(this._projBuffer!, 0, this._projData.buffer, 0, projectionBytes);
@@ -726,6 +732,22 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     this._nodePassCount = nodeBase + this._nodeCount;
 
     this._resetFrameState();
+  }
+
+  /**
+   * Whether the packed floats of the active group matrix differ from what the
+   * FrameUniforms buffer currently holds at [12, 24). Stages the packed matrix
+   * into `_stagedGroupData` as a side effect (idempotent — safe to call more
+   * than once per flush).
+   */
+  private _groupContentChanged(backend: WebGpuBackend): boolean {
+    packAffineMat3Std140(backend.renderGroupTransform ?? Matrix.identity, this._stagedGroupData, 0);
+
+    if (!this._hasWrittenProjection) {
+      return true;
+    }
+
+    return packedGroupChanged(this._stagedGroupData, this._projData, affineMat3Std140FloatCount);
   }
 
   public destroy(): void {
@@ -865,7 +887,6 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     this._frameBindGroupDirty = true;
     this._writtenView = null;
     this._writtenViewUpdateId = -1;
-    this._writtenGroupTransformId = -1;
     this._hasWrittenProjection = false;
     this._resetPassCursors();
 

@@ -1,3 +1,4 @@
+import type { AbstractVector } from '#math/AbstractVector';
 import type { Circle } from '#math/Circle';
 import type { Collidable, CollisionResponse } from '#math/Collision';
 import { CollisionType } from '#math/Collision';
@@ -251,7 +252,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     return this._position;
   }
 
-  public set position(position: ObservableVector) {
+  public set position(position: AbstractVector) {
     this._position.copy(position);
   }
 
@@ -284,7 +285,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     return this._scale;
   }
 
-  public set scale(scale: ObservableVector) {
+  public set scale(scale: AbstractVector) {
     this._scale.copy(scale);
   }
 
@@ -292,7 +293,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     return this._origin;
   }
 
-  public set origin(origin: ObservableVector) {
+  public set origin(origin: AbstractVector) {
     this._origin.copy(origin);
   }
 

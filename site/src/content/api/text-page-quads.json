@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "indices",
-          "signature": "indices: Uint16Array",
+          "signature": "indices: Uint32Array",
           "signatureTokens": [
             {
               "text": "indices",
@@ -41,13 +41,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "Uint16Array",
+              "text": "Uint32Array",
               "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Index buffer: 6 indices × quadCount."
+          "description": "Index buffer: 6 indices × quadCount. Uint32 — a single node's own glyph count can exceed 16384 quads."
         },
         {
           "name": "pageIndex",
