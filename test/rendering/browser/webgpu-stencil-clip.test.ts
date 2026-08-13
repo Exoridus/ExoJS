@@ -159,8 +159,8 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 `;
 
 // Custom SpriteMaterial fragment WGSL (the engine prepends the canonical sprite
-// vertex module exposing VertexOutput, the group(1) base texture `u_texture` /
-// `u_sampler`). Compiled for real now that a custom-material Sprite is supported
+// material prologue exposing VertexOutput, the group(1) base-texture slot table
+// and `sampleBase`). Compiled for real now that a custom-material Sprite is supported
 // under a Geometry stencil clip — it tints the white base texture by the user
 // `color` uniform so the clipped/visible pixels are checkable.
 const customSpriteWgsl = `
@@ -169,7 +169,7 @@ struct UserUniforms { color: vec4<f32> };
 
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
-  let base = textureSample(u_texture, u_sampler, input.texcoord);
+  let base = sampleBase(input.textureSlot, input.texcoord);
   return vec4<f32>(base.rgb * u_user.color.rgb, 1.0);
 }
 `.trim();

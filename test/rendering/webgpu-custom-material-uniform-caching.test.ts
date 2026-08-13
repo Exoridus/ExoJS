@@ -38,14 +38,14 @@ const renderFrame = (backend: WebGpuBackend, nodes: readonly RenderNode[]): void
   backend.flush();
 };
 
-// Fragment-only WGSL: the engine prepends the canonical sprite vertex module.
+// Fragment-only WGSL: the engine prepends the canonical sprite material prologue.
 const spriteFragmentWgsl = `
 struct UserUniforms { color: vec4<f32> };
 @group(2) @binding(0) var<uniform> u_user: UserUniforms;
 
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
-  let base = textureSample(u_texture, u_sampler, input.texcoord);
+  let base = sampleBase(input.textureSlot, input.texcoord);
   return vec4<f32>(base.rgb * u_user.color.rgb, 1.0);
 }
 `.trim();

@@ -5,7 +5,7 @@ import { ShaderSource } from '#rendering/material/ShaderSource';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import type { RenderNode } from '#rendering/RenderNode';
 import { Sprite } from '#rendering/sprite/Sprite';
-import { spriteVertexGlsl } from '#rendering/sprite/spriteMaterialSources';
+import { spriteMaterialTextureSlots, spriteVertexGlsl } from '#rendering/sprite/spriteMaterialSources';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
@@ -85,26 +85,25 @@ const createSolidTexture = (r: number, g: number, b: number, a = 255, size = 16)
   return new Texture(source);
 };
 
-// Custom fragment: samples the per-batch base texture (u_texture, unit 0) and
-// modulates it by a user vec4 uniform.
+// Custom fragment: samples this instance's base texture through the engine's
+// spliced `sampleBase` helper and modulates it by a user vec4 uniform.
 const tintFragment = `#version 300 es
 precision mediump float;
 in vec2 v_texcoord;
 in vec4 v_color;
-uniform sampler2D u_texture;
 uniform vec4 u_userColor;
 out vec4 fragColor;
 void main() {
-  vec4 base = texture(u_texture, v_texcoord);
+  vec4 base = sampleBase(v_textureSlot, v_texcoord);
   fragColor = vec4(base.rgb * u_userColor.rgb, 1.0);
 }`;
 
-// Custom fragment: ignores the base texture and outputs a material texture
-// bound on unit 1 — proves material-texture binding is independent of the base.
+// Custom fragment: never calls sampleBase and outputs a material texture
+// instead — proves material-texture binding is independent of the base slot
+// table, and that a program with every slot sampler optimised out still links.
 const patternFragment = `#version 300 es
 precision mediump float;
 in vec2 v_texcoord;
-uniform sampler2D u_texture;
 uniform sampler2D u_pattern;
 out vec4 fragColor;
 void main() {
@@ -167,7 +166,7 @@ describe('custom SpriteMaterial WebGL2 browser', () => {
     }
   });
 
-  test('binds a material texture on unit 1 independent of the base texture', async () => {
+  test('binds a material texture independent of the base slot table', async () => {
     const backend = await createBackend();
     const base = createSolidTexture(255, 0, 0);
     const pattern = createSolidTexture(0, 255, 0);
@@ -219,22 +218,55 @@ describe('custom SpriteMaterial WebGL2 browser', () => {
     }
   });
 
-  test('a base-texture switch breaks the custom-material batch', async () => {
+  // Multi-texture batching gate for the custom path. Before base textures
+  // rotated through the material slot table this frame cost one draw per
+  // sprite; it must now collapse to the plateau of a single instanced draw.
+  test('four distinct base textures under one material collapse to a single draw', async () => {
     const backend = await createBackend();
-    const textureA = createSolidTexture(200, 0, 0);
-    const textureB = createSolidTexture(0, 0, 200);
+    const textures = [createSolidTexture(200, 0, 0), createSolidTexture(0, 200, 0), createSolidTexture(0, 0, 200), createSolidTexture(200, 200, 0)];
     const material = createTintMaterial([1, 1, 1, 1]);
     const root = new Container();
-    const spriteA = new Sprite(textureA);
-    const spriteB = new Sprite(textureB);
 
     try {
-      spriteA.material = material;
-      spriteB.material = material;
-      spriteA.setPosition(8, 16);
-      spriteB.setPosition(36, 16);
-      root.addChild(spriteA);
-      root.addChild(spriteB);
+      textures.forEach((texture, index) => {
+        const sprite = new Sprite(texture);
+
+        sprite.material = material;
+        sprite.setPosition(4 + index * 14, 16);
+        root.addChild(sprite);
+      });
+
+      render(backend, root);
+
+      expect(backend.stats.drawCalls).toBe(1);
+      // Each sprite still samples ITS OWN texture, not slot 0's.
+      expectPixelNear(readWebGl2Pixel(backend, 8, 20), [200, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 22, 20), [0, 200, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 36, 20), [0, 0, 200, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 50, 20), [200, 200, 0, 255]);
+    } finally {
+      root.destroy();
+      material.destroy();
+      textures.forEach(texture => texture.destroy());
+      backend.destroy();
+    }
+  });
+
+  test('base-slot exhaustion breaks the custom-material batch', async () => {
+    // One more distinct base texture than the custom path's slot table holds.
+    const backend = await createBackend();
+    const textures = Array.from({ length: spriteMaterialTextureSlots + 1 }, (_, index) => createSolidTexture(16 * (index + 1), 0, 0));
+    const material = createTintMaterial([1, 1, 1, 1]);
+    const root = new Container();
+
+    try {
+      textures.forEach((texture, index) => {
+        const sprite = new Sprite(texture);
+
+        sprite.material = material;
+        sprite.setPosition(2 + index * 6, 16);
+        root.addChild(sprite);
+      });
 
       render(backend, root);
 
@@ -242,8 +274,7 @@ describe('custom SpriteMaterial WebGL2 browser', () => {
     } finally {
       root.destroy();
       material.destroy();
-      textureA.destroy();
-      textureB.destroy();
+      textures.forEach(texture => texture.destroy());
       backend.destroy();
     }
   });
