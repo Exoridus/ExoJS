@@ -164,6 +164,16 @@ export enum BufferUsage {
 }
 
 /**
+ * Element data type of an index buffer, used when calling `gl.drawElements` /
+ * `gl.drawElementsInstanced`. Values are WebGL2 GLenum constants; both are
+ * core WebGL2 (no `OES_element_index_uint` extension check needed, unlike WebGL1).
+ */
+export enum IndexElementTypes {
+  UnsignedShort = 0x1403,
+  UnsignedInt = 0x1405,
+}
+
+/**
  * GLSL primitive type tokens used to describe {@link ShaderAttribute} and {@link ShaderUniform} data types.
  * Values are WebGL2 GLenum constants returned by `gl.getActiveAttrib` / `gl.getActiveUniform`.
  */

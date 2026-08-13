@@ -52,12 +52,13 @@ const vertexStrideWords = vertexStrideBytes / 4;
 const nodeIndexWord = 4;
 
 /**
- * Byte size of `indexCount` uint16 indices, rounded up to 4. `GPUQueue.writeBuffer`
- * rejects byte counts and offsets that are not a multiple of 4, so index sub-ranges
- * within the shared buffer are laid out on 4-byte boundaries — which also satisfies
- * `setIndexBuffer`'s weaker 2-byte offset requirement.
+ * Byte size of `indexCount` uint32 indices. `GPUQueue.writeBuffer` rejects byte
+ * counts and offsets that are not a multiple of 4 — with 4-byte indices every
+ * index count already lands on a 4-byte boundary, so no rounding is needed
+ * (unlike the uint16 index type this renderer used before: 16-bit indices
+ * needed an explicit round-up to satisfy that same constraint).
  */
-const alignIndexBytes = (indexCount: number): number => (indexCount * Uint16Array.BYTES_PER_ELEMENT + 3) & ~3;
+const alignIndexBytes = (indexCount: number): number => indexCount * Uint32Array.BYTES_PER_ELEMENT;
 
 const initialVertexCapacity = 256;
 const initialIndexCapacity = 384;
@@ -65,8 +66,8 @@ const initialNodeCapacity = 32;
 // One short line of text is already ~64 quads, so that floor made almost
 // every real retained draw pay several doubling steps (createBuffer + a CPU
 // index fill + writeBuffer each, plus — since the pass-open growth guard —
-// an extra submit). 1024 quads is 12 KiB and covers normal text scenes in
-// one allocation, well inside the 16384-quad Uint16 vertex-index ceiling.
+// an extra submit). 1024 quads is 24 KiB (uint32 indices) and covers normal
+// text scenes in one allocation.
 const initialRetainedQuadCapacity = 1024;
 
 // FrameUniforms: 7 × vec4<f32> = 112 bytes (projection + group mat3x3,
@@ -453,7 +454,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
   private _indexCapacity = initialIndexCapacity;
   private _vertexData: ArrayBuffer = new ArrayBuffer(initialVertexCapacity * vertexStrideBytes);
   private _float32View: Float32Array = new Float32Array(this._vertexData);
-  private _indexData: Uint16Array = new Uint16Array(initialIndexCapacity);
+  private _indexData: Uint32Array = new Uint32Array(initialIndexCapacity);
   private _projData: Float32Array = new Float32Array(projectionBytes / 4);
 
   private _nodeDataArray: Float32Array = new Float32Array(initialNodeCapacity * nodeFloats);
@@ -695,7 +696,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     const pass = active.pass;
 
     pass.setVertexBuffer(0, this._vertexBuffer, vertexBase);
-    pass.setIndexBuffer(this._indexBuffer!, 'uint16', indexBase);
+    pass.setIndexBuffer(this._indexBuffer!, 'uint32', indexBase);
 
     let lastShaderType: ShaderType | null = null;
     let lastTexture: Texture | null = null;
@@ -832,7 +833,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     });
     this._vertexBufferCapacity = vertexBytes;
 
-    const indexBytes = initialIndexCapacity * 2;
+    const indexBytes = initialIndexCapacity * Uint32Array.BYTES_PER_ELEMENT;
     this._indexBuffer = device.createBuffer({
       label: 'WebGpuTextRenderer/indices',
       size: indexBytes,
@@ -1188,7 +1189,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
   private _ensureIndexCapacity(indexCount: number): void {
     if (indexCount <= this._indexCapacity) return;
     while (this._indexCapacity < indexCount) this._indexCapacity *= 2;
-    this._indexData = new Uint16Array(this._indexCapacity);
+    this._indexData = new Uint32Array(this._indexCapacity);
   }
 
   private _ensureNodeCapacity(nodeCount: number): void {
@@ -1380,7 +1381,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     pass.setBindGroup(0, frameBindGroup);
     pass.setBindGroup(1, textureBindGroup);
     pass.setVertexBuffer(0, bundle.instanceBuffer, payload.byteOffset);
-    pass.setIndexBuffer(indexBuffer, 'uint16');
+    pass.setIndexBuffer(indexBuffer, 'uint32');
     pass.drawIndexed(data.quadCount * 6, 1, 0, 0, 0);
 
     state.drawsInPass = active;
@@ -1534,7 +1535,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
 
     while (capacity < quadCount) capacity *= 2;
 
-    const indices = new Uint16Array(capacity * 6);
+    const indices = new Uint32Array(capacity * 6);
 
     for (let i = 0; i < capacity; i++) {
       const baseV = i * 4;

@@ -470,13 +470,21 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
   quads is roughly one short line of text, so effectively every real text
   draw triggered several doubling steps to reach a usable size — each one a
   fresh buffer allocation plus a CPU index fill (plus, since growth now ends
-  an open pass first, an extra submit). 1024 quads is 12 KiB and covers
+  an open pass first, an extra submit). 1024 quads is 24 KiB and covers
   normal text scenes in a single allocation, in both `WebGpuTextRenderer` and
-  `WebGl2TextRenderer`; the hard ceiling stays at 16384 quads (the `Uint16`
-  vertex-index limit).
+  `WebGl2TextRenderer`.
 
 ### Fixed
 
+- **Text draws past 16384 quads no longer silently corrupt.** `WebGpuTextRenderer`
+  and `WebGl2TextRenderer` computed glyph vertex indices as `quadIndex * 4` into a
+  `Uint16` index buffer, which wraps once a flush's cumulative quad count reaches
+  16384 — with no error and no warning, just wrong geometry (a later glyph's draw
+  silently reading an earlier glyph's vertex slot). The ceiling was tighter than it
+  looked in the WebGPU live path specifically, since one running vertex cursor
+  spans every batch of a flush, not just one draw. Both renderers' index buffers
+  (live and retained) now use `Uint32` (`'uint32'` in WebGPU, `UNSIGNED_INT` in
+  WebGL2 — both core, no extension), at the cost of doubling index-buffer memory.
 - **A paused voice is no longer the pool's preferred eviction victim.** A paused
   `SoundVoice` stays in the pool while its bookkeeping ages against the still
   running context clock, so `FirstInFirstOut` saw the oldest entry and
