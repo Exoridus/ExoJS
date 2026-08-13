@@ -496,37 +496,44 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
       device.queue.writeBuffer(uniformBuffer, 0, this._projectionData.buffer, this._projectionData.byteOffset, this._projectionData.byteLength);
     }
 
-    const active = coordinator.acquirePass();
-    const pass = active.pass;
+    // A flush whose quads are entirely clipped away by the mask draws nothing,
+    // so it only needs a pass at all when a clear is still pending — opened
+    // here so `createColorAttachment` consumes the clear-state once. With no
+    // clear pending, skip `acquirePass` entirely rather than open (and count)
+    // a pass no draw will land in.
+    if (willDraw || backend.clearRequested) {
+      const active = coordinator.acquirePass();
+      const pass = active.pass;
 
-    if (willDraw) {
-      const instanceBuffer = this._ensureInstanceBufferCapacity(device, targetInstanceBytes);
-      const instanceByteOffset = this._instancePassBytes;
+      if (willDraw) {
+        const instanceBuffer = this._ensureInstanceBufferCapacity(device, targetInstanceBytes);
+        const instanceByteOffset = this._instancePassBytes;
 
-      device.queue.writeBuffer(instanceBuffer, instanceByteOffset, this._instanceData, 0, flushBytes);
+        device.queue.writeBuffer(instanceBuffer, instanceByteOffset, this._instanceData, 0, flushBytes);
 
-      const storage = backend.getTransformStorageBuffer(this._maxNodeIndex + 1);
-      const transformBindGroup = this._getOrCreateTransformBindGroup(device, uniformBuffer, storage.buffer);
-      const textureBindGroup = this._getOrCreateTextureBindGroup(device, backend, texture);
+        const storage = backend.getTransformStorageBuffer(this._maxNodeIndex + 1);
+        const transformBindGroup = this._getOrCreateTransformBindGroup(device, uniformBuffer, storage.buffer);
+        const textureBindGroup = this._getOrCreateTextureBindGroup(device, backend, texture);
 
-      const stencil = coordinator.stencilActive;
-      const pipeline = this._getPipeline(blendMode, backend.renderTargetFormat, stencil);
+        const stencil = coordinator.stencilActive;
+        const pipeline = this._getPipeline(blendMode, backend.renderTargetFormat, stencil);
 
-      pass.setPipeline(pipeline);
-      pass.setBindGroup(0, transformBindGroup);
-      pass.setBindGroup(1, textureBindGroup);
-      pass.setVertexBuffer(0, instanceBuffer, instanceByteOffset);
-      pass.setIndexBuffer(indexBuffer, 'uint16');
-      pass.drawIndexed(indicesPerInstance, this._quadIndex, 0, 0, 0);
+        pass.setPipeline(pipeline);
+        pass.setBindGroup(0, transformBindGroup);
+        pass.setBindGroup(1, textureBindGroup);
+        pass.setVertexBuffer(0, instanceBuffer, instanceByteOffset);
+        pass.setIndexBuffer(indexBuffer, 'uint16');
+        pass.drawIndexed(indicesPerInstance, this._quadIndex, 0, 0, 0);
 
-      // The pass stays open; the cursor carries this flush's consumption forward
-      // so the next flush in the same pass appends AFTER the slice these draws
-      // read instead of overwriting it.
-      this._instancePassBytes = instanceByteOffset + flushBytes;
-      this._passDraws = active;
-      coordinator.markPassDraws();
-      backend.stats.batches++;
-      backend.stats.drawCalls++;
+        // The pass stays open; the cursor carries this flush's consumption forward
+        // so the next flush in the same pass appends AFTER the slice these draws
+        // read instead of overwriting it.
+        this._instancePassBytes = instanceByteOffset + flushBytes;
+        this._passDraws = active;
+        coordinator.markPassDraws();
+        backend.stats.batches++;
+        backend.stats.drawCalls++;
+      }
     }
 
     // Retained capture: while a capture window is active, additionally stage

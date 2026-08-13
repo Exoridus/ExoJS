@@ -388,6 +388,85 @@ describe('WebGPU single-submit frame', () => {
     }
   });
 
+  test('a frame ending on a mesh costs no extra pass/submit consuming the following clear', async ctx => {
+    const backend = await setupBackend();
+    // Sprite first, mesh last, every frame: `_setActiveRenderer` flushes the
+    // PREVIOUS frame's still-active renderer (the mesh, now holding zero draw
+    // calls) the instant this frame's first sprite draw switches away from it.
+    // That flush used to open an empty pass purely to consume the pending
+    // clear and close it immediately, even though the sprite flush right
+    // after would have consumed the SAME open pass — costing an extra pass
+    // and submit on every frame that ends on a mesh. Measuring a *steady-state*
+    // repetition of this exact frame (not just its first run) is what exposes
+    // the defect: it only fires once the previous frame really did end on the
+    // mesh renderer.
+    const cell = 12;
+    const spriteColor = '#ff0000';
+    const meshColor: RgbaTuple = [255, 255, 0, 255];
+    const spriteTexture = createSolidTexture(spriteColor, 8);
+    const sprite = new Sprite(spriteTexture);
+
+    sprite.setPosition(0, 0);
+    sprite.width = cell;
+    sprite.height = cell;
+
+    const meshX = 24;
+    const meshY = 24;
+    const mesh = new Mesh({
+      vertices: new Float32Array([
+        meshX,
+        meshY,
+        meshX + cell,
+        meshY,
+        meshX + cell,
+        meshY + cell,
+        meshX,
+        meshY,
+        meshX + cell,
+        meshY + cell,
+        meshX,
+        meshY + cell,
+      ]),
+      uvs: new Float32Array([0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1]),
+      colors: packRgbaPerVertex(meshColor, 6),
+    });
+
+    const renderFrameEndingOnMesh = (): void => {
+      backend.resetStats();
+      backend.clear(Color.black);
+      sprite.render(backend);
+      mesh.render(backend);
+      backend.flush();
+    };
+
+    try {
+      // Warm up in the SAME shape as the measured frame so `_renderer` already
+      // points at the mesh renderer (from the previous iteration's tail) by
+      // the time the measured call's first sprite draw runs.
+      for (let frame = 0; frame < 3; frame++) {
+        if (!(await renderGuarded(ctx, backend, renderFrameEndingOnMesh))) {
+          return;
+        }
+      }
+
+      const submits = countSubmits(backend, renderFrameEndingOnMesh);
+
+      expect(backend.stats.drawCalls).toBe(2);
+      expect(backend.stats.renderPasses).toBe(1);
+      expect(submits).toBe(1);
+
+      const readPixel = readWebGpuPixels(backend, canvasSize);
+
+      expectPixelNear(readPixel(4, 4), hexToRgba(spriteColor));
+      expectPixelNear(readPixel(meshX + 4, meshY + 4), meshColor);
+    } finally {
+      mesh.destroy();
+      sprite.destroy();
+      spriteTexture.destroy();
+      backend.destroy();
+    }
+  });
+
   test('many sprite/mesh alternations still cost ONE pass and ONE submit, with per-flush mesh pixels correct', async ctx => {
     const backend = await setupBackend();
     // Each alternation switches the active renderer, so this frame contains N

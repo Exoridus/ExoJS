@@ -31,6 +31,8 @@ import { TileMapNode } from '@codexo/exojs-tilemap';
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Matrix } from '#math/Matrix';
+import { Rectangle } from '#math/Rectangle';
+import { Container } from '#rendering/Container';
 import { Sprite } from '#rendering/sprite/Sprite';
 import type { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
@@ -278,6 +280,74 @@ describe('WebGPU tile-chunk single pass', () => {
       nodes.forEach(node => node.destroy());
       tileTextures.forEach(texture => texture.destroy());
       trailingSprite.destroy();
+      spriteTexture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('a fully mask-clipped tile-chunk flush does not open or count an extra pass', async ctx => {
+    const backend = await setupBackend();
+    // A sprite drawn first consumes the frame's pending clear and leaves a
+    // pass open holding its draw. The tile node is wrapped in a container
+    // clipped to a rectangle entirely off-canvas: `pushScissorRect` (which
+    // ends the sprite's open pass — a genuine boundary) resolves the clip to
+    // zero pixels, so the tile chunk's quads accumulate during `render()` but
+    // the mask clips all of them by the time `flush()` observes the scissor.
+    // With no clear pending at that point, `flush()` must not open (and count)
+    // a pass no draw lands in.
+    const spriteColor = '#ff00ff';
+    const spriteTexture = createSolidTexture(spriteColor, 8);
+    const sprite = new Sprite(spriteTexture);
+
+    sprite.setPosition(0, 0);
+    sprite.width = 8;
+    sprite.height = 8;
+
+    const tileColor = '#ff0000';
+    const tileTexture = createSolidTexture(tileColor, tileSize);
+    const node = new TileMapNode(singleTileMap(tileTexture));
+
+    node.setPosition(32, 32);
+
+    const clipped = new Container();
+
+    clipped.clip = true;
+    clipped.clipShape = new Rectangle(1000, 1000, 8, 8); // positive size, entirely off-canvas
+    clipped.addChild(node);
+
+    const renderScene = (): void => {
+      backend.resetStats();
+      backend.clear(Color.black);
+      sprite.render(backend);
+      clipped.render(backend);
+      backend.flush();
+    };
+
+    try {
+      for (let frame = 0; frame < 3; frame++) {
+        if (!(await renderGuarded(ctx, backend, renderScene))) {
+          return;
+        }
+      }
+
+      const submits = countSubmits(backend, renderScene);
+
+      // Only the sprite actually draws; the tile chunk's quads were all
+      // clipped away.
+      expect(backend.stats.drawCalls).toBe(1);
+      expect(backend.stats.renderPasses).toBe(1);
+      expect(submits).toBe(1);
+
+      const readPixel = readWebGpuPixels(backend, canvasSize);
+
+      expectPixelNear(readPixel(4, 4), hexToRgba(spriteColor));
+      // The clipped tile never drew: its cell stays at the black clear.
+      expectPixelNear(readPixel(32 + tileSize / 2, 32 + tileSize / 2), [0, 0, 0, 255]);
+    } finally {
+      clipped.destroy();
+      (clipped.clipShape as Rectangle).destroy();
+      tileTexture.destroy();
+      sprite.destroy();
       spriteTexture.destroy();
       backend.destroy();
     }
