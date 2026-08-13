@@ -30,28 +30,8 @@
       "members": [
         {
           "name": "ApplicationLike",
-          "signature": "Application<any> | (args: any[]) => Application<any>",
+          "signature": "(args: any[]) => Application<any> | Application<any>",
           "signatureTokens": [
-            {
-              "text": "Application",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "any",
-              "kind": "keyword"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
             {
               "text": "(",
               "kind": "punctuation"
@@ -74,6 +54,26 @@
             },
             {
               "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "any",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
               "kind": "punctuation"
             },
             {

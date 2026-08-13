@@ -30,19 +30,19 @@
       "members": [
         {
           "name": "SequenceBinding",
-          "signature": "string | InputSequence",
+          "signature": "InputSequence | string",
           "signatureTokens": [
             {
-              "text": "string",
-              "kind": "keyword"
+              "text": "InputSequence",
+              "kind": "type"
             },
             {
               "text": " | ",
               "kind": "punctuation"
             },
             {
-              "text": "InputSequence",
-              "kind": "type"
+              "text": "string",
+              "kind": "keyword"
             }
           ],
           "params": [],

@@ -31,11 +31,27 @@
       "members": [
         {
           "name": "GamepadDefinitionResult",
-          "signature": "GamepadMapping | { mapping: GamepadMapping; name?: string } | null | undefined",
+          "signature": "GamepadMapping | null | undefined | { mapping: GamepadMapping; name?: string }",
           "signatureTokens": [
             {
               "text": "GamepadMapping",
               "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
             },
             {
               "text": " | ",
@@ -80,22 +96,6 @@
             {
               "text": " }",
               "kind": "punctuation"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "null",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "undefined",
-              "kind": "keyword"
             }
           ],
           "params": [],

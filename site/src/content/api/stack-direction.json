@@ -28,10 +28,10 @@
       "members": [
         {
           "name": "StackDirection",
-          "signature": "\"row\" | \"column\"",
+          "signature": "\"column\" | \"row\"",
           "signatureTokens": [
             {
-              "text": "\"row\"",
+              "text": "\"column\"",
               "kind": "keyword"
             },
             {
@@ -39,7 +39,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"column\"",
+              "text": "\"row\"",
               "kind": "keyword"
             }
           ],

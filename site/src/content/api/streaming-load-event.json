@@ -30,10 +30,18 @@
       "members": [
         {
           "name": "StreamingLoadEvent",
-          "signature": "\"loadedmetadata\" | \"loadeddata\" | \"canplay\" | \"canplaythrough\"",
+          "signature": "\"canplay\" | \"canplaythrough\" | \"loadeddata\" | \"loadedmetadata\"",
           "signatureTokens": [
             {
-              "text": "\"loadedmetadata\"",
+              "text": "\"canplay\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"canplaythrough\"",
               "kind": "keyword"
             },
             {
@@ -49,15 +57,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"canplay\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"canplaythrough\"",
+              "text": "\"loadedmetadata\"",
               "kind": "keyword"
             }
           ],

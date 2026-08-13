@@ -30,8 +30,16 @@
       "members": [
         {
           "name": "SlideDirection",
-          "signature": "\"left\" | \"right\" | \"up\" | \"down\"",
+          "signature": "\"down\" | \"left\" | \"right\" | \"up\"",
           "signatureTokens": [
+            {
+              "text": "\"down\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
             {
               "text": "\"left\"",
               "kind": "keyword"
@@ -50,14 +58,6 @@
             },
             {
               "text": "\"up\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"down\"",
               "kind": "keyword"
             }
           ],

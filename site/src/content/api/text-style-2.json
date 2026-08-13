@@ -55,7 +55,7 @@
         },
         {
           "name": "color",
-          "signature": "color?: number | null",
+          "signature": "color?: null | number",
           "signatureTokens": [
             {
               "text": "color",
@@ -70,7 +70,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
+              "text": "null",
               "kind": "keyword"
             },
             {
@@ -78,7 +78,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "null",
+              "text": "number",
               "kind": "keyword"
             }
           ],
@@ -113,7 +113,7 @@
         },
         {
           "name": "halign",
-          "signature": "halign?: \"left\" | \"right\" | \"center\" | \"justify\"",
+          "signature": "halign?: \"center\" | \"justify\" | \"left\" | \"right\"",
           "signatureTokens": [
             {
               "text": "halign",
@@ -128,22 +128,6 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"left\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"right\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
               "text": "\"center\"",
               "kind": "keyword"
             },
@@ -153,6 +137,22 @@
             },
             {
               "text": "\"justify\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"left\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"right\"",
               "kind": "keyword"
             }
           ],
@@ -283,7 +283,7 @@
         },
         {
           "name": "valign",
-          "signature": "valign?: \"top\" | \"bottom\" | \"center\"",
+          "signature": "valign?: \"bottom\" | \"center\" | \"top\"",
           "signatureTokens": [
             {
               "text": "valign",
@@ -298,14 +298,6 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"top\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
               "text": "\"bottom\"",
               "kind": "keyword"
             },
@@ -315,6 +307,14 @@
             },
             {
               "text": "\"center\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"top\"",
               "kind": "keyword"
             }
           ],

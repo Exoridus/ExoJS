@@ -113,7 +113,7 @@
         },
         {
           "name": "key",
-          "signature": "key: string | null",
+          "signature": "key: null | string",
           "signatureTokens": [
             {
               "text": "key",
@@ -124,7 +124,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
+              "text": "null",
               "kind": "keyword"
             },
             {
@@ -132,7 +132,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "null",
+              "text": "string",
               "kind": "keyword"
             }
           ],
@@ -230,7 +230,7 @@
         },
         {
           "name": "store",
-          "signature": "store: string | null",
+          "signature": "store: null | string",
           "signatureTokens": [
             {
               "text": "store",
@@ -241,7 +241,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
+              "text": "null",
               "kind": "keyword"
             },
             {
@@ -249,7 +249,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "null",
+              "text": "string",
               "kind": "keyword"
             }
           ],

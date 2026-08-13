@@ -1171,7 +1171,7 @@
         },
         {
           "name": "name",
-          "signature": "name: string | null",
+          "signature": "name: null | string",
           "signatureTokens": [
             {
               "text": "name",
@@ -1182,7 +1182,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
+              "text": "null",
               "kind": "keyword"
             },
             {
@@ -1190,7 +1190,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "null",
+              "text": "string",
               "kind": "keyword"
             }
           ],

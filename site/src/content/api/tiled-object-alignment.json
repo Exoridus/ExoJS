@@ -31,58 +31,10 @@
       "members": [
         {
           "name": "TiledObjectAlignment",
-          "signature": "\"unspecified\" | \"topleft\" | \"top\" | \"topright\" | \"left\" | \"center\" | \"right\" | \"bottomleft\" | \"bottom\" | \"bottomright\"",
+          "signature": "\"bottom\" | \"bottomleft\" | \"bottomright\" | \"center\" | \"left\" | \"right\" | \"top\" | \"topleft\" | \"topright\" | \"unspecified\"",
           "signatureTokens": [
             {
-              "text": "\"unspecified\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"topleft\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"top\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"topright\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"left\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"center\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"right\"",
+              "text": "\"bottom\"",
               "kind": "keyword"
             },
             {
@@ -98,7 +50,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"bottom\"",
+              "text": "\"bottomright\"",
               "kind": "keyword"
             },
             {
@@ -106,7 +58,55 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"bottomright\"",
+              "text": "\"center\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"left\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"right\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"top\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"topleft\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"topright\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"unspecified\"",
               "kind": "keyword"
             }
           ],

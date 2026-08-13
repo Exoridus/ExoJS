@@ -128,13 +128,17 @@ describe('the local pre-push hook runs the same gate set as CI', () => {
 });
 
 describe('the Typecheck job covers the type-level gates verify:quick knows about', () => {
-  // These four were the original required-CI set; typecheck:packages and
-  // typecheck:test joined them when the lists were unified. Naming them keeps a
-  // silent deletion from a group visible as a failing test rather than as a gate
-  // that quietly stops running on both sides at once.
-  it.each(['typecheck', 'typecheck:guides', 'typecheck:examples', 'typecheck:type-tests'])('`%s` is in the typecheck group', script => {
-    expect(GATE_GROUPS.typecheck).toContain(script);
-  });
+  // These gates protect distinct source surfaces; typecheck:packages and
+  // typecheck:test joined the original set when the lists were unified, while
+  // typecheck:full-bundle covers the opt-in entry the normal build omits.
+  // Naming them keeps a silent deletion visible as a failing test rather than
+  // as a gate that quietly stops running on both sides at once.
+  it.each(['typecheck', 'typecheck:full-bundle', 'typecheck:guides', 'typecheck:examples', 'typecheck:type-tests'])(
+    '`%s` is in the typecheck group',
+    script => {
+      expect(GATE_GROUPS.typecheck).toContain(script);
+    },
+  );
 
   it('keeps `typecheck:site` out of the ungated typecheck job — it needs the built dist', () => {
     expect(GATE_GROUPS.typecheck).not.toContain('typecheck:site');

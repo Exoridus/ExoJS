@@ -162,7 +162,7 @@
         },
         {
           "name": "hasChannel",
-          "signature": "hasChannel(channel: GamepadButtonChannel | GamepadAxisChannel): boolean",
+          "signature": "hasChannel(channel: GamepadAxisChannel | GamepadButtonChannel): boolean",
           "signatureTokens": [
             {
               "text": "hasChannel",
@@ -181,7 +181,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "GamepadButtonChannel",
+              "text": "GamepadAxisChannel",
               "kind": "type"
             },
             {
@@ -189,7 +189,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "GamepadAxisChannel",
+              "text": "GamepadButtonChannel",
               "kind": "type"
             },
             {
@@ -208,7 +208,7 @@
           "params": [
             {
               "name": "channel",
-              "type": "GamepadButtonChannel | GamepadAxisChannel",
+              "type": "GamepadAxisChannel | GamepadButtonChannel",
               "optional": false
             }
           ],
@@ -765,7 +765,7 @@
         },
         {
           "name": "resolveChannelOffset",
-          "signature": "resolveChannelOffset(channel: GamepadButtonChannel | GamepadAxisChannel): number",
+          "signature": "resolveChannelOffset(channel: GamepadAxisChannel | GamepadButtonChannel): number",
           "signatureTokens": [
             {
               "text": "resolveChannelOffset",
@@ -784,7 +784,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "GamepadButtonChannel",
+              "text": "GamepadAxisChannel",
               "kind": "type"
             },
             {
@@ -792,7 +792,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "GamepadAxisChannel",
+              "text": "GamepadButtonChannel",
               "kind": "type"
             },
             {
@@ -811,7 +811,7 @@
           "params": [
             {
               "name": "channel",
-              "type": "GamepadButtonChannel | GamepadAxisChannel",
+              "type": "GamepadAxisChannel | GamepadButtonChannel",
               "optional": false
             }
           ],
@@ -908,7 +908,7 @@
         },
         {
           "name": "resolveChannelOffset",
-          "signature": "resolveChannelOffset(slot: number, channel: GamepadButtonChannel | GamepadAxisChannel): number",
+          "signature": "resolveChannelOffset(slot: number, channel: GamepadAxisChannel | GamepadButtonChannel): number",
           "signatureTokens": [
             {
               "text": "resolveChannelOffset",
@@ -943,7 +943,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "GamepadButtonChannel",
+              "text": "GamepadAxisChannel",
               "kind": "type"
             },
             {
@@ -951,7 +951,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "GamepadAxisChannel",
+              "text": "GamepadButtonChannel",
               "kind": "type"
             },
             {
@@ -975,7 +975,7 @@
             },
             {
               "name": "channel",
-              "type": "GamepadButtonChannel | GamepadAxisChannel",
+              "type": "GamepadAxisChannel | GamepadButtonChannel",
               "optional": false
             }
           ],
@@ -1093,7 +1093,7 @@
         },
         {
           "name": "internalIndex",
-          "signature": "internalIndex: number | null",
+          "signature": "internalIndex: null | number",
           "signatureTokens": [
             {
               "text": "internalIndex",
@@ -1104,7 +1104,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
+              "text": "null",
               "kind": "keyword"
             },
             {
@@ -1112,7 +1112,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "null",
+              "text": "number",
               "kind": "keyword"
             }
           ],

@@ -95,7 +95,7 @@ function convertLevel(
     // Layer IDs must be unique within a TileMap (= one level).
     // Use layerDefUid directly — it is unique per layer definition in the file.
     const layerId = layerInst.layerDefUid;
-    const parallax = resolveLdtkLayerParallax(data, layerInst.layerDefUid);
+    const parallax = resolveLdtkLayerParallax(data, layerInst);
 
     switch (layerInst.__type) {
       case 'Tiles':
@@ -197,10 +197,11 @@ function convertEntitiesLayer(
     name: layerInst.__identifier,
     visible: layerInst.visible,
     opacity: layerInst.opacity ?? 1,
-    offsetX: layerInst.pxOffsetX ?? 0,
-    offsetY: layerInst.pxOffsetY ?? 0,
+    offsetX: parallax.offsetX + (layerInst.pxOffsetX ?? 0),
+    offsetY: parallax.offsetY + (layerInst.pxOffsetY ?? 0),
     parallaxX: parallax.parallaxX,
     parallaxY: parallax.parallaxY,
+    parallaxScale: parallax.parallaxScale,
     objects,
   });
 }
@@ -224,10 +225,11 @@ function makeTileLayer(
     tileHeight: layerInst.__gridSize,
     visible: layerInst.visible,
     opacity: layerInst.opacity ?? 1,
-    offsetX: layerInst.pxOffsetX ?? 0,
-    offsetY: layerInst.pxOffsetY ?? 0,
+    offsetX: parallax.offsetX + (layerInst.pxOffsetX ?? 0),
+    offsetY: parallax.offsetY + (layerInst.pxOffsetY ?? 0),
     parallaxX: parallax.parallaxX,
     parallaxY: parallax.parallaxY,
+    parallaxScale: parallax.parallaxScale,
     ...(properties && { properties }),
   });
 }

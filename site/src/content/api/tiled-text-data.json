@@ -105,7 +105,7 @@
         },
         {
           "name": "halign",
-          "signature": "halign?: \"left\" | \"center\" | \"right\" | \"justify\"",
+          "signature": "halign?: \"center\" | \"justify\" | \"left\" | \"right\"",
           "signatureTokens": [
             {
               "text": "halign",
@@ -120,14 +120,6 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"left\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
               "text": "\"center\"",
               "kind": "keyword"
             },
@@ -136,7 +128,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"right\"",
+              "text": "\"justify\"",
               "kind": "keyword"
             },
             {
@@ -144,7 +136,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"justify\"",
+              "text": "\"left\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"right\"",
               "kind": "keyword"
             }
           ],
@@ -300,7 +300,7 @@
         },
         {
           "name": "valign",
-          "signature": "valign?: \"top\" | \"center\" | \"bottom\"",
+          "signature": "valign?: \"bottom\" | \"center\" | \"top\"",
           "signatureTokens": [
             {
               "text": "valign",
@@ -315,7 +315,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"top\"",
+              "text": "\"bottom\"",
               "kind": "keyword"
             },
             {
@@ -331,7 +331,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"bottom\"",
+              "text": "\"top\"",
               "kind": "keyword"
             }
           ],

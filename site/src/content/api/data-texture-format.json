@@ -31,16 +31,8 @@
       "members": [
         {
           "name": "DataTextureFormat",
-          "signature": "TextureFormat.R8 | TextureFormat.R32F | TextureFormat.Rgba8 | TextureFormat.Rgba32F",
+          "signature": "TextureFormat.R32F | TextureFormat.R8 | TextureFormat.Rgba32F | TextureFormat.Rgba8",
           "signatureTokens": [
-            {
-              "text": "TextureFormat.R8",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
             {
               "text": "TextureFormat.R32F",
               "kind": "type"
@@ -50,7 +42,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "TextureFormat.Rgba8",
+              "text": "TextureFormat.R8",
               "kind": "type"
             },
             {
@@ -59,6 +51,14 @@
             },
             {
               "text": "TextureFormat.Rgba32F",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureFormat.Rgba8",
               "kind": "type"
             }
           ],

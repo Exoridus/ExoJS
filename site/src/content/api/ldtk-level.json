@@ -159,7 +159,7 @@
         },
         {
           "name": "layerInstances",
-          "signature": "layerInstances: readonly LdtkLayerInstance[] | null",
+          "signature": "layerInstances: null | readonly LdtkLayerInstance[]",
           "signatureTokens": [
             {
               "text": "layerInstances",
@@ -167,6 +167,14 @@
             },
             {
               "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
               "kind": "punctuation"
             },
             {
@@ -184,14 +192,6 @@
             {
               "text": "[]",
               "kind": "punctuation"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "null",
-              "kind": "keyword"
             }
           ],
           "params": [],

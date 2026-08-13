@@ -30,10 +30,10 @@
       "members": [
         {
           "name": "SlideMode",
-          "signature": "\"push\" | \"cover\" | \"reveal\"",
+          "signature": "\"cover\" | \"push\" | \"reveal\"",
           "signatureTokens": [
             {
-              "text": "\"push\"",
+              "text": "\"cover\"",
               "kind": "keyword"
             },
             {
@@ -41,7 +41,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"cover\"",
+              "text": "\"push\"",
               "kind": "keyword"
             },
             {

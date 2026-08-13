@@ -16,7 +16,8 @@ export type ArchetypeId =
   | 'mixed-material'
   | 'mixed-material-atlased'
   | 'instanced-batch'
-  | 'mixed-sprite-mesh';
+  | 'mixed-sprite-mesh-array'
+  | 'mixed-sprite-mesh-static';
 
 /** Structural definition of a scene archetype, independent of any engine or backend. */
 export interface ArchetypeSpec {
@@ -128,6 +129,14 @@ export interface ArchetypeSpec {
    * meaning.
    */
   readonly meshEvery?: number;
+  /** Consecutive mesh leaves at each {@link meshEvery} boundary; defaults to one. */
+  readonly meshRunLength?: number;
+  /**
+   * Storage form used by mesh leaves. Array meshes exercise per-leaf packing
+   * and retained-cache poisoning; shared static geometry exercises replayable
+   * renderer switches. Meaningful only when {@link meshEvery} is set.
+   */
+  readonly meshStorage?: 'array' | 'shared-static-geometry';
 }
 
 /** One matrix cell: a single (engine, config, backend, archetype, node count) combination to measure. */

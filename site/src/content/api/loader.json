@@ -789,7 +789,7 @@
         },
         {
           "name": "keyFor",
-          "signature": "keyFor(resource: object): { source: string; type: AssetConstructor } | null",
+          "signature": "keyFor(resource: object): null | { source: string; type: AssetConstructor }",
           "signatureTokens": [
             {
               "text": "keyFor",
@@ -817,6 +817,14 @@
             },
             {
               "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
               "kind": "punctuation"
             },
             {
@@ -854,14 +862,6 @@
             {
               "text": " }",
               "kind": "punctuation"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "null",
-              "kind": "keyword"
             }
           ],
           "params": [
@@ -871,7 +871,7 @@
               "optional": false
             }
           ],
-          "returnType": "{ source: string; type: AssetConstructor } | null",
+          "returnType": "null | { source: string; type: AssetConstructor }",
           "description": "Reverse lookup: given a loaded resource object, return the asset type and source key it was first loaded under, or null for runtime-created, unloaded, or non-object resources. When a resource is shared across several aliases, the **first** alias it was stored under is returned (the canonical key). Primitive results (parsed JSON, text, CSV rows) are not keyable. Used by scene serialization to turn a live asset reference back into a portable source key; the contract is that the same asset is pre-loaded under that key before a matching deserialize."
         },
         {

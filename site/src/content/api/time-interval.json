@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "TimeInterval",
-          "signature": "1 | 1000 | 60000 | 3600000",
+          "signature": "1 | 1000 | 3600000 | 60000",
           "signatureTokens": [
             {
               "text": "1",
@@ -49,7 +49,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "60000",
+              "text": "3600000",
               "kind": "keyword"
             },
             {
@@ -57,7 +57,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "3600000",
+              "text": "60000",
               "kind": "keyword"
             }
           ],

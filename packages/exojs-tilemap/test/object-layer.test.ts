@@ -49,6 +49,7 @@ describe('ObjectLayer', () => {
     expect(layer.offsetY).toBe(0);
     expect(layer.parallaxX).toBe(1);
     expect(layer.parallaxY).toBe(1);
+    expect(layer.parallaxScale).toBe(1);
     expect(layer.tintColor).toBe(null);
     expect(layer.objects).toHaveLength(1);
     expect(Object.isFrozen(layer.objects)).toBe(true);
@@ -64,6 +65,7 @@ describe('ObjectLayer', () => {
       offsetY: -8,
       parallaxX: 0.25,
       parallaxY: 2,
+      parallaxScale: 0.75,
       tintColor: 0x804020,
     });
 
@@ -73,7 +75,12 @@ describe('ObjectLayer', () => {
     expect(layer.offsetY).toBe(-8);
     expect(layer.parallaxX).toBe(0.25);
     expect(layer.parallaxY).toBe(2);
+    expect(layer.parallaxScale).toBe(0.75);
     expect(layer.tintColor).toBe(0x804020);
+  });
+
+  it('rejects a non-positive parallax scale', () => {
+    expect(() => new ObjectLayer({ id: 1, parallaxScale: 0 })).toThrow(/positive finite number/);
   });
 
   it('query filters by name / type / kind / property (+ value), all combinable', () => {

@@ -354,7 +354,7 @@
         },
         {
           "name": "webgpuArchitecture",
-          "signature": "webgpuArchitecture: string | null",
+          "signature": "webgpuArchitecture: null | string",
           "signatureTokens": [
             {
               "text": "webgpuArchitecture",
@@ -365,7 +365,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
+              "text": "null",
               "kind": "keyword"
             },
             {
@@ -373,7 +373,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "null",
+              "text": "string",
               "kind": "keyword"
             }
           ],
@@ -383,7 +383,7 @@
         },
         {
           "name": "webgpuVendor",
-          "signature": "webgpuVendor: string | null",
+          "signature": "webgpuVendor: null | string",
           "signatureTokens": [
             {
               "text": "webgpuVendor",
@@ -394,7 +394,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
+              "text": "null",
               "kind": "keyword"
             },
             {
@@ -402,7 +402,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "null",
+              "text": "string",
               "kind": "keyword"
             }
           ],

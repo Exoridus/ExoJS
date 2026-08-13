@@ -31,28 +31,8 @@
       "members": [
         {
           "name": "TileMapObject",
-          "signature": "RectangleObject<P> | EllipseObject<P> | PointObject<P> | PolygonObject<P> | PolylineObject<P> | TileObject<P> | TextObject<P>",
+          "signature": "EllipseObject<P> | PointObject<P> | PolygonObject<P> | PolylineObject<P> | RectangleObject<P> | TextObject<P> | TileObject<P>",
           "signatureTokens": [
-            {
-              "text": "RectangleObject",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "P",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
             {
               "text": "EllipseObject",
               "kind": "type"
@@ -134,7 +114,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "TileObject",
+              "text": "RectangleObject",
               "kind": "type"
             },
             {
@@ -155,6 +135,26 @@
             },
             {
               "text": "TextObject",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "P",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileObject",
               "kind": "type"
             },
             {

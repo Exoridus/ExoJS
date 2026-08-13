@@ -160,7 +160,7 @@
         },
         {
           "name": "texture",
-          "signature": "texture?: Texture | RenderTexture | null",
+          "signature": "texture?: RenderTexture | Texture | null",
           "signatureTokens": [
             {
               "text": "texture",
@@ -175,7 +175,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Texture",
+              "text": "RenderTexture",
               "kind": "type"
             },
             {
@@ -183,7 +183,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "RenderTexture",
+              "text": "Texture",
               "kind": "type"
             },
             {

@@ -102,6 +102,8 @@ describe('validateLdtkData — accepts well-formed documents', () => {
       root.defs.layers[0].parallaxFactorX = 0.5;
       root.defs.layers[0].parallaxFactorY = -0.25;
       root.defs.layers[0].parallaxScaling = false;
+      root.defs.layers[0].pxOffsetX = 3;
+      root.defs.layers[0].pxOffsetY = -4;
     }), SOURCE)).not.toThrow();
   });
 });
@@ -205,6 +207,12 @@ describe('validateLdtkData — rejects malformed documents', () => {
     expect(() => validateLdtkData(withRoot(root => {
       root.defs.layers[0].parallaxScaling = 'yes';
     }), SOURCE)).toThrow(/defs\.layers\[0\]\.parallaxScaling/);
+  });
+
+  it('rejects a non-numeric definition-level layer offset', () => {
+    expect(() => validateLdtkData(withRoot(root => {
+      root.defs.layers[0].pxOffsetX = 'right';
+    }), SOURCE)).toThrow(/defs\.layers\[0\]\.pxOffsetX/);
   });
 });
 

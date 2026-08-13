@@ -30,11 +30,11 @@
       "members": [
         {
           "name": "ChordBinding",
-          "signature": "string | InputChord | InputAlternation",
+          "signature": "InputAlternation | InputChord | string",
           "signatureTokens": [
             {
-              "text": "string",
-              "kind": "keyword"
+              "text": "InputAlternation",
+              "kind": "type"
             },
             {
               "text": " | ",
@@ -49,8 +49,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "InputAlternation",
-              "kind": "type"
+              "text": "string",
+              "kind": "keyword"
             }
           ],
           "params": [],

@@ -9,7 +9,7 @@
 
 /** Package.json script names per owning CI job. Order within a group is the run order. */
 export const GATE_GROUPS = {
-  typecheck: ['typecheck', 'typecheck:guides', 'typecheck:examples', 'typecheck:type-tests', 'typecheck:packages', 'typecheck:test'],
+  typecheck: ['typecheck', 'typecheck:full-bundle', 'typecheck:guides', 'typecheck:examples', 'typecheck:type-tests', 'typecheck:packages', 'typecheck:test'],
   lint: ['lint:all', 'format:check'],
   sync: ['docs:api:check', 'examples:sync:check'],
   site: ['typecheck:site'],

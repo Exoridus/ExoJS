@@ -31,10 +31,10 @@
       "members": [
         {
           "name": "RepeatMode",
-          "signature": "\"stretch\" | \"repeat\" | \"mirror-repeat\"",
+          "signature": "\"mirror-repeat\" | \"repeat\" | \"stretch\"",
           "signatureTokens": [
             {
-              "text": "\"stretch\"",
+              "text": "\"mirror-repeat\"",
               "kind": "keyword"
             },
             {
@@ -50,7 +50,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"mirror-repeat\"",
+              "text": "\"stretch\"",
               "kind": "keyword"
             }
           ],

@@ -30,16 +30,8 @@
       "members": [
         {
           "name": "DecompressFormat",
-          "signature": "\"gzip\" | \"deflate\" | \"deflate-raw\"",
+          "signature": "\"deflate\" | \"deflate-raw\" | \"gzip\"",
           "signatureTokens": [
-            {
-              "text": "\"gzip\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
             {
               "text": "\"deflate\"",
               "kind": "keyword"
@@ -50,6 +42,14 @@
             },
             {
               "text": "\"deflate-raw\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"gzip\"",
               "kind": "keyword"
             }
           ],

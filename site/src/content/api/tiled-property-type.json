@@ -30,34 +30,18 @@
       "members": [
         {
           "name": "TiledPropertyType",
-          "signature": "\"string\" | \"int\" | \"float\" | \"bool\" | \"color\" | \"file\" | \"object\" | \"class\"",
+          "signature": "\"bool\" | \"class\" | \"color\" | \"file\" | \"float\" | \"int\" | \"object\" | \"string\"",
           "signatureTokens": [
             {
-              "text": "\"string\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"int\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"float\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
               "text": "\"bool\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"class\"",
               "kind": "keyword"
             },
             {
@@ -81,6 +65,22 @@
               "kind": "punctuation"
             },
             {
+              "text": "\"float\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"int\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
               "text": "\"object\"",
               "kind": "keyword"
             },
@@ -89,7 +89,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"class\"",
+              "text": "\"string\"",
               "kind": "keyword"
             }
           ],

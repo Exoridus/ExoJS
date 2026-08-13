@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "_comment": "Type-checks the opt-in all-in-one IIFE entry against every extension package's source exports. The production build only includes this entry when EXOJS_FULL_BUNDLE=1, so without this lightweight local gate a stale named export is visible only in the CI build lane.",
+  "extends": "./tsconfig.examples.json",
+  "compilerOptions": {
+    "allowJs": false,
+    "checkJs": false
+  },
+  "include": ["scripts/exo-full.entry.ts", "src/typings.d.ts"]
+}

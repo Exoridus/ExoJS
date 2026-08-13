@@ -30,24 +30,8 @@
       "members": [
         {
           "name": "FontWeight",
-          "signature": "\"normal\" | \"bold\" | \"100\" | \"200\" | \"300\" | \"400\" | \"500\" | \"600\" | \"700\" | \"800\" | \"900\"",
+          "signature": "\"100\" | \"200\" | \"300\" | \"400\" | \"500\" | \"600\" | \"700\" | \"800\" | \"900\" | \"bold\" | \"normal\"",
           "signatureTokens": [
-            {
-              "text": "\"normal\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"bold\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
             {
               "text": "\"100\"",
               "kind": "keyword"
@@ -114,6 +98,22 @@
             },
             {
               "text": "\"900\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"bold\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"normal\"",
               "kind": "keyword"
             }
           ],

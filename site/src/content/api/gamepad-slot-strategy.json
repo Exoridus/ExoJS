@@ -31,10 +31,10 @@
       "members": [
         {
           "name": "GamepadSlotStrategy",
-          "signature": "\"sticky\" | \"compact\"",
+          "signature": "\"compact\" | \"sticky\"",
           "signatureTokens": [
             {
-              "text": "\"sticky\"",
+              "text": "\"compact\"",
               "kind": "keyword"
             },
             {
@@ -42,7 +42,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"compact\"",
+              "text": "\"sticky\"",
               "kind": "keyword"
             }
           ],

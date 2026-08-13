@@ -30,42 +30,10 @@
       "members": [
         {
           "name": "TilePropertyValue",
-          "signature": "null | boolean | number | string | TilePropertyPoint | TilePropertyObjectRef | TilePropertyTileRef | readonly TilePropertyValue[] | TileProperties",
+          "signature": "TileProperties | TilePropertyObjectRef | TilePropertyPoint | TilePropertyTileRef | boolean | null | number | readonly TilePropertyValue[] | string",
           "signatureTokens": [
             {
-              "text": "null",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "boolean",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "TilePropertyPoint",
+              "text": "TileProperties",
               "kind": "type"
             },
             {
@@ -81,8 +49,40 @@
               "kind": "punctuation"
             },
             {
+              "text": "TilePropertyPoint",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
               "text": "TilePropertyTileRef",
               "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             },
             {
               "text": " | ",
@@ -109,8 +109,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "TileProperties",
-              "kind": "type"
+              "text": "string",
+              "kind": "keyword"
             }
           ],
           "params": [],

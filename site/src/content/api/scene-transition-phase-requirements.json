@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "currentFrame",
-          "signature": "currentFrame: \"none\" | \"texture\" | \"direct\"",
+          "signature": "currentFrame: \"direct\" | \"none\" | \"texture\"",
           "signatureTokens": [
             {
               "text": "currentFrame",
@@ -38,6 +38,14 @@
             },
             {
               "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"direct\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
               "kind": "punctuation"
             },
             {
@@ -50,14 +58,6 @@
             },
             {
               "text": "\"texture\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"direct\"",
               "kind": "keyword"
             }
           ],

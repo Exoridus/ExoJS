@@ -194,6 +194,8 @@ function validateLayerDef(raw: unknown, source: string, path: string): void {
   expectString(def.identifier, source, joinPath(path, 'identifier'));
   validateLayerType(def.type, source, joinPath(path, 'type'));
   expectNonNegativeInteger(def.gridSize, source, joinPath(path, 'gridSize'));
+  optionalNumber(def, 'pxOffsetX', source, path);
+  optionalNumber(def, 'pxOffsetY', source, path);
   optionalNumber(def, 'parallaxFactorX', source, path);
   optionalNumber(def, 'parallaxFactorY', source, path);
   optionalBoolean(def, 'parallaxScaling', source, path);

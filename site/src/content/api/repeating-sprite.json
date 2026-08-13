@@ -1864,7 +1864,7 @@
         },
         {
           "name": "cursor",
-          "signature": "cursor: string | null",
+          "signature": "cursor: null | string",
           "signatureTokens": [
             {
               "text": "cursor",
@@ -1875,7 +1875,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
+              "text": "null",
               "kind": "keyword"
             },
             {
@@ -1883,7 +1883,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "null",
+              "text": "string",
               "kind": "keyword"
             }
           ],
@@ -1968,7 +1968,7 @@
         },
         {
           "name": "name",
-          "signature": "name: string | null",
+          "signature": "name: null | string",
           "signatureTokens": [
             {
               "text": "name",
@@ -1979,7 +1979,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
+              "text": "null",
               "kind": "keyword"
             },
             {
@@ -1987,7 +1987,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "null",
+              "text": "string",
               "kind": "keyword"
             }
           ],
@@ -2102,7 +2102,7 @@
         },
         {
           "name": "clipShape",
-          "signature": "clipShape: Rectangle | Geometry | null",
+          "signature": "clipShape: Geometry | Rectangle | null",
           "signatureTokens": [
             {
               "text": "clipShape",
@@ -2113,7 +2113,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Rectangle",
+              "text": "Geometry",
               "kind": "type"
             },
             {
@@ -2121,7 +2121,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Geometry",
+              "text": "Rectangle",
               "kind": "type"
             },
             {

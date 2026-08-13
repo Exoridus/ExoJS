@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "blobMap",
-          "signature": "blobMap: Record<number, number> | ReadonlyMap<number, number>",
+          "signature": "blobMap: ReadonlyMap<number, number> | Record<number, number>",
           "signatureTokens": [
             {
               "text": "blobMap",
@@ -41,7 +41,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Record",
+              "text": "ReadonlyMap",
               "kind": "type"
             },
             {
@@ -69,7 +69,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "ReadonlyMap",
+              "text": "Record",
               "kind": "type"
             },
             {

@@ -30,18 +30,10 @@
       "members": [
         {
           "name": "LdtkLayerType",
-          "signature": "\"Tiles\" | \"IntGrid\" | \"Entities\" | \"AutoLayer\"",
+          "signature": "\"AutoLayer\" | \"Entities\" | \"IntGrid\" | \"Tiles\"",
           "signatureTokens": [
             {
-              "text": "\"Tiles\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"IntGrid\"",
+              "text": "\"AutoLayer\"",
               "kind": "keyword"
             },
             {
@@ -57,7 +49,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"AutoLayer\"",
+              "text": "\"IntGrid\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"Tiles\"",
               "kind": "keyword"
             }
           ],

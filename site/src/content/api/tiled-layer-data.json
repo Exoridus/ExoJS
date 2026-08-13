@@ -30,18 +30,10 @@
       "members": [
         {
           "name": "TiledLayerData",
-          "signature": "TiledTileLayerData | TiledObjectLayerData | TiledImageLayerData | TiledGroupLayerData",
+          "signature": "TiledGroupLayerData | TiledImageLayerData | TiledObjectLayerData | TiledTileLayerData",
           "signatureTokens": [
             {
-              "text": "TiledTileLayerData",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "TiledObjectLayerData",
+              "text": "TiledGroupLayerData",
               "kind": "type"
             },
             {
@@ -57,7 +49,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "TiledGroupLayerData",
+              "text": "TiledObjectLayerData",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TiledTileLayerData",
               "kind": "type"
             }
           ],

@@ -78,7 +78,7 @@
         },
         {
           "name": "imageRendering",
-          "signature": "imageRendering?: \"auto\" | \"pixelated\" | \"crisp-edges\"",
+          "signature": "imageRendering?: \"auto\" | \"crisp-edges\" | \"pixelated\"",
           "signatureTokens": [
             {
               "text": "imageRendering",
@@ -101,7 +101,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"pixelated\"",
+              "text": "\"crisp-edges\"",
               "kind": "keyword"
             },
             {
@@ -109,7 +109,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"crisp-edges\"",
+              "text": "\"pixelated\"",
               "kind": "keyword"
             }
           ],
@@ -119,7 +119,7 @@
         },
         {
           "name": "mount",
-          "signature": "mount?: string | HTMLElement",
+          "signature": "mount?: HTMLElement | string",
           "signatureTokens": [
             {
               "text": "mount",
@@ -134,16 +134,16 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
-              "kind": "keyword"
+              "text": "HTMLElement",
+              "kind": "type"
             },
             {
               "text": " | ",
               "kind": "punctuation"
             },
             {
-              "text": "HTMLElement",
-              "kind": "type"
+              "text": "string",
+              "kind": "keyword"
             }
           ],
           "params": [],

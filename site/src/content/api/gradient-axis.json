@@ -28,10 +28,10 @@
       "members": [
         {
           "name": "GradientAxis",
-          "signature": "\"vertical\" | \"horizontal\"",
+          "signature": "\"horizontal\" | \"vertical\"",
           "signatureTokens": [
             {
-              "text": "\"vertical\"",
+              "text": "\"horizontal\"",
               "kind": "keyword"
             },
             {
@@ -39,7 +39,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"horizontal\"",
+              "text": "\"vertical\"",
               "kind": "keyword"
             }
           ],

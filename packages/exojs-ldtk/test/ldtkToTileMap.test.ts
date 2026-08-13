@@ -383,6 +383,7 @@ describe('ldtkToTileMap', () => {
       const tilesLayer = result.levels[0]?.layers.find(l => l.name === 'Tiles');
       expect(tilesLayer?.parallaxX).toBeCloseTo(0.5);
       expect(tilesLayer?.parallaxY).toBeCloseTo(1.25);
+      expect(tilesLayer?.parallaxScale).toBeCloseTo(0.5);
     });
 
     it('defaults a TileLayer to parallaxX/Y = 1 (no parallax) when the layer def has no factors', () => {
@@ -390,6 +391,7 @@ describe('ldtkToTileMap', () => {
       const groundLayer = result.levels[0]?.layers.find(l => l.name === 'Ground');
       expect(groundLayer?.parallaxX).toBe(1);
       expect(groundLayer?.parallaxY).toBe(1);
+      expect(groundLayer?.parallaxScale).toBe(1);
     });
 
     it('converts a layer def parallax factor into the runtime ObjectLayer parallaxX/Y', () => {
@@ -397,6 +399,48 @@ describe('ldtkToTileMap', () => {
       const entitiesLayer = result.levels[0]?.objectLayers[0];
       expect(entitiesLayer?.parallaxX).toBe(0);
       expect(entitiesLayer?.parallaxY).toBe(1);
+      expect(entitiesLayer?.parallaxScale).toBeCloseTo(0.01);
+    });
+
+    it('keeps scale at 1 and applies LDtk centre compensation when parallaxScaling is false', () => {
+      const data: LdtkData = {
+        ...parallaxData,
+        defs: {
+          ...parallaxData.defs,
+          layers: parallaxData.defs.layers.map(def =>
+            def.uid === 101
+              ? { ...def, parallaxFactorX: 0.5, parallaxFactorY: -0.25, parallaxScaling: false }
+              : def,
+          ),
+        },
+      };
+      const tilesLayer = ldtkToTileMap(data).levels[0]?.layers.find(l => l.name === 'Tiles');
+
+      expect(tilesLayer?.parallaxScale).toBe(1);
+      expect(tilesLayer?.offsetX).toBe(-32);
+      expect(tilesLayer?.offsetY).toBe(16);
+    });
+
+    it('adds layer-definition offsets to each instance offset', () => {
+      const data: LdtkData = {
+        ...layeredData,
+        defs: {
+          ...layeredData.defs,
+          layers: layeredData.defs.layers.map(def =>
+            def.uid === 101 ? { ...def, pxOffsetX: 7, pxOffsetY: -9 } : def,
+          ),
+        },
+        levels: layeredData.levels.map(level => ({
+          ...level,
+          layerInstances: level.layerInstances?.map(layer =>
+            layer.layerDefUid === 101 ? { ...layer, pxOffsetX: 3, pxOffsetY: 4 } : layer,
+          ) ?? null,
+        })),
+      };
+      const tilesLayer = ldtkToTileMap(data).levels[0]?.layers.find(l => l.name === 'Tiles');
+
+      expect(tilesLayer?.offsetX).toBe(10);
+      expect(tilesLayer?.offsetY).toBe(-5);
     });
   });
 

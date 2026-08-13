@@ -30,16 +30,8 @@
       "members": [
         {
           "name": "Action",
-          "signature": "ButtonAction | AxisAction | VectorAction | ChordAction | SequenceAction",
+          "signature": "AxisAction | ButtonAction | ChordAction | SequenceAction | VectorAction",
           "signatureTokens": [
-            {
-              "text": "ButtonAction",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
             {
               "text": "AxisAction",
               "kind": "type"
@@ -49,7 +41,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "VectorAction",
+              "text": "ButtonAction",
               "kind": "type"
             },
             {
@@ -66,6 +58,14 @@
             },
             {
               "text": "SequenceAction",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "VectorAction",
               "kind": "type"
             }
           ],

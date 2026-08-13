@@ -32,7 +32,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(family: string, fontStyle: \"normal\" | \"italic\", fontWeight: string, pageSize: number, mode: AtlasMode, sdfRadius: number): GlyphAtlas",
+          "signature": "new(family: string, fontStyle: \"italic\" | \"normal\", fontWeight: string, pageSize: number, mode: AtlasMode, sdfRadius: number): GlyphAtlas",
           "signatureTokens": [
             {
               "text": "new",
@@ -67,7 +67,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"normal\"",
+              "text": "\"italic\"",
               "kind": "keyword"
             },
             {
@@ -75,7 +75,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"italic\"",
+              "text": "\"normal\"",
               "kind": "keyword"
             },
             {
@@ -163,7 +163,7 @@
             },
             {
               "name": "fontStyle",
-              "type": "\"normal\" | \"italic\"",
+              "type": "\"italic\" | \"normal\"",
               "optional": false
             },
             {

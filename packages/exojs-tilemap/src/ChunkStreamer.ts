@@ -178,9 +178,14 @@ export class ChunkStreamer {
 
     const shiftX = centerX * (1 - layer.parallaxX);
     const shiftY = centerY * (1 - layer.parallaxY);
+    const scale = layer.parallaxScale;
 
-    const topLeftTile = layer.pixelToTile(bounds.left - shiftX, bounds.top - shiftY);
-    const bottomRightTile = layer.pixelToTile(bounds.right - shiftX, bounds.bottom - shiftY);
+    const layerLeft = layer.offsetX + (bounds.left - shiftX - layer.offsetX) / scale;
+    const layerTop = layer.offsetY + (bounds.top - shiftY - layer.offsetY) / scale;
+    const layerRight = layer.offsetX + (bounds.right - shiftX - layer.offsetX) / scale;
+    const layerBottom = layer.offsetY + (bounds.bottom - shiftY - layer.offsetY) / scale;
+    const topLeftTile = layer.pixelToTile(layerLeft, layerTop);
+    const bottomRightTile = layer.pixelToTile(layerRight, layerBottom);
 
     const topLeftChunk = tileToChunkCoord(topLeftTile.tx, topLeftTile.ty, layer.chunkWidth, layer.chunkHeight);
     const bottomRightChunk = tileToChunkCoord(bottomRightTile.tx, bottomRightTile.ty, layer.chunkWidth, layer.chunkHeight);

@@ -33,7 +33,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(index: number, channel: GamepadButtonChannel | GamepadAxisChannel, options: GamepadAxisOptions): GamepadAxis",
+          "signature": "new(index: number, channel: GamepadAxisChannel | GamepadButtonChannel, options: GamepadAxisOptions): GamepadAxis",
           "signatureTokens": [
             {
               "text": "new",
@@ -68,7 +68,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "GamepadButtonChannel",
+              "text": "GamepadAxisChannel",
               "kind": "type"
             },
             {
@@ -76,7 +76,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "GamepadAxisChannel",
+              "text": "GamepadButtonChannel",
               "kind": "type"
             },
             {
@@ -116,7 +116,7 @@
             },
             {
               "name": "channel",
-              "type": "GamepadButtonChannel | GamepadAxisChannel",
+              "type": "GamepadAxisChannel | GamepadButtonChannel",
               "optional": false
             },
             {
@@ -237,7 +237,7 @@
         },
         {
           "name": "channel",
-          "signature": "channel: GamepadButtonChannel | GamepadAxisChannel",
+          "signature": "channel: GamepadAxisChannel | GamepadButtonChannel",
           "signatureTokens": [
             {
               "text": "channel",
@@ -248,7 +248,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "GamepadButtonChannel",
+              "text": "GamepadAxisChannel",
               "kind": "type"
             },
             {
@@ -256,7 +256,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "GamepadAxisChannel",
+              "text": "GamepadButtonChannel",
               "kind": "type"
             }
           ],
@@ -329,7 +329,7 @@
         },
         {
           "name": "pair",
-          "signature": "pair: number | null",
+          "signature": "pair: null | number",
           "signatureTokens": [
             {
               "text": "pair",
@@ -340,7 +340,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
+              "text": "null",
               "kind": "keyword"
             },
             {
@@ -348,7 +348,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "null",
+              "text": "number",
               "kind": "keyword"
             }
           ],

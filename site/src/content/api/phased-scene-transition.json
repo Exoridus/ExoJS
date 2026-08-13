@@ -704,7 +704,7 @@
         },
         {
           "name": "placement",
-          "signature": "placement: \"screen\" | \"scene\"",
+          "signature": "placement: \"scene\" | \"screen\"",
           "signatureTokens": [
             {
               "text": "placement",
@@ -715,7 +715,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"screen\"",
+              "text": "\"scene\"",
               "kind": "keyword"
             },
             {
@@ -723,7 +723,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"scene\"",
+              "text": "\"screen\"",
               "kind": "keyword"
             }
           ],

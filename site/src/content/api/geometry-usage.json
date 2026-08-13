@@ -31,10 +31,10 @@
       "members": [
         {
           "name": "GeometryUsage",
-          "signature": "\"static\" | \"dynamic\" | \"stream\"",
+          "signature": "\"dynamic\" | \"static\" | \"stream\"",
           "signatureTokens": [
             {
-              "text": "\"static\"",
+              "text": "\"dynamic\"",
               "kind": "keyword"
             },
             {
@@ -42,7 +42,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"dynamic\"",
+              "text": "\"static\"",
               "kind": "keyword"
             },
             {

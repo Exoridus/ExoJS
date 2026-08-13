@@ -180,7 +180,7 @@
         },
         {
           "name": "status",
-          "signature": "status: number | null",
+          "signature": "status: null | number",
           "signatureTokens": [
             {
               "text": "status",
@@ -191,7 +191,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
+              "text": "null",
               "kind": "keyword"
             },
             {
@@ -199,7 +199,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "null",
+              "text": "number",
               "kind": "keyword"
             }
           ],
@@ -209,7 +209,7 @@
         },
         {
           "name": "statusText",
-          "signature": "statusText: string | null",
+          "signature": "statusText: null | string",
           "signatureTokens": [
             {
               "text": "statusText",
@@ -220,7 +220,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
+              "text": "null",
               "kind": "keyword"
             },
             {
@@ -228,7 +228,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "null",
+              "text": "string",
               "kind": "keyword"
             }
           ],

@@ -163,7 +163,7 @@
         },
         {
           "name": "overflow",
-          "signature": "overflow?: \"visible\" | \"clip\" | \"ellipsis\"",
+          "signature": "overflow?: \"clip\" | \"ellipsis\" | \"visible\"",
           "signatureTokens": [
             {
               "text": "overflow",
@@ -178,14 +178,6 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"visible\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
               "text": "\"clip\"",
               "kind": "keyword"
             },
@@ -196,6 +188,14 @@
             {
               "text": "\"ellipsis\"",
               "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"visible\"",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -204,7 +204,7 @@
         },
         {
           "name": "whiteSpace",
-          "signature": "whiteSpace?: \"pre\" | \"normal\" | \"pre-line\"",
+          "signature": "whiteSpace?: \"normal\" | \"pre\" | \"pre-line\"",
           "signatureTokens": [
             {
               "text": "whiteSpace",
@@ -219,7 +219,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"pre\"",
+              "text": "\"normal\"",
               "kind": "keyword"
             },
             {
@@ -227,7 +227,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"normal\"",
+              "text": "\"pre\"",
               "kind": "keyword"
             },
             {

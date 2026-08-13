@@ -30,10 +30,10 @@
       "members": [
         {
           "name": "TiledTilesetRefData",
-          "signature": "TiledExternalTilesetRefData | TiledEmbeddedTilesetRefData",
+          "signature": "TiledEmbeddedTilesetRefData | TiledExternalTilesetRefData",
           "signatureTokens": [
             {
-              "text": "TiledExternalTilesetRefData",
+              "text": "TiledEmbeddedTilesetRefData",
               "kind": "type"
             },
             {
@@ -41,7 +41,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "TiledEmbeddedTilesetRefData",
+              "text": "TiledExternalTilesetRefData",
               "kind": "type"
             }
           ],

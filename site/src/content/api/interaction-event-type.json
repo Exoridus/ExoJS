@@ -30,66 +30,10 @@
       "members": [
         {
           "name": "InteractionEventType",
-          "signature": "\"pointerdown\" | \"pointerup\" | \"pointermove\" | \"pointerover\" | \"pointerout\" | \"pointertap\" | \"contextmenu\" | \"dragstart\" | \"drag\" | \"dragend\"",
+          "signature": "\"contextmenu\" | \"drag\" | \"dragend\" | \"dragstart\" | \"pointerdown\" | \"pointermove\" | \"pointerout\" | \"pointerover\" | \"pointertap\" | \"pointerup\"",
           "signatureTokens": [
             {
-              "text": "\"pointerdown\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"pointerup\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"pointermove\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"pointerover\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"pointerout\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"pointertap\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
               "text": "\"contextmenu\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"dragstart\"",
               "kind": "keyword"
             },
             {
@@ -106,6 +50,62 @@
             },
             {
               "text": "\"dragend\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"dragstart\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"pointerdown\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"pointermove\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"pointerout\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"pointerover\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"pointertap\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"pointerup\"",
               "kind": "keyword"
             }
           ],

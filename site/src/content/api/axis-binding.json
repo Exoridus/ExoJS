@@ -30,16 +30,8 @@
       "members": [
         {
           "name": "AxisBinding",
-          "signature": "InputChannel | AtLeastOne<AxisCompositeBinding>",
+          "signature": "AtLeastOne<AxisCompositeBinding> | InputChannel",
           "signatureTokens": [
-            {
-              "text": "InputChannel",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
             {
               "text": "AtLeastOne",
               "kind": "type"
@@ -55,6 +47,14 @@
             {
               "text": ">",
               "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputChannel",
+              "kind": "type"
             }
           ],
           "params": [],

@@ -28,18 +28,10 @@
       "members": [
         {
           "name": "FontFormat",
-          "signature": "\"woff2\" | \"woff\" | \"ttf\" | \"otf\"",
+          "signature": "\"otf\" | \"ttf\" | \"woff\" | \"woff2\"",
           "signatureTokens": [
             {
-              "text": "\"woff2\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"woff\"",
+              "text": "\"otf\"",
               "kind": "keyword"
             },
             {
@@ -55,7 +47,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"otf\"",
+              "text": "\"woff\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"woff2\"",
               "kind": "keyword"
             }
           ],

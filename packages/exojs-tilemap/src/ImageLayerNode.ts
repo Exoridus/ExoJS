@@ -104,7 +104,7 @@ export class ImageLayerNode extends Container {
     this._sprite = sprite;
     this.addChild(sprite);
 
-    if (layer.repeatX || layer.repeatY || layer.parallaxX !== 1 || layer.parallaxY !== 1) {
+    if (layer.repeatX || layer.repeatY || layer.parallaxX !== 1 || layer.parallaxY !== 1 || layer.parallaxScale !== 1) {
       this.cullable = false;
     }
   }
@@ -155,19 +155,37 @@ export class ImageLayerNode extends Container {
 
     const layer = this._layer;
 
-    if (layer.parallaxX !== 1 || layer.parallaxY !== 1) {
+    const patchesPosition = layer.parallaxX !== 1 || layer.parallaxY !== 1;
+    const patchesScale = layer.parallaxScale !== 1;
+
+    if (patchesPosition || patchesScale) {
       const camCenter = builder.view.center;
       const prevX = this.x;
       const prevY = this.y;
+      const prevScaleX = this.scale.x;
+      const prevScaleY = this.scale.y;
 
-      this.x = this._baseOffsetX + camCenter.x * (1 - layer.parallaxX);
-      this.y = this._baseOffsetY + camCenter.y * (1 - layer.parallaxY);
+      if (patchesPosition) {
+        this.x = this._baseOffsetX + camCenter.x * (1 - layer.parallaxX);
+        this.y = this._baseOffsetY + camCenter.y * (1 - layer.parallaxY);
+      }
 
-      this._updateRepeatCoverage(builder);
-      super._collectContent(builder);
+      if (patchesScale) {
+        this.setScale(prevScaleX * layer.parallaxScale, prevScaleY * layer.parallaxScale);
+      }
 
-      this.x = prevX;
-      this.y = prevY;
+      try {
+        this._updateRepeatCoverage(builder, layer.parallaxScale);
+        super._collectContent(builder);
+      } finally {
+        if (patchesPosition) {
+          this.setPosition(prevX, prevY);
+        }
+
+        if (patchesScale) {
+          this.setScale(prevScaleX, prevScaleY);
+        }
+      }
     } else {
       this._updateRepeatCoverage(builder);
       super._collectContent(builder);
@@ -190,7 +208,7 @@ export class ImageLayerNode extends Container {
    * follows the parallax-shifted origin. Skips the rebuild when neither the view
    * span nor the patched origin changed since the last frame.
    */
-  private _updateRepeatCoverage(builder: RenderPlanBuilder): void {
+  private _updateRepeatCoverage(builder: RenderPlanBuilder, parallaxScale = 1): void {
     const layer = this._layer;
     const sprite = this._sprite;
 
@@ -227,9 +245,10 @@ export class ImageLayerNode extends Container {
 
     if (layer.repeatX) {
       const imgW = this._imageWidth;
-      const localViewMin = bounds.x - originX;
+      const localViewMin = (bounds.x - originX) / parallaxScale;
+      const localViewWidth = bounds.width / parallaxScale;
       const startLocal = Math.floor(localViewMin / imgW) * imgW;
-      const periods = Math.ceil((localViewMin + bounds.width - startLocal) / imgW);
+      const periods = Math.ceil((localViewMin + localViewWidth - startLocal) / imgW);
 
       childX = startLocal;
       childWidth = periods * imgW;
@@ -237,9 +256,10 @@ export class ImageLayerNode extends Container {
 
     if (layer.repeatY) {
       const imgH = this._imageHeight;
-      const localViewMin = bounds.y - originY;
+      const localViewMin = (bounds.y - originY) / parallaxScale;
+      const localViewHeight = bounds.height / parallaxScale;
       const startLocal = Math.floor(localViewMin / imgH) * imgH;
-      const periods = Math.ceil((localViewMin + bounds.height - startLocal) / imgH);
+      const periods = Math.ceil((localViewMin + localViewHeight - startLocal) / imgH);
 
       childY = startLocal;
       childHeight = periods * imgH;

@@ -30,24 +30,8 @@
       "members": [
         {
           "name": "TiledRenderOrder",
-          "signature": "\"right-down\" | \"right-up\" | \"left-down\" | \"left-up\"",
+          "signature": "\"left-down\" | \"left-up\" | \"right-down\" | \"right-up\"",
           "signatureTokens": [
-            {
-              "text": "\"right-down\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"right-up\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
             {
               "text": "\"left-down\"",
               "kind": "keyword"
@@ -58,6 +42,22 @@
             },
             {
               "text": "\"left-up\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"right-down\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"right-up\"",
               "kind": "keyword"
             }
           ],

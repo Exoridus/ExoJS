@@ -30,11 +30,19 @@
       "members": [
         {
           "name": "ViewFollowTarget",
-          "signature": "SceneNode | { x: number; y: number } | null",
+          "signature": "SceneNode | null | { x: number; y: number }",
           "signatureTokens": [
             {
               "text": "SceneNode",
               "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
             },
             {
               "text": " | ",
@@ -75,14 +83,6 @@
             {
               "text": " }",
               "kind": "punctuation"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "null",
-              "kind": "keyword"
             }
           ],
           "params": [],

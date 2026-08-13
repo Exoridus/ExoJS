@@ -117,7 +117,7 @@
         },
         {
           "name": "setTexture",
-          "signature": "setTexture(name: string, texture: Texture | RenderTexture): this",
+          "signature": "setTexture(name: string, texture: RenderTexture | Texture): this",
           "signatureTokens": [
             {
               "text": "setTexture",
@@ -152,7 +152,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Texture",
+              "text": "RenderTexture",
               "kind": "type"
             },
             {
@@ -160,7 +160,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "RenderTexture",
+              "text": "Texture",
               "kind": "type"
             },
             {
@@ -184,7 +184,7 @@
             },
             {
               "name": "texture",
-              "type": "Texture | RenderTexture",
+              "type": "RenderTexture | Texture",
               "optional": false
             }
           ],
@@ -341,7 +341,7 @@
         },
         {
           "name": "target",
-          "signature": "target: \"mesh\" | \"sprite\" | \"particle\"",
+          "signature": "target: \"mesh\" | \"particle\" | \"sprite\"",
           "signatureTokens": [
             {
               "text": "target",
@@ -360,7 +360,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"sprite\"",
+              "text": "\"particle\"",
               "kind": "keyword"
             },
             {
@@ -368,7 +368,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"particle\"",
+              "text": "\"sprite\"",
               "kind": "keyword"
             }
           ],
@@ -420,7 +420,7 @@
         },
         {
           "name": "textures",
-          "signature": "textures: Record<string, Texture | RenderTexture>",
+          "signature": "textures: Record<string, RenderTexture | Texture>",
           "signatureTokens": [
             {
               "text": "textures",
@@ -447,7 +447,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Texture",
+              "text": "RenderTexture",
               "kind": "type"
             },
             {
@@ -455,7 +455,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "RenderTexture",
+              "text": "Texture",
               "kind": "type"
             },
             {

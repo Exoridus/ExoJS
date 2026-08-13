@@ -28,8 +28,16 @@
       "members": [
         {
           "name": "OscillatorType",
-          "signature": "\"sine\" | \"square\" | \"sawtooth\" | \"triangle\"",
+          "signature": "\"sawtooth\" | \"sine\" | \"square\" | \"triangle\"",
           "signatureTokens": [
+            {
+              "text": "\"sawtooth\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
             {
               "text": "\"sine\"",
               "kind": "keyword"
@@ -40,14 +48,6 @@
             },
             {
               "text": "\"square\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"sawtooth\"",
               "kind": "keyword"
             },
             {

@@ -353,6 +353,32 @@ describe('ChunkStreamer.update() — parallax-aware wanted range', () => {
     expect(layer.getChunk(bottomRightChunk.cx + 1, bottomRightChunk.cy + 1)).toBeDefined();
     expect(layer.getChunk(topLeftChunk.cx - 2, topLeftChunk.cy - 2)).toBeUndefined();
   });
+
+  it('inverts parallax scale when computing the streamed layer-space range', () => {
+    const tileset = makeTileset();
+    const view = new View(500, 0, 40, 40);
+    const layer = new TileLayer({
+      id: 0, name: 'scaled', offsetX: 20,
+      tileWidth: 10, tileHeight: 10, tilesets: [tileset],
+      chunkWidth: 4, chunkHeight: 4,
+      parallaxX: 0.5, parallaxY: 1, parallaxScale: 0.5,
+    });
+
+    new ChunkStreamer(layer, makeAlwaysAvailableSource(), view, { loadRadius: 0, unloadRadius: 0 }).update();
+
+    const bounds = view.getBounds();
+    const shiftX = view.center.x * (1 - layer.parallaxX);
+    const toLayerX = (worldX: number): number => layer.offsetX + (worldX - shiftX - layer.offsetX) / layer.parallaxScale;
+    const topLeft = layer.pixelToTile(toLayerX(bounds.left), bounds.top);
+    const bottomRight = layer.pixelToTile(toLayerX(bounds.right), bounds.bottom);
+    const first = tileToChunkCoord(topLeft.tx, topLeft.ty, layer.chunkWidth, layer.chunkHeight);
+    const last = tileToChunkCoord(bottomRight.tx, bottomRight.ty, layer.chunkWidth, layer.chunkHeight);
+
+    expect(layer.getChunk(first.cx, first.cy)).toBeDefined();
+    expect(layer.getChunk(last.cx, last.cy)).toBeDefined();
+    expect(layer.getChunk(first.cx - 1, first.cy)).toBeUndefined();
+    expect(layer.getChunk(last.cx + 1, last.cy)).toBeUndefined();
+  });
 });
 
 describe('ChunkStreamer.destroy()', () => {
