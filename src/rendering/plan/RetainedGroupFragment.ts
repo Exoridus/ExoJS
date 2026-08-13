@@ -133,14 +133,17 @@ export class RetainedGroupFragment {
   private _recordable = false;
   private _recordableFor: RenderBackend | null = null;
 
-  // Lazy drawable -> captured shared-row map over the TOP-LEVEL draw
-  // records (the direct drawable children — the only fast-patch-eligible ones).
-  // Built on first lookup after a capture, dropped on the next capture.
-  private _directRowMap: Map<Drawable, number> | null = null;
-  // The smallest nodeIndex among the top-level draw records — the group's own
-  // shared-buffer base at CAPTURE time. Group-local row = nodeIndex minus
-  // this. Computed with the row map; -1 when there are no direct draws.
-  private _directRowMinIndex = -1;
+  // Lazy drawable -> captured shared-row map over EVERY draw record in the
+  // fragment, nested groups included. Built on first lookup after a capture,
+  // dropped on the next capture. Which of those rows a given consumer may
+  // actually patch is the consumer's own eligibility question — a
+  // {@link RetainedContainer} restricts itself to direct children, the
+  // render-root representation does not.
+  private _rowMap: Map<Drawable, RetainedFragmentDraw> | null = null;
+  // The smallest nodeIndex among ALL draw records — the fragment's own
+  // shared-buffer base at CAPTURE time. Local row = nodeIndex minus this.
+  // Computed with the row map; -1 when there are no draws.
+  private _rowMinIndex = -1;
 
   // Nodes whose OWN transform moved since the last collect, pushed by
   // the SceneNode seam through the enclosing group. A plain array (not a Set):
@@ -159,56 +162,83 @@ export class RetainedGroupFragment {
   }
 
   /**
-   * The shared transform-buffer row a DIRECT drawable child was captured on
-   * (fast patch), or `undefined` when `drawable` is not a top-level
-   * captured draw (nested in a sub-container, or not in this group). Lazily
-   * builds a drawable→row map over the top-level draw records, rebuilt after
-   * each capture.
+   * The shared transform-buffer row `drawable` was captured on, or `undefined`
+   * when it is not a captured draw of this fragment. Lazily builds a
+   * drawable→row map over every draw record, rebuilt after each capture.
    */
-  public directDrawNodeIndex(drawable: Drawable): number | undefined {
-    this._ensureDirectRowMap();
-
-    return this._directRowMap!.get(drawable);
+  public recordedRowIndex(drawable: Drawable): number | undefined {
+    return this.recordedDraw(drawable)?.nodeIndex;
   }
 
   /**
-   * The group's own shared-transform-buffer base at CAPTURE time: the smallest
-   * nodeIndex among the top-level draw records. A patched node's group-local
-   * store row is `directDrawNodeIndex(node) - directDrawBaseNodeIndex()`.
-   *
-   * This is deliberately the CAPTURE-frame min, NOT the bundle's record-frame
-   * rebase base (`transformRowBase`): the two frames can start the group at
-   * different absolute rows (a sibling before the group changing its row count
-   * between capture and record), and the group-local position of each child is
-   * a property of the unchanged subtree — captured here — not of the absolute
-   * base. Using the record-frame base offsets every patch by the delta.
+   * The captured draw record for `drawable`, or `undefined` when it is not a
+   * captured draw of this fragment. Handed out so a transform-only reconcile can
+   * refresh the record's snapshotted screen AABB in place: those bounds feed the
+   * optimizer's reorder-safety overlap test on the entry-replay tier, and a moved
+   * node whose record still carries its old extent could let a batch run be
+   * reordered past a draw it really overlaps.
    */
-  public directDrawBaseNodeIndex(): number {
-    this._ensureDirectRowMap();
+  public recordedDraw(drawable: Drawable): RetainedFragmentDraw | undefined {
+    this._ensureRowMap();
 
-    return this._directRowMinIndex;
+    return this._rowMap!.get(drawable);
   }
 
-  private _ensureDirectRowMap(): void {
-    if (this._directRowMap !== null) {
+  /**
+   * The fragment's own shared-transform-buffer base at CAPTURE time: the
+   * smallest nodeIndex among ALL its draw records. A patched node's local store
+   * row is `recordedRowIndex(node) - recordedRowBase()`.
+   *
+   * Two properties this has to get right, and both have bitten:
+   *
+   * - It is the CAPTURE-frame min, NOT the bundle's record-frame rebase base
+   *   (`transformRowBase`). The two frames can start the fragment at different
+   *   absolute rows (a sibling before it changing its row count between capture
+   *   and record), and each node's local position is a property of the
+   *   unchanged subtree — captured here — not of the absolute base. Using the
+   *   record-frame base offsets every patch by the delta.
+   * - It spans NESTED draws, not just top-level ones. The backend rebases by
+   *   the minimum node index over every recorded batch, and entries carry
+   *   monotonically increasing indices in collect order, so a fragment whose
+   *   first child is a plain container holding a drawable starts lower than its
+   *   first top-level draw. A top-level-only minimum then shifts every patch by
+   *   that difference — the nested node takes the moved node's transform and
+   *   the moved node freezes.
+   */
+  public recordedRowBase(): number {
+    this._ensureRowMap();
+
+    return this._rowMinIndex;
+  }
+
+  private _ensureRowMap(): void {
+    if (this._rowMap !== null) {
       return;
     }
 
-    const map = new Map<Drawable, number>();
-    let min = -1;
+    const map = new Map<Drawable, RetainedFragmentDraw>();
 
-    for (const entry of this._entries) {
+    this._rowMinIndex = this._collectRowsInto(map, this._entries, -1);
+    this._rowMap = map;
+  }
+
+  /** Fold every draw record (nested groups included) into `map`; returns the running minimum. */
+  private _collectRowsInto(map: Map<Drawable, RetainedFragmentDraw>, entries: readonly RetainedFragmentEntry[], min: number): number {
+    let currentMin = min;
+
+    for (const entry of entries) {
       if (entry.kind === RenderEntryKind.Draw) {
-        map.set(entry.drawable, entry.nodeIndex);
+        map.set(entry.drawable, entry);
 
-        if (min === -1 || entry.nodeIndex < min) {
-          min = entry.nodeIndex;
+        if (currentMin === -1 || entry.nodeIndex < currentMin) {
+          currentMin = entry.nodeIndex;
         }
+      } else if (entry.kind === RenderEntryKind.Group) {
+        currentMin = this._collectRowsInto(map, entry.entries, currentMin);
       }
     }
 
-    this._directRowMap = map;
-    this._directRowMinIndex = min;
+    return currentMin;
   }
 
   /** Record that `node`'s own transform moved (from the SceneNode seam). */
@@ -359,7 +389,7 @@ export class RetainedGroupFragment {
     this._groupCursor = 0;
     this._barrierCursor = 0;
     this._entries.length = 0;
-    this._directRowMap = null;
+    this._rowMap = null;
     // A full (re)capture reads every child's current transform: any queued
     // transform-only moves are subsumed and must not double-patch afterwards.
     this.clearDirtyTransformRows();
@@ -382,7 +412,7 @@ export class RetainedGroupFragment {
     this._releaseDrawableRefs();
     this._hasCapture = false;
     this._entries.length = 0;
-    this._directRowMap = null;
+    this._rowMap = null;
     this.clearDirtyTransformRows();
     this._replayedSinceCapture = false;
     this._suppressed = false;

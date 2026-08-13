@@ -5,6 +5,7 @@ import type { View } from '#rendering/View';
 
 import type { ScopeEntry } from './RenderScope';
 import { RetainedGroupFragment } from './RetainedGroupFragment';
+import { reconcileRetainedTransformRows } from './retainedTransformRowPatch';
 
 /** The render target a product was compiled against (backend-owned identity). */
 type RenderTargetIdentity = RenderBackend['renderTarget'];
@@ -80,10 +81,9 @@ export class RetainedRootRepresentation {
    * keys, baked transform rows — carry no view state of their own (the recorded
    * batches resolve projection live at replay).
    */
-  public isClean(
+  public isCleanIgnoringTransform(
     contentRevision: number,
     structureRevision: number,
-    transformRevision: number,
     ancestryStamp: number,
     view: View,
     backend: RenderBackend,
@@ -93,7 +93,6 @@ export class RetainedRootRepresentation {
       !this._hasCapture ||
       this._contentRevision !== contentRevision ||
       this._structureRevision !== structureRevision ||
-      this._transformRevision !== transformRevision ||
       this._ancestryStamp !== ancestryStamp ||
       this._backend !== backend ||
       this._target !== target
@@ -110,6 +109,96 @@ export class RetainedRootRepresentation {
     }
 
     return this._keptEmpty || view.getBounds().containsRect(this._keptBounds.getRect());
+  }
+
+  /**
+   * Settle the transform channel for a frame whose other keys already match:
+   * `true` means the product may be replayed, `false` that the frame must
+   * re-collect.
+   *
+   * Transform-only descendant moves are the one change class that does NOT
+   * invalidate here. The moved nodes arrive through the same seam a
+   * {@link RetainedContainer} uses, and their baked rows are patched in place
+   * (O(k)) rather than re-derived — which is what keeps a scene with a few
+   * percent of moving nodes on the recorded tier.
+   *
+   * The queue is fed from a live capture onward, one tier earlier than a group's
+   * — a group only needs it on the recorded tier, whereas the root needs the
+   * queue as its PROOF that every move was accounted for. Without that proof one
+   * frame earlier, a scene that moves something every frame would never reach the
+   * clean frame it has to record on.
+   *
+   * Two guards make that sound against per-child view culling, which a group
+   * does not have to face (it suppresses culling inside itself and is culled as
+   * a whole):
+   *
+   * - **A capture that culled something is never patched.** A culled node is not
+   *   in the fragment, so a move that brings it back into view could not be
+   *   noticed at all. Such a capture keeps the plain re-collect behaviour.
+   * - **A moved node that left the view fails the reconcile.** Replaying would
+   *   keep drawing it. Its new rect is also folded into the kept-union, so a
+   *   later view change is judged against where the nodes are now, not where
+   *   they were at capture.
+   */
+  public reconcileTransform(transformRevision: number, view: View, backend: RenderBackend): boolean {
+    if (!this.fragment.hasDirtyTransformRows()) {
+      // Nothing queued. Either nothing moved (revisions agree), or a move
+      // happened while no recording was live — the enqueue gate skips those, so
+      // there is no proof the queue saw everything and the frame re-collects.
+      return this._transformRevision === transformRevision;
+    }
+
+    if (this._culledDuringCapture || !this._foldMovedNodesIntoKeptBounds(view)) {
+      this._dropRecording();
+
+      return false;
+    }
+
+    if (!reconcileRetainedTransformRows(this.fragment, backend, () => true)) {
+      return false;
+    }
+
+    this._transformRevision = transformRevision;
+
+    return true;
+  }
+
+  /**
+   * Grow the kept-union by every queued node's CURRENT cull rect, rejecting the
+   * reconcile if one of them no longer meets the view — it would have been
+   * dropped by a real collect, and replaying it would draw a node that is no
+   * longer selected.
+   */
+  private _foldMovedNodesIntoKeptBounds(view: View): boolean {
+    const viewRect = view.getBounds();
+
+    for (const node of this.fragment.dirtyTransformRows) {
+      if (!node.cullable) {
+        // Never culled: its position cannot change the selection.
+        continue;
+      }
+
+      const rect = node.cullArea ?? node.getBounds();
+
+      if (!viewRect.intersectsWith(rect)) {
+        return false;
+      }
+
+      this._keptBounds.addRect(rect);
+      this._keptEmpty = false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Give up the recorded tier without giving up the capture: the queue is
+   * drained so no stale row survives, and dropping the recording closes the
+   * enqueue gate so nothing accumulates until the next collect re-records.
+   */
+  private _dropRecording(): void {
+    this.fragment.instructions?.invalidate();
+    this.fragment.clearDirtyTransformRows();
   }
 
   /** The active capture was replayed at least once — it earned its keep. */

@@ -4,67 +4,11 @@ import { nextNodeRevision } from '#core/NodeRevision';
 import { registerTransformGroupBoundary, unregisterTransformGroupBoundary } from '#core/SceneNode';
 import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
+import { reconcileRetainedTransformRows } from '#rendering/plan/retainedTransformRowPatch';
 import type { RenderBackend } from '#rendering/RenderBackend';
 
 import { Container } from './Container';
-import type { Drawable } from './Drawable';
-import type { RetainedGroupBundle } from './plan/RetainedInstructionSet';
 import type { RenderNode } from './RenderNode';
-import { packTransformRow, TRANSFORM_FLOATS_PER_ROW } from './TransformBuffer';
-
-/**
- * A backend exposing a renderer registry, structurally — the same narrow
- * shape `drawCommandUsesSharedTransform` (`plan/RenderCommand.ts`) resolves
- * through, so both call sites agree on what "the renderer for this drawable"
- * means without a hard dependency between the two modules.
- */
-interface BackendWithRendererRegistry {
-  readonly rendererRegistry?: {
-    resolve(drawable: Drawable): unknown;
-  };
-}
-
-/**
- * Optional per-renderer escape hatch from the generic shared-`TransformBuffer`
- * row patch (`RetainedGroupBundle._patchTransformRow`): a renderer that packs
- * its own private per-node data (`_consumesSharedTransform === false`, e.g.
- * Text — its row format and storage differ from the shared buffer's) implements
- * this instead, patching whatever it owns directly. `base` is the same
- * capture-frame direct-draw base {@link RetainedContainer._tryPatchTransformRow}
- * already computes for the generic path; a renderer whose own indexing scheme
- * doesn't use it is free to ignore the parameter. Returns `false` when the
- * node isn't fast-patch-eligible (mirrors the generic path's own eligibility
- * guards), which drops the recording and falls back to a full re-record —
- * never wrong pixels, only a missed optimization.
- *
- * Renderer-agnostic by design: a WebGL2 implementation of the same renderer
- * (CPU-side vertex re-bake instead of a GPU buffer write) satisfies this exact
- * interface unchanged.
- * @internal
- */
-export interface OwnTransformRowPatcher {
-  _patchOwnTransformRow(node: RenderNode, bundle: RetainedGroupBundle, base: number): boolean;
-}
-
-const hasOwnTransformRowPatch = (renderer: unknown): renderer is OwnTransformRowPatcher =>
-  typeof (renderer as { _patchOwnTransformRow?: unknown } | null)?._patchOwnTransformRow === 'function';
-
-/**
- * Reused scratch for one patched transform row (3 rgba32f texels, the
- * {@link TransformBuffer} layout). Filled and consumed synchronously inside a
- * single patch call, so one module-level buffer is safe and allocation-free
- * under churn.
- */
-const patchRowScratch = new Float32Array(TRANSFORM_FLOATS_PER_ROW);
-
-/**
- * A {@link RetainedGroupBundle} with its optional `_patchTransformRow` capability
- * confirmed present. Exists so the runtime guard in {@link RetainedContainer._reconcileTransformRows}
- * only has to establish this once; the narrowing then carries through the
- * type system into {@link RetainedContainer._tryPatchTransformRow} instead of a
- * blind non-null assertion at the call site.
- */
-type PatchableRetainedGroupBundle = RetainedGroupBundle & { _patchTransformRow: NonNullable<RetainedGroupBundle['_patchTransformRow']> };
 
 /** Observation window for the retention diagnostic, in fragment builds (~frames). */
 const retainedDiagnosticWindow = 120;
@@ -399,114 +343,14 @@ export class RetainedContainer extends Container {
 
   /**
    * Reconcile the queued transform-only moves against the recorded
-   * instruction set before replay. On the recorded tier the transforms are
-   * baked into the group-owned store, so each moved DIRECT drawable child's row
-   * is patched in place (O(k) rows + one sub-range upload). Any ineligible move
-   * (nested below a sub-container, pixel-snapped, or not a recorded direct draw)
-   * drops the recording, so this frame entry-replays with live transforms and
-   * re-records — correct, O(entries), the rare fallback. On the entry-replay
-   * tier there is nothing to reconcile (transforms are re-read live); the queue
-   * is simply drained.
+   * instruction set before replay. Only DIRECT drawable children are in this
+   * group's patch contract — a move nested below a sub-container drops the
+   * recording, so the frame entry-replays with live transforms and re-records.
+   * The mechanics live in {@link reconcileRetainedTransformRows}; the render-root
+   * representation shares them with a wider eligibility rule.
    */
   private _reconcileTransformRows(backend: RenderBackend): void {
-    const set = this._fragment.instructions;
-    const bundle = set?.ownedBundle ?? null;
-
-    if (set === null || !set.hasRecording || bundle === null || typeof bundle._patchTransformRow !== 'function' || bundle.transformRowBase === undefined) {
-      // The set holds a recording whose baked transform rows we cannot patch
-      // (a backend without row-patch support), yet a transform-only move must
-      // still take effect. Drop the recording so
-      // `_markCurrentScopeRetained` fails validation and the group falls to
-      // entry replay (live transforms) + re-record this frame. Without this the
-      // group keeps splicing the stale rows and the moved node renders frozen.
-      if (set?.hasRecording) {
-        set.invalidate();
-      }
-
-      this._fragment.clearDirtyTransformRows();
-
-      return;
-    }
-
-    // The group-local row origin is the fragment's CAPTURE-frame minimum
-    // draw index — NOT `bundle.transformRowBase` (the record-frame's rebase
-    // base). The two frames can start the group at different absolute rows, and
-    // the store rows are group-local, so only the capture-frame subtree base
-    // maps a captured index to its store row (see directDrawBaseNodeIndex).
-    const base = this._fragment.directDrawBaseNodeIndex();
-    // The guard above already confirmed `_patchTransformRow` is present; carry
-    // that guarantee into the callee's parameter type instead of asserting
-    // blind at the call site inside it. Calling through `patchableBundle`
-    // (rather than a detached function reference) keeps the method's `this`
-    // bound to the bundle instance.
-    const patchableBundle: PatchableRetainedGroupBundle = bundle as PatchableRetainedGroupBundle;
-
-    for (const node of this._fragment.dirtyTransformRows) {
-      if (!this._tryPatchTransformRow(node, backend, patchableBundle, base)) {
-        // Ineligible: drop the baked recording. `_markCurrentScopeRetained`
-        // will now fail its validity check, so the group falls to entry replay
-        // (live transforms) and re-records this frame.
-        set.invalidate();
-        break;
-      }
-    }
-
-    this._fragment.clearDirtyTransformRows();
-  }
-
-  /**
-   * Patch one moved node's group-local transform row, or return `false` when it
-   * is not fast-patch-eligible. Eligible: a direct
-   * drawable child, non-snapped, present in the recorded row map. The
-   * group-local matrix is `getGlobalTransform()` composed to this boundary — the
-   * exact value the recorder wrote.
-   *
-   * A renderer that opts out of the shared `TransformBuffer` (its resolved
-   * renderer exposes {@link OwnTransformRowPatcher}, e.g. Text) is dispatched
-   * to its OWN patch method instead of the generic `bundle._patchTransformRow`
-   * below — its row lives in a private, renderer-owned store the generic path
-   * never reads, so calling the generic patch there would silently no-op
-   * against bytes nobody consumes (stale pixels, not a caught failure).
-   */
-  private _tryPatchTransformRow(node: RenderNode, backend: RenderBackend, bundle: PatchableRetainedGroupBundle, base: number): boolean {
-    if (node.parent !== this) {
-      return false;
-    }
-
-    const drawable = node as unknown as Drawable;
-    const registry = (backend as BackendWithRendererRegistry).rendererRegistry;
-
-    if (registry && typeof registry.resolve === 'function') {
-      try {
-        const renderer = registry.resolve(drawable);
-
-        if (hasOwnTransformRowPatch(renderer)) {
-          return renderer._patchOwnTransformRow(node, bundle, base);
-        }
-      } catch {
-        // No renderer registered for this drawable (custom drawable type) —
-        // fall through to the generic shared-transform patch path below,
-        // unchanged from before this dispatch existed.
-      }
-    }
-
-    const nodeIndex = this._fragment.directDrawNodeIndex(drawable);
-
-    // A recorded direct child may be pixel-snapped in either mode: its patched
-    // row carries the raw transform plus the snap flag (packTransformRow) and the
-    // shader rounds the device origin (and, in geometry mode, the quad edges), so
-    // the row stays view-independent and fully recordable.
-    if (nodeIndex === undefined) {
-      return false;
-    }
-
-    // Transform-only patch: tint is not part of this row anymore (it
-    // lives in the bundle's separate tint texture) and a moved node's tint
-    // doesn't change, so there is nothing to patch there.
-    packTransformRow(patchRowScratch, 0, node.getGlobalTransform(), drawable.pixelSnapMode);
-    bundle._patchTransformRow(nodeIndex - base, patchRowScratch);
-
-    return true;
+    reconcileRetainedTransformRows(this._fragment, backend, node => node.parent === this);
   }
 
   /**

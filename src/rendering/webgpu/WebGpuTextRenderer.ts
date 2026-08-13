@@ -3,8 +3,8 @@
 import { Matrix } from '#math/Matrix';
 import { affineMat3Std140FloatCount, packAffineMat3Std140, packedGroupChanged } from '#rendering/affinePacking';
 import type { RetainedGroupBundle } from '#rendering/plan/RetainedInstructionSet';
+import type { OwnTransformRowPatcher } from '#rendering/plan/retainedTransformRowPatch';
 import type { RenderNode } from '#rendering/RenderNode';
-import type { OwnTransformRowPatcher } from '#rendering/RetainedContainer';
 import { type BitmapText } from '#rendering/text/BitmapText';
 import type { TextPageQuads } from '#rendering/text/Text';
 import { Text } from '#rendering/text/Text';

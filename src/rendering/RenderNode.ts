@@ -1,5 +1,5 @@
 import { Color } from '#core/Color';
-import { SceneNode } from '#core/SceneNode';
+import { registerRetainedRenderRoot, SceneNode, unregisterRetainedRenderRoot } from '#core/SceneNode';
 import { Signal } from '#core/Signal';
 import type { InteractionEvent, InteractionEventType } from '#input/InteractionEvent';
 import type { KeyEvent } from '#input/KeyEvent';
@@ -472,7 +472,34 @@ export abstract class RenderNode extends SceneNode {
    * here is an exclusive owner slot on the subtree.
    */
   public _retainedRootRepresentation(): RetainedRootRepresentation {
-    return (this._retainedRoot ??= new RetainedRootRepresentation());
+    if (this._retainedRoot === null) {
+      this._retainedRoot = new RetainedRootRepresentation();
+      // Arm the transform-move seam: while at least one representation is live,
+      // own-transform mutations walk their ancestor chain and offer themselves
+      // to every root above. Balanced by destroy().
+      registerRetainedRenderRoot();
+    }
+
+    return this._retainedRoot;
+  }
+
+  /**
+   * @internal — the descendant transform-move seam for the automatic root
+   * representation. Gated on a live CAPTURE, not on a live recording as
+   * {@link RetainedContainer._enqueueDirtyTransformRow} is: the root treats a
+   * queued move as its proof that the transform channel is accounted for, and
+   * that proof has to exist one tier earlier. Without it a scene that moves
+   * something every frame would never see the clean frame it needs to record in
+   * the first place, and would stay on plain collect forever.
+   */
+  public override _enqueueRetainedRootRow(node: RenderNode): void {
+    const representation = this._retainedRoot;
+
+    if (!representation?.fragment.hasCapture) {
+      return;
+    }
+
+    representation.fragment.enqueueDirtyTransformRow(node);
   }
 
   /** @internal */
@@ -628,9 +655,13 @@ export abstract class RenderNode extends SceneNode {
 
     this._destroyCacheTexture();
     // Releases the captured entry records (and their drawable references) plus
-    // the recorded GPU bundle this node owned as a render root.
-    this._retainedRoot?.dispose();
-    this._retainedRoot = null;
+    // the recorded GPU bundle this node owned as a render root, and balances the
+    // representation's seam registration exactly once.
+    if (this._retainedRoot !== null) {
+      this._retainedRoot.dispose();
+      this._retainedRoot = null;
+      unregisterRetainedRenderRoot();
+    }
     this._cacheBounds.destroy();
     this._cacheSprite?.destroy();
     this._cacheSprite = null;

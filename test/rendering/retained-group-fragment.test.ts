@@ -94,23 +94,23 @@ describe('RetainedGroupFragment', () => {
     fragment.capture(1, 1, fakeBackendA, [makeScopeDrawEntry(spriteA, 3), makeScopeDrawEntry(spriteB, 5)]);
 
     expect((fragment.entries[0] as { nodeIndex: number }).nodeIndex).toBe(3);
-    expect(fragment.directDrawNodeIndex(spriteA)).toBe(3);
-    expect(fragment.directDrawNodeIndex(spriteB)).toBe(5);
-    expect(fragment.directDrawNodeIndex(new Drawable())).toBeUndefined();
+    expect(fragment.recordedRowIndex(spriteA)).toBe(3);
+    expect(fragment.recordedRowIndex(spriteB)).toBe(5);
+    expect(fragment.recordedRowIndex(new Drawable())).toBeUndefined();
 
     spriteA.destroy();
     spriteB.destroy();
   });
 
-  test('directDrawNodeIndex rebuilds after a recapture (fresh row assignment)', () => {
+  test('recordedRowIndex rebuilds after a recapture (fresh row assignment)', () => {
     const fragment = new RetainedGroupFragment();
     const sprite = new Drawable();
 
     fragment.capture(1, 1, fakeBackendA, [makeScopeDrawEntry(sprite, 4)]);
-    expect(fragment.directDrawNodeIndex(sprite)).toBe(4);
+    expect(fragment.recordedRowIndex(sprite)).toBe(4);
 
     fragment.capture(2, 1, fakeBackendA, [makeScopeDrawEntry(sprite, 9)]);
-    expect(fragment.directDrawNodeIndex(sprite)).toBe(9);
+    expect(fragment.recordedRowIndex(sprite)).toBe(9);
 
     sprite.destroy();
   });
