@@ -1,0 +1,24 @@
+/**
+ * Renderer SDK export surface snapshot gate.
+ *
+ * Captures every runtime-visible export name from the renderer-sdk barrel and
+ * compares against the committed Vitest snapshot. The test fails whenever
+ * exports are added or removed, forcing the change to be deliberate.
+ *
+ * To update the snapshot after an intentional export change:
+ *   pnpm exec vitest run --update
+ *
+ * Note: only runtime-visible names appear here (classes, functions, enums,
+ * const objects). Pure TypeScript interfaces and type aliases are erased at
+ * compile time and do not show up in Object.keys() output.
+ */
+
+import * as exo from '#renderer-sdk';
+
+describe('renderer-sdk export surface snapshot', () => {
+  test('sorted runtime export names match committed snapshot', () => {
+    const sortedKeys = Object.keys(exo).sort();
+
+    expect(sortedKeys).toMatchSnapshot();
+  });
+});
