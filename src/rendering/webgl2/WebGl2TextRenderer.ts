@@ -5,6 +5,7 @@ import { Shader } from '#rendering/shader/Shader';
 import { type BitmapText } from '#rendering/text/BitmapText';
 import type { TextPageQuads } from '#rendering/text/Text';
 import { Text } from '#rendering/text/Text';
+import { composeTextAtlasFragmentGlsl, packTextNodeAtlasSlot, textAtlasTextureSlots, textNodeIndexMask } from '#rendering/text/textAtlasTextureSlots';
 import { DataTexture } from '#rendering/texture/DataTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import { BlendModes, BufferTypes, BufferUsage, IndexElementTypes, RenderingPrimitives, TextureFormat } from '#rendering/types';
@@ -44,8 +45,8 @@ import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './
 // Texel 8 : (r,  g,  b,  a )  — gradientBottom
 // Texel 9 : (minX, minY, w, h) — text block bounds (local space, for gradient UV)
 //
-// The shaders divide shadowOffset by u_pageSize (a per-batch uniform = atlas texture width)
-// to convert px → UV space.
+// The shaders divide shadowOffset by u_pageSize (a per-batch uniform shared by
+// compatible atlas textures) to convert px → UV space.
 
 const nodeTexels = 10;
 const nodeFloats = nodeTexels * 4; // 40 floats per node
@@ -55,7 +56,7 @@ const identityGroupMat3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
 // Per-vertex layout (20 bytes), mirrors WebGpuTextRenderer's vertex buffer exactly:
 //   a_position : vec2  f32  (offset  0,  8 bytes)  ← LOCAL space
 //   a_texcoord : vec2  f32  (offset  8,  8 bytes)
-//   a_nodeIndex: float f32  (offset 16,  4 bytes)  ← row into the data texture (transform + style)
+//   a_packedNodeSlot: uint u32 (offset 16, 4 bytes) ← 24-bit node row + 8-bit atlas slot
 //
 // The vertex shader reads the world transform live from the per-node data texture via
 // texelFetch (same texture the fragment stage already reads style from), keyed by
@@ -81,6 +82,9 @@ interface PendingQuad {
   readonly atlasTexture: Texture;
   readonly node: Text | BitmapText;
 }
+
+const sharesAtlasBatchClass = (a: PendingQuad, b: PendingQuad): boolean =>
+  a.shaderType === b.shaderType && a.atlasTexture.width === b.atlasTexture.width && a.atlasTexture.height === b.atlasTexture.height;
 
 /**
  * Record-time payload carried from `flush()` to `_configureRetainedVao`/replay.
@@ -138,8 +142,9 @@ interface TextRendererConnection {
  * - `text-color` — RGBA atlas (emoji / colour fonts)
  *
  * All per-node data (world transform + style) is packed into a single
- * `RGBA32F` data texture uploaded once per {@link flush}.  Nodes sharing the
- * same shader type and atlas page are drawn in a single `drawElements` call.
+ * `RGBA32F` data texture uploaded once per {@link flush}. Compatible atlas
+ * textures rotate through an eight-slot table, so one `drawElements` call can
+ * cover several fonts/pages.
  */
 export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText> implements WebGl2RetainedBatchReplayer, OwnTransformRowPatcher {
   /**
@@ -151,13 +156,11 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
   public readonly _consumesSharedTransform = false;
 
   /**
-   * Retained-batch opt-in: a flush whose glyph quads all
-   * share one (shaderType, atlasTexture) — the overwhelmingly common case, one
-   * font/atlas per flush — records the vertex bytes into the group instance
-   * buffer and replays them with `drawElements`. A flush that spans multiple
-   * (shaderType, atlasTexture) batches, or a second Text flush inside the same
-   * capture window, poisons the capture instead — always safe, just a missed
-   * optimization.
+   * Retained-batch opt-in: one compatible shader/page class containing at most
+   * eight atlas textures records the vertex bytes into the group instance
+   * buffer and replays them with `drawElements`. A flush that needs several
+   * batches, or a second Text flush inside the same capture window, poisons the
+   * capture instead — always safe, just a missed optimization.
    *
    * The world transform is read live in the vertex shader (mirrors
    * `WebGpuTextRenderer`), so an own-transform move is an O(1) GPU-side texel
@@ -168,12 +171,11 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
    */
   public readonly _supportsRetainedBatches = true;
 
-  private readonly _sdfShader: Shader = new Shader(textVertSource, textSdfFragSource);
-  private readonly _msdfShader: Shader = new Shader(textVertSource, textMsdfFragSource);
-  private readonly _colorShader: Shader = new Shader(textVertSource, textColorFragSource);
+  private readonly _sdfShader: Shader = new Shader(textVertSource, composeTextAtlasFragmentGlsl(textSdfFragSource));
+  private readonly _msdfShader: Shader = new Shader(textVertSource, composeTextAtlasFragmentGlsl(textMsdfFragSource));
+  private readonly _colorShader: Shader = new Shader(textVertSource, composeTextAtlasFragmentGlsl(textColorFragSource));
 
-  private readonly _textureUnitScratch = new Int32Array([0]);
-  private readonly _nodeDataUnitScratch = new Int32Array([1]);
+  private readonly _nodeDataUnitScratch = new Int32Array([textAtlasTextureSlots]);
   private readonly _floatScratch = new Float32Array(1);
   // Own-transform-move patch scratch: 2 texels (transform cols 0-1), mirrors
   // WebGpuTextRenderer's `_patchRowScratch`.
@@ -192,8 +194,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
   // (nesting-safe — one entry per capture-open call).
   private _retainedQuadIndexBuffer: WebGl2RenderBuffer | null = null;
   private _retainedQuadCapacity = 0;
-  private readonly _retainedTextureUnit0Scratch = new Int32Array([0]);
-  private readonly _retainedNodeDataUnitScratch = new Int32Array([1]);
+  private readonly _retainedNodeDataUnitScratch = new Int32Array([textAtlasTextureSlots]);
   private readonly _recordedCaptures = new WeakSet<WebGl2RetainedGroupResources>();
 
   private _nodeDataArray: Float32Array = new Float32Array(initialNodeCapacity * nodeFloats);
@@ -250,6 +251,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     this._sdfShader.sync();
     this._msdfShader.sync();
     this._colorShader.sync();
+    this._pinAtlasSamplerUnits();
 
     const indexBuffer = new WebGl2RenderBuffer(BufferTypes.ElementArrayBuffer, this._indexData, BufferUsage.DynamicDraw).connect(
       this._createBufferRuntime(gl, buffers),
@@ -267,7 +269,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       .addIndex(indexBuffer, IndexElementTypes.UnsignedInt)
       .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_position'), gl.FLOAT, false, vertexStrideBytes, 0)
       .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_texcoord'), gl.FLOAT, false, vertexStrideBytes, 8)
-      .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_nodeIndex'), gl.FLOAT, false, vertexStrideBytes, 16);
+      .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_packedNodeSlot'), gl.UNSIGNED_INT, false, vertexStrideBytes, 16, true);
 
     vao.connect(this._createVaoRuntime(gl, vaoHandle));
 
@@ -331,6 +333,10 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     if (existing !== undefined) return existing;
 
     const idx = this._nodeCount++;
+
+    if (idx > textNodeIndexMask) {
+      throw new Error(`WebGl2TextRenderer: node index ${idx} exceeds the 24-bit packed vertex limit.`);
+    }
     this._nodeIndexMap.set(node, idx);
     this._ensureNodeCapacity(idx + 1);
     this._packNodeData(idx, node);
@@ -446,7 +452,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     // invisible whenever it is the first draw of a frame. A raw gl.bindTexture
     // would likewise leave the bind cache claiming unit 1 still holds whatever
     // managed texture was there last.
-    this.getBackend().setActiveTextureUnit(1).bindRawTexture(c.nodeDataTexture);
+    this.getBackend().setActiveTextureUnit(textAtlasTextureSlots).bindRawTexture(c.nodeDataTexture);
     gl.texSubImage2D(
       gl.TEXTURE_2D,
       0,
@@ -471,10 +477,15 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       }
     }
 
-    // Sort by (shaderType, atlasTexture) so equal-key quads are contiguous
+    // Sort by compatible atlas class, then texture identity. Up to eight
+    // textures of one class share a draw through the shader slot table.
     this._pendingQuads.sort((a, b) => {
       const sc = a.shaderType.localeCompare(b.shaderType);
       if (sc !== 0) return sc;
+      const wc = a.atlasTexture.width - b.atlasTexture.width;
+      if (wc !== 0) return wc;
+      const hc = a.atlasTexture.height - b.atlasTexture.height;
+      if (hc !== 0) return hc;
       return (this._textureKeyMap.get(a.atlasTexture) ?? 0) - (this._textureKeyMap.get(b.atlasTexture) ?? 0);
     });
 
@@ -483,25 +494,33 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     let i = 0;
 
     // Retained recording: a recordable Text flush is a
-    // SINGLE (shaderType, atlasTexture) batch. A second batch this flush (or a
+    // SINGLE compatible multi-atlas batch. A second batch this flush (or a
     // second flush into the same capture window) poisons the capture below.
     const capturing = backend._isRetainedCapturing;
     let batchCount = 0;
     let recWordCount = 0;
     let recQuadCount = 0;
-    let recAtlas: Texture | null = null;
+    let recAtlases: readonly Texture[] = [];
     let recShaderType: ShaderType = 'sdf';
 
     while (i < quads.length) {
       // In-bounds: `i` < `quads.length` per the loop guard.
       const first = quads[i]!;
-      const firstTextureKey = this._textureKeyMap.get(first.atlasTexture);
+      const atlasSlots = new Map<Texture, number>();
+      const atlasTextures: Texture[] = [];
+      let j = i;
 
-      let j = i + 1;
       while (j < quads.length) {
         // In-bounds: `j` < `quads.length` per the loop guard.
         const pq = quads[j]!;
-        if (pq.shaderType !== first.shaderType || this._textureKeyMap.get(pq.atlasTexture) !== firstTextureKey) break;
+        if (!sharesAtlasBatchClass(first, pq)) break;
+
+        if (!atlasSlots.has(pq.atlasTexture)) {
+          if (atlasTextures.length === textAtlasTextureSlots) break;
+          atlasSlots.set(pq.atlasTexture, atlasTextures.length);
+          atlasTextures.push(pq.atlasTexture);
+        }
+
         j++;
       }
 
@@ -527,7 +546,8 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
 
       for (let k = i; k < j; k++) {
         // In-bounds: `k` ranges over `[i, j)` ⊆ `[0, quads.length)`.
-        const { quads: batch, nodeIndex } = quads[k]!;
+        const { quads: batch, nodeIndex, atlasTexture } = quads[k]!;
+        const atlasSlot = atlasSlots.get(atlasTexture)!;
         const qVerts = batch.quadCount * 4;
         const { vertices, uvs, indices } = batch;
 
@@ -539,7 +559,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
           this._float32View[w + 1] = vertices[vp + 1]!;
           this._float32View[w + 2] = uvs[vp]!;
           this._float32View[w + 3] = uvs[vp + 1]!;
-          this._float32View[w + 4] = nodeIndex;
+          this._uint32View[w + 4] = packTextNodeAtlasSlot(nodeIndex, atlasSlot);
         }
 
         for (let x = 0; x < indices.length; x++) {
@@ -555,7 +575,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       if (recordThisBatch) {
         recWordCount = totalVerts * vertexStrideWords;
         recQuadCount = totalIndices / 6;
-        recAtlas = first.atlasTexture;
+        recAtlases = atlasTextures;
         recShaderType = first.shaderType;
       }
 
@@ -565,7 +585,9 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       c.indexBuffer.upload(this._indexData.subarray(0, totalIndices));
 
       backend.bindVertexArrayObject(c.vao);
-      backend.bindTexture(first.atlasTexture, 0);
+      for (let slot = 0; slot < atlasTextures.length; slot++) {
+        backend.bindTexture(atlasTextures[slot]!, slot);
+      }
 
       if (shader.uniforms.has('u_projection')) {
         shader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
@@ -576,9 +598,6 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
         shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
       }
       backend._stageViewportUniform(shader);
-      if (shader.uniforms.has('u_texture')) {
-        shader.getUniform('u_texture').setValue(this._textureUnitScratch);
-      }
       if (shader.uniforms.has('u_nodeData')) {
         shader.getUniform('u_nodeData').setValue(this._nodeDataUnitScratch);
       }
@@ -603,15 +622,16 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     }
 
     if (capturing) {
-      this._tryRecordRetainedBatch(backend, batchCount, recWordCount, recQuadCount, recShaderType, recAtlas);
+      this._tryRecordRetainedBatch(backend, batchCount, recWordCount, recQuadCount, recShaderType, recAtlases);
     }
   }
 
   /**
    * Record this flush's ONE glyph-quad batch for retained replay, or poison the
    * capture when it is not a clean single batch (multiple distinct
-   * (shaderType, atlasTexture) combinations this flush, or a second Text flush
-   * into the same capture window). Poisoning is always safe: the group falls
+   * incompatible shader/page classes or more than eight atlas textures this
+   * flush, or a second Text flush into the same capture window). Poisoning is
+   * always safe: the group falls
    * back to entry replay for that frame, never wrong pixels.
    */
   private _tryRecordRetainedBatch(
@@ -620,7 +640,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     wordCount: number,
     quadCount: number,
     shaderType: ShaderType,
-    atlas: Texture | null,
+    atlases: readonly Texture[],
   ): void {
     const bundle = backend._currentRetainedCaptureBundle;
 
@@ -628,7 +648,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       return;
     }
 
-    if (batchCount !== 1 || atlas === null || this._recordedCaptures.has(bundle)) {
+    if (batchCount !== 1 || atlases.length === 0 || this._recordedCaptures.has(bundle)) {
       backend._poisonRetainedCaptures();
 
       return;
@@ -642,7 +662,16 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       shaderType,
     };
 
-    backend._recordRetainedBatch(this, this._uint32View.subarray(0, wordCount), this._nodeCount, BlendModes.Normal, [atlas], 1, null, rendererData);
+    backend._recordRetainedBatch(
+      this,
+      this._uint32View.subarray(0, wordCount),
+      this._nodeCount,
+      BlendModes.Normal,
+      atlases,
+      atlases.length,
+      null,
+      rendererData,
+    );
 
     this._recordedCaptures.add(bundle);
   }
@@ -651,6 +680,19 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     if (type === 'sdf') return this._sdfShader;
     if (type === 'msdf') return this._msdfShader;
     return this._colorShader;
+  }
+
+  private _pinAtlasSamplerUnits(): void {
+    const samplerUnit = new Int32Array(1);
+
+    for (const shader of [this._sdfShader, this._msdfShader, this._colorShader]) {
+      for (let slot = 0; slot < textAtlasTextureSlots; slot++) {
+        samplerUnit[0] = slot;
+        shader.getUniform(`u_texture${slot}`).setValue(samplerUnit);
+      }
+
+      shader.sync();
+    }
   }
 
   // ── Retained-batch record/replay ──────────────────────────────────────────
@@ -705,7 +747,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       .addIndex(indexBuffer, IndexElementTypes.UnsignedInt)
       .addAttribute(buffer, shader.getAttribute('a_position'), gl.FLOAT, false, vertexStrideBytes, base + 0)
       .addAttribute(buffer, shader.getAttribute('a_texcoord'), gl.FLOAT, false, vertexStrideBytes, base + 8)
-      .addAttribute(buffer, shader.getAttribute('a_nodeIndex'), gl.FLOAT, false, vertexStrideBytes, base + 16);
+      .addAttribute(buffer, shader.getAttribute('a_packedNodeSlot'), gl.UNSIGNED_INT, false, vertexStrideBytes, base + 16, true);
 
     const state = this._getTextReplayState(payload.bundle);
 
@@ -757,15 +799,16 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     }
 
     const shader = this._shaderFor(data.shaderType);
-    // Text's recording always stages exactly one atlas page texture (single
-    // batch); the payload's shared type is wider only because other renderers
-    // can target a RenderTexture.
+    // Text's recording stages one or more atlas page textures in packed-slot
+    // order. All belong to the same shader/page-size class.
     const atlas = payload.textures[0] as Texture;
     const view = backend.view;
 
     backend.setBlendMode(payload.blendMode);
-    backend.bindTexture(atlas, 0);
-    backend.bindTexture(state.nodeDataTexture, 1);
+    for (let slot = 0; slot < payload.textures.length; slot++) {
+      backend.bindTexture(payload.textures[slot]!, slot);
+    }
+    backend.bindTexture(state.nodeDataTexture, textAtlasTextureSlots);
 
     if (shader.uniforms.has('u_projection')) {
       shader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
@@ -776,9 +819,6 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
     }
     backend._stageViewportUniform(shader);
-    if (shader.uniforms.has('u_texture')) {
-      shader.getUniform('u_texture').setValue(this._retainedTextureUnit0Scratch);
-    }
     if (shader.uniforms.has('u_nodeData')) {
       shader.getUniform('u_nodeData').setValue(this._retainedNodeDataUnitScratch);
     }
@@ -992,8 +1032,13 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
               attribute.buffer.bind();
               lastBuffer = attribute.buffer;
             }
-            gl.vertexAttribPointer(attribute.location, attribute.size, attribute.type, attribute.normalized, attribute.stride, attribute.start);
+            if (attribute.integer) {
+              gl.vertexAttribIPointer(attribute.location, attribute.size, attribute.type, attribute.stride, attribute.start);
+            } else {
+              gl.vertexAttribPointer(attribute.location, attribute.size, attribute.type, attribute.normalized, attribute.stride, attribute.start);
+            }
             gl.enableVertexAttribArray(attribute.location);
+            gl.vertexAttribDivisor(attribute.location, attribute.divisor);
           }
           if (vao.indexBuffer) vao.indexBuffer.bind();
           appliedVersion = vao.version;

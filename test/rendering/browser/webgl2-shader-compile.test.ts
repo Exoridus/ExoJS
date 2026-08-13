@@ -13,6 +13,8 @@
 // against the same SwiftShader driver the WebGL2 browser project runs on. A
 // reserved-word (or any other compile) regression now fails right here.
 
+import { composeTextAtlasFragmentGlsl } from '#rendering/text/textAtlasTextureSlots';
+
 // Core shaders plus the extension packages' own — the particle stage ships
 // from `@codexo/exojs-particles`, so a glob over `src/` alone would leave the
 // only GLSL outside core uncompiled here.
@@ -27,18 +29,28 @@ type ShaderStage = 'vertex' | 'fragment';
 interface ShaderEntry {
   readonly name: string;
   readonly source: string;
+  /** Source exactly as the owning renderer submits it to WebGL. */
+  readonly runtimeSource: string;
   readonly stage: ShaderStage;
 }
 
+const composeRuntimeSource = (name: string, source: string): string =>
+  name.startsWith('text-') && name.endsWith('.frag') ? composeTextAtlasFragmentGlsl(source) : source;
+
 const shaders: readonly ShaderEntry[] = Object.entries(shaderModules)
-  .map(([path, source]) => ({
-    name: path.slice(path.lastIndexOf('/') + 1),
-    source,
-    stage: path.endsWith('.vert') ? 'vertex' : 'fragment',
-  }))
+  .map(([path, source]) => {
+    const name = path.slice(path.lastIndexOf('/') + 1);
+
+    return {
+      name,
+      source,
+      runtimeSource: composeRuntimeSource(name, source),
+      stage: path.endsWith('.vert') ? 'vertex' : 'fragment',
+    };
+  })
   .sort((a, b) => a.name.localeCompare(b.name));
 
-const sourceByName: Record<string, string> = Object.fromEntries(shaders.map(entry => [entry.name, entry.source]));
+const sourceByName: Record<string, string> = Object.fromEntries(shaders.map(entry => [entry.name, entry.runtimeSource]));
 
 // Vertex/fragment pairs as wired up by the renderer sources; `text.vert` is
 // shared across all three text-fragment variants, while `particle.*` and
@@ -117,8 +129,8 @@ describe('WebGL2 GLSL shader sources', () => {
     }
   });
 
-  test.each(shaders)('compiles $name', ({ name, source, stage }) => {
-    const { shader, log } = compileShader(gl, stage, source);
+  test.each(shaders)('compiles $name', ({ name, runtimeSource, stage }) => {
+    const { shader, log } = compileShader(gl, stage, runtimeSource);
 
     try {
       expect(log, `${name} failed to compile:\n${log ?? ''}`).toBeNull();

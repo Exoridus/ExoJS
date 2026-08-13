@@ -22,7 +22,7 @@ import { RetainedContainer } from '#rendering/RetainedContainer';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { spriteMaterialTextureSlots } from '#rendering/sprite/spriteMaterialSources';
 import { Texture } from '#rendering/texture/Texture';
-import { BlendModes } from '#rendering/types';
+import { BlendModes, ScaleModes, WrapModes } from '#rendering/types';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { readWebGpuPixels } from './_backendSetup';
@@ -67,7 +67,7 @@ const makeApp = (canvas: HTMLCanvasElement): Application =>
     },
   }) as unknown as Application;
 
-const createSolidTexture = (r: number, g: number, b: number): Texture => {
+const createSolidTexture = (r: number, g: number, b: number, a = 255): Texture => {
   const source = document.createElement('canvas');
 
   source.width = 16;
@@ -79,16 +79,48 @@ const createSolidTexture = (r: number, g: number, b: number): Texture => {
     throw new Error('2D context is required to create test textures.');
   }
 
-  context.fillStyle = `rgb(${r}, ${g}, ${b})`;
+  context.fillStyle = `rgba(${r}, ${g}, ${b}, ${a / 255})`;
   context.fillRect(0, 0, source.width, source.height);
 
   return new Texture(source);
+};
+
+const createSplitTexture = (): Texture => {
+  const source = document.createElement('canvas');
+
+  source.width = 2;
+  source.height = 2;
+
+  const context = source.getContext('2d');
+
+  if (!context) {
+    throw new Error('2D context is required to create test textures.');
+  }
+
+  context.fillStyle = '#f00';
+  context.fillRect(0, 0, 1, 2);
+  context.fillStyle = '#00f';
+  context.fillRect(1, 0, 1, 2);
+
+  return new Texture(source, { scaleMode: ScaleModes.Linear, generateMipMap: false });
 };
 
 const createMaterial = (): SpriteMaterial =>
   new SpriteMaterial({
     shader: new ShaderSource({ wgsl: customFragmentWgsl }),
     uniforms: { u_userColor: [1, 0, 0.5, 1] },
+  });
+
+const createPassThroughMaterial = (): SpriteMaterial =>
+  new SpriteMaterial({
+    shader: new ShaderSource({
+      wgsl: `
+@fragment
+fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
+  return sampleBase(input.textureSlot, input.texcoord) * input.color;
+}
+`.trim(),
+    }),
   });
 
 const render = async (backend: WebGpuBackend, node: RenderNode): Promise<void> => {
@@ -100,6 +132,67 @@ const render = async (backend: WebGpuBackend, node: RenderNode): Promise<void> =
 };
 
 describe('custom SpriteMaterial WebGPU browser', () => {
+  test('material sampler overrides only base-texture sampling and mutates live during retained replay', async ctx => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+
+    const backend = new WebGpuBackend(makeApp(canvas));
+
+    await backend.initialize();
+    wireCoreRenderers(backend);
+
+    const texture = createSplitTexture();
+    const material = createPassThroughMaterial();
+    const group = new RetainedContainer();
+    const sprite = new Sprite(texture);
+
+    material.sampler = { scaleMode: ScaleModes.Nearest, wrapMode: WrapModes.ClampToEdge };
+    sprite.material = material;
+    sprite.setPosition(16, 16).setScale(16, 16);
+    group.addChild(sprite);
+
+    const cleanup = (): void => {
+      group.destroy();
+      material.destroy();
+      texture.destroy();
+      backend.destroy();
+    };
+
+    try {
+      await render(backend, group);
+      await render(backend, group);
+      await render(backend, group);
+      expectPixelNear(readWebGpuPixels(backend, 64)(31, 24), [255, 0, 0, 255]);
+
+      const replay = vi.spyOn(backend, '_replayRetainedBatch');
+
+      material.sampler.scaleMode = ScaleModes.Linear;
+      await render(backend, group);
+
+      const blended = readWebGpuPixels(backend, 64)(31, 24);
+
+      expect(replay).toHaveBeenCalledTimes(1);
+      expect(blended[0]).toBeGreaterThan(100);
+      expect(blended[0]).toBeLessThan(200);
+      expect(blended[2]).toBeGreaterThan(50);
+      expect(blended[2]).toBeLessThan(160);
+      replay.mockRestore();
+    } catch (error) {
+      if (error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError')) {
+        cleanup();
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+        return;
+      }
+
+      throw error;
+    } finally {
+      if (!texture.destroyed) cleanup();
+    }
+  });
+
   test('retained replay keeps uniform values live and recoverably re-records blend changes', async ctx => {
     const canvas = document.createElement('canvas');
     canvas.width = 64;
@@ -237,6 +330,82 @@ describe('custom SpriteMaterial WebGPU browser', () => {
       firstPattern.destroy();
       base.destroy();
       backend.destroy();
+    }
+  });
+
+  test('matches the default premultiply result and preserves per-texture flags inside one custom batch', async ctx => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+
+    const backend = new WebGpuBackend(makeApp(canvas));
+
+    await backend.initialize();
+    wireCoreRenderers(backend);
+
+    const device = getBackendDevice(backend);
+    // Browser-source pixels are unpremultiplied. The default-true texture must
+    // therefore resolve (200, 100, 50, .5) to roughly (100, 50, 25, .5), while
+    // the false texture already stores those premultiplied RGB channels.
+    const defaultTexture = createSolidTexture(200, 100, 50, 128);
+    const customPremultiplyTexture = createSolidTexture(200, 100, 50, 128);
+    const customAlreadyPremultipliedTexture = createSolidTexture(100, 50, 25, 128);
+
+    customAlreadyPremultipliedTexture.setPremultiplyAlpha(false);
+
+    const material = createPassThroughMaterial();
+    const root = new Container();
+    const defaultSprite = new Sprite(defaultTexture);
+    const customPremultiplySprite = new Sprite(customPremultiplyTexture);
+    const customAlreadyPremultipliedSprite = new Sprite(customAlreadyPremultipliedTexture);
+
+    defaultSprite.setPosition(4, 16);
+    customPremultiplySprite.setPosition(24, 16);
+    customAlreadyPremultipliedSprite.setPosition(44, 16);
+    customPremultiplySprite.material = material;
+    customAlreadyPremultipliedSprite.material = material;
+    root.addChild(defaultSprite);
+    root.addChild(customPremultiplySprite);
+    root.addChild(customAlreadyPremultipliedSprite);
+
+    const cleanup = (): void => {
+      root.destroy();
+      material.destroy();
+      defaultTexture.destroy();
+      customPremultiplyTexture.destroy();
+      customAlreadyPremultipliedTexture.destroy();
+      backend.destroy();
+    };
+
+    device.pushErrorScope('validation');
+
+    try {
+      backend.resetStats();
+      backend.clear(Color.black);
+      root.render(backend);
+      backend.flush();
+
+      const validationError = await device.popErrorScope();
+      const readPixel = readWebGpuPixels(backend, 64);
+      const expected = [100, 50, 25, 255] as const;
+
+      expect(validationError).toBeNull();
+      expect(backend.stats.drawCalls).toBe(2);
+      expectPixelNear(readPixel(8, 20), expected);
+      expectPixelNear(readPixel(28, 20), expected);
+      expectPixelNear(readPixel(48, 20), expected);
+    } catch (error) {
+      if (error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError')) {
+        cleanup();
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+        return;
+      }
+
+      throw error;
+    } finally {
+      if (!defaultTexture.destroyed) cleanup();
     }
   });
 

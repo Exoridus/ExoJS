@@ -501,7 +501,7 @@ describe('render plan grouping key audit', () => {
     });
 
     test('different material blend modes produce different groupIndices', () => {
-      // material.pipelineKey is derived via derivePipelineKey(shaderId, material.blendMode, sampler).
+      // material.pipelineKey is derived from shader identity + blend mode.
       // Two materials with different blendModes therefore produce different
       // pipelineKeys and end up in different optimizer groups — matching the
       // sprite renderer's flush-on-blendMode-change boundary.

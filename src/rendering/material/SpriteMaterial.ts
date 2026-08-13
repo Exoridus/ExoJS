@@ -8,10 +8,10 @@ import { ShaderSource } from './ShaderSource';
 /**
  * Material specialization for {@link Sprite} drawables.
  *
- * API shell for the sprite custom-material path; the renderer integration
- * and instancing contract are added in a later phase. The base texture
- * stays on the sprite — this material supplies the fragment program,
- * uniforms, and additional texture bindings.
+ * The base texture stays on the sprite and is sampled through the engine's
+ * `sampleBase(slot, uv)` helper, which preserves batching and resolves the
+ * backend's premultiplied-alpha convention. The material supplies the custom
+ * fragment program, uniforms, additional texture bindings, and blend mode.
  * @advanced
  */
 export class SpriteMaterial extends Material {

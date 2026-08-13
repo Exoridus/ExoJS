@@ -1,7 +1,6 @@
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
-import type { SamplerOptions } from '#rendering/texture/Sampler';
 import type { Texture } from '#rendering/texture/Texture';
-import { BlendModes } from '#rendering/types';
+import { BlendModes, type ScaleModes, type WrapModes } from '#rendering/types';
 
 import { deriveBindKey, derivePipelineKey } from './MaterialKey';
 import type { ShaderSource } from './ShaderSource';
@@ -22,6 +21,18 @@ export type UniformValue =
   | Int32Array
   | Texture
   | RenderTexture;
+
+/**
+ * Sampling state a material can override for the drawable's base texture.
+ * Upload state remains owned by the texture because one texture may be drawn
+ * through several materials in the same frame.
+ */
+export interface MaterialSamplerOptions {
+  /** Minification and magnification filter applied when sampling the base texture. */
+  scaleMode: ScaleModes;
+  /** Behaviour when base-texture UV coordinates exceed [0, 1]. */
+  wrapMode: WrapModes;
+}
 
 /** Whether a material-uniform value occupies a texture binding. @internal */
 export const isTextureUniformValue = (value: UniformValue): value is Texture | RenderTexture =>
@@ -62,10 +73,11 @@ export interface MaterialOptions {
   readonly blendMode?: BlendModes;
 
   /**
-   * Backend-agnostic sampling state descriptor, or `null` to inherit the
-   * backend/texture default. Defaults to `null`.
+   * Filter/wrap override for the drawable's base texture, or `null` to inherit
+   * that texture's sampler. Additional material textures keep their own
+   * sampler state. Defaults to `null`.
    */
-  readonly sampler?: SamplerOptions | null;
+  readonly sampler?: MaterialSamplerOptions | null;
 }
 
 let nextMaterialId = 1;
@@ -111,8 +123,8 @@ export abstract class Material {
   /** Compositing blend mode applied when drawing with this material. */
   public blendMode: BlendModes;
 
-  /** Backend-agnostic sampling state descriptor, or `null` for the default. */
-  public sampler: SamplerOptions | null;
+  /** Filter/wrap override for the drawable's base texture, or `null` to inherit it. */
+  public sampler: MaterialSamplerOptions | null;
 
   /** Which drawable class this material can serve; renderers check compatibility. */
   public abstract readonly target: 'mesh' | 'sprite' | 'particle';
@@ -168,21 +180,22 @@ export abstract class Material {
 
   /**
    * Stable pipeline key: identical ⇒ same GPU pipeline/program can be used.
-   * Derived from shader identity, blend mode, and sampler state, and is
+   * Derived from shader identity and blend mode, and is
    * independent of the owning material instance so identically configured
    * materials share a pipeline. Drives grouping and the pipeline cache.
    */
   public get pipelineKey(): number {
-    return derivePipelineKey(this.shader.id, this.blendMode, this.sampler);
+    return derivePipelineKey(this.shader.id, this.blendMode);
   }
 
   /**
    * Stable bind key: identical ⇒ same bindings (textures unchanged). Derived
-   * from this material's identity and the identities of its bound textures.
-   * Changes when a texture is swapped; drives bind-group/slot reuse.
+   * from this material's identity, base-texture sampler override, and the
+   * identities of its bound textures. Changes when a texture is swapped or
+   * sampler state changes; drives bind-group/slot reuse.
    */
   public get bindKey(): number {
-    return deriveBindKey(this._id, this._uniformValues, this._textureValues);
+    return deriveBindKey(this._id, this._uniformValues, this._textureValues, this.sampler);
   }
 
   /**

@@ -8,6 +8,13 @@ import type { OwnTransformRowPatcher } from '#rendering/RetainedContainer';
 import { type BitmapText } from '#rendering/text/BitmapText';
 import type { TextPageQuads } from '#rendering/text/Text';
 import { Text } from '#rendering/text/Text';
+import {
+  packTextNodeAtlasSlot,
+  textAtlasSlotShift,
+  textAtlasTextureSlots,
+  textAtlasTextureSlotWgsl,
+  textNodeIndexMask,
+} from '#rendering/text/textAtlasTextureSlots';
 import type { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
 import type { View } from '#rendering/View';
@@ -45,7 +52,7 @@ import { stencilContentDepthStencilState } from './WebGpuStencilState';
 const nodeTexels = 10;
 const nodeFloats = nodeTexels * 4;
 
-// Per-vertex layout (20 bytes): pos f32x2 + uv f32x2 + nodeIndex f32
+// Per-vertex layout (20 bytes): pos f32x2 + uv f32x2 + packed node/atlas u32
 const vertexStrideBytes = 20;
 const vertexStrideWords = vertexStrideBytes / 4;
 // Word offset of the per-vertex node index within one vertex.
@@ -85,12 +92,24 @@ interface PendingQuad {
 
 interface BatchDraw {
   readonly shaderType: ShaderType;
-  readonly atlasTexture: Texture;
+  readonly atlasTextures: readonly Texture[];
   readonly firstVertex: number;
   readonly vertexCount: number;
   readonly firstIndex: number;
   readonly indexCount: number;
 }
+
+interface TextTextureSetBindGroupEntry {
+  readonly textures: readonly Texture[];
+  views: GPUTextureView[];
+  samplers: GPUSampler[];
+  group: GPUBindGroup;
+}
+
+const maxTextureSetsPerAnchor = 8;
+
+const sharesAtlasBatchClass = (a: PendingQuad, b: PendingQuad): boolean =>
+  a.shaderType === b.shaderType && a.atlasTexture.width === b.atlasTexture.width && a.atlasTexture.height === b.atlasTexture.height;
 
 /**
  * Opaque, renderer-private snapshot carried on {@link WebGpuRetainedBatchPayload.rendererData}
@@ -170,13 +189,12 @@ struct FrameUniforms {
 @group(0) @binding(0) var<uniform>       frame : FrameUniforms;
 @group(0) @binding(1) var<storage, read> nodes : array<vec4<f32>>;
 
-@group(1) @binding(0) var atlasTexture : texture_2d<f32>;
-@group(1) @binding(1) var atlasSampler : sampler;
+${textAtlasTextureSlotWgsl}
 
 struct VertexInput {
     @location(0) position  : vec2<f32>,
     @location(1) texcoord  : vec2<f32>,
-    @location(2) nodeIndex : f32,
+    @location(2) packedNodeSlot : u32,
 };
 
 struct VertexOutput {
@@ -184,11 +202,12 @@ struct VertexOutput {
     @location(0)                    texcoord : vec2<f32>,
     @location(1)                    gradUV   : vec2<f32>,
     @location(2) @interpolate(flat) nodeIdx  : u32,
+    @location(3) @interpolate(flat) textureSlot : u32,
 };
 
 @vertex
 fn vertexMain(input: VertexInput) -> VertexOutput {
-    let ni   = u32(input.nodeIndex);
+    let ni   = input.packedNodeSlot & ${textNodeIndexMask}u;
     let base = ni * 10u;
 
     let t0 = nodes[base + 0u];
@@ -239,6 +258,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     out.texcoord = input.texcoord;
     out.gradUV   = gradUV;
     out.nodeIdx  = ni;
+    out.textureSlot = input.packedNodeSlot >> ${textAtlasSlotShift}u;
     return out;
 }
 
@@ -261,14 +281,16 @@ fn fragmentSdf(in: VertexOutput) -> @location(0) vec4<f32> {
     let shadowAlpha  = tParams.y;
     let soft         = max(tParams.z, 0.001);
     let gradEnabled  = tParams.w;
-    let pageSize     = f32(textureDimensions(atlasTexture, 0).x);
+    let pageSize     = f32(atlasTextureDimensions(in.textureSlot).x);
     let shadowOffset = tShadow2.xy / pageSize;
     let gradVertical = tShadow2.z;
 
-    let sd   = textureSample(atlasTexture, atlasSampler, in.texcoord).r;
+    let uvDx = dpdx(in.texcoord);
+    let uvDy = dpdy(in.texcoord);
+    let sd   = sampleTexture(in.textureSlot, in.texcoord, uvDx, uvDy).r;
     let fill = smoothstep(0.5 - soft, 0.5 + soft, sd);
 
-    let shadowSd = textureSample(atlasTexture, atlasSampler, in.texcoord - shadowOffset).r;
+    let shadowSd = sampleTexture(in.textureSlot, in.texcoord - shadowOffset, uvDx, uvDy).r;
 
     let outline = select(0.0,
         smoothstep(outlineMin - soft, outlineMin + soft, sd) * (1.0 - fill),
@@ -313,15 +335,17 @@ fn fragmentMsdf(in: VertexOutput) -> @location(0) vec4<f32> {
     let shadowAlpha  = tParams.y;
     let soft         = max(tParams.z, 0.001);
     let gradEnabled  = tParams.w;
-    let pageSize     = f32(textureDimensions(atlasTexture, 0).x);
+    let pageSize     = f32(atlasTextureDimensions(in.textureSlot).x);
     let shadowOffset = tShadow2.xy / pageSize;
     let gradVertical = tShadow2.z;
 
-    let msd  = textureSample(atlasTexture, atlasSampler, in.texcoord).rgb;
+    let uvDx = dpdx(in.texcoord);
+    let uvDy = dpdy(in.texcoord);
+    let msd  = sampleTexture(in.textureSlot, in.texcoord, uvDx, uvDy).rgb;
     let sd   = median3(msd.r, msd.g, msd.b);
     let fill = smoothstep(0.5 - soft, 0.5 + soft, sd);
 
-    let shadowMsd = textureSample(atlasTexture, atlasSampler, in.texcoord - shadowOffset).rgb;
+    let shadowMsd = sampleTexture(in.textureSlot, in.texcoord - shadowOffset, uvDx, uvDy).rgb;
     let shadowSd  = median3(shadowMsd.r, shadowMsd.g, shadowMsd.b);
 
     let outline = select(0.0,
@@ -351,7 +375,7 @@ fn fragmentColor(in: VertexOutput) -> @location(0) vec4<f32> {
     let ni     = in.nodeIdx;
     let base   = ni * 10u;
     let tint   = nodes[base + 2u];
-    let sample = textureSample(atlasTexture, atlasSampler, in.texcoord);
+    let sample = sampleTexture(in.textureSlot, in.texcoord, dpdx(in.texcoord), dpdy(in.texcoord));
     return sample * tint;
 }
 `;
@@ -362,8 +386,8 @@ fn fragmentColor(in: VertexOutput) -> @location(0) vec4<f32> {
  * Mirrors {@link WebGl2TextRenderer}: per-node style data is packed once per
  * flush into a `var<storage, read>` buffer, three specialised WGSL fragment
  * variants handle SDF / MSDF / colour-atlas glyphs, and quads are sorted and
- * batched by (shaderType, atlasPage) to minimise draw calls within a single
- * render pass.
+ * batched by compatible shader/page classes with up to eight atlas textures
+ * per draw.
  */
 export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText> implements WebGpuRetainedBatchReplayer, OwnTransformRowPatcher {
   /**
@@ -375,12 +399,11 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
   public readonly _consumesSharedTransform = false;
 
   /**
-   * Retained-batch opt-in: a flush whose glyph quads all
-   * share one (shaderType, atlasTexture) — the overwhelmingly common case, one
-   * font/atlas per flush — is a recordable batch. A flush that mixes multiple
-   * distinct (shaderType, atlasTexture) combinations, or a second Text flush
-   * within the same capture window, poisons the capture instead (see
-   * `_tryRecordRetainedBatch`) — always safe, just a missed optimization.
+   * Retained-batch opt-in: one compatible shader/page class containing at most
+   * eight atlas textures is recordable. A flush that needs several batches, or
+   * a second Text flush within the same capture window, poisons the capture
+   * instead (see `_tryRecordRetainedBatch`) — always safe, just a missed
+   * optimization.
    * @internal
    */
   public readonly _supportsRetainedBatches = true;
@@ -406,12 +429,10 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
   private _pipelineLayout: GPUPipelineLayout | null = null;
 
   private readonly _pipelines = new Map<string, GPURenderPipeline>();
-  // Weak cache: avoids retaining transient atlas textures via strong keys. The
-  // bind group is stored alongside the texture view it was built from — a
-  // mutable DataTexture (the glyph atlas) keeps the same view across content
-  // updates but gets a fresh one when the backend recreates the GPU texture on
-  // resize, so the cache is invalidated only then.
-  private _texBindGroups = new WeakMap<Texture, { group: GPUBindGroup; view: GPUTextureView }>();
+  // Ordered texture sets are cached under their slot-0 texture. Weak anchoring
+  // avoids retaining dead atlases; a small per-anchor bound covers stable UI
+  // combinations without letting pathological rotations grow indefinitely.
+  private _textureSetBindGroups = new WeakMap<Texture, TextTextureSetBindGroupEntry[]>();
 
   private _projBuffer: GPUBuffer | null = null;
   private _nodeBuffer: GPUBuffer | null = null;
@@ -461,6 +482,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
   private _indexCapacity = initialIndexCapacity;
   private _vertexData: ArrayBuffer = new ArrayBuffer(initialVertexCapacity * vertexStrideBytes);
   private _float32View: Float32Array = new Float32Array(this._vertexData);
+  private _uint32View: Uint32Array = new Uint32Array(this._vertexData);
   private _indexData: Uint32Array = new Uint32Array(initialIndexCapacity);
   private _projData: Float32Array = new Float32Array(projectionBytes / 4);
 
@@ -501,10 +523,15 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       }
     }
 
-    // Sort by (shaderType, atlasTexture) so equal-key quads are contiguous
+    // Sort by compatible atlas class, then texture identity. Up to eight
+    // textures of one class share a draw through the shader slot table.
     this._pendingQuads.sort((a, b) => {
       const sc = a.shaderType.localeCompare(b.shaderType);
       if (sc !== 0) return sc;
+      const wc = a.atlasTexture.width - b.atlasTexture.width;
+      if (wc !== 0) return wc;
+      const hc = a.atlasTexture.height - b.atlasTexture.height;
+      if (hc !== 0) return hc;
       return (this._textureKeyMap.get(a.atlasTexture) ?? 0) - (this._textureKeyMap.get(b.atlasTexture) ?? 0);
     });
 
@@ -545,12 +572,20 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     while (qi < quads.length) {
       // qi/qj/k are all bounded by `quads.length` via the loop guards above.
       const first = quads[qi]!;
-      const firstTextureKey = this._textureKeyMap.get(first.atlasTexture);
+      const atlasSlots = new Map<Texture, number>();
+      const atlasTextures: Texture[] = [];
+      let qj = qi;
 
-      let qj = qi + 1;
       while (qj < quads.length) {
         const pq = quads[qj]!;
-        if (pq.shaderType !== first.shaderType || this._textureKeyMap.get(pq.atlasTexture) !== firstTextureKey) break;
+        if (!sharesAtlasBatchClass(first, pq)) break;
+
+        if (!atlasSlots.has(pq.atlasTexture)) {
+          if (atlasTextures.length === textAtlasTextureSlots) break;
+          atlasSlots.set(pq.atlasTexture, atlasTextures.length);
+          atlasTextures.push(pq.atlasTexture);
+        }
+
         qj++;
       }
 
@@ -559,7 +594,8 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       let batchIndexCount = 0;
 
       for (let k = qi; k < qj; k++) {
-        const { quads: batch, nodeIndex } = quads[k]!;
+        const { quads: batch, nodeIndex, atlasTexture } = quads[k]!;
+        const atlasSlot = atlasSlots.get(atlasTexture)!;
         const qVerts = batch.quadCount * 4;
         const { vertices, uvs, indices } = batch;
 
@@ -571,7 +607,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
           this._float32View[w + 1] = vertices[vp + 1]!;
           this._float32View[w + 2] = uvs[vp]!;
           this._float32View[w + 3] = uvs[vp + 1]!;
-          this._float32View[w + 4] = nodeIndex;
+          this._uint32View[w + 4] = packTextNodeAtlasSlot(nodeIndex, atlasSlot);
         }
 
         for (let x = 0; x < indices.length; x++) {
@@ -585,7 +621,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
 
       batches.push({
         shaderType: first.shaderType,
-        atlasTexture: first.atlasTexture,
+        atlasTextures,
         firstVertex: batchFirstVertex,
         vertexCount: packedV - batchFirstVertex,
         firstIndex: batchFirstIndex,
@@ -660,8 +696,14 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     if (nodeBase > 0) {
       for (let v = 0; v < packedV; v++) {
         const w = v * vertexStrideWords + nodeIndexWord;
+        const packedNodeSlot = this._uint32View[w]!;
+        const nodeIndex = (packedNodeSlot & textNodeIndexMask) + nodeBase;
 
-        this._float32View[w] = this._float32View[w]! + nodeBase;
+        if (nodeIndex > textNodeIndexMask) {
+          throw new Error(`WebGpuTextRenderer: packed node index ${nodeIndex} exceeds the 24-bit vertex limit.`);
+        }
+
+        this._uint32View[w] = (packedNodeSlot & ~textNodeIndexMask) | nodeIndex;
       }
     }
 
@@ -687,10 +729,12 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     // the freshly opened pass) still read them there. Rewinding would let a
     // later append overwrite bytes those draws read.
     if (coordinator.passHasDraws) {
-      for (const batch of batches) {
-        if (backend._textureUploadWouldMutate(batch.atlasTexture)) {
-          coordinator.endPass();
-          break;
+      outer: for (const batch of batches) {
+        for (const texture of batch.atlasTextures) {
+          if (backend._textureUploadWouldMutate(texture)) {
+            coordinator.endPass();
+            break outer;
+          }
         }
       }
     }
@@ -705,18 +749,13 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     pass.setIndexBuffer(this._indexBuffer!, 'uint32', indexBase);
 
     let lastShaderType: ShaderType | null = null;
-    let lastTexture: Texture | null = null;
-
     for (const batch of batches) {
       if (batch.shaderType !== lastShaderType) {
         pass.setPipeline(this._getPipeline(batch.shaderType, format, stencil));
         pass.setBindGroup(0, frameBindGroup);
         lastShaderType = batch.shaderType;
       }
-      if (batch.atlasTexture !== lastTexture) {
-        pass.setBindGroup(1, this._getTexBindGroup(device, backend, batch.atlasTexture));
-        lastTexture = batch.atlasTexture;
-      }
+      pass.setBindGroup(1, this._getTexBindGroup(device, backend, batch.atlasTextures));
       pass.drawIndexed(batch.indexCount, 1, batch.firstIndex, 0, 0);
       coordinator.markPassDraws();
       backend.stats.batches++;
@@ -815,16 +854,16 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     this._textureBindGroupLayout = device.createBindGroupLayout({
       label: 'WebGpuTextRenderer/texture',
       entries: [
-        {
-          binding: 0,
+        ...Array.from({ length: textAtlasTextureSlots }, (_, binding) => ({
+          binding,
           visibility: GPUShaderStage.FRAGMENT,
-          texture: { sampleType: 'float' },
-        },
-        {
-          binding: 1,
+          texture: { sampleType: 'float' as const },
+        })),
+        ...Array.from({ length: textAtlasTextureSlots }, (_, slot) => ({
+          binding: textAtlasTextureSlots + slot,
           visibility: GPUShaderStage.FRAGMENT,
-          sampler: { type: 'filtering' },
-        },
+          sampler: { type: 'filtering' as const },
+        })),
       ],
     });
 
@@ -891,7 +930,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     this._resetPassCursors();
 
     this._pipelines.clear();
-    this._texBindGroups = new WeakMap<Texture, { group: GPUBindGroup; view: GPUTextureView }>();
+    this._textureSetBindGroups = new WeakMap<Texture, TextTextureSetBindGroupEntry[]>();
 
     this._pipelineLayout = null;
     this._textureBindGroupLayout = null;
@@ -939,6 +978,10 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     if (existing !== undefined) return existing;
 
     const idx = this._nodeCount++;
+
+    if (idx > textNodeIndexMask) {
+      throw new Error(`WebGpuTextRenderer: node index ${idx} exceeds the 24-bit packed vertex limit.`);
+    }
     this._nodeIndexMap.set(node, idx);
     this._ensureNodeCapacity(idx + 1);
     this._packNodeData(idx, node);
@@ -1114,27 +1157,71 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     return this._frameBindGroup;
   }
 
-  private _getTexBindGroup(device: GPUDevice, backend: WebGpuBackend, texture: Texture): GPUBindGroup {
-    // Always resolve the binding so the backend syncs the texture first: a glyph
-    // atlas that gained new glyphs (e.g. a scene switch introducing new
-    // characters) uploads its dirty region here. Returning a cached bind group
-    // without this call would leave those new glyphs un-uploaded — they sample
-    // empty atlas texels and render invisibly.
-    const { view, sampler } = backend.getTextureBinding(texture);
+  private _getTexBindGroup(device: GPUDevice, backend: WebGpuBackend, textures: readonly Texture[]): GPUBindGroup {
+    if (textures.length === 0 || textures.length > textAtlasTextureSlots) {
+      throw new Error(`WebGpuTextRenderer: expected 1-${textAtlasTextureSlots} atlas textures, got ${textures.length}.`);
+    }
 
-    const cached = this._texBindGroups.get(texture);
-    if (cached?.view === view) return cached.group;
+    // WebGPU bind groups are fixed-layout. Duplicate slot 0 into unused entries;
+    // packed vertices can only select the real prefix. Resolve every live
+    // binding before the cache lookup so dirty pages still upload and sampler
+    // mutations are visible even when their texture view stays stable.
+    const fallbackTexture = textures[0]!;
+    const fallbackBinding = backend.getTextureBinding(fallbackTexture);
+    const resolvedTextures = new Array<Texture>(textAtlasTextureSlots);
+    const bindings = new Array<ReturnType<WebGpuBackend['getTextureBinding']>>(textAtlasTextureSlots);
 
-    const group = device.createBindGroup({
+    for (let slot = 0; slot < textAtlasTextureSlots; slot++) {
+      const texture = textures[slot] ?? fallbackTexture;
+
+      resolvedTextures[slot] = texture;
+      bindings[slot] = texture === fallbackTexture ? fallbackBinding : backend.getTextureBinding(texture);
+    }
+
+    let cachedEntries = this._textureSetBindGroups.get(fallbackTexture);
+
+    if (cachedEntries === undefined) {
+      cachedEntries = [];
+      this._textureSetBindGroups.set(fallbackTexture, cachedEntries);
+    }
+
+    for (const cached of cachedEntries) {
+      if (!cached.textures.every((texture, slot) => texture === resolvedTextures[slot])) continue;
+
+      const bindingChanged = cached.views.some((view, slot) => view !== bindings[slot]!.view || cached.samplers[slot] !== bindings[slot]!.sampler);
+
+      if (bindingChanged) {
+        cached.views = bindings.map(binding => binding.view);
+        cached.samplers = bindings.map(binding => binding.sampler);
+        cached.group = this._buildTextureBindGroup(device, bindings);
+      }
+
+      return cached.group;
+    }
+
+    const group = this._buildTextureBindGroup(device, bindings);
+
+    cachedEntries.push({
+      textures: resolvedTextures,
+      views: bindings.map(binding => binding.view),
+      samplers: bindings.map(binding => binding.sampler),
+      group,
+    });
+
+    if (cachedEntries.length > maxTextureSetsPerAnchor) cachedEntries.shift();
+
+    return group;
+  }
+
+  private _buildTextureBindGroup(device: GPUDevice, bindings: ReadonlyArray<ReturnType<WebGpuBackend['getTextureBinding']>>): GPUBindGroup {
+    return device.createBindGroup({
       label: 'WebGpuTextRenderer/texture-bind-group',
       layout: this._textureBindGroupLayout!,
       entries: [
-        { binding: 0, resource: view },
-        { binding: 1, resource: sampler },
+        ...bindings.map(({ view }, binding) => ({ binding, resource: view })),
+        ...bindings.map(({ sampler }, slot) => ({ binding: textAtlasTextureSlots + slot, resource: sampler })),
       ],
     });
-    this._texBindGroups.set(texture, { group, view });
-    return group;
   }
 
   // ── Pipeline helpers ─────────────────────────────────────────────────────
@@ -1172,7 +1259,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
             attributes: [
               { shaderLocation: 0, offset: 0, format: 'float32x2' },
               { shaderLocation: 1, offset: 8, format: 'float32x2' },
-              { shaderLocation: 2, offset: 16, format: 'float32' },
+              { shaderLocation: 2, offset: 16, format: 'uint32' },
             ],
           },
         ],
@@ -1205,6 +1292,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     while (this._vertexCapacity < vertexCount) this._vertexCapacity *= 2;
     this._vertexData = new ArrayBuffer(this._vertexCapacity * vertexStrideBytes);
     this._float32View = new Float32Array(this._vertexData);
+    this._uint32View = new Uint32Array(this._vertexData);
   }
 
   private _ensureIndexCapacity(indexCount: number): void {
@@ -1255,13 +1343,14 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
   }
 
   /**
-   * Stage this flush's ONE batch for retained replay, or poison the active
+   * Stage this flush's ONE multi-atlas batch for retained replay, or poison the active
    * capture(s) when this flush is not a clean single-batch recording.
    * `TextRetainedReplayState` holds at most one recorded batch per bundle per
    * capture window (identified via `backend._currentRetainedCaptureFrame`,
    * unique per capture-open call) — a flush spanning multiple distinct
-   * (shaderType, atlasTexture) combinations, or a second Text flush within the
-   * same window, would need a second slot this design doesn't provide.
+   * incompatible shader/page classes or more than eight atlas textures, or a
+   * second Text flush within the same window, would need a second slot this
+   * design doesn't provide.
    * Poisoning is always safe: the group falls back to entry replay for this
    * frame only, never wrong pixels.
    */
@@ -1293,7 +1382,17 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       quadCount: batch.indexCount / 6,
     };
 
-    backend._recordRetainedBatch(this, vertexBytes, vertexByteLength, this._nodeCount, BlendModes.Normal, [batch.atlasTexture], 1, null, rendererData);
+    backend._recordRetainedBatch(
+      this,
+      vertexBytes,
+      vertexByteLength,
+      this._nodeCount,
+      BlendModes.Normal,
+      batch.atlasTextures,
+      batch.atlasTextures.length,
+      null,
+      rendererData,
+    );
 
     this._recordedCaptureFrames.add(frame);
   }
@@ -1378,20 +1477,24 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       device.queue.writeBuffer(state.uniformBuffer!, 0, state.uboData.buffer, state.uboData.byteOffset, projectionBytes);
     }
 
-    // Text's own recording always stages exactly one `Texture` (the atlas
-    // page — see `_tryRecordRetainedBatch`'s `[batch.atlasTexture]`), never a
-    // `RenderTexture`; the payload's shared type is wider only because other
-    // renderers can target one.
+    // Text's own recording stages one or more atlas `Texture`s in packed-slot
+    // order, never a `RenderTexture`; the payload's shared type is wider only
+    // because other renderers can target one.
     // Same-frame atlas-mutation guard: syncing a dirty glyph page below lands on
     // the queue timeline ahead of the deferred submit, retroactively changing
     // draws already recorded into the open pass — from any renderer, since the
     // pass survives a renderer switch.
-    if (coordinator.passHasDraws && backend._textureUploadWouldMutate(payload.textures[0]!)) {
-      coordinator.endPass();
-      state.drawsInPass = null;
+    if (coordinator.passHasDraws) {
+      for (const texture of payload.textures) {
+        if (backend._textureUploadWouldMutate(texture)) {
+          coordinator.endPass();
+          state.drawsInPass = null;
+          break;
+        }
+      }
     }
 
-    const textureBindGroup = this._getTexBindGroup(device, backend, payload.textures[0]! as Texture);
+    const textureBindGroup = this._getTexBindGroup(device, backend, payload.textures as readonly Texture[]);
     const frameBindGroup = this._getTextReplayBindGroup(state, device);
     const indexBuffer = this._ensureRetainedQuadIndexBuffer(device, data.quadCount, coordinator);
 

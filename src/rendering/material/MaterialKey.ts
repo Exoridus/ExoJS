@@ -1,9 +1,8 @@
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
-import type { SamplerOptions } from '#rendering/texture/Sampler';
 import type { Texture } from '#rendering/texture/Texture';
 import type { BlendModes } from '#rendering/types';
 
-import type { UniformValue } from './Material';
+import type { MaterialSamplerOptions, UniformValue } from './Material';
 
 /**
  * @internal
@@ -16,11 +15,12 @@ import type { UniformValue } from './Material';
  * `JSON.stringify` over objects with unstable key order.
  *
  * Two key spaces:
- * - {@link derivePipelineKey}: shader identity + blend + sampler state.
+ * - {@link derivePipelineKey}: shader identity + blend state.
  *   Drives GPU pipeline/program reuse and material grouping. Independent of
  *   the owning material instance, so identically configured materials share
  *   a pipeline key.
- * - {@link deriveBindKey}: material identity + bound texture identities.
+ * - {@link deriveBindKey}: material identity + base sampler override + bound
+ *   texture identities.
  *   Drives bind-group/slot reuse; changes when a material swaps a texture.
  */
 
@@ -59,23 +59,23 @@ const intern = (registry: Map<string, number>, descriptor: string, allocate: () 
   return key;
 };
 
-const samplerDescriptor = (sampler: SamplerOptions | null): string => {
+const samplerDescriptor = (sampler: MaterialSamplerOptions | null): string => {
   if (sampler === null) {
     return '-';
   }
 
-  return [sampler.scaleMode, sampler.wrapMode, sampler.premultiplyAlpha ? 1 : 0, sampler.generateMipMap ? 1 : 0, sampler.flipY ? 1 : 0].join(':');
+  return `${sampler.scaleMode}:${sampler.wrapMode}`;
 };
 
 const isTextureBinding = (value: UniformValue): value is Texture | RenderTexture =>
   typeof value === 'object' && value !== null && !Array.isArray(value) && !ArrayBuffer.isView(value);
 
 /**
- * Pipeline key from shader identity, blend mode, and sampler state.
+ * Pipeline key from shader identity and blend mode.
  * @internal
  */
-export const derivePipelineKey = (shaderId: number, blendMode: BlendModes, sampler: SamplerOptions | null): number => {
-  const descriptor = `${shaderId}|${blendMode}|${samplerDescriptor(sampler)}`;
+export const derivePipelineKey = (shaderId: number, blendMode: BlendModes): number => {
+  const descriptor = `${shaderId}|${blendMode}`;
 
   return intern(pipelineKeyRegistry, descriptor, () => nextPipelineKey++);
 };
@@ -87,7 +87,12 @@ export const derivePipelineKey = (shaderId: number, blendMode: BlendModes, sampl
  * descriptor is independent of insertion order.
  * @internal
  */
-export const deriveBindKey = (materialId: number, uniforms: Record<string, UniformValue>, textures: Record<string, Texture | RenderTexture>): number => {
+export const deriveBindKey = (
+  materialId: number,
+  uniforms: Record<string, UniformValue>,
+  textures: Record<string, Texture | RenderTexture>,
+  sampler: MaterialSamplerOptions | null,
+): number => {
   const entries: string[] = [];
 
   for (const name of Object.keys(textures)) {
@@ -106,7 +111,7 @@ export const deriveBindKey = (materialId: number, uniforms: Record<string, Unifo
 
   entries.sort();
 
-  const descriptor = `${materialId}|${entries.join(',')}`;
+  const descriptor = `${materialId}|${samplerDescriptor(sampler)}|${entries.join(',')}`;
 
   return intern(bindKeyRegistry, descriptor, () => nextBindKey++);
 };

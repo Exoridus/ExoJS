@@ -267,7 +267,9 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     shader.sync();
     backend.bindVertexArrayObject(vao);
     instanceBuffer.upload(this._instanceFloat32.subarray(0, this._instanceCount * wordsPerInstance));
+    this._bindBaseTextureSamplers(backend, material, this._slotCount);
     vao.drawInstanced(4, 0, this._instanceCount, RenderingPrimitives.TriangleStrip);
+    this._unbindBaseTextureSamplers(backend, material, this._slotCount);
     backend.stats.batches++;
     backend.stats.drawCalls++;
 
@@ -465,7 +467,31 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
 
     shader.sync();
     backend.bindVertexArrayObject(vao);
+    this._bindBaseTextureSamplers(backend, material, textures.length);
     vao.drawInstanced(4, 0, payload.instanceCount, RenderingPrimitives.TriangleStrip);
+    this._unbindBaseTextureSamplers(backend, material, textures.length);
+  }
+
+  private _bindBaseTextureSamplers(backend: WebGl2Backend, material: SpriteMaterial | null, slotCount: number): void {
+    const sampler = material?.sampler;
+
+    if (sampler === null || sampler === undefined) {
+      return;
+    }
+
+    for (let slot = 0; slot < slotCount; slot++) {
+      backend.bindMaterialSampler(sampler, slot);
+    }
+  }
+
+  private _unbindBaseTextureSamplers(backend: WebGl2Backend, material: SpriteMaterial | null, slotCount: number): void {
+    if (material?.sampler === null || material?.sampler === undefined) {
+      return;
+    }
+
+    for (let slot = 0; slot < slotCount; slot++) {
+      backend.unbindMaterialSampler(slot);
+    }
   }
 
   /** Structural preflight called for every batch before the set is spliced. @internal */

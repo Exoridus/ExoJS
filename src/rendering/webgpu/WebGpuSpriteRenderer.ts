@@ -685,8 +685,11 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       this._activeTextures[slot] = texture;
     }
 
+    const premultiplySample = backend.shouldPremultiplyTextureSample(texture) ? 1 : 0;
+    const packedSlotFlags = slot | (premultiplySample << 8);
+
     this._ensureInstanceCapacity(this._instanceCount + 1);
-    this._packInstance(sprite, texture, slot, nodeIndex);
+    this._packInstance(sprite, texture, packedSlotFlags, nodeIndex);
     this._instanceCount++;
   }
 
@@ -1109,7 +1112,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
     // Resolve the batch textures LIVE through the shared texture-set cache
     // (syncs dirty content, adopts refreshed views/samplers).
-    const textureBindGroup = this._getOrCreateTextureBindGroup(device, backend, payload.textures, material !== null);
+    const textureBindGroup = this._getOrCreateTextureBindGroup(device, backend, payload.textures, material !== null, material?.sampler ?? null);
 
     let customResources: CustomSpriteResources | null = null;
     let userBindGroup: GPUBindGroup | null = null;
@@ -1382,6 +1385,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     backend: WebGpuBackend,
     textures: ReadonlyArray<Texture | RenderTexture | null | undefined>,
     custom = false,
+    samplerOverride: SpriteMaterial['sampler'] = null,
   ): GPUBindGroup {
     // Slots beyond the active count get the slot-0 texture as a filler so
     // the bind-group layout always sees N valid texture views and samplers.
@@ -1400,7 +1404,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     // group(1) layout) instead of the device-tier default one.
     const slotCapacity = custom ? spriteMaterialTextureSlots : this._maxBatchTextures;
     const fallbackTexture = textures[0] ?? Texture.empty;
-    const fallbackBinding = backend.getTextureBinding(fallbackTexture);
+    const fallbackBinding = backend.getTextureBinding(fallbackTexture, samplerOverride);
     const resolvedTextures = new Array<Texture | RenderTexture>(slotCapacity);
     const resolvedBindings = new Array<ReturnType<WebGpuBackend['getTextureBinding']>>(slotCapacity);
 
@@ -1408,7 +1412,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       const texture = textures[i] ?? fallbackTexture;
 
       resolvedTextures[i] = texture;
-      resolvedBindings[i] = texture === fallbackTexture ? fallbackBinding : backend.getTextureBinding(texture);
+      resolvedBindings[i] = texture === fallbackTexture ? fallbackBinding : backend.getTextureBinding(texture, samplerOverride);
     }
 
     // Cache lookup, anchored on the resolved slot-0 texture. An entry matches
@@ -1610,7 +1614,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, transformBindGroup);
-    pass.setBindGroup(1, this._getOrCreateTextureBindGroup(device, backend, this._activeTextures, true));
+    pass.setBindGroup(1, this._getOrCreateTextureBindGroup(device, backend, this._activeTextures, true, material.sampler));
     pass.setBindGroup(2, this._getUserBindGroup(material, resources, backend, device));
     pass.setVertexBuffer(0, instanceBuffer, instanceByteOffset);
     pass.setIndexBuffer(this._indexBuffer!, 'uint16');

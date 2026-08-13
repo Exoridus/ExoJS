@@ -56,7 +56,7 @@
         },
         {
           "name": "sampler",
-          "signature": "sampler?: SamplerOptions | null",
+          "signature": "sampler?: MaterialSamplerOptions | null",
           "signatureTokens": [
             {
               "text": "sampler",
@@ -71,7 +71,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "SamplerOptions",
+              "text": "MaterialSamplerOptions",
               "kind": "type"
             },
             {
@@ -85,7 +85,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Backend-agnostic sampling state descriptor, or null to inherit the backend/texture default. Defaults to null."
+          "description": "Filter/wrap override for the drawable's base texture, or null to inherit that texture's sampler. Additional material textures keep their own sampler state. Defaults to null."
         },
         {
           "name": "shader",
@@ -159,7 +159,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Named texture bindings claimed in addition to the drawable's own texture."
+          "description": "Declared texture slots claimed in addition to the drawable's own texture."
         },
         {
           "name": "uniforms",
@@ -204,7 +204,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Initial uniform values; mutate per frame via Material.uniforms."
+          "description": "Declared uniform slots and their initial values. Names and scalar/texture kinds form a fixed construction-time schema; values remain mutable."
         }
       ],
       "paragraphs": [],

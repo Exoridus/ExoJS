@@ -242,6 +242,12 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
 
 ### Changed
 
+- **BREAKING — `Material.sampler` is now a real base-texture binding override.**
+  It contains only `scaleMode` and `wrapMode`, applies to the drawable's base
+  texture across WebGPU and WebGL2 (including particle materials), and leaves
+  additional material textures on their own sampler state. `null` continues to
+  inherit the texture sampler. Sampler changes now affect `bindKey`, not
+  `pipelineKey`, and in-place changes are resolved live during retained replay.
 - **BREAKING — `Material` binding schemas are fixed at construction.** Declare
   every scalar and texture slot through the constructor's `uniforms`/`textures`
   options. Existing values and texture identities remain live and replaceable,
@@ -438,6 +444,11 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
 
 ### Performance
 
+- **Text batches can span up to eight atlas textures per draw.** WebGPU and
+  WebGL2 now assign compatible atlas pages to a small texture-slot table instead
+  of ending the batch at every texture change. Mixed-font text with the same
+  shader/page class therefore keeps one draw (and remains retained-recordable)
+  until the eight-slot capacity is exhausted.
 - **WebGPU text flushes share one render pass and one submit.** The WebGPU text
   renderer rewrote its shared vertex, index and node-data buffers from offset 0
   on every flush, and ended (submitted) the render pass at the tail of each one
@@ -497,6 +508,11 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
 
 ### Fixed
 
+- **Custom WebGPU `SpriteMaterial` shaders now honour
+  `Texture.premultiplyAlpha`.** The engine carries the per-texture flag through
+  the opaque value passed to `sampleBase()`, so custom materials match the stock
+  sprite shader and WebGL2 even when one batch mixes textures with different
+  upload-alpha modes.
 - **Retained `SpriteMaterial` batches now keep live uniforms and material
   textures on WebGPU and WebGL2.** Retained groups record instance/transform
   data while resolving material state at replay, deduplicated once per material

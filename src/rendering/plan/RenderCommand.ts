@@ -19,10 +19,10 @@ export const enum RenderEntryKind {
  * eventual instanced batching.
  *
  * - {@link pipelineKey} drives pipeline/program reuse: identical key ⇒
- *   identical GPU pipeline state (shader + blend + sampler). Two draws
+ *   identical GPU pipeline state (shader + blend). Two draws
  *   with the same pipeline key can be issued with a single pipeline bind.
- * - {@link bindKey} drives texture-bind reuse: identical key ⇒ identical
- *   texture bindings. Two draws with the same bind key can share a bind
+ * - {@link bindKey} drives texture/sampler-bind reuse: identical key ⇒
+ *   identical bindings. Two draws with the same bind key can share a bind
  *   group / texture-slot state.
  *
  * When the drawable carries a {@link Material}, both keys are taken

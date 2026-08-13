@@ -62,7 +62,7 @@ export type { GradientStop, GradientToTextureOptions, GradientType } from '#rend
 export { Gradient } from '#rendering/gradient/Gradient';
 export { LinearGradient } from '#rendering/gradient/LinearGradient';
 export { RadialGradient } from '#rendering/gradient/RadialGradient';
-export type { MaterialOptions, UniformValue } from '#rendering/material/Material';
+export type { MaterialOptions, MaterialSamplerOptions, UniformValue } from '#rendering/material/Material';
 export { Material } from '#rendering/material/Material';
 export { MeshMaterial } from '#rendering/material/MeshMaterial';
 export type { ShaderSourceOptions } from '#rendering/material/ShaderSource';

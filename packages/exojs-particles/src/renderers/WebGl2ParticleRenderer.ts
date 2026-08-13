@@ -221,10 +221,20 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
 
     resources.vertexBuffer.upload(this._resolveUpload(mode, resources));
 
+    const sampler = mode.material.sampler;
+
+    if (sampler !== null) {
+      backend.bindMaterialSampler(sampler, 0);
+    }
+
     if (resources.instanced) {
       resources.vao.drawInstanced(resources.indexCount, 0, this._drawCount, resources.primitive);
     } else {
       resources.vao.draw(resources.indexBuffer !== null ? resources.indexCount : this._drawCount, 0, resources.primitive);
+    }
+
+    if (sampler !== null) {
+      backend.unbindMaterialSampler(0);
     }
 
     backend.stats.batches++;

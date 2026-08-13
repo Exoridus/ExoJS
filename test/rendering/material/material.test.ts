@@ -1,8 +1,7 @@
-import type { MaterialOptions } from '#rendering/material/Material';
+import type { MaterialOptions, MaterialSamplerOptions } from '#rendering/material/Material';
 import { MeshMaterial } from '#rendering/material/MeshMaterial';
 import { ShaderSource } from '#rendering/material/ShaderSource';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
-import type { SamplerOptions } from '#rendering/texture/Sampler';
 import { Texture } from '#rendering/texture/Texture';
 import { BlendModes, ScaleModes, WrapModes } from '#rendering/types';
 
@@ -38,20 +37,14 @@ const createMaterialOptions = (overrides: Partial<MaterialOptions> = {}): Materi
   ...overrides,
 });
 
-const linearClamp: SamplerOptions = {
+const linearClamp: MaterialSamplerOptions = {
   scaleMode: ScaleModes.Linear,
   wrapMode: WrapModes.ClampToEdge,
-  premultiplyAlpha: false,
-  generateMipMap: false,
-  flipY: false,
 };
 
-const nearestRepeat: SamplerOptions = {
+const nearestRepeat: MaterialSamplerOptions = {
   scaleMode: ScaleModes.Nearest,
   wrapMode: WrapModes.Repeat,
-  premultiplyAlpha: false,
-  generateMipMap: false,
-  flipY: false,
 };
 
 describe('ShaderSource', () => {
@@ -227,12 +220,12 @@ describe('Material.pipelineKey', () => {
     expect(material.pipelineKey).toBe(initial);
   });
 
-  test('changes with sampler state', () => {
+  test('does not change with sampler binding state', () => {
     const shader = createShaderSource();
     const a = new MeshMaterial({ shader, sampler: linearClamp });
     const b = new MeshMaterial({ shader, sampler: nearestRepeat });
 
-    expect(a.pipelineKey).not.toBe(b.pipelineKey);
+    expect(a.pipelineKey).toBe(b.pipelineKey);
   });
 
   test('does not change when a scalar uniform changes', () => {
@@ -259,6 +252,19 @@ describe('Material.bindKey', () => {
     material.setUniform('u_time', 7);
     material.setUniform('u_time', 8);
 
+    expect(material.bindKey).toBe(initial);
+  });
+
+  test('changes with sampler state, including in-place mutation', () => {
+    const material = new MeshMaterial(createMaterialOptions({ sampler: { ...linearClamp } }));
+    const initial = material.bindKey;
+
+    material.sampler!.scaleMode = ScaleModes.Nearest;
+    const changed = material.bindKey;
+
+    material.sampler!.scaleMode = ScaleModes.Linear;
+
+    expect(changed).not.toBe(initial);
     expect(material.bindKey).toBe(initial);
   });
 

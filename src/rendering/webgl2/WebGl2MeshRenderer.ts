@@ -249,7 +249,9 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       connection.dynamicInstanceBuffer.upload(instances.data.subarray(0, count * instances.strideFloats));
     }
 
+    this._bindBaseTextureSampler(backend, material);
     vao.drawInstanced(cacheEntry.indexCount, 0, count, RenderingPrimitives.Triangles);
+    this._unbindBaseTextureSampler(backend, material);
 
     backend.stats.batches++;
     backend.stats.drawCalls++;
@@ -490,7 +492,9 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     this._bindInstancedShaderState(first.shader, first.texture, first.material, backend, maxNodeIndex);
     backend.bindVertexArrayObject(vao);
     connection.dynamicNodeIndexBuffer.upload(this._nodeIndexData.subarray(0, count));
+    this._bindBaseTextureSampler(backend, first.material);
     vao.drawInstanced(cacheEntry.indexCount, 0, count, RenderingPrimitives.Triangles);
+    this._unbindBaseTextureSampler(backend, first.material);
 
     backend.stats.batches++;
     backend.stats.drawCalls++;
@@ -559,7 +563,9 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     backend.bindVertexArrayObject(connection.dynamicVao);
     connection.dynamicVertexBuffer.upload(this._float32View.subarray(0, mesh.vertexCount * vertexStrideWords));
     connection.dynamicIndexBuffer.upload(this._indexData.subarray(0, mesh.indexCount));
+    this._bindBaseTextureSampler(backend, draw.material);
     connection.dynamicVao.draw(mesh.indexCount, 0, RenderingPrimitives.Triangles);
+    this._unbindBaseTextureSampler(backend, draw.material);
 
     backend.stats.batches++;
     backend.stats.drawCalls++;
@@ -604,6 +610,18 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     }
 
     shader.sync();
+  }
+
+  private _bindBaseTextureSampler(backend: WebGl2Backend, material: Material | null): void {
+    if (material?.sampler !== null && material?.sampler !== undefined) {
+      backend.bindMaterialSampler(material.sampler, 0);
+    }
+  }
+
+  private _unbindBaseTextureSampler(backend: WebGl2Backend, material: Material | null): void {
+    if (material?.sampler !== null && material?.sampler !== undefined) {
+      backend.unbindMaterialSampler(0);
+    }
   }
 
   // ── Retained-batch record/replay (mesh opt-in) ────────────────────────────

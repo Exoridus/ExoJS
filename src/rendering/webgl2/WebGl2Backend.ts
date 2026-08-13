@@ -9,6 +9,7 @@ import type { BackendRenderPass } from '#rendering/BackendRenderPass';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import { dataTextureBytesPerPixel, estimateTextureBytes, GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
+import type { MaterialSamplerOptions } from '#rendering/material/Material';
 import type { Mesh } from '#rendering/mesh/Mesh';
 import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/RenderCommand';
 import type { ScopeEntry } from '#rendering/plan/RenderScope';
@@ -222,6 +223,8 @@ export class WebGl2Backend implements RenderBackend {
   private readonly _renderTargetStates: Map<RenderTarget, ManagedRenderTargetState> = new Map<RenderTarget, ManagedRenderTargetState>();
   private readonly _textureDestroyHandlers: Map<Texture | RenderTexture, () => void> = new Map<Texture | RenderTexture, () => void>();
   private readonly _textureReleaseHandlers: Map<Texture, () => void> = new Map<Texture, () => void>();
+  /** Context-local base-texture sampler overrides shared by custom materials. */
+  private readonly _materialSamplers = new Map<string, WebGLSampler>();
   private readonly _renderTargetDestroyHandlers: Map<RenderTarget, () => void> = new Map<RenderTarget, () => void>();
   private readonly _renderTexturePool: RenderTexturePool = new RenderTexturePool();
   private readonly _clipBoundsStack: Rectangle[] = [];
@@ -949,6 +952,39 @@ export class WebGl2Backend implements RenderBackend {
     // because its parameter and upload calls act on whatever is bound to the
     // active unit — binding a second time here would only duplicate GL work.
     this._syncTexture(texture);
+
+    return this;
+  }
+
+  /** Bind a material's base-texture sampler override to one texture unit. @internal */
+  public bindMaterialSampler(options: MaterialSamplerOptions, unit: number): this {
+    const key = `${options.scaleMode}:${options.wrapMode}`;
+    let sampler = this._materialSamplers.get(key);
+
+    if (sampler === undefined) {
+      const gl = this._context;
+      const created = gl.createSampler();
+
+      if (created === null) {
+        throw new Error('WebGl2Backend: could not create a material sampler.');
+      }
+
+      gl.samplerParameteri(created, gl.TEXTURE_MAG_FILTER, options.scaleMode);
+      gl.samplerParameteri(created, gl.TEXTURE_MIN_FILTER, options.scaleMode);
+      gl.samplerParameteri(created, gl.TEXTURE_WRAP_S, options.wrapMode);
+      gl.samplerParameteri(created, gl.TEXTURE_WRAP_T, options.wrapMode);
+      this._materialSamplers.set(key, created);
+      sampler = created;
+    }
+
+    this._context.bindSampler(unit, sampler);
+
+    return this;
+  }
+
+  /** Restore a texture unit to its texture-owned sampler state. @internal */
+  public unbindMaterialSampler(unit: number): this {
+    this._context.bindSampler(unit, null);
 
     return this;
   }
@@ -1863,6 +1899,12 @@ export class WebGl2Backend implements RenderBackend {
     for (const texture of [...this._textureStates.keys()]) {
       this._evictTexture(texture);
     }
+
+    for (const sampler of this._materialSamplers.values()) {
+      this._context.deleteSampler(sampler);
+    }
+
+    this._materialSamplers.clear();
   }
 
   private _getRenderTargetState(target: RenderTarget): ManagedRenderTargetState {
