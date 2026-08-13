@@ -7,7 +7,7 @@ import type { TextPageQuads } from '#rendering/text/Text';
 import { Text } from '#rendering/text/Text';
 import { DataTexture } from '#rendering/texture/DataTexture';
 import type { Texture } from '#rendering/texture/Texture';
-import { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives, TextureFormat } from '#rendering/types';
+import { BlendModes, BufferTypes, BufferUsage, IndexElementTypes, RenderingPrimitives, TextureFormat } from '#rendering/types';
 
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
 import textVertSource from './glsl/text.vert';
@@ -68,8 +68,8 @@ const initialIndexCapacity = 384;
 const initialNodeCapacity = 32;
 // One short line of text is already ~64 quads, so that floor made almost
 // every real retained draw pay several doubling steps (a fresh GL buffer plus
-// a CPU index fill each). 1024 quads is 12 KiB and covers normal text scenes
-// in one allocation, well inside the 16384-quad Uint16 vertex-index ceiling.
+// a CPU index fill each). 1024 quads is 24 KiB (uint32 indices) and covers
+// normal text scenes in one allocation.
 const initialRetainedQuadCapacity = 1024;
 
 type ShaderType = 'sdf' | 'msdf' | 'color';
@@ -184,7 +184,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
   private _vertexData: ArrayBuffer = new ArrayBuffer(initialVertexCapacity * vertexStrideBytes);
   private _float32View: Float32Array = new Float32Array(this._vertexData);
   private _uint32View: Uint32Array = new Uint32Array(this._vertexData);
-  private _indexData: Uint16Array = new Uint16Array(initialIndexCapacity);
+  private _indexData: Uint32Array = new Uint32Array(initialIndexCapacity);
 
   // Retained-batch state: the renderer-owned, grow-only quad-index buffer (the
   // standard `0,1,2, 0,2,3` glyph pattern shared by every recorded batch) and
@@ -264,7 +264,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     if (vaoHandle === null) throw new Error('WebGl2TextRenderer: could not create VAO.');
 
     const vao = new WebGl2VertexArrayObject()
-      .addIndex(indexBuffer)
+      .addIndex(indexBuffer, IndexElementTypes.UnsignedInt)
       .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_position'), gl.FLOAT, false, vertexStrideBytes, 0)
       .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_texcoord'), gl.FLOAT, false, vertexStrideBytes, 8)
       .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_nodeIndex'), gl.FLOAT, false, vertexStrideBytes, 16);
@@ -702,7 +702,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     const indexBuffer = this._ensureRetainedQuadIndexBuffer(data.quadCount);
 
     vao
-      .addIndex(indexBuffer)
+      .addIndex(indexBuffer, IndexElementTypes.UnsignedInt)
       .addAttribute(buffer, shader.getAttribute('a_position'), gl.FLOAT, false, vertexStrideBytes, base + 0)
       .addAttribute(buffer, shader.getAttribute('a_texcoord'), gl.FLOAT, false, vertexStrideBytes, base + 8)
       .addAttribute(buffer, shader.getAttribute('a_nodeIndex'), gl.FLOAT, false, vertexStrideBytes, base + 16);
@@ -869,7 +869,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
 
     while (capacity < quadCount) capacity *= 2;
 
-    const indices = new Uint16Array(capacity * 6);
+    const indices = new Uint32Array(capacity * 6);
 
     for (let q = 0; q < capacity; q++) {
       const baseV = q * 4;
@@ -918,7 +918,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
   private _ensureIndexCapacity(indexCount: number): void {
     if (indexCount <= this._indexCapacity) return;
     while (this._indexCapacity < indexCount) this._indexCapacity *= 2;
-    this._indexData = new Uint16Array(this._indexCapacity);
+    this._indexData = new Uint32Array(this._indexCapacity);
   }
 
   private _ensureNodeCapacity(nodeCount: number): void {
@@ -1004,7 +1004,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       },
       draw: (vao, size, start, type): void => {
         if (vao.indexBuffer) {
-          gl.drawElements(type, size, gl.UNSIGNED_SHORT, start);
+          gl.drawElements(type, size, vao.indexType, start);
         } else {
           gl.drawArrays(type, start, size);
         }

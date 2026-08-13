@@ -1,5 +1,5 @@
 import type { ShaderAttribute } from '#rendering/shader/ShaderAttribute';
-import { RenderingPrimitives, ShaderPrimitives } from '#rendering/types';
+import { IndexElementTypes, RenderingPrimitives, ShaderPrimitives } from '#rendering/types';
 
 import type { WebGl2RenderBuffer } from './WebGl2RenderBuffer';
 
@@ -45,6 +45,7 @@ export interface WebGl2VertexArrayObjectRuntime {
 export class WebGl2VertexArrayObject {
   private readonly _attributes: VaoAttribute[] = [];
   private _indexBuffer: WebGl2RenderBuffer | null = null;
+  private _indexType: IndexElementTypes = IndexElementTypes.UnsignedShort;
   private _drawMode: RenderingPrimitives;
   private _runtime: WebGl2VertexArrayObjectRuntime | null = null;
   private _version = 0;
@@ -59,6 +60,11 @@ export class WebGl2VertexArrayObject {
 
   public get indexBuffer(): WebGl2RenderBuffer | null {
     return this._indexBuffer;
+  }
+
+  /** GLenum element type of {@link indexBuffer}'s contents (`gl.drawElements`'s `type` argument). */
+  public get indexType(): IndexElementTypes {
+    return this._indexType;
   }
 
   public get drawMode(): RenderingPrimitives {
@@ -111,8 +117,9 @@ export class WebGl2VertexArrayObject {
     return this;
   }
 
-  public addIndex(buffer: WebGl2RenderBuffer): this {
+  public addIndex(buffer: WebGl2RenderBuffer, type: IndexElementTypes = IndexElementTypes.UnsignedShort): this {
     this._indexBuffer = buffer;
+    this._indexType = type;
     this._version++;
 
     return this;
@@ -121,6 +128,7 @@ export class WebGl2VertexArrayObject {
   public clear(): this {
     this._attributes.length = 0;
     this._indexBuffer = null;
+    this._indexType = IndexElementTypes.UnsignedShort;
     this._version++;
 
     return this;

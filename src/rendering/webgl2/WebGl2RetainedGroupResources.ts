@@ -539,10 +539,14 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
             gl.vertexAttribDivisor(attribute.location, attribute.divisor);
           }
 
-          // Indexed batches (mesh opt-in) carry an index buffer; capturing its
-          // ELEMENT_ARRAY_BUFFER binding into this VAO is what lets replay use
-          // drawElementsInstanced. Sprite/nine-slice/repeating VAOs have no
-          // index buffer, so this is a no-op for them (drawArrays path).
+          // Indexed batches (mesh opt-in, and Text's static glyph-quad pattern)
+          // carry an index buffer; capturing its ELEMENT_ARRAY_BUFFER binding
+          // into this VAO is what lets replay use drawElements(Instanced).
+          // Sprite/nine-slice/repeating VAOs have no index buffer, so this is a
+          // no-op for them (drawArrays path). Each renderer's `addIndex` call
+          // stamps the matching element type (`vao.indexType`, read below) —
+          // mesh's Uint16 geometry and Text's Uint32 glyph pattern share this
+          // one runtime but never assume each other's width.
           vao.indexBuffer?.bind();
 
           appliedVersion = vao.version;
@@ -553,14 +557,14 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
       },
       draw: (vao, size, start, type): void => {
         if (vao.indexBuffer !== null) {
-          gl.drawElements(type, size, gl.UNSIGNED_SHORT, start);
+          gl.drawElements(type, size, vao.indexType, start);
         } else {
           gl.drawArrays(type, start, size);
         }
       },
       drawInstanced: (vao, count, start, instanceCount, type): void => {
         if (vao.indexBuffer !== null) {
-          gl.drawElementsInstanced(type, count, gl.UNSIGNED_SHORT, start, instanceCount);
+          gl.drawElementsInstanced(type, count, vao.indexType, start, instanceCount);
         } else {
           gl.drawArraysInstanced(type, start, count, instanceCount);
         }
