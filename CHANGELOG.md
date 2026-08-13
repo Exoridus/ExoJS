@@ -459,6 +459,14 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
   regardless of how many systems or flushes it contains. A capacity growth and
   a mid-frame edit to a mode's own vertex geometry still end the pass, since
   appending cannot cover either.
+- **A frame that ends on a mesh no longer pays an extra pass and submit for
+  the next frame's clear.** `WebGpuMeshRenderer.flush()` honored a pending
+  clear-with-nothing-to-draw by opening a render pass and ending it right
+  back — even though the very next renderer's flush in the same frame would
+  have reused an open one. That empty pass now stays open instead of being
+  closed in place, so a following flush (e.g. the sprite flush right after)
+  appends into it rather than paying for a pass and a `queue.submit` of its
+  own.
 - **`Container` caches its paint order and child-index lookups.**
   `InteractionManager` re-sorted every container's children on every single
   hit-test call, and `getChildIndex()` did a linear `indexOf` scan on every
