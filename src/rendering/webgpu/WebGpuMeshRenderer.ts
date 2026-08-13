@@ -1286,6 +1286,18 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
   protected onDisconnect(): void {
     this.flush();
+
+    // The teardown below destroys the very buffers a draw of ours left in the
+    // open pass still binds, and the pass no longer ends at the tail of a
+    // flush. Submit it first so those draws reach the queue against live
+    // buffers. Backend destroy and device loss drop the pass before disconnecting
+    // renderers, so this only fires when a renderer is disconnected on its own.
+    const coordinator = this._backend?._passCoordinator ?? null;
+
+    if (coordinator !== null && this._ownDrawsPass !== null && this._ownDrawsPass === coordinator.activePass) {
+      coordinator.endPass();
+    }
+
     this._vertexBuffer?.destroy();
     this._indexBuffer?.destroy();
     this._uniformBuffer?.destroy();

@@ -62,6 +62,12 @@ const alignIndexBytes = (indexCount: number): number => (indexCount * Uint16Arra
 const initialVertexCapacity = 256;
 const initialIndexCapacity = 384;
 const initialNodeCapacity = 32;
+// One short line of text is already ~64 quads, so that floor made almost
+// every real retained draw pay several doubling steps (createBuffer + a CPU
+// index fill + writeBuffer each, plus — since the pass-open growth guard —
+// an extra submit). 1024 quads is 12 KiB and covers normal text scenes in
+// one allocation, well inside the 16384-quad Uint16 vertex-index ceiling.
+const initialRetainedQuadCapacity = 1024;
 
 // FrameUniforms: 7 × vec4<f32> = 112 bytes (projection + group mat3x3,
 // column-major, + device-pixel snap viewport rect)
@@ -1365,7 +1371,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
 
     const textureBindGroup = this._getTexBindGroup(device, backend, payload.textures[0]! as Texture);
     const frameBindGroup = this._getTextReplayBindGroup(state, device);
-    const indexBuffer = this._ensureRetainedQuadIndexBuffer(device, data.quadCount);
+    const indexBuffer = this._ensureRetainedQuadIndexBuffer(device, data.quadCount, coordinator);
 
     const active = coordinator.acquirePass();
     const pass = active.pass;
@@ -1511,12 +1517,20 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
    * renderer, exactly like `WebGpuNineSliceSpriteRenderer`'s static per-quad
    * index buffer serves every nine-slice instance.
    */
-  private _ensureRetainedQuadIndexBuffer(device: GPUDevice, quadCount: number): GPUBuffer {
+  private _ensureRetainedQuadIndexBuffer(device: GPUDevice, quadCount: number, coordinator: WebGpuBackend['_passCoordinator']): GPUBuffer {
     if (this._retainedQuadIndexBuffer !== null && this._retainedQuadIndexCapacity >= quadCount) {
       return this._retainedQuadIndexBuffer;
     }
 
-    let capacity = Math.max(this._retainedQuadIndexCapacity, 64);
+    // Growing below destroys the current buffer. An earlier retained replay
+    // in this same still-open pass may still have a draw bound to it, and
+    // the pass no longer ends at the tail of a replay call — end it first so
+    // that draw reaches the queue against a live buffer.
+    if (this._retainedQuadIndexBuffer !== null && coordinator.passHasDraws) {
+      coordinator.endPass();
+    }
+
+    let capacity = Math.max(this._retainedQuadIndexCapacity, initialRetainedQuadCapacity);
 
     while (capacity < quadCount) capacity *= 2;
 

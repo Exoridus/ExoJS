@@ -460,6 +460,14 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
   `Container` itself — the paint-order snapshot skips the sort entirely while
   every sibling shares a `zIndex` — invalidated by each structural mutator, and
   by a child's `zIndex` write for the paint order alone.
+- **The retained-text quad-index buffer starts at 1024 quads, not 64.** 64
+  quads is roughly one short line of text, so effectively every real text
+  draw triggered several doubling steps to reach a usable size — each one a
+  fresh buffer allocation plus a CPU index fill (plus, since growth now ends
+  an open pass first, an extra submit). 1024 quads is 12 KiB and covers
+  normal text scenes in a single allocation, in both `WebGpuTextRenderer` and
+  `WebGl2TextRenderer`; the hard ceiling stays at 16384 quads (the `Uint16`
+  vertex-index limit).
 
 ### Fixed
 
@@ -582,6 +590,22 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
   check is now an always-on `invariant` throw, matching the existing
   ancestor-cycle guard, so a use-after-destroy attach fails the same way in
   every build instead of degrading quietly in production only.
+- **`WebGpuMeshRenderer.onDisconnect()` no longer destroys buffers a
+  still-open pass draws against.** Since the pass-cursor sweep, a mesh flush
+  no longer ends the WebGPU render pass; disconnecting the renderer on its
+  own (mid-frame, outside `WebGpuBackend.destroy()`/device loss, both of
+  which already drop the pass first) could leave its own draws recorded into
+  a pass that was still open and unsubmitted, then free the vertex, index,
+  uniform and instanced buffers they read — a destroyed-buffer validation
+  error whenever something later submitted that pass. `onDisconnect()` now
+  ends its own open pass first when it holds the renderer's draws.
+- **`WebGpuTextRenderer`'s shared retained quad-index buffer no longer grows
+  out from under a still-open pass.** The grow branch of
+  `_ensureRetainedQuadIndexBuffer()` destroyed the current buffer
+  unconditionally; an earlier retained replay in the same still-open pass
+  could already have a draw bound to it, so freeing it invalidated the whole
+  merged command buffer at the next submit. Growth now ends the open pass
+  first when it already holds draws.
 
 ### Docs
 
