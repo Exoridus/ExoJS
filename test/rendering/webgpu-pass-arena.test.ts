@@ -1,6 +1,6 @@
 import type { MockInstance } from 'vitest';
 
-import { WebGpuInstanceArena } from '#rendering/webgpu/WebGpuInstanceArena';
+import { WebGpuPassArena } from '#rendering/webgpu/WebGpuPassArena';
 import type { WebGpuActiveRenderPass } from '#rendering/webgpu/WebGpuPassCoordinator';
 
 // Minimal WebGPU device mock sufficient for arena buffer creation/destruction.
@@ -59,7 +59,7 @@ const setupGpuBufferUsage = (): (() => void) => {
 // A distinct pass identity — the arena only compares object references.
 const makePass = (): WebGpuActiveRenderPass => ({}) as unknown as WebGpuActiveRenderPass;
 
-describe('WebGpuInstanceArena', () => {
+describe('WebGpuPassArena', () => {
   let restore: () => void;
 
   beforeEach(() => {
@@ -72,7 +72,7 @@ describe('WebGpuInstanceArena', () => {
   });
 
   test('has no buffer and does not fit anything before the first grow', () => {
-    const arena = new WebGpuInstanceArena('test', 64);
+    const arena = new WebGpuPassArena('test', 64);
 
     expect(arena.buffer).toBeNull();
     expect(arena.cursor).toBe(0);
@@ -82,7 +82,7 @@ describe('WebGpuInstanceArena', () => {
 
   test('take() hands out distinct, monotonically increasing offsets within a pass', () => {
     const device = createMockDevice();
-    const arena = new WebGpuInstanceArena('test', 256);
+    const arena = new WebGpuPassArena('test', 256);
     const pass = makePass();
 
     arena.grow(device as unknown as GPUDevice, 256);
@@ -103,7 +103,7 @@ describe('WebGpuInstanceArena', () => {
 
   test('fits() is true up to capacity and false once a batch would overflow', () => {
     const device = createMockDevice();
-    const arena = new WebGpuInstanceArena('test', 64);
+    const arena = new WebGpuPassArena('test', 64);
     const pass = makePass();
 
     arena.grow(device as unknown as GPUDevice, 64);
@@ -121,7 +121,7 @@ describe('WebGpuInstanceArena', () => {
 
   test('grow() doubles capacity (or jumps to the request) and destroys the old buffer', () => {
     const device = createMockDevice();
-    const arena = new WebGpuInstanceArena('test', 16);
+    const arena = new WebGpuPassArena('test', 16);
 
     arena.grow(device as unknown as GPUDevice, 10);
 
@@ -147,7 +147,7 @@ describe('WebGpuInstanceArena', () => {
 
   test('grow() preserves the append invariant: a fresh larger buffer, cursor untouched', () => {
     const device = createMockDevice();
-    const arena = new WebGpuInstanceArena('test', 32);
+    const arena = new WebGpuPassArena('test', 32);
     const pass = makePass();
 
     arena.grow(device as unknown as GPUDevice, 32);
@@ -164,7 +164,7 @@ describe('WebGpuInstanceArena', () => {
 
   test('syncPass() resets the cursor when a different pass opens (per-frame reset)', () => {
     const device = createMockDevice();
-    const arena = new WebGpuInstanceArena('test', 256);
+    const arena = new WebGpuPassArena('test', 256);
     const passA = makePass();
     const passB = makePass();
 
@@ -188,7 +188,7 @@ describe('WebGpuInstanceArena', () => {
 
   test('resetPass() drops the pass association so the next syncPass restarts', () => {
     const device = createMockDevice();
-    const arena = new WebGpuInstanceArena('test', 128);
+    const arena = new WebGpuPassArena('test', 128);
     const pass = makePass();
 
     arena.grow(device as unknown as GPUDevice, 128);
@@ -209,7 +209,7 @@ describe('WebGpuInstanceArena', () => {
 
   test('destroy() releases the buffer and clears state', () => {
     const device = createMockDevice();
-    const arena = new WebGpuInstanceArena('test', 64);
+    const arena = new WebGpuPassArena('test', 64);
     const pass = makePass();
 
     arena.grow(device as unknown as GPUDevice, 64);

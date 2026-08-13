@@ -51,6 +51,7 @@ export type { ComputeBindGroupEntry, ComputeBinding } from '#rendering/webgpu/co
 export { reflectComputeBindings, WebGpuComputePipeline, WebGpuStorageBuffer, WebGpuUniformBuffer } from '#rendering/webgpu/compute/index';
 export { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 export { getWebGpuBlendState } from '#rendering/webgpu/WebGpuBlendState';
+export { WebGpuPassArena } from '#rendering/webgpu/WebGpuPassArena';
 export type { WebGpuActiveRenderPass } from '#rendering/webgpu/WebGpuPassCoordinator';
 export {
   retainedGroupUniformBytes,

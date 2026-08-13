@@ -15,7 +15,7 @@ import type { View } from '#rendering/View';
 import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
 import type { WebGpuBackend } from './WebGpuBackend';
 import { getWebGpuBlendState } from './WebGpuBlendState';
-import { WebGpuInstanceArena } from './WebGpuInstanceArena';
+import { WebGpuPassArena } from './WebGpuPassArena';
 import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
 import {
   retainedGroupUniformBytes,
@@ -367,7 +367,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   // Frame-scoped append arena for the per-batch instance stream: consecutive
   // batch flushes accumulate into one open pass at distinct byte offsets, so the
   // whole frame submits once instead of once per flush.
-  private readonly _instanceArena = new WebGpuInstanceArena('sprite:instance-buffer', initialBatchCapacity * instanceStrideBytes);
+  private readonly _instanceArena = new WebGpuPassArena('sprite:instance-buffer', initialBatchCapacity * instanceStrideBytes);
   // CPU staging for the batch currently being packed (one batch at a time).
   private _instanceCapacity = 0;
   private _instanceData: ArrayBuffer = new ArrayBuffer(0);

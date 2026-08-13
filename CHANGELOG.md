@@ -242,6 +242,12 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
 
 ### Changed
 
+- **`WebGpuInstanceArena` renamed `WebGpuPassArena` and exported from
+  `renderer-sdk`.** The class stages bytes against a cursor bound to the open
+  render pass and knows nothing about instances — the name described its first
+  caller, not what it does. Package renderers previously had to hand-rebuild the
+  cursor/grow/reset discipline, which is subtle enough that every copy is a
+  chance to get it wrong.
 - **BREAKING — `SceneManager` renamed `SceneDirector`, `app.scene` renamed
   `app.scenes`.**
 - **BREAKING — scene construction and navigation are constructor- or
