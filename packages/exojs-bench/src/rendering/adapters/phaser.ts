@@ -2,6 +2,7 @@ import * as Phaser from 'phaser';
 
 import { mutationSignature, selectMutationIndices } from '../../shared/mutation';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
+import { isScrolling } from '../world';
 
 /**
  * Phaser 4.2 arm of the rendering benchmark.
@@ -108,6 +109,14 @@ export const createPhaserAdapter = (): EngineAdapter => {
       // WebGPU renderer; it runs under the harness 'webgl2' request (disclosed)
       // and never the 'webgpu' backend.
       return target === 'webgl2';
+    },
+
+    coversArchetype(spec: ArchetypeSpec): boolean {
+      // This arm builds a fixed, viewport-sized scene with a static camera. A
+      // scrolling archetype would silently render as an ordinary fully-visible
+      // one here, i.e. a row that looks comparable and is not — so the arm sits
+      // the archetype out instead.
+      return !isScrolling(spec);
     },
 
     async init(canvas: HTMLCanvasElement, target: Backend): Promise<void> {

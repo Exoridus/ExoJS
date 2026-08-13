@@ -17,7 +17,8 @@ export type ArchetypeId =
   | 'mixed-material-atlased'
   | 'instanced-batch'
   | 'mixed-sprite-mesh-array'
-  | 'mixed-sprite-mesh-static';
+  | 'mixed-sprite-mesh-static'
+  | 'scrolling-world';
 
 /** Structural definition of a scene archetype, independent of any engine or backend. */
 export interface ArchetypeSpec {
@@ -34,18 +35,22 @@ export interface ArchetypeSpec {
   /**
    * Whether frustum/off-screen culling is enabled for this archetype (drives
    * `.cullable` on every spine container and leaf sprite in both adapters).
-   * Currently `false` for every archetype in `archetypes.ts`: keeping every
-   * archetype's sprites on-screen means a cull
-   * check can only ever be a no-op there, and the two engines do NOT pay the
-   * same cost for an identically-set flag. ExoJS's `cullable` drives a real
-   * per-node bounds+intersection check in the render walk
-   * (`SceneNode.inView`); Pixi's `cullable` is inert unless the app registers
-   * `CullerPlugin` (or `Culler.shared.cull(...)` is called explicitly), which
-   * `adapters/pixi.ts` does not do. Leaving this `true` therefore adds
-   * cull-walk overhead to the ExoJS arm with no matching cost on the Pixi arm.
-   * If a future archetype needs genuine off-screen content, either give Pixi
-   * an equivalent `CullerPlugin` registration before flipping this back to
-   * `true`, or disclose the asymmetry explicitly in the report.
+   *
+   * `false` for every archetype whose content is fully on-screen, which is all
+   * of them except `scrolling-world`: a cull check can only ever be a no-op
+   * there, and the two engines do NOT pay the same cost for an identically-set
+   * flag. ExoJS's `cullable` drives a real per-node bounds+intersection check in
+   * the render walk (`SceneNode.inView`); Pixi's `cullable` is inert unless
+   * `Culler.shared.cull(...)` is called explicitly (`CullerPlugin` hooks the
+   * Application ticker, which this harness never runs). Leaving it `true` on a
+   * fully-visible archetype would therefore add cull-walk overhead to the ExoJS
+   * arm with no matching cost on the Pixi arm.
+   *
+   * An archetype with genuine off-screen content sets it `true` and is measured
+   * on BOTH Pixi arms — `pixi default` leaves culling off (Pixi's out-of-the-box
+   * behaviour: it draws the off-screen content too) and `pixi culled` calls
+   * `Culler.shared.cull` per frame, so the asymmetry is measured rather than
+   * assumed away.
    */
   readonly cullingEnabled: boolean;
   /**
@@ -137,6 +142,29 @@ export interface ArchetypeSpec {
    * renderer switches. Meaningful only when {@link meshEvery} is set.
    */
   readonly meshStorage?: 'array' | 'shared-static-geometry';
+  /**
+   * Camera travel per frame, in world units, along the world diagonal. Setting
+   * it to a positive value makes the archetype a SCROLLING one: the leaf grid
+   * covers {@link worldSpan} viewports per axis instead of exactly one, and the
+   * camera reflects around inside it (see `world.ts::cameraCenterAt`).
+   * `undefined`/`0` keeps the fixed, viewport-sized world with a static camera
+   * that every other archetype uses.
+   *
+   * The two arms express the camera differently and both do so idiomatically:
+   * ExoJS moves its `View` centre (the engine has a real camera, and the view
+   * rect is what its culling and its retained-product validity are keyed on),
+   * while the Pixi arm translates the world container (Pixi has no camera
+   * object). Same visible content per frame either way — disclosed in the
+   * report's Methodology rather than papered over.
+   */
+  readonly cameraSpeed?: number;
+  /**
+   * World size as a multiple of the viewport PER AXIS, so the content multiple
+   * is its square: `2` lays the scene out over 4x the viewport's area and leaves
+   * roughly 75% of it off-screen at any moment. Meaningful only together with
+   * {@link cameraSpeed}.
+   */
+  readonly worldSpan?: number;
 }
 
 /** One matrix cell: a single (engine, config, backend, archetype, node count) combination to measure. */
@@ -198,6 +226,19 @@ export interface EngineAdapter {
   readonly config: string;
   /** Whether this adapter supports the given backend. */
   supports(backend: Backend): boolean;
+  /**
+   * Whether this arm should be measured on the given archetype. Optional; an
+   * arm that omits it is measured on every archetype, which is the norm.
+   *
+   * It exists for arms that are a VARIANT of another arm rather than a whole
+   * engine — `pixi culled`, which differs from `pixi default` only by an
+   * explicit per-frame `Culler.shared.cull` call. On an archetype whose content
+   * is fully on-screen that call changes nothing except its own cost, so the
+   * variant would spend the whole matrix producing rows that duplicate the arm
+   * it varies. Restricting it to the archetypes where the variation is the
+   * point keeps the matrix honest and its runtime bounded.
+   */
+  coversArchetype?(spec: ArchetypeSpec): boolean;
   /** Initialize the engine against the given canvas and backend. */
   init(canvas: HTMLCanvasElement, backend: Backend): Promise<void>;
   /** Build a scene for the given archetype, node count, and RNG seed. */

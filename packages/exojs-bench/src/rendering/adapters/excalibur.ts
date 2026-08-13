@@ -2,6 +2,7 @@ import * as ex from 'excalibur';
 
 import { mutationSignature, selectMutationIndices } from '../../shared/mutation';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
+import { isScrolling } from '../world';
 
 /**
  * Excalibur 0.32 arm of the rendering benchmark.
@@ -104,6 +105,14 @@ export const createExcaliburAdapter = (): EngineAdapter => {
     supports(target: Backend): boolean {
       // Excalibur 0.32 renders WebGL2 only; it ships no WebGPU renderer.
       return target === 'webgl2';
+    },
+
+    coversArchetype(spec: ArchetypeSpec): boolean {
+      // This arm builds a fixed, viewport-sized scene with a static camera. A
+      // scrolling archetype would silently render as an ordinary fully-visible
+      // one here, i.e. a row that looks comparable and is not — so the arm sits
+      // the archetype out instead.
+      return !isScrolling(spec);
     },
 
     async init(canvas: HTMLCanvasElement, target: Backend): Promise<void> {

@@ -140,19 +140,20 @@ const toMarkdown = (data: ReportData): string => {
     lines.push('');
   }
 
-  // Methodology disclosure: leaving per-archetype culling on while every
-  // archetype keeps its sprites on-screen would mean the cull check never
-  // removes a node — pure asymmetric overhead, since ExoJS's `cullable` drives
-  // a real per-node bounds check in the render walk while Pixi's `cullable` is
-  // inert unless `CullerPlugin` is registered (it is not, in `adapters/pixi.ts`).
-  // Culling is disabled on every archetype (`cullingEnabled: false` in
-  // `archetypes.ts`) so both arms do identical visible-set work; this line
-  // makes that explicit in every generated report rather than leaving it to
-  // source-comment archaeology.
+  // Methodology disclosure: leaving per-archetype culling on while an archetype
+  // keeps its sprites on-screen would mean the cull check never removes a node —
+  // pure asymmetric overhead, since ExoJS's `cullable` drives a real per-node
+  // bounds check in the render walk while Pixi's `cullable` is inert unless
+  // something calls `Culler.shared.cull(...)`. Culling is therefore disabled on
+  // every fully-visible archetype, and the one archetype with real off-screen
+  // content resolves the asymmetry by MEASURING both Pixi behaviours instead of
+  // assuming one. These lines make that explicit in every generated report
+  // rather than leaving it to source-comment archaeology.
   lines.push(
     '## Methodology',
     '',
-    '- **Culling:** disabled on every archetype (`cullingEnabled: false`). Every archetype keeps its sprites fully on-screen, so a cull check never removes a node — it can only add overhead. ExoJS\'s `cullable` flag drives a real per-node bounds/intersection check in the render walk; Pixi\'s `cullable` flag is inert unless the app registers `CullerPlugin`, which this harness does not do. The Phaser arm does no bounds culling (its default `willRender` checks only visibility/alpha flags), and the Excalibur arm never runs its off-screen culling system (only the draw path is stepped, not the update systems that tag entities off-screen). Every arm therefore does identical visible-set work.',
+    '- **Culling:** disabled on every archetype whose content is fully on-screen (`cullingEnabled: false`) — there a cull check never removes a node and can only add overhead, and the arms do not pay equally for it: ExoJS\'s `cullable` flag drives a real per-node bounds/intersection check in the render walk, while Pixi\'s `cullable` flag is inert unless something calls `Culler.shared.cull(...)`. The Phaser arm does no bounds culling (its default `willRender` checks only visibility/alpha flags), and the Excalibur arm never runs its off-screen culling system (only the draw path is stepped, not the update systems that tag entities off-screen). On those archetypes every arm therefore does identical visible-set work.',
+    '- **`scrolling-world` is the one archetype with off-screen content**, and the only one with a moving camera: `nodeCount` leaves are laid out over 4x the viewport\'s area (`worldSpan: 2`), so roughly 25% are visible at any moment, and the camera travels the world diagonal at `cameraSpeed` units per frame, reflecting off the world edges on a path that is a closed form in the frame index (identical on every arm). Two disclosures apply to its rows. **(1) Camera mechanism differs by arm, idiomatically:** ExoJS moves its `View` centre (the engine has a real camera, and the view rect is what its culling and its retained-render-product validity key on); Pixi has no camera object, so that arm translates the world container under a fixed screen rect. Both show the identical world content per frame. **(2) Two Pixi arms:** `pixi default` is stock Pixi and does NOT cull — it draws the off-screen content too, which is Pixi\'s out-of-the-box behaviour and the honest upper bound; `pixi culled` adds the explicit per-frame `Culler.shared.cull(root, renderer.screen, false)` a Pixi app that wants culling has to write itself. Read the ExoJS rows against `pixi culled` for a culling-vs-culling comparison, and against `pixi default` for the out-of-the-box one. `pixi culled` is measured only on this archetype.',
     '- **Phaser renders WebGL, not WebGL2.** The Phaser arm is measured as a stock Phaser 4 app: Phaser 4.2 is often described as a from-scratch WebGL2 renderer, but its `WebGLRenderer` requests a plain `webgl` (WebGL1) context by default (`canvas.getContext(\'webgl\')`, WebGLRenderer.js:709), uses GLSL ES 1.00 shaders, and polyfills the WebGL2-core features it needs (instanced arrays, VAO) from WebGL1 extensions — its renderer is an evolution of the Phaser 3.85+ WebGL path, not a WebGL2 rewrite. The arm runs under the `webgl2` backend *request* but its rows are WebGL-rendered. Its CPU-time column is measured identically to the other arms and **is** cross-arm comparable; its full-frame time comes from the rAF delta (as it does for any arm when the optional GPU-timer extension is absent). The WebGL2 draw-call structural probe cannot attach to a WebGL context, so the Phaser arm reports **no structural counters** (`drawCalls`/`textureBinds`/`bufferUploads` show 0 with an explanatory `note`) — the counts are omitted, never faked. Compare structural columns only among the WebGL2 arms (ExoJS, Pixi, Excalibur). Phaser 4 ships no WebGPU renderer, so it never runs the `webgpu` backend.',
     '- **Competitor render-path isolation.** Each competitor arm is driven through only its render path with its own loop suppressed: Phaser via `renderer.preRender()` + `SceneManager.render()` + `renderer.postRender()` with `game.loop.stop()`; Excalibur via its public draw sequence (`beginDrawLifecycle`/`clear`/`currentScene.draw`/`flush`/`endDrawLifecycle`) with `engine.clock.stop()`. Update/input/physics subsystems are never stepped, so only rendering is measured.',
     '',
