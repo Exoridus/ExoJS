@@ -728,12 +728,13 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
 
     if (this._drawCallCount === 0 || maskClipsAll) {
-      // Honor a pending clear with an empty pass so createColorAttachment
-      // consumes the clear-state once.
+      // No drawable content but a clear is pending: open the coordinator's
+      // pass so createColorAttachment consumes the clear-state once, but
+      // leave it open (not ended) so a following renderer's flush in the same
+      // frame — e.g. the sprite flush right after this one — can append its
+      // draws into it instead of paying for an extra pass and submit.
       if (backend.clearRequested) {
         backend._passCoordinator.acquirePass();
-        backend._passCoordinator.endPass();
-        this._resetInstancedBatchPass();
       }
       this._resetFrame();
       return;
