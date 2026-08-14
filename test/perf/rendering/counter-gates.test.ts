@@ -86,14 +86,19 @@ const EXPECTED = {
   //   items' stored AABBs.
   // - `culledNodes` stays 112, so a strategy that silently stopped culling and
   //   submitted the whole subtree could not pass this row.
-  // - `globalTransform`/`materialKey` stay identical because a selection resolves
-  //   them exactly as the walk did, for the same admitted items. Cut 1 buys the
-  //   WALK, not the per-item resolve; the honest number belongs here rather than
-  //   an optimistic one.
+  // - `materialKey` stays 888, because a selection resolves it live for exactly
+  //   the admitted items, as the walk did.
+  //
+  // `globalTransform` re-pins 5554 -> 3554 with the same change: nothing in the
+  // subtree moved since the items were discovered, so the scan culls against
+  // their stored world AABBs instead of calling `getBounds()` — which resolves
+  // the whole parent chain — once per item. Exactly 2 per sprite, which is what
+  // that call cost. A rise back toward 5554 means the stored-bounds path stopped
+  // engaging on a settled scene.
   panPlainBeyondMargin: {
     collect: 1,
     inView: 1001,
-    globalTransform: 5554,
+    globalTransform: 3554,
     materialKey: 888,
     submittedNodes: 888,
     culledNodes: 112,
@@ -108,9 +113,10 @@ const EXPECTED = {
   // It pins the one-time cost the tier trades against, so it can never be
   // silently inflated. `collect` is 1001 — the discovery walk visits every node
   // exactly once, because an item that is off-screen now is precisely the one
-  // that must be findable when it scrolls in — and `globalTransform` is 2000
-  // above the plain re-collect this frame used to be (8002 -> 10002), which is
-  // the bounds read that IS each item's payload.
+  // that must be findable when it scrolls in — and `globalTransform` is 8002,
+  // exactly what the plain re-collect this frame replaced already paid: the
+  // bounds each item stores are read from the same `getBounds()` call the emit
+  // path made anyway, so discovery adds a walk and no transform work.
   //
   // What must NOT appear here is a per-node frame-local product. The discovery
   // walk allocates no pooled draw command, no `nodeIndex`, no transform-buffer
@@ -120,7 +126,7 @@ const EXPECTED = {
   sourceDiscovery: {
     collect: 1001,
     inView: 1001,
-    globalTransform: 10002,
+    globalTransform: 8002,
     materialKey: 1000,
     submittedNodes: 1000,
     culledNodes: 0,

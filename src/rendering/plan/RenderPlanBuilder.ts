@@ -98,6 +98,20 @@ interface MutableGroupScope extends GroupScope, EntryPlacementState {
  * playback semantics — the group uniform is suspended (the branch collected
  * world-space transforms) and fragment capture records a live re-dispatch.
  */
+/**
+ * What one frame selects from: the entries, the source that judges them, and
+ * whether their stored world AABBs are still exact.
+ *
+ * The third field travels with the other two because it is a property of the
+ * pairing rather than of either half — the same source answers `true` on a
+ * settled frame and `false` on the next one if a single sprite moved.
+ */
+interface SourceSelection {
+  readonly entries: readonly SourceEntry[];
+  readonly source: RenderRootSource;
+  readonly boundsAreCurrent: boolean;
+}
+
 const groupEscapeEffect: EffectDescriptor = Object.freeze({
   filters: [],
   clip: ClipKind.None,
@@ -650,12 +664,12 @@ export class RenderPlanBuilder {
    * of that: the scene-graph walk, the transform derivation and the material
    * resolve for items the rect rejects.
    */
-  private _emitSourceSelection(entries: readonly SourceEntry[], source: RenderRootSource, rect: ReadonlyRectangle): void {
+  private _emitSourceSelection(entries: readonly SourceEntry[], selection: SourceSelection, rect: ReadonlyRectangle): void {
     for (const entry of entries) {
       if (entry.kind === RenderEntryKind.Draw) {
-        this._emitSelectedItem(entry, source, rect);
+        this._emitSelectedItem(entry, selection, rect);
       } else if (entry.kind === RenderEntryKind.Group) {
-        this._emitSelectedGroup(entry, source, rect);
+        this._emitSelectedGroup(entry, selection, rect);
       } else {
         // Live re-dispatch through the ordinary collect path, at its stored
         // placement. A view-dependent producer therefore sees the CURRENT view
@@ -683,10 +697,10 @@ export class RenderPlanBuilder {
    * them anyway would be two getter calls per item on the one path whose whole
    * purpose is to be cheap at a million.
    */
-  private _emitSelectedItem(item: PersistentDrawItem, source: RenderRootSource, rect: ReadonlyRectangle): void {
+  private _emitSelectedItem(item: PersistentDrawItem, selection: SourceSelection, rect: ReadonlyRectangle): void {
     const drawable = item.drawable;
 
-    if (!source.admits(item, rect)) {
+    if (!selection.source.admits(item, rect, selection.boundsAreCurrent)) {
       this.backend.stats.culledNodes++;
       this._noteViewCulled();
 
@@ -722,9 +736,13 @@ export class RenderPlanBuilder {
    * what keeps the descent proportional to what is on screen instead of to
    * everything the source holds.
    */
-  private _emitSelectedGroup(group: SourceGroup, source: RenderRootSource, rect: ReadonlyRectangle): void {
+  private _emitSelectedGroup(group: SourceGroup, selection: SourceSelection, rect: ReadonlyRectangle): void {
     const node = group.node;
 
+    // Read live rather than from a stored group extent: a group's AABB
+    // aggregates its children, so it is the one rect a `getBounds()` call still
+    // has to compose even on the stored-bounds path — and there are as many
+    // groups as the scene has containers, not as many as it has sprites.
     if (!node._inCullRect(rect)) {
       this.backend.stats.culledNodes++;
       this._noteViewCulled();
@@ -741,7 +759,7 @@ export class RenderPlanBuilder {
     this._scopeStack.push(groupScope);
 
     try {
-      this._emitSourceSelection(group.entries, source, rect);
+      this._emitSourceSelection(group.entries, selection, rect);
     } finally {
       this._scopeStack.pop();
     }
@@ -827,7 +845,7 @@ export class RenderPlanBuilder {
     // this frame ends up capturing.
     representation.noteRebuildKeys(contentRevision, structureRevision, ancestryStamp);
 
-    const selection = this._resolveSourceSelection(node, representation, contentRevision, structureRevision, ancestryStamp);
+    const selection = this._resolveSourceSelection(node, representation, contentRevision, structureRevision, ancestryStamp, transformRevision);
 
     if (representation.shouldSuppressCapture(contentRevision, structureRevision, transformRevision, view)) {
       // No capture this frame, but the cheap path is still the cheap path: the
@@ -836,7 +854,7 @@ export class RenderPlanBuilder {
       if (selection === null) {
         node._collectForRenderPlan(this);
       } else {
-        this._emitSourceSelection(selection.entries, selection.source, this.cullRect);
+        this._emitSourceSelection(selection.entries, selection, this.cullRect);
       }
 
       return;
@@ -855,7 +873,7 @@ export class RenderPlanBuilder {
       if (selection === null) {
         node._collectForRenderPlan(this);
       } else {
-        this._emitSourceSelection(selection.entries, selection.source, this._captureCullRect);
+        this._emitSourceSelection(selection.entries, selection, this._captureCullRect);
       }
     } finally {
       this._trackedRoot = previousTracked;
@@ -886,11 +904,12 @@ export class RenderPlanBuilder {
     contentRevision: number,
     structureRevision: number,
     ancestryStamp: number,
-  ): { entries: readonly SourceEntry[]; source: RenderRootSource } | null {
+    transformRevision: number,
+  ): SourceSelection | null {
     const existing = representation.source;
 
     if (existing?.isUsable(contentRevision, structureRevision, ancestryStamp)) {
-      return { entries: existing.entries, source: existing };
+      return { entries: existing.entries, source: existing, boundsAreCurrent: existing.storedBoundsAreCurrent(transformRevision) };
     }
 
     // Stale items describe a subtree that no longer exists, and world bounds
@@ -915,9 +934,11 @@ export class RenderPlanBuilder {
 
     const source = representation.ensureSource();
 
-    source.adopt(discovered, contentRevision, structureRevision, ancestryStamp);
+    source.adopt(discovered, contentRevision, structureRevision, ancestryStamp, transformRevision);
 
-    return { entries: discovered, source };
+    // Freshly discovered: the bounds were read from the very nodes this frame is
+    // about to select from.
+    return { entries: discovered, source, boundsAreCurrent: true };
   }
 
   /**

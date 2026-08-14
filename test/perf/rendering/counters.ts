@@ -10,8 +10,8 @@
  *
  * The wrapped methods mirror the four sub-phases the collect-phase benchmark
  * (`test/perf/collect-phase-benchmark.ts`) attributes build() time to:
- *   - `RenderNode._collect`            — node visits entering the cull/emit gate
- *   - `SceneNode._inCullRect`          — view-frustum cull checks
+ *   - `RenderNode._collect`               — node visits entering the cull/emit gate
+ *   - `SceneNode._inCullRectUsingBounds`  — view-frustum cull checks
  *   - `SceneNode.getGlobalTransform`   — world-transform resolutions (build + play)
  *   - `Drawable._getOrComputeMaterialKey` — per-draw material-key resolutions
  *
@@ -32,10 +32,15 @@ export interface CollectCounters {
   /** `RenderNode._collect` calls — nodes visited by the collect walk. */
   collect: number;
   /**
-   * `SceneNode._inCullRect` calls — view-frustum cull checks performed. The
-   * collect path tests against a RECT (the view's own, or the capture's inflated
-   * one) rather than a `View`, so the counter wraps that method; `inView`
-   * delegates to it, so a public caller is still counted.
+   * `SceneNode._inCullRectUsingBounds` calls — view-frustum cull checks
+   * performed.
+   *
+   * Wraps the shared bottom of the rule rather than one of its entrances, so a
+   * check counts exactly once however it was reached: `inView` delegates to
+   * `_inCullRect`, which delegates to this, and the persistent-source scan calls
+   * it directly with bounds it already holds. Counting an entrance instead would
+   * make the number drop whenever a caller switched entrances — reading as "the
+   * frame stopped culling" when nothing about the culling changed.
    */
   inView: number;
   /** `SceneNode.getGlobalTransform` calls — world-transform resolutions (build + play). */
@@ -83,7 +88,7 @@ const installCounters = (): Installed => {
   // call `super._collect`, which resolves to this wrapped implementation — so a
   // single wrap here counts every node visit regardless of subclass.
   wrap(RenderNode.prototype, '_collect', 'collect');
-  wrap(SceneNode.prototype, '_inCullRect', 'inView');
+  wrap(SceneNode.prototype, '_inCullRectUsingBounds', 'inView');
   wrap(SceneNode.prototype, 'getGlobalTransform', 'globalTransform');
   wrap(Drawable.prototype, '_getOrComputeMaterialKey', 'materialKey');
 

@@ -60,6 +60,22 @@ export class RenderRootSource {
    * assumption never becomes silent.
    */
   private _ancestryStamp = -1;
+  /**
+   * The subtree's transform revision when the items were built.
+   *
+   * Deliberately NOT part of {@link isUsable}. A transform-only move leaves
+   * every item's identity, placement and producer intact — which drawable exists
+   * and where it sits in draw order is unchanged — so invalidating the whole
+   * source over one moving sprite would take the cheap path away from every
+   * partly-dynamic scene, and those are most scenes.
+   *
+   * What a move DOES invalidate is the stored world AABBs, and only those. So
+   * this key gates exactly that: {@link storedBoundsAreCurrent}. Equal means
+   * nothing at or below the root moved, so every stored extent is still exact;
+   * unequal drops the scan back to reading each node live, which is correct
+   * whatever moved.
+   */
+  private _transformRevision = -1;
 
   /** Swappable because which strategy wins is a measurement (see the seam's doc). */
   public visibility: RenderItemVisibility = new FlatScanVisibility();
@@ -72,6 +88,11 @@ export class RenderRootSource {
       this._structureRevision === structureRevision &&
       this._ancestryStamp === ancestryStamp
     );
+  }
+
+  /** Whether the items' stored world AABBs still describe their drawables. */
+  public storedBoundsAreCurrent(transformRevision: number): boolean {
+    return this._transformRevision === transformRevision;
   }
 
   /** The items, valid only while {@link isUsable} holds. */
@@ -87,17 +108,24 @@ export class RenderRootSource {
    * for those are separate work (`NEU-O47`/`NEU-O49`), and the case this cut
    * exists for is a moving camera over unchanged content.
    */
-  public adopt(entries: readonly SourceEntry[], contentRevision: number, structureRevision: number, ancestryStamp: number): void {
+  public adopt(
+    entries: readonly SourceEntry[],
+    contentRevision: number,
+    structureRevision: number,
+    ancestryStamp: number,
+    transformRevision: number,
+  ): void {
     this._entries = entries;
     this._contentRevision = contentRevision;
     this._structureRevision = structureRevision;
     this._ancestryStamp = ancestryStamp;
+    this._transformRevision = transformRevision;
     this._hasItems = true;
   }
 
   /** Whether the rect admits this item; delegates to the active strategy. */
-  public admits(item: PersistentDrawItem, rect: ReadonlyRectangle): boolean {
-    return this.visibility.admits(item, rect);
+  public admits(item: PersistentDrawItem, rect: ReadonlyRectangle, boundsAreCurrent: boolean): boolean {
+    return this.visibility.admits(item, rect, boundsAreCurrent);
   }
 
   /** Drop the items (structure/content changed, or the root was destroyed). */
@@ -107,5 +135,6 @@ export class RenderRootSource {
     this._contentRevision = -1;
     this._structureRevision = -1;
     this._ancestryStamp = -1;
+    this._transformRevision = -1;
   }
 }

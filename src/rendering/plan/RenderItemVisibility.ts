@@ -1,4 +1,5 @@
 import type { ReadonlyRectangle } from '#math/Rectangle';
+import type { RectangleLike } from '#math/RectangleLike';
 
 import type { PersistentDrawItem } from './RenderSourceItem';
 
@@ -22,8 +23,18 @@ import type { PersistentDrawItem } from './RenderSourceItem';
  * measurement says the index earns its maintenance.
  */
 export interface RenderItemVisibility {
-  /** Whether `rect` admits this item. */
-  admits(item: PersistentDrawItem, rect: ReadonlyRectangle): boolean;
+  /**
+   * Whether `rect` admits this item.
+   *
+   * `boundsAreCurrent` says whether the item's stored world AABB still describes
+   * the drawable — true exactly when nothing in the subtree has moved since the
+   * items were discovered. It is passed rather than inferred because only the
+   * source holds the transform revision that answers it, and getting it wrong in
+   * either direction is a real defect: `false` when it could be `true` costs the
+   * scan a full parent-chain resolve per item, and `true` when it should be
+   * `false` culls against a stale extent and drops a node that moved into view.
+   */
+  admits(item: PersistentDrawItem, rect: ReadonlyRectangle, boundsAreCurrent: boolean): boolean;
 }
 
 /**
@@ -37,17 +48,34 @@ export interface RenderItemVisibility {
  * whole difference to the full collect it replaces.
  */
 export class FlatScanVisibility implements RenderItemVisibility {
-  public admits(item: PersistentDrawItem, rect: ReadonlyRectangle): boolean {
-    // Deliberately the node's own test rather than a comparison against the
-    // item's stored AABB. The two agree while nothing has moved, but only one of
-    // them stays correct when they disagree — and duplicating `cullable` /
-    // `cullArea` handling here would be a second copy of a rule that has already
-    // moved once (`inView` -> `_inCullRect`). A cache hit on `getBounds()` is the
-    // cost, and reading live is also what keeps this correct across an ancestor
-    // move, which the stored AABBs do not survive.
-    //
-    // An index cannot afford this call per item; the shared-helper and
-    // mutable-`cullArea` questions that raises belong to the index, not here.
-    return item.drawable._inCullRect(rect);
+  /**
+   * Reused rect handed to the cull test, so a scan over a million items
+   * allocates nothing. A plain object rather than a `Rectangle`: the test only
+   * reads `x`/`y`/`width`/`height`, while a `Rectangle` would route all four
+   * writes through its observable vector and size on every item.
+   */
+  private readonly _bounds: RectangleLike = { x: 0, y: 0, width: 0, height: 0 };
+
+  public admits(item: PersistentDrawItem, rect: ReadonlyRectangle, boundsAreCurrent: boolean): boolean {
+    const drawable = item.drawable;
+
+    if (!boundsAreCurrent) {
+      // Something in the subtree moved, so a stored extent may be anywhere. Read
+      // through the node, which resolves live — the correct answer, at the cost
+      // of a parent-chain walk per item.
+      return drawable._inCullRect(rect);
+    }
+
+    const bounds = this._bounds;
+
+    bounds.x = item.minX;
+    bounds.y = item.minY;
+    bounds.width = item.maxX - item.minX;
+    bounds.height = item.maxY - item.minY;
+
+    // Same rule, same implementation — `_inCullRect` IS this call with
+    // `getBounds()` filled in — so `cullable` and a live-mutated `cullArea` are
+    // still honoured and no second culling semantics exists to drift.
+    return drawable._inCullRectUsingBounds(rect, bounds);
   }
 }

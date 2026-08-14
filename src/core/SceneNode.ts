@@ -10,6 +10,7 @@ import {
   intersectionRectEllipse,
   intersectionSat,
 } from '#math/collision-detection';
+import { intersectionRectRect } from '#math/collision-primitives';
 import type { Ellipse } from '#math/Ellipse';
 import { Flags } from '#math/Flags';
 import { Interval } from '#math/Interval';
@@ -19,6 +20,7 @@ import { ObservableVector, type ObservableVectorOwner } from '#math/ObservableVe
 import { Polygon } from '#math/Polygon';
 import type { ReadonlyRectangle } from '#math/Rectangle';
 import { Rectangle } from '#math/Rectangle';
+import type { RectangleLike } from '#math/RectangleLike';
 import { degreesToRadians, trimRotation } from '#math/utils';
 import { Vector } from '#math/Vector';
 import type { Container } from '#rendering/Container';
@@ -928,11 +930,39 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    * @internal
    */
   public _inCullRect(rect: ReadonlyRectangle): boolean {
+    return this._inCullRectUsingBounds(rect, this.getBounds());
+  }
+
+  /**
+   * {@link _inCullRect} against bounds the caller already holds.
+   *
+   * Exists because {@link getBounds} resolves the whole parent chain on every
+   * call, and the persistent-source scan asks this question once per item in a
+   * subtree that can hold a million of them — at which point that resolve is the
+   * single most expensive thing a camera step pays for.
+   *
+   * The two halves of the rule are split on purpose along the line of what the
+   * caller may safely have cached:
+   *
+   * - `cullable` and `cullArea` are read LIVE, always. `cullArea` is a mutable
+   *   `Rectangle` and only REPLACING the reference stamps a revision, so a
+   *   caller that had copied it could go stale in place, unnoticed.
+   * - `bounds` is the caller's, and it is the caller's obligation to pass one
+   *   that is current. The source does that by refusing this path outright
+   *   unless the subtree's transform revision is unchanged since it stored them
+   *   — no node moved, so no stored extent can be wrong.
+   *
+   * This is one rule with one implementation, not a second culling semantics:
+   * {@link _inCullRect} is this method with `getBounds()` filled in.
+   */
+  public _inCullRectUsingBounds(rect: ReadonlyRectangle, bounds: RectangleLike): boolean {
     if (!this._cullable) {
       return true;
     }
 
-    return rect.intersectsWith(this._cullArea ?? this.getBounds());
+    const area = this._cullArea;
+
+    return area !== null ? rect.intersectsWith(area) : intersectionRectRect(rect, bounds);
   }
 
   /**

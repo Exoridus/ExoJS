@@ -1,3 +1,4 @@
+import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import { RenderEntryKind } from '#rendering/plan/RenderCommand';
@@ -328,6 +329,72 @@ describe('render-root source: discovery', () => {
     playFrame(root, backend);
 
     expect(sourceOf(root)?.isUsable(root._contentRevision, root._structureRevision, root._globalTransformStamp)).toBe(false);
+
+    root.destroy();
+    backend.destroy();
+  });
+});
+
+describe('render-root source: stored bounds', () => {
+  test('a moved item is selected on its CURRENT position, not on the extent it was discovered at', () => {
+    const { backend, draws } = createDrawRecordingBackend();
+    const root = makeRoot(new Container());
+    const stays = new Leaf('stays');
+    const moves = new Leaf('moves');
+
+    stays.setPosition(100, 300);
+    // Discovered far outside every view this test uses, so its STORED extent
+    // says "not visible" for the rest of the run.
+    moves.setPosition(4000, 300);
+    root.addChild(stays, moves);
+
+    driveToSourceTier(root, backend);
+    draws.length = 0;
+    backend.setView(viewAt(400));
+    playFrame(root, backend);
+
+    expect(draws).toEqual(['stays']);
+
+    // A transform-only move: the item's identity, placement and producer are
+    // unchanged, so the source stays usable — but its stored AABB now describes
+    // where the drawable WAS. Culling against it would drop a node that just
+    // moved into view.
+    moves.setPosition(140, 300);
+    draws.length = 0;
+    backend.setView(viewAt(410));
+    playFrame(root, backend);
+
+    expect(draws).toEqual(['stays', 'moves']);
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('an item whose cullArea is mutated in place is judged by the mutated rect', () => {
+    const { backend, draws } = createDrawRecordingBackend();
+    const root = makeRoot(new Container());
+    const leaf = new Leaf('a');
+    // Replacing the reference stamps structure dirty; MUTATING the rectangle
+    // stamps nothing, so this is the one input a selection can never cache.
+    const area = new Rectangle(4000, 300, 16, 16);
+
+    leaf.setPosition(100, 300);
+    leaf.cullArea = area;
+    root.addChild(leaf);
+
+    driveToSourceTier(root, backend);
+    draws.length = 0;
+    backend.setView(viewAt(400));
+    playFrame(root, backend);
+
+    expect(draws).toEqual([]);
+
+    area.setPosition(100, 300);
+    draws.length = 0;
+    backend.setView(viewAt(410));
+    playFrame(root, backend);
+
+    expect(draws).toEqual(['a']);
 
     root.destroy();
     backend.destroy();
