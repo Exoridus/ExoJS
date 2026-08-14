@@ -915,13 +915,24 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   }
 
   public inView(view: View): boolean {
+    return this._inCullRect(view.getBounds());
+  }
+
+  /**
+   * The view test against an explicit rect rather than a view's own bounds.
+   *
+   * A capturing collect culls against a rect slightly LARGER than the view so
+   * the resulting retained product survives a camera that moves (see
+   * `RenderPlanBuilder.cullRect`); everything else passes the view's own rect
+   * and gets exactly {@link inView}.
+   * @internal
+   */
+  public _inCullRect(rect: ReadonlyRectangle): boolean {
     if (!this._cullable) {
       return true;
     }
 
-    const bounds = this._cullArea ?? this.getBounds();
-
-    return view.getBounds().intersectsWith(bounds);
+    return rect.intersectsWith(this._cullArea ?? this.getBounds());
   }
 
   /**

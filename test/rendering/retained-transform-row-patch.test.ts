@@ -295,7 +295,7 @@ describe('automatic render-root representation: incremental transform rows', () 
     harness.backend.destroy();
   });
 
-  test('a capture that culled something never patches — a culled node could move back into view unseen', () => {
+  test('a capture that culled something still patches a RECORDED node that moves', () => {
     const harness = createPatchingBackend();
     const root = new Container();
     const visible = new RecordableLeaf('a');
@@ -311,29 +311,67 @@ describe('automatic render-root representation: incremental transform rows', () 
     visible.setPosition(410, 300);
     playFrame(root, harness.backend);
 
-    expect(harness.patches).toEqual([]);
-    expect(harness.events).toContain('flush:a'); // full re-collect
+    // The moved node is in the product, so its row is patchable; the culled one
+    // is irrelevant to this move. Off-screen content no longer costs the whole
+    // subtree its recorded tier.
+    expect(harness.patches).toHaveLength(1);
+    expect(harness.events).not.toContain('flush:a');
 
     root.destroy();
     harness.backend.destroy();
   });
 
-  test('a moved node that leaves the view forces a re-collect instead of a stale replay', () => {
+  test('a node the capture culled cannot be patched when it moves — the frame re-collects and draws it', () => {
     const harness = createPatchingBackend();
     const root = new Container();
-    const leaf = new RecordableLeaf('a');
+    const visible = new RecordableLeaf('a');
+    const offscreen = new RecordableLeaf('b');
 
-    leaf.setPosition(400, 300);
-    root.addChild(leaf);
+    visible.setPosition(400, 300);
+    offscreen.setPosition(5000, 5000);
+    root.addChild(visible, offscreen);
     harness.backend.setView(new View(400, 300, 800, 600));
 
     reachSpliceTier(root, harness);
 
-    leaf.setPosition(5000, 5000);
+    // The one direction the capture rect cannot answer: a node that is in NO
+    // record moves into the view. There is no row to patch and nothing in the
+    // product points at it, so the frame must fall back to a real collect.
+    harness.events.length = 0;
+    offscreen.setPosition(400, 300);
     playFrame(root, harness.backend);
 
     expect(harness.patches).toEqual([]);
-    expect(harness.events).not.toContain('replay:a');
+    expect(harness.events).toContain('flush:a,b');
+
+    root.destroy();
+    harness.backend.destroy();
+  });
+
+  test('a moved node that leaves the view replays clipped instead of forcing a re-collect', () => {
+    const harness = createPatchingBackend();
+    const root = new Container();
+    const anchor = new RecordableLeaf('a');
+    const leaver = new RecordableLeaf('b');
+
+    // `anchor` keeps the ROOT itself inside the view; without it the root's own
+    // bounds would follow the leaver off-screen and the whole subtree would be
+    // culled, which is a different thing than the case under test.
+    anchor.setPosition(400, 300);
+    leaver.setPosition(420, 300);
+    root.addChild(anchor, leaver);
+    harness.backend.setView(new View(400, 300, 800, 600));
+
+    reachSpliceTier(root, harness);
+
+    leaver.setPosition(5000, 5000);
+    playFrame(root, harness.backend);
+
+    // Drawing a node that has left the view is not a pixel error — it lands
+    // outside the viewport and is clipped — so the cheap answer is the correct
+    // one: patch the row and keep replaying.
+    expect(harness.patches).toHaveLength(1);
+    expect(harness.events).toContain('replay:a,b');
 
     root.destroy();
     harness.backend.destroy();

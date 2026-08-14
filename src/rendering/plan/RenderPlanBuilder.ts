@@ -55,6 +55,19 @@ interface RetainedBackendHooks {
   _validateRetainedInstructionSet?(set: RetainedInstructionSet): boolean;
 }
 
+/**
+ * How far a capturing collect's cull rect reaches beyond the view, per side, as
+ * a fraction of that view axis. Each axis therefore grows by twice this, and the
+ * camera may travel that fraction of an axis before the captured product
+ * expires.
+ *
+ * A start value, not a tuned one: the trade is band area (nodes captured once,
+ * then replayed for free) against re-collect frequency (which falls roughly
+ * linearly with margin / camera speed). The `scrolling-world` benchmark
+ * archetype exists to sweep it.
+ */
+const RETAINED_CULL_MARGIN_RATIO = 1 / 16;
+
 interface MutableGroupScope extends GroupScope {
   _nextSeq: number;
   firstZ: number | null;
@@ -164,6 +177,24 @@ export class RenderPlanBuilder {
    * at one null check on every other frame.
    */
   private _trackedRoot: RetainedRootRepresentation | null = null;
+  /**
+   * The INFLATED rect a capturing collect culls against (see
+   * {@link RETAINED_CULL_MARGIN_RATIO}), live only while {@link _trackedRoot} is
+   * set. Off a capture, {@link cullRect} falls back to the view's own rect, so a
+   * frame that will not be retained culls exactly as tightly as it always has.
+   */
+  private readonly _captureCullRect = new Rectangle();
+  private _captureCullActive = false;
+
+  /**
+   * The rect the view test compares against for this collect: the view's own
+   * bounds normally, the capture's inflated rect while a render root is being
+   * captured.
+   * @internal
+   */
+  public get cullRect(): Rectangle {
+    return this._captureCullActive ? this._captureCullRect : this.view.getBounds();
+  }
 
   public build(root: RenderNode, backend: RenderBackend): RenderPlan {
     this.backend = backend;
@@ -178,6 +209,7 @@ export class RenderPlanBuilder {
     this._viewCullSuppression = 0;
     this._retentionRoot = root._supportsRootRetention() ? root : null;
     this._trackedRoot = null;
+    this._captureCullActive = false;
     // Base this plan's node indices after whatever earlier render() calls already
     // wrote into the frame-scoped transform buffer, so every draw across all
     // render() calls in the frame references a distinct slot and can batch.
@@ -409,16 +441,49 @@ export class RenderPlanBuilder {
 
     const previousTracked = this._trackedRoot;
 
-    representation.beginCapture();
+    // Exactly one node per build is the retention root (`_retentionRoot` is
+    // compared by identity in `emitNode`), so the capture cull rect needs no
+    // stack — it is armed here and disarmed below.
+    this._inflateCaptureCullRect(view);
+    representation.beginCapture(this._captureCullRect);
     this._trackedRoot = representation;
 
     try {
       node._collectForRenderPlan(this);
     } finally {
       this._trackedRoot = previousTracked;
+      this._captureCullActive = false;
     }
 
     representation.commitCapture(contentRevision, structureRevision, transformRevision, ancestryStamp, view, backend, target, this._peekCurrentScopeEntries());
+  }
+
+  /**
+   * Arm {@link _captureCullRect} as the view's rect grown by
+   * {@link RETAINED_CULL_MARGIN_RATIO} on every side.
+   *
+   * The margin is what lets a capture outlive a moving camera. Culling against
+   * the tight view rect makes the resulting product valid for that rect and
+   * nothing else — every camera step invalidates it, which is why a scene with
+   * off-screen content used to re-collect every single frame. Culling against a
+   * rect that ENCLOSES the view instead makes the product valid for every view
+   * still inside that rect: whatever was dropped was outside a rect containing
+   * today's view, so it is still correctly not drawn, and whatever was kept but
+   * has since left the view is drawn off-screen and clipped. Same pixels, one
+   * O(1) rect test instead of a re-collect.
+   *
+   * The price is the extra nodes in the band, which are captured once and then
+   * replayed for free. Growing each axis by twice the ratio, a uniformly dense
+   * scene gains `(1 + 2r)^2 - 1` nodes — about 27% at the current ratio — while
+   * the camera may travel a full `r` of each axis before the product expires.
+   */
+  private _inflateCaptureCullRect(view: View): void {
+    const rect = view.getBounds();
+    const marginX = rect.width * RETAINED_CULL_MARGIN_RATIO;
+    const marginY = rect.height * RETAINED_CULL_MARGIN_RATIO;
+
+    this._captureCullRect.set(rect.x - marginX, rect.y - marginY, rect.width + 2 * marginX, rect.height + 2 * marginY);
+    this._captureCullActive = true;
   }
 
   /**
