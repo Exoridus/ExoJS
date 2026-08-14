@@ -1,5 +1,6 @@
 import { packedGroupChanged } from '#rendering/affinePacking';
 import { Shader } from '#rendering/shader/Shader';
+import { TRANSFORM_TEXTURE_GLSL_INCLUDE } from '#rendering/shader/transformTextureLayout';
 import type { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { computeShaderTiling, type RepeatingSpriteQuad } from '#rendering/sprite/repeatingSpritePlan';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -32,6 +33,8 @@ uniform mat3 u_group;
 uniform vec4 u_viewport;
 uniform sampler2D u_transforms;
 
+${TRANSFORM_TEXTURE_GLSL_INCLUDE}
+
 out vec2 v_texcoord;
 out vec4 v_color;
 
@@ -50,8 +53,8 @@ void main(void) {
     int cy = (vid >> 1) & 1;
 
     int row = int(a_nodeIndex);
-    vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
-    vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
+    vec4 m0 = texelFetch(u_transforms, exoTransformTexel(row, 0), 0);
+    vec4 m1 = texelFetch(u_transforms, exoTransformTexel(row, 1), 0);
 
     // Local destination boundaries. In geometry mode they are snapped BELOW,
     // and destW/destH (which drive the tiling UVs) are derived from the snapped
@@ -139,6 +142,8 @@ uniform mat3 u_group;
 uniform vec4 u_viewport;
 uniform sampler2D u_transforms;
 
+${TRANSFORM_TEXTURE_GLSL_INCLUDE}
+
 out vec2 v_texcoord;
 out vec4 v_color;
 
@@ -160,8 +165,8 @@ void main(void) {
     float ly = (cy == 0) ? a_quadBounds.y : a_quadBounds.w;
 
     int row = int(a_nodeIndex);
-    vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
-    vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
+    vec4 m0 = texelFetch(u_transforms, exoTransformTexel(row, 0), 0);
+    vec4 m1 = texelFetch(u_transforms, exoTransformTexel(row, 1), 0);
 
     // Geometry boundary snap: round each local corner to the device grid so the
     // segment edges land on whole device pixels (m1.z == 2.0, axis-aligned only).

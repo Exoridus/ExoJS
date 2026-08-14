@@ -22,6 +22,10 @@ export type { DrawableConstructor, Renderer } from '#rendering/Renderer';
 export { RendererRegistry } from '#rendering/RendererRegistry';
 export type { ShaderProgram } from '#rendering/shader/Shader';
 export { Shader } from '#rendering/shader/Shader';
+// A renderer whose vertex stage reads the shared transform buffer must carry
+// this directive: the engine expands it into the row -> texel mapping at compile
+// time, which is what lets the store scale past MAX_TEXTURE_SIZE rows.
+export { TRANSFORM_TEXTURE_GLSL_INCLUDE } from '#rendering/shader/transformTextureLayout';
 export { Spritesheet } from '#rendering/sprite/Spritesheet';
 // Renderers that guard on `Texture.source === null` need this to tell "still
 // waiting on an image" from "holds its pixels in a CPU buffer" — without it an

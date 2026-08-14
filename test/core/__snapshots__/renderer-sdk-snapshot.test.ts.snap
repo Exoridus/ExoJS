@@ -17,6 +17,7 @@ exports[`renderer-sdk export surface snapshot > sorted runtime export names matc
   "RenderingPrimitives",
   "Shader",
   "Spritesheet",
+  "TRANSFORM_TEXTURE_GLSL_INCLUDE",
   "Texture",
   "View",
   "WebGl2Backend",

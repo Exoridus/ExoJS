@@ -32,6 +32,8 @@
  * {@link spriteMaterialTextureSlots}..N / WGSL group(2)).
  */
 
+import { TRANSFORM_TEXTURE_GLSL_INCLUDE } from '#rendering/shader/transformTextureLayout';
+
 /**
  * Base-texture batch slots a custom {@link SpriteMaterial} rotates through.
  *
@@ -71,6 +73,8 @@ uniform vec4 u_viewport;                        // device-pixel snap rect (x, y,
 uniform sampler2D u_transforms;                 // shared per-frame transform buffer (2 texels/row)
 uniform sampler2D u_tintTexture;                // shared per-frame tint buffer (rgba8, 1 texel/row)
 
+${TRANSFORM_TEXTURE_GLSL_INCLUDE}
+
 out vec2 v_texcoord;
 out vec4 v_color;
 flat out uint v_textureSlot;
@@ -97,9 +101,9 @@ void main(void) {
     // transform texel 0 = (a, b, c, d), texel 1 = (tx, ty, snapMode, 0); tint
     // is its own rgba8 texel (0..1 already, hardware-normalized).
     int row = int(a_nodeIndex);
-    vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
-    vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
-    vec4 m2 = texelFetch(u_tintTexture, ivec2(0, row), 0);
+    vec4 m0 = texelFetch(u_transforms, exoTransformTexel(row, 0), 0);
+    vec4 m1 = texelFetch(u_transforms, exoTransformTexel(row, 1), 0);
+    vec4 m2 = texelFetch(u_tintTexture, exoTintTexel(row), 0);
 
     // Geometry boundary snap (m1.z == 2.0, axis-aligned only): round each local
     // corner to the device grid so the quad edges land on whole device pixels.
