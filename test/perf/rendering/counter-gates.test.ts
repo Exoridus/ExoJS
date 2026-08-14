@@ -41,7 +41,7 @@ const SPRITE_COUNT = 1000;
  * one fixed scene + drive pattern. See each `it` for what a drift means.
  *
  * columns: collect  = RenderNode._collect calls (nodes visited by the walk)
- *          inView   = SceneNode.inView calls (cull checks)
+ *          inView   = SceneNode._inCullRectUsingBounds calls (cull checks)
  *          gt       = SceneNode.getGlobalTransform calls (build + play transform reads)
  *          mk       = Drawable._getOrComputeMaterialKey calls (per-draw material keys)
  *          plus the deterministic RenderStats totals (submitted/culled/draws/batches).
@@ -81,24 +81,24 @@ const EXPECTED = {
   // Every OTHER column is deliberately unchanged, and the three that matter are
   // load-bearing rather than incidental:
   //
-  // - `inView` stays 1001 because the selection tests each item with the node's
-  //   own `_inCullRect` — the same rule, read live, not a second copy over the
-  //   items' stored AABBs.
+  // - `inView` stays 1001 because the selection still asks the cull question
+  //   once per item, through the node's own rule rather than a second copy of
+  //   it — only the bounds it feeds that rule changed source.
   // - `culledNodes` stays 112, so a strategy that silently stopped culling and
   //   submitted the whole subtree could not pass this row.
   // - `materialKey` stays 888, because a selection resolves it live for exactly
   //   the admitted items, as the walk did.
   //
-  // `globalTransform` re-pins 5554 -> 3554 with the same change: nothing in the
-  // subtree moved since the items were discovered, so the scan culls against
-  // their stored world AABBs instead of calling `getBounds()` — which resolves
-  // the whole parent chain — once per item. Exactly 2 per sprite, which is what
-  // that call cost. A rise back toward 5554 means the stored-bounds path stopped
-  // engaging on a settled scene.
+  // `globalTransform` re-pins 5554 -> 1778 with the same change: nothing in the
+  // subtree moved since the items were discovered, so the stored world AABBs
+  // answer both questions a `getBounds()` call used to be made for — the cull
+  // test, and the screen extent the emitted command carries — and that call
+  // resolves the whole parent chain. A rise back toward 5554 means the
+  // stored-bounds path stopped engaging on a settled scene.
   panPlainBeyondMargin: {
     collect: 1,
     inView: 1001,
-    globalTransform: 3554,
+    globalTransform: 1778,
     materialKey: 888,
     submittedNodes: 888,
     culledNodes: 112,
@@ -111,12 +111,15 @@ const EXPECTED = {
   // frame in front of it.
   //
   // It pins the one-time cost the tier trades against, so it can never be
-  // silently inflated. `collect` is 1001 — the discovery walk visits every node
+  // silently inflated. `collect` is 1001: the discovery walk visits every node
   // exactly once, because an item that is off-screen now is precisely the one
-  // that must be findable when it scrolls in — and `globalTransform` is 8002,
-  // exactly what the plain re-collect this frame replaced already paid: the
-  // bounds each item stores are read from the same `getBounds()` call the emit
-  // path made anyway, so discovery adds a walk and no transform work.
+  // that must be findable when it scrolls in.
+  //
+  // `globalTransform` is 4002 — HALF what the plain re-collect this frame
+  // replaced paid (8002). Discovery reads each drawable's bounds once, and the
+  // selection that immediately follows it reuses those stored values instead of
+  // asking the node again, so even the frame that pays for the walk comes out
+  // ahead on transform resolves.
   //
   // What must NOT appear here is a per-node frame-local product. The discovery
   // walk allocates no pooled draw command, no `nodeIndex`, no transform-buffer
@@ -126,7 +129,7 @@ const EXPECTED = {
   sourceDiscovery: {
     collect: 1001,
     inView: 1001,
-    globalTransform: 8002,
+    globalTransform: 4002,
     materialKey: 1000,
     submittedNodes: 1000,
     culledNodes: 0,

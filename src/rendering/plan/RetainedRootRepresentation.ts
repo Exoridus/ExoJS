@@ -446,6 +446,17 @@ export class RetainedRootRepresentation {
     this._keptEmpty = false;
   }
 
+  /**
+   * {@link noteKept} for a caller that holds the compared extent as four numbers
+   * rather than a rectangle — the source selection, whose items store it that
+   * way. Materialising a `Rectangle` per item just to hand it over would cost
+   * more than the fold.
+   */
+  public noteKeptCoords(minX: number, minY: number, maxX: number, maxY: number): void {
+    this._keptBounds.addCoords(minX, minY).addCoords(maxX, maxY);
+    this._keptEmpty = false;
+  }
+
   /** A node was dropped by the view test — the capture is view-locked. */
   public noteCulled(): void {
     this._culledDuringCapture = true;

@@ -707,10 +707,8 @@ export class RenderPlanBuilder {
       return;
     }
 
-    this._noteViewKept(drawable);
     reserveEntryPlacement(this._currentScope(), item.seq, item.zIndex);
 
-    const bounds = drawable.getBounds();
     const command = this._acquireDrawCommand();
 
     command.drawable = drawable;
@@ -719,12 +717,53 @@ export class RenderPlanBuilder {
     command.zIndex = item.zIndex;
     command.groupIndex = undefined;
     command.material = drawable._getOrComputeMaterialKey(this.backend);
-    command.minX = bounds.left;
-    command.minY = bounds.top;
-    command.maxX = bounds.right;
-    command.maxY = bounds.bottom;
 
+    if (selection.boundsAreCurrent) {
+      // The stored extent is the drawable's own, unchanged — same argument the
+      // scan just made. Asking the node again would resolve its parent chain a
+      // second time for an answer already in hand.
+      command.minX = item.minX;
+      command.minY = item.minY;
+      command.maxX = item.maxX;
+      command.maxY = item.maxY;
+    } else {
+      const bounds = drawable.getBounds();
+
+      command.minX = bounds.left;
+      command.minY = bounds.top;
+      command.maxX = bounds.right;
+      command.maxY = bounds.bottom;
+    }
+
+    this._noteSelectedItemKept(command, drawable);
     this._pushDrawEntry(item.seq, item.zIndex, command);
+  }
+
+  /**
+   * Fold a selected item into the capture's kept-union, folding exactly the rect
+   * the cull test compared.
+   *
+   * That "exactly" is the whole contract of the union — a later view containing
+   * it must provably admit the same set — so a node with a `cullArea` folds its
+   * `cullArea`, and every other node folds its bounds, which the command already
+   * carries.
+   */
+  private _noteSelectedItemKept(command: DrawCommand, drawable: Drawable): void {
+    const tracked = this._trackedRoot;
+
+    if (tracked === null || !drawable.cullable) {
+      return;
+    }
+
+    const area = drawable.cullArea;
+
+    if (area !== null) {
+      tracked.noteKept(area);
+
+      return;
+    }
+
+    tracked.noteKeptCoords(command.minX, command.minY, command.maxX, command.maxY);
   }
 
   /**
