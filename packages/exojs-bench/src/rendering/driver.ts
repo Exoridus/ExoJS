@@ -9,7 +9,8 @@ import { chromium } from 'playwright';
 import type { BaseProvenance, LibraryProvenance } from '../shared/provenance';
 import { readLibraryProvenance } from '../shared/provenance';
 import { buildMatrix } from './archetypes';
-import type { Backend, CellResult, CellSpec, EngineAdapter } from './EngineAdapter';
+import type { ArchetypeSpec, Backend, CellResult, CellSpec, EngineAdapter } from './EngineAdapter';
+import { isScrolling } from './world';
 
 // Re-exported so `rendering/index.ts` and the CLI keep importing `LibraryProvenance`
 // from the rendering barrel unchanged while the definition lives in `shared/`.
@@ -139,10 +140,11 @@ const driverSideOnly = (): never => {
   throw new Error('Adapter lifecycle runs in the harness page, not in the driver process.');
 };
 
-const capabilityDescriptor = (engine: string, config: string, backends: readonly Backend[]): EngineAdapter => ({
+const capabilityDescriptor = (engine: string, config: string, backends: readonly Backend[], coversArchetype?: (spec: ArchetypeSpec) => boolean): EngineAdapter => ({
   engine,
   config,
   supports: (backend: Backend): boolean => backends.includes(backend),
+  ...(coversArchetype !== undefined && { coversArchetype }),
   init: driverSideOnly,
   buildScene: driverSideOnly,
   mutate: driverSideOnly,
@@ -159,6 +161,13 @@ const ADAPTER_CAPABILITIES: readonly EngineAdapter[] = [
   // local-only reference; its version + provenance are stamped into the report
   // header via `readLibraryProvenance`.
   capabilityDescriptor('pixi', 'default', ['webgl2', 'webgpu']),
+  // Second Pixi arm: stock Pixi PLUS the explicit per-frame `Culler.shared.cull`
+  // a Pixi app that wants culling has to write itself. It runs only on
+  // archetypes with genuine off-screen content (`cullingEnabled`), where the
+  // difference between the two arms is the measurement; on a fully-visible
+  // archetype the cull call could only ever add cost over an identical visible
+  // set, so the variant would just duplicate `pixi default` across the matrix.
+  capabilityDescriptor('pixi', 'culled', ['webgl2', 'webgpu'], spec => spec.cullingEnabled),
   // Phaser 4 and Excalibur are committed competitor arms (pinned exact
   // devDependencies). Both are WebGL2-only in this harness and never run WebGPU
   // (Phaser 4 ships no WebGPU renderer; Excalibur 0.32 has none). Phaser 4 is
@@ -169,8 +178,11 @@ const ADAPTER_CAPABILITIES: readonly EngineAdapter[] = [
   // A missing (unlinked) competitor degrades gracefully: its per-cell dynamic
   // import fails in isolation (`runCellInPage` records that cell `unavailable`
   // and the run continues), and it is left out of Vite's pre-bundle set below.
-  capabilityDescriptor('phaser', 'default', ['webgl2']),
-  capabilityDescriptor('excalibur', 'default', ['webgl2']),
+  // Both sit out the scrolling archetypes: neither arm implements a moving
+  // camera, so they would render a fixed, fully-visible scene under an id that
+  // promises off-screen content — a row that looks comparable and is not.
+  capabilityDescriptor('phaser', 'default', ['webgl2'], spec => !isScrolling(spec)),
+  capabilityDescriptor('excalibur', 'default', ['webgl2'], spec => !isScrolling(spec)),
 ];
 
 /**

@@ -639,7 +639,7 @@ const resolveAdapter = async (engine: string, config: string): Promise<EngineAda
   } else if (engine === 'pixi') {
     const { createPixiAdapter } = await import('../adapters/pixi');
 
-    adapter = createPixiAdapter();
+    adapter = createPixiAdapter(config === 'culled' ? 'culled' : 'default');
   } else if (engine === 'phaser') {
     const { createPhaserAdapter } = await import('../adapters/phaser');
 

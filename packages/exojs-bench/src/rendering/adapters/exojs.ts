@@ -18,6 +18,7 @@ import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { mutationSignature, selectMutationIndices } from '../../shared/mutation';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
+import { cameraCenterAt, GRID_MARGIN, gridLayout, gridPosition, isScrolling, SPRITE_SIZE, VIEWPORT_HEIGHT, VIEWPORT_WIDTH, worldExtent } from '../world';
 
 /**
  * One array-backed mesh leaf: the same SPRITE_SIZE quad a sprite leaf covers,
@@ -76,13 +77,6 @@ const createBatchQuad = (): Geometry => {
   });
 };
 
-/** Fixed design-space viewport the harness canvas renders (see `page/index.html`). */
-const VIEWPORT_WIDTH = 1280;
-const VIEWPORT_HEIGHT = 720;
-/** Inset that keeps every gridded sprite (plus its mutation wobble) inside the view so culling never removes it mid-run. */
-const GRID_MARGIN = 32;
-/** Side length of the generated per-archetype textures / sprites, in pixels. */
-const SPRITE_SIZE = 8;
 /** Peak per-axis displacement applied to a mutated leaf; small enough to never cross the viewport edge. */
 const WOBBLE_AMPLITUDE = 2;
 /** Phase step per frame for the mutation wobble. */
@@ -236,6 +230,15 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
   let batchGeometry: Geometry | null = null;
   /** Shared by every mesh leaf in `mixed-sprite-mesh-static`; absent for the array case. */
   let sharedMeshGeometry: Geometry | null = null;
+  /**
+   * The archetype currently built, when it scrolls a camera
+   * (`ArchetypeSpec.cameraSpeed`); `null` for every static-view archetype, in
+   * which case `mutate` leaves the view alone. The camera is driven through the
+   * context's own `view` — the engine's real camera, and the rect its per-node
+   * culling and its retained-product validity are keyed on — rather than by
+   * translating the world, which is the same distinction a game makes.
+   */
+  let scrollingSpec: ArchetypeSpec | null = null;
 
   /** Drop the `instanced-batch` scene so a rebuild (or teardown) leaks no GPU resources. */
   const releaseBatchScene = (): void => {
@@ -257,10 +260,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
    */
   const buildBatchScene = (spec: ArchetypeSpec, nodeCount: number): void => {
     const batchSize = Math.max(1, spec.batchSize ?? 1);
-    const columns = Math.max(1, Math.ceil(Math.sqrt(nodeCount)));
-    const rows = Math.max(1, Math.ceil(nodeCount / columns));
-    const cellWidth = (VIEWPORT_WIDTH - 2 * GRID_MARGIN) / columns;
-    const cellHeight = (VIEWPORT_HEIGHT - 2 * GRID_MARGIN) / rows;
+    const layout = gridLayout(nodeCount, VIEWPORT_WIDTH, VIEWPORT_HEIGHT, GRID_MARGIN);
     const transform = new Matrix();
     const tint = Color.white;
 
@@ -274,8 +274,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
         batches.push(current);
       }
 
-      const x = GRID_MARGIN + (i % columns) * cellWidth + cellWidth / 2;
-      const y = GRID_MARGIN + Math.floor(i / columns) * cellHeight + cellHeight / 2;
+      const { x, y } = gridPosition(i, layout, GRID_MARGIN);
 
       // `add` copies the transform and tint, so one scratch Matrix suffices.
       transform.set(1, 0, x, 0, 1, y);
@@ -397,10 +396,11 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
         spine.push(container);
       }
 
-      const columns = Math.max(1, Math.ceil(Math.sqrt(nodeCount)));
-      const rows = Math.max(1, Math.ceil(nodeCount / columns));
-      const cellWidth = (VIEWPORT_WIDTH - 2 * GRID_MARGIN) / columns;
-      const cellHeight = (VIEWPORT_HEIGHT - 2 * GRID_MARGIN) / rows;
+      // A scrolling archetype lays its leaves out over a world LARGER than the
+      // viewport (`spec.worldSpan`); every other archetype gets a world exactly
+      // the size of the viewport, i.e. the pre-existing layout unchanged.
+      const world = worldExtent(spec, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+      const layout = gridLayout(nodeCount, world.width, world.height, GRID_MARGIN);
       const overdraw = spec.id === 'overdraw';
 
       // Canonical, shared mutation selection: draw one RNG value per leaf in
@@ -475,8 +475,9 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
           leaf.height = VIEWPORT_HEIGHT;
         }
 
-        const x = overdraw ? 0 : GRID_MARGIN + (i % columns) * cellWidth + cellWidth / 2;
-        const y = overdraw ? 0 : GRID_MARGIN + Math.floor(i / columns) * cellHeight + cellHeight / 2;
+        const cell = gridPosition(i, layout, GRID_MARGIN);
+        const x = overdraw ? 0 : cell.x;
+        const y = overdraw ? 0 : cell.y;
 
         leaf.setPosition(x, y);
         spine[i % spine.length]!.addChild(leaf);
@@ -501,6 +502,15 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       }
 
       views = spec.viewCount !== undefined && spec.viewCount > 1 ? buildViewGrid(spec.viewCount) : [];
+
+      // Park the camera on the frame-0 centre so the first warmup frame already
+      // renders the scene the timed run will see, and so a previous scrolling
+      // cell can never leave this one's view off its world.
+      scrollingSpec = isScrolling(spec) ? spec : null;
+
+      const start = cameraCenterAt(spec, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+
+      app.rendering.view.setCenter(start.x, start.y);
     },
 
     mutationSignature(): string {
@@ -508,6 +518,15 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
     },
 
     mutate(frame: number): void {
+      // Camera step for a scrolling archetype. Both this and the wobble below
+      // run inside the harness's CPU bracket, which is correct: moving the
+      // camera IS the per-frame work such a scene does.
+      if (scrollingSpec !== null && app !== null) {
+        const centre = cameraCenterAt(scrollingSpec, frame, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+
+        app.rendering.view.setCenter(centre.x, centre.y);
+      }
+
       const phase = frame * WOBBLE_SPEED;
       const dx = Math.sin(phase) * WOBBLE_AMPLITUDE;
       const dy = Math.cos(phase) * WOBBLE_AMPLITUDE;
@@ -607,6 +626,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       mutableLeaves = [];
       mutableIndices = [];
       views = [];
+      scrollingSpec = null;
 
       if (app !== null) {
         app.destroy();

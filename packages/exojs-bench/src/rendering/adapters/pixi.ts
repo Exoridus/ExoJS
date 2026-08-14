@@ -1,7 +1,8 @@
-import { Application, Container, RendererType, Sprite, Texture, type WebGPURenderer } from 'pixi.js';
+import { Application, Container, Culler, RendererType, Sprite, Texture, type WebGPURenderer } from 'pixi.js';
 
 import { mutationSignature, selectMutationIndices } from '../../shared/mutation';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
+import { cameraCenterAt, GRID_MARGIN, gridLayout, gridPosition, isScrolling, SPRITE_SIZE, VIEWPORT_HEIGHT, VIEWPORT_WIDTH, worldExtent } from '../world';
 
 /**
  * Pixi.js v8 arm of the rendering benchmark — the direct renderer comparison and
@@ -22,13 +23,6 @@ import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
  * `renderer.render(...)` — the same shape as the ExoJS adapter's one-call frame.
  */
 
-/** Fixed design-space viewport the harness canvas renders (see `page/index.html`). Identical to the ExoJS arm. */
-const VIEWPORT_WIDTH = 1280;
-const VIEWPORT_HEIGHT = 720;
-/** Inset that keeps every gridded sprite (plus its mutation wobble) inside the view so culling never removes it mid-run. */
-const GRID_MARGIN = 32;
-/** Side length of the generated per-archetype textures / sprites, in pixels. */
-const SPRITE_SIZE = 8;
 /** Peak per-axis displacement applied to a mutated leaf; small enough to never cross the viewport edge. */
 const WOBBLE_AMPLITUDE = 2;
 /** Phase step per frame for the mutation wobble. */
@@ -86,7 +80,24 @@ const createDistinctTexture = (index: number, total: number): Texture => {
   return Texture.from(canvas);
 };
 
-export const createPixiAdapter = (): EngineAdapter => {
+/**
+ * Which Pixi arm this adapter represents.
+ *
+ * `default` is stock Pixi: it never culls, because Pixi culls only when the app
+ * registers `CullerPlugin` (which hooks `Application.render`, a loop this
+ * harness never runs) or calls `Culler.shared.cull(...)` itself. On an archetype
+ * with off-screen content that arm therefore draws the whole world — Pixi's real
+ * out-of-the-box behaviour, and the honest upper bound.
+ *
+ * `culled` is the same arm plus the explicit per-frame cull call, i.e. what a
+ * Pixi app that wants culling actually writes. It is measured only on
+ * archetypes with genuine off-screen content (see `coversArchetype` below);
+ * everywhere else the call could only ever be overhead over an unchanged
+ * visible set.
+ */
+export type PixiAdapterConfig = 'default' | 'culled';
+
+export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): EngineAdapter => {
   let app: Application | null = null;
   let backend: Backend | null = null;
   let root: Container | null = null;
@@ -94,13 +105,27 @@ export const createPixiAdapter = (): EngineAdapter => {
   let mutableLeaves: MutableLeaf[] = [];
   /** Leaf indices the most recent buildScene selected for mutation — the source of {@link EngineAdapter.mutationSignature}. */
   let mutableIndices: number[] = [];
+  /**
+   * The archetype currently built, when it scrolls a camera; `null` otherwise.
+   * Pixi has no camera object, so the idiomatic equivalent — and what this arm
+   * does — is to translate the world container under a fixed screen rect. Same
+   * visible content per frame as the ExoJS arm's view move; different mechanism,
+   * disclosed in the report's Methodology.
+   */
+  let scrollingSpec: ArchetypeSpec | null = null;
 
   return {
     engine: 'pixi',
-    config: 'default',
+    config,
 
     supports(target: Backend): boolean {
       return target === 'webgl2' || target === 'webgpu';
+    },
+
+    coversArchetype(spec: ArchetypeSpec): boolean {
+      // The stock arm runs everywhere; the culled variant only where culling can
+      // actually remove something.
+      return config === 'default' || spec.cullingEnabled;
     },
 
     async init(canvas: HTMLCanvasElement, target: Backend): Promise<void> {
@@ -159,13 +184,14 @@ export const createPixiAdapter = (): EngineAdapter => {
       // propagation identically for a fair per-node cost.
       const sceneRoot = new Container();
 
-      // `spec.cullingEnabled` is `false` for every archetype (see
-      // `archetypes.ts` for the fairness rationale): setting `.cullable` here is a
-      // no-op anyway because this arm never registers `CullerPlugin` (nor
-      // calls `Culler.shared.cull(...)`) — the flag is inert data on Pixi
-      // unless one of those is wired up. Kept in sync with the ExoJS arm's
-      // flag purely so both scenes stay a byte-for-byte transcription of
-      // each other, not because it does anything on this side.
+      // `spec.cullingEnabled` is `false` for every fully-visible archetype (see
+      // `archetypes.ts` for the fairness rationale). On the `default` arm the
+      // flag is inert either way — Pixi acts on `.cullable` only when something
+      // calls `Culler.shared.cull(...)`, which that arm never does — and it is
+      // kept in sync with the ExoJS arm purely so both scenes stay a
+      // byte-for-byte transcription of each other. On the `culled` arm it is
+      // load-bearing: it is exactly the flag the per-frame cull in `renderFrame`
+      // reads.
       sceneRoot.cullable = spec.cullingEnabled;
 
       const spine: Container[] = [sceneRoot];
@@ -178,10 +204,12 @@ export const createPixiAdapter = (): EngineAdapter => {
         spine.push(container);
       }
 
-      const columns = Math.max(1, Math.ceil(Math.sqrt(nodeCount)));
-      const rows = Math.max(1, Math.ceil(nodeCount / columns));
-      const cellWidth = (VIEWPORT_WIDTH - 2 * GRID_MARGIN) / columns;
-      const cellHeight = (VIEWPORT_HEIGHT - 2 * GRID_MARGIN) / rows;
+      // World extent and grid come from the SAME shared helpers the ExoJS arm
+      // uses (`world.ts`), so a scrolling archetype places the identical leaf at
+      // the identical world position on both arms — the layout counterpart of
+      // the shared mutation selection below.
+      const world = worldExtent(spec, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+      const layout = gridLayout(nodeCount, world.width, world.height, GRID_MARGIN);
       const overdraw = spec.id === 'overdraw';
 
       // Shared, canonical mutation selection — the SAME helper the ExoJS arm
@@ -222,8 +250,9 @@ export const createPixiAdapter = (): EngineAdapter => {
           sprite.height = VIEWPORT_HEIGHT;
         }
 
-        const x = overdraw ? 0 : GRID_MARGIN + (i % columns) * cellWidth + cellWidth / 2;
-        const y = overdraw ? 0 : GRID_MARGIN + Math.floor(i / columns) * cellHeight + cellHeight / 2;
+        const cell = gridPosition(i, layout, GRID_MARGIN);
+        const x = overdraw ? 0 : cell.x;
+        const y = overdraw ? 0 : cell.y;
 
         sprite.position.set(x, y);
         spine[i % spine.length]!.addChild(sprite);
@@ -236,6 +265,13 @@ export const createPixiAdapter = (): EngineAdapter => {
       root = sceneRoot;
       mutableLeaves = leaves;
       mutableIndices = selectedIndices;
+      scrollingSpec = isScrolling(spec) ? spec : null;
+
+      // Park the world on the frame-0 camera centre, so the first warmup frame
+      // already shows what the timed run will see.
+      const start = cameraCenterAt(spec, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+
+      sceneRoot.position.set(VIEWPORT_WIDTH / 2 - start.x, VIEWPORT_HEIGHT / 2 - start.y);
     },
 
     mutationSignature(): string {
@@ -243,6 +279,12 @@ export const createPixiAdapter = (): EngineAdapter => {
     },
 
     mutate(frame: number): void {
+      if (scrollingSpec !== null && root !== null) {
+        const centre = cameraCenterAt(scrollingSpec, frame, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+
+        root.position.set(VIEWPORT_WIDTH / 2 - centre.x, VIEWPORT_HEIGHT / 2 - centre.y);
+      }
+
       const phase = frame * WOBBLE_SPEED;
       const dx = Math.sin(phase) * WOBBLE_AMPLITUDE;
       const dy = Math.cos(phase) * WOBBLE_AMPLITUDE;
@@ -272,6 +314,17 @@ export const createPixiAdapter = (): EngineAdapter => {
         throw new Error('renderFrame was called before buildScene.');
       }
 
+      // The `culled` arm's per-frame cull, the analogue of what `CullerPlugin`
+      // would do if this harness ran Pixi's Application loop. `skipUpdateTransform`
+      // is passed FALSE (the plugin's default is true) because the camera moved
+      // in `mutate` since the last render: with stale world transforms the cull
+      // would test this frame's screen rect against last frame's bounds and
+      // decide the boundary row wrong. Pixi's own documented example for a
+      // moving scene passes false for the same reason.
+      if (config === 'culled') {
+        Culler.shared.cull(root, app.renderer.screen, false);
+      }
+
       // One explicit frame: clear + render the tree + submit, the analogue of the
       // ExoJS adapter's resetStats/clear/render/flush sequence.
       app.renderer.render({ container: root, clear: true });
@@ -290,6 +343,7 @@ export const createPixiAdapter = (): EngineAdapter => {
       textures = [];
       mutableLeaves = [];
       mutableIndices = [];
+      scrollingSpec = null;
 
       if (app !== null) {
         // `removeView: false` — keep the shared `#stage` canvas in the DOM for

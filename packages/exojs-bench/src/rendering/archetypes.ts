@@ -15,9 +15,10 @@ const GPU_BOUND_COUNTS = [1_000, 5_000, 25_000] as const;
  * at 25k: a 100k measurement there would be dominated by overdraw and state
  * changes and would say nothing about node scaling.
  */
-// Fairness: `cullingEnabled` is `false` on every archetype below.
-// Every archetype keeps its sprites fully on-screen (`GRID_MARGIN` in the
-// adapters), so a viewport cull check never actually removes a node here —
+// Fairness: `cullingEnabled` is `false` on every archetype below except
+// `scrolling-world`, the only one with genuine off-screen content.
+// Every other archetype keeps its sprites fully on-screen (`GRID_MARGIN` in the
+// adapters), so a viewport cull check never actually removes a node there —
 // it can only ever be a no-op. Left on, it was pure asymmetric overhead: the
 // exojs adapter's `cullable` flag drives a REAL per-node bounds+intersection
 // check in the render walk (`SceneNode.inView`, called from every
@@ -28,9 +29,11 @@ const GPU_BOUND_COUNTS = [1_000, 5_000, 25_000] as const;
 // cross-arm comparison for a check that never changed the visible set.
 // Disabling it on both arms makes them do the same visible-set work; see
 // `EngineAdapter.ts`'s `cullingEnabled` doc and the report's Methodology
-// section for the full disclosure. Re-enabling it for a future archetype that
-// genuinely has off-screen content requires giving Pixi an equivalent
-// `CullerPlugin` registration first, or the asymmetry returns.
+// section for the full disclosure. `scrolling-world` is the exception the last
+// sentence of that note asked for: it has real off-screen content, so it runs
+// on two Pixi arms — `default` (culling off, Pixi's out-of-the-box behaviour)
+// and `culled` (explicit per-frame `Culler.shared.cull`) — instead of resolving
+// the asymmetry by assumption.
 export const ARCHETYPES: readonly ArchetypeSpec[] = [
   { id: 'static-heavy', nodeCounts: SCALING_COUNTS, nestingDepth: 4, textureCount: 1, mutationFraction: 0, cullingEnabled: false },
   { id: 'dynamic-heavy', nodeCounts: SCALING_COUNTS, nestingDepth: 4, textureCount: 1, mutationFraction: 0.075, cullingEnabled: false },
@@ -157,6 +160,27 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
     meshRunLength: 4,
     meshStorage: 'array',
   },
+  // The only archetype with content OUTSIDE the view, and the only one with a
+  // moving camera. Every other archetype builds its scene fully on-screen under
+  // a static view, so nothing in the matrix has ever measured what a scrolling
+  // map costs — which is the shape of practically every real 2D scene.
+  //
+  // `worldSpan: 2` lays `nodeCount` leaves over 4x the viewport's AREA, so about
+  // 25% are visible at any moment and the other 75% are the off-screen content
+  // under study. `nodeCount` stays the WORLD total, exactly as it is on every
+  // other archetype, so the per-node build/traversal cost is comparable across
+  // the matrix; only the drawn quarter of it reaches the GPU.
+  //
+  // `cameraSpeed: 8` is 8 world units per frame along the diagonal, i.e. ~480
+  // units/s at 60fps — a brisk but ordinary scroll rate for a 1280x720 view.
+  // It is the archetype's one free parameter, and the one to sweep when reading
+  // any "how often does the camera invalidate a cached product" curve: that
+  // frequency falls roughly linearly with (tolerance band width / camera speed).
+  //
+  // Otherwise identical to `static-heavy` (depth 4, one texture, no mutation),
+  // so the delta between the two rows is the camera and the off-screen content
+  // and nothing else.
+  { id: 'scrolling-world', nodeCounts: SCALING_COUNTS, nestingDepth: 4, textureCount: 1, mutationFraction: 0, cullingEnabled: true, worldSpan: 2, cameraSpeed: 8 },
   {
     id: 'mixed-material-atlased',
     nodeCounts: GPU_BOUND_COUNTS,
@@ -210,6 +234,10 @@ export const buildMatrix = (adapters: readonly EngineAdapter[], backends: readon
       if (!adapter.supports(backend)) continue;
 
       for (const archetype of ARCHETYPES) {
+        // Arms that are a variant of another arm cover only the archetypes
+        // where the variation is the point (see `EngineAdapter.coversArchetype`).
+        if (adapter.coversArchetype?.(archetype) === false) continue;
+
         for (const nodeCount of archetype.nodeCounts) {
           cells.push({
             engine: adapter.engine,
