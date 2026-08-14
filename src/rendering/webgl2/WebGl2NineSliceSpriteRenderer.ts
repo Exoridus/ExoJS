@@ -1,5 +1,6 @@
 import { packedGroupChanged } from '#rendering/affinePacking';
 import { Shader } from '#rendering/shader/Shader';
+import { TRANSFORM_TEXTURE_GLSL_INCLUDE } from '#rendering/shader/transformTextureLayout';
 import type { NineSliceQuad } from '#rendering/sprite/nineSlice';
 import type { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -28,7 +29,9 @@ layout(location = 3) in uint a_nodeIndex;    // row into the shared transform bu
 uniform mat3 u_projection;
 uniform mat3 u_group;
 uniform vec4 u_viewport;                     // device-pixel viewport rect (x, y, width, height)
-uniform sampler2D u_transforms;              // shared per-frame transform buffer (3 texels/row)
+uniform sampler2D u_transforms;              // shared per-frame transform buffer (2 texels/row)
+
+${TRANSFORM_TEXTURE_GLSL_INCLUDE}
 
 out vec2 v_texcoord;
 out vec4 v_color;
@@ -52,8 +55,8 @@ void main(void) {
     float localY = (cornerY == 0) ? a_quadBounds.y : a_quadBounds.w;
 
     int row = int(a_nodeIndex);
-    vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0); // a, b, c, d
-    vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0); // tx, ty, snapMode, 0
+    vec4 m0 = texelFetch(u_transforms, exoTransformTexel(row, 0), 0); // a, b, c, d
+    vec4 m1 = texelFetch(u_transforms, exoTransformTexel(row, 1), 0); // tx, ty, snapMode, 0
 
     // Geometry boundary snap: round each local corner to the device grid so the
     // quad edges land on whole device pixels (m1.z == 2.0, axis-aligned only).

@@ -6,6 +6,7 @@ import { MeshMaterial } from '#rendering/material/MeshMaterial';
 import { ShaderSource } from '#rendering/material/ShaderSource';
 import { Mesh } from '#rendering/mesh/Mesh';
 import type { RenderNode } from '#rendering/RenderNode';
+import { TRANSFORM_TEXTURE_GLSL_INCLUDE } from '#rendering/shader/transformTextureLayout';
 import { Texture } from '#rendering/texture/Texture';
 import { BlendModes, ScaleModes, WrapModes } from '#rendering/types';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
@@ -171,12 +172,13 @@ layout(location = 6) in uint a_nodeIndex;
 uniform mat3 u_projection;
 uniform sampler2D u_transforms;
 uniform sampler2D u_tintTexture;
+${TRANSFORM_TEXTURE_GLSL_INCLUDE}
 out vec2 v_texcoord;
 out vec4 v_tint;
 void main() {
   int row = int(a_nodeIndex);
-  vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
-  vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
+  vec4 m0 = texelFetch(u_transforms, exoTransformTexel(row, 0), 0);
+  vec4 m1 = texelFetch(u_transforms, exoTransformTexel(row, 1), 0);
   mat3 transform = mat3(
     m0.x, m0.z, 0.0,
     m0.y, m0.w, 0.0,
@@ -184,7 +186,7 @@ void main() {
   );
   gl_Position = vec4((u_projection * transform * vec3(a_position, 1.0)).xy, 0.0, 1.0);
   v_texcoord = a_texcoord;
-  v_tint = texelFetch(u_tintTexture, ivec2(0, row), 0) * a_color;
+  v_tint = texelFetch(u_tintTexture, exoTintTexel(row), 0) * a_color;
 }`;
 
 const instancedBatchFragment = `#version 300 es

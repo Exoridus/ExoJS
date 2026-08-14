@@ -4,6 +4,7 @@ import { formatShaderError, RenderError } from '#rendering/RenderError';
 import type { Shader, ShaderProgram } from '#rendering/shader/Shader';
 import { ShaderAttribute } from '#rendering/shader/ShaderAttribute';
 import { ShaderUniform } from '#rendering/shader/ShaderUniform';
+import { resolveTransformTextureGlsl } from '#rendering/shader/transformTextureLayout';
 import { ShaderPrimitives } from '#rendering/types';
 
 import { WebGl2ShaderBlock } from './WebGl2ShaderBlock';
@@ -97,6 +98,10 @@ export function createWebGl2ShaderProgram(gl: WebGL2RenderingContext, label?: st
   let vertexShader: WebGLShader | null = null;
   let fragmentShader: WebGLShader | null = null;
   let pendingShader: Shader | null = null;
+  // Sources after include expansion — what the driver actually compiled, so a
+  // compile error's numbered excerpt lines up with the log's line numbers.
+  let compiledVertexSource = '';
+  let compiledFragmentSource = '';
   const managedUniforms: ManagedUniform[] = [];
   const uniformBlocks: WebGl2ShaderBlock[] = [];
 
@@ -121,10 +126,17 @@ export function createWebGl2ShaderProgram(gl: WebGL2RenderingContext, label?: st
       return;
     }
 
+    // Expand the engine's `#exo-include` directives before handing the source
+    // to the driver: the shared transform store's row -> texel mapping lives in
+    // one place (`transformTextureLayout`) instead of being copied into every
+    // shader that reads a node's transform.
+    compiledVertexSource = resolveTransformTextureGlsl(shader.vertexSource);
+    compiledFragmentSource = resolveTransformTextureGlsl(shader.fragmentSource);
+
     // Issue compile + link without querying status. The driver may
     // service these on a worker; we'll collect the result at first bind.
-    vertexShader = compileShader(gl, gl.VERTEX_SHADER, shader.vertexSource);
-    fragmentShader = compileShader(gl, gl.FRAGMENT_SHADER, shader.fragmentSource);
+    vertexShader = compileShader(gl, gl.VERTEX_SHADER, compiledVertexSource);
+    fragmentShader = compileShader(gl, gl.FRAGMENT_SHADER, compiledFragmentSource);
     program = linkProgram(gl, vertexShader, fragmentShader);
 
     pendingShader = shader;
@@ -146,13 +158,13 @@ export function createWebGl2ShaderProgram(gl: WebGL2RenderingContext, label?: st
     if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
       const log = gl.getShaderInfoLog(vertexShader);
 
-      throw createCompileError('vertex', pendingShader.vertexSource, log, label);
+      throw createCompileError('vertex', compiledVertexSource, log, label);
     }
 
     if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
       const log = gl.getShaderInfoLog(fragmentShader);
 
-      throw createCompileError('fragment', pendingShader.fragmentSource, log, label);
+      throw createCompileError('fragment', compiledFragmentSource, log, label);
     }
 
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {

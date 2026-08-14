@@ -32,6 +32,13 @@ import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { RenderTexturePool } from '#rendering/RenderTexturePool';
 import type { Shader } from '#rendering/shader/Shader';
+import {
+  createTransformTextureLayout,
+  createTransformTextureRect,
+  tintTextureRect,
+  type TransformTextureLayout,
+  transformTextureRect,
+} from '#rendering/shader/transformTextureLayout';
 import { DataTexture, type DataTextureFormat } from '#rendering/texture/DataTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
@@ -251,6 +258,12 @@ export class WebGl2Backend implements RenderBackend {
   private readonly _loseContextExtension: WEBGL_lose_context | null;
   /** Whether `EXT_color_buffer_float` is available (float RenderTexture targets are renderable). */
   private _floatRenderable = false;
+  // This context's `gl.MAX_TEXTURE_SIZE`. Caps both dimensions of the shared
+  // transform/tint textures, so the transform store's layout consults it to
+  // reject an impossible capacity up front instead of letting `texImage2D` fail
+  // with GL_INVALID_VALUE and leave every transform fetch reading an incomplete
+  // texture (a black frame). Re-read after a context restore.
+  private _maxTextureSize = 0;
   private _renderTarget: RenderTarget;
   // Device-pixel viewport rect last handed to `gl.viewport` (x, y, width,
   // height). Cached at the bind seam so the vertex shaders can map a drawable's
@@ -276,6 +289,12 @@ export class WebGl2Backend implements RenderBackend {
   private readonly _accountant: GpuResourceAccountant = new GpuResourceAccountant(this._stats);
   private readonly _transformBuffer = new TransformBuffer();
   private _transformTexture: DataTexture<TextureFormat.Rgba32F> | null = null;
+  // Row -> texel mapping for the current buffer capacity, plus the scratch rects
+  // the per-flush upload writes its regions into (both paths run every flush, so
+  // neither allocates).
+  private _transformTextureLayout: TransformTextureLayout | null = null;
+  private readonly _transformRectScratch = createTransformTextureRect();
+  private readonly _tintRectScratch = createTransformTextureRect();
   private _transformTextureHash = 0;
   private _transformTextureCount = -1;
   // Tint's own rgba8 texture (see TransformBuffer's class doc for why it's
@@ -316,6 +335,7 @@ export class WebGl2Backend implements RenderBackend {
     // Enable + cache float color-buffer renderability. getExtension() is the
     // enable call; without it, RGBA16F/RGBA32F are not color-renderable in WebGL2.
     this._floatRenderable = this._context.getExtension('EXT_color_buffer_float') !== null;
+    this._maxTextureSize = this._context.getParameter(this._context.MAX_TEXTURE_SIZE) as number;
 
     // Grab the lose-context extension up front so a later restore can act on the
     // live instance (see the field comment). `null` on backends that don't
@@ -1033,13 +1053,28 @@ export class WebGl2Backend implements RenderBackend {
   public bindTransformBufferTexture(unit: number, minCount: number): this {
     const requiredCount = Math.max(1, minCount);
     const transformTexture = this._transformTexture;
+    // Rows are packed several per texture line, so a row index is not the y
+    // coordinate: the store scales to `rowsPerLine * MAX_TEXTURE_SIZE` rows
+    // instead of stopping dead at MAX_TEXTURE_SIZE. Throws (rather than
+    // rendering black off an incomplete texture) if even that is exceeded.
+    // Rebuilt only when the buffer's capacity changes — this runs per flush.
+    let layout = this._transformTextureLayout;
 
-    if (transformTexture?.height !== this._transformBuffer.capacity || transformTexture.buffer !== this._transformBuffer.data) {
+    if (layout?.rowCapacity !== this._transformBuffer.capacity) {
+      layout = createTransformTextureLayout(this._transformBuffer.capacity, this._maxTextureSize);
+      this._transformTextureLayout = layout;
+    }
+
+    if (
+      transformTexture?.height !== layout.transformHeight ||
+      transformTexture.width !== layout.transformWidth ||
+      transformTexture.buffer !== this._transformBuffer.data
+    ) {
       transformTexture?.destroy();
 
       this._transformTexture = new DataTexture({
-        width: 2,
-        height: this._transformBuffer.capacity,
+        width: layout.transformWidth,
+        height: layout.transformHeight,
         format: TextureFormat.Rgba32F,
         data: this._transformBuffer.data,
       });
@@ -1053,12 +1088,12 @@ export class WebGl2Backend implements RenderBackend {
     // both textures upload from the one dirty-range consumption below.
     const tintTexture = this._tintTexture;
 
-    if (tintTexture?.height !== this._transformBuffer.capacity || tintTexture.buffer !== this._transformBuffer.tintData) {
+    if (tintTexture?.height !== layout.tintHeight || tintTexture.width !== layout.tintWidth || tintTexture.buffer !== this._transformBuffer.tintData) {
       tintTexture?.destroy();
 
       this._tintTexture = new DataTexture({
-        width: 1,
-        height: this._transformBuffer.capacity,
+        width: layout.tintWidth,
+        height: layout.tintHeight,
         format: TextureFormat.Rgba8,
         data: this._transformBuffer.tintData,
       });
@@ -1085,8 +1120,15 @@ export class WebGl2Backend implements RenderBackend {
       const { firstRow, rowCount } = this._transformBuffer.consumeDirtyRange(snapshot.count);
 
       if (rowCount > 0) {
-        nextTransformTexture.commitRect(0, firstRow, 2, rowCount);
-        nextTintTexture.commitRect(0, firstRow, 1, rowCount);
+        // A logical row range maps to a texel rect, not a band of texture rows:
+        // a range inside one texture line uploads exactly its texels, and one
+        // that spans lines widens to whole lines so the upload keeps the
+        // contiguous full-width fast path.
+        const transformRect = transformTextureRect(layout, firstRow, rowCount, this._transformRectScratch);
+        const tintRect = tintTextureRect(layout, firstRow, rowCount, this._tintRectScratch);
+
+        nextTransformTexture.commitRect(transformRect.x, transformRect.y, transformRect.width, transformRect.height);
+        nextTintTexture.commitRect(tintRect.x, tintRect.y, tintRect.width, tintRect.height);
         this._transformBuffer.recordUpload(rowCount);
       }
 
@@ -1365,6 +1407,10 @@ export class WebGl2Backend implements RenderBackend {
     // its style from a private per-node texture — `_consumesSharedTransform ===
     // false`) leaves the range empty: there is nothing to rebase or store, but
     // the instance bytes and per-batch VAOs still need finalizing below.
+    // Connect first: the group's transform store sizes its textures against the
+    // context's MAX_TEXTURE_SIZE, which it can only read once attached.
+    frame.bundle._connectDevice(this._context, this._accountant);
+
     if (range.max >= range.min) {
       for (const payload of frame.payloads) {
         payload.replayer._rebaseRetainedNodeIndices(payload, range.min);
@@ -1373,7 +1419,6 @@ export class WebGl2Backend implements RenderBackend {
       frame.bundle._storeTransformRows(this._transformBuffer.data, this._transformBuffer.tintData, range.min, range.max - range.min + 1);
     }
 
-    frame.bundle._connectDevice(this._context, this._accountant);
     frame.bundle._uploadInstances();
 
     for (let i = 0; i < frame.payloads.length; i++) {
@@ -1760,6 +1805,10 @@ export class WebGl2Backend implements RenderBackend {
     // not survive a context loss, so RGBA16F/RGBA32F render targets would stop
     // being color-renderable until this is re-fetched on the fresh context.
     this._floatRenderable = gl.getExtension('EXT_color_buffer_float') !== null;
+    this._maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
+    // Drop the cached transform layout: it was derived from the LOST context's
+    // limit, and the restored one may report a different one.
+    this._transformTextureLayout = null;
 
     // Evict all managed texture / render-target state (deletes the now-dead
     // handles — harmless on the fresh context — frees the resource accountant,
@@ -2295,14 +2344,17 @@ export class WebGl2Backend implements RenderBackend {
           const channels = formatInfo.channels;
           const rowChannels = texture.width * channels;
 
-          if (region.x === 0 && region.width === texture.width) {
-            // Full-width rows are already contiguous and tightly packed in the
-            // row-major buffer, so there is nothing to pack: the
-            // `(…, srcData, srcOffset)` overload lets GL read the band straight
-            // out of the texture buffer at an element offset. This is the shape
-            // every ring-buffer style upload takes (transform/tint rows,
-            // scrolling spectrograms), so it is the common case rather than a
-            // corner one.
+          // A region is already contiguous and tightly packed in the row-major
+          // buffer when it spans full rows, and equally when it is a single row
+          // (however narrow — one row never straddles a gap). Both let the
+          // `(…, srcData, srcOffset)` overload read straight out of the texture
+          // buffer at an element offset, with nothing to pack. Between them they
+          // cover every shape the engine's own uploads take: full-width bands
+          // (ring-buffer style writes, a whole transform store) and single-row
+          // spans (a patched transform row, a dirty range inside one texture
+          // line), so the packing path below is left to genuinely rectangular
+          // sub-regions like a partial glyph-atlas update.
+          if ((region.x === 0 && region.width === texture.width) || region.height === 1) {
             gl.texSubImage2D(
               gl.TEXTURE_2D,
               0,
@@ -2313,7 +2365,7 @@ export class WebGl2Backend implements RenderBackend {
               formatInfo.format,
               formatInfo.type,
               texture.buffer,
-              region.y * rowChannels,
+              region.y * rowChannels + region.x * channels,
             );
           } else {
             // The rows are no longer contiguous, so lift the sub-region out of

@@ -18,6 +18,8 @@
  * cannot run any earlier.
  */
 
+import { TRANSFORM_TEXTURE_GLSL_INCLUDE } from './transformTextureLayout';
+
 /**
  * GLSL ES 3.00 form of the instanced-batch contract. Insert it directly after
  * the `#version 300 es` directive of a custom material's **vertex** shader; it
@@ -36,7 +38,10 @@
  *   through to the fragment stage.
  *
  * Unused declarations are stripped at link time; a batch shader that ignores
- * texcoords or vertex colors needs no further ceremony.
+ * texcoords or vertex colors needs no further ceremony. The `#exo-include`
+ * comment the constant carries is expanded by the engine when it compiles the
+ * shader — it is what keeps the buffers' texel addressing internal, so leave it
+ * in place.
  *
  * @example
  * ```ts
@@ -68,10 +73,12 @@ uniform vec4 u_viewport;
 uniform sampler2D u_transforms;
 uniform sampler2D u_tintTexture;
 
+${TRANSFORM_TEXTURE_GLSL_INCLUDE}
+
 vec2 exoInstanceClipPosition(vec2 localPosition, uint nodeIndex) {
     int row = int(nodeIndex);
-    vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0); // a, b, c, d
-    vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0); // tx, ty, snapMode, 0
+    vec4 m0 = texelFetch(u_transforms, exoTransformTexel(row, 0), 0); // a, b, c, d
+    vec4 m1 = texelFetch(u_transforms, exoTransformTexel(row, 1), 0); // tx, ty, snapMode, 0
     // mat3() takes columns, the engine's Matrix is row-major — hence the
     // interleave. Yields | a b tx ; c d ty ; 0 0 1 |.
     mat3 transform = mat3(
@@ -96,7 +103,7 @@ vec2 exoInstanceClipPosition(vec2 localPosition, uint nodeIndex) {
 }
 
 vec4 exoInstanceTint(uint nodeIndex) {
-    return texelFetch(u_tintTexture, ivec2(0, int(nodeIndex)), 0);
+    return texelFetch(u_tintTexture, exoTintTexel(int(nodeIndex)), 0);
 }
 `;
 

@@ -18,6 +18,7 @@ import {
   packedGroupChanged,
   RenderingPrimitives,
   Shader,
+  TRANSFORM_TEXTURE_GLSL_INCLUDE,
   WebGl2RenderBuffer,
   WebGl2VertexArrayObject,
 } from '@codexo/exojs/renderer-sdk';
@@ -55,6 +56,8 @@ uniform mat3 u_group;
 uniform vec4 u_viewport;                      // device-pixel viewport rect (x, y, width, height)
 uniform sampler2D u_transforms;              // shared per-frame transform buffer (2 texels/row)
 
+${TRANSFORM_TEXTURE_GLSL_INCLUDE}
+
 out vec2 v_texcoord;
 out vec4 v_color;
 
@@ -70,8 +73,8 @@ void main(void) {
     int row = int(a_tileWord & ${TILE_ROW_MASK}u);
     bool diagonal = (a_tileWord & ${TILE_DIAGONAL_BIT}u) != 0u;
 
-    vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0); // a, b, c, d
-    vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0); // tx, ty, snapMode, 0
+    vec4 m0 = texelFetch(u_transforms, exoTransformTexel(row, 0), 0); // a, b, c, d
+    vec4 m1 = texelFetch(u_transforms, exoTransformTexel(row, 1), 0); // tx, ty, snapMode, 0
 
     float worldX = (m0.x * localX) + (m0.y * localY) + m1.x;
     float worldY = (m0.z * localX) + (m0.w * localY) + m1.y;

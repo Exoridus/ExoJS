@@ -12,14 +12,16 @@ uniform vec4 u_viewport;
 uniform sampler2D u_transforms;
 uniform sampler2D u_tintTexture;
 
+// #exo-include transform-texture
+
 out vec2 v_texcoord;
 out vec4 v_color;
 out vec4 v_tint;
 
 void main(void) {
     int row = int(a_nodeIndex);
-    vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0); // a,b,c,d
-    vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0); // tx,ty,snapMode,0
+    vec4 m0 = texelFetch(u_transforms, exoTransformTexel(row, 0), 0); // a,b,c,d
+    vec4 m1 = texelFetch(u_transforms, exoTransformTexel(row, 1), 0); // tx,ty,snapMode,0
     mat3 transform = mat3(
         m0.x, m0.z, 0.0,
         m0.y, m0.w, 0.0,
@@ -43,5 +45,5 @@ void main(void) {
     gl_Position = vec4(clip, 0.0, 1.0);
     v_texcoord = a_texcoord;
     v_color = a_color;
-    v_tint = texelFetch(u_tintTexture, ivec2(0, row), 0);
+    v_tint = texelFetch(u_tintTexture, exoTintTexel(row), 0);
 }

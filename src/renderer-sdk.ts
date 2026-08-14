@@ -22,6 +22,14 @@ export type { DrawableConstructor, Renderer } from '#rendering/Renderer';
 export { RendererRegistry } from '#rendering/RendererRegistry';
 export type { ShaderProgram } from '#rendering/shader/Shader';
 export { Shader } from '#rendering/shader/Shader';
+// A renderer whose vertex stage reads the shared transform buffer must carry
+// this directive. The engine expands it at compile time into helpers that map a
+// logical `nodeIndex` onto whatever the transform/tint stores currently look
+// like — that mapping is ALL this contract guarantees. The stores' dimensions,
+// their packing, and the helpers' bodies are internal and change without notice,
+// which is exactly why a renderer takes the directive instead of addressing
+// texels itself.
+export { TRANSFORM_TEXTURE_GLSL_INCLUDE } from '#rendering/shader/transformTextureLayout';
 export { Spritesheet } from '#rendering/sprite/Spritesheet';
 // Renderers that guard on `Texture.source === null` need this to tell "still
 // waiting on an image" from "holds its pixels in a CPU buffer" — without it an

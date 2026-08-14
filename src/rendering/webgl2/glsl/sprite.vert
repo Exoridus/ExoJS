@@ -16,6 +16,8 @@ uniform vec4 u_viewport;                        // device-pixel viewport rect (x
 uniform sampler2D u_transforms;                 // shared per-frame transform buffer (2 texels/row)
 uniform sampler2D u_tintTexture;                // shared per-frame tint buffer (rgba8, 1 texel/row)
 
+// #exo-include transform-texture
+
 out vec2 v_texcoord;
 out vec4 v_color;
 flat out uint v_textureSlot;
@@ -47,9 +49,9 @@ void main(void) {
     // here unifies with the mesh path and removes the redundant per-instance
     // a_color stream.
     int row = int(a_nodeIndex);
-    vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0); // a, b, c, d
-    vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0); // tx, ty, snapMode, 0
-    vec4 m2 = texelFetch(u_tintTexture, ivec2(0, row), 0); // tint (rgb 0..1, a)
+    vec4 m0 = texelFetch(u_transforms, exoTransformTexel(row, 0), 0); // a, b, c, d
+    vec4 m1 = texelFetch(u_transforms, exoTransformTexel(row, 1), 0); // tx, ty, snapMode, 0
+    vec4 m2 = texelFetch(u_tintTexture, exoTintTexel(row), 0); // tint (rgb 0..1, a)
 
     // Geometry boundary snap: round each local corner to the device grid so the
     // quad edges land on whole device pixels (m1.z == 2.0, axis-aligned only).

@@ -1,5 +1,13 @@
 import type { GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
 import type { RetainedGroupBundle } from '#rendering/plan/RetainedInstructionSet';
+import {
+  createTransformTextureLayout,
+  createTransformTextureRect,
+  tintTextureRect,
+  type TransformTextureLayout,
+  transformTextureRect,
+  WEBGL2_MIN_MAX_TEXTURE_SIZE,
+} from '#rendering/shader/transformTextureLayout';
 import { DataTexture } from '#rendering/texture/DataTexture';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
@@ -179,6 +187,11 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
   private _transformRowCount = 0;
   private _transformRowBase = 0;
   private _transformTexture: DataTexture<TextureFormat.Rgba32F> | null = null;
+  // Row -> texel mapping the current stores were allocated under. Rebuilt with
+  // the textures on growth; `null` while there are none. The scratch rect keeps
+  // the per-patch upload region allocation-free.
+  private _transformLayout: TransformTextureLayout | null = null;
+  private readonly _rectScratch = createTransformTextureRect();
   // Parallel tint rows (see TransformBuffer's class doc): same row capacity/
   // count/base as the transform store, grown and stored together.
   private _tintBytes: Uint8Array | null = null;
@@ -186,6 +199,11 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
 
   // Device-side resources, created lazily at the first capture finalize.
   private _gl: WebGL2RenderingContext | null = null;
+  // The connected context's `gl.MAX_TEXTURE_SIZE`, which caps both transform
+  // texture dimensions. Defaults to the value every WebGL2 context is required
+  // to support, so a bundle whose rows are stored before `_connectDevice` (unit
+  // tests) still gets a layout that any real context can hold.
+  private _maxTextureSize = WEBGL2_MIN_MAX_TEXTURE_SIZE;
   private _accountant: GpuResourceAccountant | null = null;
   private _instanceBuffer: WebGl2RenderBuffer | null = null;
   private readonly _vaos: WebGl2VertexArrayObject[] = [];
@@ -292,31 +310,41 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
         next *= 2;
       }
 
+      // Same packing as the shared frame-scoped store, so the group's rows are
+      // addressed by the one shader mapping and a group can hold more than
+      // MAX_TEXTURE_SIZE rows.
+      const layout = createTransformTextureLayout(next, this._maxTextureSize);
+
       this._transformTexture?.destroy();
       this._tintTexture?.destroy();
       this._transformFloats = new Float32Array(next * transformFloatsPerRow);
       this._transformTexture = new DataTexture({
-        width: 2,
-        height: next,
+        width: layout.transformWidth,
+        height: layout.transformHeight,
         format: TextureFormat.Rgba32F,
         data: this._transformFloats,
       });
       this._tintBytes = new Uint8Array(next * tintBytesPerRow);
       this._tintTexture = new DataTexture({
-        width: 1,
-        height: next,
+        width: layout.tintWidth,
+        height: layout.tintHeight,
         format: TextureFormat.Rgba8,
         data: this._tintBytes,
       });
       this._transformRowCapacity = next;
+      this._transformLayout = layout;
     }
 
     // Non-null: the branch above allocated it when missing (the texture null
-    // check narrows the texture itself, but not the floats/bytes fields).
+    // check narrows the texture itself, but not the floats/bytes/layout fields).
+    const layout = this._transformLayout!;
+    const transformRect = transformTextureRect(layout, 0, rowCount);
+    const tintRect = tintTextureRect(layout, 0, rowCount);
+
     this._transformFloats!.set(source.subarray(firstRow * transformFloatsPerRow, (firstRow + rowCount) * transformFloatsPerRow), 0);
-    this._transformTexture.commitRect(0, 0, 2, rowCount);
+    this._transformTexture.commitRect(transformRect.x, transformRect.y, transformRect.width, transformRect.height);
     this._tintBytes!.set(tintSource.subarray(firstRow * tintBytesPerRow, (firstRow + rowCount) * tintBytesPerRow), 0);
-    this._tintTexture!.commitRect(0, 0, 1, rowCount);
+    this._tintTexture!.commitRect(tintRect.x, tintRect.y, tintRect.width, tintRect.height);
     this._transformRowCount = rowCount;
     this._transformRowBase = firstRow;
   }
@@ -332,12 +360,23 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
    * ignored (a stale queue entry after a recapture shrank the store).
    */
   public _patchTransformRow(localRow: number, floats: Float32Array): void {
-    if (this._transformTexture === null || this._transformFloats === null || localRow < 0 || localRow >= this._transformRowCount) {
+    if (
+      this._transformTexture === null ||
+      this._transformFloats === null ||
+      this._transformLayout === null ||
+      localRow < 0 ||
+      localRow >= this._transformRowCount
+    ) {
       return;
     }
 
+    // One logical row never straddles a texture line, so this stays a
+    // single-row texel span whatever the row's index — the O(k) patch keeps its
+    // upload size.
+    const rect = transformTextureRect(this._transformLayout, localRow, 1, this._rectScratch);
+
     this._transformFloats.set(floats.subarray(0, transformFloatsPerRow), localRow * transformFloatsPerRow);
-    this._transformTexture.commitRect(0, localRow, 2, 1);
+    this._transformTexture.commitRect(rect.x, rect.y, rect.width, rect.height);
   }
 
   /**
@@ -363,6 +402,7 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
   public _connectDevice(gl: WebGL2RenderingContext, accountant: GpuResourceAccountant): void {
     this._gl = gl;
     this._accountant = accountant;
+    this._maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
   }
 
   /** Upload the used instance range into the group's persistent GPU buffer. */
@@ -427,6 +467,7 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
     this._tintTexture?.destroy();
     this._tintTexture = null;
     this._tintBytes = null;
+    this._transformLayout = null;
     this._transformRowCapacity = 0;
     this._transformRowCount = 0;
     this._usedWords = 0;
