@@ -18,6 +18,7 @@ import {
   type GroupScopeEntry,
   type ScopeEntry,
 } from './RenderScope';
+import { LiveEntryReason, type SourceEntry, type SourceGroup } from './RenderSourceItem';
 import type { RetainedFragmentEntry, RetainedFragmentGroup, RetainedGroupFragment } from './RetainedGroupFragment';
 import type { RetainedInstructionSet } from './RetainedInstructionSet';
 import type { RetainedDrawData } from './RetainedPlanCache';
@@ -164,6 +165,32 @@ export class RenderPlanBuilder {
   private _viewCullSuppression = 0;
 
   /**
+   * Scope stack of the source-collection walk, or empty when not collecting a
+   * source. Non-empty means this build is DISCOVERING a render root's persistent
+   * items rather than producing a frame.
+   *
+   * That walk must not pay the frame path: no pooled `DrawCommand`, no
+   * frame-global `nodeIndex`, no transform-buffer row and no backend-bound
+   * material key for a node that is only being discovered. It covers the whole
+   * subtree — a million nodes where three quarters are off-screen — so taking
+   * the normal `emitDraw` path would allocate roughly 48MB of transform rows in
+   * a grow-only buffer for draws that never happen.
+   */
+  private readonly _sourceStack: SourceEntry[][] = [];
+  /**
+   * The producer whose collect is currently running during source discovery.
+   *
+   * A view read attributes to THIS node rather than to the root, so one
+   * view-dependent parallax layer becomes one {@link LiveEntry} instead of
+   * forcing every sibling off the persistent path — the segment granularity
+   * contract 10 of the architecture freeze asks for.
+   */
+  private _sourceProducer: RenderNode | null = null;
+  /** Producers observed reading the view during the current source walk. */
+  private readonly _sourceViewReaders = new Set<RenderNode>();
+  private _nextItemHandle = 0;
+
+  /**
    * The node this build treats as the retained render root, or `null` when the
    * root is not eligible. Compared by identity in {@link emitNode}, so the
    * automatic representation attaches to the root's OWN group scope — the one
@@ -262,6 +289,14 @@ export class RenderPlanBuilder {
     // sets a capture up — the cull-rect inflation, the plan's own view field —
     // cannot mark every capture as view-dependent.
     this._trackedRoot?.noteViewRead();
+
+    if (this._sourceProducer !== null) {
+      // Local attribution: only the producer in flight is view-dependent. The
+      // root-wide flag above answers a different, binary question (may this
+      // capture replay under a moved view); this one decides which single entry
+      // stops being persistent.
+      this._sourceViewReaders.add(this._sourceProducer);
+    }
 
     return this._viewUnobserved();
   }
@@ -395,6 +430,12 @@ export class RenderPlanBuilder {
       return;
     }
 
+    if (this._sourceStack.length > 0) {
+      this._collectSourceGroup(node, reservedSeq, reservedZ);
+
+      return;
+    }
+
     const groupScope = this._acquireGroupScope(this._resolvePreserveDrawOrder(node));
 
     groupScope.transformNode = node._isTransformGroupBoundary ? node : null;
@@ -411,6 +452,55 @@ export class RenderPlanBuilder {
       }
     } finally {
       this._scopeStack.pop();
+    }
+  }
+
+  /**
+   * Discovery counterpart of the group branch: mirror the scope structure into
+   * the source and run the node's collect with it as the current producer.
+   *
+   * A transform-group boundary is NOT descended into. It owns its own retention
+   * tier, and the root records it as a live re-dispatch rather than absorbing it
+   * — the same policy the retained fragment already applies, kept here so the
+   * source cannot quietly flatten a `RetainedContainer` into itself.
+   */
+  private _collectSourceGroup(node: RenderNode, seq: number, zIndex: number): void {
+    const parent = this._sourceStack[this._sourceStack.length - 1]!;
+
+    if (node._isTransformGroupBoundary) {
+      parent.push({ kind: RenderEntryKind.Barrier, seq, node, reason: LiveEntryReason.Boundary });
+
+      return;
+    }
+
+    const group: SourceGroup = {
+      kind: RenderEntryKind.Group,
+      seq,
+      zIndex,
+      preserveDrawOrder: this._resolvePreserveDrawOrder(node),
+      transformNode: null,
+      entries: [],
+    };
+
+    parent.push(group);
+    this._sourceStack.push(group.entries);
+
+    const previousProducer = this._sourceProducer;
+
+    this._sourceProducer = node;
+
+    try {
+      node._collectForRenderPlan(this);
+    } finally {
+      this._sourceProducer = previousProducer;
+      this._sourceStack.pop();
+    }
+
+    // Attribution resolved after the collect: a producer that read the view
+    // during it cannot be persisted, so its whole emitted scope collapses to one
+    // live re-dispatch. Replacing the group in place keeps the placement exact.
+    if (this._sourceViewReaders.has(node)) {
+      parent[parent.length - 1] = { kind: RenderEntryKind.Barrier, seq, node, reason: LiveEntryReason.ViewDependent };
     }
   }
 
@@ -560,6 +650,27 @@ export class RenderPlanBuilder {
     const placementSeq = this._reservedSeq;
     const placementZ = this._reservedZ;
     const bounds = drawable.getBounds();
+
+    if (this._sourceStack.length > 0) {
+      // Discovery: record the neutral item and stop. No pooled command, no
+      // nodeIndex, no transform row, no material key — the cut-1 invariant.
+      // Bounds are read because they ARE the item's payload, and they are a
+      // cache hit for an unmoved node.
+      this._sourceStack[this._sourceStack.length - 1]!.push({
+        kind: RenderEntryKind.Draw,
+        handle: this._nextItemHandle++,
+        drawable,
+        seq: placementSeq,
+        zIndex: placementZ,
+        minX: bounds.left,
+        minY: bounds.top,
+        maxX: bounds.right,
+        maxY: bounds.bottom,
+      });
+
+      return;
+    }
+
     const command = this._acquireDrawCommand();
 
     command.drawable = drawable;
@@ -596,7 +707,16 @@ export class RenderPlanBuilder {
    * whole by RetainedContainer._collect instead.
    */
   public get _isViewCullSuppressed(): boolean {
-    return this._viewCullSuppression > 0;
+    // Source discovery suppresses culling too, and must: the whole point of the
+    // items is to hold what is OFF screen right now, since that is exactly what
+    // scrolls in later. A cull test during discovery would drop precisely the
+    // nodes the source exists to remember.
+    return this._viewCullSuppression > 0 || this._sourceStack.length > 0;
+  }
+
+  /** @internal — true while discovering a render root's persistent items. */
+  public get _isCollectingSource(): boolean {
+    return this._sourceStack.length > 0;
   }
 
   /** @internal — enter a transform-group subtree (see {@link _isViewCullSuppressed}). */
@@ -815,6 +935,12 @@ export class RenderPlanBuilder {
     this._viewCullSuppression = 0;
     this._retentionRoot = null;
     this._trackedRoot = null;
+    // Source-discovery state is per walk, never per pooled builder: a leaked
+    // reader set would attribute a view read to a producer in a later, unrelated
+    // build and make it live forever.
+    this._sourceStack.length = 0;
+    this._sourceProducer = null;
+    this._sourceViewReaders.clear();
   }
 
   private _acquireGroupScope(preserveDrawOrder: boolean): MutableGroupScope {
