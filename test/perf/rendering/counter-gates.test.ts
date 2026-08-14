@@ -97,7 +97,11 @@ const EXPECTED = {
   // stored-bounds path stopped engaging on a settled scene.
   panPlainBeyondMargin: {
     collect: 1,
-    inView: 1001,
+    // ONE: the root's own group test. The 1000 items are answered by the
+    // source's spatial index, which files them at build time and never asks a
+    // node again — that is the whole point of the index, and it is why
+    // `culledNodes` below (not this row) is what proves culling still happens.
+    inView: 1,
     globalTransform: 1778,
     materialKey: 888,
     submittedNodes: 888,
@@ -128,7 +132,10 @@ const EXPECTED = {
   // draws that never happen.
   sourceDiscovery: {
     collect: 1001,
-    inView: 1001,
+    // The discovery walk itself is culling-free by construction, and the
+    // selection that follows it in the same frame goes through the index, so the
+    // only view test left is the root's own.
+    inView: 1,
     globalTransform: 4002,
     materialKey: 1000,
     submittedNodes: 1000,
@@ -261,9 +268,23 @@ describe('CPU collect-path shape gate', () => {
 
       // A RISING `collect` means the source stopped engaging and the frame went
       // back to finding its content by walking the scene graph. A FALLING
-      // `inView`/`culledNodes` means it stopped culling per item, which would
-      // buy time by drawing what the camera cannot see.
+      // `culledNodes` means it stopped culling per item, which would buy time by
+      // drawing what the camera cannot see — that row, not `inView`, is the
+      // anti-cheat now that the index answers without calling the node.
       expectCounters(actual, EXPECTED.panPlainBeyondMargin);
+
+      // The membership ledger has to agree with what was actually submitted, so
+      // a delta that quietly stopped tracking cannot hide behind a correct
+      // frame. `visible` is the set the index admitted; `entered + stayed` is
+      // the same number decomposed, which is what makes the delta load-bearing
+      // rather than decorative.
+      const delta = root._retainedRootRepresentation().derivedProduct?.delta;
+
+      expect(delta).toBeDefined();
+      expect(delta!.visible).toBe(EXPECTED.panPlainBeyondMargin.submittedNodes);
+      expect(delta!.entered + delta!.stayed).toBe(delta!.visible);
+      expect(delta!.candidates).toBeLessThanOrEqual(SPRITE_COUNT);
+
       root.destroy();
     });
   });
@@ -303,8 +324,13 @@ describe('CPU collect-path shape gate', () => {
       // row rather than the beyond-margin one, which now also visits the root
       // once — the group tier's claim is that it never pays a walk at all, and
       // that is what inverting here would disprove.
+      //
+      // `materialKey` rather than `inView` as the second anchor: since the
+      // source answers visibility from its index, neither tier asks a node for a
+      // view test, so that comparison had stopped discriminating between them.
+      // Resolving a key per child is what a walk actually costs.
       expect(actual.collect).toBeLessThan(EXPECTED.sourceDiscovery.collect);
-      expect(actual.inView).toBeLessThan(EXPECTED.sourceDiscovery.inView);
+      expect(actual.materialKey).toBeLessThan(EXPECTED.sourceDiscovery.materialKey);
       root.destroy();
     });
   });
