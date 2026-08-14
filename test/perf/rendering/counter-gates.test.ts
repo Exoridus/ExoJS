@@ -41,7 +41,7 @@ const SPRITE_COUNT = 1000;
  * one fixed scene + drive pattern. See each `it` for what a drift means.
  *
  * columns: collect  = RenderNode._collect calls (nodes visited by the walk)
- *          inView   = SceneNode.inView calls (cull checks)
+ *          inView   = SceneNode._inCullRectUsingBounds calls (cull checks)
  *          gt       = SceneNode.getGlobalTransform calls (build + play transform reads)
  *          mk       = Drawable._getOrComputeMaterialKey calls (per-draw material keys)
  *          plus the deterministic RenderStats totals (submitted/culled/draws/batches).
@@ -68,17 +68,71 @@ const EXPECTED = {
   panPlain: { collect: 1, inView: 1, globalTransform: 2, materialKey: 0, submittedNodes: 1000, culledNodes: 0, drawCalls: 1, batches: 1 },
 
   // The same scene panned FAR ENOUGH each frame to leave the capture margin, so
-  // the product expires every frame and the walk pays the honest O(n) cost. It
-  // is the counterweight to `panPlain`: without it, a margin so wide it never
-  // expired would look identical to a correct one, and the row that used to
-  // catch a super-linear collect regression would have no home.
+  // the product expires every frame. It is the counterweight to `panPlain`:
+  // without it, a margin so wide it never expired would look identical to a
+  // correct one.
+  //
+  // `collect` re-pinned 1001 -> 1 when the persistent source landed: the frame
+  // no longer walks the scene graph to find its content, it selects from the
+  // items a single earlier walk discovered. That is the entire point of the
+  // tier, and a `collect` back at 1001 means the source stopped engaging under a
+  // moving camera.
+  //
+  // Every OTHER column is deliberately unchanged, and the three that matter are
+  // load-bearing rather than incidental:
+  //
+  // - `inView` stays 1001 because the selection still asks the cull question
+  //   once per item, through the node's own rule rather than a second copy of
+  //   it — only the bounds it feeds that rule changed source.
+  // - `culledNodes` stays 112, so a strategy that silently stopped culling and
+  //   submitted the whole subtree could not pass this row.
+  // - `materialKey` stays 888, because a selection resolves it live for exactly
+  //   the admitted items, as the walk did.
+  //
+  // `globalTransform` re-pins 5554 -> 1778 with the same change: nothing in the
+  // subtree moved since the items were discovered, so the stored world AABBs
+  // answer both questions a `getBounds()` call used to be made for — the cull
+  // test, and the screen extent the emitted command carries — and that call
+  // resolves the whole parent chain. A rise back toward 5554 means the
+  // stored-bounds path stopped engaging on a settled scene.
   panPlainBeyondMargin: {
-    collect: 1001,
+    collect: 1,
     inView: 1001,
-    globalTransform: 5554,
+    globalTransform: 1778,
     materialKey: 888,
     submittedNodes: 888,
     culledNodes: 112,
+    drawCalls: 1,
+    batches: 1,
+  },
+
+  // The frame that BUILDS the source: the second consecutive rebuild over
+  // unchanged content, driven by the same beyond-margin pan with a single warmup
+  // frame in front of it.
+  //
+  // It pins the one-time cost the tier trades against, so it can never be
+  // silently inflated. `collect` is 1001: the discovery walk visits every node
+  // exactly once, because an item that is off-screen now is precisely the one
+  // that must be findable when it scrolls in.
+  //
+  // `globalTransform` is 4002 — HALF what the plain re-collect this frame
+  // replaced paid (8002). Discovery reads each drawable's bounds once, and the
+  // selection that immediately follows it reuses those stored values instead of
+  // asking the node again, so even the frame that pays for the walk comes out
+  // ahead on transform resolves.
+  //
+  // What must NOT appear here is a per-node frame-local product. The discovery
+  // walk allocates no pooled draw command, no `nodeIndex`, no transform-buffer
+  // row and no backend-bound material key for a node it only discovered; at a
+  // million nodes that would be roughly 48MB of rows in a grow-only buffer for
+  // draws that never happen.
+  sourceDiscovery: {
+    collect: 1001,
+    inView: 1001,
+    globalTransform: 4002,
+    materialKey: 1000,
+    submittedNodes: 1000,
+    culledNodes: 0,
     drawCalls: 1,
     batches: 1,
   },
@@ -140,6 +194,20 @@ const populate = (root: Container, count: number): Sprite[] => {
   return sprites;
 };
 
+/**
+ * A pan that leaves the capture margin on every frame, alternating direction so
+ * the scene stays in front of the camera — the row is about what the frame does
+ * with its content, not about an empty view.
+ */
+const beyondMarginPan = (harness: WebGl2Harness): (() => void) => {
+  let direction = 1;
+
+  return () => {
+    harness.view.move(200 * direction, 0);
+    direction = -direction;
+  };
+};
+
 /** Assert every field of `actual` equals the pinned `expected` row (exact shape). */
 const expectCounters = (actual: FrameCounters, expected: (typeof EXPECTED)[keyof typeof EXPECTED]): void => {
   expect(actual.collect).toBe(expected.collect);
@@ -181,7 +249,7 @@ describe('CPU collect-path shape gate', () => {
     });
   });
 
-  it('camera-pan past the capture margin: the product expires and the frame re-collects O(n)', () => {
+  it('camera-pan past the capture margin: the product expires and the frame selects from the source', () => {
     withHarness(harness => {
       const root = new Container();
 
@@ -189,16 +257,32 @@ describe('CPU collect-path shape gate', () => {
       // 200px per frame against a 1280-wide view is past the margin on every
       // frame; alternating the direction keeps the scene in front of the camera
       // so the row stays about the collect walk, not about an empty view.
-      let direction = 1;
-      const pan = (): void => {
-        harness.view.move(200 * direction, 0);
-        direction = -direction;
-      };
+      const actual = measureFrameCounters(harness, root, { beforeFrame: beyondMarginPan(harness) });
 
-      // A HIGHER `collect` than 1001 (≈ 1 + SPRITE_COUNT) means the walk now
-      // visits more than every node once per pan — a super-linear collect
-      // regression, precisely the CPU-only class the allocation gate misses.
-      expectCounters(measureFrameCounters(harness, root, { beforeFrame: pan }), EXPECTED.panPlainBeyondMargin);
+      // A RISING `collect` means the source stopped engaging and the frame went
+      // back to finding its content by walking the scene graph. A FALLING
+      // `inView`/`culledNodes` means it stopped culling per item, which would
+      // buy time by drawing what the camera cannot see.
+      expectCounters(actual, EXPECTED.panPlainBeyondMargin);
+      root.destroy();
+    });
+  });
+
+  it('the source is built by one honest O(n) walk that allocates no frame-local rows', () => {
+    withHarness(harness => {
+      const root = new Container();
+
+      populate(root, SPRITE_COUNT);
+      // One warmup frame in front of the measured one, so the measured frame is
+      // the SECOND rebuild over unchanged content — the one the build gate arms
+      // discovery on.
+      const actual = measureFrameCounters(harness, root, { beforeFrame: beyondMarginPan(harness), warmup: 1 });
+
+      expectCounters(actual, EXPECTED.sourceDiscovery);
+      // The walk is the price of every later selection, so it has to stay a
+      // single visit per node. Anything above that is a super-linear discovery
+      // regression — exactly the CPU-only class the allocation gate misses.
+      expect(actual.collect).toBe(SPRITE_COUNT + 1);
       root.destroy();
     });
   });
@@ -214,10 +298,13 @@ describe('CPU collect-path shape gate', () => {
 
       expectCounters(actual, EXPECTED.panRetained);
       // Make the retained WIN load-bearing, not just incidental: the fragment is
-      // captured view-INDEPENDENTLY, so it survives camera motion of any size —
-      // unlike the plain root, whose capture margin has a finite reach. If this
-      // inverts, the fragment stopped engaging.
-      expect(actual.collect).toBeLessThan(EXPECTED.panPlainBeyondMargin.collect);
+      // captured view-INDEPENDENTLY, so it survives camera motion of any size
+      // without ever revisiting the scene graph. Anchored against the DISCOVERY
+      // row rather than the beyond-margin one, which now also visits the root
+      // once — the group tier's claim is that it never pays a walk at all, and
+      // that is what inverting here would disprove.
+      expect(actual.collect).toBeLessThan(EXPECTED.sourceDiscovery.collect);
+      expect(actual.inView).toBeLessThan(EXPECTED.sourceDiscovery.inView);
       root.destroy();
     });
   });

@@ -4,6 +4,7 @@ import type { Drawable } from '#rendering/Drawable';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { View } from '#rendering/View';
 
+import { RenderRootSource } from './RenderRootSource';
 import type { ScopeEntry } from './RenderScope';
 import { RetainedGroupFragment } from './RetainedGroupFragment';
 import { reconcileRetainedTransformRows } from './retainedTransformRowPatch';
@@ -85,6 +86,59 @@ export class RetainedRootRepresentation {
    */
   private _viewDependentCapture = false;
 
+  /**
+   * The persistent items this root can re-select from, or `null` while it has
+   * never needed them.
+   *
+   * Lazily created on purpose: the items are the dominant new memory cost at a
+   * large node count (one record per drawable in the WHOLE subtree, on screen or
+   * not), and a root whose camera never leaves its capture margin never has a
+   * use for them. Only a root that actually re-selects pays for one.
+   *
+   * Owned here rather than beside the fragment because the source is the
+   * backend- and frame-NEUTRAL half: the keys that are not — view selection,
+   * render target, backend identity — stay on this class, which is what lets a
+   * `RetainedContainer` adopt the same source later instead of growing a third
+   * implementation of the same idea.
+   */
+  private _source: RenderRootSource | null = null;
+  /**
+   * Consecutive frames that had to rebuild and found the subtree exactly as the
+   * rebuild before them left it, plus the keys that streak is measured against.
+   *
+   * The build gate ({@link shouldBuildSource}). One such frame proves nothing —
+   * a camera that stepped once and stopped produces exactly one, and a source
+   * built for it is one O(N) walk plus one record per drawable that will never
+   * be selected from twice. Two in a row is the signature of a camera moving
+   * across a settled scene, which is the case the source exists for.
+   *
+   * The keys are exactly the source's own, transform included, so a scene that
+   * moves something every frame can never produce the streak — and therefore
+   * never pays for a source it would have to discard on the next frame anyway.
+   * That is the gate's second job, and the more important one: without the
+   * transform key, `dynamic-heavy` and `deep-hierarchy` would re-walk their
+   * whole subtree on every dirty frame.
+   *
+   * Deliberately NOT derived from the capture keys: the source is valid
+   * independently of whether a capture exists, and a root whose captures are
+   * suppressed needs the cheap path more than any other, not less.
+   */
+  private _rebuildStreak = 0;
+  private _streakContent = -1;
+  private _streakStructure = -1;
+  private _streakAncestry = -1;
+  private _streakTransform = -1;
+  /**
+   * The root producer itself read the view during discovery, so there is no
+   * persistable source at any granularity — attribution to the outermost
+   * producer covers the entire subtree.
+   *
+   * Sticky across invalidation: it is a property of what the root node DOES
+   * during collect, not of the content it holds, so re-running the walk on the
+   * next view change would reach the same conclusion at the same cost.
+   */
+  private _sourceUnbuildable = false;
+
   // Thrash suppression over the FULL key (see `shouldSuppressCapture`).
   private _replayedSinceCapture = false;
   private _wastedCaptures = 0;
@@ -121,14 +175,7 @@ export class RetainedRootRepresentation {
     backend: RenderBackend,
     target: RenderTargetIdentity | null,
   ): boolean {
-    if (
-      !this._hasCapture ||
-      this._contentRevision !== contentRevision ||
-      this._structureRevision !== structureRevision ||
-      this._ancestryStamp !== ancestryStamp ||
-      this._backend !== backend ||
-      this._target !== target
-    ) {
+    if (!this.matchesNonViewKeys(contentRevision, structureRevision, ancestryStamp, backend, target)) {
       return false;
     }
 
@@ -151,6 +198,66 @@ export class RetainedRootRepresentation {
     }
 
     return this._keptEmpty || view.getBounds().containsRect(this._keptBounds.getRect());
+  }
+
+  /**
+   * Every key except the view: whether the captured product still describes the
+   * same subtree, compiled for the same backend and target.
+   *
+   * Split out from {@link isCleanIgnoringTransform} because the view key is the
+   * only one of the six that is not an exact compare, and reading the exact half
+   * on its own is what makes the tolerant half legible.
+   */
+  public matchesNonViewKeys(
+    contentRevision: number,
+    structureRevision: number,
+    ancestryStamp: number,
+    backend: RenderBackend,
+    target: RenderTargetIdentity | null,
+  ): boolean {
+    return (
+      this._hasCapture &&
+      this._contentRevision === contentRevision &&
+      this._structureRevision === structureRevision &&
+      this._ancestryStamp === ancestryStamp &&
+      this._backend === backend &&
+      this._target === target
+    );
+  }
+
+  /** The persistent items, or `null` while this root has never built any. */
+  public get source(): RenderRootSource | null {
+    return this._source;
+  }
+
+  /** The persistent items, created on first use. */
+  public ensureSource(): RenderRootSource {
+    return (this._source ??= new RenderRootSource());
+  }
+
+  /** Fold one rebuild frame into the build gate (see {@link _rebuildStreak}). */
+  public noteRebuildKeys(contentRevision: number, structureRevision: number, ancestryStamp: number, transformRevision: number): void {
+    const same =
+      this._streakContent === contentRevision &&
+      this._streakStructure === structureRevision &&
+      this._streakAncestry === ancestryStamp &&
+      this._streakTransform === transformRevision;
+
+    this._rebuildStreak = same ? this._rebuildStreak + 1 : 0;
+    this._streakContent = contentRevision;
+    this._streakStructure = structureRevision;
+    this._streakAncestry = ancestryStamp;
+    this._streakTransform = transformRevision;
+  }
+
+  /** Whether a missing source is worth one culling-free discovery walk now. */
+  public shouldBuildSource(): boolean {
+    return !this._sourceUnbuildable && this._rebuildStreak >= 1;
+  }
+
+  /** Discovery found the ROOT itself view-dependent (see {@link _sourceUnbuildable}). */
+  public markSourceUnbuildable(): void {
+    this._sourceUnbuildable = true;
   }
 
   /** Whether this view lies entirely inside the rect the capture culled against. */
@@ -350,6 +457,17 @@ export class RetainedRootRepresentation {
     this._keptEmpty = false;
   }
 
+  /**
+   * {@link noteKept} for a caller that holds the compared extent as four numbers
+   * rather than a rectangle — the source selection, whose items store it that
+   * way. Materialising a `Rectangle` per item just to hand it over would cost
+   * more than the fold.
+   */
+  public noteKeptCoords(minX: number, minY: number, maxX: number, maxY: number): void {
+    this._keptBounds.addCoords(minX, minY).addCoords(maxX, maxY);
+    this._keptEmpty = false;
+  }
+
   /** A node was dropped by the view test — the capture is view-locked. */
   public noteCulled(): void {
     this._culledDuringCapture = true;
@@ -383,7 +501,15 @@ export class RetainedRootRepresentation {
     this._replayedSinceCapture = false;
   }
 
-  /** Drop the capture and its recording; the GPU bundle is kept (grow-only). */
+  /**
+   * Drop the capture and its recording; the GPU bundle is kept (grow-only).
+   *
+   * The SOURCE deliberately survives. It is keyed on the node's own revisions
+   * and validates itself, so it stays correct across anything that invalidates a
+   * capture — and the loudest caller here is capture suppression, where the
+   * frame that just lost its capture is exactly the one that most needs a cheap
+   * path to fall back to.
+   */
   public invalidate(): void {
     this.fragment.invalidate();
     this._hasCapture = false;
@@ -404,6 +530,8 @@ export class RetainedRootRepresentation {
   public dispose(): void {
     this.invalidate();
     this.fragment.dispose();
+    this._source = null;
+    this._sourceUnbuildable = false;
     this._keptBounds.destroy();
   }
 

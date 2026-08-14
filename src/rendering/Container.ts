@@ -473,6 +473,21 @@ export class Container extends RenderNode {
       return;
     }
 
+    if (builder._isCollectingSource) {
+      // Source discovery walks every child unconditionally and produces no
+      // frame-local draws, so neither half of the retained-slot cache applies:
+      // replaying a slot would allocate exactly the pooled `DrawCommand` and
+      // transform row the discovery invariant forbids, and capturing one would
+      // key this cache against a scope that never received the entries it peeks
+      // for — throwing away a valid capture in the process.
+      for (let index = 0; index < this._childList.length; index++) {
+        // In-bounds: index < length.
+        this._childList[index]!._collect(builder, index);
+      }
+
+      return;
+    }
+
     // The cache-key accessor, deliberately not `builder.view`: reading the view
     // marks the surrounding capture view-dependent, and keying a slot cache on
     // the view is not deriving content from it.

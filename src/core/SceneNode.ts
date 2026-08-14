@@ -10,6 +10,7 @@ import {
   intersectionRectEllipse,
   intersectionSat,
 } from '#math/collision-detection';
+import { intersectionRectRect } from '#math/collision-primitives';
 import type { Ellipse } from '#math/Ellipse';
 import { Flags } from '#math/Flags';
 import { Interval } from '#math/Interval';
@@ -19,6 +20,7 @@ import { ObservableVector, type ObservableVectorOwner } from '#math/ObservableVe
 import { Polygon } from '#math/Polygon';
 import type { ReadonlyRectangle } from '#math/Rectangle';
 import { Rectangle } from '#math/Rectangle';
+import type { RectangleLike } from '#math/RectangleLike';
 import { degreesToRadians, trimRotation } from '#math/utils';
 import { Vector } from '#math/Vector';
 import type { Container } from '#rendering/Container';
@@ -928,11 +930,51 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    * @internal
    */
   public _inCullRect(rect: ReadonlyRectangle): boolean {
+    return this._inCullRectUsingBounds(rect, null);
+  }
+
+  /**
+   * {@link _inCullRect} against bounds the caller already holds.
+   *
+   * Exists because {@link getBounds} resolves the whole parent chain on every
+   * call, and the persistent-source scan asks this question once per item in a
+   * subtree that can hold a million of them — at which point that resolve is the
+   * single most expensive thing a camera step pays for.
+   *
+   * The rule is split along the line of what a caller may safely have cached:
+   *
+   * - `cullable` and `cullArea` are read LIVE, always. `cullArea` is a mutable
+   *   `Rectangle` and only REPLACING the reference stamps a revision, so a
+   *   caller that had copied it could go stale in place, unnoticed.
+   * - `bounds` is the caller's, and it is the caller's obligation to pass one
+   *   that is current. The persistent source does that by keying its items on
+   *   the subtree's transform revision: they are only selected from while
+   *   nothing in it has moved, so no stored extent can be wrong.
+   *
+   * `null` means "resolve them from this node", which is exactly
+   * {@link _inCullRect}. It is a null rather than an eagerly-passed
+   * `getBounds()` because the two early exits above must come FIRST: a node that
+   * opted out of culling, or one carrying a `cullArea`, never needs its bounds,
+   * and resolving them anyway walks its whole parent chain. Passing them in as
+   * an argument made every node in a culling-free scene pay that walk — measured
+   * on `deep-hierarchy` at 100,000 nodes as 1.9ms -> 19.3ms median.
+   *
+   * One rule, one implementation. A second copy would be free to drift, and this
+   * one decides which nodes reach the screen.
+   * @internal
+   */
+  public _inCullRectUsingBounds(rect: ReadonlyRectangle, bounds: RectangleLike | null): boolean {
     if (!this._cullable) {
       return true;
     }
 
-    return rect.intersectsWith(this._cullArea ?? this.getBounds());
+    const area = this._cullArea;
+
+    if (area !== null) {
+      return rect.intersectsWith(area);
+    }
+
+    return intersectionRectRect(rect, bounds ?? this.getBounds());
   }
 
   /**
