@@ -10,7 +10,14 @@ import type { BaseProvenance, LibraryProvenance } from '../shared/provenance';
 import { readLibraryProvenance } from '../shared/provenance';
 import { buildMatrix } from './archetypes';
 import type { ArchetypeSpec, Backend, CellResult, CellSpec, EngineAdapter } from './EngineAdapter';
+import type { MatrixSelection } from './selection';
+import { applySelection } from './selection';
 import { isScrolling } from './world';
+
+// Re-exported so the rendering barrel and the CLI keep importing the selection
+// surface from `driver` unchanged. It lives in its own module because the tests
+// that pin it must not pull Playwright in through this file.
+export { applySelection, type MatrixSelection } from './selection';
 
 // Re-exported so `rendering/index.ts` and the CLI keep importing `LibraryProvenance`
 // from the rendering barrel unchanged while the definition lives in `shared/`.
@@ -481,35 +488,6 @@ const applyFilter = (cells: readonly CellSpec[], filter: Partial<CellSpec>): Cel
   return cells.filter(cell => entries.every(([key, value]) => cell[key as keyof CellSpec] === value));
 };
 
-/**
- * Multi-value cell selection: a cell survives when, for every field the
- * selection lists, the cell's value appears in that field's list. The
- * single-valued {@link applyFilter} could only ever pin ONE archetype or ONE
- * engine per invocation, which forced a multi-archetype comparison to be split
- * across several process launches — i.e. across several browser sessions,
- * breaking the same-session rule the whole report rests on. This lets one
- * session cover exactly the arms and archetypes a given question needs, and
- * nothing else.
- */
-export interface MatrixSelection {
-  /** Engine labels to keep (e.g. `['exojs', 'pixi']`), or omitted for all. */
-  readonly engines?: readonly string[];
-  /** Engine config labels to keep (e.g. `['current', 'retained']`), or omitted for all. */
-  readonly configs?: readonly string[];
-  /** Archetype ids to keep, or omitted for all. */
-  readonly archetypes?: readonly string[];
-  /** Node counts to keep, or omitted for all. */
-  readonly nodeCounts?: readonly number[];
-}
-
-const applySelection = (cells: readonly CellSpec[], selection: MatrixSelection): CellSpec[] =>
-  cells.filter(
-    cell =>
-      (selection.engines === undefined || selection.engines.includes(cell.engine)) &&
-      (selection.configs === undefined || selection.configs.includes(cell.config)) &&
-      (selection.archetypes === undefined || selection.archetypes.includes(cell.archetype)) &&
-      (selection.nodeCounts === undefined || selection.nodeCounts.includes(cell.nodeCount)),
-  );
 
 /**
  * Callback invoked the instant a cell finishes measuring, BEFORE the run
