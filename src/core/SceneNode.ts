@@ -961,6 +961,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    *
    * One rule, one implementation. A second copy would be free to drift, and this
    * one decides which nodes reach the screen.
+   * @internal
    */
   public _inCullRectUsingBounds(rect: ReadonlyRectangle, bounds: RectangleLike | null): boolean {
     if (!this._cullable) {
