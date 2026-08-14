@@ -664,23 +664,47 @@ export class RenderPlanBuilder {
     const maxX = items.maxX;
     const maxY = items.maxY;
     const words = bits.words;
+    const wordCount = bits.wordCount;
     let other = 0;
-    let culled = 0;
+    let selected = 0;
 
-    for (let i = 0; i < count; i++) {
-      while (other < otherCount && others[other]!.itemMark <= i) {
-        this._emitSelectedOther(others[other]!, selection, rect);
-        other++;
-      }
+    // Walk the ADMITTED items only, one set bit at a time, instead of stepping
+    // over every stored item and asking. A scope that holds a million items and
+    // admits a quarter of them otherwise pays three quarters of its loop to
+    // reject — the exact cost the spatial index was built to stop paying, still
+    // being paid one layer further out. Skipping empty words makes the walk
+    // O(items / 32 + admitted).
+    //
+    // The interleaved `others` keep their placement: each is emitted at the
+    // first admitted index that reaches its mark, which is still after every
+    // item stored before it (a rejected item emits nothing, so it constrains no
+    // ordering) and before every item stored after it.
+    for (let w = 0; w < wordCount; w++) {
+      let word = words[w]!;
 
-      if ((words[i >>> 5]! & (1 << (i & 31))) === 0) {
-        culled++;
-
+      if (word === 0) {
         continue;
       }
 
-      this._emitSelectedItem(drawables[i]!, seq[i]!, zIndex[i]!, minX[i]!, minY[i]!, maxX[i]!, maxY[i]!);
+      const base = w << 5;
+
+      while (word !== 0) {
+        const lowest = word & -word;
+        const i = base + (31 - Math.clz32(lowest));
+
+        word ^= lowest;
+
+        while (other < otherCount && others[other]!.itemMark <= i) {
+          this._emitSelectedOther(others[other]!, selection, rect);
+          other++;
+        }
+
+        this._emitSelectedItem(drawables[i]!, seq[i]!, zIndex[i]!, minX[i]!, minY[i]!, maxX[i]!, maxY[i]!);
+        selected++;
+      }
     }
+
+    const culled = count - selected;
 
     while (other < otherCount) {
       this._emitSelectedOther(others[other]!, selection, rect);
