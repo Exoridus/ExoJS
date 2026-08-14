@@ -2344,14 +2344,17 @@ export class WebGl2Backend implements RenderBackend {
           const channels = formatInfo.channels;
           const rowChannels = texture.width * channels;
 
-          if (region.x === 0 && region.width === texture.width) {
-            // Full-width rows are already contiguous and tightly packed in the
-            // row-major buffer, so there is nothing to pack: the
-            // `(…, srcData, srcOffset)` overload lets GL read the band straight
-            // out of the texture buffer at an element offset. This is the shape
-            // every ring-buffer style upload takes (transform/tint rows,
-            // scrolling spectrograms), so it is the common case rather than a
-            // corner one.
+          // A region is already contiguous and tightly packed in the row-major
+          // buffer when it spans full rows, and equally when it is a single row
+          // (however narrow — one row never straddles a gap). Both let the
+          // `(…, srcData, srcOffset)` overload read straight out of the texture
+          // buffer at an element offset, with nothing to pack. Between them they
+          // cover every shape the engine's own uploads take: full-width bands
+          // (ring-buffer style writes, a whole transform store) and single-row
+          // spans (a patched transform row, a dirty range inside one texture
+          // line), so the packing path below is left to genuinely rectangular
+          // sub-regions like a partial glyph-atlas update.
+          if ((region.x === 0 && region.width === texture.width) || region.height === 1) {
             gl.texSubImage2D(
               gl.TEXTURE_2D,
               0,
@@ -2362,7 +2365,7 @@ export class WebGl2Backend implements RenderBackend {
               formatInfo.format,
               formatInfo.type,
               texture.buffer,
-              region.y * rowChannels,
+              region.y * rowChannels + region.x * channels,
             );
           } else {
             // The rows are no longer contiguous, so lift the sub-region out of
