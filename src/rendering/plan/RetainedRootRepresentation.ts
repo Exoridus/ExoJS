@@ -4,6 +4,7 @@ import type { Drawable } from '#rendering/Drawable';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { View } from '#rendering/View';
 
+import { DerivedRootProduct } from './DerivedRootProduct';
 import { RenderRootSource } from './RenderRootSource';
 import type { ScopeEntry } from './RenderScope';
 import { RetainedGroupFragment } from './RetainedGroupFragment';
@@ -102,6 +103,16 @@ export class RetainedRootRepresentation {
    * implementation of the same idea.
    */
   private _source: RenderRootSource | null = null;
+  /**
+   * The view-dependent half of the persistent state: which items this root's
+   * camera admits, and the delta against the previous selection.
+   *
+   * Owned HERE rather than on the source for the same reason the view key is:
+   * the source describes what the subtree contains and is valid for any camera,
+   * membership is an answer about one. Created together with the first
+   * selection, released with the source.
+   */
+  private _derivedProduct: DerivedRootProduct | null = null;
   /**
    * Consecutive frames that had to rebuild and found the subtree exactly as the
    * rebuild before them left it, plus the keys that streak is measured against.
@@ -233,6 +244,16 @@ export class RetainedRootRepresentation {
   /** The persistent items, created on first use. */
   public ensureSource(): RenderRootSource {
     return (this._source ??= new RenderRootSource());
+  }
+
+  /** This root's membership state, or `null` while it has never selected. */
+  public get derivedProduct(): DerivedRootProduct | null {
+    return this._derivedProduct;
+  }
+
+  /** This root's membership state, created on first use. */
+  public ensureDerivedProduct(): DerivedRootProduct {
+    return (this._derivedProduct ??= new DerivedRootProduct());
   }
 
   /** Fold one rebuild frame into the build gate (see {@link _rebuildStreak}). */
@@ -530,7 +551,10 @@ export class RetainedRootRepresentation {
   public dispose(): void {
     this.invalidate();
     this.fragment.dispose();
+    this._source?.invalidate();
     this._source = null;
+    this._derivedProduct?.release();
+    this._derivedProduct = null;
     this._sourceUnbuildable = false;
     this._keptBounds.destroy();
   }
