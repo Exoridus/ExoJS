@@ -1,5 +1,6 @@
 import { GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
 import { createRenderStats } from '#rendering/RenderStats';
+import { TRANSFORM_TEXELS_PER_ROW } from '#rendering/shader/transformTextureLayout';
 import { WebGl2RetainedGroupResources } from '#rendering/webgl2/WebGl2RetainedGroupResources';
 
 import { createFakeWebGl2Context, GlRecorder } from '../perf/rendering/fakeWebGl2';
@@ -94,7 +95,12 @@ describe('WebGl2RetainedGroupResources: CPU-side capture store', () => {
     bundle._storeTransformRows(bigShared, bigSharedTint, 0, 64);
 
     expect(bundle.transformTexture).not.toBe(texture);
-    expect(bundle.transformTexture!.height).toBeGreaterThanOrEqual(64);
+    // Rows pack several per texture line, so capacity is width * height rather
+    // than height alone (that equivalence is what capped the old store at
+    // MAX_TEXTURE_SIZE rows).
+    const grown = bundle.transformTexture!;
+
+    expect((grown.width / TRANSFORM_TEXELS_PER_ROW) * grown.height).toBeGreaterThanOrEqual(64);
 
     bundle.destroy();
   });
@@ -130,10 +136,17 @@ describe('WebGl2RetainedGroupResources: in-place transform-row patch', () => {
     expect(bundle.transformTexture!.buffer[0 * 8 + 4]).toBe(10);
 
     // Only row 1 is marked for upload — the headline O(k) sub-range property.
+    // With 2 rows stored, all of them share one texture line, so local row 1
+    // occupies texels 2..3 of line 0.
     const region = bundle.transformTexture!._consumeDirtyRegion();
 
     expect(region).not.toBeNull();
-    expect({ x: region!.x, y: region!.y, width: region!.width, height: region!.height }).toEqual({ x: 0, y: 1, width: 2, height: 1 });
+    expect({ x: region!.x, y: region!.y, width: region!.width, height: region!.height }).toEqual({
+      x: TRANSFORM_TEXELS_PER_ROW,
+      y: 0,
+      width: TRANSFORM_TEXELS_PER_ROW,
+      height: 1,
+    });
   });
 
   test('a patch does NOT bump the generation (recorded instance bytes stay valid)', () => {
@@ -161,7 +174,13 @@ describe('WebGl2RetainedGroupResources: in-place transform-row patch', () => {
 
     const region = bundle.transformTexture!._consumeDirtyRegion();
 
-    expect({ y: region!.y, height: region!.height }).toEqual({ y: 2, height: 4 }); // rows 2..5
+    // Rows 2..5, all inside the single texture line an 8-row store occupies.
+    expect({ x: region!.x, y: region!.y, width: region!.width, height: region!.height }).toEqual({
+      x: 2 * TRANSFORM_TEXELS_PER_ROW,
+      y: 0,
+      width: 4 * TRANSFORM_TEXELS_PER_ROW,
+      height: 1,
+    });
 
     bundle.destroy();
   });

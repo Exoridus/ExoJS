@@ -138,7 +138,7 @@ export class GlRecorder {
   /** `blendFunc` calls — the backend only issues one per real blend-state change. */
   public blendChanges = 0;
   public scissorChanges = 0;
-  /** Transform-texture rows uploaded this frame (height of the width-2 rgba32f upload). */
+  /** Transform rows uploaded this frame (rows span the store's texture lines). */
   public transformRows = 0;
   public transformUploadBytes = 0;
   /** Number of transform-texture uploads (zero when the frame's transforms are unchanged). */
@@ -236,8 +236,18 @@ const C = {
   ACTIVE_UNIFORMS: constantFor('ACTIVE_UNIFORMS'),
   ACTIVE_UNIFORM_BLOCKS: constantFor('ACTIVE_UNIFORM_BLOCKS'),
   TEXTURE0: constantFor('TEXTURE0'),
+  MAX_TEXTURE_SIZE: constantFor('MAX_TEXTURE_SIZE'),
+  RGBA32F: constantFor('RGBA32F'),
   NO_ERROR: 0,
 };
+
+// Texels one transform row occupies; mirrors TRANSFORM_TEXELS_PER_ROW, kept
+// local so the fake stays a pure GL stand-in with no engine imports.
+const transformTexelsPerRow = 2;
+
+// A desktop-class texture limit, so the transform store's layout is built
+// against a realistic bound rather than the fake's generic query answer.
+const fakeMaxTextureSize = 16384;
 
 interface FakeShader {
   glType: number;
@@ -260,6 +270,14 @@ export const createFakeWebGl2Context = (recorder: GlRecorder): WebGL2RenderingCo
   const newHandle = (tag: string): object => ({ __fake: tag, id: handleSeq++ });
 
   let activeUnit = 0;
+  // Texture bound per unit, and the set of handles allocated as a transform row
+  // store — an upload is attributed by identity rather than by guessing from
+  // the rectangle it writes. Per UNIT because the backend rebinds through a
+  // scratch unit and restores the active one, so a single "last bound" would go
+  // stale as soon as two textures are live at once.
+  const boundByUnit = new Map<number, object | null>();
+  const transformStores = new WeakSet<object>();
+  const boundTexture = (): object | null => boundByUnit.get(activeUnit) ?? null;
 
   const base: Record<string, unknown> = {
     // ── object lifecycle ────────────────────────────────────────────────
@@ -319,7 +337,7 @@ export const createFakeWebGl2Context = (recorder: GlRecorder): WebGL2RenderingCo
     getShaderInfoLog: (): string => '',
     getProgramInfoLog: (): string => '',
     getExtension: (): null => null,
-    getParameter: (): number => 16,
+    getParameter: (pname: number): number => (pname === C.MAX_TEXTURE_SIZE ? fakeMaxTextureSize : 16),
     getError: (): number => C.NO_ERROR,
     isContextLost: (): boolean => false,
 
@@ -352,9 +370,11 @@ export const createFakeWebGl2Context = (recorder: GlRecorder): WebGL2RenderingCo
       recorder.bufferSubUpdates++;
       recorder.bufferUploadBytes += bytes;
     },
-    texImage2D: (...args: unknown[]): void => recordTextureUpload(args),
-    texSubImage2D: (...args: unknown[]): void => recordTextureUpload(args),
+    texImage2D: (...args: unknown[]): void => recordTextureUpload(args, true),
+    texSubImage2D: (...args: unknown[]): void => recordTextureUpload(args, false),
     bindTexture: (_target: number, texture: object | null): void => {
+      boundByUnit.set(activeUnit, texture);
+
       if (texture !== null) {
         recorder.textureBinds++;
       }
@@ -381,17 +401,23 @@ export const createFakeWebGl2Context = (recorder: GlRecorder): WebGL2RenderingCo
     },
   };
 
-  // The transform texture is the only width-2 rgba32f upload (commitRect(0,0,2,count)):
-  // its height is the transform-row count uploaded this frame. Tint now lives in its
-  // own width-1 rgba8 texture (see TransformBuffer's class doc) and is intentionally
-  // NOT folded into this transform-specific metric.
-  const recordTextureUpload = (args: unknown[]): void => {
+  // Transform rows pack several per texture line, so a transform upload is no
+  // longer identifiable by a width of 2 and its row count is no longer the
+  // rectangle's height. Identify the store at ALLOCATION instead — the only
+  // rgba32f texture whose width is a power-of-two multiple of the row's texel
+  // count, which the row stores guarantee by doubling their capacity from 16
+  // (Text's own rgba32f node-data store is 10 texels per row, so it is excluded,
+  // exactly as the width-2 test used to exclude it). Tint lives in its own rgba8
+  // texture and is intentionally NOT folded into this transform-specific metric.
+  const isPowerOfTwo = (value: number): boolean => value >= 1 && (value & (value - 1)) === 0;
+
+  const recordTextureUpload = (args: unknown[], isAllocation: boolean): void => {
     // texImage2D(target, level, internalFormat, width, height, border, format, type, data?)
     // texSubImage2D(target, level, xoffset, yoffset, width, height, format, type, data?)
     // texSubImage2D(target, level, xoffset, yoffset, width, height, format, type, srcData, srcOffset)
-    const isSub = args.length >= 9 && typeof args[2] === 'number' && typeof args[3] === 'number' && typeof args[4] === 'number' && typeof args[5] === 'number';
-    const width = isSub ? (args[4] as number) : (args[3] as number);
-    const height = isSub ? (args[5] as number) : (args[4] as number);
+    // Both forms carry four numbers in a row, so the caller says which it is.
+    const width = isAllocation ? (args[3] as number) : (args[4] as number);
+    const height = isAllocation ? (args[4] as number) : (args[5] as number);
     // The `srcOffset` overload hands GL the WHOLE texture buffer plus an
     // element offset, so its byte length describes the texture rather than the
     // uploaded region. Size that upload from the region instead, otherwise a
@@ -403,14 +429,30 @@ export const createFakeWebGl2Context = (recorder: GlRecorder): WebGL2RenderingCo
     recorder.textureUploads++;
     recorder.textureUploadBytes += bytes;
 
-    if (width === 2) {
+    const texture = boundTexture();
+
+    if (isAllocation && texture !== null) {
+      const isTransformStore =
+        args[2] === C.RGBA32F && width % transformTexelsPerRow === 0 && isPowerOfTwo(width / transformTexelsPerRow) && width / transformTexelsPerRow >= 2;
+
+      if (isTransformStore) {
+        transformStores.add(texture);
+      } else {
+        transformStores.delete(texture);
+      }
+    }
+
+    // Allocation is not an upload: `transformUploads` counts the per-frame
+    // re-uploads a steady frame must avoid, and the store's initial texImage2D
+    // is neither per-frame nor avoidable.
+    if (!isAllocation && texture !== null && transformStores.has(texture)) {
       recorder.transformUploads++;
-      recorder.transformRows = Math.max(recorder.transformRows, typeof height === 'number' ? height : 0);
+      // Rows, not texture lines: a rect `width` texels wide and `height` lines
+      // tall carries `width / texelsPerRow * height` transform rows.
+      recorder.transformRows = Math.max(recorder.transformRows, (width / transformTexelsPerRow) * height);
       recorder.transformUploadBytes += bytes;
     }
   };
-
-  void activeUnit;
 
   return new Proxy(base, {
     get(target, prop, receiver): unknown {

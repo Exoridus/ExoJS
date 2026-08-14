@@ -97,7 +97,7 @@ describe('WebGL2 Sprite — real sprite.vert tint', () => {
     const real = await import('../../../src/rendering/webgl2/glsl/sprite.vert?raw');
 
     expect(real.default.length).toBeGreaterThan(0);
-    expect(real.default).toContain('texelFetch(u_tintTexture, ivec2(0, row), 0)');
+    expect(real.default).toContain('texelFetch(u_tintTexture, exoTintTexel(row), 0)');
   });
 
   test('full-opaque tint renders the exact tint colour (tint texture index + rgb swizzle)', async () => {

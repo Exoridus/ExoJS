@@ -13,6 +13,7 @@
 // against the same SwiftShader driver the WebGL2 browser project runs on. A
 // reserved-word (or any other compile) regression now fails right here.
 
+import { resolveTransformTextureGlsl } from '#rendering/shader/transformTextureLayout';
 import { composeTextAtlasFragmentGlsl } from '#rendering/text/textAtlasTextureSlots';
 
 // Core shaders plus the extension packages' own — the particle stage ships
@@ -34,8 +35,11 @@ interface ShaderEntry {
   readonly stage: ShaderStage;
 }
 
+// `WebGl2ShaderProgram` expands the engine's `#exo-include` directives before
+// handing a source to the driver, so a shader that reads the shared transform
+// store only compiles in its resolved form — the same form the renderer submits.
 const composeRuntimeSource = (name: string, source: string): string =>
-  name.startsWith('text-') && name.endsWith('.frag') ? composeTextAtlasFragmentGlsl(source) : source;
+  resolveTransformTextureGlsl(name.startsWith('text-') && name.endsWith('.frag') ? composeTextAtlasFragmentGlsl(source) : source);
 
 const shaders: readonly ShaderEntry[] = Object.entries(shaderModules)
   .map(([path, source]) => {
