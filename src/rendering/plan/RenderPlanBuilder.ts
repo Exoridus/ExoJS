@@ -91,6 +91,12 @@ interface MutableGroupScope extends GroupScope, EntryPlacementState {
   firstOwnMaterial: boolean;
 }
 
+/** What one frame selects from: the entries, and the source that judges them. */
+interface SourceSelection {
+  readonly entries: readonly SourceEntry[];
+  readonly source: RenderRootSource;
+}
+
 /**
  * Effect-less descriptor shared by every sub-branch escape barrier:
  * all effect stages are disabled, so {@link RenderEffectExecutor.play} is a
@@ -98,20 +104,6 @@ interface MutableGroupScope extends GroupScope, EntryPlacementState {
  * playback semantics — the group uniform is suspended (the branch collected
  * world-space transforms) and fragment capture records a live re-dispatch.
  */
-/**
- * What one frame selects from: the entries, the source that judges them, and
- * whether their stored world AABBs are still exact.
- *
- * The third field travels with the other two because it is a property of the
- * pairing rather than of either half — the same source answers `true` on a
- * settled frame and `false` on the next one if a single sprite moved.
- */
-interface SourceSelection {
-  readonly entries: readonly SourceEntry[];
-  readonly source: RenderRootSource;
-  readonly boundsAreCurrent: boolean;
-}
-
 const groupEscapeEffect: EffectDescriptor = Object.freeze({
   filters: [],
   clip: ClipKind.None,
@@ -700,7 +692,7 @@ export class RenderPlanBuilder {
   private _emitSelectedItem(item: PersistentDrawItem, selection: SourceSelection, rect: ReadonlyRectangle): void {
     const drawable = item.drawable;
 
-    if (!selection.source.admits(item, rect, selection.boundsAreCurrent)) {
+    if (!selection.source.admits(item, rect)) {
       this.backend.stats.culledNodes++;
       this._noteViewCulled();
 
@@ -718,22 +710,13 @@ export class RenderPlanBuilder {
     command.groupIndex = undefined;
     command.material = drawable._getOrComputeMaterialKey(this.backend);
 
-    if (selection.boundsAreCurrent) {
-      // The stored extent is the drawable's own, unchanged — same argument the
-      // scan just made. Asking the node again would resolve its parent chain a
-      // second time for an answer already in hand.
-      command.minX = item.minX;
-      command.minY = item.minY;
-      command.maxX = item.maxX;
-      command.maxY = item.maxY;
-    } else {
-      const bounds = drawable.getBounds();
-
-      command.minX = bounds.left;
-      command.minY = bounds.top;
-      command.maxX = bounds.right;
-      command.maxY = bounds.bottom;
-    }
+    // The stored extent is the drawable's own, unchanged — the same argument
+    // the scan just made. Asking the node again would resolve its parent chain a
+    // second time for an answer already in hand.
+    command.minX = item.minX;
+    command.minY = item.minY;
+    command.maxX = item.maxX;
+    command.maxY = item.maxY;
 
     this._noteSelectedItemKept(command, drawable);
     this._pushDrawEntry(item.seq, item.zIndex, command);
@@ -882,7 +865,7 @@ export class RenderPlanBuilder {
     // This frame has to produce entries one way or another. Settle the source
     // first — it is keyed on the node alone and is equally valid whether or not
     // this frame ends up capturing.
-    representation.noteRebuildKeys(contentRevision, structureRevision, ancestryStamp);
+    representation.noteRebuildKeys(contentRevision, structureRevision, ancestryStamp, transformRevision);
 
     const selection = this._resolveSourceSelection(node, representation, contentRevision, structureRevision, ancestryStamp, transformRevision);
 
@@ -947,8 +930,8 @@ export class RenderPlanBuilder {
   ): SourceSelection | null {
     const existing = representation.source;
 
-    if (existing?.isUsable(contentRevision, structureRevision, ancestryStamp)) {
-      return { entries: existing.entries, source: existing, boundsAreCurrent: existing.storedBoundsAreCurrent(transformRevision) };
+    if (existing?.isUsable(contentRevision, structureRevision, ancestryStamp, transformRevision)) {
+      return { entries: existing.entries, source: existing };
     }
 
     // Stale items describe a subtree that no longer exists, and world bounds
@@ -975,9 +958,7 @@ export class RenderPlanBuilder {
 
     source.adopt(discovered, contentRevision, structureRevision, ancestryStamp, transformRevision);
 
-    // Freshly discovered: the bounds were read from the very nodes this frame is
-    // about to select from.
-    return { entries: discovered, source, boundsAreCurrent: true };
+    return { entries: discovered, source };
   }
 
   /**

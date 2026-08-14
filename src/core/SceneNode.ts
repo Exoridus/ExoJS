@@ -930,7 +930,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    * @internal
    */
   public _inCullRect(rect: ReadonlyRectangle): boolean {
-    return this._inCullRectUsingBounds(rect, this.getBounds());
+    return this._inCullRectUsingBounds(rect, null);
   }
 
   /**
@@ -941,28 +941,39 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    * subtree that can hold a million of them — at which point that resolve is the
    * single most expensive thing a camera step pays for.
    *
-   * The two halves of the rule are split on purpose along the line of what the
-   * caller may safely have cached:
+   * The rule is split along the line of what a caller may safely have cached:
    *
    * - `cullable` and `cullArea` are read LIVE, always. `cullArea` is a mutable
    *   `Rectangle` and only REPLACING the reference stamps a revision, so a
    *   caller that had copied it could go stale in place, unnoticed.
    * - `bounds` is the caller's, and it is the caller's obligation to pass one
-   *   that is current. The source does that by refusing this path outright
-   *   unless the subtree's transform revision is unchanged since it stored them
-   *   — no node moved, so no stored extent can be wrong.
+   *   that is current. The persistent source does that by keying its items on
+   *   the subtree's transform revision: they are only selected from while
+   *   nothing in it has moved, so no stored extent can be wrong.
    *
-   * This is one rule with one implementation, not a second culling semantics:
-   * {@link _inCullRect} is this method with `getBounds()` filled in.
+   * `null` means "resolve them from this node", which is exactly
+   * {@link _inCullRect}. It is a null rather than an eagerly-passed
+   * `getBounds()` because the two early exits above must come FIRST: a node that
+   * opted out of culling, or one carrying a `cullArea`, never needs its bounds,
+   * and resolving them anyway walks its whole parent chain. Passing them in as
+   * an argument made every node in a culling-free scene pay that walk — measured
+   * on `deep-hierarchy` at 100,000 nodes as 1.9ms -> 19.3ms median.
+   *
+   * One rule, one implementation. A second copy would be free to drift, and this
+   * one decides which nodes reach the screen.
    */
-  public _inCullRectUsingBounds(rect: ReadonlyRectangle, bounds: RectangleLike): boolean {
+  public _inCullRectUsingBounds(rect: ReadonlyRectangle, bounds: RectangleLike | null): boolean {
     if (!this._cullable) {
       return true;
     }
 
     const area = this._cullArea;
 
-    return area !== null ? rect.intersectsWith(area) : intersectionRectRect(rect, bounds);
+    if (area !== null) {
+      return rect.intersectsWith(area);
+    }
+
+    return intersectionRectRect(rect, bounds ?? this.getBounds());
   }
 
   /**

@@ -328,7 +328,7 @@ describe('render-root source: discovery', () => {
     backend.setView(viewAt(1000));
     playFrame(root, backend);
 
-    expect(sourceOf(root)?.isUsable(root._contentRevision, root._structureRevision, root._globalTransformStamp)).toBe(false);
+    expect(sourceOf(root)?.isUsable(root._contentRevision, root._structureRevision, root._globalTransformStamp, root._transformRevision)).toBe(false);
 
     root.destroy();
     backend.destroy();
@@ -355,16 +355,22 @@ describe('render-root source: stored bounds', () => {
 
     expect(draws).toEqual(['stays']);
 
-    // A transform-only move: the item's identity, placement and producer are
-    // unchanged, so the source stays usable — but its stored AABB now describes
-    // where the drawable WAS. Culling against it would drop a node that just
-    // moved into view.
+    // A transform-only move. The item's identity, placement and producer are
+    // all unchanged, so nothing about the ITEMS is wrong — but their stored
+    // AABBs now describe where the drawables were, and selecting against those
+    // would drop a node that just moved into view.
     moves.setPosition(140, 300);
     draws.length = 0;
     backend.setView(viewAt(410));
     playFrame(root, backend);
 
     expect(draws).toEqual(['stays', 'moves']);
+    // The frame took the ordinary collect path and dropped the stale items,
+    // rather than selecting from them. Not merely a safety fallback: a collect
+    // over a moved subtree replays each container's unchanged drawables from its
+    // own retained slot cache, which a live-bounds selection cannot do — it was
+    // measured as the faster of the two, by a wide margin.
+    expect(sourceOf(root)?.isUsable(root._contentRevision, root._structureRevision, root._globalTransformStamp, root._transformRevision)).toBe(false);
 
     root.destroy();
     backend.destroy();

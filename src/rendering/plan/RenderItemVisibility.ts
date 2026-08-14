@@ -26,15 +26,11 @@ export interface RenderItemVisibility {
   /**
    * Whether `rect` admits this item.
    *
-   * `boundsAreCurrent` says whether the item's stored world AABB still describes
-   * the drawable — true exactly when nothing in the subtree has moved since the
-   * items were discovered. It is passed rather than inferred because only the
-   * source holds the transform revision that answers it, and getting it wrong in
-   * either direction is a real defect: `false` when it could be `true` costs the
-   * scan a full parent-chain resolve per item, and `true` when it should be
-   * `false` culls against a stale extent and drops a node that moved into view.
+   * The item's stored world AABB may be trusted: the source is keyed on the
+   * subtree's transform revision, so a set of items only reaches a strategy
+   * while nothing in it has moved since discovery.
    */
-  admits(item: PersistentDrawItem, rect: ReadonlyRectangle, boundsAreCurrent: boolean): boolean;
+  admits(item: PersistentDrawItem, rect: ReadonlyRectangle): boolean;
 }
 
 /**
@@ -56,16 +52,7 @@ export class FlatScanVisibility implements RenderItemVisibility {
    */
   private readonly _bounds: RectangleLike = { x: 0, y: 0, width: 0, height: 0 };
 
-  public admits(item: PersistentDrawItem, rect: ReadonlyRectangle, boundsAreCurrent: boolean): boolean {
-    const drawable = item.drawable;
-
-    if (!boundsAreCurrent) {
-      // Something in the subtree moved, so a stored extent may be anywhere. Read
-      // through the node, which resolves live — the correct answer, at the cost
-      // of a parent-chain walk per item.
-      return drawable._inCullRect(rect);
-    }
-
+  public admits(item: PersistentDrawItem, rect: ReadonlyRectangle): boolean {
     const bounds = this._bounds;
 
     bounds.x = item.minX;
@@ -76,6 +63,6 @@ export class FlatScanVisibility implements RenderItemVisibility {
     // Same rule, same implementation — `_inCullRect` IS this call with
     // `getBounds()` filled in — so `cullable` and a live-mutated `cullArea` are
     // still honoured and no second culling semantics exists to drift.
-    return drawable._inCullRectUsingBounds(rect, bounds);
+    return item.drawable._inCullRectUsingBounds(rect, bounds);
   }
 }

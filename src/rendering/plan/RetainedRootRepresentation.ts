@@ -103,16 +103,21 @@ export class RetainedRootRepresentation {
    */
   private _source: RenderRootSource | null = null;
   /**
-   * Consecutive frames that had to rebuild and found the same content, structure
-   * and ancestry as the rebuild before them, plus the keys that streak is
-   * measured against.
+   * Consecutive frames that had to rebuild and found the subtree exactly as the
+   * rebuild before them left it, plus the keys that streak is measured against.
    *
    * The build gate ({@link shouldBuildSource}). One such frame proves nothing —
    * a camera that stepped once and stopped produces exactly one, and a source
    * built for it is one O(N) walk plus one record per drawable that will never
    * be selected from twice. Two in a row is the signature of a camera moving
-   * across a settled scene, which is the case the source exists for, and it is a
-   * signature a scene whose content keeps changing cannot produce.
+   * across a settled scene, which is the case the source exists for.
+   *
+   * The keys are exactly the source's own, transform included, so a scene that
+   * moves something every frame can never produce the streak — and therefore
+   * never pays for a source it would have to discard on the next frame anyway.
+   * That is the gate's second job, and the more important one: without the
+   * transform key, `dynamic-heavy` and `deep-hierarchy` would re-walk their
+   * whole subtree on every dirty frame.
    *
    * Deliberately NOT derived from the capture keys: the source is valid
    * independently of whether a capture exists, and a root whose captures are
@@ -122,6 +127,7 @@ export class RetainedRootRepresentation {
   private _streakContent = -1;
   private _streakStructure = -1;
   private _streakAncestry = -1;
+  private _streakTransform = -1;
   /**
    * The root producer itself read the view during discovery, so there is no
    * persistable source at any granularity — attribution to the outermost
@@ -230,13 +236,18 @@ export class RetainedRootRepresentation {
   }
 
   /** Fold one rebuild frame into the build gate (see {@link _rebuildStreak}). */
-  public noteRebuildKeys(contentRevision: number, structureRevision: number, ancestryStamp: number): void {
-    const same = this._streakContent === contentRevision && this._streakStructure === structureRevision && this._streakAncestry === ancestryStamp;
+  public noteRebuildKeys(contentRevision: number, structureRevision: number, ancestryStamp: number, transformRevision: number): void {
+    const same =
+      this._streakContent === contentRevision &&
+      this._streakStructure === structureRevision &&
+      this._streakAncestry === ancestryStamp &&
+      this._streakTransform === transformRevision;
 
     this._rebuildStreak = same ? this._rebuildStreak + 1 : 0;
     this._streakContent = contentRevision;
     this._streakStructure = structureRevision;
     this._streakAncestry = ancestryStamp;
+    this._streakTransform = transformRevision;
   }
 
   /** Whether a missing source is worth one culling-free discovery walk now. */

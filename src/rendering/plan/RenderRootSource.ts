@@ -63,36 +63,34 @@ export class RenderRootSource {
   /**
    * The subtree's transform revision when the items were built.
    *
-   * Deliberately NOT part of {@link isUsable}. A transform-only move leaves
-   * every item's identity, placement and producer intact — which drawable exists
-   * and where it sits in draw order is unchanged — so invalidating the whole
-   * source over one moving sprite would take the cheap path away from every
-   * partly-dynamic scene, and those are most scenes.
+   * A key like the others, because the items store WORLD bounds and a move is
+   * exactly what makes a stored extent describe where a drawable was rather than
+   * where it is.
    *
-   * What a move DOES invalidate is the stored world AABBs, and only those. So
-   * this key gates exactly that: {@link storedBoundsAreCurrent}. Equal means
-   * nothing at or below the root moved, so every stored extent is still exact;
-   * unequal drops the scan back to reading each node live, which is correct
-   * whatever moved.
+   * The alternative — keep the source across a move and read each node's bounds
+   * live during the scan — was measured and is a LOSS, badly. A normal collect
+   * over a moved subtree is not a naive walk: every `Container` replays its
+   * unchanged direct drawables from its own retained slot cache, reusing their
+   * cached material key and screen extent. A live-bounds selection reproduces
+   * none of that and resolves both per item, which took `deep-hierarchy` at
+   * 100,000 nodes from 1.9ms to 14.8ms median. So the source is not "usable but
+   * degraded" after a move; it is simply not the cheaper answer, and the frame
+   * belongs on the path that already handles moving content.
    */
   private _transformRevision = -1;
 
   /** Swappable because which strategy wins is a measurement (see the seam's doc). */
   public visibility: RenderItemVisibility = new FlatScanVisibility();
 
-  /** Whether items exist and still describe this content/structure. */
-  public isUsable(contentRevision: number, structureRevision: number, ancestryStamp: number): boolean {
+  /** Whether the items still describe this subtree exactly. */
+  public isUsable(contentRevision: number, structureRevision: number, ancestryStamp: number, transformRevision: number): boolean {
     return (
       this._hasItems &&
       this._contentRevision === contentRevision &&
       this._structureRevision === structureRevision &&
-      this._ancestryStamp === ancestryStamp
+      this._ancestryStamp === ancestryStamp &&
+      this._transformRevision === transformRevision
     );
-  }
-
-  /** Whether the items' stored world AABBs still describe their drawables. */
-  public storedBoundsAreCurrent(transformRevision: number): boolean {
-    return this._transformRevision === transformRevision;
   }
 
   /** The items, valid only while {@link isUsable} holds. */
@@ -124,8 +122,8 @@ export class RenderRootSource {
   }
 
   /** Whether the rect admits this item; delegates to the active strategy. */
-  public admits(item: PersistentDrawItem, rect: ReadonlyRectangle, boundsAreCurrent: boolean): boolean {
-    return this.visibility.admits(item, rect, boundsAreCurrent);
+  public admits(item: PersistentDrawItem, rect: ReadonlyRectangle): boolean {
+    return this.visibility.admits(item, rect);
   }
 
   /** Drop the items (structure/content changed, or the root was destroyed). */
