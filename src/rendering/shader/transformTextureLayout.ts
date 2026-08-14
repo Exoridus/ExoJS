@@ -200,6 +200,12 @@ export const tintTextureRect = (
  * compile time, so the row → texel mapping exists once instead of once per
  * shader — a shader that forgets the directive fails to compile on the helper
  * names rather than silently reading the wrong texel.
+ *
+ * Re-exported to renderer authors through `@codexo/exojs/renderer-sdk`, where it
+ * promises one thing only: that `exoTransformTexel` / `exoTintTexel` resolve a
+ * logical `nodeIndex` against the store as it currently exists. The store's
+ * dimensions and packing are not part of that promise and have changed before —
+ * a row index was the texture's y coordinate until it stopped fitting.
  * @internal
  */
 export const TRANSFORM_TEXTURE_GLSL_INCLUDE = '// #exo-include transform-texture';
