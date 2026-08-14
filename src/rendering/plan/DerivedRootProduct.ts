@@ -1,5 +1,6 @@
 import type { ReadonlyRectangle } from '#math/Rectangle';
 
+import { DerivedSelectionState } from './DerivedSelectionState';
 import type { RenderItemVisibility } from './RenderItemVisibility';
 import type { SourceScope } from './RenderSourceItem';
 import { MembershipBits, type VisibilityQueryStats } from './SourceVisibilityIndex';
@@ -79,6 +80,27 @@ export class DerivedRootProduct {
   private _scopeCount = 0;
   /** Which scopes this selection actually queried; the rest were culled whole. */
   private _queried = new Uint8Array(0);
+  private _handleCount = 0;
+
+  /**
+   * Stable derived slots and the draw-order stream over them.
+   *
+   * Only maintained while {@link slotsEnabled} holds: reconciling it costs one
+   * order-stream write per visible item, which is worth paying exactly when a
+   * backend is going to draw FROM it and pure overhead otherwise.
+   */
+  public readonly slots = new DerivedSelectionState();
+
+  /**
+   * Whether this root's selection feeds a persistent-indexed backend path.
+   *
+   * Decided per source by {@link RetainedRootRepresentation}, not per frame: the
+   * eligibility question ("can this subtree's draw order be expressed as one
+   * stream of slots into one texture table?") is a property of the source's
+   * content, so it is answered when the source is built and holds until it is
+   * thrown away.
+   */
+  public slotsEnabled = false;
 
   public readonly delta: SelectionDelta = {
     cells: 0,
@@ -102,7 +124,7 @@ export class DerivedRootProduct {
       total += bits.byteLength;
     }
 
-    return total;
+    return total + this.slots.byteLength;
   }
 
   /**
@@ -113,11 +135,25 @@ export class DerivedRootProduct {
    * selection reports every admitted item as ENTERED, which is exactly true.
    */
   public rebind(scopes: readonly SourceScope[]): void {
+    let handles = 0;
+
+    for (const scope of scopes) {
+      handles += scope.items.count;
+    }
+
     this._scopeCount = scopes.length;
     this._hasPrevious = false;
     this._current = scopes.map(scope => sizedBits(scope.items.count));
     this._previous = scopes.map(scope => sizedBits(scope.items.count));
     this._queried = new Uint8Array(scopes.length);
+    this._handleCount = handles;
+
+    // Only sized when a backend is going to draw from it: the slot table and the
+    // order stream are eight bytes an item, which at a million is worth nothing
+    // to a root whose frames never reach the indexed path.
+    if (this.slotsEnabled) {
+      this.slots.rebind(handles);
+    }
   }
 
   /** Whether the product still matches a source with `scopeCount` scopes. */
@@ -179,7 +215,27 @@ export class DerivedRootProduct {
       }
     }
 
+    const hadPrevious = this._hasPrevious;
+
     this._hasPrevious = true;
+
+    // Scope 0 IS the root (`finalizeSourceScopes` pushes it first), and the
+    // previous membership is still intact here — `beginSelection` is what swaps
+    // the two, so nothing has overwritten it during this selection.
+    if (this.slotsEnabled && scopes.length > 0) {
+      if (!this.slots.matches(this._handleCount)) {
+        this.slots.rebind(this._handleCount);
+
+        // A table sized only now has no previous assignment to diff against, so
+        // every admitted item enters — which is what the backend's empty stores
+        // require anyway.
+        this.slots.update(scopes[0]!, this._current, null);
+
+        return;
+      }
+
+      this.slots.update(scopes[0]!, this._current, hadPrevious ? this._previous : null);
+    }
   }
 
   /** Drop everything (source invalidation / root destroy). */
@@ -189,6 +245,7 @@ export class DerivedRootProduct {
     this._queried = new Uint8Array(0);
     this._hasPrevious = false;
     this._scopeCount = 0;
+    this.slots.release();
     resetDelta(this.delta);
     this.delta.hadPrevious = false;
   }
