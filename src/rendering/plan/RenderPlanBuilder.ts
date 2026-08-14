@@ -8,6 +8,7 @@ import type { View } from '#rendering/View';
 
 import type { DerivedRootProduct } from './DerivedRootProduct';
 import { type EntryPlacementState, reserveEntryPlacement } from './EntryPlacement';
+import type { PersistentSlotBackend } from './PersistentSlotDraw';
 import { type DrawCommand, materialKeyForcesFlush, RenderEntryKind } from './RenderCommand';
 import { MutableRenderPlan, type RenderPlan } from './RenderPlan';
 import type { RenderRootSource } from './RenderRootSource';
@@ -890,6 +891,15 @@ export class RenderPlanBuilder {
 
     const ancestryStamp = node._globalTransformStamp;
 
+    // Persistent-indexed tier, ABOVE the capture decision. A root whose source
+    // the backend can serve from slot-addressed stores does not produce entries
+    // at all: the frame either re-issues the order stream the last selection
+    // built, or rebuilds that stream from a membership delta. Both are cheaper
+    // than the capture tiers below, and neither materialises a staying item.
+    if (this._collectPersistentRoot(representation, view, contentRevision, structureRevision, ancestryStamp, transformRevision)) {
+      return;
+    }
+
     // Transform is settled separately from the equality keys: a transform-only
     // descendant move patches its baked row in place instead of invalidating,
     // which is what keeps a partly-dynamic scene on the recorded tier.
@@ -958,6 +968,111 @@ export class RenderPlanBuilder {
     }
 
     representation.commitCapture(contentRevision, structureRevision, transformRevision, ancestryStamp, view, backend, target, this._peekCurrentScopeEntries());
+  }
+
+  /**
+   * Draw one render root straight out of its persistent slot stores, or report
+   * that it does not qualify.
+   *
+   * Two frames exist here. When the camera still lies inside the rect the last
+   * selection admitted against, the answer it produced is still the right one —
+   * same argument as the capture margin, one tier down — so the same order
+   * stream is re-issued and the frame costs one draw call. Otherwise the
+   * membership is re-queried, the delta hands slots to arrivals and takes them
+   * back from departures, and only the arrivals have their per-slot data
+   * written. A staying item is touched exactly once, to write its position in
+   * the order stream.
+   *
+   * Requires a source that still describes the subtree: everything below keys on
+   * the items' stored world bounds, and the source is invalidated by any content,
+   * structure, ancestry or transform change. So a moved subtree does not arrive
+   * here at all — it takes the transform-reconcile tier below, which stays O(k).
+   */
+  private _collectPersistentRoot(
+    representation: RetainedRootRepresentation,
+    view: View,
+    contentRevision: number,
+    structureRevision: number,
+    ancestryStamp: number,
+    transformRevision: number,
+  ): boolean {
+    const source = representation.source;
+
+    if (!source?.isUsable(contentRevision, structureRevision, ancestryStamp, transformRevision)) {
+      return false;
+    }
+
+    const rootScope = source.rootScope;
+
+    if (rootScope === null) {
+      return false;
+    }
+
+    const bundle = representation.persistentSlots(source, this.backend);
+
+    if (bundle === null) {
+      return false;
+    }
+
+    const product = representation.ensureDerivedProduct();
+
+    product.slotsEnabled = true;
+
+    const cached = representation.persistentSelectionCovers(view) ? representation.lastPersistentDraw : null;
+
+    if (cached !== null && cached.bundle === bundle) {
+      this._currentScope().persistentDraw = cached;
+
+      return true;
+    }
+
+    if (!product.matches(source.scopes.length)) {
+      product.rebind(source.scopes);
+    }
+
+    // Admit against the view grown by the same margin a capture uses, so the
+    // stream this selection produces stays valid for every view still inside it.
+    this._inflateCaptureCullRect(view);
+    this._captureCullActive = false;
+
+    const rect = this._captureCullRect;
+
+    product.beginSelection();
+    this._selectMembership(rootScope, product, source);
+    product.commitSelection(source.scopes);
+
+    const slots = product.slots;
+    const backend = this.backend as RenderBackend & PersistentSlotBackend;
+
+    if (slots.enteredCount > 0) {
+      backend._writePersistentSlots!(bundle, source, slots.entered, slots.enteredCount);
+    }
+
+    // One note for the whole root rather than one per item: the count is exact
+    // either way, and it is what proves the tier still culls.
+    this.backend.stats.culledNodes += source.itemCount - product.delta.visible;
+    representation.notePersistentSelection(rect);
+    this._currentScope().persistentDraw = representation.persistentDrawRecord(bundle, slots.order, slots.orderCount);
+
+    return true;
+  }
+
+  /**
+   * Fill every scope's membership without emitting anything.
+   *
+   * The subtree cull a nested group gets on the ordinary path is deliberately
+   * absent: it is an optimisation over a per-item test, and here the per-item
+   * test is the spatial index, which already answers for a fully off-screen
+   * group in the time it takes to reject its cells.
+   */
+  private _selectMembership(scope: SourceScope, product: DerivedRootProduct, source: RenderRootSource): void {
+    product.selectScope(scope, this._captureCullRect, source.visibility);
+
+    for (const other of scope.others) {
+      if (other.kind === RenderEntryKind.Group) {
+        this._selectMembership(other, product, source);
+      }
+    }
   }
 
   /**
@@ -1378,6 +1493,7 @@ export class RenderPlanBuilder {
       transformNode: null,
       retainedInstructions: null,
       retainedRecordTarget: null,
+      persistentDraw: null,
       _nextSeq: 0,
       firstZ: null,
       firstPipelineKey: null,
@@ -1395,6 +1511,7 @@ export class RenderPlanBuilder {
     scope.transformNode = null;
     scope.retainedInstructions = null;
     scope.retainedRecordTarget = null;
+    scope.persistentDraw = null;
     scope._nextSeq = 0;
     scope.firstZ = null;
     scope.firstPipelineKey = null;

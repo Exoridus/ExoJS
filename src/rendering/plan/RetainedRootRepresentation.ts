@@ -5,6 +5,13 @@ import type { RenderBackend } from '#rendering/RenderBackend';
 import type { View } from '#rendering/View';
 
 import { DerivedRootProduct } from './DerivedRootProduct';
+import {
+  type PersistentSlotBackend,
+  type PersistentSlotBundle,
+  type PersistentSlotDrawRecord,
+  sourceShapeAllowsPersistentSlots,
+  supportsPersistentSlots,
+} from './PersistentSlotDraw';
 import { RenderRootSource } from './RenderRootSource';
 import type { ScopeEntry } from './RenderScope';
 import { RetainedGroupFragment } from './RetainedGroupFragment';
@@ -113,6 +120,14 @@ export class RetainedRootRepresentation {
    * selection, released with the source.
    */
   private _derivedProduct: DerivedRootProduct | null = null;
+  private _slotBundle: PersistentSlotBundle | null = null;
+  private _slotBackend: RenderBackend | null = null;
+  private _slotGeneration = -1;
+  /** Remembered refusal, so an ineligible source is not re-examined every frame. */
+  private _slotsRefused = false;
+  private _slotRecord: PersistentSlotDrawRecord | null = null;
+  private readonly _slotCullRect = new Rectangle();
+  private _hasSlotCullRect = false;
   /**
    * Consecutive frames that had to rebuild and found the subtree exactly as the
    * rebuild before them left it, plus the keys that streak is measured against.
@@ -254,6 +269,132 @@ export class RetainedRootRepresentation {
   /** This root's membership state, created on first use. */
   public ensureDerivedProduct(): DerivedRootProduct {
     return (this._derivedProduct ??= new DerivedRootProduct());
+  }
+
+  /**
+   * The backend's persistent slot store for the current source, acquiring it on
+   * first use, or `null` when this root does not qualify for the indexed path.
+   *
+   * Decided once per source rather than per frame. Eligibility is a property of
+   * the source's content — its draw order, its materials, its texture set — and
+   * none of that changes while the source stays usable; asking again every frame
+   * would put a walk over every item back on the path the whole design exists to
+   * keep off it. A refusal is remembered for the same reason.
+   *
+   * A backend switch drops the answer along with the resources: which draws
+   * batch together is the new backend's rule, and the old one's GPU objects mean
+   * nothing to it.
+   */
+  public persistentSlots(source: RenderRootSource, backend: RenderBackend): PersistentSlotBundle | null {
+    if (this._slotBackend !== backend) {
+      this.releasePersistentSlots();
+      this._slotBackend = backend;
+    }
+
+    if (this._slotBundle !== null) {
+      return this._slotBundle.generation === this._slotGeneration ? this._slotBundle : this._reacquirePersistentSlots(source, backend);
+    }
+
+    if (this._slotsRefused) {
+      return null;
+    }
+
+    return this._reacquirePersistentSlots(source, backend);
+  }
+
+  /**
+   * Whether every slot the backend holds is still the one the plan believes it
+   * wrote. False after a generation bump — device restore, a store the backend
+   * had to reallocate — which is the signal that the next selection must treat
+   * every visible item as entering.
+   */
+  public get persistentSlotsIntact(): boolean {
+    return this._slotBundle !== null && this._slotBundle.generation === this._slotGeneration;
+  }
+
+  private _reacquirePersistentSlots(source: RenderRootSource, backend: RenderBackend): PersistentSlotBundle | null {
+    this.releasePersistentSlots();
+    this._slotBackend = backend;
+
+    const hooks = backend as PersistentSlotBackend;
+
+    if (!supportsPersistentSlots(hooks) || !sourceShapeAllowsPersistentSlots(source)) {
+      this._slotsRefused = true;
+
+      return null;
+    }
+
+    const bundle = hooks._acquirePersistentSlots!(source);
+
+    if (bundle === null) {
+      this._slotsRefused = true;
+
+      return null;
+    }
+
+    this._slotBundle = bundle;
+    this._slotGeneration = bundle.generation;
+
+    return bundle;
+  }
+
+  /** Drop the slot store (source invalidation, backend switch, root destroy). */
+  public releasePersistentSlots(): void {
+    this._slotBundle?.destroy?.();
+    this._slotBundle = null;
+    this._slotBackend = null;
+    this._slotGeneration = -1;
+    this._slotsRefused = false;
+    this._hasSlotCullRect = false;
+    this._slotRecord = null;
+    this._derivedProduct?.slots.release();
+  }
+
+  /**
+   * The draw record handed to the player, mutated in place across frames.
+   *
+   * `order` is the selection state's own array, whose identity survives every
+   * update, so the record is written once per selection rather than allocated
+   * per frame.
+   */
+  public persistentDrawRecord(bundle: PersistentSlotBundle, order: Uint32Array, count: number): PersistentSlotDrawRecord {
+    const record = (this._slotRecord ??= { bundle, order, count });
+
+    record.bundle = bundle;
+    record.order = order;
+    record.count = count;
+
+    return record;
+  }
+
+  /** The record from the last selection, or `null` when there has been none. */
+  public get lastPersistentDraw(): PersistentSlotDrawRecord | null {
+    return this._slotRecord;
+  }
+
+  /**
+   * Whether `view` still lies inside the rect the last indexed selection
+   * admitted against — i.e. whether its order stream is still the right answer.
+   *
+   * Same argument as the capture margin, applied one tier down: a selection that
+   * culled against a rect ENCLOSING the view admitted everything any view inside
+   * that rect admits, so a camera step that stays within it re-issues the same
+   * draw unchanged. That is what keeps the common frame at one draw call instead
+   * of a membership query over the whole source.
+   */
+  public persistentSelectionCovers(view: View): boolean {
+    return this._hasSlotCullRect && this._slotCullRect.containsRect(view.getBounds());
+  }
+
+  /** Remember the rect the indexed selection admitted against. */
+  public notePersistentSelection(cullRect: ReadonlyRectangle): void {
+    this._slotCullRect.set(cullRect.x, cullRect.y, cullRect.width, cullRect.height);
+    this._hasSlotCullRect = true;
+  }
+
+  /** Force the next frame back through a full membership query. */
+  public invalidatePersistentSelection(): void {
+    this._hasSlotCullRect = false;
   }
 
   /** Fold one rebuild frame into the build gate (see {@link _rebuildStreak}). */
@@ -549,6 +690,7 @@ export class RetainedRootRepresentation {
 
   /** Release the capture AND the retained GPU resources (node destroy). */
   public dispose(): void {
+    this.releasePersistentSlots();
     this.invalidate();
     this.fragment.dispose();
     this._source?.invalidate();
