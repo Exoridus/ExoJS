@@ -106,13 +106,7 @@ export class RenderRootSource {
    * for those are separate work (`NEU-O47`/`NEU-O49`), and the case this cut
    * exists for is a moving camera over unchanged content.
    */
-  public adopt(
-    entries: readonly SourceEntry[],
-    contentRevision: number,
-    structureRevision: number,
-    ancestryStamp: number,
-    transformRevision: number,
-  ): void {
+  public adopt(entries: readonly SourceEntry[], contentRevision: number, structureRevision: number, ancestryStamp: number, transformRevision: number): void {
     this._entries = entries;
     this._contentRevision = contentRevision;
     this._structureRevision = structureRevision;

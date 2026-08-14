@@ -20,14 +20,7 @@ import {
   type GroupScopeEntry,
   type ScopeEntry,
 } from './RenderScope';
-import {
-  createSourceScope,
-  LiveEntryReason,
-  type PersistentDrawItem,
-  type SourceEntry,
-  type SourceGroup,
-  type SourceScope,
-} from './RenderSourceItem';
+import { createSourceScope, LiveEntryReason, type PersistentDrawItem, type SourceEntry, type SourceGroup, type SourceScope } from './RenderSourceItem';
 import type { RetainedFragmentEntry, RetainedFragmentGroup, RetainedGroupFragment } from './RetainedGroupFragment';
 import type { RetainedInstructionSet } from './RetainedInstructionSet';
 import type { RetainedDrawData } from './RetainedPlanCache';
