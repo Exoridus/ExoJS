@@ -363,7 +363,7 @@ describe('automatic render-root representation: view dependence', () => {
     backend.destroy();
   });
 
-  test('a capture that culled something is view-locked: any view change re-collects', () => {
+  test('a capture that culled something still replays while the view stays inside the capture margin', () => {
     const { backend, events } = createRecordingBackend();
     const root = new Container();
     const visible = new RecordableLeaf('a');
@@ -380,13 +380,68 @@ describe('automatic render-root representation: view dependence', () => {
 
     expect(events).toContain('replay:a');
 
-    // A pan the containment test alone would have accepted — but a node WAS
-    // culled, so the selection cannot be proven unchanged without an index.
+    // The capture culled against the view rect grown by 1/16 of each axis, i.e.
+    // [-50,-37.5 .. 850,637.5]. A 2px pan stays well inside that, so every node
+    // the capture dropped is provably still outside the view.
     events.length = 0;
     backend.setView(new View(402, 300, 800, 600));
     playFrame(root, backend);
 
+    expect(events).toEqual(['replay:a']);
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('a capture that culled something re-collects once the view leaves the capture margin', () => {
+    const { backend, events } = createRecordingBackend();
+    const root = new Container();
+    const visible = new RecordableLeaf('a');
+    const offscreen = new RecordableLeaf('b');
+
+    visible.setPosition(400, 300);
+    offscreen.setPosition(5000, 5000);
+    root.addChild(visible, offscreen);
+    backend.setView(defaultView());
+
+    playFrame(root, backend);
+    playFrame(root, backend);
+    playFrame(root, backend);
+
+    expect(events).toContain('replay:a');
+
+    // 60px on x is past the 50px margin, so the view now reaches world the
+    // capture never tested — a previously-culled node could be in there and
+    // nothing in the product would point at it.
+    events.length = 0;
+    backend.setView(new View(460, 300, 800, 600));
+    playFrame(root, backend);
+
     expect(events).not.toContain('replay:a');
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('the capture margin admits the band around the view, so a node just off-screen is captured', () => {
+    const { backend, events } = createRecordingBackend();
+    const root = new Container();
+    const visible = new RecordableLeaf('a');
+    const inBand = new RecordableLeaf('b');
+
+    visible.setPosition(400, 300);
+    // Outside the [0,0 .. 800,600] view rect but inside the grown one, so the
+    // capture keeps it: that is what a later pan gets to replay for free.
+    inBand.setPosition(820, 300);
+    root.addChild(visible, inBand);
+    backend.setView(defaultView());
+
+    playFrame(root, backend);
+
+    // Without the margin the first collect would have dropped `b` and flushed
+    // `a` alone; with it the band node is in the product from the start, which
+    // is what a later pan gets to replay for free.
+    expect(events).toContain('flush:a,b');
 
     root.destroy();
     backend.destroy();

@@ -419,7 +419,7 @@ export abstract class RenderNode extends SceneNode {
     }
 
     if (!builder._isViewCullSuppressed) {
-      if (!this.inView(builder.view)) {
+      if (!this._inCullRect(builder.cullRect)) {
         builder.backend.stats.culledNodes++;
         builder._noteViewCulled();
 

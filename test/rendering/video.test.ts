@@ -2,6 +2,7 @@ import type { MockInstance } from 'vitest';
 
 import { getAudioContext } from '#audio/audio-context';
 import { AudioBus } from '#audio/AudioBus';
+import type { Rectangle } from '#math/Rectangle';
 import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { Video } from '#rendering/video/Video';
 import { View } from '#rendering/View';
@@ -108,18 +109,26 @@ const createMockVideoElement = (options: MockVideoElementOptions = {}): MockVide
 /** A minimal `RenderPlanBuilder` fake — just enough surface for `RenderNode._collect`. */
 const createBuilder = (): {
   view: View;
+  cullRect: Rectangle;
   backend: { stats: { culledNodes: number } };
   emitNode: MockInstance;
   _noteViewKept: MockInstance;
   _noteViewCulled: MockInstance;
-} => ({
-  view: new View(0, 0, 1000, 1000),
-  backend: { stats: { culledNodes: 0 } },
-  emitNode: vi.fn(),
-  // View-selection bookkeeping for the automatic render-root representation.
-  _noteViewKept: vi.fn(),
-  _noteViewCulled: vi.fn(),
-});
+} => {
+  const view = new View(0, 0, 1000, 1000);
+
+  return {
+    view,
+    // What `_collect` actually tests against: the view's own rect off a capture,
+    // the capture's inflated rect while a render root is being captured.
+    cullRect: view.getBounds(),
+    backend: { stats: { culledNodes: 0 } },
+    emitNode: vi.fn(),
+    // View-selection bookkeeping for the automatic render-root representation.
+    _noteViewKept: vi.fn(),
+    _noteViewCulled: vi.fn(),
+  };
+};
 
 describe('Video', () => {
   // Video defers its audio-node setup until the AudioContext exists. Since AU2,

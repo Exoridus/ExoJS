@@ -1,5 +1,6 @@
 import { Bounds } from '#core/Bounds';
-import type { ReadonlyRectangle } from '#math/Rectangle';
+import { type ReadonlyRectangle, Rectangle } from '#math/Rectangle';
+import type { Drawable } from '#rendering/Drawable';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { View } from '#rendering/View';
 
@@ -52,14 +53,23 @@ export class RetainedRootRepresentation {
   /**
    * Whether the capturing collect dropped at least one node on the view test.
    * A capture that culled nothing can be replayed under any view that still
-   * contains {@link _keptBounds}; a capture that culled something cannot,
-   * because a previously-culled node may have entered the new view and no index
-   * exists to find it.
+   * contains {@link _keptBounds}; a capture that culled something can only be
+   * replayed under a view inside {@link _captureCullRect}, because outside that
+   * rect a previously-culled node may have entered the view and no index exists
+   * to find it.
    */
   private _culledDuringCapture = true;
-  /** Union of the rects `inView` tested for every kept, cullable node. */
+  /** Union of the rects the view test compared for every kept, cullable node. */
   private readonly _keptBounds = new Bounds();
   private _keptEmpty = true;
+  /**
+   * The rect the capturing collect actually culled against — the view rect grown
+   * by the capture margin (`RenderPlanBuilder.cullRect`). Every node the capture
+   * dropped lies outside it, so any view still INSIDE it selects the same nodes
+   * and the product replays unchanged.
+   */
+  private readonly _captureCullRect = new Rectangle();
+  private _hasCaptureCullRect = false;
 
   // Thrash suppression over the FULL key (see `shouldSuppressCapture`).
   private _replayedSinceCapture = false;
@@ -74,12 +84,20 @@ export class RetainedRootRepresentation {
   /**
    * Whether the captured product can be replayed as-is this frame.
    *
-   * The revision/identity keys are exact compares. The view key is not: a
-   * capture whose collect culled nothing stays valid under ANY view that
-   * contains every kept node's cull rect, because then the same set of nodes
-   * passes `inView` and the captured records — world-space bounds, material
-   * keys, baked transform rows — carry no view state of their own (the recorded
-   * batches resolve projection live at replay).
+   * The revision/identity keys are exact compares. The view key is not, and it
+   * has two independent ways to pass, because the captured records — world-space
+   * bounds, material keys, baked transform rows — carry no view state of their
+   * own (the recorded batches resolve projection live at replay):
+   *
+   * - **The view still fits the capture's cull rect.** Every node the capture
+   *   dropped was outside that rect, hence outside this view too; every node it
+   *   kept is still drawn, and any that no longer meets the view is clipped
+   *   rather than wrong. This is the case that survives a moving camera over a
+   *   scene with off-screen content — the margin exists to make it common.
+   * - **Nothing was culled and the view still contains every kept node.** Then
+   *   the selection is trivially the whole subtree and stays that way. This one
+   *   also covers a view that GREW past the capture rect (a zoom-out), which the
+   *   first test cannot.
    */
   public isCleanIgnoringTransform(
     contentRevision: number,
@@ -104,11 +122,20 @@ export class RetainedRootRepresentation {
       return true;
     }
 
+    if (this._viewFitsCaptureCullRect(view)) {
+      return true;
+    }
+
     if (this._culledDuringCapture) {
       return false;
     }
 
     return this._keptEmpty || view.getBounds().containsRect(this._keptBounds.getRect());
+  }
+
+  /** Whether this view lies entirely inside the rect the capture culled against. */
+  private _viewFitsCaptureCullRect(view: View): boolean {
+    return this._hasCaptureCullRect && this._captureCullRect.containsRect(view.getBounds());
   }
 
   /**
@@ -128,17 +155,9 @@ export class RetainedRootRepresentation {
    * frame earlier, a scene that moves something every frame would never reach the
    * clean frame it has to record on.
    *
-   * Two guards make that sound against per-child view culling, which a group
-   * does not have to face (it suppresses culling inside itself and is culled as
-   * a whole):
-   *
-   * - **A capture that culled something is never patched.** A culled node is not
-   *   in the fragment, so a move that brings it back into view could not be
-   *   noticed at all. Such a capture keeps the plain re-collect behaviour.
-   * - **A moved node that left the view fails the reconcile.** Replaying would
-   *   keep drawing it. Its new rect is also folded into the kept-union, so a
-   *   later view change is judged against where the nodes are now, not where
-   *   they were at capture.
+   * The guards that make that sound against per-child view culling — which a
+   * group does not have to face, since it suppresses culling inside itself and
+   * is culled as a whole — live in {@link _canReconcileMovedNodes}.
    */
   public reconcileTransform(transformRevision: number, view: View, backend: RenderBackend): boolean {
     if (!this.fragment.hasDirtyTransformRows()) {
@@ -148,7 +167,7 @@ export class RetainedRootRepresentation {
       return this._transformRevision === transformRevision;
     }
 
-    if (this._culledDuringCapture || !this._foldMovedNodesIntoKeptBounds(view)) {
+    if (!this._canReconcileMovedNodes(view)) {
       this._dropRecording();
 
       return false;
@@ -164,15 +183,34 @@ export class RetainedRootRepresentation {
   }
 
   /**
-   * Grow the kept-union by every queued node's CURRENT cull rect, rejecting the
-   * reconcile if one of them no longer meets the view — it would have been
-   * dropped by a real collect, and replaying it would draw a node that is no
-   * longer selected.
+   * Whether every queued move can be applied to the captured product, growing
+   * the kept-union by each moved node's CURRENT cull rect on the way.
+   *
+   * Two rejections, one per direction a move can break the selection:
+   *
+   * - **A moved node the capture never recorded, on a capture that culled.** It
+   *   is not in the product, so it may be one of the culled ones — and it may
+   *   have just moved INTO the view, which replay would silently omit. Patching
+   *   cannot help: there is no row to patch. (On the recorded tier the row patch
+   *   would catch this too, but the entry-replay tier has no such check, and
+   *   this must hold on both.) When the capture culled nothing, every visible
+   *   node is in the product and no such node exists.
+   * - **A moved node that left the view, when only the kept-union rule is
+   *   carrying validity.** Replaying would keep drawing it where a real collect
+   *   would have dropped it — which matters because that rule's whole premise is
+   *   that nothing was culled. Under the capture-rect rule the premise is
+   *   different and this cannot go wrong: an out-of-view node that is still
+   *   drawn is clipped, not wrong.
    */
-  private _foldMovedNodesIntoKeptBounds(view: View): boolean {
+  private _canReconcileMovedNodes(view: View): boolean {
     const viewRect = view.getBounds();
+    const insideCaptureRect = this._viewFitsCaptureCullRect(view);
 
     for (const node of this.fragment.dirtyTransformRows) {
+      if (this._culledDuringCapture && this.fragment.recordedDraw(node as unknown as Drawable) === undefined) {
+        return false;
+      }
+
       if (!node.cullable) {
         // Never culled: its position cannot change the selection.
         continue;
@@ -180,7 +218,7 @@ export class RetainedRootRepresentation {
 
       const rect = node.cullArea ?? node.getBounds();
 
-      if (!viewRect.intersectsWith(rect)) {
+      if (!insideCaptureRect && !viewRect.intersectsWith(rect)) {
         return false;
       }
 
@@ -263,11 +301,17 @@ export class RetainedRootRepresentation {
     return false;
   }
 
-  /** Arm cull-union accumulation for the collect that is about to run. */
-  public beginCapture(): void {
+  /**
+   * Arm cull-union accumulation for the collect that is about to run, and record
+   * the rect that collect will cull against — the view's rect plus the capture
+   * margin, which is what later lets a moved view be judged in O(1).
+   */
+  public beginCapture(cullRect: ReadonlyRectangle): void {
     this._keptBounds.reset();
     this._keptEmpty = true;
     this._culledDuringCapture = false;
+    this._captureCullRect.set(cullRect.x, cullRect.y, cullRect.width, cullRect.height);
+    this._hasCaptureCullRect = true;
   }
 
   /** A node passed the view test; `rect` is exactly what `inView` compared. */
@@ -319,6 +363,7 @@ export class RetainedRootRepresentation {
     this._keptBounds.reset();
     this._keptEmpty = true;
     this._culledDuringCapture = true;
+    this._hasCaptureCullRect = false;
     this._view = null;
     this._backend = null;
     this._target = null;

@@ -58,23 +58,30 @@ const EXPECTED = {
   // toward 2001, the root's instruction tier stopped engaging on a static frame.
   staticPlain: { collect: 1, inView: 1, globalTransform: 2, materialKey: 0, submittedNodes: 1000, culledNodes: 0, drawCalls: 1, batches: 1 },
 
-  // Plain Container with the camera panning every frame. A pan changes which
-  // nodes pass the view test, so the frame takes a FULL re-collect: 1 root +
-  // 1000 children visited, 1001 cull checks, 1000 material keys. This is the
-  // O(n) collect cost — the row that catches "the collect walk regressed to
-  // touch every node again". A LOWER number here is an improvement; a HIGHER one
-  // (e.g. 2× the visits) is the exact CPU regression that merges silently.
-  //
-  // The root representation does NOT save this frame: its view-reuse test asks
-  // whether every kept node's cull rect still lies inside the new view rect, and
-  // a scene filling the viewport fails that after a single pixel of pan. Closing
-  // it needs a captured, inflated cull rect — recorded as `NEU-O45`. Until then
-  // this row stays the honest O(n) cost of a panning camera.
-  //
-  // globalTransform re-pinned 6001 -> 6002: the root resolves its own global
-  // transform once per build, to observe ancestry-derived moves its revisions do
-  // not see.
-  panPlain: { collect: 1001, inView: 1001, globalTransform: 6002, materialKey: 1000, submittedNodes: 1000, culledNodes: 0, drawCalls: 1, batches: 1 },
+  // Plain Container with the camera panning one pixel every frame. Re-pinned
+  // from a full re-collect (collect 1001 / inView 1001 / gt 6002 / mk 1000) to
+  // the static row exactly: the capture now culls against the view grown by a
+  // margin and stays valid for every view still inside that rect, so a slow pan
+  // is absorbed and the frame replays. This row is the headline of the capture
+  // margin — if it climbs back toward 1001, the margin stopped engaging and
+  // every scrolling scene regressed to a per-frame rebuild.
+  panPlain: { collect: 1, inView: 1, globalTransform: 2, materialKey: 0, submittedNodes: 1000, culledNodes: 0, drawCalls: 1, batches: 1 },
+
+  // The same scene panned FAR ENOUGH each frame to leave the capture margin, so
+  // the product expires every frame and the walk pays the honest O(n) cost. It
+  // is the counterweight to `panPlain`: without it, a margin so wide it never
+  // expired would look identical to a correct one, and the row that used to
+  // catch a super-linear collect regression would have no home.
+  panPlainBeyondMargin: {
+    collect: 1001,
+    inView: 1001,
+    globalTransform: 5554,
+    materialKey: 888,
+    submittedNodes: 888,
+    culledNodes: 112,
+    drawCalls: 1,
+    batches: 1,
+  },
 
   // RetainedContainer with the camera panning every frame. The retained fragment
   // is captured view-independently (deliberately omits View.updateId
@@ -159,17 +166,39 @@ describe('CPU collect-path shape gate', () => {
     });
   });
 
-  it('camera-pan plain container: cache busts → full O(n) re-collect', () => {
+  it('camera-pan plain container: the capture margin absorbs the pan and the frame replays', () => {
     withHarness(harness => {
       const root = new Container();
 
       populate(root, SPRITE_COUNT);
       const pan = (): void => void harness.view.move(1, 0);
 
+      // A RISING `collect` here means the captured cull rect stopped covering
+      // the panned view — the margin is the only thing keeping this frame off
+      // the O(n) path below.
+      expectCounters(measureFrameCounters(harness, root, { beforeFrame: pan }), EXPECTED.panPlain);
+      root.destroy();
+    });
+  });
+
+  it('camera-pan past the capture margin: the product expires and the frame re-collects O(n)', () => {
+    withHarness(harness => {
+      const root = new Container();
+
+      populate(root, SPRITE_COUNT);
+      // 200px per frame against a 1280-wide view is past the margin on every
+      // frame; alternating the direction keeps the scene in front of the camera
+      // so the row stays about the collect walk, not about an empty view.
+      let direction = 1;
+      const pan = (): void => {
+        harness.view.move(200 * direction, 0);
+        direction = -direction;
+      };
+
       // A HIGHER `collect` than 1001 (≈ 1 + SPRITE_COUNT) means the walk now
       // visits more than every node once per pan — a super-linear collect
       // regression, precisely the CPU-only class the allocation gate misses.
-      expectCounters(measureFrameCounters(harness, root, { beforeFrame: pan }), EXPECTED.panPlain);
+      expectCounters(measureFrameCounters(harness, root, { beforeFrame: pan }), EXPECTED.panPlainBeyondMargin);
       root.destroy();
     });
   });
@@ -184,10 +213,11 @@ describe('CPU collect-path shape gate', () => {
       const actual = measureFrameCounters(harness, root, { beforeFrame: pan });
 
       expectCounters(actual, EXPECTED.panRetained);
-      // Make the retained WIN load-bearing, not just incidental: under identical
-      // camera motion the retained tier must visit dramatically fewer nodes than
-      // the plain container. If this inverts, the fragment stopped engaging.
-      expect(actual.collect).toBeLessThan(EXPECTED.panPlain.collect);
+      // Make the retained WIN load-bearing, not just incidental: the fragment is
+      // captured view-INDEPENDENTLY, so it survives camera motion of any size —
+      // unlike the plain root, whose capture margin has a finite reach. If this
+      // inverts, the fragment stopped engaging.
+      expect(actual.collect).toBeLessThan(EXPECTED.panPlainBeyondMargin.collect);
       root.destroy();
     });
   });
