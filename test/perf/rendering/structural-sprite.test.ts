@@ -179,7 +179,7 @@ describe('structural — Sprite', () => {
     });
   });
 
-  it('static transforms skip re-upload; moving transforms re-upload all rows', () => {
+  it('neither a static nor a moving steady frame re-uploads the shared transform rows', () => {
     withHarness(harness => {
       const staticScene = buildSpriteScene({ count: 500, textures: makeTextures(1) });
       const staticMetrics = measureSteadyFrame(harness, staticScene.root, 2);
@@ -199,8 +199,16 @@ describe('structural — Sprite', () => {
         }
       });
 
-      expect(moving.transformUploads).toBeGreaterThanOrEqual(1);
-      expect(moving.transformRows).toBe(500);
+      // Moving every sprite used to re-upload all 500 shared rows. It now costs
+      // zero shared-buffer traffic: the render root is retained, so each move is
+      // reconciled as an in-place patch of one group-owned row and the recorded
+      // batch is replayed unchanged. `retained-transform-row-patch` pins that the
+      // patch really happens and addresses the right row; what belongs HERE is
+      // the structural consequence — motion neither re-uploads nor breaks the
+      // batch.
+      expect(moving.transformUploads).toBe(0);
+      expect(moving.drawCalls).toBe(1);
+      expect(moving.instances).toBe(500);
 
       root.destroy();
     });

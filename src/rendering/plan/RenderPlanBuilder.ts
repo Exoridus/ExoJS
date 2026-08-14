@@ -376,7 +376,13 @@ export class RenderPlanBuilder {
 
     const ancestryStamp = node._globalTransformStamp;
 
-    if (representation.isClean(contentRevision, structureRevision, transformRevision, ancestryStamp, view, backend, target)) {
+    // Transform is settled separately from the equality keys: a transform-only
+    // descendant move patches its baked row in place instead of invalidating,
+    // which is what keeps a partly-dynamic scene on the recorded tier.
+    if (
+      representation.isCleanIgnoringTransform(contentRevision, structureRevision, ancestryStamp, view, backend, target) &&
+      representation.reconcileTransform(transformRevision, view, backend)
+    ) {
       const set = representation.fragment.instructions;
 
       if (set !== null && this._markCurrentScopeRetained(set)) {

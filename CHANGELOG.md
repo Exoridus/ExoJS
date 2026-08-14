@@ -462,6 +462,25 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
   group-wide culling: a group under a render root keeps its own retention tier,
   including in-place transform-row patching, because the root defers to it
   instead of absorbing its entries.
+- **Moving nodes no longer throw the retained frame away.** A transform-only
+  descendant move now patches that node's baked transform row in place, the same
+  O(k) reconcile `RetainedContainer` has had, so a scene where a few percent of
+  the nodes move every frame stays on the recorded tier instead of rebuilding.
+  `dynamic-heavy` at 25 000 nodes measured 18.090 ms before and 2.525 ms after
+  (WebGPU, same session; WebGL2 2.113 ms), `deep-hierarchy` 16.908 ms before and
+  0.630 ms after. `static-heavy` is now at parity with Pixi 8 on both node counts
+  (0.165 ms against 0.165 at 25 000, 0.168 against 0.172 at 100 000). Two guards
+  keep this honest against per-child culling, which a `RetainedContainer` does
+  not have to face: a capture that culled anything is never patched (a culled
+  node could move back into view unseen), and a moved node that leaves the view
+  forces a re-collect rather than a stale replay.
+- **Fixed: a retained group could patch the wrong transform row.** The group
+  mapped a captured node index to its stored row using the lowest index among its
+  DIRECT draws, while the backend rebases the stored rows by the lowest index
+  across every recorded batch. A group whose first child was a plain container
+  holding a drawable therefore shifted every patch: the nested node jumped to the
+  moved node's transform and the moved node froze in place. The mapping now spans
+  nested draws, matching the backend.
 - **Text batches can span up to eight atlas textures per draw.** WebGPU and
   WebGL2 now assign compatible atlas pages to a small texture-slot table instead
   of ending the batch at every texture change. Mixed-font text with the same

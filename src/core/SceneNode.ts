@@ -109,6 +109,30 @@ export const unregisterTransformGroupBoundary = (): void => {
 };
 
 /**
+ * Live automatic render-root representations, the render-root counterpart of
+ * {@link transformGroupBoundaryCount}. A root's recorded rows are patched by the
+ * same seam, but a root is NOT a transform-group boundary, so the boundary count
+ * alone would leave the walk short-circuited for a scene that has no group at
+ * all — which is exactly the scene the automatic representation exists for.
+ *
+ * Same never-under-count invariant: counted from representation creation, so an
+ * over-count only makes the seam over-walk.
+ */
+let retainedRenderRootCount = 0;
+
+/** @internal — a render root created its representation; arm the transform-move seam. */
+export const registerRetainedRenderRoot = (): void => {
+  retainedRenderRootCount++;
+};
+
+/** @internal — a render root released its representation; disarm if it was the last. */
+export const unregisterRetainedRenderRoot = (): void => {
+  if (retainedRenderRootCount > 0) {
+    retainedRenderRootCount--;
+  }
+};
+
+/**
  * Sentinel `parentVersion` used by {@link SceneNode.getGlobalTransform} when
  * NOTHING above this node contributes to its world matrix — the node is a
  * root, or its parent is an engaged transform-group boundary the node does not
@@ -611,6 +635,15 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    * overrides it to enqueue the row on its fragment.
    */
   public _enqueueDirtyTransformRow(_node: RenderNode): void {}
+
+  /**
+   * @internal — the render-root counterpart of {@link _enqueueDirtyTransformRow}:
+   * a descendant's own transform moved, and this node may own an automatic
+   * render-root representation with that node's row baked into its recording.
+   * No-op on a plain node and on any node that never served as a render root;
+   * {@link RenderNode} forwards it to its representation when one exists.
+   */
+  public _enqueueRetainedRootRow(_node: RenderNode): void {}
 
   /**
    * Whether this node opts back OUT of a parent transform-group boundary and
@@ -1200,24 +1233,47 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   }
 
   /**
-   * Walk to the nearest enclosing transform-group boundary and hand it this
-   * node so it can fast-patch the row. Stops at the FIRST boundary —
-   * that group owns this node's group-local transform row. Runs on every
-   * own-transform mutation, so it must not allocate — and short-circuits when
-   * no boundary exists anywhere (the common case), turning the walk into a
-   * single count check for boundary-free scenes.
+   * Hand this node to every consumer that owns a baked copy of its transform
+   * row, so each can fast-patch that row instead of re-collecting.
+   *
+   * Two kinds of consumer, one walk:
+   *
+   * - The nearest enclosing transform-group boundary — and only the nearest:
+   *   that group owns this node's group-local row, and an outer group recorded
+   *   the inner one as a nested boundary, not as rows of its own.
+   * - EVERY ancestor that owns an automatic render-root representation. Roots
+   *   may overlap (`render(world)` alongside `render(world.hud)`) and there is
+   *   no exclusive owner slot, so the walk cannot stop at the first one. A
+   *   representation whose fragment holds no recording ignores the call.
+   *
+   * Runs on every own-transform mutation, so it must not allocate — and
+   * short-circuits to a single pair of count checks while neither consumer kind
+   * exists anywhere.
    */
   private _notifyEnclosingRetainedGroup(): void {
-    if (transformGroupBoundaryCount === 0) {
+    if (transformGroupBoundaryCount === 0 && retainedRenderRootCount === 0) {
       return;
     }
 
+    const node = this as unknown as RenderNode;
+    let boundaryNotified = transformGroupBoundaryCount === 0;
     let ancestor: Container | null = this._parentNode;
 
     while (ancestor !== null) {
-      if (ancestor._isTransformGroupBoundary) {
-        ancestor._enqueueDirtyTransformRow(this as unknown as RenderNode);
+      if (!boundaryNotified && ancestor._isTransformGroupBoundary) {
+        ancestor._enqueueDirtyTransformRow(node);
+        boundaryNotified = true;
+      }
 
+      if (retainedRenderRootCount > 0) {
+        ancestor._enqueueRetainedRootRow(node);
+      }
+
+      // Both consumers found nothing left to visit: a boundary was notified and
+      // no representation can be above it either, because a fragment that
+      // contains a boundary records it as a live re-dispatch and owns no rows
+      // below it. Walking on would be pure cost.
+      if (boundaryNotified && retainedRenderRootCount === 0) {
         return;
       }
 

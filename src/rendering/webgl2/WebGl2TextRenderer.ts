@@ -1,6 +1,6 @@
 import type { RetainedGroupBundle } from '#rendering/plan/RetainedInstructionSet';
+import type { OwnTransformRowPatcher } from '#rendering/plan/retainedTransformRowPatch';
 import type { RenderNode } from '#rendering/RenderNode';
-import type { OwnTransformRowPatcher } from '#rendering/RetainedContainer';
 import { Shader } from '#rendering/shader/Shader';
 import { type BitmapText } from '#rendering/text/BitmapText';
 import type { TextPageQuads } from '#rendering/text/Text';
