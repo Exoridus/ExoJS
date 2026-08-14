@@ -103,15 +103,25 @@ export class RetainedRootRepresentation {
    */
   private _source: RenderRootSource | null = null;
   /**
-   * Consecutive capture frames on which only the VIEW key failed.
+   * Consecutive frames that had to rebuild and found the same content, structure
+   * and ancestry as the rebuild before them, plus the keys that streak is
+   * measured against.
    *
    * The build gate ({@link shouldBuildSource}). One such frame proves nothing —
    * a camera that stepped once and stopped produces exactly one, and a source
    * built for it is one O(N) walk plus one record per drawable that will never
-   * be selected from twice. Two in a row is the signature of a camera that keeps
-   * moving over unchanged content, which is the case the source exists for.
+   * be selected from twice. Two in a row is the signature of a camera moving
+   * across a settled scene, which is the case the source exists for, and it is a
+   * signature a scene whose content keeps changing cannot produce.
+   *
+   * Deliberately NOT derived from the capture keys: the source is valid
+   * independently of whether a capture exists, and a root whose captures are
+   * suppressed needs the cheap path more than any other, not less.
    */
-  private _viewOnlyStreak = 0;
+  private _rebuildStreak = 0;
+  private _streakContent = -1;
+  private _streakStructure = -1;
+  private _streakAncestry = -1;
   /**
    * The root producer itself read the view during discovery, so there is no
    * persistable source at any granularity — attribution to the outermost
@@ -188,12 +198,9 @@ export class RetainedRootRepresentation {
    * Every key except the view: whether the captured product still describes the
    * same subtree, compiled for the same backend and target.
    *
-   * Split out because the two consumers ask different questions of it.
-   * {@link isCleanIgnoringTransform} needs all of it plus the view to decide
-   * whether the PRODUCT replays; the selection tier needs exactly this half,
-   * because a source is view-independent by construction and its validity turns
-   * only on content, structure and ancestry. A `true` here with a failing view
-   * test is the precise definition of "only the camera moved".
+   * Split out from {@link isCleanIgnoringTransform} because the view key is the
+   * only one of the six that is not an exact compare, and reading the exact half
+   * on its own is what makes the tolerant half legible.
    */
   public matchesNonViewKeys(
     contentRevision: number,
@@ -222,19 +229,19 @@ export class RetainedRootRepresentation {
     return (this._source ??= new RenderRootSource());
   }
 
-  /** Drop the items and release their drawable references. */
-  public dropSource(): void {
-    this._source?.invalidate();
-  }
+  /** Fold one rebuild frame into the build gate (see {@link _rebuildStreak}). */
+  public noteRebuildKeys(contentRevision: number, structureRevision: number, ancestryStamp: number): void {
+    const same = this._streakContent === contentRevision && this._streakStructure === structureRevision && this._streakAncestry === ancestryStamp;
 
-  /** Fold one capture frame into the build gate (see {@link _viewOnlyStreak}). */
-  public noteCaptureFrame(viewOnly: boolean): void {
-    this._viewOnlyStreak = viewOnly ? this._viewOnlyStreak + 1 : 0;
+    this._rebuildStreak = same ? this._rebuildStreak + 1 : 0;
+    this._streakContent = contentRevision;
+    this._streakStructure = structureRevision;
+    this._streakAncestry = ancestryStamp;
   }
 
   /** Whether a missing source is worth one culling-free discovery walk now. */
   public shouldBuildSource(): boolean {
-    return !this._sourceUnbuildable && this._viewOnlyStreak >= 2;
+    return !this._sourceUnbuildable && this._rebuildStreak >= 1;
   }
 
   /** Discovery found the ROOT itself view-dependent (see {@link _sourceUnbuildable}). */
@@ -472,15 +479,17 @@ export class RetainedRootRepresentation {
     this._replayedSinceCapture = false;
   }
 
-  /** Drop the capture and its recording; the GPU bundle is kept (grow-only). */
+  /**
+   * Drop the capture and its recording; the GPU bundle is kept (grow-only).
+   *
+   * The SOURCE deliberately survives. It is keyed on the node's own revisions
+   * and validates itself, so it stays correct across anything that invalidates a
+   * capture — and the loudest caller here is capture suppression, where the
+   * frame that just lost its capture is exactly the one that most needs a cheap
+   * path to fall back to.
+   */
   public invalidate(): void {
     this.fragment.invalidate();
-    // The source is keyed on the same content/structure/ancestry the capture
-    // was, so anything that drops one drops the other; the streak restarts with
-    // it, so a recovering root re-earns its source rather than inheriting a
-    // verdict from before the invalidation.
-    this._source?.invalidate();
-    this._viewOnlyStreak = 0;
     this._hasCapture = false;
     this._replayedSinceCapture = false;
     this._wastedCaptures = 0;

@@ -761,16 +761,25 @@ export class RenderPlanBuilder {
    * Between "the product still fits" and "rebuild from the scene graph" sits the
    * selection tier. A camera step that leaves the capture's margin used to cost
    * a complete collect — walk, transform resolve, material resolve, record — for
-   * a scene where nothing but the camera changed. When only the VIEW key failed,
-   * the persistent source already holds every item in the subtree, on screen or
-   * not, so the frame is a selection over those items instead:
+   * a scene where nothing but the camera changed. The persistent source already
+   * holds every item in the subtree, on screen or not, so such a frame becomes a
+   * selection over those items instead:
    *
    * ```text
    * tier 1  view still fits the capture              -> replay
-   * tier 2  view moved, content/structure unchanged  -> select from the source
+   * tier 2  source still describes the subtree       -> select from the source
    * tier 3  transform-only moves                     -> O(k) row patch
    * tier 4  content / structure / ancestry changed   -> collect the scene graph
    * ```
+   *
+   * Tier 2 sits BELOW the capture decision, not inside it: the source is keyed
+   * on the node's own content, structure and ancestry and on nothing the capture
+   * owns, so a frame that may not capture at all still gets to select. That is
+   * not a detail — a root holding a view-dependent producer can never replay its
+   * capture (PR #553), so its captures are always wasted and capture suppression
+   * eventually turns them off for good. Keying the selection on the capture
+   * would have withdrawn the source from a parallax-bearing scrolling map, which
+   * is the exact scene this whole tier exists for.
    */
   private _collectRetainedRoot(node: RenderNode): void {
     const representation = node._retainedRootRepresentation();
@@ -813,27 +822,26 @@ export class RenderPlanBuilder {
       return;
     }
 
+    // This frame has to produce entries one way or another. Settle the source
+    // first — it is keyed on the node alone and is equally valid whether or not
+    // this frame ends up capturing.
+    representation.noteRebuildKeys(contentRevision, structureRevision, ancestryStamp);
+
+    const selection = this._resolveSourceSelection(node, representation, contentRevision, structureRevision, ancestryStamp);
+
     if (representation.shouldSuppressCapture(contentRevision, structureRevision, transformRevision, view)) {
-      node._collectForRenderPlan(this);
+      // No capture this frame, but the cheap path is still the cheap path: the
+      // selection culls against the view's own rect (`cullRect` off a capture)
+      // and produces exactly the entries a plain collect would.
+      if (selection === null) {
+        node._collectForRenderPlan(this);
+      } else {
+        this._emitSourceSelection(selection.entries, selection.source, this.cullRect);
+      }
 
       return;
     }
 
-    // Only the VIEW key failed: content, structure, ancestry, backend and target
-    // all still describe the captured product, so a persistent source built for
-    // it is still valid and this frame is a pure re-selection.
-    const viewOnly = representation.matchesNonViewKeys(contentRevision, structureRevision, ancestryStamp, backend, target);
-
-    representation.noteCaptureFrame(viewOnly);
-
-    if (!viewOnly) {
-      // Content, structure or ancestry moved: the items no longer describe the
-      // subtree, and world bounds stored against a different ancestry are not
-      // repairable. Rebuilding is the correct and simple answer.
-      representation.dropSource();
-    }
-
-    const selection = viewOnly ? this._resolveSourceSelection(node, representation, contentRevision, structureRevision, ancestryStamp) : null;
     const previousTracked = this._trackedRoot;
 
     // Exactly one node per build is the retention root (`_retentionRoot` is
@@ -862,14 +870,15 @@ export class RenderPlanBuilder {
    * earned a source and does not have one yet. `null` means "collect the scene
    * graph" and is always a correct answer.
    *
-   * Discovery is gated on the SECOND consecutive view-only capture, and that
-   * gate is the whole safety argument for building a source at all. A source is
-   * one O(N) walk plus one item per drawable in the subtree, so a scene that
-   * alternates between a content change and a camera step would otherwise pay
-   * for a source it never gets to use twice. Requiring two consecutive view-only
-   * captures separates a genuinely scrolling camera — where every capture after
-   * the first is view-only and the source then serves every one of them — from
-   * a scene that merely moved the camera once.
+   * Discovery is gated on the SECOND consecutive rebuild frame that found the
+   * same content, structure and ancestry, and that gate is the whole safety
+   * argument for building a source at all. A source is one O(N) walk plus one
+   * item per drawable in the subtree, so a scene that alternates between a
+   * content change and a camera step would otherwise pay for a source it never
+   * gets to use twice. Two rebuild frames in a row over unchanged content is the
+   * signature of a camera moving across a settled scene — where the source then
+   * serves every frame after it — and it is a signature a changing scene cannot
+   * produce.
    */
   private _resolveSourceSelection(
     node: RenderNode,
@@ -883,6 +892,11 @@ export class RenderPlanBuilder {
     if (existing?.isUsable(contentRevision, structureRevision, ancestryStamp)) {
       return { entries: existing.entries, source: existing };
     }
+
+    // Stale items describe a subtree that no longer exists, and world bounds
+    // stored against a different ancestry are not repairable. Release them here
+    // rather than leaving a million dead records reachable until the next build.
+    existing?.invalidate();
 
     if (!representation.shouldBuildSource()) {
       return null;
