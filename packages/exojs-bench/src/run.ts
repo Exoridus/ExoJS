@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 // dynamic `import()` inside `runPhysicsDomain`, so a rendering run never pays for it.
 import type { PhysicsAdapter, PhysicsCellResult, PhysicsCellSpec } from './physics';
 import type { ArchetypeId, Backend, CellResult, CellSpec, MatrixSelection } from './rendering';
-import { profileCell, runMatrix, writeReport } from './rendering';
+import { isHitching, profileCell, runMatrix, writeReport } from './rendering';
 import { parseArgs } from './shared/args';
 import { createCheckpointWriter } from './shared/checkpoint';
 
@@ -239,7 +239,7 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
 
   for (const result of data.results) {
     console.log(
-      `  ${result.spec.engine.padEnd(6)} ${result.spec.config.padEnd(9)} ${result.spec.backend.padEnd(6)} ${result.spec.archetype.padEnd(15)} n=${String(result.spec.nodeCount).padStart(7)} drawCalls=${String(result.structural.drawCalls).padStart(8)} cpuMsMedian=${result.cpuMsMedian.toFixed(3)} status=${result.status}`,
+      `  ${result.spec.engine.padEnd(6)} ${result.spec.config.padEnd(9)} ${result.spec.backend.padEnd(6)} ${result.spec.archetype.padEnd(15)} n=${String(result.spec.nodeCount).padStart(7)} drawCalls=${String(result.structural.drawCalls).padStart(8)} cpuMsMedian=${result.cpuMsMedian.toFixed(3)} cpuMsP95=${result.cpuMsP95.toFixed(3).padStart(8)} status=${result.status}${isHitching(result) ? ' HITCHING' : ''}`,
     );
   }
 

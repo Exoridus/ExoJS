@@ -9,6 +9,31 @@ const FRAME_BUDGET_NODE_THRESHOLD = 100_000;
 /** Marker appended to timing columns when the run used a software rasterizer. */
 const UNTRUSTED_MARK = 'UNTRUSTED (software rasterizer)';
 
+/**
+ * A cell is `hitching` when its p95 CPU time towers over its median AND lands
+ * above an interactive frame budget.
+ *
+ * Both halves are needed. The ratio alone fires on a cell that is fast
+ * throughout (0.1ms median, 0.5ms p95 is a scheduling blip, not a hitch); the
+ * absolute alone fires on a cell that is uniformly slow, which the median
+ * already reports honestly.
+ *
+ * The marker exists because an optimisation that turns per-frame work into
+ * PERIODIC work looks, in the median, exactly like an optimisation that removed
+ * the work. `scrolling-world` at 1M is the worked example: 0.190ms median
+ * against a 400.155ms p95, i.e. a full re-collect every tenth frame. Reading
+ * only the median made that curve look flat.
+ */
+const HITCH_RATIO = 4;
+const HITCH_FLOOR_MS = 8;
+
+/** True when the cell's CPU time is periodically spiking rather than uniformly fast. */
+export const isHitching = (result: CellResult): boolean =>
+  result.cpuMsP95 >= HITCH_FLOOR_MS && result.cpuMsP95 >= result.cpuMsMedian * HITCH_RATIO;
+
+/** The `cpuMsP95` cell text, suffixed `hitching` when the spike test trips. */
+const cpuP95Cell = (result: CellResult): string => (isHitching(result) ? `${ms(result.cpuMsP95)} hitching` : ms(result.cpuMsP95));
+
 /** Everything one baseline run produces: the provenance stamps and the per-cell results. */
 export interface ReportData {
   /** One provenance stamp per backend exercised. */
@@ -46,6 +71,7 @@ const CSV_HEADER = [
   'textureBinds',
   'bufferUploads',
   'frameBudget',
+  'hitching',
   'status',
   'note',
 ] as const;
@@ -69,6 +95,7 @@ const toCsvRow = (result: CellResult): string => {
     count(structural.textureBinds),
     count(structural.bufferUploads),
     beyondBudget,
+    isHitching(result) ? 'hitching' : '',
     result.status,
     result.note ?? '',
   ];
@@ -155,6 +182,7 @@ const toMarkdown = (data: ReportData): string => {
     '- **Culling:** disabled on every archetype whose content is fully on-screen (`cullingEnabled: false`) — there a cull check never removes a node and can only add overhead, and the arms do not pay equally for it: ExoJS\'s `cullable` flag drives a real per-node bounds/intersection check in the render walk, while Pixi\'s `cullable` flag is inert unless something calls `Culler.shared.cull(...)`. The Phaser arm does no bounds culling (its default `willRender` checks only visibility/alpha flags), and the Excalibur arm never runs its off-screen culling system (only the draw path is stepped, not the update systems that tag entities off-screen). On those archetypes every arm therefore does identical visible-set work.',
     '- **`scrolling-world` is the one archetype with off-screen content**, and the only one with a moving camera: `nodeCount` leaves are laid out over 4x the viewport\'s area (`worldSpan: 2`), so roughly 25% are visible at any moment, and the camera travels the world diagonal at `cameraSpeed` units per frame, reflecting off the world edges on a path that is a closed form in the frame index (identical on every arm). Two disclosures apply to its rows. **(1) Camera mechanism differs by arm, idiomatically:** ExoJS moves its `View` centre (the engine has a real camera, and the view rect is what its culling and its retained-render-product validity key on); Pixi has no camera object, so that arm translates the world container under a fixed screen rect. Both show the identical world content per frame. **(2) Two Pixi arms:** `pixi default` is stock Pixi and does NOT cull — it draws the off-screen content too, which is Pixi\'s out-of-the-box behaviour and the honest upper bound; `pixi culled` adds the explicit per-frame `Culler.shared.cull(root, renderer.screen, false)` a Pixi app that wants culling has to write itself. Read the ExoJS rows against `pixi culled` for a culling-vs-culling comparison, and against `pixi default` for the out-of-the-box one. `pixi culled` is measured only on this archetype.',
     '- **Phaser renders WebGL, not WebGL2.** The Phaser arm is measured as a stock Phaser 4 app: Phaser 4.2 is often described as a from-scratch WebGL2 renderer, but its `WebGLRenderer` requests a plain `webgl` (WebGL1) context by default (`canvas.getContext(\'webgl\')`, WebGLRenderer.js:709), uses GLSL ES 1.00 shaders, and polyfills the WebGL2-core features it needs (instanced arrays, VAO) from WebGL1 extensions — its renderer is an evolution of the Phaser 3.85+ WebGL path, not a WebGL2 rewrite. The arm runs under the `webgl2` backend *request* but its rows are WebGL-rendered. Its CPU-time column is measured identically to the other arms and **is** cross-arm comparable; its full-frame time comes from the rAF delta (as it does for any arm when the optional GPU-timer extension is absent). The WebGL2 draw-call structural probe cannot attach to a WebGL context, so the Phaser arm reports **no structural counters** (`drawCalls`/`textureBinds`/`bufferUploads` show 0 with an explanatory `note`) — the counts are omitted, never faked. Compare structural columns only among the WebGL2 arms (ExoJS, Pixi, Excalibur). Phaser 4 ships no WebGPU renderer, so it never runs the `webgpu` backend.',
+    '- **`hitching` marks a periodic spike, and the median alone will not show it.** A cell is marked when its `cpuMsP95` is at least 4x its `cpuMsMedian` AND at least 8ms — i.e. most frames are cheap and a few are not. This matters because an optimisation that converts per-frame work into PERIODIC work (a cache that is rebuilt every n-th frame instead of every frame) improves the median exactly as much as one that removed the work, while the worst frame is unchanged. Read `cpuMsMedian` for the amortised cost and `cpuMsP95` for the frame the player actually feels; a `hitching` row means the two answer different questions and the median must not be quoted on its own.',
     '- **Competitor render-path isolation.** Each competitor arm is driven through only its render path with its own loop suppressed: Phaser via `renderer.preRender()` + `SceneManager.render()` + `renderer.postRender()` with `game.loop.stop()`; Excalibur via its public draw sequence (`beginDrawLifecycle`/`clear`/`currentScene.draw`/`flush`/`endDrawLifecycle`) with `engine.clock.stop()`. Update/input/physics subsystems are never stepped, so only rendering is measured.',
     '',
   );
@@ -194,7 +222,7 @@ const toMarkdown = (data: ReportData): string => {
       spec.archetype,
       String(spec.nodeCount),
       ms(result.cpuMsMedian),
-      ms(result.cpuMsP95),
+      cpuP95Cell(result),
       frameMedianCell(result),
       count(structural.drawCalls),
       count(structural.textureBinds),
