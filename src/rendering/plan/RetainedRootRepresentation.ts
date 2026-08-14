@@ -70,6 +70,20 @@ export class RetainedRootRepresentation {
    */
   private readonly _captureCullRect = new Rectangle();
   private _hasCaptureCullRect = false;
+  /**
+   * Whether the capturing collect READ the view — i.e. produced content that is
+   * a function of the camera, not merely positioned by it.
+   *
+   * Such a capture may only be replayed under the very same view. Both view
+   * tolerances below reason about the SELECTION of nodes (what a cull test would
+   * have dropped), and that reasoning is sound only while each node's recorded
+   * draw is what a fresh collect would produce again. A node that rebuilds its
+   * geometry from `view.center` breaks that premise: replaying it paints the
+   * camera position it was captured at. `ImageLayerNode` and `TileLayerNode` do
+   * exactly this, and contract 9 of the architecture freeze reserves the right
+   * for any node, which is why this is observed rather than declared.
+   */
+  private _viewDependentCapture = false;
 
   // Thrash suppression over the FULL key (see `shouldSuppressCapture`).
   private _replayedSinceCapture = false;
@@ -120,6 +134,12 @@ export class RetainedRootRepresentation {
 
     if (this._view === view && this._viewUpdateId === view.updateId) {
       return true;
+    }
+
+    if (this._viewDependentCapture) {
+      // The view moved and the capture is a function of it: neither tolerance
+      // applies, because both only argue about which nodes a cull test admits.
+      return false;
     }
 
     if (this._viewFitsCaptureCullRect(view)) {
@@ -310,8 +330,18 @@ export class RetainedRootRepresentation {
     this._keptBounds.reset();
     this._keptEmpty = true;
     this._culledDuringCapture = false;
+    this._viewDependentCapture = false;
     this._captureCullRect.set(cullRect.x, cullRect.y, cullRect.width, cullRect.height);
     this._hasCaptureCullRect = true;
+  }
+
+  /**
+   * The collect being captured read the view (see {@link _viewDependentCapture}).
+   * Called from `RenderPlanBuilder`'s public view getter, so it fires for any
+   * node — engine or third-party — without one having to declare itself.
+   */
+  public noteViewRead(): void {
+    this._viewDependentCapture = true;
   }
 
   /** A node passed the view test; `rect` is exactly what `inView` compared. */
@@ -363,6 +393,7 @@ export class RetainedRootRepresentation {
     this._keptBounds.reset();
     this._keptEmpty = true;
     this._culledDuringCapture = true;
+    this._viewDependentCapture = false;
     this._hasCaptureCullRect = false;
     this._view = null;
     this._backend = null;

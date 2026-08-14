@@ -193,7 +193,7 @@ export class RenderPlanBuilder {
    * @internal
    */
   public get cullRect(): Rectangle {
-    return this._captureCullActive ? this._captureCullRect : this.view.getBounds();
+    return this._captureCullActive ? this._captureCullRect : this._viewUnobserved().getBounds();
   }
 
   public build(root: RenderNode, backend: RenderBackend): RenderPlan {
@@ -237,7 +237,7 @@ export class RenderPlanBuilder {
     if (rootScope.entries.length > 0) {
       this._plan.passes.push({
         target: null,
-        view: this.view,
+        view: this._viewUnobserved(),
         clearColor: null,
         root: rootScope,
       });
@@ -249,6 +249,39 @@ export class RenderPlanBuilder {
   }
 
   public get view(): View {
+    // A collect that reads the view produces view-DEPENDENT content, and the
+    // capture running around it must then not be replayed under a different
+    // view. `ImageLayerNode` and `TileLayerNode` do exactly this (both read
+    // `view.center` to place repeat coverage, and both opt out of view culling
+    // so no cull rect records the dependency for them), and contract 9 of the
+    // architecture freeze reserves the right for any node. Noting the read here
+    // rather than asking nodes to declare a flag covers third-party nodes too,
+    // and costs one null check on a path that already resolves a getter.
+    //
+    // Builder-internal reads go through `_viewUnobserved` so the machinery that
+    // sets a capture up — the cull-rect inflation, the plan's own view field —
+    // cannot mark every capture as view-dependent.
+    this._trackedRoot?.noteViewRead();
+
+    return this._viewUnobserved();
+  }
+
+  /**
+   * The view's identity for CACHE KEYS, without recording a view dependency.
+   *
+   * Keying a cache on the view and deriving content from the view are different
+   * things, and only the second one makes a capture unreplayable under a moved
+   * camera. `Container._collectContent` does the first — it keys its retained
+   * child slots on `updateId` — and must not be mistaken for the second, or
+   * every capture would be view-locked and root retention would be dead for
+   * every scene.
+   */
+  public get viewUpdateId(): number {
+    return this._viewUnobserved().updateId;
+  }
+
+  /** The view without recording a dependency — builder-internal reads only. */
+  private _viewUnobserved(): View {
     if (this._view === null) {
       this._view = this.backend.view;
     }
@@ -394,7 +427,7 @@ export class RenderPlanBuilder {
    */
   private _collectRetainedRoot(node: RenderNode): void {
     const representation = node._retainedRootRepresentation();
-    const view = this.view;
+    const view = this._viewUnobserved();
     const backend = this.backend;
     const target = backend.renderTarget;
     const contentRevision = node._contentRevision;

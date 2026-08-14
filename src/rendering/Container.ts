@@ -473,7 +473,10 @@ export class Container extends RenderNode {
       return;
     }
 
-    const viewUpdateId = builder.view.updateId;
+    // The cache-key accessor, deliberately not `builder.view`: reading the view
+    // marks the surrounding capture view-dependent, and keying a slot cache on
+    // the view is not deriving content from it.
+    const viewUpdateId = builder.viewUpdateId;
 
     // A captured slot can no longer outlive its drawable: `SceneNode.destroy`
     // unlinks the node, and the removal stamps this container structure-dirty,

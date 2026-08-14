@@ -500,3 +500,55 @@ describe('automatic render-root representation: nested RetainedContainer', () =>
     backend.destroy();
   });
 });
+
+/**
+ * Contract 9 of the architecture freeze: view-dependent content may derive its
+ * product live, and `TileLayerNode`/`ImageLayerNode` do exactly that — they read
+ * `builder.view.center` inside their collect and both opt out of view culling.
+ *
+ * Root retention must therefore never replay a capture over a view the
+ * view-dependent node has not seen, or its content freezes while the camera
+ * moves.
+ */
+class ViewDependentLayer extends Container {
+  public collects = 0;
+  public lastCenterX = Number.NaN;
+
+  public constructor() {
+    super();
+    this.cullable = false;
+  }
+
+  protected override _collectContent(builder: RenderPlanBuilder): void {
+    this.collects++;
+    this.lastCenterX = builder.view.center.x;
+    super._collectContent(builder);
+  }
+}
+
+describe('automatic render-root representation: view-dependent content', () => {
+  test('a camera move inside the capture margin still runs a view-dependent collect', () => {
+    const { backend } = createRecordingBackend();
+    const root = new Container();
+    const layer = new ViewDependentLayer();
+
+    layer.addChild(new RecordableLeaf('a'));
+    root.addChild(layer);
+    backend.setView(defaultView());
+
+    playFrame(root, backend);
+    playFrame(root, backend);
+
+    const before = layer.collects;
+
+    // Pan by 2px: far inside the 1/16 capture margin, so the capture survives.
+    backend.setView(new View(402, 300, 800, 600));
+    playFrame(root, backend);
+
+    expect(layer.lastCenterX).toBe(402);
+    expect(layer.collects).toBeGreaterThan(before);
+
+    root.destroy();
+    backend.destroy();
+  });
+});
