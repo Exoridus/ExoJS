@@ -382,8 +382,15 @@ export const createFakeWebGl2Context = (recorder: GlRecorder): WebGL2RenderingCo
       recorder.bufferSubUpdates++;
       recorder.bufferUploadBytes += bytes;
     },
-    texImage2D: (...args: unknown[]): void => recordTextureUpload(args, true),
-    texSubImage2D: (...args: unknown[]): void => recordTextureUpload(args, false),
+    // Explicit parameters, not a rest array: a rest parameter allocates a fresh
+    // array on EVERY upload call, and at a few hundred uploads per frame that
+    // harness garbage lands in the very allocation profile these scenes exist to
+    // measure — attributed to the engine function that called into the fake,
+    // because V8 inlines the arrow. See `captureUploadArgs`.
+    texImage2D: (a0: unknown, a1: unknown, a2: unknown, a3: unknown, a4: unknown, a5: unknown, a6: unknown, a7: unknown, a8: unknown, a9: unknown): void =>
+      recordTextureUpload(captureUploadArgs(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9), true),
+    texSubImage2D: (a0: unknown, a1: unknown, a2: unknown, a3: unknown, a4: unknown, a5: unknown, a6: unknown, a7: unknown, a8: unknown, a9: unknown): void =>
+      recordTextureUpload(captureUploadArgs(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9), false),
     bindTexture: (_target: number, texture: object | null): void => {
       boundByUnit.set(activeUnit, texture);
 
@@ -423,6 +430,50 @@ export const createFakeWebGl2Context = (recorder: GlRecorder): WebGL2RenderingCo
   // texture and is intentionally NOT folded into this transform-specific metric.
   const isPowerOfTwo = (value: number): boolean => value >= 1 && (value & (value - 1)) === 0;
 
+  /**
+   * The upload entry points' arguments, staged in one reused array so the fake
+   * itself allocates nothing per call. `argCount` is the real arity: the engine
+   * never passes an explicit `undefined`, so the trailing-undefined scan
+   * reproduces what a rest parameter's `length` reported. Non-reentrant by
+   * construction — a GL upload call cannot nest inside another one.
+   */
+  const uploadArgs: unknown[] = [undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined];
+  let uploadArgCount = 0;
+
+  const captureUploadArgs = (
+    a0: unknown,
+    a1: unknown,
+    a2: unknown,
+    a3: unknown,
+    a4: unknown,
+    a5: unknown,
+    a6: unknown,
+    a7: unknown,
+    a8: unknown,
+    a9: unknown,
+  ): unknown[] => {
+    uploadArgs[0] = a0;
+    uploadArgs[1] = a1;
+    uploadArgs[2] = a2;
+    uploadArgs[3] = a3;
+    uploadArgs[4] = a4;
+    uploadArgs[5] = a5;
+    uploadArgs[6] = a6;
+    uploadArgs[7] = a7;
+    uploadArgs[8] = a8;
+    uploadArgs[9] = a9;
+
+    let count = uploadArgs.length;
+
+    while (count > 0 && uploadArgs[count - 1] === undefined) {
+      count--;
+    }
+
+    uploadArgCount = count;
+
+    return uploadArgs;
+  };
+
   const recordTextureUpload = (args: unknown[], isAllocation: boolean): void => {
     // texImage2D(target, level, internalFormat, width, height, border, format, type, data?)
     // texSubImage2D(target, level, xoffset, yoffset, width, height, format, type, data?)
@@ -434,8 +485,8 @@ export const createFakeWebGl2Context = (recorder: GlRecorder): WebGL2RenderingCo
     // element offset, so its byte length describes the texture rather than the
     // uploaded region. Size that upload from the region instead, otherwise a
     // full-width band would be booked as the entire buffer.
-    const srcOffsetForm = args.length === 10 && ArrayBuffer.isView(args[8]) && typeof args[9] === 'number';
-    const data = srcOffsetForm ? args[8] : args[args.length - 1];
+    const srcOffsetForm = uploadArgCount === 10 && ArrayBuffer.isView(args[8]) && typeof args[9] === 'number';
+    const data = srcOffsetForm ? args[8] : args[uploadArgCount - 1];
     const bytes = srcOffsetForm ? width * height * channelsOfFormat(args[6]) * elementBytesOf(data) : byteLengthOf(data);
 
     recorder.textureUploads++;

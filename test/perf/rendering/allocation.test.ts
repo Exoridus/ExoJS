@@ -16,11 +16,26 @@ import { createWebGl2Harness } from './harness';
  * The sampler is a STATISTICAL profiler (Poisson, one sample per 512 B), so a
  * single run scatters ±few-percent frame-to-frame. The gate therefore takes the
  * MEDIAN of {@link WINDOWS} independent sampling windows (each its own fresh
- * harness + profiler session) and asserts the median against
- * `documented-baseline-median × tolerance`. The median is immune to the
- * occasional high outlier — see the `windows=[…]` log line, where one window
- * routinely lands several percent high while the median sits within ~1% run to
- * run.
+ * harness + profiler session) and asserts the median against the budget
+ * {@link budgetBytesFor} derives from the documented baseline. The median is
+ * immune to the occasional high outlier — see the `windows=[…]` log line, where
+ * one window routinely lands several percent high while the median sits within
+ * ~1% run to run.
+ *
+ * All {@link WINDOWS} windows share ONE process, and that is a deliberate
+ * limit, not an oversight. It keeps the whole gate at a few seconds, and for
+ * every archetype in the catalog the pass-to-pass median is stable (≤0.21 KB)
+ * and never exceeds the same scene's fresh-process reading, so the pass/fail
+ * decision is sound. What a shared process CANNOT do is attribute bytes to a
+ * callsite, or measure a scene whose rate depends on which optimisation state
+ * V8 settled into — both need one scene per process. That is
+ * `run-allocation-cell.ts`:
+ *
+ *   node --conditions=@codexo/source --import ./scripts/glsl-register.mjs --import tsx/esm \
+ *     test/perf/rendering/run-allocation-cell.ts --id "mesh/1000" --profile
+ *
+ * Never mix its numbers with this gate's inside one table; {@link BASELINE_KB}
+ * carries both columns separately for exactly that reason.
  *
  * ── Reading the numbers ──────────────────────────────────────────
  * Every gate logs a `[alloc]` line with the live median, the budget, the
@@ -44,10 +59,12 @@ import { createWebGl2Harness } from './harness';
 const WINDOWS = 5;
 
 /**
- * Below this per-frame rate the sampler's relative noise dominates: a 2 KB/frame
- * scene collects ~4 samples per frame at the 512 B interval, against ~1700 for
- * `filtered/100`, so the same absolute Poisson jitter is a far larger fraction
- * of the total. Scenes under the floor therefore get {@link TOLERANCE_SMALL}.
+ * Below this per-frame rate a percentage band is the wrong instrument. These
+ * scenes now sit AT the harness's own floor — every one of them is within
+ * ~1.6 KB/frame of the `empty` scene, so a 15% band would be ±0.2 KB, i.e.
+ * pure Poisson jitter, while a genuine regression in a fully-retained frame is
+ * never a few percent (see {@link FIXED_HEADROOM_KB}). They get a fixed
+ * absolute headroom instead.
  */
 const NOISE_FLOOR_KB = 50;
 
@@ -61,77 +78,90 @@ const NOISE_FLOOR_KB = 50;
 const TOLERANCE_LARGE = 1.15;
 
 /**
- * Budget band for scenes below {@link NOISE_FLOOR_KB}. Wider because their
- * relative noise is up to 4.1% pass-to-pass rather than ~0.4%, and because a genuine
- * regression in a near-zero scene is never a few percent: these scenes are the
- * fully-retained steady state, where any new per-node or per-scope allocation
- * lands as a MULTIPLE of the baseline (one extra small object per sprite in
- * `sprite/1000 static` is +40 KB/frame against a 3.5 KB baseline — a 10x
- * overshoot). A tighter band here would buy no detection and only flake.
+ * Absolute headroom, in KB/frame, for every scene below {@link NOISE_FLOOR_KB}.
+ *
+ * Sized from what these gates have to catch and what they have to tolerate.
+ * TOLERATE: the widest fresh-process spread measured over five processes is
+ * 0.13 KB/frame (`deep-hierarchy`), and the widest in-suite pass-to-pass median
+ * spread is 0.08 KB — 2 KB is more than an order of magnitude above both, which
+ * is the margin the platform floor itself needs (the CI runner's Node/OS pair
+ * moves the sampler's baseline, not the render path's).
+ * CATCH: a regression in a retained frame arrives per node, per batch or per
+ * scope, so it lands as a multiple of these baselines, not a percentage — one
+ * 32-byte object per sprite is +32 KB/frame in `sprite/1000 static` against a
+ * 1.2 KB baseline, and the tightest case in the catalog (one object per MOVED
+ * node in `sprite/10000 transform-only 1%`, k=100) is still +3.2 KB against a
+ * 4.6 KB budget. Both fail the gate; neither needs a tighter band.
  */
-const TOLERANCE_SMALL = 1.3;
+const FIXED_HEADROOM_KB = 2;
 
 /**
- * Documented baseline MEDIANS in KB/frame — the medians THIS gate produces, in
- * THIS archetype order, measured against `src` on Node v24.14.1 (win32/x64) on
- * 2026-08-15 as the median of three independent 5-window passes.
+ * Documented baseline MEDIANS in KB/frame, measured against `src` on Node
+ * v24.14.1 (win32/x64) on 2026-08-16.
  *
- * Measure them from the gate, not from an isolated micro-bench or from the
- * standalone launcher: in-suite JIT tier state depends on which scenes ran
- * before, so both the ORDER of {@link ALLOCATION_ARCHETYPES} and each
- * archetype's warm-up are part of the measurement. Changing either invalidates
- * the table.
+ * Each entry is the HIGHER of two independently measured medians, because the
+ * two disagree in both directions and the budget must survive either:
  *
- * Pass-to-pass median spread across those three passes (this is the number the
- * tolerance has to absorb, not the within-pass window spread):
+ *   FRESH-PROCESS — one archetype per node process, five processes, median.
+ *     This is the source-of-truth number and the only one whose CALLSITE
+ *     attribution is trustworthy: V8's optimisation state carries across scenes
+ *     inside a process, so a scene measured after nine others is measured in a
+ *     state no real frame is in (`run-allocation-cell.ts` exists for this).
+ *   IN-SUITE — what this gate itself produces, five windows in one process, in
+ *     THIS archetype order. Lower than fresh for every retained scene (the JIT
+ *     arrives warm) and higher for `filtered/100`.
  *
- *   empty                            2.01 –   2.07   3.0%
- *   sprite/1000 static               3.42 –   3.53   3.2%
- *   sprite/1000 moving             210.65 – 211.47   0.4%
- *   sprite/10000 transform-only 1%  24.25 –  24.49   1.0%
- *   nested/1000 d4                   1.95 –   2.03   4.1%
- *   deep-hierarchy/1000 d16 1%       3.81 –   3.95   3.7%
- *   mesh/1000                      574.24 – 575.20   0.17%
- *   filtered/100                   792.94 – 793.49   0.07%
- *   blend/1000 plateau64             5.21 –   5.27   1.2%
- *   blend/1000 alternating         235.33 – 235.75   0.18%
+ * The in-suite column is the highest median seen across six passes.
+ *
+ *   archetype                        fresh    in-suite   baseline
+ *   empty                             0.99      0.99       0.99
+ *   sprite/1000 static                1.21      1.07       1.21
+ *   sprite/1000 moving                1.37      1.26       1.37
+ *   sprite/10000 transform-only 1%    2.61      2.34       2.61
+ *   nested/1000 d4                    1.20      0.65       1.20
+ *   deep-hierarchy/1000 d16 1%        1.01      0.50       1.01
+ *   mesh/1000                         0.68      0.37       0.68
+ *   filtered/100                    295.18    306.55     306.55
+ *   blend/1000 plateau64              0.93      0.57       0.93
+ *   blend/1000 alternating            1.19      0.47       1.19
+ *
+ * Spread, i.e. what the budget has to absorb: ≤0.13 KB across the five fresh
+ * processes and ≤0.21 KB across six in-suite passes on every scene but
+ * `filtered/100`, which holds 0.3% (295.5 fresh / 306.6 in-suite pass spread).
+ *
+ * `scrolling-world/10000` is measured the same way but stays out of the gate:
+ * fresh it is the steadiest scene here (1.65 KB/frame, 4.5%), in-suite it is
+ * bimodal at 14.6 vs 19.8 KB/frame between passes. See `ALLOCATION_REPORT_ONLY`.
  *
  * ── Ratchet history ─────────────────────────────────────────────
- * 2026-08-15: whole table re-measured, every budget moved DOWN hard. The
- * previous baselines (static 248, nested 363, moving 277, mesh 748, filtered
- * 823) predated the retained render path — `static` and `nested` had since
- * fallen to ~3.5 and ~2.0 KB/frame, so those two gates carried 82x and 205x
- * headroom and could not have caught anything at all; `moving`/`mesh` were
- * ~1.5x loose and `filtered` ~1.1x. Five archetypes were added in the same
- * pass (transform-only, deep-hierarchy, the two blend variants, and — measured
- * but NOT gated — scrolling-world; see `ALLOCATION_REPORT_ONLY`).
+ * 2026-08-16: whole table re-measured after the steady-state allocation track
+ * closed, and every budget moved down again — by two to three ORDERS of
+ * magnitude on the scenes the track actually hit (`mesh/1000` 574.69 → 0.68,
+ * `blend/1000 alternating` 235.70 → 1.19, `sprite/1000 moving` 211.21 → 1.37,
+ * `sprite/10000 transform-only 1%` 24.35 → 2.61). Nine of the ten gated scenes now
+ * sit within 1.6 KB/frame of `empty`, which is why the small-scene band changed
+ * from a percentage to {@link FIXED_HEADROOM_KB}. `filtered/100` 793.42 → 306.55 is
+ * partly the same track and partly the harness: `fakeWebGl2`'s two texture-
+ * upload entry points took a rest parameter, so every upload call allocated an
+ * argument array that the profiler then attributed to the ENGINE function that
+ * called into the fake — ~76 KB/frame of the old number was the measurement.
  *
- * `filtered/100` also reads ~793 here against ~869 under the previous catalog.
- * That is not a code change: the scene is byte-for-byte the same, and the shift
- * is the in-suite JIT ordering the note above warns about (two more archetypes
- * now run before it). It is the reason this table must be re-measured whole
- * rather than row by row.
+ * 2026-08-15: previous whole-table re-measure (from baselines that predated the
+ * retained render path and carried up to 205x headroom), and the pass that
+ * added transform-only, deep-hierarchy and the two blend variants.
  */
 const BASELINE_KB: Readonly<Record<string, number>> = {
-  empty: 2.06,
-  'sprite/1000 static': 3.51,
-  'sprite/1000 moving': 211.21,
-  'sprite/10000 transform-only 1%': 24.35,
-  'nested/1000 d4': 1.98,
-  'deep-hierarchy/1000 d16 1%': 3.83,
-  'mesh/1000': 574.69,
-  'filtered/100': 793.42,
-  'blend/1000 plateau64': 5.21,
-  'blend/1000 alternating': 235.7,
+  empty: 0.99,
+  'sprite/1000 static': 1.21,
+  'sprite/1000 moving': 1.37,
+  'sprite/10000 transform-only 1%': 2.61,
+  'nested/1000 d4': 1.2,
+  'deep-hierarchy/1000 d16 1%': 1.01,
+  'mesh/1000': 0.68,
+  'filtered/100': 306.55,
+  'blend/1000 plateau64': 0.93,
+  'blend/1000 alternating': 1.19,
 };
-
-/**
- * The `empty` scene is a harness/sampler FLOOR sanity, not a ratcheted budget:
- * its true value (~2 KB) is near zero and noise-dominated, so a percentage band
- * is meaningless. A fixed, roomy floor catches a gross regression (a real
- * allocation would be orders larger) without flaking on ±1 KB jitter.
- */
-const EMPTY_FLOOR_BYTES = 8 * 1024;
 
 const ENV = `Node ${process.version} ${process.platform}/${process.arch}`;
 
@@ -150,19 +180,20 @@ const median = (values: readonly number[]): number => {
  */
 const MEASURE_ONLY = process.env['EXOJS_ALLOC_MEASURE'] === '1';
 
-/** Budget in bytes/frame for an archetype, banded by whether its rate clears the noise floor. */
+/**
+ * Budget in bytes/frame for an archetype: a relative band above the noise
+ * floor, a fixed absolute headroom below it. `empty` is no longer special —
+ * with every retained scene sitting at the harness floor, the floor sanity and
+ * the ratcheted budgets are the same rule.
+ */
 const budgetBytesFor = (id: string): number => {
-  if (id === 'empty') {
-    return EMPTY_FLOOR_BYTES;
-  }
-
   const baselineKb = BASELINE_KB[id];
 
   if (baselineKb === undefined || baselineKb <= 0) {
     throw new Error(`no allocation baseline recorded for archetype '${id}' — re-measure with EXOJS_ALLOC_MEASURE=1 and add it to BASELINE_KB`);
   }
 
-  return baselineKb * (baselineKb < NOISE_FLOOR_KB ? TOLERANCE_SMALL : TOLERANCE_LARGE) * 1024;
+  return (baselineKb < NOISE_FLOOR_KB ? baselineKb + FIXED_HEADROOM_KB : baselineKb * TOLERANCE_LARGE) * 1024;
 };
 
 /** Median bytes/frame over {@link WINDOWS} fresh-harness sampling windows, plus the per-window KB samples. */

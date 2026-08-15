@@ -250,13 +250,12 @@ export const ALLOCATION_REPORT_ONLY: readonly AllocationArchetype[] = [
     id: 'scrolling-world/10000',
     rationale:
       'The only archetype with a MOVING CAMERA and genuine off-screen content: 10k sprites over 4x the viewport area, ~25% visible, camera ' +
-      'ping-ponging 8 units/frame. Coverage the gate genuinely lacks — but NOT GATEABLE as measured. Its rate is bimodal at PROCESS level: ' +
-      'across 4 fresh vitest processes the five-window medians clustered at either ~15.8 or ~20.8 KB/frame, ~25% apart, with every window ' +
-      'inside a process agreeing to ±2%; the bare-node launcher, a third process shape, reads ~3. The split is not the scene (no wall-clock ' +
-      'and no randomness reaches the render plan) and not the node count (a 2500-sprite variant splits the same way, 5.8 vs 7.2); it is V8 ' +
-      'settling the hot cull/selection loop into one optimization state for the life of the process. A budget that spans the observed range ' +
-      'could only catch a multiple-fold regression, which is worse than no gate because it would read as coverage. Re-evaluate when the cull ' +
-      'path stops allocating enough for escape analysis to swing it — at which point this becomes a gate.',
+      'ping-ponging 8 units/frame. Coverage the gate genuinely lacks — but NOT GATEABLE IN-SUITE, and the reason is now measured rather than ' +
+      'inferred. Rendered in a process of its own it is the best-behaved scene in the catalog: ~1.65 KB/frame, 4.5% spread over five fresh ' +
+      'processes. Rendered as the eleventh scene of the gate it reads 14.6 or 19.8 KB/frame — the same ~25% bimodality first seen across ' +
+      'fresh vitest processes, with every window inside a run agreeing to ±2%, and no budget can sit between those two clusters. What moves ' +
+      'is V8 settling the hot cull/selection loop into one escape-analysis state for the life of the process, and ten scenes of prior tier-up ' +
+      'state decide which. So it stays out of the same-process gate; `run-allocation-cell.ts` is where its number is real.',
     warmup: SETTLED_WARMUP,
     build: harness => {
       const worldW = VIEW.w * 2;
