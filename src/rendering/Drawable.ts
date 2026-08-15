@@ -30,6 +30,21 @@ const anchorChannel: number = SceneNodeVectorChannel.Anchor;
  * and are paired with a matching {@link Renderer} via {@link RendererRegistry}.
  */
 export class Drawable extends RenderNode {
+  /**
+   * Write this drawable's canonical quad record — {@link SOURCE_QUAD_FLOATS}
+   * floats at `offset` — and report whether it could.
+   *
+   * The default is a refusal: a drawable that does not describe itself as one
+   * textured quad has no such record, and a persistent render source containing
+   * one cannot be drawn from prepacked data. Overriding is what opts a drawable
+   * into the persistent-indexed path, and the record must be COMPLETE — a source
+   * that holds it never reads the drawable again while it stays usable.
+   * @internal
+   */
+  public _packSourceQuad(_target: Float32Array, _offset: number): boolean {
+    return false;
+  }
+
   private _tint: Color = Color.white.clone();
   private _blendMode: BlendModes = BlendModes.Normal;
   private _pixelSnapMode: PixelSnapMode = PixelSnapMode.None;

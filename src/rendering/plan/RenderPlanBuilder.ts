@@ -6,7 +6,9 @@ import type { RenderNode } from '#rendering/RenderNode';
 import { BlendModes, isAdvancedBlendMode } from '#rendering/types';
 import type { View } from '#rendering/View';
 
+import type { DerivedRootProduct } from './DerivedRootProduct';
 import { type EntryPlacementState, reserveEntryPlacement } from './EntryPlacement';
+import type { PersistentSlotBackend } from './PersistentSlotDraw';
 import { type DrawCommand, materialKeyForcesFlush, RenderEntryKind } from './RenderCommand';
 import { MutableRenderPlan, type RenderPlan } from './RenderPlan';
 import type { RenderRootSource } from './RenderRootSource';
@@ -20,7 +22,7 @@ import {
   type GroupScopeEntry,
   type ScopeEntry,
 } from './RenderScope';
-import { createSourceScope, LiveEntryReason, type PersistentDrawItem, type SourceEntry, type SourceGroup, type SourceScope } from './RenderSourceItem';
+import { createSourceScope, LiveEntryReason, type SourceGroup, type SourceOther, type SourceScope } from './RenderSourceItem';
 import type { RetainedFragmentEntry, RetainedFragmentGroup, RetainedGroupFragment } from './RetainedGroupFragment';
 import type { RetainedInstructionSet } from './RetainedInstructionSet';
 import type { RetainedDrawData } from './RetainedPlanCache';
@@ -84,10 +86,11 @@ interface MutableGroupScope extends GroupScope, EntryPlacementState {
   firstOwnMaterial: boolean;
 }
 
-/** What one frame selects from: the entries, and the source that judges them. */
+/** What one frame selects from: the scopes, the source, and this view's membership. */
 interface SourceSelection {
-  readonly entries: readonly SourceEntry[];
+  readonly rootScope: SourceScope;
   readonly source: RenderRootSource;
+  readonly product: DerivedRootProduct;
 }
 
 /**
@@ -194,7 +197,6 @@ export class RenderPlanBuilder {
   private _sourceProducer: RenderNode | null = null;
   /** Producers observed reading the view during the current source walk. */
   private readonly _sourceViewReaders = new Set<RenderNode>();
-  private _nextItemHandle = 0;
 
   /**
    * The node this build treats as the retained render root, or `null` when the
@@ -491,13 +493,13 @@ export class RenderPlanBuilder {
     const scope = this._sourceStack[this._sourceStack.length - 1]!;
 
     if (node._renderPlanHasBarrierEffects()) {
-      scope.entries.push({ kind: RenderEntryKind.Barrier, seq, node, reason: LiveEntryReason.Barrier });
+      scope.others.push({ kind: RenderEntryKind.Barrier, seq, node, reason: LiveEntryReason.Barrier, itemMark: scope.items.count });
 
       return;
     }
 
     if (node._isTransformGroupBoundary) {
-      scope.entries.push({ kind: RenderEntryKind.Barrier, seq, node, reason: LiveEntryReason.Boundary });
+      scope.others.push({ kind: RenderEntryKind.Barrier, seq, node, reason: LiveEntryReason.Boundary, itemMark: scope.items.count });
 
       return;
     }
@@ -520,7 +522,8 @@ export class RenderPlanBuilder {
    * be persisted while its output is a function of the camera.
    */
   private _collectSourceDrawable(node: RenderNode, scope: SourceScope, seq: number, zIndex: number): void {
-    const mark = scope.entries.length;
+    const mark = scope.items.count;
+    const otherMark = scope.others.length;
     const previousProducer = this._sourceProducer;
 
     this._sourceProducer = node;
@@ -535,25 +538,24 @@ export class RenderPlanBuilder {
       this._sourceProducer = previousProducer;
     }
 
-    this._resolveViewAttribution(node, scope, mark, seq);
+    this._resolveViewAttribution(node, scope, mark, otherMark, seq);
   }
 
   /** A grouping producer: mirror its scope into the source and descend. */
   private _collectSourceGroup(node: RenderNode, scope: SourceScope, seq: number, zIndex: number): void {
-    const mark = scope.entries.length;
+    const mark = scope.items.count;
+    const otherMark = scope.others.length;
     const group: SourceGroup = {
+      ...createSourceScope(),
       kind: RenderEntryKind.Group,
       seq,
       zIndex,
       preserveDrawOrder: this._resolvePreserveDrawOrder(node),
       node,
-      entries: [],
-      _nextSeq: 0,
-      firstZ: null,
-      hasMixedZ: false,
+      itemMark: mark,
     };
 
-    scope.entries.push(group);
+    scope.others.push(group);
     this._sourceStack.push(group);
 
     const previousProducer = this._sourceProducer;
@@ -567,7 +569,7 @@ export class RenderPlanBuilder {
       this._sourceStack.pop();
     }
 
-    this._resolveViewAttribution(node, scope, mark, seq);
+    this._resolveViewAttribution(node, scope, mark, otherMark, seq);
   }
 
   /**
@@ -584,13 +586,14 @@ export class RenderPlanBuilder {
    * items, and a nested producer that read the view has already collapsed
    * itself, so this only ever fires for the OUTERMOST reader of a chain.
    */
-  private _resolveViewAttribution(node: RenderNode, scope: SourceScope, mark: number, seq: number): void {
+  private _resolveViewAttribution(node: RenderNode, scope: SourceScope, mark: number, otherMark: number, seq: number): void {
     if (!this._sourceViewReaders.has(node)) {
       return;
     }
 
-    scope.entries.length = mark;
-    scope.entries.push({ kind: RenderEntryKind.Barrier, seq, node, reason: LiveEntryReason.ViewDependent });
+    scope.items.truncate(mark);
+    scope.others.length = otherMark;
+    scope.others.push({ kind: RenderEntryKind.Barrier, seq, node, reason: LiveEntryReason.ViewDependent, itemMark: mark });
   }
 
   /**
@@ -612,7 +615,7 @@ export class RenderPlanBuilder {
    * outermost producer, so a view read attributed to it covers everything below
    * it and there is nothing left to persist.
    */
-  private _discoverSource(node: RenderNode): SourceEntry[] | null {
+  private _discoverSource(node: RenderNode): SourceScope | null {
     const scope = createSourceScope();
     const previousTracked = this._trackedRoot;
     const previousCaptureCull = this._captureCullActive;
@@ -623,7 +626,6 @@ export class RenderPlanBuilder {
     this._trackedRoot = null;
     this._captureCullActive = false;
     this._sourceViewReaders.clear();
-    this._nextItemHandle = 0;
     this._sourceStack.push(scope);
     this._sourceProducer = node;
 
@@ -636,7 +638,7 @@ export class RenderPlanBuilder {
       this._captureCullActive = previousCaptureCull;
     }
 
-    return this._sourceViewReaders.has(node) ? null : scope.entries;
+    return this._sourceViewReaders.has(node) ? null : scope;
   }
 
   /**
@@ -649,20 +651,88 @@ export class RenderPlanBuilder {
    * of that: the scene-graph walk, the transform derivation and the material
    * resolve for items the rect rejects.
    */
-  private _emitSourceSelection(entries: readonly SourceEntry[], selection: SourceSelection, rect: ReadonlyRectangle): void {
-    for (const entry of entries) {
-      if (entry.kind === RenderEntryKind.Draw) {
-        this._emitSelectedItem(entry, selection, rect);
-      } else if (entry.kind === RenderEntryKind.Group) {
-        this._emitSelectedGroup(entry, selection, rect);
-      } else {
-        // Live re-dispatch through the ordinary collect path, at its stored
-        // placement. A view-dependent producer therefore sees the CURRENT view
-        // and rebuilds its coverage; a barrier or boundary keeps every bit of
-        // its own semantics, including its own retention tier.
-        entry.node._collect(this, entry.seq);
+  private _emitSourceSelection(scope: SourceScope, selection: SourceSelection, rect: ReadonlyRectangle): void {
+    const bits = selection.product.selectScope(scope, rect, selection.source.visibility);
+    const items = scope.items;
+    const others = scope.others;
+    const count = items.count;
+    const otherCount = others.length;
+    const seq = items.seq;
+    const zIndex = items.zIndex;
+    const drawables = items.drawables;
+    const minX = items.minX;
+    const minY = items.minY;
+    const maxX = items.maxX;
+    const maxY = items.maxY;
+    const words = bits.words;
+    const wordCount = bits.wordCount;
+    let other = 0;
+    let selected = 0;
+
+    // Walk the ADMITTED items only, one set bit at a time, instead of stepping
+    // over every stored item and asking. A scope that holds a million items and
+    // admits a quarter of them otherwise pays three quarters of its loop to
+    // reject — the exact cost the spatial index was built to stop paying, still
+    // being paid one layer further out. Skipping empty words makes the walk
+    // O(items / 32 + admitted).
+    //
+    // The interleaved `others` keep their placement: each is emitted at the
+    // first admitted index that reaches its mark, which is still after every
+    // item stored before it (a rejected item emits nothing, so it constrains no
+    // ordering) and before every item stored after it.
+    for (let w = 0; w < wordCount; w++) {
+      let word = words[w]!;
+
+      if (word === 0) {
+        continue;
+      }
+
+      const base = w << 5;
+
+      while (word !== 0) {
+        const lowest = word & -word;
+        const i = base + (31 - Math.clz32(lowest));
+
+        word ^= lowest;
+
+        while (other < otherCount && others[other]!.itemMark <= i) {
+          this._emitSelectedOther(others[other]!, selection, rect);
+          other++;
+        }
+
+        this._emitSelectedItem(drawables[i]!, seq[i]!, zIndex[i]!, minX[i]!, minY[i]!, maxX[i]!, maxY[i]!);
+        selected++;
       }
     }
+
+    const culled = count - selected;
+
+    while (other < otherCount) {
+      this._emitSelectedOther(others[other]!, selection, rect);
+      other++;
+    }
+
+    if (culled > 0) {
+      // One note per scope rather than per item: `noteCulled` sets a flag, and
+      // the count is a stat. Both stay exactly what a full collect reports.
+      this.backend.stats.culledNodes += culled;
+      this._noteViewCulled();
+    }
+  }
+
+  /** A stored non-item entry: a nested group, or a live re-dispatch. */
+  private _emitSelectedOther(other: SourceOther, selection: SourceSelection, rect: ReadonlyRectangle): void {
+    if (other.kind === RenderEntryKind.Group) {
+      this._emitSelectedGroup(other, selection, rect);
+
+      return;
+    }
+
+    // Live re-dispatch through the ordinary collect path, at its stored
+    // placement. A view-dependent producer therefore sees the CURRENT view and
+    // rebuilds its coverage; a barrier or boundary keeps every bit of its own
+    // semantics, including its own retention tier.
+    other.node._collect(this, other.seq);
   }
 
   /**
@@ -682,37 +752,28 @@ export class RenderPlanBuilder {
    * them anyway would be two getter calls per item on the one path whose whole
    * purpose is to be cheap at a million.
    */
-  private _emitSelectedItem(item: PersistentDrawItem, selection: SourceSelection, rect: ReadonlyRectangle): void {
-    const drawable = item.drawable;
-
-    if (!selection.source.admits(item, rect)) {
-      this.backend.stats.culledNodes++;
-      this._noteViewCulled();
-
-      return;
-    }
-
-    reserveEntryPlacement(this._currentScope(), item.seq, item.zIndex);
+  private _emitSelectedItem(drawable: Drawable, seq: number, zIndex: number, minX: number, minY: number, maxX: number, maxY: number): void {
+    reserveEntryPlacement(this._currentScope(), seq, zIndex);
 
     const command = this._acquireDrawCommand();
 
     command.drawable = drawable;
     command.nodeIndex = this._nodeIndex++;
-    command.seq = item.seq;
-    command.zIndex = item.zIndex;
+    command.seq = seq;
+    command.zIndex = zIndex;
     command.groupIndex = undefined;
     command.material = drawable._getOrComputeMaterialKey(this.backend);
 
     // The stored extent is the drawable's own, unchanged — the same argument
-    // the scan just made. Asking the node again would resolve its parent chain a
-    // second time for an answer already in hand.
-    command.minX = item.minX;
-    command.minY = item.minY;
-    command.maxX = item.maxX;
-    command.maxY = item.maxY;
+    // the query just made. Asking the node again would resolve its parent chain
+    // a second time for an answer already in hand.
+    command.minX = minX;
+    command.minY = minY;
+    command.maxX = maxX;
+    command.maxY = maxY;
 
     this._noteSelectedItemKept(command, drawable);
-    this._pushDrawEntry(item.seq, item.zIndex, command);
+    this._pushDrawEntry(seq, zIndex, command);
   }
 
   /**
@@ -774,7 +835,7 @@ export class RenderPlanBuilder {
     this._scopeStack.push(groupScope);
 
     try {
-      this._emitSourceSelection(group.entries, selection, rect);
+      this._emitSourceSelection(group, selection, rect);
     } finally {
       this._scopeStack.pop();
     }
@@ -830,6 +891,15 @@ export class RenderPlanBuilder {
 
     const ancestryStamp = node._globalTransformStamp;
 
+    // Persistent-indexed tier, ABOVE the capture decision. A root whose source
+    // the backend can serve from slot-addressed stores does not produce entries
+    // at all: the frame either re-issues the order stream the last selection
+    // built, or rebuilds that stream from a membership delta. Both are cheaper
+    // than the capture tiers below, and neither materialises a staying item.
+    if (this._collectPersistentRoot(representation, view, contentRevision, structureRevision, ancestryStamp, transformRevision)) {
+      return;
+    }
+
     // Transform is settled separately from the equality keys: a transform-only
     // descendant move patches its baked row in place instead of invalidating,
     // which is what keeps a partly-dynamic scene on the recorded tier.
@@ -869,7 +939,8 @@ export class RenderPlanBuilder {
       if (selection === null) {
         node._collectForRenderPlan(this);
       } else {
-        this._emitSourceSelection(selection.entries, selection, this.cullRect);
+        this._emitSourceSelection(selection.rootScope, selection, this.cullRect);
+        selection.product.commitSelection(selection.source.scopes);
       }
 
       return;
@@ -888,7 +959,8 @@ export class RenderPlanBuilder {
       if (selection === null) {
         node._collectForRenderPlan(this);
       } else {
-        this._emitSourceSelection(selection.entries, selection, this._captureCullRect);
+        this._emitSourceSelection(selection.rootScope, selection, this._captureCullRect);
+        selection.product.commitSelection(selection.source.scopes);
       }
     } finally {
       this._trackedRoot = previousTracked;
@@ -896,6 +968,111 @@ export class RenderPlanBuilder {
     }
 
     representation.commitCapture(contentRevision, structureRevision, transformRevision, ancestryStamp, view, backend, target, this._peekCurrentScopeEntries());
+  }
+
+  /**
+   * Draw one render root straight out of its persistent slot stores, or report
+   * that it does not qualify.
+   *
+   * Two frames exist here. When the camera still lies inside the rect the last
+   * selection admitted against, the answer it produced is still the right one —
+   * same argument as the capture margin, one tier down — so the same order
+   * stream is re-issued and the frame costs one draw call. Otherwise the
+   * membership is re-queried, the delta hands slots to arrivals and takes them
+   * back from departures, and only the arrivals have their per-slot data
+   * written. A staying item is touched exactly once, to write its position in
+   * the order stream.
+   *
+   * Requires a source that still describes the subtree: everything below keys on
+   * the items' stored world bounds, and the source is invalidated by any content,
+   * structure, ancestry or transform change. So a moved subtree does not arrive
+   * here at all — it takes the transform-reconcile tier below, which stays O(k).
+   */
+  private _collectPersistentRoot(
+    representation: RetainedRootRepresentation,
+    view: View,
+    contentRevision: number,
+    structureRevision: number,
+    ancestryStamp: number,
+    transformRevision: number,
+  ): boolean {
+    const source = representation.source;
+
+    if (!source?.isUsable(contentRevision, structureRevision, ancestryStamp, transformRevision)) {
+      return false;
+    }
+
+    const rootScope = source.rootScope;
+
+    if (rootScope === null) {
+      return false;
+    }
+
+    const bundle = representation.persistentSlots(source, this.backend);
+
+    if (bundle === null) {
+      return false;
+    }
+
+    const product = representation.ensureDerivedProduct();
+
+    product.slotsEnabled = true;
+
+    const cached = representation.persistentSelectionCovers(view) ? representation.lastPersistentDraw : null;
+
+    if (cached !== null && cached.bundle === bundle) {
+      this._currentScope().persistentDraw = cached;
+
+      return true;
+    }
+
+    if (!product.matches(source.scopes.length)) {
+      product.rebind(source.scopes);
+    }
+
+    // Admit against the view grown by the same margin a capture uses, so the
+    // stream this selection produces stays valid for every view still inside it.
+    this._inflateCaptureCullRect(view);
+    this._captureCullActive = false;
+
+    const rect = this._captureCullRect;
+
+    product.beginSelection();
+    this._selectMembership(rootScope, product, source);
+    product.commitSelection(source.scopes);
+
+    const slots = product.slots;
+    const backend = this.backend as RenderBackend & PersistentSlotBackend;
+
+    if (slots.enteredCount > 0) {
+      backend._writePersistentSlots!(bundle, source, slots.entered, slots.enteredCount);
+    }
+
+    // One note for the whole root rather than one per item: the count is exact
+    // either way, and it is what proves the tier still culls.
+    this.backend.stats.culledNodes += source.itemCount - product.delta.visible;
+    representation.notePersistentSelection(rect);
+    this._currentScope().persistentDraw = representation.persistentDrawRecord(bundle, slots.order, slots.orderCount);
+
+    return true;
+  }
+
+  /**
+   * Fill every scope's membership without emitting anything.
+   *
+   * The subtree cull a nested group gets on the ordinary path is deliberately
+   * absent: it is an optimisation over a per-item test, and here the per-item
+   * test is the spatial index, which already answers for a fully off-screen
+   * group in the time it takes to reject its cells.
+   */
+  private _selectMembership(scope: SourceScope, product: DerivedRootProduct, source: RenderRootSource): void {
+    product.selectScope(scope, this._captureCullRect, source.visibility);
+
+    for (const other of scope.others) {
+      if (other.kind === RenderEntryKind.Group) {
+        this._selectMembership(other, product, source);
+      }
+    }
   }
 
   /**
@@ -924,13 +1101,14 @@ export class RenderPlanBuilder {
     const existing = representation.source;
 
     if (existing?.isUsable(contentRevision, structureRevision, ancestryStamp, transformRevision)) {
-      return { entries: existing.entries, source: existing };
+      return this._beginSelection(existing, representation.ensureDerivedProduct());
     }
 
     // Stale items describe a subtree that no longer exists, and world bounds
     // stored against a different ancestry are not repairable. Release them here
     // rather than leaving a million dead records reachable until the next build.
     existing?.invalidate();
+    representation.derivedProduct?.release();
 
     if (!representation.shouldBuildSource()) {
       return null;
@@ -948,10 +1126,29 @@ export class RenderPlanBuilder {
     }
 
     const source = representation.ensureSource();
+    const product = representation.ensureDerivedProduct();
 
     source.adopt(discovered, contentRevision, structureRevision, ancestryStamp, transformRevision);
+    product.rebind(source.scopes);
 
-    return { entries: discovered, source };
+    return this._beginSelection(source, product);
+  }
+
+  /** Open a selection window over `source`; every membership set starts empty. */
+  private _beginSelection(source: RenderRootSource, product: DerivedRootProduct): SourceSelection | null {
+    const rootScope = source.rootScope;
+
+    if (rootScope === null) {
+      return null;
+    }
+
+    if (!product.matches(source.scopes.length)) {
+      product.rebind(source.scopes);
+    }
+
+    product.beginSelection();
+
+    return { rootScope, source, product };
   }
 
   /**
@@ -1029,17 +1226,7 @@ export class RenderPlanBuilder {
       // nodeIndex, no transform row, no material key — the cut-1 invariant.
       // Bounds are read because they ARE the item's payload, and they are a
       // cache hit for an unmoved node.
-      this._sourceStack[this._sourceStack.length - 1]!.entries.push({
-        kind: RenderEntryKind.Draw,
-        handle: this._nextItemHandle++,
-        drawable,
-        seq: placementSeq,
-        zIndex: placementZ,
-        minX: bounds.left,
-        minY: bounds.top,
-        maxX: bounds.right,
-        maxY: bounds.bottom,
-      });
+      this._sourceStack[this._sourceStack.length - 1]!.items.push(drawable, placementSeq, placementZ, bounds.left, bounds.top, bounds.right, bounds.bottom);
 
       return;
     }
@@ -1306,6 +1493,7 @@ export class RenderPlanBuilder {
       transformNode: null,
       retainedInstructions: null,
       retainedRecordTarget: null,
+      persistentDraw: null,
       _nextSeq: 0,
       firstZ: null,
       firstPipelineKey: null,
@@ -1323,6 +1511,7 @@ export class RenderPlanBuilder {
     scope.transformNode = null;
     scope.retainedInstructions = null;
     scope.retainedRecordTarget = null;
+    scope.persistentDraw = null;
     scope._nextSeq = 0;
     scope.firstZ = null;
     scope.firstPipelineKey = null;

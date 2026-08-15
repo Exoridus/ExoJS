@@ -64,6 +64,8 @@ const sourceByName: Record<string, string> = Object.fromEntries(shaders.map(entr
 // or removed.
 const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['sprite.vert', 'sprite.frag'],
+  // Persistent-indexed sprite variant: same fragment stage, slot-fetching vertex stage.
+  ['sprite-indexed.vert', 'sprite.frag'],
   ['mesh.vert', 'mesh.frag'],
   ['particle.vert', 'particle.frag'],
   ['ribbon.vert', 'ribbon.frag'],

@@ -1,8 +1,9 @@
-import type { Drawable } from '#rendering/Drawable';
 import type { RenderNode } from '#rendering/RenderNode';
 
 import type { EntryPlacementState } from './EntryPlacement';
-import type { RenderEntryKind } from './RenderCommand';
+import { PackedSourceItems } from './PackedSourceItems';
+import { RenderEntryKind } from './RenderCommand';
+import { SourceVisibilityIndex } from './SourceVisibilityIndex';
 
 /**
  * Why an entry must be re-dispatched live on every selection instead of being
@@ -20,43 +21,6 @@ export const enum LiveEntryReason {
    * `view.center`). Attributed to the producer that read it, never to the root.
    */
   ViewDependent,
-}
-
-/**
- * @internal
- *
- * One persistent, replayable draw in a {@link RenderRootSource}.
- *
- * Deliberately NOT a `RetainedFragmentDraw`. That type carries `material` (a
- * backend-bound {@link MaterialKey}) and `nodeIndex` (a frame-local transform
- * row), and neither survives the source's contract: the source outlives frames
- * and must not assume a backend. Both are re-derived when a selection is emitted
- * — the material because a backend switch invalidates it anyway, the row because
- * it is assigned per frame.
- *
- * `minX`..`maxY` are the drawable's WORLD bounds as of discovery. They are
- * ancestry-dependent, so an ancestry-stamp change invalidates them (see the
- * source's contract). The cut-1 scan does NOT read them — it goes through
- * `Drawable._inCullRect`, which is live and therefore correct even when they are
- * stale — they are the payload a spatial index selects on, and the reason the
- * source is keyed on ancestry at all.
- */
-export interface PersistentDrawItem {
-  readonly kind: RenderEntryKind.Draw;
-  /**
-   * Identity within this source, stable until the next content/structure
-   * rebuild. A producer maps to 0..n items — a container contributes none, a
-   * sprite one, a composite drawable several — so this is the handle the free
-   * list, the visibility index and the delta key on, not the drawable.
-   */
-  handle: number;
-  drawable: Drawable;
-  seq: number;
-  zIndex: number;
-  minX: number;
-  minY: number;
-  maxX: number;
-  maxY: number;
 }
 
 /**
@@ -87,17 +51,53 @@ export interface LiveEntry {
   seq: number;
   node: RenderNode;
   reason: LiveEntryReason;
+  /**
+   * How many of the owning scope's items had been recorded when this entry was
+   * pushed — i.e. where it sits in the scope's recorded order.
+   *
+   * Recorded order, not `seq`, is what the emit walk has to reproduce: `seq` is
+   * the caller's explicit placement and an emitter is free to hand out a lower
+   * one after a higher one, whereas the order entries were pushed in IS the
+   * order a full collect produced. The optimizer re-sorts by `(zIndex, seq)`
+   * afterwards exactly as it does for a live collect.
+   */
+  itemMark: number;
 }
 
 /**
- * One entry container inside the source: its entries plus the placement
- * bookkeeping that decides their draw order. Shared shape with a frame-local
- * `GroupScope` through {@link EntryPlacementState}, which is what keeps the
- * `(zIndex, seq)` rule single-sourced across the two.
  * @internal
+ *
+ * One entry container inside the source: its items, its non-item entries, and
+ * the placement bookkeeping that decides their draw order.
+ *
+ * Items live in a {@link PackedSourceItems} rather than in the entry list, which
+ * is the shape the delta needs: a scope's items are contiguous and in recorded
+ * order, so membership is a bit range that can be scanned in draw order without
+ * an indirection table, and the store costs 44 bytes an item instead of the 235
+ * an object per item measured at a million.
+ *
+ * Shared placement shape with a frame-local `GroupScope` through
+ * {@link EntryPlacementState}, which is what keeps the `(zIndex, seq)` rule
+ * single-sourced across the two.
  */
 export interface SourceScope extends EntryPlacementState {
-  readonly entries: SourceEntry[];
+  readonly items: PackedSourceItems;
+  /** Nested groups and live entries, in recorded order (see {@link LiveEntry.itemMark}). */
+  readonly others: SourceOther[];
+  /** Spatial index over {@link items}, built once when the source is finalized. */
+  readonly index: SourceVisibilityIndex;
+  /**
+   * Depth-first position of this scope among the source's scopes, assigned when
+   * the source is finalized. The derived product keys its per-scope state on it.
+   */
+  ordinal: number;
+  /**
+   * First global item handle of this scope. Scope-local index `i` is global
+   * handle `handleBase + i`; scopes are laid out in depth-first order so the
+   * handle space is a partition, which is what lets one free list and one slot
+   * table serve the whole root.
+   */
+  handleBase: number;
 }
 
 /**
@@ -119,15 +119,46 @@ export interface SourceGroup extends SourceScope {
   zIndex: number;
   preserveDrawOrder: boolean;
   node: RenderNode;
+  /** See {@link LiveEntry.itemMark}. */
+  itemMark: number;
 }
 
-/** @internal */
-export type SourceEntry = PersistentDrawItem | SourceGroup | LiveEntry;
+/** A scope's non-item entries: nested groups and live re-dispatches. @internal */
+export type SourceOther = SourceGroup | LiveEntry;
 
 /** A fresh, empty source scope with its placement state at the start. @internal */
 export const createSourceScope = (): SourceScope => ({
-  entries: [],
+  items: new PackedSourceItems(),
+  others: [],
+  index: new SourceVisibilityIndex(),
+  ordinal: -1,
+  handleBase: 0,
   _nextSeq: 0,
   firstZ: null,
   hasMixedZ: false,
 });
+
+/**
+ * Walk `scope` and every scope below it in depth-first order, assigning
+ * ordinals and global handle bases and building each scope's spatial index.
+ *
+ * Runs once per source build. Returns the total item count, which is the size of
+ * the root's handle space.
+ * @internal
+ */
+export const finalizeSourceScopes = (scope: SourceScope, out: SourceScope[], nextHandle: number): number => {
+  scope.ordinal = out.length;
+  scope.handleBase = nextHandle;
+  out.push(scope);
+  scope.index.build(scope.items);
+
+  let handle = nextHandle + scope.items.count;
+
+  for (const other of scope.others) {
+    if (other.kind === RenderEntryKind.Group) {
+      handle = finalizeSourceScopes(other, out, handle);
+    }
+  }
+
+  return handle;
+};

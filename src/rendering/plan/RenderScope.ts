@@ -4,6 +4,7 @@ import type { Geometry } from '#rendering/geometry/Geometry';
 import type { MaskSource, RenderNode } from '#rendering/RenderNode';
 import type { BlendModes } from '#rendering/types';
 
+import type { PersistentSlotDrawRecord } from './PersistentSlotDraw';
 import type { DrawCommand, RenderEntryKind } from './RenderCommand';
 import type { RetainedInstructionSet } from './RetainedInstructionSet';
 
@@ -103,6 +104,12 @@ export interface GroupScope {
    * walking entries. `null` on every other scope.
    */
   retainedInstructions: RetainedInstructionSet | null;
+  /**
+   * One render root's persistent-indexed draw spliced into this scope: the
+   * entries are EMPTY and the player asks the backend to draw the order stream
+   * instead of walking them. `null` on every other scope.
+   */
+  persistentDraw: PersistentSlotDrawRecord | null;
   /**
    * Armed record target: the plan player records this scope's
    * playback (flush-level batches + nested-group markers) into the set.

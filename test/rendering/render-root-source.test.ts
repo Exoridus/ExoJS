@@ -6,7 +6,7 @@ import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
 import { RenderPlanPlayer } from '#rendering/plan/RenderPlanPlayer';
 import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
-import { LiveEntryReason, type SourceEntry } from '#rendering/plan/RenderSourceItem';
+import { LiveEntryReason, type SourceOther, type SourceScope } from '#rendering/plan/RenderSourceItem';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { RenderNode } from '#rendering/RenderNode';
@@ -170,14 +170,44 @@ const playFrame = (root: RenderNode, backend: RenderBackend): number => {
 
 const sourceOf = (root: RenderNode): RenderRootSource | null => root._retainedRootRepresentation().source;
 
-const entriesOf = (root: RenderNode): readonly SourceEntry[] => {
-  const source = sourceOf(root);
+/**
+ * One entry of the root scope in RECORDED order — the shape the source used to
+ * hold as objects, rebuilt from the packed store so these tests keep asserting
+ * order and kind rather than storage layout.
+ */
+type SourceEntryView = { readonly kind: RenderEntryKind.Draw; readonly drawable: Drawable; readonly seq: number } | SourceOther;
 
-  if (source === null) {
+const scopeEntries = (scope: SourceScope): SourceEntryView[] => {
+  const items = scope.items;
+  const out: SourceEntryView[] = [];
+  let other = 0;
+
+  for (let i = 0; i < items.count; i++) {
+    while (other < scope.others.length && scope.others[other]!.itemMark <= i) {
+      out.push(scope.others[other]!);
+      other++;
+    }
+
+    out.push({ kind: RenderEntryKind.Draw, drawable: items.drawables[i]!, seq: items.seq[i]! });
+  }
+
+  while (other < scope.others.length) {
+    out.push(scope.others[other]!);
+    other++;
+  }
+
+  return out;
+};
+
+const entriesOf = (root: RenderNode): readonly SourceEntryView[] => {
+  const source = sourceOf(root);
+  const rootScope = source?.rootScope ?? null;
+
+  if (rootScope === null) {
     throw new Error('the root has no persistent source');
   }
 
-  return source.entries;
+  return scopeEntries(rootScope);
 };
 
 /** A view whose world rect is `[0,0 .. 800,600]`, matching the test render target. */

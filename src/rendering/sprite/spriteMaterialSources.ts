@@ -239,16 +239,124 @@ export const composeSpriteMaterialFragmentGlsl = (fragment: string): string => {
 };
 
 /**
- * WGSL vertex stage for the custom sprite-material path. Declares the
- * per-instance `VertexInput` (locations 0, 3, 5, 6), the `VertexOutput` a
- * custom `@fragment` consumes, the group(0) projection uniform + shared
- * transform storage buffers, and the `vertexMain` entry point.
+ * The whole WGSL sprite vertex stage EXCEPT where the per-sprite record comes
+ * from: the `VertexOutput` a sprite fragment consumes, the boundary snap, and
+ * `spriteVertexCore`, which turns one record plus a corner id into that output.
  *
- * Not fed to `createShaderModule` on its own — {@link spriteMaterialPrologueWgsl}
- * pairs it with the group(1) base-texture slot table.
+ * Every WGSL sprite path shares this text — the streamed default path, the
+ * custom-material path, and the persistent-indexed path — because the three
+ * differ only in whether the record arrives as vertex attributes, as a row of
+ * the shared frame storage, or as a row of a root's persistent slot store. The
+ * geometry, the snapping and the tint resolve are the SAME contract in all
+ * three, and a copy per path is how two of them silently stop matching.
+ *
+ * Reads the module-scope `projection` uniform rather than taking it as an
+ * argument, so a path may extend `ProjectionUniforms` with fields of its own
+ * (see `buildPersistentSpriteShaderSource`) as long as the three this needs —
+ * `matrix`, `group`, `viewport` — keep their meaning.
  * @internal
  */
-export const spriteVertexWgsl = `
+export const spriteVertexCoreWgsl = `
+struct VertexOutput {
+    @builtin(position) position: vec4<f32>,
+    @location(0) texcoord: vec2<f32>,
+    @location(1) color: vec4<f32>,
+    // Opaque packed slot/flag word: bits 0..7 select the batch texture slot,
+    // bit 8 asks for the sample to be converted to premultiplied alpha. Pass it
+    // unchanged to sampleBase(); custom fragments must not interpret it.
+    @location(2) @interpolate(flat) textureSlot: u32,
+};
+
+// Round one local boundary coordinate to the device grid along an axis whose
+// local-to-device scale is scale: floor(L*scale + 0.5) / scale. Pure in the
+// boundary value, so two quads sharing a boundary snap identically — seams stay
+// closed.
+fn snapBoundary(localValue: f32, scale: f32) -> f32 {
+    if (abs(scale) < 1e-6) {
+        return localValue;
+    }
+    return floor(localValue * scale + 0.5) / scale;
+}
+
+// One sprite corner, from its already-resolved record: local bounds, UV bounds
+// (CPU pre-swaps for flipY), the world transform as m0 = (a, b, c, d) /
+// m1 = (tx, ty, snapMode, *), the packed rgba8 tint word, and the opaque
+// slot/flag word to forward. \`vid\` is 0..3 in TL/TR/BR/BL order.
+fn spriteVertexCore(
+    localBounds: vec4<f32>,
+    uvBounds: vec4<f32>,
+    m0: vec4<f32>,
+    m1: vec4<f32>,
+    tintWord: u32,
+    packedSlotFlags: u32,
+    vid: u32,
+) -> VertexOutput {
+    var output: VertexOutput;
+
+    let cornerX = ((vid + 1u) >> 1u) & 1u;
+    let cornerY = vid >> 1u;
+
+    var localX = select(localBounds.x, localBounds.z, cornerX == 1u);
+    var localY = select(localBounds.y, localBounds.w, cornerY == 1u);
+
+    let tint = unpack4x8unorm(tintWord);
+
+    // Geometry boundary snap (m1.z == 2.0, axis-aligned only): round each local
+    // corner to the device grid so the quad edges land on whole device pixels.
+    // The per-axis device scale is derived from the composed pipeline.
+    if (m1.z == 2.0) {
+        let vp = projection.viewport.zw;
+        let dO = projection.matrix * projection.group * vec4<f32>(m1.x, m1.y, 0.0, 1.0);
+        let devO = projection.viewport.xy + (dO.xy * 0.5 + vec2<f32>(0.5)) * vp;
+        let dX = projection.matrix * projection.group * vec4<f32>(m1.x + m0.x, m1.y + m0.z, 0.0, 1.0);
+        let dY = projection.matrix * projection.group * vec4<f32>(m1.x + m0.y, m1.y + m0.w, 0.0, 1.0);
+        let devX = projection.viewport.xy + (dX.xy * 0.5 + vec2<f32>(0.5)) * vp;
+        let devY = projection.viewport.xy + (dY.xy * 0.5 + vec2<f32>(0.5)) * vp;
+        let scaleX = devX.x - devO.x;
+        let scaleY = devY.y - devO.y;
+        if (abs(devX.y - devO.y) < 1e-3 && abs(devY.x - devO.x) < 1e-3) {
+            localX = snapBoundary(localX, scaleX);
+            localY = snapBoundary(localY, scaleY);
+        }
+    }
+
+    let worldX = m0.x * localX + m0.y * localY + m1.x;
+    let worldY = m0.z * localX + m0.w * localY + m1.y;
+
+    var position = projection.matrix * projection.group * vec4<f32>(worldX, worldY, 0.0, 1.0);
+
+    // Render-only pixel snapping (m1.z: 0 = none, non-zero = snap origin): snap
+    // the node ORIGIN's device-pixel position and rigid-shift the whole
+    // primitive by the same delta. floor(x + 0.5) matches the CPU Math.round
+    // policy; WGSL round() is half-to-even. Grid alignment is independent of the
+    // y-axis convention because the staged viewport rect is whole device pixels.
+    if (m1.z != 0.0) {
+        let originClip = projection.matrix * projection.group * vec4<f32>(m1.x, m1.y, 0.0, 1.0);
+        let originDevice = projection.viewport.xy + (originClip.xy * 0.5 + vec2<f32>(0.5)) * projection.viewport.zw;
+        let snapDelta = (floor(originDevice + vec2<f32>(0.5)) - originDevice) * 2.0 / max(projection.viewport.zw, vec2<f32>(1.0));
+        position = vec4<f32>(position.xy + snapDelta, position.z, position.w);
+    }
+
+    output.position = position;
+
+    let u = select(uvBounds.x, uvBounds.z, cornerX == 1u);
+    let v = select(uvBounds.y, uvBounds.w, cornerY == 1u);
+    output.texcoord = vec2<f32>(u, v);
+
+    output.color = vec4<f32>(tint.rgb * tint.a, tint.a);
+    output.textureSlot = packedSlotFlags;
+
+    return output;
+}
+`;
+
+/**
+ * The group(0) declarations every WGSL sprite path that reads the SHARED
+ * per-frame transform storage makes: the projection uniform, the transform rows
+ * and the packed rgba8 tint words.
+ * @internal
+ */
+export const spriteSharedStorageWgsl = `
 struct ProjectionUniforms {
     matrix: mat4x4<f32>,
     group: mat4x4<f32>,
@@ -265,98 +373,54 @@ struct TransformSlot {
 // Packed rgba8 tint (r|g|b|a, 8 bits each, unpacked via unpack4x8unorm), one
 // u32 per instance.
 @group(0) @binding(2) var<storage, read> tints: array<u32>;
+`;
 
+/**
+ * The default sprite fragment stage: sample this instance's slot with explicit
+ * derivatives, resolve the premultiply flag the vertex stage forwarded, and
+ * modulate by the interpolated tint.
+ * @internal
+ */
+export const spriteFragmentMainWgsl = `
+@fragment
+fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
+    // Compute screen-space derivatives in uniform control flow before the
+    // per-slot switch (see buildSpriteTextureSlotWgsl for why sampling takes
+    // explicit derivatives).
+    let ddx = dpdx(input.texcoord);
+    let ddy = dpdy(input.texcoord);
+    let sample = sampleTexture(input.textureSlot & 0xffu, input.texcoord, ddx, ddy);
+    let resolvedSample = select(sample, vec4(sample.rgb * sample.a, sample.a), ((input.textureSlot >> 8u) & 1u) == 1u);
+
+    return resolvedSample * input.color;
+}
+`;
+
+/**
+ * WGSL vertex stage for the custom sprite-material path. Declares the
+ * per-instance `VertexInput` (locations 0, 3, 5, 6), the `VertexOutput` a
+ * custom `@fragment` consumes, the group(0) projection uniform + shared
+ * transform storage buffers, and the `vertexMain` entry point.
+ *
+ * Not fed to `createShaderModule` on its own — {@link spriteMaterialPrologueWgsl}
+ * pairs it with the group(1) base-texture slot table.
+ * @internal
+ */
+export const spriteVertexWgsl = `${spriteSharedStorageWgsl}
 struct VertexInput {
     @location(0) localBounds: vec4<f32>,
     @location(3) uvBounds: vec4<f32>,
     @location(5) packedSlotFlags: u32, // bits 0..7 = texture slot, bit 8 = premultiply sample
     @location(6) nodeIndex: u32,
 };
-
-struct VertexOutput {
-    @builtin(position) position: vec4<f32>,
-    @location(0) texcoord: vec2<f32>,
-    @location(1) color: vec4<f32>,
-    // Opaque packed slot/flag word. Pass it unchanged to sampleBase(); custom
-    // fragments must not interpret it as a plain slot index.
-    @location(2) @interpolate(flat) textureSlot: u32,
-};
-
-// Round one local boundary coordinate to the device grid along an axis whose
-// local-to-device scale is scale: floor(L*scale + 0.5) / scale. Pure in the
-// boundary value, so two quads sharing a boundary snap identically — seams stay
-// closed. Identical to the default sprite vertex stage.
-fn snapBoundary(localValue: f32, scale: f32) -> f32 {
-    if (abs(scale) < 1e-6) {
-        return localValue;
-    }
-    return floor(localValue * scale + 0.5) / scale;
-}
-
+${spriteVertexCoreWgsl}
 @vertex
 fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutput {
-    var output: VertexOutput;
-
-    let cornerX = ((vid + 1u) >> 1u) & 1u;
-    let cornerY = vid >> 1u;
-
-    var localX = select(input.localBounds.x, input.localBounds.z, cornerX == 1u);
-    var localY = select(input.localBounds.y, input.localBounds.w, cornerY == 1u);
-
-    // Fetch this instance's world transform and tint, keyed by nodeIndex:
-    // m0 = (a, b, c, d), m1 = (tx, ty, snapMode, 0); tint is its own packed
-    // rgba8 word, unpacked to 0..1 by the GPU (no manual math needed).
+    // This instance's world transform and tint, keyed by nodeIndex into the
+    // shared per-frame storage.
     let slot = transforms[input.nodeIndex];
-    let tint = unpack4x8unorm(tints[input.nodeIndex]);
 
-    // Geometry boundary snap (slot.m1.z == 2.0, axis-aligned only): round each
-    // local corner to the device grid so the quad edges land on whole device
-    // pixels. The per-axis device scale is derived from the composed pipeline.
-    // Identical to the default sprite stage.
-    if (slot.m1.z == 2.0) {
-        let vp = projection.viewport.zw;
-        let dO = projection.matrix * projection.group * vec4<f32>(slot.m1.x, slot.m1.y, 0.0, 1.0);
-        let devO = projection.viewport.xy + (dO.xy * 0.5 + vec2<f32>(0.5)) * vp;
-        let dX = projection.matrix * projection.group * vec4<f32>(slot.m1.x + slot.m0.x, slot.m1.y + slot.m0.z, 0.0, 1.0);
-        let dY = projection.matrix * projection.group * vec4<f32>(slot.m1.x + slot.m0.y, slot.m1.y + slot.m0.w, 0.0, 1.0);
-        let devX = projection.viewport.xy + (dX.xy * 0.5 + vec2<f32>(0.5)) * vp;
-        let devY = projection.viewport.xy + (dY.xy * 0.5 + vec2<f32>(0.5)) * vp;
-        let scaleX = devX.x - devO.x;
-        let scaleY = devY.y - devO.y;
-        if (abs(devX.y - devO.y) < 1e-3 && abs(devY.x - devO.x) < 1e-3) {
-            localX = snapBoundary(localX, scaleX);
-            localY = snapBoundary(localY, scaleY);
-        }
-    }
-
-    let worldX = slot.m0.x * localX + slot.m0.y * localY + slot.m1.x;
-    let worldY = slot.m0.z * localX + slot.m0.w * localY + slot.m1.y;
-
-    var position = projection.matrix * projection.group * vec4<f32>(worldX, worldY, 0.0, 1.0);
-
-    // Render-only pixel snapping (slot.m1.z: 0 = none, non-zero = snap origin),
-    // identical to the default sprite vertex stage: snap the node ORIGIN's
-    // device-pixel position and rigid-shift the whole primitive by the same
-    // delta. floor(x + 0.5) matches the CPU Math.round policy; WGSL round() is
-    // half-to-even. A custom material customizes only the fragment stage, so its
-    // origin snap must stay identical.
-    if (slot.m1.z != 0.0) {
-        let originClip = projection.matrix * projection.group * vec4<f32>(slot.m1.x, slot.m1.y, 0.0, 1.0);
-        let originDevice = projection.viewport.xy + (originClip.xy * 0.5 + vec2<f32>(0.5)) * projection.viewport.zw;
-        let snapDelta = (floor(originDevice + vec2<f32>(0.5)) - originDevice) * 2.0 / max(projection.viewport.zw, vec2<f32>(1.0));
-        position = vec4<f32>(position.xy + snapDelta, position.z, position.w);
-    }
-
-    output.position = position;
-
-    let u = select(input.uvBounds.x, input.uvBounds.z, cornerX == 1u);
-    let v = select(input.uvBounds.y, input.uvBounds.w, cornerY == 1u);
-    output.texcoord = vec2<f32>(u, v);
-
-    output.color = vec4<f32>(tint.rgb * tint.a, tint.a);
-    output.textureSlot = input.packedSlotFlags;
-
-    return output;
+    return spriteVertexCore(input.localBounds, input.uvBounds, slot.m0, slot.m1, tints[input.nodeIndex], input.packedSlotFlags, vid);
 }
 `;
 

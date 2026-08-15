@@ -11,8 +11,17 @@ import {
   type RetainedMaterialState,
 } from '#rendering/material/RetainedMaterialState';
 import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
+import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
+import { fillPersistentSpriteSlotTable, writePersistentSpriteSlots } from '#rendering/sprite/persistentSpriteSlots';
 import type { Sprite } from '#rendering/sprite/Sprite';
-import { buildSpriteTextureSlotWgsl, spriteMaterialPrologueWgsl, spriteMaterialTextureSlots } from '#rendering/sprite/spriteMaterialSources';
+import {
+  buildSpriteTextureSlotWgsl,
+  spriteFragmentMainWgsl,
+  spriteMaterialPrologueWgsl,
+  spriteMaterialTextureSlots,
+  spriteSharedStorageWgsl,
+  spriteVertexCoreWgsl,
+} from '#rendering/sprite/spriteMaterialSources';
 import { DataTexture } from '#rendering/texture/DataTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
@@ -24,6 +33,7 @@ import type { WebGpuBackend } from './WebGpuBackend';
 import { getWebGpuBlendState } from './WebGpuBlendState';
 import { WebGpuPassArena } from './WebGpuPassArena';
 import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
+import { persistentPremultiplyMaskIndex, persistentUniformBytes, WebGpuPersistentSlotStore } from './WebGpuPersistentSlotStore';
 import {
   retainedGroupUniformBytes,
   type WebGpuRetainedBatchPayload,
@@ -122,27 +132,7 @@ export const resolveSpriteBatchTextureSlots = (device: GPUDevice): number => {
  * @internal
  */
 export const buildSpriteShaderSource = (textureSlots: number): string => {
-  return `
-struct ProjectionUniforms {
-    matrix: mat4x4<f32>,
-    group: mat4x4<f32>,
-    viewport: vec4<f32>,        // device-pixel snap rect (x, y, width, height)
-};
-
-struct TransformSlot {
-    m0: vec4<f32>,
-    m1: vec4<f32>,
-};
-
-@group(0) @binding(0)
-var<uniform> projection: ProjectionUniforms;
-@group(0) @binding(1)
-var<storage, read> transforms: array<TransformSlot>;
-// Packed rgba8 tint (r|g|b|a, 8 bits each, unpacked via unpack4x8unorm), one
-// u32 per instance.
-@group(0) @binding(2)
-var<storage, read> tints: array<u32>;
-
+  return `${spriteSharedStorageWgsl}
 ${buildSpriteTextureSlotWgsl(textureSlots)}
 
 // Per-instance vertex layout (32 bytes per sprite). The four corners
@@ -156,109 +146,94 @@ struct VertexInput {
     @location(5) packedSlotFlags: u32,          // bits 0..7 = slot, bit 8 = premultiply
     @location(6) nodeIndex: u32,                // row into the shared transform storage buffer
 };
-
-struct VertexOutput {
-    @builtin(position) position: vec4<f32>,
-    @location(0) texcoord: vec2<f32>,
-    @location(1) color: vec4<f32>,
-    @location(2) @interpolate(flat) premultiplySample: u32,
-    @location(3) @interpolate(flat) textureSlot: u32,
-};
-
-// Round one local boundary coordinate to the device grid along an axis whose
-// local-to-device scale is scale: floor(L*scale + 0.5) / scale. Pure in the
-// boundary value, so two quads sharing a boundary snap identically — seams stay
-// closed. Degenerate scales pass the value through unchanged.
-fn snapBoundary(localValue: f32, scale: f32) -> f32 {
-    if (abs(scale) < 1e-6) {
-        return localValue;
-    }
-    return floor(localValue * scale + 0.5) / scale;
-}
-
+${spriteVertexCoreWgsl}
 @vertex
 fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutput {
-    var output: VertexOutput;
-
     // vid 0..3 → corners in TL, TR, BR, BL order (matches the static index
-    // buffer [0,1,2,0,2,3] used for indexed triangle-list drawing).
-    let cornerX = ((vid + 1u) >> 1u) & 1u;
-    let cornerY = vid >> 1u;
-
-    var localX = select(input.localBounds.x, input.localBounds.z, cornerX == 1u);
-    var localY = select(input.localBounds.y, input.localBounds.w, cornerY == 1u);
-
-    // Fetch this instance's world transform and tint, keyed by nodeIndex:
-    // m0 = (a, b, c, d), m1 = (tx, ty, snapMode, 0); tint is its own packed
-    // rgba8 word, unpacked to 0..1 by the GPU. The node tint is this sprite's
-    // own tint, so reading it here unifies with the mesh path and drops the
-    // per-instance color stream.
+    // buffer [0,1,2,0,2,3] used for indexed triangle-list drawing). The world
+    // transform and the tint are keyed by nodeIndex into the shared per-frame
+    // storage: the node tint IS this sprite's tint, which is what lets the path
+    // unify with the mesh one and drop the per-instance color stream.
     let slot = transforms[input.nodeIndex];
-    let tint = unpack4x8unorm(tints[input.nodeIndex]);
 
-    // Geometry boundary snap (slot.m1.z == 2.0, axis-aligned only): round each
-    // local corner to the device grid so the quad edges land on whole device
-    // pixels. The per-axis device scale is derived from the composed pipeline:
-    // device positions of the local origin and the two local unit axes give
-    // scaleX/scaleY and the cross-terms.
-    if (slot.m1.z == 2.0) {
-        let vp = projection.viewport.zw;
-        let dO = projection.matrix * projection.group * vec4<f32>(slot.m1.x, slot.m1.y, 0.0, 1.0);
-        let devO = projection.viewport.xy + (dO.xy * 0.5 + vec2<f32>(0.5)) * vp;
-        let dX = projection.matrix * projection.group * vec4<f32>(slot.m1.x + slot.m0.x, slot.m1.y + slot.m0.z, 0.0, 1.0);
-        let dY = projection.matrix * projection.group * vec4<f32>(slot.m1.x + slot.m0.y, slot.m1.y + slot.m0.w, 0.0, 1.0);
-        let devX = projection.viewport.xy + (dX.xy * 0.5 + vec2<f32>(0.5)) * vp;
-        let devY = projection.viewport.xy + (dY.xy * 0.5 + vec2<f32>(0.5)) * vp;
-        let scaleX = devX.x - devO.x;
-        let scaleY = devY.y - devO.y;
-        if (abs(devX.y - devO.y) < 1e-3 && abs(devY.x - devO.x) < 1e-3) {
-            localX = snapBoundary(localX, scaleX);
-            localY = snapBoundary(localY, scaleY);
-        }
-    }
-
-    let worldX = slot.m0.x * localX + slot.m0.y * localY + slot.m1.x;
-    let worldY = slot.m0.z * localX + slot.m0.w * localY + slot.m1.y;
-
-    var position = projection.matrix * projection.group * vec4<f32>(worldX, worldY, 0.0, 1.0);
-
-    // Render-only pixel snapping (slot.m1.z: 0 = none, non-zero = snap origin).
-    // Snap the node ORIGIN's device-pixel position and rigid-shift the whole
-    // primitive by the same delta. floor(x + 0.5) matches the CPU Math.round
-    // policy; WGSL round() is half-to-even. Grid alignment is independent of the
-    // y-axis convention because the staged viewport rect is whole device pixels.
-    if (slot.m1.z != 0.0) {
-        let originClip = projection.matrix * projection.group * vec4<f32>(slot.m1.x, slot.m1.y, 0.0, 1.0);
-        let originDevice = projection.viewport.xy + (originClip.xy * 0.5 + vec2<f32>(0.5)) * projection.viewport.zw;
-        let snapDelta = (floor(originDevice + vec2<f32>(0.5)) - originDevice) * 2.0 / max(projection.viewport.zw, vec2<f32>(1.0));
-        position = vec4<f32>(position.xy + snapDelta, position.z, position.w);
-    }
-    output.position = position;
-
-    let u = select(input.uvBounds.x, input.uvBounds.z, cornerX == 1u);
-    let v = select(input.uvBounds.y, input.uvBounds.w, cornerY == 1u);
-    output.texcoord = vec2<f32>(u, v);
-
-    output.color = vec4(tint.rgb * tint.a, tint.a);
-    output.textureSlot = input.packedSlotFlags & 0xFFu;
-    output.premultiplySample = (input.packedSlotFlags >> 8u) & 1u;
-
-    return output;
+    return spriteVertexCore(input.localBounds, input.uvBounds, slot.m0, slot.m1, tints[input.nodeIndex], input.packedSlotFlags, vid);
 }
+${spriteFragmentMainWgsl}`;
+};
 
-@fragment
-fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
-    // Compute screen-space derivatives in uniform control flow before the
-    // per-slot switch (see buildSpriteTextureSlotWgsl for why sampling takes
-    // explicit derivatives).
-    let ddx = dpdx(input.texcoord);
-    let ddy = dpdy(input.texcoord);
-    let sample = sampleTexture(input.textureSlot, input.texcoord, ddx, ddy);
-    let resolvedSample = select(sample, vec4(sample.rgb * sample.a, sample.a), input.premultiplySample == 1u);
+/**
+ * WGSL source for the PERSISTENT-INDEXED sprite pipeline, generated for the
+ * same `textureSlots` batch table as {@link buildSpriteShaderSource}.
+ *
+ * Same fragment stage, same geometry, same snapping, same tint resolve — the
+ * one difference is where a sprite's record comes from. The default pipeline
+ * streams a 32-byte instance per draw; here every record already lives on the
+ * GPU in slot-addressed storage that only changes when an item enters or leaves
+ * the view, and the draw supplies nothing per instance at all: there is no
+ * vertex buffer, and `@builtin(instance_index)` indexes the ORDER stream.
+ *
+ *   instance i → order[i] = slot → quads[slot], transforms[slot], tints[slot]
+ *
+ * That indirection is the whole point. The order stream is the semantic
+ * `(zIndex, seq)` sequence and is rewritten every selection (four bytes an
+ * entry); the slot stores are physical and are written only for arrivals.
+ *
+ * `textureSlot` rides in the transform row's spare fourth component — the one
+ * the canonical packer leaves at zero and no other shader reads. Which entry of
+ * a store's table a texture occupies is a BATCHING fact, not a property of the
+ * item, which is why it is derived into the slot rather than prepacked in the
+ * source. The premultiply flag is not stored at all: it is a property of the
+ * bound texture, so it arrives live as a bitmask over the table, indexed by the
+ * same slot number. A per-slot copy would go stale the moment a texture's
+ * `premultiplyAlpha` changed under a staying item.
+ * @internal
+ */
+export const buildPersistentSpriteShaderSource = (textureSlots: number): string => {
+  return `
+struct ProjectionUniforms {
+    matrix: mat4x4<f32>,
+    group: mat4x4<f32>,
+    viewport: vec4<f32>,        // device-pixel snap rect (x, y, width, height)
+    premultiplyMask: u32,       // bit i = base texture i samples unpremultiplied
+};
 
-    return resolvedSample * input.color;
+struct TransformSlot {
+    m0: vec4<f32>,
+    m1: vec4<f32>,
+};
+
+// One slot's static quad record: the drawable's own local bounds and the
+// frame's UV, with flipY already resolved by the CPU packer.
+struct SlotQuad {
+    bounds: vec4<f32>,
+    uv: vec4<f32>,
+};
+
+@group(0) @binding(0)
+var<uniform> projection: ProjectionUniforms;
+@group(0) @binding(1)
+var<storage, read> transforms: array<TransformSlot>;
+@group(0) @binding(2)
+var<storage, read> tints: array<u32>;
+@group(0) @binding(3)
+var<storage, read> quads: array<SlotQuad>;
+// The draw order, as slot numbers. Instance i draws slot order[i].
+@group(0) @binding(4)
+var<storage, read> order: array<u32>;
+
+${buildSpriteTextureSlotWgsl(textureSlots)}
+${spriteVertexCoreWgsl}
+@vertex
+fn vertexMain(@builtin(instance_index) instance: u32, @builtin(vertex_index) vid: u32) -> VertexOutput {
+    let slotIndex = order[instance];
+    let quad = quads[slotIndex];
+    let slot = transforms[slotIndex];
+    let textureSlot = u32(slot.m1.w);
+    let premultiply = (projection.premultiplyMask >> textureSlot) & 1u;
+
+    return spriteVertexCore(quad.bounds, quad.uv, slot.m0, slot.m1, tints[slotIndex], textureSlot | (premultiply << 8u), vid);
 }
-`;
+${spriteFragmentMainWgsl}`;
 };
 
 const instanceStrideBytes = 32;
@@ -370,6 +345,15 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   private _instanceFloat32 = new Float32Array(this._instanceData);
   private _instanceUint32 = new Uint32Array(this._instanceData);
   private readonly _pipelines: Map<string, GPURenderPipeline> = new Map<string, GPURenderPipeline>();
+
+  // Persistent-indexed path. Built on the first source a backend accepts rather
+  // than at connect: an application whose roots never reach the tier should not
+  // pay a WGSL compile and a pipeline layout for it, and acquisition happens
+  // once per source, never per frame.
+  private _persistentShaderModule: GPUShaderModule | null = null;
+  private _persistentBindGroupLayout: GPUBindGroupLayout | null = null;
+  private _persistentPipelineLayout: GPUPipelineLayout | null = null;
+  private readonly _persistentPipelines = new Map<string, GPURenderPipeline>();
 
   // Multi-texture batch slot count for the connected device (resolved from
   // its granted limits at connect; see resolveSpriteBatchTextureSlots). Fixed
@@ -539,6 +523,13 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
     this._customMaterials.clear();
     this._pipelines.clear();
+    // The persistent stores themselves belong to the backend, which invalidates
+    // them on the same event; what dies here is only this renderer's device-
+    // scoped shader module, layouts and pipeline cache.
+    this._persistentPipelines.clear();
+    this._persistentShaderModule = null;
+    this._persistentBindGroupLayout = null;
+    this._persistentPipelineLayout = null;
     this._indexBuffer = null;
     this._transformBindGroup = null;
     this._transformStorageBuffer = null;
@@ -613,6 +604,285 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
    */
   private _resolveBounds(sprite: Sprite): ReadonlyRectangle {
     return sprite.getLocalBounds();
+  }
+
+  // ── Persistent-indexed selection ──────────────────────────────────────────
+  // A render root whose whole subtree this renderer can serve draws out of
+  // slot-addressed storage instead of a streamed instance buffer. Same batching
+  // rules, same geometry, same fragment stage — what changes is only where the
+  // per-sprite record lives, which is what lets a camera step touch just the
+  // items that entered or left.
+
+  /** Capability flag, mirroring `_supportsRetainedBatches`. @internal */
+  public readonly _supportsPersistentSlots = true;
+
+  /**
+   * Decide whether this renderer can serve every item in `source` from one slot
+   * store, and allocate it if so.
+   *
+   * The rules are the shared sprite ones (see
+   * {@link fillPersistentSpriteSlotTable}); what is backend-specific is only the
+   * batch table's width and the store the answer is written into. Runs once per
+   * built source, never per frame.
+   * @internal
+   */
+  public _acquirePersistentSlotStore(source: RenderRootSource, backend: WebGpuBackend): WebGpuPersistentSlotStore | null {
+    const device = this._device;
+
+    if (device === null) {
+      return null;
+    }
+
+    const store = new WebGpuPersistentSlotStore();
+
+    if (!fillPersistentSpriteSlotTable(source, store, this._maxBatchTextures)) {
+      store.destroy();
+
+      return null;
+    }
+
+    this._ensurePersistentResources(device);
+    store.connectDevice(device, backend.accountant);
+
+    return store;
+  }
+
+  /**
+   * Fill the persistent rows of the items that just took a slot and push the
+   * blocks they landed on. See {@link writePersistentSpriteSlots} for why this
+   * never touches a drawable.
+   * @internal
+   */
+  public _writePersistentSlotRows(store: WebGpuPersistentSlotStore, source: RenderRootSource, entered: Int32Array, count: number): void {
+    const backend = this._backend;
+
+    if (backend === null) {
+      return;
+    }
+
+    // Both the growth (which replaces the GPU buffers) and the block uploads
+    // land on the queue timeline ahead of the deferred submit, so a draw of THIS
+    // store already recorded into the open pass would silently pick them up. End
+    // that pass first; a pass holding anyone else's draws is unaffected, because
+    // nothing but this store's own draws reads these buffers.
+    this._endPassOnPersistentHazard(backend, store);
+    writePersistentSpriteSlots(store, source, entered, count);
+    store.commitDirtySlots();
+  }
+
+  /**
+   * Draw `count` instances, instance `i` reading slot `order[i]`.
+   *
+   * One `drawIndexed` for the whole root: the store's texture table binds once,
+   * the order stream is issued verbatim, and no per-instance data crosses the
+   * bus. Nothing here may reorder or split the stream — it IS the draw order the
+   * plan built.
+   * @internal
+   */
+  public _drawPersistentSlots(store: WebGpuPersistentSlotStore, order: Uint32Array, count: number, backend: WebGpuBackend): void {
+    const device = this._device;
+
+    if (count === 0 || device === null || this._indexBuffer === null || this._persistentBindGroupLayout === null) {
+      return;
+    }
+
+    // Drain whatever the live path still holds: this root's stream draws at the
+    // position the plan gave it, which is after everything recorded before it.
+    this.flush();
+
+    // Match the live path's visibility handling: a fully-clipped scissor draws
+    // nothing, and the selection stays valid for the next frame.
+    const scissor = backend.getScissorRect();
+
+    if (scissor !== null && (scissor.width <= 0 || scissor.height <= 0)) {
+      return;
+    }
+
+    const coordinator = backend._passCoordinator;
+
+    // Resolving the bindings re-uploads mutated texture content on the queue
+    // timeline, which would retroactively change draws already recorded into the
+    // open pass — the same hazard the live flush guards, applied to the store's
+    // fixed texture table.
+    if (coordinator.passHasDraws) {
+      for (const texture of store.textures) {
+        if (backend._textureUploadWouldMutate(texture)) {
+          coordinator.endPass();
+          this._instanceArena.resetPass();
+          break;
+        }
+      }
+    }
+
+    const textureBindGroup = this._getOrCreateTextureBindGroup(device, backend, store.textures);
+
+    // The uniform block and the order buffer are both rewritten here, so the
+    // same aliasing argument as the slot writes applies before either happens.
+    const uniformDirty = this._stagePersistentUniforms(backend, store);
+
+    if (uniformDirty || store.orderWouldGrow(count)) {
+      this._endPassOnPersistentHazard(backend, store);
+    }
+
+    if (uniformDirty) {
+      device.queue.writeBuffer(store.uniformBuffer!, 0, store.uniformData.buffer, store.uniformData.byteOffset, persistentUniformBytes);
+      store.uniformWritten = true;
+    }
+
+    store.uploadOrder(order, count);
+
+    const active = coordinator.acquirePass();
+    const pass = active.pass;
+
+    pass.setPipeline(this._getPersistentPipeline(store.blendMode, backend.renderTargetFormat, coordinator.stencilActive, device));
+    pass.setBindGroup(0, store.bindGroup(device, this._persistentBindGroupLayout));
+    pass.setBindGroup(1, textureBindGroup);
+    pass.setIndexBuffer(this._indexBuffer, 'uint16');
+    pass.drawIndexed(indicesPerSprite, count, 0, 0, 0);
+
+    store.drawsInPass = active;
+    coordinator.markPassDraws();
+    backend.stats.batches++;
+    backend.stats.drawCalls++;
+    backend.stats.submittedNodes += count;
+  }
+
+  /**
+   * End the open pass when it already holds draws of THIS store, because the
+   * caller is about to rewrite a buffer those draws read. `queue.writeBuffer` is
+   * ordered against the submit rather than against the individual draws inside
+   * it, so without this the earlier draw would sample the new data.
+   */
+  private _endPassOnPersistentHazard(backend: WebGpuBackend, store: WebGpuPersistentSlotStore): void {
+    const coordinator = backend._passCoordinator;
+    const active = coordinator.activePass;
+
+    if (active !== null && store.drawsInPass === active && coordinator.passHasDraws) {
+      coordinator.endPass();
+      this._instanceArena.resetPass();
+      store.drawsInPass = null;
+    }
+  }
+
+  /**
+   * Stage this frame's projection, group matrix, snap rect and premultiply mask
+   * into the store's uniform block, and report whether any of it changed.
+   *
+   * The mask is resolved LIVE from the bound textures rather than being baked
+   * into a slot: whether a texture samples unpremultiplied is a property of the
+   * texture, and a per-slot copy would go stale under a staying item the moment
+   * it changed. The table is at most 32 entries, so one `u32` covers it.
+   */
+  private _stagePersistentUniforms(backend: WebGpuBackend, store: WebGpuPersistentSlotStore): boolean {
+    const data = store.uniformData;
+    const scratch = this._stagedReplayGroupData;
+
+    packAffineMat4(backend.renderGroupTransform ?? Matrix.identity, scratch, 0);
+
+    // Staged unconditionally: an unchanged rect makes this an identity write,
+    // while a changed one forces the rewrite the view stamp cannot see.
+    let dirty = packSnapViewport(backend, data, 32) || !store.uniformWritten;
+
+    let mask = 0;
+
+    for (let i = 0; i < store.textures.length; i++) {
+      if (backend.shouldPremultiplyTextureSample(store.textures[i]!)) {
+        mask |= 1 << i;
+      }
+    }
+
+    if (store.uniformWords[persistentPremultiplyMaskIndex] !== mask) {
+      store.uniformWords[persistentPremultiplyMaskIndex] = mask;
+      dirty = true;
+    }
+
+    const view = backend.view;
+
+    packAffineMat4(view.getTransform(), this._stagedPersistentViewData, 0);
+
+    if (!dirty) {
+      for (let i = 0; i < affineMat4FloatCount; i++) {
+        if (data[i] !== this._stagedPersistentViewData[i] || data[affineMat4FloatCount + i] !== scratch[i]) {
+          dirty = true;
+          break;
+        }
+      }
+    }
+
+    if (dirty) {
+      data.set(this._stagedPersistentViewData, 0);
+      data.set(scratch, affineMat4FloatCount);
+    }
+
+    return dirty;
+  }
+
+  /** Scratch for the packed view matrix compared in {@link _stagePersistentUniforms}. */
+  private readonly _stagedPersistentViewData = new Float32Array(affineMat4FloatCount);
+
+  /**
+   * Compile the persistent pipeline's WGSL and build its layouts, once per
+   * connection. group(0) is the store's own block — uniforms plus the four
+   * slot-addressed storage buffers; group(1) is the SAME base-texture slot table
+   * the live path uses, generated for the same device tier, so both paths share
+   * one bind-group cache and one set of texture bindings.
+   */
+  private _ensurePersistentResources(device: GPUDevice): void {
+    if (this._persistentShaderModule !== null) {
+      return;
+    }
+
+    this._persistentShaderModule = device.createShaderModule({
+      label: 'sprite:persistent-shader',
+      code: buildPersistentSpriteShaderSource(this._maxBatchTextures),
+    });
+    this._persistentBindGroupLayout = device.createBindGroupLayout({
+      label: 'sprite:bind-group-layout:persistent',
+      entries: [
+        { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } },
+        { binding: 1, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
+        { binding: 2, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
+        { binding: 3, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
+        { binding: 4, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
+      ],
+    });
+    this._persistentPipelineLayout = device.createPipelineLayout({
+      label: 'sprite:persistent-pipeline-layout',
+      bindGroupLayouts: [this._persistentBindGroupLayout, this._textureBindGroupLayout!],
+    });
+  }
+
+  private _getPersistentPipeline(blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean, device: GPUDevice): GPURenderPipeline {
+    const key = `${blendMode}:${format}:${stencil ? 's' : 'n'}`;
+    const existing = this._persistentPipelines.get(key);
+
+    if (existing !== undefined) {
+      return existing;
+    }
+
+    const descriptor: GPURenderPipelineDescriptor = {
+      label: 'sprite:persistent-render-pipeline',
+      layout: this._persistentPipelineLayout!,
+      // No vertex buffers at all: every per-instance value is read from storage,
+      // indexed through the order stream by @builtin(instance_index).
+      vertex: { module: this._persistentShaderModule!, entryPoint: 'vertexMain' },
+      fragment: {
+        module: this._persistentShaderModule!,
+        entryPoint: 'fragmentMain',
+        targets: [{ format, blend: getWebGpuBlendState(blendMode), writeMask: GPUColorWrite.ALL }],
+      },
+      primitive: { topology: 'triangle-list' },
+    };
+
+    if (stencil) {
+      descriptor.depthStencil = stencilContentDepthStencilState();
+    }
+
+    const pipeline = device.createRenderPipeline(descriptor);
+
+    this._persistentPipelines.set(key, pipeline);
+
+    return pipeline;
   }
 
   /** Default multi-texture path: rotate the base texture through the device's batch slots. */

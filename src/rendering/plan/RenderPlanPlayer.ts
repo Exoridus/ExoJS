@@ -1,6 +1,7 @@
 import { Matrix } from '#math/Matrix';
 import type { RenderBackend } from '#rendering/RenderBackend';
 
+import type { PersistentSlotBundle } from './PersistentSlotDraw';
 import { RenderEntryKind } from './RenderCommand';
 import { RenderEffectExecutor } from './RenderEffectExecutor';
 import type { RenderInstruction } from './RenderInstruction';
@@ -101,6 +102,7 @@ interface RenderPlanPlaybackHooks {
   _beginRetainedCapture?(set: RetainedInstructionSet): void;
   _endRetainedCapture?(set: RetainedInstructionSet): void;
   _replayRetainedBatch?(batch: RetainedBatchInstruction): void;
+  _drawPersistentOrder?(bundle: PersistentSlotBundle, order: Uint32Array, count: number): void;
 }
 
 /**
@@ -191,6 +193,19 @@ export class RenderPlanPlayer {
     // always carry the field, but hand-built test scopes may omit it.
     if (scope.retainedInstructions) {
       this._replayRetainedInstructions(scope.retainedInstructions, hooks, context);
+
+      return;
+    }
+
+    // Persistent-indexed root: the collect switch left this scope
+    // EMPTY and attached the order stream. The backend draws instance `i` from
+    // slot `order[i]`, so the stream IS the draw order — nothing here may
+    // reorder, group or split it. Truthy check: pooled scopes always carry the
+    // field, but hand-built test scopes may omit it.
+    const persistent = scope.persistentDraw;
+
+    if (persistent && hooks._drawPersistentOrder !== undefined) {
+      hooks._drawPersistentOrder(persistent.bundle, persistent.order, persistent.count);
 
       return;
     }

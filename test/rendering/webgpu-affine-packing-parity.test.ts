@@ -20,11 +20,12 @@
 import { Color } from '#core/Color';
 import { Matrix } from '#math/Matrix';
 import { affineMat3Std140FloatCount, affineMat4FloatCount, packAffineMat3Std140, packAffineMat4 } from '#rendering/affinePacking';
+import { spriteVertexCoreWgsl } from '#rendering/sprite/spriteMaterialSources';
 import { TransformBuffer } from '#rendering/TransformBuffer';
 import { instancedMeshShaderSource, WebGpuMeshRenderer } from '#rendering/webgpu/WebGpuMeshRenderer';
 import { nineSliceShaderSource } from '#rendering/webgpu/WebGpuNineSliceSpriteRenderer';
 import { geoPathEntries, shaderPathEntries } from '#rendering/webgpu/WebGpuRepeatingSpriteRenderer';
-import { baseSpriteBatchTextureSlots, buildSpriteShaderSource } from '#rendering/webgpu/WebGpuSpriteRenderer';
+import { buildPersistentSpriteShaderSource, buildSpriteShaderSource, spriteBatchTextureSlotTiers } from '#rendering/webgpu/WebGpuSpriteRenderer';
 import { textShaderSource } from '#rendering/webgpu/WebGpuTextRenderer';
 
 // ── Fixtures: asymmetric (rotation + skew) affine matrices ───────────────────
@@ -130,24 +131,40 @@ describe('shared TransformSlot convention', () => {
 describe('WGSL slot math parity across instanced renderers', () => {
   // The canonical orientation, as WGSL source patterns. `lx` / `ly` are the
   // renderer-specific local-coordinate expressions (pre-escaped for regex).
-  const canonicalWorldX = (lx: string, ly: string): RegExp =>
-    new RegExp(String.raw`slot\.m0\.x\s*\*\s*${lx}\s*\+\s*slot\.m0\.y\s*\*\s*${ly}\s*\+\s*slot\.m1\.x`);
-  const canonicalWorldY = (lx: string, ly: string): RegExp =>
-    new RegExp(String.raw`slot\.m0\.z\s*\*\s*${lx}\s*\+\s*slot\.m0\.w\s*\*\s*${ly}\s*\+\s*slot\.m1\.y`);
+  // `slot` is how the stage names the TransformSlot it read: most read it into
+  // a local named `slot`, while the shared sprite vertex core takes the two
+  // rows as parameters and names them directly.
+  const canonicalWorldX = (slot: string, lx: string, ly: string): RegExp =>
+    new RegExp(String.raw`${slot}m0\.x\s*\*\s*${lx}\s*\+\s*${slot}m0\.y\s*\*\s*${ly}\s*\+\s*${slot}m1\.x`);
+  const canonicalWorldY = (slot: string, lx: string, ly: string): RegExp =>
+    new RegExp(String.raw`${slot}m0\.z\s*\*\s*${lx}\s*\+\s*${slot}m0\.w\s*\*\s*${ly}\s*\+\s*${slot}m1\.y`);
 
-  const cases: ReadonlyArray<{ name: string; source: string; lx: string; ly: string }> = [
-    // The vertex stage (where the TransformSlot math lives) is identical
-    // across the generated slot tiers; the base tier stands in for all.
-    { name: 'sprite', source: buildSpriteShaderSource(baseSpriteBatchTextureSlots), lx: 'localX', ly: 'localY' },
+  const slotLocal = String.raw`slot\.`;
+
+  const cases: ReadonlyArray<{ name: string; source: string; slot?: string; lx: string; ly: string }> = [
+    // Every WGSL sprite path — the streamed default, the custom-material one
+    // and the persistent-indexed one — runs the SAME vertex core, so pinning
+    // the core covers all three at once. It takes the two transform rows as
+    // parameters rather than reading a local, hence the empty slot prefix.
+    { name: 'sprite (shared vertex core)', source: spriteVertexCoreWgsl, slot: '', lx: 'localX', ly: 'localY' },
     { name: 'nine-slice', source: nineSliceShaderSource, lx: 'localX', ly: 'localY' },
     { name: 'repeating-sprite (shader path)', source: shaderPathEntries, lx: 'lx', ly: 'ly' },
     { name: 'repeating-sprite (geometry path)', source: geoPathEntries, lx: 'lx', ly: 'ly' },
     { name: 'mesh (instanced path)', source: instancedMeshShaderSource, lx: String.raw`input\.position\.x`, ly: String.raw`input\.position\.y` },
   ];
 
-  test.each(cases)('$name applies the shared TransformSlot in canonical orientation', ({ source, lx, ly }) => {
-    expect(source).toMatch(canonicalWorldX(lx, ly));
-    expect(source).toMatch(canonicalWorldY(lx, ly));
+  test.each(cases)('$name applies the shared TransformSlot in canonical orientation', ({ source, slot, lx, ly }) => {
+    const prefix = slot ?? slotLocal;
+
+    expect(source).toMatch(canonicalWorldX(prefix, lx, ly));
+    expect(source).toMatch(canonicalWorldY(prefix, lx, ly));
+  });
+
+  test('every generated sprite tier embeds the pinned vertex core verbatim', () => {
+    for (const tier of spriteBatchTextureSlotTiers) {
+      expect(buildSpriteShaderSource(tier)).toContain(spriteVertexCoreWgsl);
+      expect(buildPersistentSpriteShaderSource(tier)).toContain(spriteVertexCoreWgsl);
+    }
   });
 });
 

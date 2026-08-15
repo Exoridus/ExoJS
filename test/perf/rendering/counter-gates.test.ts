@@ -95,13 +95,33 @@ const EXPECTED = {
   // test, and the screen extent the emitted command carries — and that call
   // resolves the whole parent chain. A rise back toward 5554 means the
   // stored-bounds path stopped engaging on a settled scene.
+  // Re-pinned again when the persistent-indexed tier landed. The frame no
+  // longer materialises anything per visible item: it re-queries membership,
+  // hands slots to the arrivals, rebuilds the order stream and issues one
+  // instanced draw out of slot-addressed stores.
+  //
+  // - `globalTransform` 1778 -> 2. Only the root's own matrix resolves. A
+  //   selected item's world transform was written into its slot when it
+  //   ENTERED and has not been read since — that is the saving, and a rise back
+  //   toward 1778 means the per-item materialisation returned.
+  // - `materialKey` 888 -> 0. The store's texture table and blend mode are
+  //   fixed for the source's life (that is what acquisition checks), so there
+  //   is no per-draw key left to resolve.
+  // - `drawCalls`/`batches` stay 1: the whole root is one instanced draw.
+  // - `submittedNodes` 888 -> 956 and `culledNodes` 112 -> 44, because this
+  //   tier always admits against the view grown by the capture margin, where
+  //   the old suppressed-capture frame culled against the tight view rect. The
+  //   68 extra items are the band: off-screen, rasterised to nothing, and the
+  //   reason a small camera step can re-issue the same stream instead of
+  //   re-querying. `culledNodes` is still the anti-cheat — it must stay well
+  //   above zero, or the tier stopped culling and is simply drawing everything.
   panPlainBeyondMargin: {
     collect: 1,
-    inView: 1001,
-    globalTransform: 1778,
-    materialKey: 888,
-    submittedNodes: 888,
-    culledNodes: 112,
+    inView: 1,
+    globalTransform: 2,
+    materialKey: 0,
+    submittedNodes: 956,
+    culledNodes: 44,
     drawCalls: 1,
     batches: 1,
   },
@@ -128,7 +148,10 @@ const EXPECTED = {
   // draws that never happen.
   sourceDiscovery: {
     collect: 1001,
-    inView: 1001,
+    // The discovery walk itself is culling-free by construction, and the
+    // selection that follows it in the same frame goes through the index, so the
+    // only view test left is the root's own.
+    inView: 1,
     globalTransform: 4002,
     materialKey: 1000,
     submittedNodes: 1000,
@@ -261,9 +284,23 @@ describe('CPU collect-path shape gate', () => {
 
       // A RISING `collect` means the source stopped engaging and the frame went
       // back to finding its content by walking the scene graph. A FALLING
-      // `inView`/`culledNodes` means it stopped culling per item, which would
-      // buy time by drawing what the camera cannot see.
+      // `culledNodes` means it stopped culling per item, which would buy time by
+      // drawing what the camera cannot see — that row, not `inView`, is the
+      // anti-cheat now that the index answers without calling the node.
       expectCounters(actual, EXPECTED.panPlainBeyondMargin);
+
+      // The membership ledger has to agree with what was actually submitted, so
+      // a delta that quietly stopped tracking cannot hide behind a correct
+      // frame. `visible` is the set the index admitted; `entered + stayed` is
+      // the same number decomposed, which is what makes the delta load-bearing
+      // rather than decorative.
+      const delta = root._retainedRootRepresentation().derivedProduct?.delta;
+
+      expect(delta).toBeDefined();
+      expect(delta!.visible).toBe(EXPECTED.panPlainBeyondMargin.submittedNodes);
+      expect(delta!.entered + delta!.stayed).toBe(delta!.visible);
+      expect(delta!.candidates).toBeLessThanOrEqual(SPRITE_COUNT);
+
       root.destroy();
     });
   });
@@ -303,8 +340,13 @@ describe('CPU collect-path shape gate', () => {
       // row rather than the beyond-margin one, which now also visits the root
       // once — the group tier's claim is that it never pays a walk at all, and
       // that is what inverting here would disprove.
+      //
+      // `materialKey` rather than `inView` as the second anchor: since the
+      // source answers visibility from its index, neither tier asks a node for a
+      // view test, so that comparison had stopped discriminating between them.
+      // Resolving a key per child is what a walk actually costs.
       expect(actual.collect).toBeLessThan(EXPECTED.sourceDiscovery.collect);
-      expect(actual.inView).toBeLessThan(EXPECTED.sourceDiscovery.inView);
+      expect(actual.materialKey).toBeLessThan(EXPECTED.sourceDiscovery.materialKey);
       root.destroy();
     });
   });
