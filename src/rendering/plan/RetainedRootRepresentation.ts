@@ -4,6 +4,7 @@ import type { Drawable } from '#rendering/Drawable';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { View } from '#rendering/View';
 
+import { CaptureThrashSuppressor, CaptureVerdict } from './CaptureThrashSuppressor';
 import { DerivedRootProduct } from './DerivedRootProduct';
 import {
   type PersistentSlotBackend,
@@ -105,9 +106,13 @@ export class RetainedRootRepresentation {
    *
    * Owned here rather than beside the fragment because the source is the
    * backend- and frame-NEUTRAL half: the keys that are not — view selection,
-   * render target, backend identity — stay on this class, which is what lets a
-   * `RetainedContainer` adopt the same source later instead of growing a third
-   * implementation of the same idea.
+   * render target, backend identity — stay on this class.
+   *
+   * Root-only, and not for want of a second consumer: a `RetainedContainer`
+   * suppresses per-child culling inside its boundary, so it has no re-selection
+   * to make and holds none of this (see {@link RenderRootSource}). The layer the
+   * two tiers do share is the one below — the fragment's pooled records and the
+   * capture-thrash rule.
    */
   private _source: RenderRootSource | null = null;
   /**
@@ -165,10 +170,10 @@ export class RetainedRootRepresentation {
    */
   private _sourceUnbuildable = false;
 
-  // Thrash suppression over the FULL key (see `shouldSuppressCapture`).
-  private _replayedSinceCapture = false;
-  private _wastedCaptures = 0;
-  private _suppressed = false;
+  // Thrash suppression over the FULL key (see `shouldSuppressCapture`). The
+  // state machine is shared with a group's fragment; only the key is this
+  // tier's own, and it is the wider of the two.
+  private readonly _thrash = new CaptureThrashSuppressor();
   private _observedContent = -1;
   private _observedStructure = -1;
   private _observedTransform = -1;
@@ -530,7 +535,7 @@ export class RetainedRootRepresentation {
 
   /** The active capture was replayed at least once — it earned its keep. */
   public markReplayed(): void {
-    this._replayedSinceCapture = true;
+    this._thrash.markReplayed();
     this.fragment.markReplayed();
   }
 
@@ -545,49 +550,26 @@ export class RetainedRootRepresentation {
    * suppressed and recovered forever instead of settling.
    */
   public shouldSuppressCapture(contentRevision: number, structureRevision: number, transformRevision: number, view: View): boolean {
-    if (this._hasCapture) {
-      if (this._replayedSinceCapture) {
-        this._wastedCaptures = 0;
+    const keyUnchanged =
+      this._observedContent === contentRevision &&
+      this._observedStructure === structureRevision &&
+      this._observedTransform === transformRevision &&
+      this._observedView === view &&
+      this._observedViewUpdateId === view.updateId;
+    const verdict = this._thrash.evaluate(this._hasCapture, keyUnchanged);
 
-        return false;
-      }
+    if (verdict === CaptureVerdict.Capture) {
+      return false;
+    }
 
-      this._wastedCaptures++;
-
-      if (this._wastedCaptures < 2) {
-        // Grace: a single wasted capture recaptures immediately (the expected
-        // behaviour for a one-shot mutation).
-        return false;
-      }
-
+    if (verdict === CaptureVerdict.InvalidateAndSuppress) {
       this.invalidate();
-      this._suppressed = true;
-      this._observe(contentRevision, structureRevision, transformRevision, view);
-
-      return true;
+      this._thrash.suppress();
     }
 
-    if (this._suppressed) {
-      if (
-        this._observedContent === contentRevision &&
-        this._observedStructure === structureRevision &&
-        this._observedTransform === transformRevision &&
-        this._observedView === view &&
-        this._observedViewUpdateId === view.updateId
-      ) {
-        // The key stopped moving: this frame would have been clean if a capture
-        // existed. Recover the retained tier now.
-        this._suppressed = false;
+    this._observe(contentRevision, structureRevision, transformRevision, view);
 
-        return false;
-      }
-
-      this._observe(contentRevision, structureRevision, transformRevision, view);
-
-      return true;
-    }
-
-    return false;
+    return true;
   }
 
   /**
@@ -660,7 +642,7 @@ export class RetainedRootRepresentation {
     this._backend = backend;
     this._target = target;
     this._hasCapture = true;
-    this._replayedSinceCapture = false;
+    this._thrash.markCaptured();
   }
 
   /**
@@ -675,9 +657,7 @@ export class RetainedRootRepresentation {
   public invalidate(): void {
     this.fragment.invalidate();
     this._hasCapture = false;
-    this._replayedSinceCapture = false;
-    this._wastedCaptures = 0;
-    this._suppressed = false;
+    this._thrash.reset();
     this._keptBounds.reset();
     this._keptEmpty = true;
     this._culledDuringCapture = true;

@@ -30,9 +30,17 @@ import { finalizeSourceScopes, type SourceScope } from './RenderSourceItem';
  * frame-local), and no membership (per view — see {@link DerivedRootProduct}).
  * Those are re-derived when a selection is emitted and belong to the derived
  * product, not here. The root-specific KEYS — view selection and render target —
- * likewise stay in {@link RetainedRootRepresentation} above it, so
- * `RetainedContainer` can adopt this same source later instead of becoming a
- * third implementation of the same idea.
+ * likewise stay in {@link RetainedRootRepresentation} above it, which is what
+ * keeps this half describable without a camera.
+ *
+ * This is a RENDER ROOT's structure and stays one. A `RetainedContainer` was
+ * once expected to adopt it; it must not, because the boundary suppresses
+ * per-child culling (`RenderNode._collectForRenderPlan`), so a selection inside
+ * a transform group can only ever return every item. It would pay the discovery
+ * walk, the item store and the index for no selectivity, and trade an
+ * O(batches) instruction replay for an O(items) emit. What the two tiers really
+ * do share is the layer below — {@link RetainedGroupFragment}'s pooled records
+ * and {@link CaptureThrashSuppressor} — and they share it already.
  *
  * The one exception is the ancestry stamp, which is a key here as well: the
  * items hold world bounds, so they are ancestry-dependent data rather than

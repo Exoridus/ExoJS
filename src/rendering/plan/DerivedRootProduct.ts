@@ -61,9 +61,11 @@ const popcount = (value: number): number => {
  * backend- and view-NEUTRAL description of what the subtree contains; membership
  * is a function of the camera and of the target the root is drawn into, and
  * folding it into the source would make a root rendered through two views
- * overwrite its own answer every frame. Keeping the split explicit is also what
- * lets `RetainedContainer` adopt the same source later (cut 3) without
- * inheriting a view it does not have.
+ * overwrite its own answer every frame.
+ *
+ * Per render root, and nothing else: a `RetainedContainer` is culled as a whole
+ * and never asks which of its children a rect admits, so it holds no membership
+ * of any kind (see {@link RenderRootSource}).
  *
  * Membership is one bit per item, held per scope so a scope's bits are a plain
  * index range over its contiguous item store. That shape is the point: the delta
