@@ -23,7 +23,7 @@ import { Session } from 'node:inspector';
 import type { RenderNode } from '#rendering/RenderNode';
 
 import type { AllocationArchetype, AllocationScene } from './allocationScenes';
-import { ALLOCATION_ARCHETYPES, ALLOCATION_REPORT_ONLY } from './allocationScenes';
+import { ALLOCATION_ARCHETYPES, ALLOCATION_REPORT_ONLY, buildScrollingWorldReference } from './allocationScenes';
 import type { WebGl2Harness } from './harness';
 import { createWebGl2Harness } from './harness';
 
@@ -47,7 +47,27 @@ if (id === undefined) {
   throw new Error('usage: run-allocation-cell.ts --id "<archetype id>" [--windows N] [--frames N] [--profile] [--top N]');
 }
 
-const archetype: AllocationArchetype | undefined = [...ALLOCATION_ARCHETYPES, ...ALLOCATION_REPORT_ONLY].find(candidate => candidate.id === id);
+/**
+ * `--id "reference/<count>"` builds the scrolling-world reference stage at that
+ * node count instead of a catalog archetype — the size where the persistent
+ * item source and the derived selection actually run, and the only place some
+ * per-scope allocation is visible at all.
+ *
+ * The warm-up is long on purpose and the number is only meaningful after one
+ * earlier sampling window has run in this process: measured cold, this scene
+ * reports ~1.9 MB/frame attributed to a function that contains no allocation,
+ * which is V8's optimisation state, not the frame (see `runReference` in
+ * `run-allocation.ts`). {@link REFERENCE_BOOTSTRAP_FRAMES} is that earlier
+ * window, and it doubles as the scene's one-time bootstrap reading.
+ */
+const referenceCount = /^reference\/(\d+)$/u.exec(id)?.[1];
+const REFERENCE_BOOTSTRAP_FRAMES = 100;
+const REFERENCE_WARMUP = 600;
+
+const archetype: AllocationArchetype | undefined =
+  referenceCount === undefined
+    ? [...ALLOCATION_ARCHETYPES, ...ALLOCATION_REPORT_ONLY].find(candidate => candidate.id === id)
+    : { id, rationale: 'reference stage', warmup: REFERENCE_WARMUP, build: harness => buildScrollingWorldReference(harness, Number(referenceCount)) };
 
 if (archetype === undefined) {
   throw new Error(`unknown archetype '${id}'`);
@@ -180,11 +200,22 @@ if (args.includes('--cpu')) {
 
 const results: number[] = [];
 let callsites: CallsiteRow[] = [];
+let bootstrapBytes: number | null = null;
 
 for (let window = 0; window < windows; window++) {
   const harness = createWebGl2Harness();
   const scene: AllocationScene = archetype.build(harness);
   const warmup = archetype.warmup ?? 30;
+
+  if (referenceCount !== undefined) {
+    const bootstrap = await sample(() => {
+      for (let i = 0; i < REFERENCE_BOOTSTRAP_FRAMES; i++) {
+        renderOnce(harness, scene.root, scene.beforeFrame);
+      }
+    });
+
+    bootstrapBytes = sumSelfSize(bootstrap);
+  }
 
   for (let i = 0; i < warmup; i++) {
     renderOnce(harness, scene.root, scene.beforeFrame);
@@ -231,6 +262,10 @@ console.log(
     warmup: archetype.warmup ?? 30,
     windowsKb: results.map(kb),
     kbPerFrame: kb(results.reduce((total, value) => total + value, 0) / results.length),
+    // One-time, NOT a rate: the reference stage's bootstrap window is dominated
+    // by work that happens once, so dividing it by its frame count would
+    // describe no frame the scene renders again.
+    ...(bootstrapBytes === null ? {} : { bootstrapMb: Number((bootstrapBytes / 1024 / 1024).toFixed(1)), bootstrapFrames: REFERENCE_BOOTSTRAP_FRAMES }),
     ...(wantProfile
       ? {
           callsites: callsites.map(row => ({
