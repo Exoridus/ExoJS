@@ -106,9 +106,13 @@ export class RetainedRootRepresentation {
    *
    * Owned here rather than beside the fragment because the source is the
    * backend- and frame-NEUTRAL half: the keys that are not — view selection,
-   * render target, backend identity — stay on this class, which is what lets a
-   * `RetainedContainer` adopt the same source later instead of growing a third
-   * implementation of the same idea.
+   * render target, backend identity — stay on this class.
+   *
+   * Root-only, and not for want of a second consumer: a `RetainedContainer`
+   * suppresses per-child culling inside its boundary, so it has no re-selection
+   * to make and holds none of this (see {@link RenderRootSource}). The layer the
+   * two tiers do share is the one below — the fragment's pooled records and the
+   * capture-thrash rule.
    */
   private _source: RenderRootSource | null = null;
   /**
