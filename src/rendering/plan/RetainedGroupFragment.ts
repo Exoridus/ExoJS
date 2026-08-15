@@ -3,6 +3,7 @@ import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
 import { BlendModes } from '#rendering/types';
 
+import { CaptureThrashSuppressor, CaptureVerdict } from './CaptureThrashSuppressor';
 import { copyMaterialKeyInto, type MaterialKey, RenderEntryKind } from './RenderCommand';
 import type { ScopeEntry } from './RenderScope';
 import { isRetainedFragmentRecordable, RetainedInstructionSet } from './RetainedInstructionSet';
@@ -109,18 +110,11 @@ export class RetainedGroupFragment {
   private readonly _barrierPool: RetainedFragmentBarrier[] = [];
   private _barrierCursor = 0;
 
-  // Thrash suppression: a capture that is invalidated without
-  // ever having been replayed was pure waste. One wasted capture is tolerated
-  // (a lone mutation between replays keeps the recapture-immediately
-  // behavior); the SECOND consecutive wasted capture is evidence of
-  // per-frame thrash — from then on dirty frames skip the snapshot entirely
-  // (plain collect, cheapest possible dirty frame) until the revisions
-  // observed on consecutive dirty frames stop moving, at which point one full
-  // collect + capture recovers the retained tier (one frame late,
-  // self-correcting, no tunables).
-  private _replayedSinceCapture = false;
-  private _suppressed = false;
-  private _wastedCaptures = 0;
+  // Thrash suppression. The state machine is shared with the render-root
+  // representation ({@link CaptureThrashSuppressor}); what stays here is this
+  // tier's KEY — the content and structure revisions, and nothing else, because
+  // a group's clean-frame test spans exactly those two channels.
+  private readonly _thrash = new CaptureThrashSuppressor();
   private _observedContent = -1;
   private _observedStructure = -1;
 
@@ -301,12 +295,12 @@ export class RetainedGroupFragment {
 
   /** `true` while capture is thrash-suppressed. */
   public get captureSuppressed(): boolean {
-    return this._suppressed;
+    return this._thrash.suppressed;
   }
 
   /** The active capture was replayed (spliced) at least once — it earned its keep. */
   public markReplayed(): void {
-    this._replayedSinceCapture = true;
+    this._thrash.markReplayed();
   }
 
   /**
@@ -316,46 +310,21 @@ export class RetainedGroupFragment {
    * `true` to skip the capture.
    */
   public shouldSuppressCapture(contentRevision: number, structureRevision: number): boolean {
-    if (this._hasCapture) {
-      if (this._replayedSinceCapture) {
-        this._wastedCaptures = 0;
+    const verdict = this._thrash.evaluate(this._hasCapture, this._observedContent === contentRevision && this._observedStructure === structureRevision);
 
-        return false;
-      }
+    if (verdict === CaptureVerdict.Capture) {
+      return false;
+    }
 
-      this._wastedCaptures++;
-
-      if (this._wastedCaptures < 2) {
-        // Grace: a single wasted capture recaptures immediately
-        // (the expected behavior for one-shot mutations).
-        return false;
-      }
-
-      // Two consecutive captures invalidated without a single replay: thrash.
+    if (verdict === CaptureVerdict.InvalidateAndSuppress) {
       this.invalidate();
-      this._suppressed = true;
-      this._observedContent = contentRevision;
-      this._observedStructure = structureRevision;
-
-      return true;
+      this._thrash.suppress();
     }
 
-    if (this._suppressed) {
-      if (this._observedContent === contentRevision && this._observedStructure === structureRevision) {
-        // The revisions stopped moving: this frame would have been clean if a
-        // capture existed. Recover the retained tier now.
-        this._suppressed = false;
+    this._observedContent = contentRevision;
+    this._observedStructure = structureRevision;
 
-        return false;
-      }
-
-      this._observedContent = contentRevision;
-      this._observedStructure = structureRevision;
-
-      return true;
-    }
-
-    return false;
+    return true;
   }
 
   public get entries(): readonly RetainedFragmentEntry[] {
@@ -400,7 +369,7 @@ export class RetainedGroupFragment {
     this._structureRevision = structureRevision;
     this._backend = backend;
     this._hasCapture = true;
-    this._replayedSinceCapture = false;
+    this._thrash.markCaptured();
     // The subtree changed: any recorded batches and the cached recordability
     // verdict are stale. The instruction set keeps its GPU bundle (grow-only)
     // and re-records from the next clean playback.
@@ -414,9 +383,7 @@ export class RetainedGroupFragment {
     this._entries.length = 0;
     this._rowMap = null;
     this.clearDirtyTransformRows();
-    this._replayedSinceCapture = false;
-    this._suppressed = false;
-    this._wastedCaptures = 0;
+    this._thrash.reset();
     this._recordableFor = null;
     this._instructions?.invalidate();
   }
