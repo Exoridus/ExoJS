@@ -131,9 +131,14 @@ describe('WebGL2 partial DataTexture upload: full-width fast path', () => {
     const [packed] = harness.calls;
 
     expect(packed).toBeDefined();
-    expect(packed).toHaveLength(9);
+    // Packed into the per-texture scratch, which is at least the region's size
+    // and handed to GL through the same `(srcData, srcOffset)` overload — the
+    // rectangle's dimensions fix how much is read, so the scratch never has to
+    // be narrowed to an exact-length view.
+    expect(packed).toHaveLength(10);
     expect(packed![8]).not.toBe(texture.buffer);
-    expect((packed![8] as Float32Array).length).toBe(7 * 8);
+    expect((packed![8] as Float32Array).length).toBeGreaterThanOrEqual(7 * 8);
+    expect(packed![9]).toBe(0);
 
     texture.destroy();
   });
@@ -153,7 +158,10 @@ describe('WebGL2 partial DataTexture upload: full-width fast path', () => {
 
     const [packed] = harness.calls;
 
-    expect(Array.from(packed![8] as Uint8Array)).toEqual([5, 6, 9, 10]);
+    // Only the region's own elements are read (2x2 from offset 0); whatever the
+    // scratch holds past them is never uploaded.
+    expect(Array.from((packed![8] as Uint8Array).subarray(0, 4))).toEqual([5, 6, 9, 10]);
+    expect(packed![9]).toBe(0);
 
     texture.destroy();
   });
