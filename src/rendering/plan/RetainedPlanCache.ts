@@ -62,9 +62,13 @@ const createSlot = (): MutableRetainedDrawSlot => ({
  * rewritten in place, so steady-state recapture allocates zero slot objects.
  */
 export class RetainedPlanCache {
-  /** Active slot list, reused across captures (pointer pushes only). */
-  private readonly _slots: MutableRetainedDrawSlot[] = [];
-  /** Grow-only record pool; `_slots` holds a cursor-ordered prefix of it. */
+  /**
+   * Grow-only record pool. It IS the slot list: `_appendSlot` acquires in
+   * capture order, so the pool's used prefix is exactly the capture, and a
+   * parallel array of the same records would only add a per-capture refill to
+   * maintain (`length = 0` plus one push per slot, ~34 bytes per slot per
+   * capture on a scene that recaptures every frame).
+   */
   private readonly _slotPool = new RetainedRecordPool(createSlot);
   private _contentRevision = -1;
   private _structureRevision = -1;
@@ -73,8 +77,14 @@ export class RetainedPlanCache {
   private _backend: RenderBackend | null = null;
   private _hasCapture = false;
 
-  public get slots(): readonly RetainedDrawSlot[] {
-    return this._slots;
+  /** How many slots the current capture holds. */
+  public get slotCount(): number {
+    return this._slotPool.used;
+  }
+
+  /** Slot `index` of the current capture; callers hold `index < slotCount`. */
+  public slotAt(index: number): RetainedDrawSlot {
+    return this._slotPool.at(index);
   }
 
   /**
@@ -103,7 +113,6 @@ export class RetainedPlanCache {
    */
   public _beginCapture(): void {
     this._hasCapture = false;
-    this._slots.length = 0;
     this._slotPool.rewind();
   }
 
@@ -117,7 +126,6 @@ export class RetainedPlanCache {
 
     slot.childIndex = childIndex;
     copyRetainedDrawData(slot, command);
-    this._slots.push(slot);
   }
 
   /** Key the capture; only after this does {@link isClean} consider it. */
@@ -133,7 +141,6 @@ export class RetainedPlanCache {
   public invalidate(): void {
     releasePooledDrawables(this._slotPool);
     this._hasCapture = false;
-    this._slots.length = 0;
     this._slotPool.rewind();
   }
 }

@@ -11,6 +11,18 @@ import { RenderBackendType } from '#rendering/RenderBackendType';
 import { createRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 
+/** Real major GC + a macrotask hop so reclaimed WeakRefs settle (`--expose-gc` comes from the vitest project). */
+async function forceGc(): Promise<void> {
+  const gc = (globalThis as { gc?: () => void }).gc;
+
+  if (!gc) throw new Error('globalThis.gc is unavailable — the test project must pass --expose-gc to the fork pool');
+
+  for (let i = 0; i < 3; i++) {
+    gc();
+    await new Promise(resolve => setTimeout(resolve, 0));
+  }
+}
+
 const material: MaterialKey = { rendererId: 1, blendMode: 0, textureId: -1, shaderId: -1, pipelineKey: 1, bindKey: 1, ownMaterial: false };
 const fakeBackendA = {} as RenderBackend;
 const fakeBackendB = {} as RenderBackend;
@@ -132,7 +144,9 @@ describe('RetainedGroupFragment', () => {
     fragment.enqueueDirtyTransformRow(b);
 
     expect(fragment.hasDirtyTransformRows()).toBe(true);
-    expect([...fragment.dirtyTransformRows]).toEqual([a, b]);
+    expect(fragment.dirtyTransformRowCount).toBe(2);
+    expect(fragment.dirtyTransformRowAt(0)).toBe(a);
+    expect(fragment.dirtyTransformRowAt(1)).toBe(b);
 
     fragment.clearDirtyTransformRows();
 
@@ -140,6 +154,52 @@ describe('RetainedGroupFragment', () => {
 
     a.destroy();
     b.destroy();
+  });
+
+  test('a cleared queue reports only what was queued after it, never the slots it kept', () => {
+    // The reset rewinds a logical length and keeps the backing array, so the
+    // records of the previous cycle are still physically in it. Nothing may see
+    // them: the count is the contract.
+    const fragment = new RetainedGroupFragment();
+    const a = new Drawable();
+    const b = new Drawable();
+    const c = new Drawable();
+
+    fragment.enqueueDirtyTransformRow(a);
+    fragment.enqueueDirtyTransformRow(b);
+    fragment.clearDirtyTransformRows();
+
+    fragment.enqueueDirtyTransformRow(c);
+
+    expect(fragment.dirtyTransformRowCount).toBe(1);
+    expect(fragment.dirtyTransformRowAt(0)).toBe(c);
+
+    a.destroy();
+    b.destroy();
+    c.destroy();
+  });
+
+  test('invalidate() releases the queue references so a dropped node can GC', async () => {
+    // The per-frame reset deliberately keeps its slots (that is what makes the
+    // refill allocation-free), so the structural paths — invalidate and capture —
+    // are what has to hand the references back.
+    const fragment = new RetainedGroupFragment();
+    // Queued, cleared and released inside a scope that ends here, so the only
+    // reference that could keep the node alive is the fragment's own slot.
+    const ref = ((): WeakRef<Drawable> => {
+      const node = new Drawable();
+
+      fragment.enqueueDirtyTransformRow(node);
+      fragment.clearDirtyTransformRows();
+      fragment.invalidate();
+      node.destroy();
+
+      return new WeakRef(node);
+    })();
+
+    await forceGc();
+
+    expect(ref.deref()).toBeUndefined();
   });
 
   test('invalidate() clears the capture', () => {
@@ -326,8 +386,8 @@ class SnapshotProbeContainer extends BoundaryContainer {
 
   protected override _collectContent(builder: RenderPlanBuilder): void {
     super._collectContent(builder);
-    this.probeFragment.capture(0, 0, builder.backend, builder._peekCurrentScopeEntries());
-    this.lastSnapshot = this.probeFragment.entries;
+    this.probeFragment.capture(0, 0, builder.backend, builder._peekCurrentScopeEntries(), builder._peekCurrentScopeEntryCount());
+    this.lastSnapshot = this.probeFragment.entries.slice(0, this.probeFragment.entryCount);
   }
 }
 

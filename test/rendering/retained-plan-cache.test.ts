@@ -58,7 +58,7 @@ describe('RetainedPlanCache', () => {
     const cache = new RetainedPlanCache();
 
     expect(cache.isClean(1, 1, 1, 1, fakeBackendA)).toBe(false);
-    expect(cache.slots).toEqual([]);
+    expect(cache.slotCount).toBe(0);
   });
 
   test('isClean is true only when content, structure, transform, view, and backend all match the last capture', () => {
@@ -68,8 +68,8 @@ describe('RetainedPlanCache', () => {
     captureOne(cache, drawable, 5, 3, 2, 7, fakeBackendA);
 
     expect(cache.isClean(5, 3, 2, 7, fakeBackendA)).toBe(true);
-    expect(cache.slots).toHaveLength(1);
-    expect(cache.slots[0]!.drawable).toBe(drawable);
+    expect(cache.slotCount).toBe(1);
+    expect(cache.slotAt(0).drawable).toBe(drawable);
 
     expect(cache.isClean(6, 3, 2, 7, fakeBackendA)).toBe(false); // content changed
     expect(cache.isClean(5, 4, 2, 7, fakeBackendA)).toBe(false); // structure changed
@@ -101,7 +101,7 @@ describe('RetainedPlanCache', () => {
     cache.invalidate();
 
     expect(cache.isClean(1, 1, 1, 1, fakeBackendA)).toBe(false);
-    expect(cache.slots).toEqual([]);
+    expect(cache.slotCount).toBe(0);
 
     drawable.destroy();
   });
@@ -112,7 +112,7 @@ describe('RetainedPlanCache', () => {
 
     captureOne(cache, drawable, 1, 1, 1, 1, fakeBackendA);
 
-    const slotBefore = cache.slots[0]!;
+    const slotBefore = cache.slotAt(0);
     const materialBefore = slotBefore.material;
 
     expect(materialBefore).not.toBe(material); // copied, not aliased
@@ -121,11 +121,11 @@ describe('RetainedPlanCache', () => {
     cache._appendSlot(3, makeCommand(drawable, 9));
     cache._commitCapture(2, 1, 1, 1, fakeBackendA);
 
-    expect(cache.slots[0]).toBe(slotBefore); // same pooled record...
-    expect(cache.slots[0]!.material).toBe(materialBefore); // ...same pooled key object
-    expect(cache.slots[0]!.childIndex).toBe(3); // ...refreshed data
-    expect(cache.slots[0]!.minX).toBe(9);
-    expect(cache.slots[0]!.material.pipelineKey).toBe(material.pipelineKey);
+    expect(cache.slotAt(0)).toBe(slotBefore); // same pooled record...
+    expect(cache.slotAt(0).material).toBe(materialBefore); // ...same pooled key object
+    expect(cache.slotAt(0).childIndex).toBe(3); // ...refreshed data
+    expect(cache.slotAt(0).minX).toBe(9);
+    expect(cache.slotAt(0).material.pipelineKey).toBe(material.pipelineKey);
 
     drawable.destroy();
   });
@@ -136,7 +136,7 @@ describe('RetainedPlanCache', () => {
 
     captureOne(cache, drawable, 1, 1, 1, 1, fakeBackendA);
 
-    const pooledSlot = cache.slots[0]!;
+    const pooledSlot = cache.slotAt(0);
 
     expect(pooledSlot.drawable).toBe(drawable);
 
@@ -152,8 +152,8 @@ describe('RetainedPlanCache', () => {
     cache._appendSlot(0, makeCommand(drawable));
     cache._commitCapture(2, 1, 1, 1, fakeBackendA);
 
-    expect(cache.slots[0]).toBe(pooledSlot);
-    expect(cache.slots[0]!.drawable).toBe(drawable);
+    expect(cache.slotAt(0)).toBe(pooledSlot);
+    expect(cache.slotAt(0).drawable).toBe(drawable);
 
     drawable.destroy();
   });
@@ -164,7 +164,7 @@ class ProbeContainer extends Container {
 
   protected override _collectContent(builder: RenderPlanBuilder): void {
     super._collectContent(builder);
-    this.probedEntryCount = builder._peekCurrentScopeEntries().length;
+    this.probedEntryCount = builder._peekCurrentScopeEntryCount();
   }
 }
 

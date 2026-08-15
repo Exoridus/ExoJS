@@ -303,7 +303,7 @@ export class RetainedContainer extends Container {
       // keys. The key deliberately omits View.updateId (group-level culling
       // makes the fragment view-independent — the camera-pan win) and the
       // container's own transform (a move only changes the group matrix).
-      builder._replayRetainedFragment(this._fragment.entries);
+      builder._replayRetainedFragment(this._fragment.entries, this._fragment.entryCount);
       this._fragment.markReplayed();
       // Record-on-first-clean-frame: this clean playback
       // is the recording source; the player captures it if the backend
@@ -337,7 +337,13 @@ export class RetainedContainer extends Container {
     }
 
     if (!suppressCapture) {
-      this._fragment.capture(this._contentRevision, this._structureRevision, builder.backend, builder._peekCurrentScopeEntries());
+      this._fragment.capture(
+        this._contentRevision,
+        this._structureRevision,
+        builder.backend,
+        builder._peekCurrentScopeEntries(),
+        builder._peekCurrentScopeEntryCount(),
+      );
     }
   }
 

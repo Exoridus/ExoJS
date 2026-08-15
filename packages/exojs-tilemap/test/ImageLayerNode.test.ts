@@ -35,7 +35,8 @@ function makeLayer(opts: Partial<ImageLayerOptions> = {}): ImageLayer {
  *  - `view.updateId`       — the retained-plan revision key,
  *  - `_isViewCullSuppressed: true` — makes the child `_collect` skip the
  *    `inView` frustum test and go straight to `emitNode` (no cull machinery),
- *  - `emitNode` / `_peekCurrentScopeEntries` — the no-slot capture bookkeeping,
+ *  - `emitNode` / `_peekCurrentScopeEntries` + `_peekCurrentScopeEntryCount` — the
+ *    no-slot capture bookkeeping,
  *  - `backend`             — stored verbatim by the retained-plan cache commit.
  */
 function mockBuilder(options: {
@@ -55,6 +56,7 @@ function mockBuilder(options: {
     },
     emitNode(): void {},
     _peekCurrentScopeEntries: (): readonly unknown[] => [],
+    _peekCurrentScopeEntryCount: (): number => 0,
   };
 }
 

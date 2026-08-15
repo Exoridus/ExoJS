@@ -43,8 +43,14 @@ export interface RetainedFragmentGroup {
    * for scopes that collected entries normally.
    */
   retainedInstructions: RetainedInstructionSet | null;
-  /** Pooled entry list owned by this record, reset and refilled on recapture. */
+  /**
+   * Pooled entry list owned by this record, rewritten in place on recapture.
+   * Valid up to {@link RetainedFragmentGroup.entryCount} — the array itself may
+   * still hold records a longer earlier capture left behind, which is what keeps
+   * the recapture from re-growing it (see {@link RetainedGroupFragment}).
+   */
   readonly entries: RetainedFragmentEntry[];
+  entryCount: number;
 }
 
 /**
@@ -85,7 +91,16 @@ let nextDirtyRowEpoch = 1;
  * records in place and allocates zero objects.
  */
 export class RetainedGroupFragment {
+  /**
+   * Snapshotted entries, valid up to {@link _entryCount}. Like every other
+   * per-capture store here the array is rewritten rather than emptied: the
+   * records in it are pooled and immortal either way, and emptying would hand
+   * the backing store back and re-grow it on the next capture — ~33 bytes per
+   * entry per capture, which is the whole cost of recapturing a scene whose
+   * content changes every frame.
+   */
   private readonly _entries: RetainedFragmentEntry[] = [];
+  private _entryCount = 0;
   private _contentRevision = -1;
   private _structureRevision = -1;
   private _backend: RenderBackend | null = null;
@@ -128,12 +143,26 @@ export class RetainedGroupFragment {
   private _rowMinIndex = -1;
 
   // Nodes whose OWN transform moved since the last collect, pushed by
-  // the SceneNode seam through the enclosing group. A plain array (not a Set):
-  // `length = 0` on reset retains capacity, so the add-k/reset-per-frame churn
-  // cycle allocates nothing in steady state (unlike Set.clear). Dedup is O(1)
-  // via a per-node epoch stamp keyed on `_dirtyRowEpoch` — a globally unique
-  // value bumped on every reset, so a stale stamp never falsely dedups.
+  // the SceneNode seam through the enclosing group. A plain array (not a Set),
+  // held with an explicit LOGICAL length: the per-frame reset rewinds
+  // `_dirtyRowCount` and leaves the physical array alone, so the next frame
+  // overwrites the slots it already has.
+  //
+  // `length = 0` would be wrong here, not merely different. V8 hands the
+  // backing store back on a shrink to zero, so the refill re-grows from empty
+  // through the whole doubling sequence — measured at ~27 bytes per queued node
+  // per frame, which made this queue the single largest allocation in a scene
+  // where every node moves (28.6 KB/frame at 1000 nodes). Dedup is O(1) via a
+  // per-node epoch stamp keyed on `_dirtyRowEpoch` — a globally unique value
+  // bumped on every reset, so a stale stamp never falsely dedups.
+  //
+  // Slots at or beyond `_dirtyRowCount` keep whatever node they last held.
+  // That retains nothing a live subtree does not already retain, and it cannot
+  // outlive a node's removal: removing a child moves the subtree's structure
+  // revision, and the next build therefore recaptures or invalidates — both of
+  // which drop the references through {@link _dropDirtyTransformRows}.
   private readonly _dirtyTransformRows: RenderNode[] = [];
+  private _dirtyRowCount = 0;
   private _dirtyRowEpoch = nextDirtyRowEpoch++;
 
   /** Snapshot policy for nested transform groups — see {@link _snapshotInto}. */
@@ -200,15 +229,17 @@ export class RetainedGroupFragment {
 
     const map = new Map<Drawable, RetainedFragmentDraw>();
 
-    this._rowMinIndex = this._collectRowsInto(map, this._entries, -1);
+    this._rowMinIndex = this._collectRowsInto(map, this._entries, this._entryCount, -1);
     this._rowMap = map;
   }
 
   /** Fold every draw record (nested groups included) into `map`; returns the running minimum. */
-  private _collectRowsInto(map: Map<Drawable, RetainedFragmentDraw>, entries: readonly RetainedFragmentEntry[], min: number): number {
+  private _collectRowsInto(map: Map<Drawable, RetainedFragmentDraw>, entries: readonly RetainedFragmentEntry[], entryCount: number, min: number): number {
     let currentMin = min;
 
-    for (const entry of entries) {
+    for (let index = 0; index < entryCount; index++) {
+      const entry = entries[index]!;
+
       if (entry.kind === RenderEntryKind.Draw) {
         map.set(entry.drawable, entry);
 
@@ -216,7 +247,7 @@ export class RetainedGroupFragment {
           currentMin = entry.nodeIndex;
         }
       } else if (entry.kind === RenderEntryKind.Group) {
-        currentMin = this._collectRowsInto(map, entry.entries, currentMin);
+        currentMin = this._collectRowsInto(map, entry.entries, entry.entryCount, currentMin);
       }
     }
 
@@ -231,25 +262,49 @@ export class RetainedGroupFragment {
     }
 
     node._dirtyRowStamp = this._dirtyRowEpoch;
-    this._dirtyTransformRows.push(node);
+
+    const index = this._dirtyRowCount++;
+
+    if (index < this._dirtyTransformRows.length) {
+      this._dirtyTransformRows[index] = node;
+    } else {
+      this._dirtyTransformRows.push(node);
+    }
   }
 
   /** `true` when at least one transform-only move is queued for this frame. */
   public hasDirtyTransformRows(): boolean {
-    return this._dirtyTransformRows.length > 0;
+    return this._dirtyRowCount > 0;
   }
 
-  /** The queued moved nodes (insertion order, deduped). */
-  public get dirtyTransformRows(): readonly RenderNode[] {
-    return this._dirtyTransformRows;
+  /** How many moved nodes are queued for this frame. */
+  public get dirtyTransformRowCount(): number {
+    return this._dirtyRowCount;
+  }
+
+  /** Queued moved node `index` (insertion order, deduped); callers hold `index < dirtyTransformRowCount`. */
+  public dirtyTransformRowAt(index: number): RenderNode {
+    return this._dirtyTransformRows[index]!;
   }
 
   /** Drop the queue — after patching them, or after a full re-collect subsumed them. */
   public clearDirtyTransformRows(): void {
-    // length = 0 retains the backing store (no realloc next frame); a fresh
-    // epoch invalidates every prior dedup stamp in O(1).
-    this._dirtyTransformRows.length = 0;
+    // Rewinding the logical length keeps the backing store for the next frame
+    // (see the field comment); a fresh epoch invalidates every prior dedup
+    // stamp in O(1).
+    this._dirtyRowCount = 0;
     this._dirtyRowEpoch = nextDirtyRowEpoch++;
+  }
+
+  /**
+   * Drop the queue AND its references — the structural counterpart of
+   * {@link clearDirtyTransformRows}, for the two paths that follow a change in
+   * what the subtree contains. Keeping the backing store across those would let
+   * a removed node stay reachable through a slot nothing will overwrite again.
+   */
+  private _dropDirtyTransformRows(): void {
+    this._dirtyTransformRows.length = 0;
+    this.clearDirtyTransformRows();
   }
 
   /** The group's instruction set, or `null` if recording was never armed. */
@@ -274,7 +329,7 @@ export class RetainedGroupFragment {
     }
 
     if (this._recordableFor !== backend) {
-      this._recordable = isRetainedFragmentRecordable(this._entries, backend);
+      this._recordable = isRetainedFragmentRecordable(this._entries, this._entryCount, backend);
       this._recordableFor = backend;
     }
 
@@ -315,8 +370,17 @@ export class RetainedGroupFragment {
     return true;
   }
 
+  /**
+   * The captured entries. Valid up to {@link entryCount} — reading past it walks
+   * records an earlier, longer capture left in the array.
+   */
   public get entries(): readonly RetainedFragmentEntry[] {
     return this._entries;
+  }
+
+  /** How many of {@link entries} belong to the current capture. */
+  public get entryCount(): number {
+    return this._entryCount;
   }
 
   public isClean(contentRevision: number, structureRevision: number, backend: RenderBackend): boolean {
@@ -330,12 +394,19 @@ export class RetainedGroupFragment {
    * are recorded as re-dispatch references only (semantics-neutral by
    * construction). Called by {@link RetainedContainer}
    * right after a full collect of its scope.
+   *
+   * `entryCount` is how many of `entries` belong to this capture. It defaults to
+   * the array's own length, which is right for every exact array; a caller
+   * handing over a STILL-OPEN builder scope must pass the scope's entry count
+   * instead, because that array can run past what the collect filled (see
+   * `RenderPlanBuilder._peekCurrentScopeEntries`).
    */
   public capture(
     contentRevision: number,
     structureRevision: number,
     backend: RenderBackend,
     entries: readonly ScopeEntry[],
+    entryCount = entries.length,
     deferTransformGroups = false,
   ): void {
     this._deferTransformGroups = deferTransformGroups;
@@ -345,13 +416,12 @@ export class RetainedGroupFragment {
     this._drawPool.rewind();
     this._groupPool.rewind();
     this._barrierPool.rewind();
-    this._entries.length = 0;
     this._rowMap = null;
     // A full (re)capture reads every child's current transform: any queued
     // transform-only moves are subsumed and must not double-patch afterwards.
-    this.clearDirtyTransformRows();
+    this._dropDirtyTransformRows();
 
-    this._snapshotInto(this._entries, entries);
+    this._entryCount = this._snapshotInto(this._entries, entries, entryCount);
 
     this._contentRevision = contentRevision;
     this._structureRevision = structureRevision;
@@ -369,8 +439,9 @@ export class RetainedGroupFragment {
     releasePooledDrawables(this._drawPool);
     this._hasCapture = false;
     this._entries.length = 0;
+    this._entryCount = 0;
     this._rowMap = null;
-    this.clearDirtyTransformRows();
+    this._dropDirtyTransformRows();
     this._thrash.reset();
     this._recordableFor = null;
     this._instructions?.invalidate();
@@ -385,15 +456,20 @@ export class RetainedGroupFragment {
     this._instructions?.dispose();
   }
 
-  private _snapshotInto(target: RetainedFragmentEntry[], entries: readonly ScopeEntry[]): void {
-    for (const entry of entries) {
+  /** Copy `entryCount` scope entries into `target`, reusing its slots; returns how many it wrote. */
+  private _snapshotInto(target: RetainedFragmentEntry[], entries: readonly ScopeEntry[], entryCount: number): number {
+    let used = 0;
+
+    for (let index = 0; index < entryCount; index++) {
+      const entry = entries[index]!;
+
       if (entry.kind === RenderEntryKind.Draw) {
         const command = entry.command;
         const record = this._drawPool.acquire();
 
         copyRetainedDrawData(record, command);
         record.nodeIndex = command.nodeIndex;
-        target.push(record);
+        used = appendRecord(target, used, record);
       } else if (entry.kind === RenderEntryKind.Group) {
         // A snapshot that DEFERS transform groups (the automatic render-root
         // representation) records a nested boundary as a live re-dispatch
@@ -411,7 +487,7 @@ export class RetainedGroupFragment {
 
           deferred.seq = entry.seq;
           deferred.node = entry.scope.transformNode;
-          target.push(deferred);
+          used = appendRecord(target, used, deferred);
 
           continue;
         }
@@ -424,17 +500,18 @@ export class RetainedGroupFragment {
         record.transformNode = entry.scope.transformNode;
         // ?? null: hand-built test scopes may omit this field.
         record.retainedInstructions = entry.scope.retainedInstructions ?? null;
-        record.entries.length = 0;
-        this._snapshotInto(record.entries, entry.scope.entries);
-        target.push(record);
+        record.entryCount = this._snapshotInto(record.entries, entry.scope.entries, entry.scope.entries.length);
+        used = appendRecord(target, used, record);
       } else {
         const record = this._barrierPool.acquire();
 
         record.seq = entry.seq;
         record.node = entry.scope.node;
-        target.push(record);
+        used = appendRecord(target, used, record);
       }
     }
+
+    return used;
   }
 }
 
@@ -462,7 +539,19 @@ const createFragmentGroup = (): RetainedFragmentGroup => ({
   transformNode: null,
   retainedInstructions: null,
   entries: [],
+  entryCount: 0,
 });
+
+/** Write `record` at `used` in a snapshot array, reusing the slot when it exists. */
+const appendRecord = (target: RetainedFragmentEntry[], used: number, record: RetainedFragmentEntry): number => {
+  if (used < target.length) {
+    target[used] = record;
+  } else {
+    target.push(record);
+  }
+
+  return used + 1;
+};
 
 const createFragmentBarrier = (): RetainedFragmentBarrier => ({
   kind: RenderEntryKind.Barrier,
