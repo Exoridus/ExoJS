@@ -129,6 +129,34 @@ describe('RetainedPlanCache', () => {
 
     drawable.destroy();
   });
+
+  test('invalidate() releases the pooled strong reference to drawables so they can GC', () => {
+    const cache = new RetainedPlanCache();
+    const drawable = new Drawable();
+
+    captureOne(cache, drawable, 1, 1, 1, 1, fakeBackendA);
+
+    const pooledSlot = cache.slots[0]!;
+
+    expect(pooledSlot.drawable).toBe(drawable);
+
+    cache.invalidate();
+
+    // The pooled record survives for reuse; only its drawable reference is
+    // dropped, so a child evicted from the container is not kept alive by a
+    // cache that no longer describes it. Same contract the fragment's draw pool
+    // has — both go through `releasePooledDrawables` now.
+    expect(pooledSlot.drawable).toBeUndefined();
+
+    cache._beginCapture();
+    cache._appendSlot(0, makeCommand(drawable));
+    cache._commitCapture(2, 1, 1, 1, fakeBackendA);
+
+    expect(cache.slots[0]).toBe(pooledSlot);
+    expect(cache.slots[0]!.drawable).toBe(drawable);
+
+    drawable.destroy();
+  });
 });
 
 class ProbeContainer extends Container {

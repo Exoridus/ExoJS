@@ -7,6 +7,7 @@ import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
 import { RenderPlanPlayer } from '#rendering/plan/RenderPlanPlayer';
 import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
 import { LiveEntryReason, type SourceOther, type SourceScope } from '#rendering/plan/RenderSourceItem';
+import type { RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { RenderNode } from '#rendering/RenderNode';
@@ -169,6 +170,8 @@ const playFrame = (root: RenderNode, backend: RenderBackend): number => {
 };
 
 const sourceOf = (root: RenderNode): RenderRootSource | null => root._retainedRootRepresentation().source;
+
+const fragmentOf = (group: RetainedContainer): RetainedGroupFragment => (group as unknown as { _fragment: RetainedGroupFragment })._fragment;
 
 /**
  * One entry of the root scope in RECORDED order — the shape the source used to
@@ -673,6 +676,100 @@ describe('render-root source: boundaries the source refuses to rebuild', () => {
     expect(draws).toEqual(['a', 'b']);
     expect(sourceOf(root)).toBeNull();
 
+    root.destroy();
+    backend.destroy();
+  });
+});
+
+describe('render-root source: a transform group pays for none of the root machinery', () => {
+  /**
+   * The two tiers share their capture layer — the pooled records, the thrash
+   * rule, the transform-row reconcile — and share nothing above it. A source is
+   * a spatial index plus one packed item per drawable, built so a MOVED CAMERA
+   * can re-select what it admits; inside a transform group there is no such
+   * question to answer, because `RenderNode._collectForRenderPlan` suppresses
+   * per-child culling at the boundary and the group is culled as a whole.
+   *
+   * So a group would pay the walk, the item store and the index for a selection
+   * that can only ever return everything, and would trade its own O(batches)
+   * replay for an O(items) emit. These tests exist to make that stay a decision
+   * rather than an omission.
+   */
+  test('a group under a selecting root builds no source, no membership and no representation of its own', () => {
+    const { backend, draws } = createDrawRecordingBackend();
+    const root = makeRoot(new Container());
+    const group = new RetainedContainer();
+    const inside = new Leaf('g1');
+
+    inside.setPosition(140, 300);
+    group.addChild(inside);
+    root.addChild(new Leaf('a').setPosition(100, 300), group);
+
+    driveToSourceTier(root, backend);
+
+    // The root reached the tier this is all about...
+    expect(sourceOf(root)).not.toBeNull();
+
+    // ...and the group under it holds none of it. Read through the private
+    // field rather than `_retainedRootRepresentation()`, which would CREATE the
+    // very thing being asserted absent.
+    const groupRoot = (group as unknown as { _retainedRoot: unknown })._retainedRoot;
+
+    expect(groupRoot).toBeNull();
+
+    // Its own tier still carries it across camera steps: the group fragment's
+    // key omits `View.updateId` on purpose — the group is culled as a whole, so
+    // its capture is view-independent — and that is exactly what a root-style
+    // per-child re-selection inside the group would take away.
+    const captureSpy = vi.spyOn(fragmentOf(group), 'capture');
+
+    for (const centerX of [420, 440, 460, 380]) {
+      draws.length = 0;
+      backend.setView(viewAt(centerX));
+      playFrame(root, backend);
+
+      expect(draws).toEqual(['a', 'g1']);
+    }
+
+    expect(captureSpy).not.toHaveBeenCalled();
+    expect((group as unknown as { _retainedRoot: unknown })._retainedRoot).toBeNull();
+
+    captureSpy.mockRestore();
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('moving the group is one matrix: the root source survives it and the group re-collects nothing', () => {
+    const { backend, draws } = createDrawRecordingBackend();
+    const root = makeRoot(new Container());
+    const group = new RetainedContainer();
+    const inside = new Leaf('g1');
+
+    group.addChild(inside);
+    group.setPosition(140, 300);
+    root.addChild(new Leaf('a').setPosition(100, 300), group);
+
+    driveToSourceTier(root, backend);
+
+    const source = sourceOf(root);
+
+    expect(source).not.toBeNull();
+
+    const captureSpy = vi.spyOn(fragmentOf(group), 'capture');
+
+    group.setPosition(160, 300);
+    draws.length = 0;
+    playFrame(root, backend);
+
+    // A group move stamps no revision inside the group, so its fragment stays
+    // clean; and the group is a live entry in the root's source rather than a
+    // set of items, so the root's stored world bounds do not describe it and
+    // its move cannot invalidate them.
+    expect(draws).toEqual(['a', 'g1']);
+    expect(captureSpy).not.toHaveBeenCalled();
+    expect(sourceOf(root)).toBe(source);
+
+    captureSpy.mockRestore();
     root.destroy();
     backend.destroy();
   });
