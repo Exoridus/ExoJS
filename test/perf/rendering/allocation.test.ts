@@ -80,20 +80,25 @@ const TOLERANCE_LARGE = 1.15;
 /**
  * Absolute headroom, in KB/frame, for every scene below {@link NOISE_FLOOR_KB}.
  *
- * Sized from what these gates have to catch and what they have to tolerate.
+ * Sized from what these gates have to catch, what they have to tolerate, and
+ * the rule that a ratchet never runs backwards.
  * TOLERATE: the widest fresh-process spread measured over five processes is
  * 0.13 KB/frame (`deep-hierarchy`), and the widest in-suite pass-to-pass median
- * spread is 0.08 KB — 2 KB is more than an order of magnitude above both, which
- * is the margin the platform floor itself needs (the CI runner's Node/OS pair
- * moves the sampler's baseline, not the render path's).
+ * spread is 0.21 KB — an order of magnitude below this, which is the margin the
+ * platform floor itself needs (the CI runner's Node/OS pair moves the sampler's
+ * baseline, and since it moves `empty` too, it moves every scene together).
  * CATCH: a regression in a retained frame arrives per node, per batch or per
  * scope, so it lands as a multiple of these baselines, not a percentage — one
  * 32-byte object per sprite is +32 KB/frame in `sprite/1000 static` against a
  * 1.2 KB baseline, and the tightest case in the catalog (one object per MOVED
  * node in `sprite/10000 transform-only 1%`, k=100) is still +3.2 KB against a
- * 4.6 KB budget. Both fail the gate; neither needs a tighter band.
+ * 3.9 KB budget. Both fail the gate; neither needs a tighter band.
+ * NEVER LOOSEN: 1.25 is also the largest round value at which no budget in the
+ * table comes out above the one it replaces. At 2 KB, `nested/1000 d4` would
+ * have gone from 2.57 to 3.20 KB — a scene whose measured rate FELL would have
+ * been handed a wider budget, which is the one thing a ratchet must not do.
  */
-const FIXED_HEADROOM_KB = 2;
+const FIXED_HEADROOM_KB = 1.25;
 
 /**
  * Documented baseline MEDIANS in KB/frame, measured against `src` on Node
