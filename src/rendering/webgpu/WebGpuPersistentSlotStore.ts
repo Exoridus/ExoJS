@@ -323,16 +323,28 @@ export class WebGpuPersistentSlotStore implements PersistentSlotBundle {
 
     const blocks = this._dirtyBlocks;
     let uploadedSlots = 0;
+    let block = 0;
 
-    for (let block = 0; block < blocks.length; block++) {
+    // Consecutive dirty blocks are uploaded as ONE run per buffer rather than
+    // one call per block. Arrivals cluster hard — the free list is LIFO, so a
+    // scrolling camera hands the departures' slots straight back to the
+    // arrivals — which at a million items turns a few hundred `writeBuffer`
+    // calls a frame into a handful, for the same bytes.
+    while (block < blocks.length) {
       if (blocks[block] === 0) {
+        block++;
         continue;
       }
 
-      blocks[block] = 0;
+      const runStart = block;
 
-      const firstSlot = block * slotsPerBlock;
-      const slots = Math.min(slotsPerBlock, this._capacity - firstSlot);
+      while (block < blocks.length && blocks[block] !== 0) {
+        blocks[block] = 0;
+        block++;
+      }
+
+      const firstSlot = runStart * slotsPerBlock;
+      const slots = Math.min((block - runStart) * slotsPerBlock, this._capacity - firstSlot);
 
       if (slots <= 0) {
         continue;
