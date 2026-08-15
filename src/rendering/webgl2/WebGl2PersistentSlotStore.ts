@@ -332,7 +332,10 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
     const view = this._order.subarray(0, Math.max(1, count));
 
     if (this._orderBuffer === null) {
-      this._orderBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, view, BufferUsage.DynamicDraw).connect(createRuntime(gl), this._accountant ?? undefined);
+      this._orderBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, view, BufferUsage.DynamicDraw).connect(
+        createRuntime(gl),
+        this._accountant ?? undefined,
+      );
     } else {
       this._orderBuffer.upload(view);
     }

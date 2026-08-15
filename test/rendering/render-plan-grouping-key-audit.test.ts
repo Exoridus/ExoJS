@@ -195,6 +195,7 @@ const createPlan = (entries: object[]): RenderPlan => {
       transformNode: null,
       retainedInstructions: null,
       retainedRecordTarget: null,
+      persistentDraw: null,
     };
 
     return {

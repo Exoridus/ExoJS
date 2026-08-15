@@ -256,7 +256,14 @@ describe('DerivedSelectionState', () => {
       const state = new DerivedSelectionState();
 
       state.rebind(6);
-      state.update(root, membership(scopes, [[0, 3], [0, 1]]), null);
+      state.update(
+        root,
+        membership(scopes, [
+          [0, 3],
+          [0, 1],
+        ]),
+        null,
+      );
 
       // Item 1 is not admitted, so the nested scope is reached at item 3 instead
       // — still after every root item recorded before it, still before item 3.
@@ -273,7 +280,14 @@ describe('DerivedSelectionState', () => {
       const state = new DerivedSelectionState();
 
       state.rebind(5);
-      state.update(root, membership(scopes, [[0, 1, 2], [0, 1]]), null);
+      state.update(
+        root,
+        membership(scopes, [
+          [0, 1, 2],
+          [0, 1],
+        ]),
+        null,
+      );
 
       expect(orderedHandles(state)).toEqual([0, 1, 2, 3, 4]);
     });
