@@ -434,6 +434,7 @@ export class SourceVisibilityIndex {
 
     const cellStart = this._cellStart;
     const cellItems = this._cellItems;
+    const words = bits.words;
     const overhangX = this._overhangCellsX * cellSize;
     const overhangY = this._overhangCellsY * cellSize;
 
@@ -457,8 +458,15 @@ export class SourceVisibilityIndex {
         const cellLeft = originX + column * cellSize;
 
         if (rowInterior && cellLeft >= left && cellLeft + cellSize + overhangX <= right) {
+          // Admitting a whole cell is the query's inner loop at scale — nine
+          // candidates in ten reach it on a viewport-sized rect — so the set is
+          // written through its word array directly. `bits.set` is the same two
+          // operations behind a call, and at a third of a million admissions a
+          // frame the call is a measurable share of the query.
           for (let k = from; k < to; k++) {
-            bits.set(cellItems[k]!);
+            const i = cellItems[k]!;
+
+            words[i >>> 5] = words[i >>> 5]! | (1 << (i & 31));
           }
 
           continue;
@@ -477,7 +485,7 @@ export class SourceVisibilityIndex {
           // both classifiers stamp the structure revision the source is keyed
           // on, so the classification cannot have gone stale here.
           if (intersectionRectRect(queryRect, scratch)) {
-            bits.set(i);
+            words[i >>> 5] = words[i >>> 5]! | (1 << (i & 31));
           }
         }
       }
