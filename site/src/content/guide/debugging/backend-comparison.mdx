@@ -56,6 +56,10 @@ Chromium is measured on every CI run. Firefox and Safari need a machine with a d
 The Safari column above shows it — `auto` already keeps Safari on WebGL2 for this reason. Stick with WebGL2 there rather than pinning `backend: { type: 'webgpu' }` for production use.
 </Callout>
 
+Feature parity is a different question from cost, and the matrix above says nothing about the latter. One stress workload has been measured end to end on both backends. In the `scrolling-world` case of the engine's benchmark harness — one million static sprites spread over four times the viewport's area, with a moving camera — both backends draw the visible world in a single draw call: a large static world can keep its renderable state persistent while the camera moves, so moving the camera does not require rebuilding the visible scene from scratch. On the documented reference run (headless Chromium, NVIDIA GeForce RTX 5070 Ti, ExoJS 0.15.2, 2026-08-15) CPU-p95 measured 10.08 ms on WebGL2 and 10.45 ms on WebGPU.
+
+Read that as one dated result for one workload on one machine, not as a backend-wide guarantee and not as a frame-rate claim. CPU-p95 is the time the engine spent in the render path on the CPU in its 95th-percentile frame — not the frame's GPU time, and not a whole game frame with update, input, and physics in it. The two backends' full-frame columns come from different instruments (a hardware timer query on WebGL2, a queue-completion wall clock on WebGPU) and are not comparable one-to-one. Methodology, metric definitions, the environment metadata recorded per run, and the command that reproduces this cell live in the harness's README: [`@codexo/exojs-bench`](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-bench/README.md).
+
 ### Known differences
 
 Where differences exist, they are performance characteristics or rendering-path specifics, not API gaps:
