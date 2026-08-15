@@ -1,6 +1,6 @@
 {
   "title": "DataTextureDirtyRegion",
-  "description": "A region of the buffer marked for upload by the next backend sync. Bounds are pixel coordinates with origin at the top-left.",
+  "description": "A region of the buffer marked for upload by the next backend sync. Bounds are pixel coordinates with origin at the top-left. The instance DataTexture._consumeDirtyRegion hands out is the texture's own long-lived record, reused across consume cycles — read it inside the sync pass that consumed it and do not retain it.",
   "symbol": "DataTextureDirtyRegion",
   "kind": "interface",
   "subsystem": "rendering",
@@ -19,7 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A region of the buffer marked for upload by the next backend sync. Bounds are pixel coordinates with origin at the top-left."
+        "A region of the buffer marked for upload by the next backend sync. Bounds are pixel coordinates with origin at the top-left.",
+        "The instance DataTexture._consumeDirtyRegion hands out is the texture's own long-lived record, reused across consume cycles — read it inside the sync pass that consumed it and do not retain it."
       ],
       "importLine": "import { DataTextureDirtyRegion } from '@codexo/exojs'",
       "sourceLink": null

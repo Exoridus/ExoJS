@@ -2586,20 +2586,48 @@ interface WebGl2DataTextureFormatInfo {
   readonly bytesPerPixel: number;
 }
 
+type WebGl2DataTextureFormatTable = Readonly<Record<DataTextureFormat | ColorTextureFormat, WebGl2DataTextureFormatInfo>>;
+
+/**
+ * The descriptor table, built once and handed out by reference. `_syncTexture`
+ * resolves a format for every dirty texture in every frame, so returning a fresh
+ * object literal per call meant one descriptor allocation per texture sync.
+ *
+ * Built on first use rather than at module scope: the enum values are read off
+ * the `WebGL2RenderingContext` global, which a plain Node import of the engine
+ * does not have. `formatTableSource` keys the cache on the global's identity, so
+ * a scope that installs (or replaces) the class after the first lookup still
+ * gets a table built from it.
+ */
+let formatTableSource: unknown = null;
+let formatTable: WebGl2DataTextureFormatTable | null = null;
+
+// Only the descriptors are frozen — they are what leaves this module, so they
+// are what a call site could otherwise mutate. The table holding them stays a
+// plain object: `Object.freeze` on the container buys nothing here (it never
+// escapes) and would only risk pushing the per-call keyed lookup out of V8's
+// fast property path.
+function buildWebgl2DataTextureFormatTable(gl: typeof WebGL2RenderingContext): WebGl2DataTextureFormatTable {
+  return {
+    [TextureFormat.R8]: Object.freeze({ internalFormat: gl.R8, format: gl.RED, type: gl.UNSIGNED_BYTE, channels: 1, bytesPerPixel: 1 }),
+    [TextureFormat.R32F]: Object.freeze({ internalFormat: gl.R32F, format: gl.RED, type: gl.FLOAT, channels: 1, bytesPerPixel: 4 }),
+    [TextureFormat.Rgba8]: Object.freeze({ internalFormat: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, channels: 4, bytesPerPixel: 4 }),
+    [TextureFormat.Rgba16F]: Object.freeze({ internalFormat: gl.RGBA16F, format: gl.RGBA, type: gl.HALF_FLOAT, channels: 4, bytesPerPixel: 8 }),
+    [TextureFormat.Rgba32F]: Object.freeze({ internalFormat: gl.RGBA32F, format: gl.RGBA, type: gl.FLOAT, channels: 4, bytesPerPixel: 16 }),
+  };
+}
+
 // Handles both DataTexture (single- and four-channel) and RenderTexture
 // (four-channel color attachment) formats — the four-channel entries overlap.
 function webgl2DataTextureFormat(format: DataTextureFormat | ColorTextureFormat): WebGl2DataTextureFormatInfo {
   const gl = WebGL2RenderingContext;
-  switch (format) {
-    case TextureFormat.R8:
-      return { internalFormat: gl.R8, format: gl.RED, type: gl.UNSIGNED_BYTE, channels: 1, bytesPerPixel: 1 };
-    case TextureFormat.R32F:
-      return { internalFormat: gl.R32F, format: gl.RED, type: gl.FLOAT, channels: 1, bytesPerPixel: 4 };
-    case TextureFormat.Rgba8:
-      return { internalFormat: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, channels: 4, bytesPerPixel: 4 };
-    case TextureFormat.Rgba16F:
-      return { internalFormat: gl.RGBA16F, format: gl.RGBA, type: gl.HALF_FLOAT, channels: 4, bytesPerPixel: 8 };
-    case TextureFormat.Rgba32F:
-      return { internalFormat: gl.RGBA32F, format: gl.RGBA, type: gl.FLOAT, channels: 4, bytesPerPixel: 16 };
+  let table = formatTable;
+
+  if (table === null || formatTableSource !== gl) {
+    table = buildWebgl2DataTextureFormatTable(gl);
+    formatTableSource = gl;
+    formatTable = table;
   }
+
+  return table[format];
 }

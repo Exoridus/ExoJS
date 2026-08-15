@@ -36,6 +36,10 @@ const bytesPerChannelForFormat: Record<DataTextureFormat, number> = {
 /**
  * A region of the buffer marked for upload by the next backend sync.
  * Bounds are pixel coordinates with origin at the top-left.
+ *
+ * The instance {@link DataTexture._consumeDirtyRegion} hands out is the
+ * texture's own long-lived record, reused across consume cycles — read it
+ * inside the sync pass that consumed it and do not retain it.
  */
 export interface DataTextureDirtyRegion {
   /** Whether the whole texture should be re-uploaded (covers initial alloc and full {@link DataTexture.commit}). */
@@ -44,6 +48,15 @@ export interface DataTextureDirtyRegion {
   readonly y: number;
   readonly width: number;
   readonly height: number;
+}
+
+/** The writable view of {@link DataTextureDirtyRegion} the owning texture mutates. @internal */
+interface MutableDataTextureDirtyRegion {
+  full: boolean;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 /** Construction options for {@link DataTexture}. */
@@ -116,7 +129,19 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
   public readonly format: F;
   public readonly buffer: DataTextureBuffer<F>;
 
-  private _dirty: DataTextureDirtyRegion | null = null;
+  /**
+   * The one dirty-region record this texture ever owns. `commit`/`commitRect`
+   * rewrite it in place and `_dirtyPending` says whether it currently describes
+   * anything, so marking a region dirty allocates nothing — the transform and
+   * tint stores commit a rect per moved node per frame, which previously cost
+   * one record per commit and a second one per union.
+   *
+   * Reuse is safe because every consumer reads the region synchronously inside
+   * the sync pass that consumed it (`_syncTexture` on both backends) and none
+   * holds it beyond that.
+   */
+  private readonly _dirty: MutableDataTextureDirtyRegion = { full: false, x: 0, y: 0, width: 0, height: 0 };
+  private _dirtyPending = false;
 
   public constructor(options: DataTextureOptions & { format: F }) {
     super(null, { ...DataTexture.defaultSamplerOptions, ...options.samplerOptions });
@@ -167,7 +192,17 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
     this.setSize(width, height);
 
     // Mark fully dirty so the first sync uploads the whole buffer.
-    this._dirty = { full: true, x: 0, y: 0, width, height };
+    this._markFullyDirty();
+  }
+
+  /** Point the record at the whole texture. Shared by construction and {@link commit}. */
+  private _markFullyDirty(): void {
+    this._dirty.full = true;
+    this._dirty.x = 0;
+    this._dirty.y = 0;
+    this._dirty.width = this.width;
+    this._dirty.height = this.height;
+    this._dirtyPending = true;
   }
 
   /**
@@ -183,7 +218,7 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
    * mutating `buffer` contents to flush changes to the GPU.
    */
   public commit(): this {
-    this._dirty = { full: true, x: 0, y: 0, width: this.width, height: this.height };
+    this._markFullyDirty();
     this.setSize(this.width, this.height);
     // setSize is a no-op when dimensions don't change; force version bump for sync detection.
     this._bumpVersion();
@@ -210,19 +245,28 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
       throw new Error(`DataTexture commitRect (${x}, ${y}, ${width}, ${height}) is out of bounds for ${this.width}x${this.height}.`);
     }
 
-    if (this._dirty === null) {
-      this._dirty = { full: false, x, y, width, height };
-    } else if (this._dirty.full) {
-      // Already pending full upload — region is subsumed.
-    } else {
-      // Union with the existing pending region.
-      const minX = Math.min(this._dirty.x, x);
-      const minY = Math.min(this._dirty.y, y);
-      const maxX = Math.max(this._dirty.x + this._dirty.width, x + width);
-      const maxY = Math.max(this._dirty.y + this._dirty.height, y + height);
+    const dirty = this._dirty;
 
-      this._dirty = { full: false, x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+    if (!this._dirtyPending) {
+      dirty.full = false;
+      dirty.x = x;
+      dirty.y = y;
+      dirty.width = width;
+      dirty.height = height;
+      this._dirtyPending = true;
+    } else if (!dirty.full) {
+      // Union with the existing pending region, in place.
+      const minX = Math.min(dirty.x, x);
+      const minY = Math.min(dirty.y, y);
+      const maxX = Math.max(dirty.x + dirty.width, x + width);
+      const maxY = Math.max(dirty.y + dirty.height, y + height);
+
+      dirty.x = minX;
+      dirty.y = minY;
+      dirty.width = maxX - minX;
+      dirty.height = maxY - minY;
     }
+    // Pending and already full: the region is subsumed, nothing to record.
 
     this._bumpVersion();
 
@@ -234,13 +278,20 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
    * `null` when there is nothing pending. Backends call this once per sync
    * pass to plan their texSubImage2D / writeTexture operations.
    *
+   * The returned object is the texture's own record and is rewritten by the
+   * next {@link commit}/{@link commitRect} — read it within the sync pass, do
+   * not store it.
+   *
    * @internal
    */
   public _consumeDirtyRegion(): DataTextureDirtyRegion | null {
-    const region = this._dirty;
-    this._dirty = null;
+    if (!this._dirtyPending) {
+      return null;
+    }
 
-    return region;
+    this._dirtyPending = false;
+
+    return this._dirty;
   }
 }
 

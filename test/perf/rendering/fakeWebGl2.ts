@@ -508,7 +508,10 @@ export const installFakeWebGl2Globals = (): void => {
 
   const stub: Record<string, number> = {};
 
-  for (const name of ['R8', 'R32F', 'RGBA8', 'RGBA32F', 'RED', 'RGBA', 'UNSIGNED_BYTE', 'FLOAT']) {
+  // Every constant the backend's format table reads — it builds all five format
+  // descriptors in one go, so a missing name would put `undefined` in an entry
+  // rather than only failing if that format were ever requested.
+  for (const name of ['R8', 'R32F', 'RGBA8', 'RGBA16F', 'RGBA32F', 'RED', 'RGBA', 'UNSIGNED_BYTE', 'HALF_FLOAT', 'FLOAT']) {
     stub[name] = constantFor(name);
   }
 
