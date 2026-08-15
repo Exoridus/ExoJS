@@ -67,6 +67,8 @@ interface MockWebGpuEnvironment {
   readonly pipelineDescriptors: GPURenderPipelineDescriptor[];
   readonly buffers: Array<{ destroy: MockInstance }>;
   readonly textures: Array<{ destroy: MockInstance; createView: MockInstance }>;
+  /** `GPUDevice.destroy` — resolves `device.lost` with reason `'destroyed'`, as the platform does. */
+  readonly destroyDevice: MockInstance;
   /** Resolve this to simulate the GPU device being lost. */
   simulateDeviceLost(info?: Partial<GPUDeviceLostInfo>): void;
   restore(): void;
@@ -161,7 +163,14 @@ const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
       ...info,
     } as GPUDeviceLostInfo);
   };
+  // Mirrors the platform contract: destroying a device resolves its `lost`
+  // promise with reason `'destroyed'`, which is what distinguishes an
+  // intentional teardown from a driver-side loss.
+  const destroyDevice = vi.fn(() => {
+    _resolveLost?.({ reason: 'destroyed' as GPUDeviceLostReason, message: 'device destroyed' } as GPUDeviceLostInfo);
+  });
   const device = {
+    destroy: destroyDevice,
     createShaderModule: vi.fn(() => ({}) as GPUShaderModule),
     createBindGroupLayout,
     createPipelineLayout: vi.fn(() => ({}) as GPUPipelineLayout),
@@ -255,6 +264,7 @@ const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
     pipelineDescriptors,
     buffers,
     textures,
+    destroyDevice,
     simulateDeviceLost,
     restore: (): void => {
       if (previousGpu) {
@@ -2339,6 +2349,161 @@ describe('WebGpuBackend', () => {
       // teardown so it cannot keep running against a torn-down/replaced
       // navigator.gpu mock in a later test.
       manager?.destroy();
+      environment.restore();
+    }
+  });
+
+  test('destroy releases the GPUDevice explicitly instead of leaving it to garbage collection', async () => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const app = {
+        canvas: environment.canvas,
+        options: { canvas: { width: 128, height: 128 }, clearColor: Color.black },
+      } as unknown as Application;
+      const manager = new WebGpuBackend(app);
+
+      installCoreAndParticleRenderers(manager);
+
+      await manager.initialize();
+
+      expect(environment.destroyDevice).not.toHaveBeenCalled();
+
+      manager.destroy();
+
+      expect(environment.destroyDevice).toHaveBeenCalledTimes(1);
+    } finally {
+      environment.restore();
+    }
+  });
+
+  test('destroy releases the device only after the resources it owns', async () => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const app = {
+        canvas: environment.canvas,
+        options: { canvas: { width: 128, height: 128 }, clearColor: Color.black },
+      } as unknown as Application;
+      const manager = new WebGpuBackend(app);
+
+      installCoreAndParticleRenderers(manager);
+
+      await manager.initialize();
+
+      const order: string[] = [];
+
+      for (const buffer of environment.buffers) {
+        buffer.destroy.mockImplementation(() => order.push('buffer'));
+      }
+
+      environment.destroyDevice.mockImplementation(() => order.push('device'));
+
+      manager.destroy();
+
+      // Buffer/texture teardown must still run against a live device: once the
+      // device is destroyed every handle it owns is already invalid.
+      expect(order.at(-1)).toBe('device');
+      expect(order.indexOf('buffer')).toBeGreaterThanOrEqual(0);
+    } finally {
+      environment.restore();
+    }
+  });
+
+  test('an intentional destroy does not start a device-recovery attempt', async () => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const app = {
+        canvas: environment.canvas,
+        options: { canvas: { width: 128, height: 128 }, clearColor: Color.black },
+      } as unknown as Application;
+      const manager = new WebGpuBackend(app);
+
+      installCoreAndParticleRenderers(manager);
+
+      await manager.initialize();
+
+      const restored = vi.fn();
+      const lost = vi.fn();
+
+      manager.onDeviceRestored.add(restored);
+      manager.onDeviceLost.add(lost);
+
+      const requestsBeforeDestroy = (navigator.gpu.requestAdapter as unknown as MockInstance).mock.calls.length;
+
+      manager.destroy();
+
+      // The `lost` promise resolves a microtask later, and a recovery attempt
+      // would show up as a fresh requestAdapter() call.
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect((navigator.gpu.requestAdapter as unknown as MockInstance).mock.calls.length).toBe(requestsBeforeDestroy);
+      expect(restored).not.toHaveBeenCalled();
+      expect(lost).not.toHaveBeenCalled();
+    } finally {
+      environment.restore();
+    }
+  });
+
+  test('an unintentional device loss still recovers after the explicit-destroy guard', async () => {
+    const environment = createMockWebGpuEnvironment();
+    let manager: WebGpuBackend | null = null;
+
+    try {
+      const app = {
+        canvas: environment.canvas,
+        options: { canvas: { width: 128, height: 128 }, clearColor: Color.black },
+      } as unknown as Application;
+
+      manager = new WebGpuBackend(app);
+      installCoreAndParticleRenderers(manager);
+
+      await manager.initialize();
+
+      const restored = vi.fn();
+
+      manager.onDeviceRestored.add(restored);
+
+      environment.simulateDeviceLost({ message: 'gpu removed' });
+
+      await vi.waitFor(
+        () => {
+          expect(restored).toHaveBeenCalledTimes(1);
+        },
+        { timeout: 5000, interval: 25 },
+      );
+
+      expect(manager.deviceLost).toBe(false);
+    } finally {
+      manager?.destroy();
+      environment.restore();
+    }
+  });
+
+  test('a failure after device acquisition releases the device instead of stranding it', async () => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      // The canvas hands out no WebGPU context: initialization fails at a point
+      // where the device exists but `destroy()` cannot reach it any more.
+      Object.defineProperty(environment.canvas, 'getContext', {
+        configurable: true,
+        value: vi.fn(() => null),
+      });
+
+      const app = {
+        canvas: environment.canvas,
+        options: { canvas: { width: 128, height: 128 }, clearColor: Color.black },
+      } as unknown as Application;
+      const manager = new WebGpuBackend(app);
+
+      installCoreAndParticleRenderers(manager);
+
+      await expect(manager.initialize()).rejects.toThrow('Could not create WebGPU canvas context.');
+      expect(environment.destroyDevice).toHaveBeenCalledTimes(1);
+    } finally {
       environment.restore();
     }
   });

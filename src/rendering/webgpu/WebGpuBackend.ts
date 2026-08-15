@@ -955,6 +955,14 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   public destroy(): void {
+    // Captured before the teardown below nulls `_device`: the explicit
+    // `GPUDevice.destroy()` at the very end of this method is what actually
+    // hands the driver-side device (on D3D12: its command queue) back.
+    // Dropping the last JS reference only makes it eligible for garbage
+    // collection, and a driver has a hard ceiling on live devices that GC
+    // timing must not be trusted to stay under.
+    const device = this._device;
+
     this._destroyed = true;
     this._removeUncapturedErrorListener();
     this.onDeviceLost.destroy();
@@ -1034,6 +1042,16 @@ export class WebGpuBackend implements RenderBackend {
     this._renderTarget = this._rootRenderTarget;
     this._clearColor.destroy();
     this._rootRenderTarget.destroy();
+
+    // Last, so every buffer/texture destroy above still ran against a live
+    // device. The resulting device loss carries reason `'destroyed'`, and
+    // `_destroyed` was set at the top of this method — both the loss
+    // subscription and `_handleDeviceLoss` bail out on it, so this cannot
+    // start a recovery attempt. Guarded for the mock devices the jsdom suites
+    // hand the backend, which implement no `destroy`.
+    if (typeof device?.destroy === 'function') {
+      device.destroy();
+    }
   }
 
   public createColorAttachment(): GPURenderPassColorAttachment {
@@ -1796,28 +1814,43 @@ export class WebGpuBackend implements RenderBackend {
     // fails (a usable adapter but a failing requestDevice — e.g. a missing
     // backend library), which breaks the automatic WebGL2 fallback in
     // Application.
-    const context = this._canvas.getContext('webgpu');
-
-    if (context === null) {
-      throw new Error('Could not create WebGPU canvas context.');
-    }
-
-    const format = gpuNavigator.gpu.getPreferredCanvasFormat();
-
+    // From here on the device exists but is not yet owned by `this._device`,
+    // so a failure would strand it beyond the reach of `destroy()`. Every
+    // throw on this stretch releases it explicitly — the driver's live-device
+    // ceiling is low enough that a leak per failed initialization matters,
+    // and `Application`'s WebGPU→WebGL2 fallback walks exactly this path.
     try {
-      context.configure({
-        device,
-        format,
-        alphaMode: 'opaque',
-        // COPY_SRC is required by WebGpuBackdropBlendCompositor to capture
-        // the root-canvas backdrop via copyTextureToTexture.
-        usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
-      });
+      const context = this._canvas.getContext('webgpu');
+
+      if (context === null) {
+        throw new Error('Could not create WebGPU canvas context.');
+      }
+
+      const format = gpuNavigator.gpu.getPreferredCanvasFormat();
+
+      try {
+        context.configure({
+          device,
+          format,
+          alphaMode: 'opaque',
+          // COPY_SRC is required by WebGpuBackdropBlendCompositor to capture
+          // the root-canvas backdrop via copyTextureToTexture.
+          usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
+        });
+      } catch (error) {
+        throw this._createInitializationError('Failed to configure the WebGPU canvas context.', error);
+      }
+
+      this._context = context;
+      this._format = format;
     } catch (error) {
-      throw this._createInitializationError('Failed to configure the WebGPU canvas context.', error);
+      if (typeof device.destroy === 'function') {
+        device.destroy();
+      }
+
+      throw error;
     }
 
-    this._context = context;
     this._device = device;
 
     // Surface uncaptured GPU errors (validation / OOM / internal) through
@@ -1828,7 +1861,6 @@ export class WebGpuBackend implements RenderBackend {
       device.addEventListener('uncapturederror', this._onUncapturedError);
     }
 
-    this._format = format;
     this._hasPresentedFrame = false;
     this._subscribeToDeviceLoss();
     this.rendererRegistry.connect(this);
@@ -1840,7 +1872,7 @@ export class WebGpuBackend implements RenderBackend {
     // draw call of every blend mode does not have to block on synchronous
     // pipeline creation. Renderers without a prewarmPipelines method
     // continue to create pipelines lazily on first use.
-    const prewarmFormats: readonly GPUTextureFormat[] = [format, managedTextureFormat];
+    const prewarmFormats: readonly GPUTextureFormat[] = [this.format, managedTextureFormat];
 
     await this._prewarmRendererPipelines(prewarmFormats);
 
