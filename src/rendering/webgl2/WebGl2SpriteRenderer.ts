@@ -11,12 +11,11 @@ import {
 import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
 import { Shader } from '#rendering/shader/Shader';
-import { SOURCE_QUAD_FLOATS } from '#rendering/sourceQuadRecord';
+import { fillPersistentSpriteSlotTable, writePersistentSpriteSlots } from '#rendering/sprite/persistentSpriteSlots';
 import type { Sprite } from '#rendering/sprite/Sprite';
 import { composeSpriteMaterialFragmentGlsl, spriteMaterialTextureSlots, spriteVertexGlsl } from '#rendering/sprite/spriteMaterialSources';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
-import { TRANSFORM_FLOATS_PER_ROW, TRANSFORM_TINT_BYTES_PER_ROW } from '#rendering/TransformBuffer';
 import { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
 import type { View } from '#rendering/View';
 
@@ -239,128 +238,34 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
    * Decide whether this renderer can serve every item in `source` from one slot
    * store, and allocate it if so.
    *
-   * Three refusals, each of them a batching rule rather than an ordering one —
-   * ordering was already settled by the plan layer:
-   *
-   * - A sprite carrying its own {@link SpriteMaterial} takes the custom path,
-   *   where a material switch is a hard flush boundary. One ordered stream
-   *   cannot express that, so any own-material item disqualifies the source.
-   * - A blend-mode change is likewise a flush boundary, so the whole source has
-   *   to agree on one.
-   * - The base textures must all fit ONE slot table. That is what makes a slot
-   *   texture index stable for the item's whole life — with one table there is
-   *   no per-batch re-slotting for a membership change to invalidate.
-   *
-   * Runs once per built source, never per frame.
+   * The rules are the shared sprite ones (see
+   * {@link fillPersistentSpriteSlotTable}); what is backend-specific is only the
+   * batch table's width and the store the answer is written into. Runs once per
+   * built source, never per frame.
    * @internal
    */
   public _acquirePersistentSlotStore(source: RenderRootSource, backend: WebGl2Backend): WebGl2PersistentSlotStore | null {
     const store = new WebGl2PersistentSlotStore();
-    const textureIndexOfHandle = new Uint8Array(source.itemCount);
-    let blendMode: BlendModes | null = null;
 
-    for (const scope of source.scopes) {
-      const drawables = scope.items.drawables;
-      const count = scope.items.count;
-      const handleBase = scope.handleBase;
-
-      for (let i = 0; i < count; i++) {
-        const sprite = drawables[i] as Sprite;
-        const texture = sprite.texture;
-
-        if (texture === null || sprite.material != null) {
-          store.destroy();
-
-          return null;
-        }
-
-        const mode = sprite.blendMode;
-
-        if (blendMode === null) {
-          blendMode = mode;
-        } else if (blendMode !== mode) {
-          store.destroy();
-
-          return null;
-        }
-
-        let index = store.textures.indexOf(texture);
-
-        if (index === -1) {
-          if (store.textures.length >= this._maxTextureSlots) {
-            store.destroy();
-
-            return null;
-          }
-
-          index = store.textures.push(texture) - 1;
-        }
-
-        // Recorded per item here, on the walk that builds the table anyway, so
-        // an ENTER never has to ask a drawable which texture it uses.
-        textureIndexOfHandle[handleBase + i] = index;
-      }
-    }
-
-    if (blendMode === null) {
+    if (!fillPersistentSpriteSlotTable(source, store, this._maxTextureSlots)) {
       store.destroy();
 
       return null;
     }
 
-    store.blendMode = blendMode;
-    store.textureIndexOfHandle = textureIndexOfHandle;
     store.connectDevice(backend.context, backend.accountant);
 
     return store;
   }
 
   /**
-   * Fill the persistent rows of the items that just took a slot, entirely from
-   * the source's prepacked tables.
-   *
-   * `entered` is a flat `(scopeOrdinal, localIndex, slot)` triple list holding
-   * arrivals only — a staying item's rows are already what this would write,
-   * which is the whole saving. No drawable is touched: an item entering the view
-   * has not been read for hundreds of frames, and resolving its transform,
-   * bounds and texture frame out of cold objects was the measured cost of a
-   * camera step. Everything here is a fixed-size copy between typed arrays, plus
-   * one lookup for the store-table texture index.
+   * Fill the persistent rows of the items that just took a slot and push the
+   * texture lines they landed on. See {@link writePersistentSpriteSlots} for why
+   * this never touches a drawable.
    * @internal
    */
   public _writePersistentSlotRows(store: WebGl2PersistentSlotStore, source: RenderRootSource, entered: Int32Array, count: number): void {
-    const scopes = source.scopes;
-    const textureIndexOfHandle = store.textureIndexOfHandle;
-    let highest = -1;
-
-    for (let i = 0; i < count; i++) {
-      const slot = entered[i * 3 + 2]!;
-
-      if (slot > highest) {
-        highest = slot;
-      }
-    }
-
-    store.ensureCapacity(highest + 1);
-
-    for (let i = 0; i < count; i++) {
-      const base = i * 3;
-      const scope = scopes[entered[base]!]!;
-      const localIndex = entered[base + 1]!;
-      const items = scope.items;
-
-      store.writeSlotFrom(
-        entered[base + 2]!,
-        items.rows,
-        localIndex * TRANSFORM_FLOATS_PER_ROW,
-        items.tints,
-        localIndex * TRANSFORM_TINT_BYTES_PER_ROW,
-        items.quads,
-        localIndex * SOURCE_QUAD_FLOATS,
-        textureIndexOfHandle[scope.handleBase + localIndex]!,
-      );
-    }
-
+    writePersistentSpriteSlots(store, source, entered, count);
     store.commitDirtyRows();
   }
 
