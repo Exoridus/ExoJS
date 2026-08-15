@@ -462,7 +462,11 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       nodeCount,
       gl.RGBA,
       gl.FLOAT,
-      this._nodeDataArray.subarray(0, nodeCount * nodeFloats),
+      // `(srcData, srcOffset)`: the rectangle above already fixes how much is
+      // read (`nodeTexels * nodeCount` texels from element 0), so narrowing the
+      // array with a `subarray()` view per flush would only allocate.
+      this._nodeDataArray,
+      0,
     );
   }
 
@@ -581,8 +585,8 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
 
       batchCount++;
 
-      c.vertexBuffer.upload(this._float32View.subarray(0, totalVerts * vertexStrideWords));
-      c.indexBuffer.upload(this._indexData.subarray(0, totalIndices));
+      c.vertexBuffer.upload(this._float32View, 0, totalVerts * vertexStrideWords);
+      c.indexBuffer.upload(this._indexData, 0, totalIndices);
 
       backend.bindVertexArrayObject(c.vao);
       for (let slot = 0; slot < atlasTextures.length; slot++) {

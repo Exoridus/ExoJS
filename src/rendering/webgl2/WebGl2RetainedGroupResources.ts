@@ -416,16 +416,20 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
       throw new Error('WebGl2RetainedGroupResources: device not connected before instance upload.');
     }
 
-    const view = this._instanceFloats.subarray(0, this._usedWords);
-
     if (this._instanceBuffer === null) {
-      this._instanceBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, view, BufferUsage.DynamicDraw).connect(
-        this._createBufferRuntime(this._gl),
-        this._accountant ?? undefined,
-      );
-    } else {
-      this._instanceBuffer.upload(view);
+      // Only the constructor still needs a narrowed view: it sizes the initial
+      // GPU store from what it is handed and takes no element count. That runs
+      // once per group; every later upload states the range instead.
+      this._instanceBuffer = new WebGl2RenderBuffer(
+        BufferTypes.ArrayBuffer,
+        this._instanceFloats.subarray(0, this._usedWords),
+        BufferUsage.DynamicDraw,
+      ).connect(this._createBufferRuntime(this._gl), this._accountant ?? undefined);
+
+      return;
     }
+
+    this._instanceBuffer.upload(this._instanceFloats, 0, this._usedWords);
   }
 
   /**

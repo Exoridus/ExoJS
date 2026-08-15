@@ -219,7 +219,7 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
       resources.meshBuffer.upload(meshGeometry.vertexData);
     }
 
-    resources.vertexBuffer.upload(this._resolveUpload(mode, resources));
+    resources.vertexBuffer.upload(this._resolveUploadSource(mode, resources), 0, this._drawCount * resources.stride);
 
     const sampler = mode.material.sampler;
 
@@ -268,11 +268,12 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
   }
 
   /**
-   * The slice of the mode's scratch buffer this draw uploads. The byte view is
-   * cached and only rebuilt when the mode swaps in a larger backing buffer, so
-   * a steady-state frame allocates nothing beyond the subarray itself.
+   * The mode's scratch buffer as bytes. The view is cached and only rebuilt
+   * when the mode swaps in a larger backing buffer; how much of it this draw
+   * uploads is expressed as an element count at the upload call, so a steady
+   * frame allocates nothing at all.
    */
-  private _resolveUpload(mode: ParticleRenderMode, resources: ParticleModeResources): Uint8Array {
+  private _resolveUploadSource(mode: ParticleRenderMode, resources: ParticleModeResources): Uint8Array {
     const data = mode.data;
 
     if (resources.source !== data) {
@@ -280,7 +281,7 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
       resources.bytes = new Uint8Array(data);
     }
 
-    return resources.bytes.subarray(0, this._drawCount * resources.stride);
+    return resources.bytes;
   }
 
   private _getOrCreateResources(mode: ParticleRenderMode): ParticleModeResources {

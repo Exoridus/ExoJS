@@ -339,15 +339,18 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
 
     this._order.set(order.subarray(0, count));
 
-    const view = this._order.subarray(0, Math.max(1, count));
+    // At least one element: a zero-length store is not a valid buffer.
+    const uploadCount = Math.max(1, count);
 
     if (this._orderBuffer === null) {
-      this._orderBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, view, BufferUsage.DynamicDraw).connect(
+      // Only the constructor still needs a narrowed view — it sizes the initial
+      // store from what it is handed and takes no element count.
+      this._orderBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._order.subarray(0, uploadCount), BufferUsage.DynamicDraw).connect(
         createRuntime(gl),
         this._accountant ?? undefined,
       );
     } else {
-      this._orderBuffer.upload(view);
+      this._orderBuffer.upload(this._order, 0, uploadCount);
     }
 
     return this._orderBuffer;

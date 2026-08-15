@@ -388,7 +388,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
 
     shader.sync();
     backend.bindVertexArrayObject(vao);
-    instanceBuffer.upload(this._instanceFloat32.subarray(0, this._instanceCount * wordsPerInstance));
+    instanceBuffer.upload(this._instanceFloat32, 0, this._instanceCount * wordsPerInstance);
     this._bindBaseTextureSamplers(backend, material, this._slotCount);
     vao.drawInstanced(4, 0, this._instanceCount, RenderingPrimitives.TriangleStrip);
     this._unbindBaseTextureSamplers(backend, material, this._slotCount);

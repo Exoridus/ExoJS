@@ -341,7 +341,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
 
     this._shader.sync();
     backend.bindVertexArrayObject(vao);
-    instanceBuffer.upload(this._instanceFloat32.subarray(0, this._quadIndex * wordsPerInstance));
+    instanceBuffer.upload(this._instanceFloat32, 0, this._quadIndex * wordsPerInstance);
     vao.drawInstanced(4, 0, this._quadIndex, RenderingPrimitives.TriangleStrip);
     backend.stats.batches++;
     backend.stats.drawCalls++;
