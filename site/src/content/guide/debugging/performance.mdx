@@ -131,6 +131,8 @@ Two things to keep in mind:
 
 The most useful performance practice is measurement. Turn on the performance layer, watch the numbers, change one thing, measure again. The engine's behavior under your specific scene — your sprite counts, your texture layout, your filter stacks — matters more than any general guideline.
 
+The engine's own reproducible stress benchmarks live with [`@codexo/exojs-bench`](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-bench/README.md), whose README documents the methodology behind them — median vs. p95, warmup and timed frames, what each metric does and does not cover. Useful as a reference for measuring honestly; the numbers that decide your game still come from the `PerformanceLayer` on your own scene.
+
 ## Examples
 
 <a id="sprite-stress"></a>
