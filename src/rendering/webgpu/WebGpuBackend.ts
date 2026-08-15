@@ -14,7 +14,9 @@ import type { Geometry } from '#rendering/geometry/Geometry';
 import { dataTextureBytesPerPixel, estimateTextureBytes, GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
 import type { MaterialSamplerOptions } from '#rendering/material/Material';
 import type { Mesh } from '#rendering/mesh/Mesh';
+import type { PersistentSlotBundle } from '#rendering/plan/PersistentSlotDraw';
 import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
 import type { ScopeEntry } from '#rendering/plan/RenderScope';
 import {
   type RetainedBatchInstruction,
@@ -44,6 +46,7 @@ import { WebGpuBackdropBlendCompositor } from './WebGpuBackdropBlendCompositor';
 import { WebGpuMaskCompositor } from './WebGpuMaskCompositor';
 import { WebGpuMeshRenderer } from './WebGpuMeshRenderer';
 import { WebGpuPassCoordinator } from './WebGpuPassCoordinator';
+import type { WebGpuPersistentSlotCapableRenderer, WebGpuPersistentSlotStore } from './WebGpuPersistentSlotStore';
 import {
   retainedTintSlotBytes,
   retainedTransformSlotBytes,
@@ -250,6 +253,11 @@ export class WebGpuBackend implements RenderBackend {
   // device-loss generation bumps; permanently vetoed (poisoned) sets.
   private readonly _retainedCaptureFrames: WebGpuRetainedCaptureFrame[] = [];
   private readonly _retainedBundles = new Set<WebGpuRetainedGroupBundle>();
+  /**
+   * Live persistent slot stores, so a device loss can invalidate every one of
+   * them — their buffers belong to the device that just went away.
+   */
+  private readonly _persistentStores = new Set<WebGpuPersistentSlotStore>();
   private readonly _rejectedRetainedSets = new WeakSet<RetainedInstructionSet>();
   // Reused across per-batch scans at record time to avoid an
   // allocation per flush; the renderer-agnostic counterpart of WebGL2's
@@ -477,6 +485,85 @@ export class WebGpuBackend implements RenderBackend {
         storage.recordSkippedWrite();
       }
     }
+  }
+
+  /**
+   * Allocate a persistent slot store for `source`, or refuse it.
+   *
+   * The backend's own check is narrow: every item in the source must resolve to
+   * ONE renderer, and that renderer must implement the indexed path. Everything
+   * beyond that — materials, blend modes, the texture table — is the renderer's
+   * rule, so the decision is delegated rather than duplicated here.
+   *
+   * Called once per built source. A refusal is remembered by the caller, so the
+   * walk below never runs per frame.
+   * @internal
+   */
+  public _acquirePersistentSlots(source: RenderRootSource): PersistentSlotBundle | null {
+    if (this._deviceLost || this._device === null) {
+      return null;
+    }
+
+    let owner: WebGpuPersistentSlotCapableRenderer | null = null;
+
+    for (const scope of source.scopes) {
+      const drawables = scope.items.drawables;
+      const count = scope.items.count;
+
+      for (let i = 0; i < count; i++) {
+        let renderer: WebGpuPersistentSlotCapableRenderer | null;
+
+        try {
+          renderer = this.rendererRegistry.resolve(drawables[i]!) as unknown as WebGpuPersistentSlotCapableRenderer | null;
+        } catch {
+          return null;
+        }
+
+        if (renderer?._supportsPersistentSlots !== true) {
+          return null;
+        }
+
+        if (owner === null) {
+          owner = renderer;
+        } else if (owner !== renderer) {
+          return null;
+        }
+      }
+    }
+
+    if (owner === null) {
+      return null;
+    }
+
+    // Prepack BEFORE allocating anything: a source holding an item that cannot
+    // describe itself as a quad is not servable, and finding that out after the
+    // store exists would mean tearing it down again.
+    if (!source.prepack()) {
+      return null;
+    }
+
+    const store = owner._acquirePersistentSlotStore(source, this);
+
+    if (store !== null) {
+      store.owner = owner;
+      this._persistentStores.add(store);
+    }
+
+    return store;
+  }
+
+  /** @internal */
+  public _writePersistentSlots(bundle: PersistentSlotBundle, source: RenderRootSource, entered: Int32Array, count: number): void {
+    const store = bundle as WebGpuPersistentSlotStore;
+
+    store.owner?._writePersistentSlotRows(store, source, entered, count);
+  }
+
+  /** @internal */
+  public _drawPersistentOrder(bundle: PersistentSlotBundle, order: Uint32Array, count: number): void {
+    const store = bundle as WebGpuPersistentSlotStore;
+
+    store.owner?._drawPersistentSlots(store, order, count, this);
   }
 
   /** @internal */
@@ -914,6 +1001,15 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     this._retainedBundles.clear();
+
+    // Same argument for the persistent slot stores: their buffers belong to the
+    // device being torn down, and the generation bump is what tells the plan to
+    // treat every visible item as entering again.
+    for (const store of [...this._persistentStores]) {
+      store.destroy();
+    }
+
+    this._persistentStores.clear();
     this._retainedCaptureFrames.length = 0;
     this._passCoordinatorInstance?.destroyStencil();
     this._drawPlanDepth = 0;
@@ -1932,6 +2028,15 @@ export class WebGpuBackend implements RenderBackend {
     for (const bundle of this._retainedBundles) {
       bundle.invalidateDeviceState(false);
     }
+
+    // Persistent slot stores hold buffers of the dead device. Drop the handles
+    // and bump every generation, which is what makes the plan re-acquire and
+    // treat the next selection as all-entering.
+    for (const store of this._persistentStores) {
+      store.invalidateDeviceResources();
+    }
+
+    this._persistentStores.clear();
 
     this._retainedCaptureFrames.length = 0;
 
