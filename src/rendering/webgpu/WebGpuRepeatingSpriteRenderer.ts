@@ -2,6 +2,7 @@
 
 import { Matrix } from '#math/Matrix';
 import { affineMat4FloatCount, packAffineMat4, packedGroupChanged } from '#rendering/affinePacking';
+import type { Drawable } from '#rendering/Drawable';
 import type { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { computeShaderTiling, type RepeatingSpriteQuad } from '#rendering/sprite/repeatingSpritePlan';
 import { DataTexture } from '#rendering/texture/DataTexture';
@@ -253,6 +254,23 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
    */
   public readonly _supportsRetainedBatches = true;
 
+  /**
+   * Veto the SHADER path at collect time — `resolvedStrategy` is derived from
+   * the source type alone, so it is decidable per drawable, and a shader-path
+   * draw would otherwise poison the capture on every frame for a recording the
+   * group can never use.
+   *
+   * The verdict is cached per capture, so it would go stale if this answer could
+   * flip under a live capture. It cannot: `resolvedStrategy` reads a private,
+   * readonly source assigned once in the constructor, so a sprite's strategy is
+   * fixed for its lifetime. The poison in {@link render} is therefore
+   * unreachable through the public API and kept only as a structural safety net.
+   * @internal
+   */
+  public _admitsRetainedRecording(drawable: Drawable): boolean {
+    return (drawable as RepeatingSprite).resolvedStrategy !== 'shader';
+  }
+
   private readonly _projData = new Float32Array(projectionByteLength / Float32Array.BYTES_PER_ELEMENT);
   // Projection-uniform skip state: a matching (view identity, view.updateId,
   // group-matrix content) triple means the shared UBO already holds this
@@ -426,12 +444,16 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     const modeX = sprite.modeX;
     const modeY = sprite.modeY;
 
-    // Retained recording: only the geometry path is
-    // replayable (see _supportsRetainedBatches). A shader-path draw inside an
-    // active capture window cannot be replayed from group-owned resources, so
-    // poison the window — the group falls back to entry replay (correct, never
-    // stale) instead of a replay missing the wrap-mode sampler. Both pixel-snap
-    // modes are resolved in-shader and stay recordable.
+    // Retained recording: only the geometry path is replayable (see
+    // _supportsRetainedBatches), and _admitsRetainedRecording keeps a
+    // shader-path sprite from opening a capture at all. A sprite's strategy
+    // cannot change after that verdict was cached (readonly source), so this is
+    // unreachable through the public API and stays only as a structural safety
+    // net: were it to fire, a shader-path draw inside an active capture window
+    // cannot be replayed from group-owned resources, so poison the window — the
+    // group falls back to entry replay (correct, never stale) instead of a
+    // replay missing the wrap-mode sampler. Both pixel-snap modes are resolved
+    // in-shader and stay recordable.
     if (strategy === 'shader' && backend._retainedCaptureActive) {
       backend._poisonActiveRetainedCaptures();
     }

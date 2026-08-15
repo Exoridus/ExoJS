@@ -189,6 +189,14 @@ const byteLengthOf = (data: unknown): number => {
   return 0;
 };
 
+/**
+ * Bytes a `bufferData`/`bufferSubData` call actually uploads. `length` (in
+ * elements of `data`'s own type) is the WebGL2 range overload's count; absent,
+ * the whole view is uploaded.
+ */
+const uploadedBytes = (data: unknown, _srcOffset: number | undefined, length: number | undefined): number =>
+  length === undefined ? byteLengthOf(data) : length * elementBytesOf(data);
+
 /** Bytes per typed-array element, for sizing an upload expressed as an element offset. */
 const elementBytesOf = (data: unknown): number => (ArrayBuffer.isView(data) ? ((data as { BYTES_PER_ELEMENT?: number }).BYTES_PER_ELEMENT ?? 1) : 1);
 
@@ -356,15 +364,19 @@ export const createFakeWebGl2Context = (recorder: GlRecorder): WebGL2RenderingCo
     drawElements: (): void => {
       recorder.drawCalls++;
     },
-    bufferData: (_target: number, data: unknown, _usage: number): void => {
-      const bytes = typeof data === 'number' ? data : byteLengthOf(data);
+    // The WebGL2 `(srcData, srcOffset, length)` overloads upload a RANGE of the
+    // view, not all of it — `length` is in elements. Ignoring the extra
+    // arguments would over-count every partial upload (the mesh renderer's
+    // per-draw vertex/index/node-index uploads are all partial).
+    bufferData: (_target: number, data: unknown, _usage: number, srcOffset?: number, length?: number): void => {
+      const bytes = typeof data === 'number' ? data : uploadedBytes(data, srcOffset, length);
 
       recorder.bufferUploads++;
       recorder.bufferReallocations++;
       recorder.bufferUploadBytes += bytes;
     },
-    bufferSubData: (_target: number, _offset: number, data: unknown): void => {
-      const bytes = byteLengthOf(data);
+    bufferSubData: (_target: number, _offset: number, data: unknown, srcOffset?: number, length?: number): void => {
+      const bytes = uploadedBytes(data, srcOffset, length);
 
       recorder.bufferUploads++;
       recorder.bufferSubUpdates++;

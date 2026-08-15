@@ -9,7 +9,7 @@ import type { View } from '#rendering/View';
 
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
 import type { WebGl2Backend } from './WebGl2Backend';
-import { WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
+import { uploadBufferRange, uploadBufferStore, WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
 import { createWebGl2ShaderProgram } from './WebGl2ShaderProgram';
 import type { WebGl2VertexArrayObject, WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
 
@@ -173,17 +173,16 @@ export abstract class AbstractWebGl2BatchedRenderer extends AbstractWebGl2Render
       },
       upload: (buffer: WebGl2RenderBuffer, offset: number): void => {
         const gl = connection.gl;
-        const data = buffer.data;
         const state = connection.buffers.get(buffer);
 
         gl.bindBuffer(buffer.type, handle);
 
-        if (state && state.dataByteLength >= data.byteLength) {
-          gl.bufferSubData(buffer.type, offset, data);
-          state.dataByteLength = data.byteLength;
+        if (state && state.dataByteLength >= buffer.uploadByteLength) {
+          uploadBufferRange(gl, buffer, offset);
+          state.dataByteLength = buffer.uploadByteLength;
         } else {
-          gl.bufferData(buffer.type, data, buffer.usage);
-          connection.buffers.set(buffer, { handle, dataByteLength: data.byteLength });
+          uploadBufferStore(gl, buffer);
+          connection.buffers.set(buffer, { handle, dataByteLength: buffer.uploadByteLength });
         }
       },
       destroy: (buffer: WebGl2RenderBuffer): void => {

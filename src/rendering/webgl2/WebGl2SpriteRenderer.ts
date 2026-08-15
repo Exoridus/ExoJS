@@ -25,7 +25,7 @@ import vertexSource from './glsl/sprite.vert';
 import indexedVertexSource from './glsl/sprite-indexed.vert';
 import type { WebGl2Backend } from './WebGl2Backend';
 import { WebGl2PersistentSlotStore } from './WebGl2PersistentSlotStore';
-import { WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
+import { uploadBufferRange, uploadBufferStore, WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
 import type { WebGl2RetainedBatchPayload, WebGl2RetainedBatchReplayer, WebGl2RetainedNodeIndexRange } from './WebGl2RetainedGroupResources';
 import { createWebGl2ShaderProgram } from './WebGl2ShaderProgram';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
@@ -975,17 +975,16 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
       },
       upload: (buffer, offset): void => {
         const gl = connection.gl;
-        const data = buffer.data;
         const state = connection.buffers.get(buffer);
 
         gl.bindBuffer(buffer.type, handle);
 
-        if (state && state.dataByteLength >= data.byteLength) {
-          gl.bufferSubData(buffer.type, offset, data);
-          state.dataByteLength = data.byteLength;
+        if (state && state.dataByteLength >= buffer.uploadByteLength) {
+          uploadBufferRange(gl, buffer, offset);
+          state.dataByteLength = buffer.uploadByteLength;
         } else {
-          gl.bufferData(buffer.type, data, buffer.usage);
-          connection.buffers.set(buffer, { handle, dataByteLength: data.byteLength });
+          uploadBufferStore(gl, buffer);
+          connection.buffers.set(buffer, { handle, dataByteLength: buffer.uploadByteLength });
         }
       },
       destroy: (buffer): void => {

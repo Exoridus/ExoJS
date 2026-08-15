@@ -1,4 +1,5 @@
 import { packedGroupChanged } from '#rendering/affinePacking';
+import type { Drawable } from '#rendering/Drawable';
 import { Shader } from '#rendering/shader/Shader';
 import { TRANSFORM_TEXTURE_GLSL_INCLUDE } from '#rendering/shader/transformTextureLayout';
 import type { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
@@ -10,7 +11,7 @@ import { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives, ScaleModes, 
 
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
 import type { WebGl2Backend } from './WebGl2Backend';
-import { WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
+import { uploadBufferRange, uploadBufferStore, WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
 import type { WebGl2RetainedBatchPayload, WebGl2RetainedBatchReplayer, WebGl2RetainedNodeIndexRange } from './WebGl2RetainedGroupResources';
 import { createWebGl2ShaderProgram } from './WebGl2ShaderProgram';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
@@ -289,6 +290,23 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
    */
   public readonly _supportsRetainedBatches = true;
 
+  /**
+   * Veto the SHADER path at collect time. `resolvedStrategy` is derived from the
+   * source type alone, so it is decidable per drawable — and a shader-path draw
+   * would otherwise poison the capture on every frame, leaving the group on the
+   * entry-replay tier it can reach for free.
+   *
+   * The verdict is cached per capture, so it would go stale if this answer could
+   * flip under a live capture. It cannot: `resolvedStrategy` reads a private,
+   * readonly source assigned once in the constructor, so a sprite's strategy is
+   * fixed for its lifetime. The poison in {@link render} is therefore
+   * unreachable through the public API and kept only as a structural safety net.
+   * @internal
+   */
+  public _admitsRetainedRecording(drawable: Drawable): boolean {
+    return (drawable as RepeatingSprite).resolvedStrategy !== 'shader';
+  }
+
   private readonly _shaderPathShader: Shader;
   private readonly _geoPathShader: Shader;
   private readonly _batchSize: number;
@@ -375,12 +393,15 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
 
     const backend = this.getBackend();
 
-    // Retained recording: only the geometry path is
-    // replayable. A shader-path draw inside an active capture cannot be replayed
-    // from group-owned resources, so poison the window — the group falls back to
-    // entry replay (correct, never stale) rather than replaying an incomplete or
-    // wrap-less instruction stream. Both pixel-snap modes are resolved in-shader
-    // and stay recordable.
+    // Retained recording: only the geometry path is replayable, and
+    // _admitsRetainedRecording keeps a shader-path sprite from opening a capture
+    // at all. A sprite's strategy cannot change after that verdict was cached
+    // (readonly source), so this poison is unreachable through the public API
+    // and stays only as a structural safety net: were it to fire, the window
+    // cannot be replayed from group-owned resources, so the group falls back to
+    // entry replay (correct, never stale) rather than replaying a wrap-less
+    // instruction stream. Both pixel-snap modes are resolved in-shader and stay
+    // recordable.
     if (backend._isRetainedCapturing && strategy === 'shader') {
       backend._poisonRetainedCaptures();
     }
@@ -907,16 +928,15 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
       },
       upload: (buffer, offset): void => {
         const gl = conn.gl;
-        const data = buffer.data;
         const state = conn.buffers.get(buffer);
 
         gl.bindBuffer(buffer.type, handle);
-        if (state && state.dataByteLength >= data.byteLength) {
-          gl.bufferSubData(buffer.type, offset, data);
-          state.dataByteLength = data.byteLength;
+        if (state && state.dataByteLength >= buffer.uploadByteLength) {
+          uploadBufferRange(gl, buffer, offset);
+          state.dataByteLength = buffer.uploadByteLength;
         } else {
-          gl.bufferData(buffer.type, data, buffer.usage);
-          conn.buffers.set(buffer, { handle, dataByteLength: data.byteLength });
+          uploadBufferStore(gl, buffer);
+          conn.buffers.set(buffer, { handle, dataByteLength: buffer.uploadByteLength });
         }
       },
       destroy: (buffer): void => {

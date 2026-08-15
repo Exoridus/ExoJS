@@ -7,7 +7,7 @@ import { BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types'
 import fragmentSource from './glsl/stencil-clip.frag';
 import vertexSource from './glsl/stencil-clip.vert';
 import type { WebGl2Backend } from './WebGl2Backend';
-import { WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
+import { uploadBufferStore, WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
 import { createWebGl2ShaderProgram } from './WebGl2ShaderProgram';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
 
@@ -178,7 +178,7 @@ export class WebGl2StencilClipper {
       },
       upload: (buffer: WebGl2RenderBuffer): void => {
         gl.bindBuffer(buffer.type, handle);
-        gl.bufferData(buffer.type, buffer.data, buffer.usage);
+        uploadBufferStore(gl, buffer);
       },
       destroy: (buffer: WebGl2RenderBuffer): void => {
         gl.deleteBuffer(handle);

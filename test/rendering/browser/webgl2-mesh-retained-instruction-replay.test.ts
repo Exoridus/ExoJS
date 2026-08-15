@@ -201,6 +201,50 @@ const buildScene = () => {
   return { root, group, redA, redB, greenA, greenB, destroy };
 };
 
+/**
+ * Same shape as {@link buildScene}, but the group's meshes are built from raw
+ * vertex ARRAYS instead of a shared {@link Geometry}. Those can only ever take
+ * the mesh renderer's dynamic single-draw path, which is not recordable — the
+ * collect-time admission predicate must keep the group off the recorded tier
+ * entirely rather than letting it record and poison every frame.
+ */
+const buildArrayMeshScene = () => {
+  const blue = createSolidTexture('#0000ff');
+  const red = createSolidTexture('#ff0000');
+  const root = new Container();
+  const outside = new Sprite(blue);
+  const group = new RetainedContainer();
+  const vertices = new Float32Array([0, 0, 16, 0, 16, 16, 0, 16]);
+  const indices = new Uint16Array([0, 1, 2, 0, 2, 3]);
+  const uvs = new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]);
+  const meshA = new Mesh({ vertices, indices, uvs, texture: red });
+  const meshB = new Mesh({ vertices, indices, uvs, texture: red });
+
+  outside.setPosition(48, 0);
+  root.addChild(outside);
+
+  meshB.setPosition(16, 0);
+  group.addChild(meshA);
+  group.addChild(meshB);
+  group.setPosition(8, 24);
+  root.addChild(group);
+
+  const destroy = (): void => {
+    root.destroy();
+    blue.destroy();
+    red.destroy();
+  };
+
+  return { root, group, meshA, meshB, destroy };
+};
+
+const expectArrayScenePixels = (backend: WebGl2Backend): void => {
+  expectPixelNear(readWebGl2Pixel(backend, 52, 8), [0, 0, 255, 255]); // live outside sprite
+  expectPixelNear(readWebGl2Pixel(backend, 16, 32), [255, 0, 0, 255]); // meshA (8,24)-(24,40)
+  expectPixelNear(readWebGl2Pixel(backend, 32, 32), [255, 0, 0, 255]); // meshB (24,24)-(40,40)
+  expectPixelNear(readWebGl2Pixel(backend, 58, 58), [0, 0, 0, 255]); // background
+};
+
 const expectBaseScenePixels = (backend: WebGl2Backend): void => {
   expectPixelNear(readWebGl2Pixel(backend, 52, 8), [0, 0, 255, 255]); // live outside sprite
   expectPixelNear(readWebGl2Pixel(backend, 16, 32), [255, 0, 0, 255]); // redA (8,24)-(24,40)
@@ -401,6 +445,47 @@ describe('WebGL2 renderer matrix: Mesh retained instruction-set replay cells', (
       WebGl2MeshRenderer.prototype._rebaseRetainedNodeIndices = original;
       brokenScene.destroy();
       brokenBackend.destroy();
+    }
+  });
+
+  test('cell 6 — array-vertex meshes are never recorded: no capture, no poison, pixel-stable entry replay across mutation', async () => {
+    const backend = await createBackend();
+    const scene = buildArrayMeshScene();
+    const beginSpy = vi.spyOn(backend, '_beginRetainedCapture');
+    const poisonSpy = vi.spyOn(backend, '_poisonRetainedCaptures');
+
+    try {
+      // An array-vertex mesh re-packs its vertices into the renderer's own
+      // scratch buffers every frame, so it can only ever take the dynamic
+      // single draw — the path that poisons an open capture. The collect-time
+      // admission predicate keeps the capture from opening in the first place,
+      // which must not change a single pixel of what the group renders.
+      render(backend, scene.root); // F1 collect
+
+      const collectFrame = readCanvas(backend);
+
+      expectArrayScenePixels(backend);
+
+      render(backend, scene.root); // F2 — would have recorded, now does not
+      render(backend, scene.root); // F3 — would have poisoned + re-armed
+
+      expect(beginSpy).not.toHaveBeenCalled();
+      expect(poisonSpy).not.toHaveBeenCalled();
+      expect(readCanvas(backend)).toEqual(collectFrame);
+
+      // A cached replay that had gone stale would freeze the moved mesh at its
+      // old spot; the entry-replay tier must track it live.
+      scene.meshB.setPosition(0, 16);
+      render(backend, scene.root);
+
+      expect(poisonSpy).not.toHaveBeenCalled();
+      expectPixelNear(readWebGl2Pixel(backend, 16, 48), [255, 0, 0, 255]); // meshB now at group-local (0,16)
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [0, 0, 0, 255]); // its old spot cleared
+      expectPixelNear(readWebGl2Pixel(backend, 16, 32), [255, 0, 0, 255]); // meshA unmoved
+      expectPixelNear(readWebGl2Pixel(backend, 52, 8), [0, 0, 255, 255]); // live sprite unaffected
+    } finally {
+      scene.destroy();
+      backend.destroy();
     }
   });
 });
