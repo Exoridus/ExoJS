@@ -4,7 +4,7 @@ import { type DrawCommand, type MaterialKey, RenderEntryKind } from '#rendering/
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
 import type { GroupScope } from '#rendering/plan/RenderScope';
-import type { RetainedDrawData } from '#rendering/plan/RetainedPlanCache';
+import type { RetainedDrawData } from '#rendering/plan/RetainedRecordPool';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';

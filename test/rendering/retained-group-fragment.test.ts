@@ -5,6 +5,7 @@ import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
 import type { DrawScopeEntry, GroupScope } from '#rendering/plan/RenderScope';
 import { type RetainedFragmentEntry, RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
+import type { RetainedRecordPool } from '#rendering/plan/RetainedRecordPool';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { createRenderStats } from '#rendering/RenderStats';
@@ -36,15 +37,19 @@ const makeScopeDrawEntry = (drawable: Drawable, nodeIndex = 0): DrawScopeEntry =
 });
 
 interface DrawPoolCarrier {
-  _drawPool: Array<{ drawable: Drawable | undefined }>;
-  _drawCursor: number;
+  _drawPool: RetainedRecordPool<{ drawable: Drawable | undefined }>;
 }
 
 /** The live prefix of the fragment's grow-only draw pool, as raw references. */
 const pooledDrawables = (fragment: RetainedGroupFragment): Array<Drawable | undefined> => {
-  const carrier = fragment as unknown as DrawPoolCarrier;
+  const pool = (fragment as unknown as DrawPoolCarrier)._drawPool;
+  const drawables: Array<Drawable | undefined> = [];
 
-  return carrier._drawPool.slice(0, carrier._drawCursor).map(record => record.drawable);
+  for (let index = 0; index < pool.used; index++) {
+    drawables.push(pool.at(index).drawable);
+  }
+
+  return drawables;
 };
 
 describe('RetainedGroupFragment', () => {

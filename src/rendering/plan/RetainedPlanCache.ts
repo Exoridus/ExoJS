@@ -1,27 +1,8 @@
 import type { Drawable } from '#rendering/Drawable';
 import type { RenderBackend } from '#rendering/RenderBackend';
-import { BlendModes } from '#rendering/types';
 
-import { copyMaterialKeyInto, type DrawCommand, type MaterialKey } from './RenderCommand';
-
-/**
- * The replayable payload of one previously-collected draw: everything
- * `RenderPlanBuilder.emitDraw` computed for it (material key, bounds in the
- * capture's space convention, seq/zIndex placement). Base shape shared by the
- * per-child {@link RetainedDrawSlot} and the whole-fragment
- * {@link RetainedFragmentDraw}.
- * @internal
- */
-export interface RetainedDrawData {
-  readonly drawable: Drawable;
-  readonly seq: number;
-  readonly zIndex: number;
-  readonly material: MaterialKey;
-  readonly minX: number;
-  readonly minY: number;
-  readonly maxX: number;
-  readonly maxY: number;
-}
+import { createEmptyMaterialKey, type DrawCommand } from './RenderCommand';
+import { copyRetainedDrawData, type MutableRetainedDrawData, releasePooledDrawables, type RetainedDrawData, RetainedRecordPool } from './RetainedRecordPool';
 
 /**
  * @internal
@@ -41,17 +22,21 @@ export interface RetainedDrawSlot extends RetainedDrawData {
  * recapture of a same-shaped child list allocates zero objects. Structurally
  * satisfies the readonly {@link RetainedDrawSlot} contract consumers read.
  */
-interface MutableRetainedDrawSlot {
+interface MutableRetainedDrawSlot extends MutableRetainedDrawData {
   childIndex: number;
-  drawable: Drawable;
-  seq: number;
-  zIndex: number;
-  readonly material: MaterialKey;
-  minX: number;
-  minY: number;
-  maxX: number;
-  maxY: number;
 }
+
+const createSlot = (): MutableRetainedDrawSlot => ({
+  childIndex: 0,
+  drawable: undefined as unknown as Drawable,
+  seq: 0,
+  zIndex: 0,
+  material: createEmptyMaterialKey(),
+  minX: 0,
+  minY: 0,
+  maxX: 0,
+  maxY: 0,
+});
 
 /**
  * Per-`Container` fragment cache for the static-subtree-skip. Lazily
@@ -80,8 +65,7 @@ export class RetainedPlanCache {
   /** Active slot list, reused across captures (pointer pushes only). */
   private readonly _slots: MutableRetainedDrawSlot[] = [];
   /** Grow-only record pool; `_slots` holds a cursor-ordered prefix of it. */
-  private readonly _slotPool: MutableRetainedDrawSlot[] = [];
-  private _poolCursor = 0;
+  private readonly _slotPool = new RetainedRecordPool(createSlot);
   private _contentRevision = -1;
   private _structureRevision = -1;
   private _transformRevision = -1;
@@ -120,7 +104,7 @@ export class RetainedPlanCache {
   public _beginCapture(): void {
     this._hasCapture = false;
     this._slots.length = 0;
-    this._poolCursor = 0;
+    this._slotPool.rewind();
   }
 
   /**
@@ -129,17 +113,10 @@ export class RetainedPlanCache {
    * pool has grown to the child count).
    */
   public _appendSlot(childIndex: number, command: DrawCommand): void {
-    const slot = this._acquireSlot();
+    const slot = this._slotPool.acquire();
 
     slot.childIndex = childIndex;
-    slot.drawable = command.drawable;
-    slot.seq = command.seq;
-    slot.zIndex = command.zIndex;
-    copyMaterialKeyInto(slot.material, command.material);
-    slot.minX = command.minX;
-    slot.minY = command.minY;
-    slot.maxX = command.maxX;
-    slot.maxY = command.maxY;
+    copyRetainedDrawData(slot, command);
     this._slots.push(slot);
   }
 
@@ -154,48 +131,9 @@ export class RetainedPlanCache {
   }
 
   public invalidate(): void {
-    this._releaseDrawableRefs();
+    releasePooledDrawables(this._slotPool);
     this._hasCapture = false;
     this._slots.length = 0;
-    this._poolCursor = 0;
-  }
-
-  /**
-   * Drop the grow-only slot pool's strong references to their drawables so an
-   * evicted/destroyed drawable can be garbage-collected. The pooled slot
-   * objects survive and their `drawable` is rewritten in place on the next
-   * capture, so pool reuse is unaffected.
-   */
-  private _releaseDrawableRefs(): void {
-    for (let index = 0; index < this._poolCursor; index++) {
-      this._slotPool[index]!.drawable = undefined as unknown as Drawable;
-    }
-  }
-
-  private _acquireSlot(): MutableRetainedDrawSlot {
-    const pooled = this._slotPool[this._poolCursor];
-
-    if (pooled !== undefined) {
-      this._poolCursor++;
-
-      return pooled;
-    }
-
-    const slot: MutableRetainedDrawSlot = {
-      childIndex: 0,
-      drawable: undefined as unknown as Drawable,
-      seq: 0,
-      zIndex: 0,
-      material: { rendererId: 0, blendMode: BlendModes.Normal, textureId: -1, shaderId: -1, pipelineKey: 0, bindKey: 0, ownMaterial: false },
-      minX: 0,
-      minY: 0,
-      maxX: 0,
-      maxY: 0,
-    };
-
-    this._slotPool[this._poolCursor] = slot;
-    this._poolCursor++;
-
-    return slot;
+    this._slotPool.rewind();
   }
 }

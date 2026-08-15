@@ -3,7 +3,7 @@ import type { Material } from '#rendering/material/Material';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
-import type { BlendModes } from '#rendering/types';
+import { BlendModes } from '#rendering/types';
 
 /** @internal */
 export const enum RenderEntryKind {
@@ -223,6 +223,26 @@ export const makeMaterialKey = (drawable: Drawable, backend: RenderBackend | nul
     drawable,
     backend,
   );
+
+/**
+ * A material key in its neutral, pre-derivation state, for a pooled record that
+ * owns its key object and rewrites it in place (`copyMaterialKeyInto`) rather
+ * than replacing it.
+ *
+ * The neutral values are not arbitrary: `-1` is "no such id" for the texture and
+ * shader channels, which `getTextureId`/`getShaderId` also return, so a key that
+ * has never been written groups with nothing rather than with texture 0.
+ * @internal
+ */
+export const createEmptyMaterialKey = (): MaterialKey => ({
+  rendererId: 0,
+  blendMode: BlendModes.Normal,
+  textureId: -1,
+  shaderId: -1,
+  pipelineKey: 0,
+  bindKey: 0,
+  ownMaterial: false,
+});
 
 /**
  * In-place variant of {@link makeMaterialKey}: derives the same material key but

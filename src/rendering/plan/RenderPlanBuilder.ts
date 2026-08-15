@@ -25,7 +25,7 @@ import {
 import { createSourceScope, LiveEntryReason, type SourceGroup, type SourceOther, type SourceScope } from './RenderSourceItem';
 import type { RetainedFragmentEntry, RetainedFragmentGroup, RetainedGroupFragment } from './RetainedGroupFragment';
 import type { RetainedInstructionSet } from './RetainedInstructionSet';
-import type { RetainedDrawData } from './RetainedPlanCache';
+import type { RetainedDrawData } from './RetainedRecordPool';
 import type { RetainedRootRepresentation } from './RetainedRootRepresentation';
 
 /**
