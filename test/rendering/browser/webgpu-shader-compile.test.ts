@@ -42,7 +42,7 @@ import { compositorShaderSource as maskCompositorWgsl } from '#rendering/webgpu/
 import { instancedMeshShaderSource, meshShaderSource } from '#rendering/webgpu/WebGpuMeshRenderer';
 import { nineSliceShaderSource } from '#rendering/webgpu/WebGpuNineSliceSpriteRenderer';
 import { commonWgsl, geoPathEntries, shaderPathEntries } from '#rendering/webgpu/WebGpuRepeatingSpriteRenderer';
-import { buildSpriteShaderSource, spriteBatchTextureSlotTiers } from '#rendering/webgpu/WebGpuSpriteRenderer';
+import { buildPersistentSpriteShaderSource, buildSpriteShaderSource, spriteBatchTextureSlotTiers } from '#rendering/webgpu/WebGpuSpriteRenderer';
 import { stencilWriteShaderSource } from '#rendering/webgpu/WebGpuStencilClipper';
 import { textShaderSource } from '#rendering/webgpu/WebGpuTextRenderer';
 
@@ -64,6 +64,12 @@ const shaders: readonly ShaderEntry[] = [
   // The sprite shader is generated per slot tier from the device limits
   // Every tier that can ever ship is compiled here.
   ...spriteBatchTextureSlotTiers.map(tier => ({ name: `WebGpuSpriteRenderer (${tier} texture slots)`, source: buildSpriteShaderSource(tier) })),
+  // The persistent-indexed variant is generated for the same tiers: same
+  // fragment stage and same shared vertex core, fed from slot-addressed storage.
+  ...spriteBatchTextureSlotTiers.map(tier => ({
+    name: `WebGpuSpriteRenderer persistent-indexed (${tier} texture slots)`,
+    source: buildPersistentSpriteShaderSource(tier),
+  })),
   { name: 'WebGpuStencilClipper', source: stencilWriteShaderSource },
   { name: 'WebGpuTextRenderer', source: textShaderSource },
   { name: 'spriteMaterialSources spriteMaterialPrologueWgsl (custom-material prelude)', source: spriteMaterialPrologueWgsl },
