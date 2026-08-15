@@ -1,8 +1,4 @@
-import type { Color } from '#core/Color';
-import type { Matrix } from '#math/Matrix';
-import type { ReadonlyRectangle } from '#math/Rectangle';
 import type { GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
-import type { PixelSnapMode } from '#rendering/pixelSnap';
 import type { PersistentSlotBundle } from '#rendering/plan/PersistentSlotDraw';
 import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
 import {
@@ -18,7 +14,7 @@ import {
 import { DataTexture } from '#rendering/texture/DataTexture';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
-import { packTintRow, packTransformRow, TRANSFORM_TINT_BYTES_PER_ROW } from '#rendering/TransformBuffer';
+import { TRANSFORM_TINT_BYTES_PER_ROW } from '#rendering/TransformBuffer';
 import { BlendModes, BufferTypes, BufferUsage, TextureFormat } from '#rendering/types';
 
 import type { WebGl2Backend } from './WebGl2Backend';
@@ -120,6 +116,16 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
    * store at all — which is why this can be a single value rather than per slot.
    */
   public blendMode: BlendModes = BlendModes.Normal;
+
+  /**
+   * Which entry of {@link textures} each source item uses, indexed by GLOBAL
+   * item handle.
+   *
+   * Derived, not source data: it names a position in THIS store's table. Filled
+   * once during acquisition, which already walks every item to build that table,
+   * so an ENTER never has to ask a drawable for its texture.
+   */
+  public textureIndexOfHandle = new Uint8Array(0);
 
   private _gl: WebGL2RenderingContext | null = null;
   private _accountant: GpuResourceAccountant | null = null;
@@ -224,43 +230,47 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
   }
 
   /**
-   * Write one slot's persistent rows: quad attributes, world transform (with
-   * `textureSlot` in the transform row's spare component) and tint.
+   * Fill one slot from the source's prepacked tables.
    *
-   * `uv` is stored as plain floats rather than the live path's normalised
-   * `u16x4` — the row is rgba32f either way, so packing would only cost
-   * precision.
+   * Deliberately takes offsets into typed arrays rather than a drawable: the
+   * whole point of the source-side prepack is that an item entering the view is
+   * never read out of the scene graph again, so this method must have no way to
+   * do so. The quad record's eight floats are already in this store's attribute
+   * layout — local bounds then UV — so they copy straight across.
+   *
+   * `textureIndex` overwrites the canonical transform row's spare fourth
+   * component, which the shared packer leaves at zero and no other shader reads.
+   * It is the one genuinely derived field here, because which slot of the
+   * store's table a texture occupies is a batching fact, not a property of the
+   * item — see `sprite-indexed.vert`.
    */
-  public writeSlot(
+  public writeSlotFrom(
     slot: number,
-    bounds: ReadonlyRectangle,
-    uMin: number,
-    vMin: number,
-    uMax: number,
-    vMax: number,
-    transform: Matrix,
-    tint: Color,
-    snapMode: PixelSnapMode,
-    textureSlot: number,
+    rows: Float32Array,
+    rowOffset: number,
+    tints: Uint8Array,
+    tintOffset: number,
+    quads: Float32Array,
+    quadOffset: number,
+    textureIndex: number,
   ): void {
     const offset = slot * floatsPerSlotRow;
     const attributes = this._attributes;
+    const transforms = this._transforms;
 
-    attributes[offset + 0] = bounds.left;
-    attributes[offset + 1] = bounds.top;
-    attributes[offset + 2] = bounds.right;
-    attributes[offset + 3] = bounds.bottom;
-    attributes[offset + 4] = uMin;
-    attributes[offset + 5] = vMin;
-    attributes[offset + 6] = uMax;
-    attributes[offset + 7] = vMax;
+    for (let i = 0; i < floatsPerSlotRow; i++) {
+      attributes[offset + i] = quads[quadOffset + i]!;
+      transforms[offset + i] = rows[rowOffset + i]!;
+    }
 
-    packTransformRow(this._transforms, offset, transform, snapMode);
-    // The shared packer leaves this at 0 and no shader reads it there; the
-    // indexed variant reads it as the batch's base-texture slot, which keeps the
-    // attribute store two texels wide. See `sprite-indexed.vert`.
-    this._transforms[offset + 7] = textureSlot;
-    packTintRow(this._tints, slot * tintBytesPerSlot, tint);
+    transforms[offset + floatsPerSlotRow - 1] = textureIndex;
+
+    const tintTarget = slot * tintBytesPerSlot;
+
+    for (let i = 0; i < tintBytesPerSlot; i++) {
+      this._tints[tintTarget + i] = tints[tintOffset + i]!;
+    }
+
     this._markDirty(slot);
   }
 
@@ -374,6 +384,7 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
     this._destroyed = true;
     this.invalidateDeviceResources();
     this.textures.length = 0;
+    this.textureIndexOfHandle = new Uint8Array(0);
     this._order = new Uint32Array(0);
   }
 

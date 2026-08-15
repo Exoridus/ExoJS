@@ -539,6 +539,13 @@ export class WebGl2Backend implements RenderBackend {
       return null;
     }
 
+    // Prepack BEFORE allocating anything: a source holding an item that cannot
+    // describe itself as a quad is not servable, and finding that out after the
+    // store exists would mean tearing it down again.
+    if (!source.prepack()) {
+      return null;
+    }
+
     const store = owner._acquirePersistentSlotStore(source, this);
 
     if (store !== null) {

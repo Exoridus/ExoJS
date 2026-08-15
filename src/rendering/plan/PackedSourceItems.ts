@@ -1,4 +1,6 @@
 import type { Drawable } from '#rendering/Drawable';
+import { SOURCE_QUAD_FLOATS } from '#rendering/sourceQuadRecord';
+import { packTintRow, packTransformRow, TRANSFORM_FLOATS_PER_ROW, TRANSFORM_TINT_BYTES_PER_ROW } from '#rendering/TransformBuffer';
 
 const initialCapacity = 64;
 
@@ -42,6 +44,27 @@ export class PackedSourceItems {
    */
   public readonly drawables: Drawable[] = [];
 
+  /**
+   * Canonical prepacked render data, or empty until {@link prepack} runs.
+   *
+   * Sized only for a source a backend has accepted for the persistent-indexed
+   * path, because that is the only case where it pays: an item entering the view
+   * there is otherwise read out of the scene graph cold — its world transform,
+   * its local bounds and its texture frame all resolved through objects nothing
+   * has touched for hundreds of frames — and that read, not the write, was the
+   * measured cost of a camera step. Prepacked, an ENTER is a fixed-size copy
+   * between typed arrays.
+   *
+   * Backend-NEUTRAL by construction: the transform row and tint row use the
+   * engine's canonical packers, and the quad record is the drawable's own
+   * description of itself ({@link Drawable._packSourceQuad}). Nothing here knows
+   * a texel address, a buffer offset, a derived slot or a batch.
+   */
+  private _rows = new Float32Array(0);
+  private _tints = new Uint8Array(0);
+  private _quads = new Float32Array(0);
+  private _prepacked = false;
+
   public get count(): number {
     return this._count;
   }
@@ -70,6 +93,62 @@ export class PackedSourceItems {
     return this._zIndex;
   }
 
+  /** Canonical transform rows, `TRANSFORM_FLOATS_PER_ROW` per item. @internal */
+  public get rows(): Float32Array {
+    return this._rows;
+  }
+
+  /** Canonical tint rows, `TRANSFORM_TINT_BYTES_PER_ROW` per item. @internal */
+  public get tints(): Uint8Array {
+    return this._tints;
+  }
+
+  /** Canonical quad records, `SOURCE_QUAD_FLOATS` per item. @internal */
+  public get quads(): Float32Array {
+    return this._quads;
+  }
+
+  public get isPrepacked(): boolean {
+    return this._prepacked;
+  }
+
+  /**
+   * Resolve every item's canonical render data once, so no later selection has
+   * to touch a drawable again.
+   *
+   * Returns `false` — and allocates nothing — as soon as one item cannot
+   * describe itself as a quad, because a store fed from a partial table would
+   * silently draw stale rows for the rest.
+   */
+  public prepack(): boolean {
+    if (this._prepacked) {
+      return true;
+    }
+
+    const count = this._count;
+    const rows = new Float32Array(count * TRANSFORM_FLOATS_PER_ROW);
+    const tints = new Uint8Array(count * TRANSFORM_TINT_BYTES_PER_ROW);
+    const quads = new Float32Array(count * SOURCE_QUAD_FLOATS);
+
+    for (let i = 0; i < count; i++) {
+      const drawable = this.drawables[i]!;
+
+      if (!drawable._packSourceQuad(quads, i * SOURCE_QUAD_FLOATS)) {
+        return false;
+      }
+
+      packTransformRow(rows, i * TRANSFORM_FLOATS_PER_ROW, drawable.getGlobalTransform(), drawable.pixelSnapMode);
+      packTintRow(tints, i * TRANSFORM_TINT_BYTES_PER_ROW, drawable.tint);
+    }
+
+    this._rows = rows;
+    this._tints = tints;
+    this._quads = quads;
+    this._prepacked = true;
+
+    return true;
+  }
+
   /** CPU bytes this store holds, for the memory report. */
   public get byteLength(): number {
     return (
@@ -79,6 +158,9 @@ export class PackedSourceItems {
       this._maxY.byteLength +
       this._seq.byteLength +
       this._zIndex.byteLength +
+      this._rows.byteLength +
+      this._tints.byteLength +
+      this._quads.byteLength +
       this.drawables.length * 8
     );
   }
@@ -128,6 +210,10 @@ export class PackedSourceItems {
     this._maxY = new Float64Array(0);
     this._seq = new Int32Array(0);
     this._zIndex = new Float64Array(0);
+    this._rows = new Float32Array(0);
+    this._tints = new Uint8Array(0);
+    this._quads = new Float32Array(0);
+    this._prepacked = false;
     this.drawables.length = 0;
   }
 

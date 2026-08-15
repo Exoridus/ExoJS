@@ -85,6 +85,39 @@ export class Sprite extends Drawable {
     this.setTexture(texture);
   }
 
+  /**
+   * @internal — the canonical quad record: local bounds, then the frame's UV
+   * normalised against the texture with `flipY` already resolved, exactly as
+   * both shipped sprite renderers pack it.
+   *
+   * Refuses when there is no texture (nothing to sample) or when the sprite
+   * carries its own material — a material switch is a hard batch boundary, so
+   * such a sprite is never served from a persistent slot store anyway.
+   */
+  public override _packSourceQuad(target: Float32Array, offset: number): boolean {
+    const texture = this._texture;
+
+    if (texture === null || this.material !== null) {
+      return false;
+    }
+
+    const bounds = this.getLocalBounds();
+    const frame = this._textureFrame;
+    const top = frame.top / texture.height;
+    const bottom = frame.bottom / texture.height;
+
+    target[offset + 0] = bounds.left;
+    target[offset + 1] = bounds.top;
+    target[offset + 2] = bounds.right;
+    target[offset + 3] = bounds.bottom;
+    target[offset + 4] = frame.left / texture.width;
+    target[offset + 5] = texture.flipY ? bottom : top;
+    target[offset + 6] = frame.right / texture.width;
+    target[offset + 7] = texture.flipY ? top : bottom;
+
+    return true;
+  }
+
   public get textureFrame(): Rectangle {
     return this._textureFrame;
   }

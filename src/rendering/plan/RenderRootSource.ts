@@ -102,6 +102,25 @@ export class RenderRootSource {
     );
   }
 
+  /**
+   * Resolve every item's canonical render data, once, across every scope.
+   *
+   * Called when a backend has accepted this source for the persistent-indexed
+   * path and never otherwise: the table is the largest thing the source holds,
+   * and it only pays for itself where an ENTER would otherwise read a cold
+   * drawable. `false` means at least one item cannot describe itself as a quad,
+   * and the caller must fall back rather than serve a partial table.
+   */
+  public prepack(): boolean {
+    for (const scope of this._scopes) {
+      if (!scope.items.prepack()) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   /** The root scope, valid only while {@link isUsable} holds. */
   public get rootScope(): SourceScope | null {
     return this._rootScope;

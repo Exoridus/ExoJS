@@ -11,10 +11,12 @@ import {
 import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
 import { Shader } from '#rendering/shader/Shader';
+import { SOURCE_QUAD_FLOATS } from '#rendering/sourceQuadRecord';
 import type { Sprite } from '#rendering/sprite/Sprite';
 import { composeSpriteMaterialFragmentGlsl, spriteMaterialTextureSlots, spriteVertexGlsl } from '#rendering/sprite/spriteMaterialSources';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
+import { TRANSFORM_FLOATS_PER_ROW, TRANSFORM_TINT_BYTES_PER_ROW } from '#rendering/TransformBuffer';
 import { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
 import type { View } from '#rendering/View';
 
@@ -254,11 +256,13 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
    */
   public _acquirePersistentSlotStore(source: RenderRootSource, backend: WebGl2Backend): WebGl2PersistentSlotStore | null {
     const store = new WebGl2PersistentSlotStore();
+    const textureIndexOfHandle = new Uint8Array(source.itemCount);
     let blendMode: BlendModes | null = null;
 
     for (const scope of source.scopes) {
       const drawables = scope.items.drawables;
       const count = scope.items.count;
+      const handleBase = scope.handleBase;
 
       for (let i = 0; i < count; i++) {
         const sprite = drawables[i] as Sprite;
@@ -280,15 +284,21 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
           return null;
         }
 
-        if (!store.textures.includes(texture)) {
+        let index = store.textures.indexOf(texture);
+
+        if (index === -1) {
           if (store.textures.length >= this._maxTextureSlots) {
             store.destroy();
 
             return null;
           }
 
-          store.textures.push(texture);
+          index = store.textures.push(texture) - 1;
         }
+
+        // Recorded per item here, on the walk that builds the table anyway, so
+        // an ENTER never has to ask a drawable which texture it uses.
+        textureIndexOfHandle[handleBase + i] = index;
       }
     }
 
@@ -299,24 +309,28 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     }
 
     store.blendMode = blendMode;
+    store.textureIndexOfHandle = textureIndexOfHandle;
     store.connectDevice(backend.context, backend.accountant);
 
     return store;
   }
 
   /**
-   * Fill the persistent rows of the items that just took a slot.
+   * Fill the persistent rows of the items that just took a slot, entirely from
+   * the source's prepacked tables.
    *
-   * `entered` is a flat `(scopeOrdinal, localIndex, slot)` triple list, and it
-   * holds arrivals only — a staying item's rows are already what this would
-   * write, which is the entire saving. The texture slot is resolved against the
-   * store's fixed table, so it is written once per item rather than re-derived
-   * per batch.
+   * `entered` is a flat `(scopeOrdinal, localIndex, slot)` triple list holding
+   * arrivals only — a staying item's rows are already what this would write,
+   * which is the whole saving. No drawable is touched: an item entering the view
+   * has not been read for hundreds of frames, and resolving its transform,
+   * bounds and texture frame out of cold objects was the measured cost of a
+   * camera step. Everything here is a fixed-size copy between typed arrays, plus
+   * one lookup for the store-table texture index.
    * @internal
    */
   public _writePersistentSlotRows(store: WebGl2PersistentSlotStore, source: RenderRootSource, entered: Int32Array, count: number): void {
     const scopes = source.scopes;
-
+    const textureIndexOfHandle = store.textureIndexOfHandle;
     let highest = -1;
 
     for (let i = 0; i < count; i++) {
@@ -332,26 +346,18 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     for (let i = 0; i < count; i++) {
       const base = i * 3;
       const scope = scopes[entered[base]!]!;
-      const sprite = scope.items.drawables[entered[base + 1]!] as Sprite;
-      const slot = entered[base + 2]!;
-      const texture = sprite.texture!;
-      const frame = sprite.textureFrame;
-      const uMin = frame.left / texture.width;
-      const uMax = frame.right / texture.width;
-      const vTop = frame.top / texture.height;
-      const vBottom = frame.bottom / texture.height;
+      const localIndex = entered[base + 1]!;
+      const items = scope.items;
 
-      store.writeSlot(
-        slot,
-        sprite.getLocalBounds(),
-        uMin,
-        texture.flipY ? vBottom : vTop,
-        uMax,
-        texture.flipY ? vTop : vBottom,
-        sprite.getGlobalTransform(),
-        sprite.tint,
-        sprite.pixelSnapMode,
-        store.textures.indexOf(texture),
+      store.writeSlotFrom(
+        entered[base + 2]!,
+        items.rows,
+        localIndex * TRANSFORM_FLOATS_PER_ROW,
+        items.tints,
+        localIndex * TRANSFORM_TINT_BYTES_PER_ROW,
+        items.quads,
+        localIndex * SOURCE_QUAD_FLOATS,
+        textureIndexOfHandle[scope.handleBase + localIndex]!,
       );
     }
 
