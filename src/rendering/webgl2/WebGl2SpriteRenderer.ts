@@ -9,6 +9,7 @@ import {
   type RetainedMaterialState,
 } from '#rendering/material/RetainedMaterialState';
 import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
+import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
 import { Shader } from '#rendering/shader/Shader';
 import type { Sprite } from '#rendering/sprite/Sprite';
 import { composeSpriteMaterialFragmentGlsl, spriteMaterialTextureSlots, spriteVertexGlsl } from '#rendering/sprite/spriteMaterialSources';
@@ -20,7 +21,9 @@ import type { View } from '#rendering/View';
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
 import fragmentSource from './glsl/sprite.frag';
 import vertexSource from './glsl/sprite.vert';
+import indexedVertexSource from './glsl/sprite-indexed.vert';
 import type { WebGl2Backend } from './WebGl2Backend';
+import { WebGl2PersistentSlotStore } from './WebGl2PersistentSlotStore';
 import { WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
 import type { WebGl2RetainedBatchPayload, WebGl2RetainedBatchReplayer, WebGl2RetainedNodeIndexRange } from './WebGl2RetainedGroupResources';
 import { createWebGl2ShaderProgram } from './WebGl2ShaderProgram';
@@ -78,6 +81,10 @@ const transformTextureUnit = 16;
 // sprite draw's shader is active, so units stay disjoint in practice, but this
 // still sits clear of it.
 const transformTintTextureUnit = 18;
+// The persistent-indexed variant's quad-attribute store. One above the tint
+// unit, so the two shared-store units and this one stay disjoint from the
+// 0..15 base-texture range and from the backend's render-target sync scratch.
+const slotAttributeTextureUnit = 19;
 // Material texture bindings occupy the units above the custom path's base-slot
 // table (spriteMaterialTextureSlots..+6). The material CONTRACT stays at 7
 // extra textures, matching WebGl2MeshRenderer and the WebGPU sprite renderer.
@@ -112,6 +119,11 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   }
 
   private readonly _shader: Shader;
+  /** Persistent-indexed program: same fragment stage, slot-fetching vertex stage. */
+  private readonly _indexedShader: Shader;
+  private _indexedVao: WebGl2VertexArrayObject | null = null;
+  private _indexedVaoBuffer: WebGl2RenderBuffer | null = null;
+  private readonly _slotAttributeUnitScratch: Int32Array = new Int32Array([slotAttributeTextureUnit]);
   private readonly _batchSize: number;
   private readonly _instanceData: ArrayBuffer;
   private readonly _instanceFloat32: Float32Array;
@@ -166,6 +178,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
 
     this._batchSize = batchSize;
     this._shader = new Shader(vertexSource, fragmentSource);
+    this._indexedShader = new Shader(indexedVertexSource, fragmentSource);
     this._instanceData = new ArrayBuffer(batchSize * instanceStrideBytes);
     this._instanceFloat32 = new Float32Array(this._instanceData);
     this._instanceUint32 = new Uint32Array(this._instanceData);
@@ -208,6 +221,204 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
    */
   private _resolveBounds(sprite: Sprite): ReadonlyRectangle {
     return sprite.getLocalBounds();
+  }
+
+  // ── Persistent-indexed selection ──────────────────────────────────────────
+  // A render root whose whole subtree this renderer can serve draws out of
+  // slot-addressed stores instead of a streamed instance buffer. Same program
+  // family, same fragment stage, same batching rules — what changes is only
+  // where the per-sprite record lives, which is what lets a camera step touch
+  // just the items that entered or left.
+
+  /** Capability flag, mirroring `_supportsRetainedBatches`. @internal */
+  public readonly _supportsPersistentSlots = true;
+
+  /**
+   * Decide whether this renderer can serve every item in `source` from one slot
+   * store, and allocate it if so.
+   *
+   * Three refusals, each of them a batching rule rather than an ordering one —
+   * ordering was already settled by the plan layer:
+   *
+   * - A sprite carrying its own {@link SpriteMaterial} takes the custom path,
+   *   where a material switch is a hard flush boundary. One ordered stream
+   *   cannot express that, so any own-material item disqualifies the source.
+   * - A blend-mode change is likewise a flush boundary, so the whole source has
+   *   to agree on one.
+   * - The base textures must all fit ONE slot table. That is what makes a slot
+   *   texture index stable for the item's whole life — with one table there is
+   *   no per-batch re-slotting for a membership change to invalidate.
+   *
+   * Runs once per built source, never per frame.
+   * @internal
+   */
+  public _acquirePersistentSlotStore(source: RenderRootSource, backend: WebGl2Backend): WebGl2PersistentSlotStore | null {
+    const store = new WebGl2PersistentSlotStore();
+    let blendMode: BlendModes | null = null;
+
+    for (const scope of source.scopes) {
+      const drawables = scope.items.drawables;
+      const count = scope.items.count;
+
+      for (let i = 0; i < count; i++) {
+        const sprite = drawables[i] as Sprite;
+        const texture = sprite.texture;
+
+        if (texture === null || sprite.material != null) {
+          store.destroy();
+
+          return null;
+        }
+
+        const mode = sprite.blendMode;
+
+        if (blendMode === null) {
+          blendMode = mode;
+        } else if (blendMode !== mode) {
+          store.destroy();
+
+          return null;
+        }
+
+        if (!store.textures.includes(texture)) {
+          if (store.textures.length >= this._maxTextureSlots) {
+            store.destroy();
+
+            return null;
+          }
+
+          store.textures.push(texture);
+        }
+      }
+    }
+
+    if (blendMode === null) {
+      store.destroy();
+
+      return null;
+    }
+
+    store.blendMode = blendMode;
+    store.connectDevice(backend.context, backend.accountant);
+
+    return store;
+  }
+
+  /**
+   * Fill the persistent rows of the items that just took a slot.
+   *
+   * `entered` is a flat `(scopeOrdinal, localIndex, slot)` triple list, and it
+   * holds arrivals only — a staying item's rows are already what this would
+   * write, which is the entire saving. The texture slot is resolved against the
+   * store's fixed table, so it is written once per item rather than re-derived
+   * per batch.
+   * @internal
+   */
+  public _writePersistentSlotRows(store: WebGl2PersistentSlotStore, source: RenderRootSource, entered: Int32Array, count: number): void {
+    const scopes = source.scopes;
+
+    let highest = -1;
+
+    for (let i = 0; i < count; i++) {
+      const slot = entered[i * 3 + 2]!;
+
+      if (slot > highest) {
+        highest = slot;
+      }
+    }
+
+    store.ensureCapacity(highest + 1);
+
+    for (let i = 0; i < count; i++) {
+      const base = i * 3;
+      const scope = scopes[entered[base]!]!;
+      const sprite = scope.items.drawables[entered[base + 1]!] as Sprite;
+      const slot = entered[base + 2]!;
+      const texture = sprite.texture!;
+      const frame = sprite.textureFrame;
+      const uMin = frame.left / texture.width;
+      const uMax = frame.right / texture.width;
+      const vTop = frame.top / texture.height;
+      const vBottom = frame.bottom / texture.height;
+
+      store.writeSlot(
+        slot,
+        sprite.getLocalBounds(),
+        uMin,
+        texture.flipY ? vBottom : vTop,
+        uMax,
+        texture.flipY ? vTop : vBottom,
+        sprite.getGlobalTransform(),
+        sprite.tint,
+        sprite.pixelSnapMode,
+        store.textures.indexOf(texture),
+      );
+    }
+
+    store.commitDirtyRows();
+  }
+
+  /**
+   * Draw `count` instances, instance `i` reading slot `order[i]`.
+   *
+   * One `drawArraysInstanced` for the whole root: the store's texture table is
+   * bound once, and the stream is issued verbatim. Nothing here may reorder or
+   * split it — the stream IS the draw order the plan built.
+   * @internal
+   */
+  public _drawPersistentSlots(store: WebGl2PersistentSlotStore, order: Uint32Array, count: number, backend: WebGl2Backend): void {
+    if (count === 0) {
+      return;
+    }
+
+    const gl = backend.context;
+    const shader = this._indexedShader;
+    const buffer = store.uploadOrder(order, count, () => this._createBufferRuntime(this._connection!));
+    const vao = this._acquireIndexedVao(gl, buffer);
+
+    backend.setBlendMode(store.blendMode);
+    backend.bindShader(shader);
+    shader.getUniform('u_projection').setValue(backend.view.getTransform().toArray(false));
+
+    if (shader.uniforms.has('u_group')) {
+      const groupTransform = backend.renderGroupTransform;
+
+      shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
+    }
+
+    backend._stageViewportUniform(shader);
+    backend.bindTexture(store.attributeTexture, slotAttributeTextureUnit);
+    backend.bindTexture(store.transformTexture, transformTextureUnit);
+    backend.bindTexture(store.tintTexture, transformTintTextureUnit);
+    shader.sync();
+    backend.bindVertexArrayObject(vao);
+
+    for (let i = 0; i < store.textures.length; i++) {
+      backend.bindTexture(store.textures[i]!, i);
+    }
+
+    vao.drawInstanced(4, 0, count, RenderingPrimitives.TriangleStrip);
+    backend.stats.batches++;
+    backend.stats.drawCalls++;
+    backend.stats.submittedNodes += count;
+  }
+
+  /**
+   * The VAO the indexed path draws through, rebuilt when the store's order
+   * buffer is replaced (growth destroys it, so the pointer would dangle).
+   */
+  private _acquireIndexedVao(gl: WebGL2RenderingContext, buffer: WebGl2RenderBuffer): WebGl2VertexArrayObject {
+    if (this._indexedVao !== null && this._indexedVaoBuffer === buffer) {
+      return this._indexedVao;
+    }
+
+    this._indexedVao?.destroy();
+    this._indexedVaoBuffer = buffer;
+    this._indexedVao = new WebGl2VertexArrayObject(RenderingPrimitives.TriangleStrip)
+      .addAttribute(buffer, this._indexedShader.getAttribute('a_slot'), gl.UNSIGNED_INT, false, Uint32Array.BYTES_PER_ELEMENT, 0, true, 1)
+      .connect(this._createVaoRuntime(this._connection!));
+
+    return this._indexedVao;
   }
 
   public flush(): void {
@@ -543,10 +754,25 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
       samplerUnit[0] = i;
       this._shader.getUniform(`u_texture${i}`).setValue(samplerUnit);
     }
+
+    this._indexedShader.connect(createWebGl2ShaderProgram(gl));
+    this._indexedShader.sync();
+
+    for (let i = 0; i < this._maxTextureSlots; i++) {
+      samplerUnit[0] = i;
+      this._indexedShader.getUniform(`u_texture${i}`).setValue(samplerUnit);
+    }
+
+    this._indexedShader.getUniform('u_slotAttributes').setValue(this._slotAttributeUnitScratch);
+    this._indexedShader.getUniform('u_transforms').setValue(this._transformUnitScratch);
+    this._indexedShader.getUniform('u_tintTexture').setValue(this._tintUnitScratch);
   }
 
   protected onDisconnect(): void {
     this._shader.disconnect();
+    this._indexedShader.disconnect();
+    this._indexedVao?.destroy();
+    this._indexedVao = null;
 
     for (const shader of this._customShaders.values()) {
       shader.destroy();

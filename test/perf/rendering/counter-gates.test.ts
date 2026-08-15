@@ -95,17 +95,33 @@ const EXPECTED = {
   // test, and the screen extent the emitted command carries — and that call
   // resolves the whole parent chain. A rise back toward 5554 means the
   // stored-bounds path stopped engaging on a settled scene.
+  // Re-pinned again when the persistent-indexed tier landed. The frame no
+  // longer materialises anything per visible item: it re-queries membership,
+  // hands slots to the arrivals, rebuilds the order stream and issues one
+  // instanced draw out of slot-addressed stores.
+  //
+  // - `globalTransform` 1778 -> 2. Only the root's own matrix resolves. A
+  //   selected item's world transform was written into its slot when it
+  //   ENTERED and has not been read since — that is the saving, and a rise back
+  //   toward 1778 means the per-item materialisation returned.
+  // - `materialKey` 888 -> 0. The store's texture table and blend mode are
+  //   fixed for the source's life (that is what acquisition checks), so there
+  //   is no per-draw key left to resolve.
+  // - `drawCalls`/`batches` stay 1: the whole root is one instanced draw.
+  // - `submittedNodes` 888 -> 956 and `culledNodes` 112 -> 44, because this
+  //   tier always admits against the view grown by the capture margin, where
+  //   the old suppressed-capture frame culled against the tight view rect. The
+  //   68 extra items are the band: off-screen, rasterised to nothing, and the
+  //   reason a small camera step can re-issue the same stream instead of
+  //   re-querying. `culledNodes` is still the anti-cheat — it must stay well
+  //   above zero, or the tier stopped culling and is simply drawing everything.
   panPlainBeyondMargin: {
     collect: 1,
-    // ONE: the root's own group test. The 1000 items are answered by the
-    // source's spatial index, which files them at build time and never asks a
-    // node again — that is the whole point of the index, and it is why
-    // `culledNodes` below (not this row) is what proves culling still happens.
     inView: 1,
-    globalTransform: 1778,
-    materialKey: 888,
-    submittedNodes: 888,
-    culledNodes: 112,
+    globalTransform: 2,
+    materialKey: 0,
+    submittedNodes: 956,
+    culledNodes: 44,
     drawCalls: 1,
     batches: 1,
   },

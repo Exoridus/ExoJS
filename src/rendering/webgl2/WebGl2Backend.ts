@@ -11,7 +11,9 @@ import type { Geometry } from '#rendering/geometry/Geometry';
 import { dataTextureBytesPerPixel, estimateTextureBytes, GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
 import type { MaterialSamplerOptions } from '#rendering/material/Material';
 import type { Mesh } from '#rendering/mesh/Mesh';
+import type { PersistentSlotBundle } from '#rendering/plan/PersistentSlotDraw';
 import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
 import type { ScopeEntry } from '#rendering/plan/RenderScope';
 import {
   type RetainedBatchCapableRenderer,
@@ -50,6 +52,7 @@ import { WebGl2BackdropBlendCompositor } from './WebGl2BackdropBlendCompositor';
 import { WebGl2MaskCompositor } from './WebGl2MaskCompositor';
 import { WebGl2MeshRenderer } from './WebGl2MeshRenderer';
 import { WebGl2PassCoordinator } from './WebGl2PassCoordinator';
+import type { PersistentSlotCapableRenderer, WebGl2PersistentSlotStore } from './WebGl2PersistentSlotStore';
 import {
   type WebGl2RecordedTextureState,
   type WebGl2RetainedBatchPayload,
@@ -288,6 +291,11 @@ export class WebGl2Backend implements RenderBackend {
   private readonly _stats: RenderStats = createRenderStats();
   private readonly _accountant: GpuResourceAccountant = new GpuResourceAccountant(this._stats);
   private readonly _transformBuffer = new TransformBuffer();
+  /**
+   * Live persistent slot stores, so a device loss can invalidate every one of
+   * them — their textures and buffers belong to the context that just went away.
+   */
+  private readonly _persistentStores = new Set<WebGl2PersistentSlotStore>();
   private _transformTexture: DataTexture<TextureFormat.Rgba32F> | null = null;
   // Row -> texel mapping for the current buffer capacity, plus the scratch rects
   // the per-flush upload writes its regions into (both paths run every flush, so
@@ -485,6 +493,74 @@ export class WebGl2Backend implements RenderBackend {
         this._transformBuffer.recordSkippedWrite();
       }
     }
+  }
+
+  /**
+   * Allocate a persistent slot store for `source`, or refuse it.
+   *
+   * The backend's own check is narrow: every item in the source must resolve to
+   * ONE renderer, and that renderer must implement the indexed path. Everything
+   * beyond that — materials, blend modes, the texture table — is the renderer's
+   * rule, so the decision is delegated rather than duplicated here.
+   *
+   * Called once per built source. A refusal is remembered by the caller, so the
+   * walk below never runs per frame.
+   * @internal
+   */
+  public _acquirePersistentSlots(source: RenderRootSource): PersistentSlotBundle | null {
+    let owner: PersistentSlotCapableRenderer | null = null;
+
+    for (const scope of source.scopes) {
+      const drawables = scope.items.drawables;
+      const count = scope.items.count;
+
+      for (let i = 0; i < count; i++) {
+        let renderer: PersistentSlotCapableRenderer | null;
+
+        try {
+          renderer = this.rendererRegistry.resolve(drawables[i]!) as unknown as PersistentSlotCapableRenderer | null;
+        } catch {
+          return null;
+        }
+
+        if (renderer?._supportsPersistentSlots !== true) {
+          return null;
+        }
+
+        if (owner === null) {
+          owner = renderer;
+        } else if (owner !== renderer) {
+          return null;
+        }
+      }
+    }
+
+    if (owner === null) {
+      return null;
+    }
+
+    const store = owner._acquirePersistentSlotStore(source, this);
+
+    if (store !== null) {
+      store.owner = owner;
+      this._persistentStores.add(store);
+    }
+
+    return store;
+  }
+
+  /** @internal */
+  public _writePersistentSlots(bundle: PersistentSlotBundle, source: RenderRootSource, entered: Int32Array, count: number): void {
+    const store = bundle as WebGl2PersistentSlotStore;
+
+    store.owner?._writePersistentSlotRows(store, source, entered, count);
+  }
+
+  /** @internal */
+  public _drawPersistentOrder(bundle: PersistentSlotBundle, order: Uint32Array, count: number): void {
+    const store = bundle as WebGl2PersistentSlotStore;
+
+    store.owner?._drawPersistentSlots(store, order, count, this);
   }
 
   /** @internal */
@@ -1861,6 +1937,13 @@ export class WebGl2Backend implements RenderBackend {
     }
 
     this._retainedCaptures.length = 0;
+
+    // Same argument for the persistent slot stores: their textures and order
+    // buffers died with the context, and the generation bump is what tells the
+    // plan to treat every visible item as entering again.
+    for (const store of this._persistentStores) {
+      store.invalidateDeviceResources();
+    }
 
     // Reset the cached GL bind state — every handle these tracked is dead, so
     // the next bind must run unconditionally rather than short-circuiting on a
