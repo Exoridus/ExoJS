@@ -64,6 +64,14 @@ export interface SpriteSceneConfig {
   readonly assign?: TextureAssign;
   /** Blend modes cycled across sprites (default: all Normal). */
   readonly blendModes?: readonly BlendModes[];
+  /**
+   * Consecutive sprites sharing one blend mode before the cycle advances
+   * (default 1 = alternate per sprite). A plateau > 1 models the realistic
+   * "a few hundred state switches per frame" scene — the batcher flushes once
+   * per run instead of once per sprite, so the two settings bracket the
+   * batch-record path from both ends.
+   */
+  readonly blendRunLength?: number;
   readonly size?: number;
   readonly viewW?: number;
   readonly viewH?: number;
@@ -77,7 +85,7 @@ export interface SpriteScene {
 }
 
 export const buildSpriteScene = (config: SpriteSceneConfig): SpriteScene => {
-  const { count, textures, assign = 'cycle', blendModes, size = 64, viewW = 1280, viewH = 720, offscreenFraction = 0 } = config;
+  const { count, textures, assign = 'cycle', blendModes, blendRunLength = 1, size = 64, viewW = 1280, viewH = 720, offscreenFraction = 0 } = config;
   const root = new Container();
   const sprites: Sprite[] = [];
   const offscreenCount = Math.floor(count * offscreenFraction);
@@ -87,7 +95,7 @@ export const buildSpriteScene = (config: SpriteSceneConfig): SpriteScene => {
     const sprite = new Sprite(texture);
 
     if (blendModes !== undefined && blendModes.length > 0) {
-      sprite.blendMode = blendModes[i % blendModes.length];
+      sprite.blendMode = blendModes[Math.floor(i / Math.max(1, blendRunLength)) % blendModes.length];
     }
 
     if (i < offscreenCount) {
