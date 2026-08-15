@@ -2,6 +2,7 @@
 
 import { Matrix } from '#math/Matrix';
 import { packAffineMat3Std140 } from '#rendering/affinePacking';
+import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { Material } from '#rendering/material/Material';
 import type { Mesh } from '#rendering/mesh/Mesh';
@@ -357,11 +358,40 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   /**
    * Retained-batch opt-in: the default static
    * INSTANCED draw (runs of ≥2 same-geometry meshes) is a recordable
-   * flush-level batch. Single meshes take the CPU-baked default path (view
-   * baked into vertices — uncacheable) and custom-material meshes their own
-   * path; both poison any open capture so the group degrades to entry replay.
+   * flush-level batch. Custom-material meshes and meshes without shared static
+   * geometry are excluded at collect time and never open a capture. A LONE
+   * static-geometry mesh still can: it takes the CPU-baked default path (view
+   * baked into vertices — uncacheable) and poisons the window from there,
+   * because run length is only known at flush time.
    */
   public readonly _supportsRetainedBatches = true;
+
+  /**
+   * Only a mesh backed by SHARED, STATIC {@link Geometry} can reach the
+   * recordable instanced path at all — an array-vertex mesh
+   * (`geometry === null`) and a `dynamic`/`stream` geometry re-pack into this
+   * renderer's own scratch buffers every frame and always take the CPU-baked
+   * default path. Vetoing them at collect time stops a group of array meshes
+   * from recording and re-poisoning on every frame.
+   *
+   * NOT sufficient on this backend, deliberately: the instanced path also needs
+   * a RUN of ≥2 same-geometry meshes (see `_getStaticBatchLength`), which is a
+   * flush-time property no per-drawable predicate can decide. A group of static
+   * meshes that never form a run therefore still records and poisons per frame.
+   *
+   * The verdict is cached per capture, so it would go stale if this answer could
+   * flip under a live capture. It cannot for any mesh that can appear in one:
+   * `Geometry.usage` is readonly, and `Mesh._geometry` is written once in the
+   * constructor. The one subclass that rewrites it, the pooled `ImmediateMesh`,
+   * is submitted straight to the backend by `RenderingContext.drawGeometry` /
+   * `drawBatch` and never enters the scene graph, so it is never a captured
+   * fragment entry.
+   * @internal
+   */
+  public _admitsRetainedRecording(drawable: Drawable): boolean {
+    return (drawable as Mesh).geometry?.usage === 'static';
+  }
+
   /** Reusable single-slot texture list handed to the recorder (avoids a per-batch array). */
   private readonly _retainedTextureScratch: [Texture | RenderTexture] = [TextureClass.white];
 

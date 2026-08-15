@@ -251,6 +251,31 @@ export interface RetainedBatchCapableRenderer {
   readonly _supportsRetainedBatches?: boolean;
   /** Opt an own-material drawable into retained recording. @internal */
   _canRecordRetainedDrawable?(drawable: Drawable): boolean;
+  /**
+   * Veto a drawable this renderer cannot record REGARDLESS of its material,
+   * because the drawable's own storage or draw path is not the one
+   * `_supportsRetainedBatches` promises. Consulted for every draw entry, before
+   * the own-material hook; an absent implementation means the renderer records
+   * anything it is handed on its default path.
+   *
+   * A renderer that already poisons an open capture from a non-recordable draw
+   * path belongs here: without the veto the fragment is admitted, opens a
+   * capture, records, and gets poisoned again on every single frame — the
+   * group ends up on the same (correct) entry-replay tier either way, but pays
+   * for a recording it can never use. The poison call stays as the safety net
+   * its own contract describes.
+   *
+   * CONTRACT for implementers: this answer is cached per capture (see
+   * `RetainedGroupFragment.isRecordable`) and only re-taken when the capture is
+   * re-keyed, so it must read state that either is immutable for the drawable's
+   * lifetime or, when mutated, bumps the node's content revision. Otherwise a
+   * `recordable → non-recordable` flip would leave the group replaying a capture
+   * its own renderer can no longer honour. Both current implementations read
+   * immutable state: mesh geometry storage and a repeating sprite's resolved
+   * strategy are fixed at construction.
+   * @internal
+   */
+  _admitsRetainedRecording?(drawable: Drawable): boolean;
 }
 
 interface BackendWithRendererRegistry {
@@ -261,7 +286,11 @@ interface BackendWithRendererRegistry {
 
 /**
  * A captured fragment can be recorded as an instruction set iff every draw's
- * renderer opts in via {@link RetainedBatchCapableRenderer}; own-material
+ * renderer opts in via {@link RetainedBatchCapableRenderer}; no draw is vetoed
+ * by its renderer's per-drawable
+ * {@link RetainedBatchCapableRenderer._admitsRetainedRecording} check (a mesh
+ * without static geometry, a shader-path repeating sprite — draws whose
+ * renderer would otherwise poison the capture on every frame); own-material
  * draws additionally pass that renderer's live-state capability check; and no
  * barrier record exists anywhere in the fragment (barriers re-dispatch live
  * per frame and cannot interleave with cached batch runs). Nested
@@ -307,6 +336,10 @@ const entriesRecordable = (entries: readonly RetainedFragmentEntry[], registry: 
     }
 
     if (renderer === null || typeof renderer !== 'object' || renderer._supportsRetainedBatches !== true) {
+      return false;
+    }
+
+    if (renderer._admitsRetainedRecording?.(drawable) === false) {
       return false;
     }
 

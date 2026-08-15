@@ -1602,8 +1602,24 @@ export class WebGl2Backend implements RenderBackend {
    * Invalidate every open capture window by appending an instruction whose
    * recorded generation can never match its bundle — the resulting sets fail
    * collect-time validation forever and the group stays on the (correct)
-   * entry-replay tier. Belt-and-braces for draws the recordability predicate
-   * should have excluded; never expected on a healthy path.
+   * entry-replay tier.
+   *
+   * Most callers are belt-and-braces for draws the collect-time recordability
+   * predicate already excluded, and those never fire on a healthy frame — a
+   * renderer whose non-recordable draws are decidable PER DRAWABLE states that
+   * through `_admitsRetainedRecording` so the capture is never opened at all
+   * (mesh geometry storage, the repeating sprite's shader path).
+   *
+   * One caller is not defensive and DOES fire on healthy frames: the Text
+   * renderer poisons when a flush is not a single recordable batch, or when a
+   * SECOND Text flush lands in the same window. Neither is a property of any
+   * one drawable — both depend on how the frame's draws compose into flushes —
+   * so no per-drawable predicate can pre-empt them, and a perfectly ordinary
+   * scene reaches this (two overlapping Text nodes split by a sprite in between
+   * force two Text flushes into one window, on every frame). Such a group
+   * re-records and re-poisons per frame; the tier it lands on is correct, the
+   * repeated recording is the waste, and a cheaper form (a veto flag on the set
+   * instead of one appended instruction per open capture) is the open follow-up.
    * @internal
    */
   public _poisonRetainedCaptures(): void {

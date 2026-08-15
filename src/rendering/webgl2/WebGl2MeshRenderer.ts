@@ -1,4 +1,5 @@
 import { Matrix } from '#math/Matrix';
+import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { Material, UniformValue } from '#rendering/material/Material';
 import type { Mesh } from '#rendering/mesh/Mesh';
@@ -13,7 +14,7 @@ import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
 import fragmentSource from './glsl/mesh.frag';
 import vertexSource from './glsl/mesh.vert';
 import type { WebGl2Backend } from './WebGl2Backend';
-import { WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
+import { uploadBufferRange, uploadBufferStore, WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
 import type { WebGl2RetainedBatchPayload, WebGl2RetainedBatchReplayer, WebGl2RetainedNodeIndexRange } from './WebGl2RetainedGroupResources';
 import { createWebGl2ShaderProgram } from './WebGl2ShaderProgram';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
@@ -80,10 +81,35 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
    * Retained-batch opt-in: the default-path static
    * instanced draw ({@link _drawStaticBatch}) is a flush-level batch the group
    * recorder can capture and replay. Custom-material and dynamic-geometry
-   * meshes never take that path — they poison any open capture instead (see
-   * {@link _drawDynamicInstancedSingle}) so the group degrades to entry replay.
+   * meshes never take that path; both are excluded at collect time (own
+   * material by the predicate's own-material rule, geometry storage by
+   * {@link _admitsRetainedRecording}), so no capture opens around them.
    */
   public readonly _supportsRetainedBatches = true;
+
+  /**
+   * Only a mesh backed by SHARED, STATIC {@link Geometry} is recordable: that is
+   * the one form whose vertex/index buffers are the persistent objects a
+   * retained batch references. An array-vertex mesh (`geometry === null`) and a
+   * `dynamic`/`stream` geometry both re-pack into the renderer's own scratch
+   * buffers every frame, so they take {@link _drawDynamicInstancedSingle} and
+   * poison the capture there. Vetoing them at collect time is what keeps that
+   * poison the dead safety net its contract describes — without it a group of
+   * array meshes records and re-poisons on every single frame.
+   *
+   * The verdict is cached per capture, so it would go stale if this answer could
+   * flip under a live capture. It cannot for any mesh that can appear in one:
+   * `Geometry.usage` is readonly, and `Mesh._geometry` is written once in the
+   * constructor. The one subclass that rewrites it, the pooled `ImmediateMesh`,
+   * is submitted straight to the backend by `RenderingContext.drawGeometry` /
+   * `drawBatch` and never enters the scene graph, so it is never a captured
+   * fragment entry.
+   * @internal
+   */
+  public _admitsRetainedRecording(drawable: Drawable): boolean {
+    return (drawable as Mesh).geometry?.usage === 'static';
+  }
+
   /** Reusable single-slot texture list handed to the recorder (avoids a per-batch array). */
   private readonly _retainedTextureScratch: [Texture | RenderTexture] = [Texture.white];
 
@@ -110,7 +136,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
   private _indexData: Uint16Array = new Uint16Array(initialIndexCapacity);
   private _nodeIndexData: Uint32Array = new Uint32Array(initialNodeIndexCapacity);
   // Initial (empty) backing data for the shared divisor-1 instance buffer; a
-  // draw uploads a subarray of the RenderBatch's own storage directly.
+  // draw uploads the packed prefix of the RenderBatch's own storage directly.
   private readonly _instanceAttributeData: Float32Array = new Float32Array(0);
 
   // Frame-persistent pool of pending-draw slots. `render()` fills slots front to
@@ -241,12 +267,12 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
 
     this._bindInstancedShaderState(shader, texture, material, backend, maxNodeIndex);
     backend.bindVertexArrayObject(vao);
-    connection.dynamicNodeIndexBuffer.upload(this._nodeIndexData.subarray(0, count));
+    connection.dynamicNodeIndexBuffer.upload(this._nodeIndexData, 0, count);
 
     if (instances !== null) {
       // Upload exactly the packed instances, not the batch's whole (over-grown)
       // storage — the VAO reads `count` strides from offset 0.
-      connection.dynamicInstanceBuffer.upload(instances.data.subarray(0, count * instances.strideFloats));
+      connection.dynamicInstanceBuffer.upload(instances.data, 0, count * instances.strideFloats);
     }
 
     this._bindBaseTextureSampler(backend, material);
@@ -412,12 +438,12 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
   }
 
   private _drawDynamicInstancedSingle(draw: PendingMeshDraw, backend: WebGl2Backend, connection: MeshRendererConnection): void {
-    // A dynamic-geometry (non-static) mesh cannot be recorded — its geometry
-    // is not the shared, persistent buffer a retained batch references. The
-    // recordability predicate admits it (material === null, snap none),
-    // so poison any open capture: the group's set never validates and it stays
-    // on the correct entry-replay tier. Belt-and-braces, mirroring the sprite
-    // renderer's custom-material poison.
+    // A dynamic-geometry (non-static) mesh cannot be recorded — its geometry is
+    // not the shared, persistent buffer a retained batch references, which is
+    // why _admitsRetainedRecording keeps such a mesh from ever opening a
+    // capture. A mesh's geometry cannot change after that verdict was cached
+    // (see _admitsRetainedRecording), so this poison is unreachable through the
+    // public API and stays only as a structural safety net.
     if (backend._isRetainedCapturing) {
       backend._poisonRetainedCaptures();
     }
@@ -447,9 +473,9 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     this._nodeIndexData[0] = nodeIndex >>> 0;
 
     backend.bindVertexArrayObject(connection.dynamicVao);
-    connection.dynamicVertexBuffer.upload(this._float32View.subarray(0, draw.mesh.vertexCount * vertexStrideWords));
-    connection.dynamicIndexBuffer.upload(this._indexData.subarray(0, draw.mesh.indexCount));
-    connection.dynamicNodeIndexBuffer.upload(this._nodeIndexData.subarray(0, 1));
+    connection.dynamicVertexBuffer.upload(this._float32View, 0, draw.mesh.vertexCount * vertexStrideWords);
+    connection.dynamicIndexBuffer.upload(this._indexData, 0, draw.mesh.indexCount);
+    connection.dynamicNodeIndexBuffer.upload(this._nodeIndexData, 0, 1);
     connection.dynamicVao.drawInstanced(draw.mesh.indexCount, 0, 1, RenderingPrimitives.Triangles);
 
     backend.stats.batches++;
@@ -491,7 +517,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
 
     this._bindInstancedShaderState(first.shader, first.texture, first.material, backend, maxNodeIndex);
     backend.bindVertexArrayObject(vao);
-    connection.dynamicNodeIndexBuffer.upload(this._nodeIndexData.subarray(0, count));
+    connection.dynamicNodeIndexBuffer.upload(this._nodeIndexData, 0, count);
     this._bindBaseTextureSampler(backend, first.material);
     vao.drawInstanced(cacheEntry.indexCount, 0, count, RenderingPrimitives.Triangles);
     this._unbindBaseTextureSampler(backend, first.material);
@@ -561,8 +587,8 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
 
     shader.sync();
     backend.bindVertexArrayObject(connection.dynamicVao);
-    connection.dynamicVertexBuffer.upload(this._float32View.subarray(0, mesh.vertexCount * vertexStrideWords));
-    connection.dynamicIndexBuffer.upload(this._indexData.subarray(0, mesh.indexCount));
+    connection.dynamicVertexBuffer.upload(this._float32View, 0, mesh.vertexCount * vertexStrideWords);
+    connection.dynamicIndexBuffer.upload(this._indexData, 0, mesh.indexCount);
     this._bindBaseTextureSampler(backend, draw.material);
     connection.dynamicVao.draw(mesh.indexCount, 0, RenderingPrimitives.Triangles);
     this._unbindBaseTextureSampler(backend, draw.material);
@@ -1115,16 +1141,14 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       },
       upload: (buffer: WebGl2RenderBuffer, offset: number): void => {
         const state = buffers.get(buffer);
-        const data = buffer.data;
-
         gl.bindBuffer(buffer.type, handle);
 
-        if (state && state.dataByteLength >= data.byteLength) {
-          gl.bufferSubData(buffer.type, offset, data);
-          state.dataByteLength = data.byteLength;
+        if (state && state.dataByteLength >= buffer.uploadByteLength) {
+          uploadBufferRange(gl, buffer, offset);
+          state.dataByteLength = buffer.uploadByteLength;
         } else {
-          gl.bufferData(buffer.type, data, buffer.usage);
-          buffers.set(buffer, { handle, dataByteLength: data.byteLength });
+          uploadBufferStore(gl, buffer);
+          buffers.set(buffer, { handle, dataByteLength: buffer.uploadByteLength });
         }
       },
       destroy: (buffer: WebGl2RenderBuffer): void => {

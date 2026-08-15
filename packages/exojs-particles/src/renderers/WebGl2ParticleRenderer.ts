@@ -6,7 +6,7 @@ import type { WebGl2Backend } from '@codexo/exojs/renderer-sdk';
 import { BufferTypes, BufferUsage, RenderingPrimitives } from '@codexo/exojs/renderer-sdk';
 import { Shader } from '@codexo/exojs/renderer-sdk';
 import { AbstractWebGl2Renderer } from '@codexo/exojs/renderer-sdk';
-import { WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from '@codexo/exojs/renderer-sdk';
+import { uploadBufferRange, uploadBufferStore, WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from '@codexo/exojs/renderer-sdk';
 import { createWebGl2ShaderProgram } from '@codexo/exojs/renderer-sdk';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from '@codexo/exojs/renderer-sdk';
 
@@ -464,17 +464,16 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
       },
       upload: (buffer, offset): void => {
         const gl = connection.gl;
-        const data = buffer.data;
         const state = connection.buffers.get(buffer);
 
         gl.bindBuffer(buffer.type, handle);
 
-        if (state && state.dataByteLength >= data.byteLength) {
-          gl.bufferSubData(buffer.type, offset, data);
-          state.dataByteLength = data.byteLength;
+        if (state && state.dataByteLength >= buffer.uploadByteLength) {
+          uploadBufferRange(gl, buffer, offset);
+          state.dataByteLength = buffer.uploadByteLength;
         } else {
-          gl.bufferData(buffer.type, data, buffer.usage);
-          connection.buffers.set(buffer, { handle, dataByteLength: data.byteLength });
+          uploadBufferStore(gl, buffer);
+          connection.buffers.set(buffer, { handle, dataByteLength: buffer.uploadByteLength });
         }
       },
       destroy: (buffer): void => {

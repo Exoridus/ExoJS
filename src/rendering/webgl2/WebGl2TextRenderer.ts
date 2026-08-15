@@ -16,7 +16,7 @@ import textColorFragSource from './glsl/text-color.frag';
 import textMsdfFragSource from './glsl/text-msdf.frag';
 import textSdfFragSource from './glsl/text-sdf.frag';
 import type { WebGl2Backend } from './WebGl2Backend';
-import { WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
+import { uploadBufferRange, uploadBufferStore, WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
 import {
   type WebGl2RetainedBatchPayload,
   type WebGl2RetainedBatchReplayer,
@@ -1001,14 +1001,13 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       },
       upload: (buf, offset): void => {
         const state = buffers.get(buf);
-        const data = buf.data;
         gl.bindBuffer(buf.type, handle);
-        if (state && state.dataByteLength >= data.byteLength) {
-          gl.bufferSubData(buf.type, offset, data);
-          state.dataByteLength = data.byteLength;
+        if (state && state.dataByteLength >= buf.uploadByteLength) {
+          uploadBufferRange(gl, buf, offset);
+          state.dataByteLength = buf.uploadByteLength;
         } else {
-          gl.bufferData(buf.type, data, buf.usage);
-          buffers.set(buf, { handle, dataByteLength: data.byteLength });
+          uploadBufferStore(gl, buf);
+          buffers.set(buf, { handle, dataByteLength: buf.uploadByteLength });
         }
       },
       destroy: (buf): void => {

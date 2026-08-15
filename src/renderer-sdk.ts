@@ -43,7 +43,7 @@ export { AbstractWebGl2BatchedRenderer } from '#rendering/webgl2/AbstractWebGl2B
 export { AbstractWebGl2Renderer } from '#rendering/webgl2/AbstractWebGl2Renderer';
 export { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 export type { WebGl2RenderBufferRuntime } from '#rendering/webgl2/WebGl2RenderBuffer';
-export { WebGl2RenderBuffer } from '#rendering/webgl2/WebGl2RenderBuffer';
+export { uploadBufferRange, uploadBufferStore, WebGl2RenderBuffer } from '#rendering/webgl2/WebGl2RenderBuffer';
 export type {
   WebGl2RetainedBatchPayload,
   WebGl2RetainedBatchReplayer,

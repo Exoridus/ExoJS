@@ -19,6 +19,8 @@ import {
   RenderingPrimitives,
   Shader,
   TRANSFORM_TEXTURE_GLSL_INCLUDE,
+  uploadBufferRange,
+  uploadBufferStore,
   WebGl2RenderBuffer,
   WebGl2VertexArrayObject,
 } from '@codexo/exojs/renderer-sdk';
@@ -584,17 +586,16 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
       },
       upload: (buffer, offset): void => {
         const gl = connection.gl;
-        const data = buffer.data;
         const state = connection.buffers.get(buffer);
 
         gl.bindBuffer(buffer.type, handle);
 
-        if (state && state.dataByteLength >= data.byteLength) {
-          gl.bufferSubData(buffer.type, offset, data);
-          state.dataByteLength = data.byteLength;
+        if (state && state.dataByteLength >= buffer.uploadByteLength) {
+          uploadBufferRange(gl, buffer, offset);
+          state.dataByteLength = buffer.uploadByteLength;
         } else {
-          gl.bufferData(buffer.type, data, buffer.usage);
-          connection.buffers.set(buffer, { handle, dataByteLength: data.byteLength });
+          uploadBufferStore(gl, buffer);
+          connection.buffers.set(buffer, { handle, dataByteLength: buffer.uploadByteLength });
         }
       },
       destroy: (buffer): void => {

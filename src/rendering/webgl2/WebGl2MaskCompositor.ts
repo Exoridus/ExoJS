@@ -7,7 +7,7 @@ import { BufferTypes, BufferUsage } from '#rendering/types';
 import fragmentSource from './glsl/mask-compose.frag';
 import vertexSource from './glsl/mask-compose.vert';
 import type { WebGl2Backend } from './WebGl2Backend';
-import { WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
+import { uploadBufferStore, WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
 import { createWebGl2ShaderProgram } from './WebGl2ShaderProgram';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
 
@@ -187,10 +187,8 @@ export class WebGl2MaskCompositor {
         gl.bindBuffer(buffer.type, handle);
       },
       upload: (buffer: WebGl2RenderBuffer): void => {
-        const data = buffer.data;
-
         gl.bindBuffer(buffer.type, handle);
-        gl.bufferData(buffer.type, data, buffer.usage);
+        uploadBufferStore(gl, buffer);
         handles.set(buffer, handle);
       },
       destroy: (buffer: WebGl2RenderBuffer): void => {

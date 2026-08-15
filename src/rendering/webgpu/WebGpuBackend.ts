@@ -1570,11 +1570,23 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   /**
-   * Mark every active capture window as unreplayable (defensive, see
-   * {@link WebGpuRetainedCaptureFrame.poisoned}). The recordability predicate
-   * makes this unreachable; if it ever fires, the produced sets are vetoed in
-   * `_validateRetainedInstructionSet` so the group stays on the (correct)
-   * entry-replay tier instead of replaying incomplete instruction streams.
+   * Mark every active capture window as unreplayable (see
+   * {@link WebGpuRetainedCaptureFrame.poisoned}). A poisoned window's set is
+   * vetoed in `_validateRetainedInstructionSet`, so the group stays on the
+   * (correct) entry-replay tier instead of replaying an incomplete instruction
+   * stream.
+   *
+   * Most callers are defensive and the collect-time recordability predicate
+   * keeps them unreachable — a renderer whose non-recordable draws are decidable
+   * PER DRAWABLE states that through `_admitsRetainedRecording` so no capture is
+   * opened for them at all. Two callers do fire on healthy frames and cannot be
+   * pre-empted per drawable, because both are properties of how a frame's draws
+   * compose into flushes rather than of any one drawable: the Text renderer's
+   * multi-batch / second-flush-per-window guard, and this backend's own
+   * single-mesh default path (the recordable mesh draw needs a RUN of ≥2
+   * same-geometry meshes, so a lone static-geometry mesh inside a capture
+   * poisons it). Both leave the group re-recording and re-poisoning per frame on
+   * the correct tier; a cheaper veto form is the open follow-up.
    * @internal
    */
   public _poisonActiveRetainedCaptures(): void {

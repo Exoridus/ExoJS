@@ -14,7 +14,7 @@ import type { Texture } from '#rendering/texture/Texture';
 import { TRANSFORM_FLOATS_PER_ROW, TRANSFORM_TINT_BYTES_PER_ROW } from '#rendering/TransformBuffer';
 import { type BlendModes, BufferTypes, BufferUsage, RenderingPrimitives, TextureFormat } from '#rendering/types';
 
-import { WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
+import { uploadBufferRange, uploadBufferStore, WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
 
 const transformFloatsPerRow = TRANSFORM_FLOATS_PER_ROW;
@@ -532,15 +532,13 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
         gl.bindBuffer(buffer.type, handle);
       },
       upload: (buffer, offset): void => {
-        const data = buffer.data;
-
         gl.bindBuffer(buffer.type, handle);
 
-        if (allocatedBytes >= data.byteLength && allocatedBytes > 0) {
-          gl.bufferSubData(buffer.type, offset, data as ArrayBufferView);
+        if (allocatedBytes >= buffer.uploadByteLength && allocatedBytes > 0) {
+          uploadBufferRange(gl, buffer, offset);
         } else {
-          gl.bufferData(buffer.type, data as ArrayBufferView, buffer.usage);
-          allocatedBytes = data.byteLength;
+          uploadBufferStore(gl, buffer);
+          allocatedBytes = buffer.uploadByteLength;
         }
       },
       destroy: (buffer): void => {
