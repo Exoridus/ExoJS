@@ -327,8 +327,12 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
   private _geoVao: WebGl2VertexArrayObject | null = null;
   private _geoQuadCount = 0;
 
-  // Sampler cache keyed by "wrapS:wrapT:scaleMode"
-  private _samplers = new Map<string, WebGLSampler>();
+  /**
+   * Sampler cache keyed by wrapS/wrapT/scaleMode packed into one number. A
+   * template-string key would be rebuilt on every shader-path flush — measured
+   * at ~146 B per flush, which a blend-churn frame pays once per sprite.
+   */
+  private _samplers = new Map<number, WebGLSampler>();
 
   // Shared batch state
   private _maxNodeIndex = 0;
@@ -609,12 +613,12 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     gl.bindSampler(0, samplerHandle);
 
     backend.bindTransformBufferTexture(transformTextureUnit, this._maxNodeIndex + 1);
-    this._shaderPathShader.getUniform('u_texture').setValue(new Int32Array([0]));
+    this._shaderPathShader.getUniform('u_texture').setValue(this._textureUnitScratch);
     this._shaderPathShader.getUniform('u_transforms').setValue(this._transformUnitScratch);
     this._shaderPathShader.sync();
 
     backend.bindVertexArrayObject(vao);
-    buf.upload(this._shaderF32.subarray(0, this._shaderQuadCount * shaderWordsPerInstance));
+    buf.upload(this._shaderF32, 0, this._shaderQuadCount * shaderWordsPerInstance);
     vao.drawInstanced(4, 0, this._shaderQuadCount, RenderingPrimitives.TriangleStrip);
 
     backend.stats.batches++;
@@ -634,12 +638,12 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     if (!conn || !buf || !vao || this._geoQuadCount === 0) return;
 
     backend.bindTransformBufferTexture(transformTextureUnit, this._maxNodeIndex + 1);
-    this._geoPathShader.getUniform('u_texture').setValue(new Int32Array([0]));
+    this._geoPathShader.getUniform('u_texture').setValue(this._textureUnitScratch);
     this._geoPathShader.getUniform('u_transforms').setValue(this._transformUnitScratch);
     this._geoPathShader.sync();
 
     backend.bindVertexArrayObject(vao);
-    buf.upload(this._geoF32.subarray(0, this._geoQuadCount * geoWordsPerInstance));
+    buf.upload(this._geoF32, 0, this._geoQuadCount * geoWordsPerInstance);
     vao.drawInstanced(4, 0, this._geoQuadCount, RenderingPrimitives.TriangleStrip);
 
     backend.stats.batches++;
@@ -809,7 +813,9 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
   }
 
   private _getOrCreateSampler(gl: WebGL2RenderingContext, wrapS: WrapModes, wrapT: WrapModes, scaleMode: ScaleModes): WebGLSampler {
-    const key = `${wrapS}:${wrapT}:${scaleMode}`;
+    // Exact, allocation-free key: every wrap and scale mode is a GL enum well
+    // below 0x10000, so three of them pack into one integer below 2^53.
+    const key = (wrapS * 0x10000 + wrapT) * 0x10000 + scaleMode;
     const existing = this._samplers.get(key);
     if (existing !== undefined) return existing;
 

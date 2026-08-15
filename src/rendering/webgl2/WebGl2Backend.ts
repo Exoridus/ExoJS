@@ -196,6 +196,20 @@ interface RetainedCaptureFrame {
 const renderTargetTextureSyncUnit = 17;
 
 /**
+ * Row length (in channels) from which packing a rectangular texture region
+ * switches from a plain element loop to `set(subarray(…))`.
+ *
+ * `set` copies natively but needs a view per row, and below roughly this length
+ * the call overhead outweighs the copy: measured per pack, 8x8 rows 74 ns
+ * (loop) vs 421 ns (set) and 32x32 rows 1.20 us vs 1.66 us, flipping at 48–64
+ * to 4.5 us vs 3.9 us at 64x64 and 10.5 us vs 6.0 us at 96x96. Glyph-atlas
+ * updates — the only rectangular region the engine itself produces — sit on the
+ * small side, where the loop is both faster AND allocation-free (a 32x32 pack
+ * allocated 3.3 KB of row views).
+ */
+const nativeRowCopyThreshold = 48;
+
+/**
  * WebGL 2.0 implementation of {@link RenderBackend}. Manages the GL
  * context, texture and framebuffer caches keyed by user-side
  * {@link Texture}/{@link RenderTexture} identity, the active VAO, shader
@@ -2062,54 +2076,66 @@ export class WebGl2Backend implements RenderBackend {
     this._materialSamplers.clear();
   }
 
+  /** Same hit/miss split as {@link _getTextureState}, and for the same reason. */
   private _getRenderTargetState(target: RenderTarget): ManagedRenderTargetState {
-    let state = this._renderTargetStates.get(target);
+    return this._renderTargetStates.get(target) ?? this._createRenderTargetState(target);
+  }
 
-    if (!state) {
-      this._subscribeToDestroy(target, this._renderTargetDestroyHandlers, () => {
-        this._evictRenderTarget(target, true);
-      });
+  private _createRenderTargetState(target: RenderTarget): ManagedRenderTargetState {
+    this._subscribeToDestroy(target, this._renderTargetDestroyHandlers, () => {
+      this._evictRenderTarget(target, true);
+    });
 
-      state = {
-        framebuffer: target.root ? null : this._createFramebuffer(),
-        version: -1,
-        attachedTexture: null,
-        stencilRenderbuffer: null,
-        stencilWidth: 0,
-        stencilHeight: 0,
-      };
+    const state: ManagedRenderTargetState = {
+      framebuffer: target.root ? null : this._createFramebuffer(),
+      version: -1,
+      attachedTexture: null,
+      stencilRenderbuffer: null,
+      stencilWidth: 0,
+      stencilHeight: 0,
+    };
 
-      this._renderTargetStates.set(target, state);
-    }
+    this._renderTargetStates.set(target, state);
 
     return state;
   }
 
+  /**
+   * The backend-side state for `texture`, created on first sight.
+   *
+   * The creation half lives in {@link _createTextureState} for one reason: its
+   * eviction handlers are closures over `texture`, and V8 allocates the scope
+   * that backs them when the function is ENTERED, not when the branch that
+   * builds them is taken. Keeping them here cost every cache hit ~45 bytes —
+   * and this runs once per bound texture per draw, so a 762-draw blend-churn
+   * scene paid 107 KB/frame (3.5 MB/frame at 25 000 draws) for closures it
+   * never created.
+   */
   private _getTextureState(texture: Texture | RenderTexture): ManagedTextureState {
-    let state = this._textureStates.get(texture);
+    return this._textureStates.get(texture) ?? this._createTextureState(texture);
+  }
 
-    if (!state) {
-      this._subscribeToDestroy(texture, this._textureDestroyHandlers, () => {
-        this._evictTexture(texture);
+  private _createTextureState(texture: Texture | RenderTexture): ManagedTextureState {
+    this._subscribeToDestroy(texture, this._textureDestroyHandlers, () => {
+      this._evictTexture(texture);
+    });
+
+    if (texture instanceof Texture) {
+      this._subscribeToRelease(texture, this._textureReleaseHandlers, () => {
+        this._evictTexture(texture, false);
       });
-
-      if (texture instanceof Texture) {
-        this._subscribeToRelease(texture, this._textureReleaseHandlers, () => {
-          this._evictTexture(texture, false);
-        });
-      }
-
-      state = {
-        handle: this._createTextureHandle(),
-        version: -1,
-        width: 0,
-        height: 0,
-        accountedBytes: 0,
-        partialUploadScratch: null,
-      };
-
-      this._textureStates.set(texture, state);
     }
+
+    const state: ManagedTextureState = {
+      handle: this._createTextureHandle(),
+      version: -1,
+      width: 0,
+      height: 0,
+      accountedBytes: 0,
+      partialUploadScratch: null,
+    };
+
+    this._textureStates.set(texture, state);
 
     return state;
   }
@@ -2382,9 +2408,13 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   /**
-   * Return a packing scratch view sized exactly `length`, backed by
-   * `state.partialUploadScratch` (grown on demand, never shrunk, kind-matched
-   * to `source`). Reusing this buffer across every `DataTexture` upload that
+   * Return the packing scratch for `state`, at least `length` elements long
+   * (grown on demand, never shrunk, kind-matched to `source`). It is NOT
+   * narrowed to `length`: the caller passes it to the `(…, srcData, srcOffset)`
+   * overload, which reads exactly the rectangle's worth of elements from the
+   * offset — so a longer buffer uploads the same bytes as an exact-length view
+   * would, without allocating one per pack. Reusing this buffer across every
+   * `DataTexture` upload that
    * has to be packed at all — instead of allocating a fresh temporary array
    * per sync — is what keeps a barrier-heavy scene's per-frame CPU garbage
    * flat instead of scaling with flush count: each flush's transform (and now
@@ -2402,129 +2432,167 @@ export class WebGl2Backend implements RenderBackend {
       state.partialUploadScratch = scratch;
     }
 
-    return scratch.length === length ? scratch : scratch.subarray(0, length);
+    return scratch;
   }
 
+  /**
+   * Bind `texture` to the active unit, uploading first if its contents moved on
+   * since the last bind.
+   *
+   * Split into this binding-only fast path and {@link _syncTextureUpload}
+   * because a frame calls it once per bound texture per draw and almost never
+   * needs the upload: at a few thousand calls per frame, running them through
+   * the upload function's frame cost ~45 B each even when every branch in it
+   * was skipped (measured: 107 KB/frame on a 762-draw blend-churn scene, 3.5
+   * MB/frame at 25 000 draws, with a matching 19x difference in scavenge count
+   * — the bytes are real, not a profiler artefact). Keeping the hot path in a
+   * small function of its own removes that entirely.
+   */
   private _syncTexture(texture: Texture | RenderTexture): ManagedTextureState {
     assertLiveTexture(texture);
 
-    const gl = this._context;
     const state = this._getTextureState(texture);
     const version = texture instanceof RenderTexture ? texture.textureVersion : texture.version;
 
     this._bindTextureHandle(state.handle);
 
-    if (state.version !== version) {
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, texture.scaleMode);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, texture.scaleMode);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, texture.wrapMode);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, texture.wrapMode);
-      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, texture.premultiplyAlpha);
+    if (state.version === version) {
+      return state;
+    }
 
-      if (texture instanceof DataTexture) {
-        // `instanceof DataTexture` narrows to `DataTexture<any>` (the generic is
-        // erased), so `texture.format` widens to `any`; the class invariant
-        // guarantees it is a `DataTextureFormat`, so restore that type here.
-        const format: DataTextureFormat = texture.format;
-        const formatInfo = webgl2DataTextureFormat(format);
-        const region = texture._consumeDirtyRegion();
-        const needsAlloc = state.version === -1 || state.width !== texture.width || state.height !== texture.height;
+    return this._syncTextureUpload(texture, state, version);
+  }
 
-        // Our DataTexture buffers are tightly packed (no per-row padding), but
-        // WebGL defaults UNPACK_ALIGNMENT to 4. For single-byte (r8) data a
-        // sub-region upload whose width isn't a multiple of 4 would be misread
-        // — or rejected with INVALID_OPERATION for height > 1 — leaving the
-        // region un-uploaded. That is exactly what corrupts a partial glyph-
-        // atlas upload when new glyphs first appear after the initial full
-        // upload (e.g. switching to a scene with new characters). Force tight
-        // packing for the upload, then restore the GL default.
-        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+  /**
+   * Upload `texture`'s current contents into its already-bound GL texture and
+   * re-stamp `state`. Split out of {@link _syncTexture}; never called for a
+   * texture whose version the state already carries.
+   */
+  private _syncTextureUpload(texture: Texture | RenderTexture, state: ManagedTextureState, version: number): ManagedTextureState {
+    const gl = this._context;
 
-        const bytesPerPixel = dataTextureBytesPerPixel(format);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, texture.scaleMode);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, texture.scaleMode);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, texture.wrapMode);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, texture.wrapMode);
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, texture.premultiplyAlpha);
 
-        if (needsAlloc || region === null || region.full) {
-          gl.texImage2D(gl.TEXTURE_2D, 0, formatInfo.internalFormat, texture.width, texture.height, 0, formatInfo.format, formatInfo.type, texture.buffer);
-          this._bookTextureStorage(state, texture, bytesPerPixel);
-          this._accountant.recordTextureUpload(texture.width * texture.height * bytesPerPixel);
+    if (texture instanceof DataTexture) {
+      // `instanceof DataTexture` narrows to `DataTexture<any>` (the generic is
+      // erased), so `texture.format` widens to `any`; the class invariant
+      // guarantees it is a `DataTextureFormat`, so restore that type here.
+      const format: DataTextureFormat = texture.format;
+      const formatInfo = webgl2DataTextureFormat(format);
+      const region = texture._consumeDirtyRegion();
+      const needsAlloc = state.version === -1 || state.width !== texture.width || state.height !== texture.height;
+
+      // Our DataTexture buffers are tightly packed (no per-row padding), but
+      // WebGL defaults UNPACK_ALIGNMENT to 4. For single-byte (r8) data a
+      // sub-region upload whose width isn't a multiple of 4 would be misread
+      // — or rejected with INVALID_OPERATION for height > 1 — leaving the
+      // region un-uploaded. That is exactly what corrupts a partial glyph-
+      // atlas upload when new glyphs first appear after the initial full
+      // upload (e.g. switching to a scene with new characters). Force tight
+      // packing for the upload, then restore the GL default.
+      gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+
+      const bytesPerPixel = dataTextureBytesPerPixel(format);
+
+      if (needsAlloc || region === null || region.full) {
+        gl.texImage2D(gl.TEXTURE_2D, 0, formatInfo.internalFormat, texture.width, texture.height, 0, formatInfo.format, formatInfo.type, texture.buffer);
+        this._bookTextureStorage(state, texture, bytesPerPixel);
+        this._accountant.recordTextureUpload(texture.width * texture.height * bytesPerPixel);
+      } else {
+        const channels = formatInfo.channels;
+        const rowChannels = texture.width * channels;
+
+        // A region is already contiguous and tightly packed in the row-major
+        // buffer when it spans full rows, and equally when it is a single row
+        // (however narrow — one row never straddles a gap). Both let the
+        // `(…, srcData, srcOffset)` overload read straight out of the texture
+        // buffer at an element offset, with nothing to pack. Between them they
+        // cover every shape the engine's own uploads take: full-width bands
+        // (ring-buffer style writes, a whole transform store) and single-row
+        // spans (a patched transform row, a dirty range inside one texture
+        // line), so the packing path below is left to genuinely rectangular
+        // sub-regions like a partial glyph-atlas update.
+        if ((region.x === 0 && region.width === texture.width) || region.height === 1) {
+          gl.texSubImage2D(
+            gl.TEXTURE_2D,
+            0,
+            region.x,
+            region.y,
+            region.width,
+            region.height,
+            formatInfo.format,
+            formatInfo.type,
+            texture.buffer,
+            region.y * rowChannels + region.x * channels,
+          );
         } else {
-          const channels = formatInfo.channels;
-          const rowChannels = texture.width * channels;
+          // The rows are no longer contiguous, so lift the sub-region out of
+          // the row-major buffer into a reusable scratch view (grown once,
+          // never reallocated per call — see `_acquirePartialUploadScratch`)
+          // that gl.texSubImage2D can read as one tightly packed block.
+          const subRowChannels = region.width * channels;
+          const subView = this._acquirePartialUploadScratch(state, texture.buffer, region.width * region.height * channels);
+          const source = texture.buffer;
 
-          // A region is already contiguous and tightly packed in the row-major
-          // buffer when it spans full rows, and equally when it is a single row
-          // (however narrow — one row never straddles a gap). Both let the
-          // `(…, srcData, srcOffset)` overload read straight out of the texture
-          // buffer at an element offset, with nothing to pack. Between them they
-          // cover every shape the engine's own uploads take: full-width bands
-          // (ring-buffer style writes, a whole transform store) and single-row
-          // spans (a patched transform row, a dirty range inside one texture
-          // line), so the packing path below is left to genuinely rectangular
-          // sub-regions like a partial glyph-atlas update.
-          if ((region.x === 0 && region.width === texture.width) || region.height === 1) {
-            gl.texSubImage2D(
-              gl.TEXTURE_2D,
-              0,
-              region.x,
-              region.y,
-              region.width,
-              region.height,
-              formatInfo.format,
-              formatInfo.type,
-              texture.buffer,
-              region.y * rowChannels + region.x * channels,
-            );
-          } else {
-            // The rows are no longer contiguous, so lift the sub-region out of
-            // the row-major buffer into a reusable scratch view (grown once,
-            // never reallocated per call — see `_acquirePartialUploadScratch`)
-            // that gl.texSubImage2D can read as one tightly packed block.
-            const subRowChannels = region.width * channels;
-            const subView = this._acquirePartialUploadScratch(state, texture.buffer, region.width * region.height * channels);
-
+          if (subRowChannels <= nativeRowCopyThreshold) {
             for (let row = 0; row < region.height; row++) {
               const sourceStart = (region.y + row) * rowChannels + region.x * channels;
               const targetStart = row * subRowChannels;
 
-              subView.set(texture.buffer.subarray(sourceStart, sourceStart + subRowChannels), targetStart);
+              for (let i = 0; i < subRowChannels; i++) {
+                // In-bounds: the scratch is sized `region.width * region.height
+                // * channels` and the region lies inside the texture buffer.
+                subView[targetStart + i] = source[sourceStart + i]!;
+              }
             }
+          } else {
+            for (let row = 0; row < region.height; row++) {
+              const sourceStart = (region.y + row) * rowChannels + region.x * channels;
 
-            gl.texSubImage2D(gl.TEXTURE_2D, 0, region.x, region.y, region.width, region.height, formatInfo.format, formatInfo.type, subView);
+              subView.set(source.subarray(sourceStart, sourceStart + subRowChannels), row * subRowChannels);
+            }
           }
 
-          this._accountant.recordTextureUpload(region.width * region.height * bytesPerPixel);
+          gl.texSubImage2D(gl.TEXTURE_2D, 0, region.x, region.y, region.width, region.height, formatInfo.format, formatInfo.type, subView, 0);
         }
 
-        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
-      } else if (texture instanceof RenderTexture) {
-        const info = webgl2DataTextureFormat(texture.format);
-
-        if (state.version === -1 || state.width !== texture.width || state.height !== texture.height || texture.source === null) {
-          gl.texImage2D(gl.TEXTURE_2D, 0, info.internalFormat, texture.width, texture.height, 0, info.format, info.type, texture.source);
-          this._bookTextureStorage(state, texture, info.bytesPerPixel);
-          this._accountant.recordTextureUpload(texture.width * texture.height * info.bytesPerPixel);
-        } else {
-          gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, texture.width, texture.height, info.format, info.type, texture.source);
-          this._accountant.recordTextureUpload(texture.width * texture.height * info.bytesPerPixel);
-        }
-      } else if (texture.source) {
-        if (state.version === -1 || state.width !== texture.width || state.height !== texture.height) {
-          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
-          this._bookTextureStorage(state, texture, RGBA8_BYTES_PER_PIXEL);
-        } else {
-          gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
-        }
-
-        this._accountant.recordTextureUpload(texture.width * texture.height * RGBA8_BYTES_PER_PIXEL);
+        this._accountant.recordTextureUpload(region.width * region.height * bytesPerPixel);
       }
 
-      if (texture.generateMipMap && (texture instanceof RenderTexture || texture.source !== null)) {
-        gl.generateMipmap(gl.TEXTURE_2D);
+      gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+    } else if (texture instanceof RenderTexture) {
+      const info = webgl2DataTextureFormat(texture.format);
+
+      if (state.version === -1 || state.width !== texture.width || state.height !== texture.height || texture.source === null) {
+        gl.texImage2D(gl.TEXTURE_2D, 0, info.internalFormat, texture.width, texture.height, 0, info.format, info.type, texture.source);
+        this._bookTextureStorage(state, texture, info.bytesPerPixel);
+        this._accountant.recordTextureUpload(texture.width * texture.height * info.bytesPerPixel);
+      } else {
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, texture.width, texture.height, info.format, info.type, texture.source);
+        this._accountant.recordTextureUpload(texture.width * texture.height * info.bytesPerPixel);
+      }
+    } else if (texture.source) {
+      if (state.version === -1 || state.width !== texture.width || state.height !== texture.height) {
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
+        this._bookTextureStorage(state, texture, RGBA8_BYTES_PER_PIXEL);
+      } else {
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
       }
 
-      state.version = version;
-      state.width = texture.width;
-      state.height = texture.height;
+      this._accountant.recordTextureUpload(texture.width * texture.height * RGBA8_BYTES_PER_PIXEL);
     }
+
+    if (texture.generateMipMap && (texture instanceof RenderTexture || texture.source !== null)) {
+      gl.generateMipmap(gl.TEXTURE_2D);
+    }
+
+    state.version = version;
+    state.width = texture.width;
+    state.height = texture.height;
 
     return state;
   }

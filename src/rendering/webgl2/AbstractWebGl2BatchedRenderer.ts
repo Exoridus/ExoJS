@@ -80,7 +80,7 @@ export abstract class AbstractWebGl2BatchedRenderer extends AbstractWebGl2Render
 
     this.shader.sync();
     backend.bindVertexArrayObject(vao);
-    vertexBuffer.upload(this.float32View.subarray(0, this.batchIndex * this.attributeCount));
+    vertexBuffer.upload(this.float32View, 0, this.batchIndex * this.attributeCount);
     vao.draw(this.batchIndex * 6, 0);
     backend.stats.batches++;
     backend.stats.drawCalls++;

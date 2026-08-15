@@ -93,6 +93,41 @@ describe('WebGL2 uploads a partial DataTexture region', () => {
     }
   });
 
+  test('a wide inset region packs through the native row copy', async () => {
+    const backend = await createWebGl2TestBackend(CANVAS);
+    const root = new Container();
+    const texture = makeTexture();
+
+    root.addChild(new Sprite(texture));
+
+    try {
+      renderWebGl2Once(backend, root, Color.black);
+
+      // 20 rgba8 texels = 80 channels per row, past the width at which the
+      // packing loop switches from element-wise copying to `set(subarray(…))`.
+      // The narrow case above stays on the element-wise side, so the two tests
+      // together cover both branches of that switch.
+      paintRect(texture, 4, 6, 20, 5, BLUE);
+      texture.commitRect(4, 6, 20, 5);
+
+      renderWebGl2Once(backend, root, Color.black);
+
+      const frame = readWebGl2Frame(backend, CANVAS);
+
+      expect(pixelAt(frame, 4, 6)).toEqual([...BLUE]);
+      expect(pixelAt(frame, 23, 10)).toEqual([...BLUE]);
+      expect(pixelAt(frame, 14, 8)).toEqual([...BLUE]);
+      // One texel outside the region on every side stayed red.
+      expect(pixelAt(frame, 3, 8)).toEqual([...RED]);
+      expect(pixelAt(frame, 24, 8)).toEqual([...RED]);
+      expect(pixelAt(frame, 14, 5)).toEqual([...RED]);
+      expect(pixelAt(frame, 14, 11)).toEqual([...RED]);
+    } finally {
+      root.destroy();
+      backend.destroy();
+    }
+  });
+
   test('a full-width band of rows uploads the same bytes as an inset region would', async () => {
     const backend = await createWebGl2TestBackend(CANVAS);
     const root = new Container();

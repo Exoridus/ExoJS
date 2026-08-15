@@ -39,6 +39,8 @@ export class WebGl2StencilClipper {
   private readonly _shader: Shader = new Shader(vertexSource, fragmentSource);
   private readonly _matrix: Matrix = new Matrix();
   private _positions: Float32Array = new Float32Array(64);
+  private _view: DataView | null = null;
+  private _viewSource: Float32Array | ArrayBuffer | null = null;
   private _connection: StencilClipperConnection | null = null;
 
   public connect(backend: WebGl2Backend): void {
@@ -78,6 +80,10 @@ export class WebGl2StencilClipper {
     connection.vao.destroy();
     this._shader.disconnect();
     this._connection = null;
+    // Drop the memoised view so a disconnected clipper holds no clip shape's
+    // vertex data alive.
+    this._view = null;
+    this._viewSource = null;
   }
 
   /**
@@ -105,7 +111,7 @@ export class WebGl2StencilClipper {
     this._shader.sync();
 
     backend.bindVertexArrayObject(connection.vao);
-    connection.vertexBuffer.upload(this._positions.subarray(0, vertexCount * 2));
+    connection.vertexBuffer.upload(this._positions, 0, vertexCount * 2);
 
     const mode = shape.topology === 'triangle-strip' ? RenderingPrimitives.TriangleStrip : RenderingPrimitives.Triangles;
 
@@ -122,7 +128,7 @@ export class WebGl2StencilClipper {
     }
 
     const { stride, vertexData, indices } = shape;
-    const view = vertexData instanceof Float32Array ? new DataView(vertexData.buffer, vertexData.byteOffset, vertexData.byteLength) : new DataView(vertexData);
+    const view = this._viewOf(vertexData);
     const drawCount = indices !== null ? indices.length : shape.vertexCount;
 
     this._ensureCapacity(drawCount);
@@ -139,6 +145,22 @@ export class WebGl2StencilClipper {
     }
 
     return drawCount;
+  }
+
+  /**
+   * A `DataView` over `vertexData`, memoised on the source it was built from.
+   * A clip shape is drawn twice per clipped scope per frame (push and pop) and
+   * its vertex data is the same object every time, so building a fresh view per
+   * draw was ~30 B per clipper draw for nothing.
+   */
+  private _viewOf(vertexData: Float32Array | ArrayBuffer): DataView {
+    if (this._viewSource !== vertexData || this._view === null) {
+      this._viewSource = vertexData;
+      this._view =
+        vertexData instanceof Float32Array ? new DataView(vertexData.buffer, vertexData.byteOffset, vertexData.byteLength) : new DataView(vertexData);
+    }
+
+    return this._view;
   }
 
   private _resolvePositionAttribute(attributes: readonly GeometryAttribute[]): GeometryAttribute {
