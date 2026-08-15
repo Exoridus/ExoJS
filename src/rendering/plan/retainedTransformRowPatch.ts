@@ -123,7 +123,8 @@ export const tryPatchRetainedTransformRow = (
  * stale extent can hide a real overlap.
  */
 const refreshRetainedDrawBounds = (fragment: RetainedGroupFragment): void => {
-  for (const node of fragment.dirtyTransformRows) {
+  for (let index = 0; index < fragment.dirtyTransformRowCount; index++) {
+    const node = fragment.dirtyTransformRowAt(index);
     const record = fragment.recordedDraw(node as unknown as Drawable);
 
     if (record === undefined) {
@@ -197,7 +198,9 @@ export const reconcileRetainedTransformRows = (fragment: RetainedGroupFragment, 
 
   refreshRetainedDrawBounds(fragment);
 
-  for (const node of fragment.dirtyTransformRows) {
+  for (let index = 0; index < fragment.dirtyTransformRowCount; index++) {
+    const node = fragment.dirtyTransformRowAt(index);
+
     if (!isEligible(node) || !tryPatchRetainedTransformRow(node, fragment, patchableBundle, backend, base)) {
       // Ineligible: drop the baked recording. Validation now fails, so the caller
       // falls back to entry replay (live transforms) and re-records this frame.

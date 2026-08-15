@@ -326,6 +326,9 @@ export class WebGl2Backend implements RenderBackend {
   private _tintTexture: DataTexture<TextureFormat.Rgba8> | null = null;
   private _activeDrawCommand: DrawCommand | null = null;
   private _drawPlanDepth = 0;
+  // Nested-plan stacks, indexed by `_drawPlanDepth` rather than push/pop-drained:
+  // the depth already IS the stack cursor, and a drained array gives its backing
+  // store back only to re-grow it on the next `render()` call.
   private readonly _planBaseStack: number[] = [];
   private readonly _planHashStack: number[] = [];
   private _renderPlanEpoch = 0;
@@ -468,8 +471,16 @@ export class WebGl2Backend implements RenderBackend {
     // current buffer count, so writes land in fresh frame-global slots and
     // batches survive across render() calls. Remember this plan's base so a
     // nested plan can free its rows on end.
-    this._planBaseStack.push(this._transformBuffer.count);
-    this._planHashStack.push(this._transformBuffer.frameHash);
+    const depth = this._drawPlanDepth;
+
+    if (depth < this._planBaseStack.length) {
+      this._planBaseStack[depth] = this._transformBuffer.count;
+      this._planHashStack[depth] = this._transformBuffer.frameHash;
+    } else {
+      this._planBaseStack.push(this._transformBuffer.count);
+      this._planHashStack.push(this._transformBuffer.frameHash);
+    }
+
     this._activeDrawCommand = null;
     this._drawPlanDepth++;
   }
@@ -666,8 +677,9 @@ export class WebGl2Backend implements RenderBackend {
   public _endDrawPlan(): void {
     this._activeDrawCommand = null;
 
-    const planBase = this._planBaseStack.pop() ?? 0;
-    const planHash = this._planHashStack.pop() ?? 0;
+    const depth = this._drawPlanDepth - 1;
+    const planBase = depth >= 0 ? (this._planBaseStack[depth] ?? 0) : 0;
+    const planHash = depth >= 0 ? (this._planHashStack[depth] ?? 0) : 0;
 
     if (this._drawPlanDepth > 0) {
       this._drawPlanDepth--;

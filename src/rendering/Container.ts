@@ -517,13 +517,14 @@ export class Container extends RenderNode {
    */
   private _replayRetainedChildren(builder: RenderPlanBuilder): void {
     // Non-null: only called from the isClean-guarded fast path above.
-    const slots = this._retainedPlan!.slots;
+    const cache = this._retainedPlan!;
+    const slotCount = cache.slotCount;
     let slotIndex = 0;
 
     for (let index = 0; index < this._childList.length; index++) {
-      const slot = slots[slotIndex];
+      const slot = slotIndex < slotCount ? cache.slotAt(slotIndex) : null;
 
-      if (slot?.childIndex === index) {
+      if (slot !== null && slot.childIndex === index) {
         builder._replayRetainedDraw(slot);
         slotIndex++;
       } else {
@@ -563,14 +564,16 @@ export class Container extends RenderNode {
 
       sawSlotCandidate = true;
 
-      const beforeCount = builder._peekCurrentScopeEntries().length;
+      // The scope is still open, so its entry COUNT is the collected length —
+      // the array itself may run past it (see `_peekCurrentScopeEntries`).
+      const beforeCount = builder._peekCurrentScopeEntryCount();
 
       child._collect(builder, index);
 
-      const entries = builder._peekCurrentScopeEntries();
+      const afterCount = builder._peekCurrentScopeEntryCount();
 
-      if (entries.length === beforeCount + 1) {
-        const entry = entries[entries.length - 1]!;
+      if (afterCount === beforeCount + 1) {
+        const entry = builder._peekCurrentScopeEntries()[afterCount - 1]!;
 
         if (entry.kind === RenderEntryKind.Draw && entry.command.drawable === child) {
           (this._retainedPlan ??= new RetainedPlanCache())._appendSlot(index, entry.command);

@@ -13,6 +13,7 @@ import type { GroupScope, GroupScopeEntry } from '#rendering/plan/RenderScope';
 import { type RetainedFragmentEntry, type RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
+import type { RenderNode } from '#rendering/RenderNode';
 import { createRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { RetainedContainer } from '#rendering/RetainedContainer';
@@ -25,6 +26,10 @@ class LeafDrawable extends Drawable {
 }
 
 const fragmentOf = (group: RetainedContainer): RetainedGroupFragment => (group as unknown as { _fragment: RetainedGroupFragment })._fragment;
+
+/** The fragment's queued transform-row nodes, materialized through its logical length. */
+const queuedRows = (fragment: RetainedGroupFragment): RenderNode[] =>
+  Array.from({ length: fragment.dirtyTransformRowCount }, (_unused, index) => fragment.dirtyTransformRowAt(index));
 
 // F4: the enqueue seam is gated on a live committed recording (only the
 // recorded-instruction tier ever consumes a queued row), so tests that
@@ -49,7 +54,7 @@ describe('RetainedContainer: transform-row patch seam', () => {
 
     child.setPosition(40, 40);
 
-    expect([...fragmentOf(group).dirtyTransformRows]).toEqual([child]);
+    expect(queuedRows(fragmentOf(group))).toEqual([child]);
 
     group.destroy();
     backend.destroy();
@@ -68,7 +73,7 @@ describe('RetainedContainer: transform-row patch seam', () => {
 
     child.setPosition(5, 5);
 
-    expect(fragmentOf(group).dirtyTransformRows.includes(child)).toBe(true);
+    expect(queuedRows(fragmentOf(group))).toContain(child);
 
     group.destroy();
     backend.destroy();
@@ -121,7 +126,7 @@ describe('RetainedContainer: transform-row patch seam', () => {
 
     child.setPosition(40, 40);
 
-    expect([...fragment.dirtyTransformRows]).toEqual([child]);
+    expect(queuedRows(fragment)).toEqual([child]);
 
     group.destroy();
     backend.destroy();
@@ -189,7 +194,7 @@ describe('RetainedContainer: transform-row patch seam', () => {
 
     child.setPosition(7, 7);
 
-    expect(fragmentOf(group).dirtyTransformRows.includes(child)).toBe(true);
+    expect(queuedRows(fragmentOf(group))).toContain(child);
 
     group.destroy();
     backend.destroy();
@@ -727,7 +732,7 @@ describe('RetainedContainer: pooled fragment snapshot', () => {
     collectDraws(root, backend); // capture with 2 draws (pool grows)
     collectDraws(root, backend); // splice
 
-    expect(fragment.entries).toHaveLength(2);
+    expect(fragment.entryCount).toBe(2);
     expect(fragment.entries[0]).toBe(firstRecord);
 
     const secondRecord = fragment.entries[1]!;
@@ -736,13 +741,16 @@ describe('RetainedContainer: pooled fragment snapshot', () => {
     collectDraws(root, backend); // capture with 1 draw (pool keeps record 2)
     collectDraws(root, backend); // splice
 
-    expect(fragment.entries).toHaveLength(1);
+    expect(fragment.entryCount).toBe(1);
     expect(fragment.entries[0]).toBe(firstRecord);
+    // The snapshot array keeps the slot the wider capture grew it to — that is
+    // what makes the re-grow below allocation-free.
+    expect(fragment.entries).toHaveLength(2);
 
     group.addChild(leafB);
     collectDraws(root, backend); // grow again: pooled record 2 is reused
 
-    expect(fragment.entries).toHaveLength(2);
+    expect(fragment.entryCount).toBe(2);
     expect(fragment.entries[1]).toBe(secondRecord);
 
     root.destroy();

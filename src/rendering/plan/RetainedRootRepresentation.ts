@@ -500,7 +500,9 @@ export class RetainedRootRepresentation {
     const viewRect = view.getBounds();
     const insideCaptureRect = this._viewFitsCaptureCullRect(view);
 
-    for (const node of this.fragment.dirtyTransformRows) {
+    for (let index = 0; index < this.fragment.dirtyTransformRowCount; index++) {
+      const node = this.fragment.dirtyTransformRowAt(index);
+
       if (this._culledDuringCapture && this.fragment.recordedDraw(node as unknown as Drawable) === undefined) {
         return false;
       }
@@ -627,11 +629,12 @@ export class RetainedRootRepresentation {
     backend: RenderBackend,
     target: RenderTargetIdentity | null,
     entries: readonly ScopeEntry[],
+    entryCount: number,
   ): void {
     // `true`: nested transform groups are recorded as live re-dispatches, so a
     // `RetainedContainer` under a render root keeps its own retention tier
     // untouched (see the snapshot policy in `RetainedGroupFragment`).
-    this.fragment.capture(contentRevision, structureRevision, backend, entries, true);
+    this.fragment.capture(contentRevision, structureRevision, backend, entries, entryCount, true);
 
     this._contentRevision = contentRevision;
     this._structureRevision = structureRevision;

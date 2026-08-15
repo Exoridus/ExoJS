@@ -300,24 +300,30 @@ interface BackendWithRendererRegistry {
  * uploaded rows/quads stay view-independent — a snapped draw is fully recordable.
  * @internal
  */
-export const isRetainedFragmentRecordable = (entries: readonly RetainedFragmentEntry[], backend: RenderBackend): boolean => {
+export const isRetainedFragmentRecordable = (entries: readonly RetainedFragmentEntry[], entryCount: number, backend: RenderBackend): boolean => {
   const registry = (backend as BackendWithRendererRegistry).rendererRegistry;
 
   if (!registry || typeof registry.resolve !== 'function') {
     return false;
   }
 
-  return entriesRecordable(entries, registry);
+  return entriesRecordable(entries, entryCount, registry);
 };
 
-const entriesRecordable = (entries: readonly RetainedFragmentEntry[], registry: NonNullable<BackendWithRendererRegistry['rendererRegistry']>): boolean => {
-  for (const entry of entries) {
+const entriesRecordable = (
+  entries: readonly RetainedFragmentEntry[],
+  entryCount: number,
+  registry: NonNullable<BackendWithRendererRegistry['rendererRegistry']>,
+): boolean => {
+  for (let index = 0; index < entryCount; index++) {
+    const entry = entries[index]!;
+
     if (entry.kind === RenderEntryKind.Barrier) {
       return false;
     }
 
     if (entry.kind === RenderEntryKind.Group) {
-      if (!entriesRecordable(entry.entries, registry)) {
+      if (!entriesRecordable(entry.entries, entry.entryCount, registry)) {
         return false;
       }
 

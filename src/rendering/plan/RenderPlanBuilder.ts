@@ -75,6 +75,20 @@ const RETAINED_CULL_MARGIN_RATIO = 1 / 16;
 
 interface MutableGroupScope extends GroupScope, EntryPlacementState {
   /**
+   * How many of {@link GroupScope.entries} this collect has filled. Live only
+   * while the scope is on the stack: {@link RenderPlanBuilder._popScope} trims
+   * the array to it, so every consumer downstream of the collect still reads a
+   * scope whose physical length IS its entry count.
+   *
+   * The indirection exists because the alternative — emptying the array at
+   * acquire and pushing back into it — hands the backing store to the GC once
+   * per scope per frame and re-grows it through the whole doubling sequence on
+   * the refill, at ~27 bytes per entry per frame (28.6 KB/frame on a
+   * 1000-entry fragment replay). Overwriting the slots the scope already owns
+   * costs nothing in steady state.
+   */
+  entryCount: number;
+  /**
    * First-draw material of this scope, the `hasMixedPipeline` counterpart of
    * {@link MutableGroupScope.firstZ}. `firstPipelineKey === null` means "no draw
    * seen yet"; `firstBindKey`/`firstOwnMaterial` are only meaningful once it is
@@ -110,29 +124,63 @@ const groupEscapeEffect: EffectDescriptor = Object.freeze({
   needsBackdropBlend: false,
 });
 
+/**
+ * Append `entry` at the scope's logical end, reusing the slot the previous
+ * collect left there when the array is already that long. See
+ * {@link MutableGroupScope.entryCount} for why the array is not emptied and
+ * re-pushed instead.
+ */
+const appendScopeEntry = (scope: MutableGroupScope, entry: ScopeEntry): void => {
+  const index = scope.entryCount++;
+
+  if (index < scope.entries.length) {
+    scope.entries[index] = entry;
+  } else {
+    scope.entries.push(entry);
+  }
+};
+
 /** @internal */
 export class RenderPlanBuilder {
+  /**
+   * Free list of released builders, held with an explicit logical length: the
+   * acquire/release pair runs once per `render()` call, and draining the array
+   * physically would hand its backing store back and re-grow it on the very
+   * next release.
+   */
   private static readonly _available: RenderPlanBuilder[] = [];
-  private static readonly _active: RenderPlanBuilder[] = [];
+  private static _availableCount = 0;
+
+  /**
+   * Whether this builder is checked out. A flag rather than an `_active` list:
+   * the list was never read except to answer this one question, and answering it
+   * per builder costs nothing to maintain.
+   */
+  private _checkedOut = false;
 
   public static acquire(): RenderPlanBuilder {
-    const builder = RenderPlanBuilder._available.pop() ?? new RenderPlanBuilder();
+    const builder = RenderPlanBuilder._availableCount > 0 ? RenderPlanBuilder._available[--RenderPlanBuilder._availableCount]! : new RenderPlanBuilder();
 
-    RenderPlanBuilder._active.push(builder);
+    builder._checkedOut = true;
 
     return builder;
   }
 
   public static release(builder: RenderPlanBuilder): void {
-    const index = RenderPlanBuilder._active.lastIndexOf(builder);
-
-    if (index === -1) {
+    if (!builder._checkedOut) {
       return;
     }
 
-    RenderPlanBuilder._active.splice(index, 1);
+    builder._checkedOut = false;
     builder._resetRuntimeState();
-    RenderPlanBuilder._available.push(builder);
+
+    const index = RenderPlanBuilder._availableCount++;
+
+    if (index < RenderPlanBuilder._available.length) {
+      RenderPlanBuilder._available[index] = builder;
+    } else {
+      RenderPlanBuilder._available.push(builder);
+    }
   }
 
   public backend!: RenderBackend;
@@ -140,7 +188,14 @@ export class RenderPlanBuilder {
 
   private readonly _plan = new MutableRenderPlan();
   private readonly _groupPool: MutableGroupScope[] = [];
+  /**
+   * Open scopes, innermost last, with {@link _scopeDepth} as the cursor. Held
+   * that way rather than push/pop-drained for the same reason as every other
+   * per-frame store here: the array outlives the frame and its slots are
+   * overwritten, so no frame pays to re-grow it.
+   */
   private readonly _scopeStack: MutableGroupScope[] = [];
+  private _scopeDepth = 0;
   private _groupPoolCursor = 0;
 
   // Frame-persistent free-lists. Each lives on the builder INSTANCE
@@ -239,7 +294,7 @@ export class RenderPlanBuilder {
     this._drawEntryPoolCursor = 0;
     this._groupEntryPoolCursor = 0;
     this._barrierEntryPoolCursor = 0;
-    this._scopeStack.length = 0;
+    this._drainScopeStack();
     this._hasPending = false;
     this._viewCullSuppression = 0;
     this._retentionRoot = root._supportsRootRetention() ? root : null;
@@ -265,18 +320,11 @@ export class RenderPlanBuilder {
 
     const rootScope = this._acquireGroupScope(false);
 
-    this._scopeStack.push(rootScope);
+    this._pushScope(rootScope);
     root._collect(this);
-    this._scopeStack.pop();
+    this._popScope();
 
-    if (rootScope.entries.length > 0) {
-      this._plan.passes.push({
-        target: null,
-        view: this._viewUnobserved(),
-        clearColor: null,
-        root: rootScope,
-      });
-    }
+    this._plan.setSinglePass(rootScope.entries.length > 0 ? this._viewUnobserved() : null, rootScope);
 
     this._plan.nodeCount = this._nodeIndex - frameBase;
 
@@ -383,12 +431,12 @@ export class RenderPlanBuilder {
       this._pushBarrierEntry(reservedSeq, reservedZ, barrierScope);
 
       if (childPlan !== null) {
-        this._scopeStack.push(childPlan);
+        this._pushScope(childPlan);
 
         try {
           node._collectForRenderPlan(this);
         } finally {
-          this._scopeStack.pop();
+          this._popScope();
         }
       }
 
@@ -419,12 +467,12 @@ export class RenderPlanBuilder {
       };
 
       this._pushBarrierEntry(reservedSeq, reservedZ, barrierScope);
-      this._scopeStack.push(childPlan);
+      this._pushScope(childPlan);
 
       try {
         this.emitNode(node, seq);
       } finally {
-        this._scopeStack.pop();
+        this._popScope();
       }
 
       return;
@@ -450,7 +498,7 @@ export class RenderPlanBuilder {
 
     this._pushGroupEntry(reservedSeq, reservedZ, groupScope);
 
-    this._scopeStack.push(groupScope);
+    this._pushScope(groupScope);
 
     try {
       if (node === this._retentionRoot) {
@@ -459,7 +507,7 @@ export class RenderPlanBuilder {
         node._collectForRenderPlan(this);
       }
     } finally {
-      this._scopeStack.pop();
+      this._popScope();
     }
   }
 
@@ -832,12 +880,12 @@ export class RenderPlanBuilder {
     const groupScope = this._acquireGroupScope(group.preserveDrawOrder);
 
     this._pushGroupEntry(group.seq, group.zIndex, groupScope);
-    this._scopeStack.push(groupScope);
+    this._pushScope(groupScope);
 
     try {
       this._emitSourceSelection(group, selection, rect);
     } finally {
-      this._scopeStack.pop();
+      this._popScope();
     }
   }
 
@@ -915,7 +963,7 @@ export class RenderPlanBuilder {
         return;
       }
 
-      this._replayRetainedFragment(representation.fragment.entries);
+      this._replayRetainedFragment(representation.fragment.entries, representation.fragment.entryCount);
       representation.markReplayed();
       // Record-on-first-clean-frame: this clean playback is the recording
       // source, so the record cost never lands on a frame whose capture is
@@ -967,7 +1015,17 @@ export class RenderPlanBuilder {
       this._captureCullActive = false;
     }
 
-    representation.commitCapture(contentRevision, structureRevision, transformRevision, ancestryStamp, view, backend, target, this._peekCurrentScopeEntries());
+    representation.commitCapture(
+      contentRevision,
+      structureRevision,
+      transformRevision,
+      ancestryStamp,
+      view,
+      backend,
+      target,
+      this._peekCurrentScopeEntries(),
+      this._peekCurrentScopeEntryCount(),
+    );
   }
 
   /**
@@ -1251,13 +1309,23 @@ export class RenderPlanBuilder {
   }
 
   /**
-   * @internal — the entries pushed into the currently-active scope so far this
-   * collect. Read-only peek used by {@link RetainedPlanCache} to snapshot a
-   * container's direct-drawable fragment right after a full (non-skipped)
-   * collect of it.
+   * @internal — the entry array of the currently-active scope. Read-only peek
+   * used by {@link RetainedPlanCache} to snapshot a container's direct-drawable
+   * fragment right after a full (non-skipped) collect of it.
+   *
+   * Valid only up to {@link _peekCurrentScopeEntryCount}: while a scope is still
+   * open its array may run past the entries THIS collect filled, holding
+   * whatever the previous frame left in those slots (see
+   * {@link MutableGroupScope.entryCount}). Reading `entries.length` here instead
+   * of the count would snapshot a stale entry as if it had just been collected.
    */
   public _peekCurrentScopeEntries(): readonly ScopeEntry[] {
     return this._currentScope().entries;
+  }
+
+  /** @internal — how many entries the currently-active scope holds so far this collect. */
+  public _peekCurrentScopeEntryCount(): number {
+    return this._currentScope().entryCount;
   }
 
   /**
@@ -1403,8 +1471,10 @@ export class RenderPlanBuilder {
    * groups re-acquire pooled scopes, and barrier nodes re-dispatch through a
    * normal `_collect`.
    */
-  public _replayRetainedFragment(entries: readonly RetainedFragmentEntry[]): void {
-    for (const entry of entries) {
+  public _replayRetainedFragment(entries: readonly RetainedFragmentEntry[], entryCount = entries.length): void {
+    for (let index = 0; index < entryCount; index++) {
+      const entry = entries[index]!;
+
       if (entry.kind === RenderEntryKind.Draw) {
         this._replayRetainedDraw(entry);
       } else if (entry.kind === RenderEntryKind.Group) {
@@ -1453,17 +1523,17 @@ export class RenderPlanBuilder {
     }
 
     this._pushGroupEntry(fragment.seq, fragment.zIndex, groupScope);
-    this._scopeStack.push(groupScope);
+    this._pushScope(groupScope);
 
     try {
-      this._replayRetainedFragment(fragment.entries);
+      this._replayRetainedFragment(fragment.entries, fragment.entryCount);
     } finally {
-      this._scopeStack.pop();
+      this._popScope();
     }
   }
 
   private _resetRuntimeState(): void {
-    this._scopeStack.length = 0;
+    this._drainScopeStack();
     this._hasPending = false;
     this._groupPoolCursor = 0;
     this._commandPoolCursor = 0;
@@ -1480,13 +1550,36 @@ export class RenderPlanBuilder {
     // build and make it live forever.
     this._sourceStack.length = 0;
     this._sourceProducer = null;
-    this._sourceViewReaders.clear();
+
+    // `Set.clear()` installs a fresh backing table, so an unconditional clear
+    // allocates once per frame for a set that is empty on every frame that
+    // discovered no source.
+    if (this._sourceViewReaders.size > 0) {
+      this._sourceViewReaders.clear();
+    }
+  }
+
+  /**
+   * Empty the scope stack without discarding its backing store.
+   *
+   * `length = 0` is not the same thing: V8 trims an array's backing store to
+   * its new length, and it does so against the CAPACITY rather than the current
+   * length — so the assignment gives the store back even on a stack that is
+   * already empty, and the next push re-grows it. Popping leaves the store
+   * alone. The loop also runs the per-scope trim `_popScope` owes each scope an
+   * exception unwind may have left open.
+   */
+  private _drainScopeStack(): void {
+    while (this._scopeDepth > 0) {
+      this._popScope();
+    }
   }
 
   private _acquireGroupScope(preserveDrawOrder: boolean): MutableGroupScope {
     const scope = this._groupPool[this._groupPoolCursor] ?? {
       kind: RenderEntryKind.Group,
       entries: [],
+      entryCount: 0,
       hasMixedZ: false,
       hasMixedPipeline: false,
       preserveDrawOrder: false,
@@ -1504,7 +1597,7 @@ export class RenderPlanBuilder {
     this._groupPool[this._groupPoolCursor] = scope;
     this._groupPoolCursor++;
 
-    scope.entries.length = 0;
+    scope.entryCount = 0;
     scope.hasMixedZ = false;
     scope.hasMixedPipeline = false;
     scope.preserveDrawOrder = preserveDrawOrder;
@@ -1587,7 +1680,7 @@ export class RenderPlanBuilder {
     const scope = this._currentScope();
 
     this._foldMaterialIntoScope(scope, command);
-    scope.entries.push(entry);
+    appendScopeEntry(scope, entry);
   }
 
   private _pushGroupEntry(seq: number, zIndex: number, scope: GroupScope): void {
@@ -1603,7 +1696,7 @@ export class RenderPlanBuilder {
     }
 
     this._groupEntryPoolCursor++;
-    this._currentScope().entries.push(entry);
+    appendScopeEntry(this._currentScope(), entry);
   }
 
   private _pushBarrierEntry(seq: number, zIndex: number, scope: BarrierScope): void {
@@ -1619,7 +1712,7 @@ export class RenderPlanBuilder {
     }
 
     this._barrierEntryPoolCursor++;
-    this._currentScope().entries.push(entry);
+    appendScopeEntry(this._currentScope(), entry);
   }
 
   private _reserveEntryPlacement(seq: number | undefined, zIndex: number): void {
@@ -1642,8 +1735,41 @@ export class RenderPlanBuilder {
     return this._sourceStack[this._sourceStack.length - 1] ?? this._currentScope();
   }
 
+  /**
+   * Close the innermost scope: trim its entry array to what this collect
+   * actually filled, so everything downstream — the optimizer's z-sort, the
+   * player's walk, a fragment snapshot — reads a scope whose length is its
+   * entry count and never sees a slot left over from an earlier frame.
+   *
+   * The trim is the ONE place the array may shrink, and it only shrinks to the
+   * count this frame reached; the steady state where the count is unchanged
+   * does nothing at all.
+   */
+  private _popScope(): void {
+    if (this._scopeDepth === 0) {
+      return;
+    }
+
+    const scope = this._scopeStack[--this._scopeDepth]!;
+
+    if (scope.entries.length !== scope.entryCount) {
+      scope.entries.length = scope.entryCount;
+    }
+  }
+
+  /** Open `scope`, reusing the stack slot at this depth when one already exists. */
+  private _pushScope(scope: MutableGroupScope): void {
+    const depth = this._scopeDepth++;
+
+    if (depth < this._scopeStack.length) {
+      this._scopeStack[depth] = scope;
+    } else {
+      this._scopeStack.push(scope);
+    }
+  }
+
   private _currentScope(): MutableGroupScope {
-    const scope = this._scopeStack[this._scopeStack.length - 1];
+    const scope = this._scopeDepth > 0 ? this._scopeStack[this._scopeDepth - 1] : undefined;
 
     if (!scope) {
       throw new Error('RenderPlanBuilder scope stack is empty.');
