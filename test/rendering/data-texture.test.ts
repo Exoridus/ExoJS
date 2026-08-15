@@ -174,13 +174,71 @@ describe('DataTexture', () => {
       expect(region).toEqual({ full: false, x: 2, y: 2, width: 10, height: 10 });
     });
 
-    test('commitRect() after commit() keeps the full flag', () => {
+    test('commitRect() unions overlapping pending regions to their bounding box', () => {
+      const tex = new DataTexture({ width: 16, height: 16, format: TextureFormat.R8 });
+      tex._consumeDirtyRegion(); // clear initial
+      tex.commitRect(2, 2, 6, 6); // (2,2)..(8,8)
+      tex.commitRect(5, 4, 6, 2); // (5,4)..(11,6) — overlaps on x and y
+      const region = tex._consumeDirtyRegion();
+      expect(region).toEqual({ full: false, x: 2, y: 2, width: 9, height: 6 });
+    });
+
+    test('commitRect() keeps a fully contained region inside the pending one', () => {
+      const tex = new DataTexture({ width: 16, height: 16, format: TextureFormat.R8 });
+      tex._consumeDirtyRegion(); // clear initial
+      tex.commitRect(2, 2, 8, 8);
+      tex.commitRect(4, 4, 2, 2); // strictly inside — must not shrink the union
+      expect(tex._consumeDirtyRegion()).toEqual({ full: false, x: 2, y: 2, width: 8, height: 8 });
+    });
+
+    test('commitRect() after commit() keeps the full flag and the full extent', () => {
       const tex = new DataTexture({ width: 16, height: 16, format: TextureFormat.R8 });
       tex._consumeDirtyRegion();
       tex.commit();
       tex.commitRect(2, 2, 4, 4);
       const region = tex._consumeDirtyRegion();
-      expect(region?.full).toBe(true);
+      expect(region).toEqual({ full: true, x: 0, y: 0, width: 16, height: 16 });
+    });
+
+    test('a partial commit after a consume starts a fresh region, not a union with the consumed one', () => {
+      const tex = new DataTexture({ width: 16, height: 16, format: TextureFormat.R8 });
+      tex._consumeDirtyRegion(); // clear initial full dirty
+
+      tex.commitRect(0, 0, 2, 2);
+      expect(tex._consumeDirtyRegion()).toEqual({ full: false, x: 0, y: 0, width: 2, height: 2 });
+
+      tex.commitRect(12, 12, 4, 4);
+      expect(tex._consumeDirtyRegion()).toEqual({ full: false, x: 12, y: 12, width: 4, height: 4 });
+    });
+
+    test('a partial commit after a consumed FULL region drops the full flag', () => {
+      const tex = new DataTexture({ width: 16, height: 16, format: TextureFormat.R8 });
+      tex.commit();
+      tex._consumeDirtyRegion(); // consume the full region
+
+      tex.commitRect(3, 3, 2, 2);
+      expect(tex._consumeDirtyRegion()).toEqual({ full: false, x: 3, y: 3, width: 2, height: 2 });
+    });
+
+    test('the consumed region is a reused record — valid for the consuming sync pass, rewritten by the next commit', () => {
+      const tex = new DataTexture({ width: 16, height: 16, format: TextureFormat.R8 });
+      tex._consumeDirtyRegion(); // clear initial
+
+      tex.commitRect(1, 1, 2, 2);
+
+      const first = tex._consumeDirtyRegion();
+
+      // A synchronous consumer reads correct values for the region it consumed.
+      expect(first).toEqual({ full: false, x: 1, y: 1, width: 2, height: 2 });
+
+      tex.commitRect(9, 9, 3, 3);
+
+      const second = tex._consumeDirtyRegion();
+
+      // Same object handed out again (no per-commit allocation), carrying the
+      // new region — which is why a consumer must not hold it across a sync.
+      expect(second).toBe(first);
+      expect(second).toEqual({ full: false, x: 9, y: 9, width: 3, height: 3 });
     });
 
     test('commitRect() throws on out-of-bounds coords', () => {

@@ -351,13 +351,18 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
 
   /**
    * Fast patch: overwrite one group-local transform row in place with
-   * `floats` (8 = 2 rgba32f texels, the {@link TransformBuffer} row layout)
-   * and mark ONLY that row's sub-range for upload. Deliberately does NOT bump
-   * the generation — the recorded instance bytes reference this row by index
-   * and stay valid; only the transform behind the index moved. Tint is not
+   * `floats` and mark ONLY that row's sub-range for upload. Deliberately does
+   * NOT bump the generation — the recorded instance bytes reference this row by
+   * index and stay valid; only the transform behind the index moved. Tint is not
    * touched (a moved node's tint doesn't change — see
    * {@link RetainedContainer._tryPatchTransformRow}). Out-of-range rows are
    * ignored (a stale queue entry after a recapture shrank the store).
+   *
+   * `floats` is exactly one row — `TRANSFORM_FLOATS_PER_ROW` (8 = 2 rgba32f
+   * texels, the {@link TransformBuffer} row layout) — so it is copied whole. It
+   * is deliberately NOT narrowed with `subarray()` first: this runs once per
+   * moved node per frame, and a view per patch was the single largest per-node
+   * allocation on the transform-patch path.
    */
   public _patchTransformRow(localRow: number, floats: Float32Array): void {
     if (
@@ -375,7 +380,7 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
     // upload size.
     const rect = transformTextureRect(this._transformLayout, localRow, 1, this._rectScratch);
 
-    this._transformFloats.set(floats.subarray(0, transformFloatsPerRow), localRow * transformFloatsPerRow);
+    this._transformFloats.set(floats, localRow * transformFloatsPerRow);
     this._transformTexture.commitRect(rect.x, rect.y, rect.width, rect.height);
   }
 
