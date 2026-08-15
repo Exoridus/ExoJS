@@ -13,6 +13,7 @@ import type { View } from '#rendering/View';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import { wireCoreRenderers } from '../../rendering/browser/_coreRenderers';
+import { installFakeDomGlobals } from './fakeDom';
 import { createFakeCanvas, createFakeWebGl2Context, GlRecorder, installFakeWebGl2Globals } from './fakeWebGl2';
 
 export interface HarnessOptions {
@@ -78,6 +79,8 @@ export interface FrameMetrics {
  * registered. Construct once, render many frames.
  */
 export const createWebGl2Harness = (options: HarnessOptions = {}): WebGl2Harness => {
+  // No-ops under jsdom/browser; only the standalone bare-node launchers need it.
+  installFakeDomGlobals();
   installFakeWebGl2Globals();
 
   const width = options.width ?? 1280;
