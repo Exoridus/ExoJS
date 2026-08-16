@@ -150,6 +150,12 @@ interface GpuFrameTimer {
   readonly available: boolean;
   /** Caveat to attach to the cell when THIS timer's samples are the reported frame time, or null when the source needs none. */
   readonly note: string | null;
+  /**
+   * Wait until GPU work submitted BEFORE the timed window has completed, so no
+   * warmup work can be charged to a timed frame. Called exactly once, at the
+   * warmup/timing boundary; a no-op for timers that cannot inherit a backlog.
+   */
+  drainSubmittedWork(): Promise<void>;
   /** Open a GPU-time query bracketing the current frame's GPU commands. */
   beginFrame(): void;
   /** Close the current frame's GPU-time query. */
@@ -177,6 +183,9 @@ const noopStructuralProbe: StructuralProbe = {
 const noopGpuTimer: GpuFrameTimer = {
   available: false,
   note: null,
+  async drainSubmittedWork(): Promise<void> {
+    /* nothing submitted through a timer here; the rAF-delta fallback measures presentation cadence, which carries no queue backlog */
+  },
   beginFrame(): void {
     /* no GPU timer wired */
   },
@@ -253,6 +262,11 @@ const createWebGl2GpuTimer = (gl: WebGL2RenderingContext): GpuFrameTimer => {
     available: true,
     // A real hardware GPU-time query: canonical GPU frame time, no caveat needed.
     note: null,
+    async drainSubmittedWork(): Promise<void> {
+      // A TIME_ELAPSED query measures only the commands between its own
+      // begin/end, so a timed frame's sample structurally cannot absorb work
+      // submitted during warmup. Nothing to wait for.
+    },
     beginFrame(): void {
       if (failed) {
         return;
@@ -315,17 +329,34 @@ const createWebGl2GpuTimer = (gl: WebGL2RenderingContext): GpuFrameTimer => {
  * `renderFrame`, which calls `queue.submit` synchronously) until the device
  * queue signals that submitted work is complete, via `queue.onSubmittedWorkDone`.
  * That promise resolves on QUEUE COMPLETION, independent of the swapchain present
- * that gates rAF, so the sample reflects the frame's actual GPU execution time
- * rather than the vsync interval. Because the harness paces frames from rAF, the
- * GPU has drained the previous frame before the next submit, so each frame's
- * submit→done delta is that frame's own work (not a cumulative queue backlog).
+ * that gates rAF, so the sample reflects GPU execution rather than the vsync
+ * interval.
  *
- * Caveats, documented honestly on the cell via {@link WEBGPU_SUBMIT_TIMER_NOTE}:
- * this is a CPU-observed wall clock, not a hardware timestamp — it carries the
- * fixed latency of the completion callback and is subject to the same
+ * `onSubmittedWorkDone` is CUMULATIVE: it resolves when everything submitted up
+ * to that point has completed, not just this frame's commands. A sample is
+ * therefore that frame's own work only while the queue was empty at submit time.
+ * Two things are needed for that, and the timer owns the first:
+ *
+ * 1. Work submitted before the timed window must be complete when it opens.
+ *    Warmup runs as a straight loop with no rAF between frames, so it can leave
+ *    a deep queue behind; {@link GpuFrameTimer.drainSubmittedWork} waits it out
+ *    at the warmup/timing boundary. Without that drain, a heavy cell charged
+ *    warmup work to its first timed frames (measured: 128.3ms of backlog moved
+ *    out of a 1M-node cell's window, dropping its worst sample 133.0 → 27.3ms).
+ * 2. Consecutive timed submits must be far enough apart for the queue to drain
+ *    between them. rAF pacing normally guarantees this, but a frame heavy enough
+ *    to block the compositor makes the browser fire several rAF callbacks
+ *    back-to-back; those frames submit ~1ms apart and their promises then resolve
+ *    on the SAME completion, so one queue event yields several near-identical
+ *    samples. The harness does not currently detect that (see
+ *    {@link WEBGPU_SUBMIT_TIMER_NOTE}).
+ *
+ * Caveats, documented on the cell via {@link WEBGPU_SUBMIT_TIMER_NOTE}: this is a
+ * CPU-observed wall clock, not a hardware timestamp — it carries the fixed
+ * latency of the completion callback and is subject to the same
  * `performance.now()` resolution clamp as the CPU timer (100µs until the page is
- * served cross-origin-isolated). It is nonetheless a true measure of per-frame
- * work rather than presentation cadence.
+ * served cross-origin-isolated). It is nonetheless a measure of per-frame GPU
+ * work rather than of presentation cadence.
  */
 const createWebGpuGpuTimer = (device: GPUDevice): GpuFrameTimer => {
   const pending: Array<Promise<void>> = [];
@@ -334,6 +365,12 @@ const createWebGpuGpuTimer = (device: GPUDevice): GpuFrameTimer => {
   return {
     available: true,
     note: WEBGPU_SUBMIT_TIMER_NOTE,
+    async drainSubmittedWork(): Promise<void> {
+      // The measurement boundary. Everything the warmup submitted must be off
+      // the queue before the first timed frame's bracket opens, or that frame's
+      // cumulative `onSubmittedWorkDone` resolves after warmup work it never did.
+      await device.queue.onSubmittedWorkDone();
+    },
     beginFrame(): void {
       // The measurement bracket opens at endFrame (post-submit); nothing to do
       // here. Kept for interface symmetry with the WebGL2 query timer.
@@ -483,6 +520,18 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
         break;
       }
     }
+
+    // ── measurement boundary ────────────────────────────────────────────────
+    // Warmup runs unpaced, so on a backend whose frame time is a queue-completion
+    // wall clock (WebGPU, see `createWebGpuGpuTimer`) it can still have work in
+    // flight here — and that work would resolve INSIDE the first timed frames'
+    // brackets, which is how a 1M-node cell reported 133ms on a frame that did
+    // 0.9ms of work. Wait it out once, before the timed window opens. This runs
+    // outside every reported metric: `cpuMs*` brackets only `mutate` +
+    // `renderFrame`, the rAF deltas start at the first timed callback, and no GPU
+    // sample exists yet. Backends whose timer cannot inherit a backlog (the
+    // WebGL2 hardware query, the rAF-delta fallback) no-op here.
+    await gpuTimer.drainSubmittedWork();
 
     probe.reset();
 
