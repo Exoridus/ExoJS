@@ -139,13 +139,13 @@ const FIXED_HEADROOM_KB = 1.25;
  *   nested/1000 d4                    1.20      0.65       1.20
  *   deep-hierarchy/1000 d16 1%        1.01      0.50       1.01
  *   mesh/1000                         0.68      0.37       0.68
- *   filtered/100                    218.60    229.59     229.59
+ *   filtered/100                    101.95    102.98     102.98
  *   blend/1000 plateau64              0.93      0.57       0.93
  *   blend/1000 alternating            1.19      0.47       1.19
  *
  * Spread, i.e. what the budget has to absorb: ≤0.13 KB across the five fresh
  * processes and ≤0.21 KB across six in-suite passes on every scene but
- * `filtered/100`, which holds 0.24% (218.1–219.5 fresh, 229.0–229.6 across four
+ * `filtered/100`, which holds 0.9% (101.9–102.1 fresh, 102.1–103.0 across four
  * in-suite passes).
  *
  * `scrolling-world/10000` is measured the same way but stays out of the gate:
@@ -153,6 +153,12 @@ const FIXED_HEADROOM_KB = 1.25;
  * bimodal at 14.6 vs 19.8 KB/frame between passes. See `ALLOCATION_REPORT_ONLY`.
  *
  * ── Ratchet history ─────────────────────────────────────────────
+ * 2026-08-16c: `filtered/100` ONLY, 229.59 → 102.98, after the effect path's
+ * control plane stopped being rebuilt per frame — the redirect pass and its
+ * descriptor, the clip/mask continuation closures, the barrier scope and its
+ * effect descriptor, and the scissor stack's per-push rectangle and vectors.
+ * Same rule as the entry below it: one row, no global re-baseline.
+ *
  * 2026-08-16b: `filtered/100` ONLY, 306.55 → 229.59, after the effect path
  * stopped building a whole render plan per filter pass and per composite. No
  * other row is touched and no global re-baseline: the change reaches nothing
@@ -186,7 +192,7 @@ const BASELINE_KB: Readonly<Record<string, number>> = {
   'nested/1000 d4': 1.2,
   'deep-hierarchy/1000 d16 1%': 1.01,
   'mesh/1000': 0.68,
-  'filtered/100': 229.59,
+  'filtered/100': 102.98,
   'blend/1000 plateau64': 0.93,
   'blend/1000 alternating': 1.19,
 };
