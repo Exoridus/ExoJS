@@ -471,7 +471,10 @@ const resolveAdapter = async (engine: string, config: string): Promise<EngineAda
   let adapter: EngineAdapter;
 
   if (engine === 'exojs') {
-    adapter = createExoJsAdapter(undefined, config === 'retained' ? 'retained' : 'current');
+    // `cull-margin-*` arms are calibration arms and carry their ratio in the
+    // config label itself, so the label is passed through rather than folded to
+    // one of the two named arms (see `ExoJsAdapterConfig`).
+    adapter = createExoJsAdapter(undefined, config === 'retained' || config.startsWith('cull-margin-') ? (config as 'retained') : 'current');
   } else if (engine === 'pixi') {
     const { createPixiAdapter } = await import('../adapters/pixi');
 

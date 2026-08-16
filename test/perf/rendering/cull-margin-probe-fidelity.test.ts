@@ -19,13 +19,12 @@ import { describe, expect, test } from 'vitest';
 import { ARCHETYPES } from '../../../packages/exojs-bench/src/rendering/archetypes';
 import type { ArchetypeSpec } from '../../../packages/exojs-bench/src/rendering/EngineAdapter';
 import * as world from '../../../packages/exojs-bench/src/rendering/world';
-
 import * as probe from './cullMarginProbe';
 
 const SPEC = ARCHETYPES.find((archetype): archetype is ArchetypeSpec => archetype.id === 'scrolling-world')!;
 
 describe('cull-margin probe fidelity', () => {
-  test('the archetype parameters the probe hard-codes are the archetype\'s own', () => {
+  test("the archetype parameters the probe hard-codes are the archetype's own", () => {
     expect(SPEC.cameraSpeed).toBe(probe.SCROLLING_WORLD.cameraSpeed);
     expect(SPEC.worldSpan).toBe(probe.SCROLLING_WORLD.worldSpan);
     expect(SPEC.nestingDepth).toBe(probe.SCROLLING_WORLD.nestingDepth);
@@ -46,7 +45,12 @@ describe('cull-margin probe fidelity', () => {
 
     for (const nodeCount of [5_000, 25_000, 100_000, 1_000_000]) {
       const expected = world.gridLayout(nodeCount, extent.width, extent.height, world.GRID_MARGIN);
-      const actual = probe.gridLayout(nodeCount, probe.VIEWPORT_WIDTH * probe.SCROLLING_WORLD.worldSpan, probe.VIEWPORT_HEIGHT * probe.SCROLLING_WORLD.worldSpan, probe.GRID_MARGIN);
+      const actual = probe.gridLayout(
+        nodeCount,
+        probe.VIEWPORT_WIDTH * probe.SCROLLING_WORLD.worldSpan,
+        probe.VIEWPORT_HEIGHT * probe.SCROLLING_WORLD.worldSpan,
+        probe.GRID_MARGIN,
+      );
 
       expect(actual).toEqual(expected);
     }
@@ -70,7 +74,7 @@ describe('cull-margin probe fidelity', () => {
     }
   });
 
-  test('the on-screen leaf count matches the bench, so the off-screen fraction is the archetype\'s', () => {
+  test("the on-screen leaf count matches the bench, so the off-screen fraction is the archetype's", () => {
     for (const frame of [0, 7, 64, 199]) {
       expect(probe.visibleLeafCount(25_000, frame, SPEC.cameraSpeed!, SPEC.worldSpan!)).toBe(
         world.visibleLeafCount(SPEC, 25_000, frame, world.VIEWPORT_WIDTH, world.VIEWPORT_HEIGHT, world.GRID_MARGIN, world.SPRITE_SIZE),

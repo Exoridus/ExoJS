@@ -165,6 +165,26 @@ const ADAPTER_CAPABILITIES: readonly EngineAdapter[] = [
 ];
 
 /**
+ * Opt-in calibration arms for the retained capture margin: identical to
+ * `exojs current` except for the ratio the retention layer grows its cull rect
+ * by (see `ExoJsAdapterConfig`).
+ *
+ * Deliberately NOT in {@link ADAPTER_CAPABILITIES}: they answer an engine-tuning
+ * question, not a cross-library one, and folding them into the default matrix
+ * would silently redefine what a reportable run covers. They enter the matrix
+ * only when `--config` names them, and they cover only the archetypes with real
+ * off-screen content - on a fully-visible scene the margin cannot change the
+ * selected set, so an arm there would just duplicate `current`.
+ */
+const CALIBRATION_CAPABILITIES: readonly EngineAdapter[] = ['1_32', '1_16', '3_32', '1_8', '3_16', '1_4'].map(ratio =>
+  capabilityDescriptor('exojs', `cull-margin-${ratio}`, ['webgl2', 'webgpu'], spec => isScrolling(spec)),
+);
+
+/** The calibration arms this invocation explicitly asked for, if any. */
+const requestedCalibrationArms = (selection: MatrixSelection | undefined): readonly EngineAdapter[] =>
+  selection?.configs === undefined ? [] : CALIBRATION_CAPABILITIES.filter(adapter => selection.configs!.includes(adapter.config));
+
+/**
  * Starts a programmatic Vite dev server rooted at the matrix harness page.
  *
  * Thin wrapper over the shared factory in `shared/viteServer.ts` - the Vite
@@ -791,7 +811,7 @@ export const runMatrix = async (options: {
 }): Promise<MatrixOutcome> => {
   const engineVersion = readEngineVersion();
   const libraries = readLibraryProvenance(LIBRARY_ARMS);
-  const allCells = buildMatrix(ADAPTER_CAPABILITIES, options.backends);
+  const allCells = buildMatrix([...ADAPTER_CAPABILITIES, ...requestedCalibrationArms(options.selection)], options.backends);
   const filtered = options.filter ? applyFilter(allCells, options.filter) : allCells;
   const selected = options.selection ? applySelection(filtered, options.selection) : filtered;
   const cells = options.timedFramesOverride === undefined ? selected : selected.map(cell => ({ ...cell, timedFrames: options.timedFramesOverride! }));

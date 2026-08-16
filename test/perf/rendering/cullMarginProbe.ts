@@ -182,9 +182,11 @@ interface BuilderInternals {
   _inflateCaptureCullRect(view: View): void;
 }
 
-type BuilderProto = RenderPlanBuilder & BuilderInternals;
-
-const originalInflate = (RenderPlanBuilder.prototype as unknown as BuilderProto)._inflateCaptureCullRect;
+// Cast to the internals shape ALONE, never to an intersection with the class:
+// `_captureCullRect` is `private` on `RenderPlanBuilder` and public here, and TypeScript
+// reduces such an intersection to `never` — after which every member access on it is an
+// error (TS2339). The `unknown` hop is what makes the reinterpretation legal.
+const originalInflate = (RenderPlanBuilder.prototype as unknown as BuilderInternals)._inflateCaptureCullRect;
 
 /**
  * Make every capture and every indexed selection cull against the view grown by
@@ -193,7 +195,7 @@ const originalInflate = (RenderPlanBuilder.prototype as unknown as BuilderProto)
  * {@link restoreCaptureMargin}.
  */
 export const installCaptureMargin = (ratio: number): void => {
-  (RenderPlanBuilder.prototype as unknown as BuilderProto)._inflateCaptureCullRect = function inflate(this: BuilderInternals, view: View): void {
+  (RenderPlanBuilder.prototype as unknown as BuilderInternals)._inflateCaptureCullRect = function inflate(this: BuilderInternals, view: View): void {
     const rect = view.getBounds();
     const marginX = rect.width * ratio;
     const marginY = rect.height * ratio;
@@ -205,7 +207,7 @@ export const installCaptureMargin = (ratio: number): void => {
 
 /** Put the engine's own margin back. */
 export const restoreCaptureMargin = (): void => {
-  (RenderPlanBuilder.prototype as unknown as BuilderProto)._inflateCaptureCullRect = originalInflate;
+  (RenderPlanBuilder.prototype as unknown as BuilderInternals)._inflateCaptureCullRect = originalInflate;
 };
 
 /**
