@@ -1,5 +1,6 @@
 import { Color } from '#core/Color';
 import { BackendTargetPass } from '#rendering/BackendTargetPass';
+import { drawDrawableDirect } from '#rendering/plan/drawDrawableDirect';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { Sprite } from '#rendering/sprite/Sprite';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -66,7 +67,7 @@ export class BlurFilter extends Filter {
       new BackendTargetPass(
         () => {
           if (radius <= 0) {
-            this._sprite.setPosition(0, 0).render(backend);
+            drawDrawableDirect(this._sprite.setPosition(0, 0), backend);
 
             return;
           }
@@ -75,8 +76,8 @@ export class BlurFilter extends Filter {
             const t = steps === 1 ? 0 : step / (steps - 1);
             const offset = (t * 2 - 1) * radius;
 
-            this._sprite.setPosition(offset, 0).render(backend);
-            this._sprite.setPosition(0, offset).render(backend);
+            drawDrawableDirect(this._sprite.setPosition(offset, 0), backend);
+            drawDrawableDirect(this._sprite.setPosition(0, offset), backend);
           }
         },
         {

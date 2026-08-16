@@ -445,14 +445,21 @@ describe('render plan', () => {
     expect(draw).toHaveBeenCalledTimes(1);
   });
 
+  // Driven by a RenderNode mask, not by `cacheAsBitmap`. The bitmap-cache
+  // composite used to render its cache sprite through `playRenderTree`, so it
+  // nested a builder; it now hands the sprite to `drawDrawableDirect` and does
+  // not. A node mask still renders its source subtree through a real nested
+  // plan (`RenderEffectExecutor._resolveMaskTexture`), which is what this test
+  // is actually about.
   test('builder pool is re-entrant and nested render() acquires distinct builders', () => {
     const { backend } = createRuntime();
     const root = new Container();
     const child = new BoxDrawable('child');
+    const maskSource = new BoxDrawable('mask');
     const acquiredBuilders: RenderPlanBuilder[] = [];
     const originalAcquire = RenderPlanBuilder.acquire;
 
-    root.cacheAsBitmap = true;
+    root.mask = maskSource;
     root.addChild(child);
 
     const acquireSpy = vi.spyOn(RenderPlanBuilder, 'acquire').mockImplementation(() => {

@@ -6,6 +6,7 @@ import type { KeyEvent } from '#input/KeyEvent';
 import { Rectangle } from '#math/Rectangle';
 import type { Filter } from '#rendering/filters/Filter';
 import type { Geometry } from '#rendering/geometry/Geometry';
+import { drawDrawableDirect } from '#rendering/plan/drawDrawableDirect';
 import { playRenderTree } from '#rendering/plan/playRenderTree';
 import { type RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RetainedRootRepresentation } from '#rendering/plan/RetainedRootRepresentation';
@@ -13,6 +14,7 @@ import { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 
 import { BackendTargetPass } from './BackendTargetPass';
+import type { Drawable } from './Drawable';
 import type { RenderBackend } from './RenderBackend';
 import { BlendModes, isAdvancedBlendMode } from './types';
 import { View } from './View';
@@ -21,7 +23,14 @@ interface DestroyableFilter {
   destroy(): void;
 }
 
-interface RenderNodeSpriteLike {
+/**
+ * The cache sprite, described structurally so this module never imports the
+ * `Sprite` class (that edge would close a runtime cycle). `Drawable` is folded
+ * in as a TYPE-only extension because the composite path now hands the sprite
+ * straight to `backend.draw` — the factory returns a real `Sprite`, so this
+ * only writes down what was already true.
+ */
+interface RenderNodeSpriteLike extends Drawable {
   width: number;
   height: number;
   setTexture(texture: RenderTexture | null): this;
@@ -729,7 +738,7 @@ export abstract class RenderNode extends SceneNode {
 
     sprite.width = width;
     sprite.height = height;
-    sprite.render(backend);
+    drawDrawableDirect(sprite, backend);
   }
 
   private _ensureCacheTexture(width: number, height: number): RenderTexture {
