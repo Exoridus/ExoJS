@@ -241,6 +241,7 @@ export class WebGpuPersistentSlotStore implements PersistentSlotBundle {
       next *= 2;
     }
 
+    const carried = this._capacity;
     const transforms = new Float32Array(next * floatsPerTransformRow);
     const quads = new Float32Array(next * floatsPerQuadRecord);
     const tints = new Uint8Array(next * tintBytesPerSlot);
@@ -254,13 +255,23 @@ export class WebGpuPersistentSlotStore implements PersistentSlotBundle {
     this._tints = tints;
     this._capacity = next;
 
-    // Every row moved into fresh GPU buffers, so the whole store is pending
-    // regardless of which rows the caller is about to write.
+    // The rows this growth CARRIED ACROSS are pending: they moved into fresh GPU
+    // buffers, so their contents have to be pushed again. The rows above the old
+    // capacity are not. An arrival that writes one marks its own block through
+    // `writeSlotFrom`, and a row nothing writes is never named by an order
+    // stream, so no draw can read it — marking the whole new capacity uploaded
+    // the entire store on the one frame it allocates, up to half of it rows that
+    // had never been written.
+    //
+    // Rounding up to the block boundary keeps the partially filled last carried
+    // block. It also subsumes every mark already pending, because a pending mark
+    // can only address a row below the old capacity.
     const blocks = Math.ceil(next / slotsPerBlock);
+    const carriedBlocks = Math.ceil(carried / slotsPerBlock);
 
     this._dirtyBlocks = new Uint8Array(blocks);
-    this._dirtyBlocks.fill(1);
-    this._dirtyBlockCount = blocks;
+    this._dirtyBlocks.fill(1, 0, carriedBlocks);
+    this._dirtyBlockCount = carriedBlocks;
     this._allocateSlotBuffers(next);
   }
 
