@@ -229,7 +229,12 @@ export class RetainedInstructionSet {
       return false;
     }
 
-    for (const instruction of this._instructions) {
+    // Indexed rather than `for…of`: every retained group is validated once per
+    // frame, so the array iterator's result objects are per-instruction garbage
+    // on the hottest steady-state path there is.
+    for (let i = 0; i < this._instructions.length; i++) {
+      const instruction = this._instructions[i]!;
+
       if (instruction.kind === RetainedInstructionKind.Batch && instruction.bundle.generation !== instruction.generation) {
         return false;
       }

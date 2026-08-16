@@ -244,6 +244,26 @@ export default defineConfig({
           name: 'rendering-perf',
           alias: aliasConfig,
           include: ['test/perf/rendering/**/*.test.ts'],
+          // The allocation gate is its own project — see `rendering-alloc`.
+          exclude: ['test/perf/rendering/allocation.test.ts'],
+        }),
+        plugins: [realShaderPlugin],
+      },
+
+      // ── rendering-alloc — the steady-state allocation gate ───────────────
+      // Same harness as `rendering-perf`, separate project for exactly one
+      // reason: this gate must never run under coverage instrumentation.
+      // Istanbul rewrites every statement, which defeats V8's escape analysis,
+      // and the numbers stop describing the code we ship — `mesh/1000` reads
+      // 71 KB/frame instrumented against 0.65 KB/frame plain, a 100x gap on one
+      // machine with one Node build. Kept out of `test:coverage` and run by
+      // `test:alloc` instead; the suite itself refuses to assert when it detects
+      // instrumentation, so this split cannot be undone silently.
+      {
+        ...createJsdomTestProject({
+          name: 'rendering-alloc',
+          alias: aliasConfig,
+          include: ['test/perf/rendering/allocation.test.ts'],
         }),
         plugins: [realShaderPlugin],
       },

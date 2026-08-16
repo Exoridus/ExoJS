@@ -186,16 +186,21 @@ export function createWebGl2ShaderProgram(gl: WebGL2RenderingContext, label?: st
     pendingShader = null;
   }
 
+  // Indexed rather than `for…of`: this runs once per batch, so it is the one
+  // loop every scene in the catalog walks — and the array iterators V8 does not
+  // scalar-replace here are the only allocation left in a fully retained frame.
   function syncUniforms(): void {
-    for (const managed of managedUniforms) {
+    for (let i = 0; i < managedUniforms.length; i++) {
+      const managed = managedUniforms[i]!;
+
       if (managed.uniform.dirty) {
         managed.uploadFn(gl, managed.location, managed.uniform.value);
         managed.uniform.markClean();
       }
     }
 
-    for (const block of uniformBlocks) {
-      block.upload();
+    for (let i = 0; i < uniformBlocks.length; i++) {
+      uniformBlocks[i]!.upload();
     }
   }
 

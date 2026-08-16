@@ -73,7 +73,16 @@ export class RenderTexturePool {
       const texture = this._textures[index]!;
 
       if (texture.width === width && texture.height === height) {
-        this._textures.splice(index, 1);
+        // Shift down rather than `splice(index, 1)`: splice allocates the
+        // removed-elements array it returns, and this runs once per filter,
+        // mask and backdrop-blend intermediate — every frame, forever. The
+        // copy keeps the least-recently-released-first order eviction relies
+        // on, and the pool is capped at a few dozen entries.
+        for (let next = index + 1; next < this._textures.length; next++) {
+          this._textures[next - 1] = this._textures[next]!;
+        }
+
+        this._textures.length--;
         this._bytes -= this._estimateBytes(texture);
 
         return texture;

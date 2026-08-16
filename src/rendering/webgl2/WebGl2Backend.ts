@@ -1685,7 +1685,15 @@ export class WebGl2Backend implements RenderBackend {
       return false;
     }
 
-    for (const instruction of set.instructions) {
+    // Indexed rather than `for…of`: the inner texture-state loop next to it is
+    // already indexed for the same reason — every retained set is validated
+    // once per frame, and the array iterator's per-step result object is the
+    // kind of steady-state garbage a fully retained frame must not produce.
+    const instructions = set.instructions;
+
+    for (let index = 0; index < instructions.length; index++) {
+      const instruction = instructions[index]!;
+
       if (instruction.kind !== RetainedInstructionKind.Batch) {
         continue;
       }
