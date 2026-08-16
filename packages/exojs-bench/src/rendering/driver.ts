@@ -105,7 +105,7 @@ const REPO_ROOT = resolve(HERE, '..', '..', '..', '..');
 const ENGINE_SRC = resolve(REPO_ROOT, 'src');
 
 /** Chromium flag set for the WebGL2 browser. Pinning the device scale factor keeps `devicePixelRatio` at 1 so canvas backing size is deterministic. NO `--use-angle=swiftshader`: that would force a software rasterizer and make every timing worthless. */
-const LAUNCH_FLAGS: readonly string[] = ['--force-device-scale-factor=1'];
+export const LAUNCH_FLAGS: readonly string[] = ['--force-device-scale-factor=1'];
 
 /**
  * Chromium flag set for the WebGPU browser. Adds only `--enable-unsafe-webgpu`
@@ -113,7 +113,7 @@ const LAUNCH_FLAGS: readonly string[] = ['--force-device-scale-factor=1'];
  * (D3D12). Deliberately NOT `--enable-features=Vulkan` — forcing Vulkan lands on
  * SwiftShader, which would make every WebGPU timing a software number.
  */
-const WEBGPU_LAUNCH_FLAGS: readonly string[] = [...LAUNCH_FLAGS, '--enable-unsafe-webgpu'];
+export const WEBGPU_LAUNCH_FLAGS: readonly string[] = [...LAUNCH_FLAGS, '--enable-unsafe-webgpu'];
 
 /** Adapter identity substrings that name a software WebGPU implementation rather than a real GPU. */
 const SOFTWARE_WEBGPU_PATTERN = /swiftshader|lavapipe|llvmpipe|warp|software|basic render/i;
@@ -122,7 +122,7 @@ const SOFTWARE_WEBGPU_PATTERN = /swiftshader|lavapipe|llvmpipe|warp|software|bas
 const SHADER_EXTENSIONS = ['.vert', '.frag', '.glsl'] as const;
 
 /** ExoJS package version, read from the repository root manifest. */
-const readEngineVersion = (): string => {
+export const readEngineVersion = (): string => {
   const manifest = JSON.parse(readFileSync(resolve(REPO_ROOT, 'package.json'), 'utf8')) as { version?: string };
 
   return manifest.version ?? '0.0.0';
@@ -300,7 +300,7 @@ const CROSS_ORIGIN_ISOLATION_HEADERS: Readonly<Record<string, string>> = {
 };
 
 /** Starts a programmatic Vite dev server rooted at the harness page. */
-const startViteServer = async (version: string): Promise<ViteDevServer> => {
+export const startViteServer = async (version: string): Promise<ViteDevServer> => {
   const vite = await loadVite();
   const server = await vite.createServer({
     configFile: false,
@@ -389,7 +389,7 @@ const readRendererInPage = async (page: import('playwright').Page): Promise<stri
 const isSoftwareRenderer = (renderer: string): boolean => /swiftshader|llvmpipe|software/i.test(renderer);
 
 /** Resolved WebGPU adapter identity for one backend run. */
-interface WebGpuIdentity {
+export interface WebGpuIdentity {
   /** Human-readable adapter string stamped into provenance. */
   readonly adapter: string;
   /** True when the adapter is real and should be measured; false emits `unavailable` cells. */
@@ -407,7 +407,7 @@ interface WebGpuIdentity {
  * caller can emit `unavailable` cells instead of measuring a software rasterizer
  * and passing it off as a GPU number.
  */
-const readWebGpuAdapter = async (page: import('playwright').Page): Promise<WebGpuIdentity> => {
+export const readWebGpuAdapter = async (page: import('playwright').Page): Promise<WebGpuIdentity> => {
   const probe = await page.evaluate(async () => {
     const gpu = (navigator as Navigator & { gpu?: GPU }).gpu;
 
@@ -476,6 +476,8 @@ const unavailableCell = (spec: CellSpec, note: string): CellResult => ({
   cpuMsP95: 0,
   frameMsMedian: null,
   frameMsP95: null,
+  queueMsMedian: null,
+  queueMsP95: null,
   structural: { drawCalls: 0, textureBinds: 0, bufferUploads: 0 },
   status: 'unavailable',
   note,
