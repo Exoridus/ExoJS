@@ -210,10 +210,24 @@ export interface CellResult extends BaseCellResult<CellSpec> {
   readonly cpuMsMedian: number;
   /** 95th-percentile per-frame CPU time in milliseconds. */
   readonly cpuMsP95: number;
-  /** Median full-frame GPU time in milliseconds, or null when unavailable. */
+  /** Median GPU frame time in milliseconds, or null when unavailable. */
   readonly frameMsMedian: number | null;
-  /** 95th-percentile full-frame GPU time in milliseconds, or null when unavailable. */
+  /** 95th-percentile GPU frame time in milliseconds, or null when unavailable. */
   readonly frameMsP95: number | null;
+  /**
+   * WebGPU only: median per-frame QUEUE OCCUPANCY in milliseconds, or null on
+   * every other backend.
+   *
+   * A different measurement from {@link frameMsMedian}, not a second opinion on
+   * it. `frameMs*` is hardware GPU time for the frame's render passes;
+   * `queueMs*` is the CPU-observed `queue.onSubmittedWorkDone` interval charged
+   * to the frame that caused it. Only `queueMs*` sees `queue.writeBuffer` upload
+   * cost, and only `frameMs*` resolves work below the queue's ~0.5–3.2ms
+   * completion-observation floor. The cell note states both limits.
+   */
+  readonly queueMsMedian: number | null;
+  /** WebGPU only: 95th-percentile per-frame queue occupancy in milliseconds; see {@link queueMsMedian}. */
+  readonly queueMsP95: number | null;
   /** Structural draw-call counters gathered while measuring this cell. */
   readonly structural: StructuralCounters;
 }

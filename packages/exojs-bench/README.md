@@ -47,7 +47,8 @@ domain), asset loading, GC headroom — everything outside `mutate` +
 | column | what it is |
 | --- | --- |
 | `cpuMsMedian` / `cpuMsP95` | wall clock bracketing `mutate` + `renderFrame`, per frame. The primary metric: the CPU cost of the render path. |
-| `frameMsMedian` / `frameMsP95` | full-frame time, from the best source available on the backend (see below). |
+| `frameMsMedian` / `frameMsP95` | GPU time for the frame, from a HARDWARE clock (see below). |
+| `queueMsMedian` / `queueMsP95` | WebGPU only: queue occupancy attributed to the frame that caused it. A different measurement from `frameMs*`, not a second opinion on it (see below). |
 | `drawCalls` / `textureBinds` / `bufferUploads` | per-frame counts from a probe wrapped around the live graphics context. |
 | `status` | `ok`, `exceeded` (aborted on a sustained slowdown), or `unavailable` (never measured). |
 | `note` | per-cell disclosure: which frame-time source was used, why a cell aborted, which counters were skipped. |
@@ -57,29 +58,64 @@ matters when reading a WebGL2 row against a WebGPU one:
 
 - **WebGL2** uses the hardware `EXT_disjoint_timer_query_webgl2` query when the
   browser exposes it (browsers gate it behind privacy policy), discarding any
-  sample the driver flags as disjoint.
-- **WebGPU** exposes no externally wireable hardware timestamp, so the harness
-  measures the wall clock from `queue.submit` to `queue.onSubmittedWorkDone`.
-  That is de-vsynced GPU work, but a CPU-observed interval carrying callback
-  latency — not a hardware timestamp. `onSubmittedWorkDone` resolves on
-  CUMULATIVE queue completion, so a sample is that frame's own work only while
-  the queue was empty when the frame was submitted. The harness guarantees that
-  at the warmup/timing boundary — it waits out everything the unpaced warmup
-  submitted before the first timed frame — but NOT between timed frames: a frame
-  heavy enough to block the compositor makes several `requestAnimationFrame`
-  callbacks fire back-to-back, and those frames' promises then resolve on the
-  same completion. One queue event can therefore appear as two or three
-  near-identical samples, which inflates `frameMsP95` (measured on a 1M-node
-  cell: `p95` 26.8ms against 4.5ms once the overlapping samples are attributed
-  to the frame that caused them). Read `frameMsP95` on a WebGPU row as an upper
-  bound, and prefer `cpuMs*` wherever the question allows it.
+  sample the driver flags as disjoint. The query brackets `mutate` +
+  `renderFrame`, so it covers the frame's WHOLE GL command stream — uploads
+  (`texSubImage2D`) included.
+- **WebGPU** uses hardware `timestamp-query` writes around each of the frame's
+  render passes, summed per frame. The feature is obtained by requesting it on
+  every device the page creates (additively, identically for every arm) and the
+  writes are injected into the render-pass descriptors the arm hands to
+  `beginRenderPass`; query slots are resolved once, after the timed window, so
+  the instrument adds no wait to the measured path. This covers render-pass
+  EXECUTION only: `queue.writeBuffer` is a queue operation outside every command
+  buffer, so its device copy cannot be bracketed by any timestamp pair. On an
+  upload-heavy frame that copy is the dominant GPU cost — `queueMs*` is the
+  column that sees it.
 - **Fallback**: the delta between consecutive `requestAnimationFrame` callbacks,
   which is display-present cadence rather than GPU work. Cells that fall back to
   it say so in their `note`.
 
+### `queueMs*`, and why it is not the WebGPU frame time
+
+`queueMs*` is the `queue.onSubmittedWorkDone` wall clock, with each frame charged
+only the interval past the PREVIOUS frame's observed completion
+(`doneAt − max(submitAt, previous doneAt)`). Completion is cumulative, so without
+that attribution one stall is reported by every frame submitted behind it —
+measured on a 1M-node cell, a single 27.7ms upload event was reported by three
+consecutive frames as `27.74 / 27.13 / 27.43`; attributed, it reads
+`27.74 / 0.03 / 1.09`. Warmup work is drained at the warmup/timing boundary for
+the same reason.
+
+It is nonetheless NOT a per-frame GPU time, and was demoted out of `frameMs*`
+because of what the instrument's floor is. `onSubmittedWorkDone` reports when the
+browser OBSERVES completion, not when the GPU finished: a rAF-paced submit that
+clears the canvas swapchain — 2µs of GPU work by the hardware clock — reports
+0.50ms, and the identical clear into an offscreen texture reports 3.18ms, because
+a present flushes the device and nothing else does. Real frames land in both
+regimes, which is why the old WebGPU `frameMsMedian` was bimodal between ~0.6 and
+~3.0ms run to run while the GPU work behind it never moved. Read `queueMs*` for
+large events (uploads, stalls); never as a small-frame GPU time.
+
+### Diagnostic drivers
+
+Two frame-series probes live beside the matrix harness. Neither runs during a
+matrix cell; both share the harness's page, server and launch flags so their
+numbers are produced under the same conditions.
+
+```sh
+pnpm perf:webgpu:stall   # per-frame selection/capacity/upload/allocation counters
+pnpm perf:webgpu:timer   # per-frame timer methodology: raw vs attributed queue
+                         # latency vs hardware timestamps, plus serialized /
+                         # canvas-clear / offscreen-clear control arms and the
+                         # clock + scheduler controls behind the floor above
+```
+
 **Do not compare a WebGL2 frame-time column against a WebGPU one as if the two
-came from the same instrument.** `cpuMs*` is measured identically everywhere and
-is the column to compare across backends and arms.
+came from the same instrument.** Both are hardware clocks, but they bracket
+different things — WebGL2 the whole command stream, WebGPU the render passes —
+and the gap is not small: the same `retained scrolling-world 100k` cell measures
+0.397ms on WebGL2 and 0.065ms on WebGPU. `cpuMs*` is measured identically
+everywhere and is the column to compare across backends and arms.
 
 The structural counters are the durable half of the report: exact, deterministic
 and reproducible where a timing is not. A non-empty scene that reports zero draw

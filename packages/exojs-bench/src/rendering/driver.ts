@@ -476,6 +476,8 @@ const unavailableCell = (spec: CellSpec, note: string): CellResult => ({
   cpuMsP95: 0,
   frameMsMedian: null,
   frameMsP95: null,
+  queueMsMedian: null,
+  queueMsP95: null,
   structural: { drawCalls: 0, textureBinds: 0, bufferUploads: 0 },
   status: 'unavailable',
   note,

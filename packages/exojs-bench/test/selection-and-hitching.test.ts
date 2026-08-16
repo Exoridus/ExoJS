@@ -19,6 +19,8 @@ const result = (cpuMsMedian: number, cpuMsP95: number): CellResult => ({
   cpuMsP95,
   frameMsMedian: 0,
   frameMsP95: 0,
+  queueMsMedian: null,
+  queueMsP95: null,
   structural: { drawCalls: 0, textureBinds: 0, bufferUploads: 0 },
   status: 'ok',
 });
