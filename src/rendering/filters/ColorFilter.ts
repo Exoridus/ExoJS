@@ -1,5 +1,6 @@
 import { Color } from '#core/Color';
 import { BackendTargetPass } from '#rendering/BackendTargetPass';
+import { drawDrawableDirect } from '#rendering/plan/drawDrawableDirect';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { Sprite } from '#rendering/sprite/Sprite';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -37,7 +38,7 @@ export class ColorFilter extends Filter {
     backend.execute(
       new BackendTargetPass(
         () => {
-          this._sprite.render(backend);
+          drawDrawableDirect(this._sprite, backend);
         },
         {
           target: output,

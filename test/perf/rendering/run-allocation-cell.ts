@@ -11,10 +11,17 @@
  *
  *   pnpm perf:renderers:alloc:cell -- --id "mesh/1000" [--windows 1] [--frames 200] [--profile] [--top 25]
  *   pnpm perf:renderers:alloc:cell -- --id "mesh/1000" --cpu
+ *   pnpm perf:renderers:alloc:cell -- --id "filter/color 100" --structural
  *
  * Prints one JSON object on stdout (last line) so a driver can collect runs;
  * `--profile` writes the callsite table to stderr, so it never mixes into it.
  * `--cpu` swaps the sampler for wall-clock timing — see the block below it.
+ * `--structural` reports the frame's work units instead of its bytes — see the
+ * block below THAT, and read the two together: "3 KB per filter pass" and "3 KB
+ * per drawable" are the same KB/frame and different bugs.
+ *
+ * `--id` resolves against the gate catalog first, then the filter probe catalog
+ * in `filterScenes.ts`, then the `reference/<count>` stage.
  *
  * @internal Test/perf-only.
  */
@@ -24,6 +31,7 @@ import type { RenderNode } from '#rendering/RenderNode';
 
 import type { AllocationArchetype, AllocationScene } from './allocationScenes';
 import { ALLOCATION_ARCHETYPES, ALLOCATION_REPORT_ONLY, buildScrollingWorldReference } from './allocationScenes';
+import { ALL_FILTER_ARCHETYPES, FILTERED_NODE_COUNT } from './filterScenes';
 import type { WebGl2Harness } from './harness';
 import { createWebGl2Harness } from './harness';
 
@@ -66,7 +74,7 @@ const REFERENCE_WARMUP = 600;
 
 const archetype: AllocationArchetype | undefined =
   referenceCount === undefined
-    ? [...ALLOCATION_ARCHETYPES, ...ALLOCATION_REPORT_ONLY].find(candidate => candidate.id === id)
+    ? [...ALLOCATION_ARCHETYPES, ...ALLOCATION_REPORT_ONLY, ...ALL_FILTER_ARCHETYPES].find(candidate => candidate.id === id)
     : { id, rationale: 'reference stage', warmup: REFERENCE_WARMUP, build: harness => buildScrollingWorldReference(harness, Number(referenceCount)) };
 
 if (archetype === undefined) {
@@ -195,6 +203,99 @@ if (args.includes('--cpu')) {
   const at = (quantile: number): number => Number((timings[Math.min(timings.length - 1, Math.floor(timings.length * quantile))]! * 1000).toFixed(1));
 
   console.log(JSON.stringify({ id: archetype.id, frames, medianUs: at(0.5), p95Us: at(0.95) }));
+  process.exit(0);
+}
+
+/**
+ * Structural companion mode (`--structural`): the same scene and the same
+ * warm-up, counting the frame's WORK instead of its bytes.
+ *
+ * A KB/frame number alone cannot tell "3 KB per filter pass" from "3 KB per
+ * drawable" or "3 KB per acquired target" — they are the same rate and three
+ * different fixes. This prints the denominators: passes, draws, target
+ * acquisitions, binds, uploads. It is also the guard on any fix that follows,
+ * because trading JS allocation for an extra render pass or an extra texture
+ * copy is not a win.
+ *
+ * Reported for the LAST frame after warm-up, not a sum: every counter here is
+ * per-frame and the scenes are static, so the last frame IS the steady frame.
+ * Pool acquisitions are counted by wrapping the backend rather than by reading
+ * a stat, because the pool deliberately keeps none.
+ */
+if (args.includes('--structural')) {
+  const harness = createWebGl2Harness();
+  const scene: AllocationScene = archetype.build(harness);
+  const warmup = archetype.warmup ?? 30;
+  const backend = harness.backend;
+  const acquireRenderTexture = backend.acquireRenderTexture.bind(backend);
+  const releaseRenderTexture = backend.releaseRenderTexture.bind(backend);
+  const seenTextures = new WeakSet<object>();
+  let acquires = 0;
+  let releases = 0;
+  let poolMisses = 0;
+
+  backend.acquireRenderTexture = (width: number, height: number) => {
+    const texture = acquireRenderTexture(width, height);
+
+    acquires++;
+
+    // A texture this run has never seen before came from `new RenderTexture`,
+    // not from the pool. Counted rather than inferred from a pool size, which
+    // the backend does not expose — and after warm-up a miss means a per-frame
+    // GPU allocation, which is a different and worse problem than a per-frame
+    // JS one.
+    if (seenTextures.has(texture)) {
+      return texture;
+    }
+
+    seenTextures.add(texture);
+    poolMisses++;
+
+    return texture;
+  };
+
+  backend.releaseRenderTexture = (texture: Parameters<typeof releaseRenderTexture>[0]) => {
+    releases++;
+
+    return releaseRenderTexture(texture);
+  };
+
+  for (let i = 0; i < warmup; i++) {
+    renderOnce(harness, scene.root, scene.beforeFrame);
+  }
+
+  acquires = 0;
+  releases = 0;
+  poolMisses = 0;
+  renderOnce(harness, scene.root, scene.beforeFrame);
+
+  const stats = harness.backend.stats;
+  const { recorder } = harness;
+  const filteredNodes = FILTERED_NODE_COUNT[archetype.id];
+
+  scene.teardown?.();
+  harness.destroy();
+
+  console.log(
+    JSON.stringify({
+      id: archetype.id,
+      ...(filteredNodes === undefined ? {} : { filteredNodes }),
+      renderPasses: stats.renderPasses,
+      drawCalls: stats.drawCalls,
+      batches: stats.batches,
+      submittedNodes: stats.submittedNodes,
+      culledNodes: stats.culledNodes,
+      renderTextureAcquires: acquires,
+      renderTextureReleases: releases,
+      renderTexturePoolMisses: poolMisses,
+      textureBinds: recorder.textureBinds,
+      programChanges: recorder.programChanges,
+      bufferUploads: recorder.bufferUploads,
+      uploadedBufferBytes: recorder.bufferUploadBytes,
+      transformUploads: recorder.transformUploads,
+      transformUploadBytes: recorder.transformUploadBytes,
+    }),
+  );
   process.exit(0);
 }
 

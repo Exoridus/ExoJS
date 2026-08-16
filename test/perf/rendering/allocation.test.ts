@@ -77,9 +77,12 @@ const NOISE_FLOOR_KB = 50;
  * Budget band for scenes above {@link NOISE_FLOOR_KB}. Measured pass-to-pass
  * median spread on those scenes is ≤0.4% (see the table on {@link BASELINE_KB}),
  * so nearly the whole 15% is headroom for cross-machine drift. `filtered/100` is
- * the only scene left above the floor, and it reads 329.89 KB/frame on the CI
- * runner (Node v24.19.0 linux/x64) against 306.55 in-suite here — +7.6%, half
- * the band — while a real ≥15% allocation regression still fails the gate.
+ * the only scene left above the floor, and the CI runner (Node v24.19.0
+ * linux/x64) reads it about 7.6% above this dev box — measured as 329.89 against
+ * 306.55 before the effect path stopped nesting a plan per pass. The band is
+ * stated as a RATIO for that reason: the absolute pair moves with every ratchet,
+ * the cross-machine factor does not, and half the band is still free at it while
+ * a real ≥15% allocation regression fails.
  */
 const TOLERANCE_LARGE = 1.15;
 
@@ -136,19 +139,29 @@ const FIXED_HEADROOM_KB = 1.25;
  *   nested/1000 d4                    1.20      0.65       1.20
  *   deep-hierarchy/1000 d16 1%        1.01      0.50       1.01
  *   mesh/1000                         0.68      0.37       0.68
- *   filtered/100                    295.18    306.55     306.55
+ *   filtered/100                    218.60    229.59     229.59
  *   blend/1000 plateau64              0.93      0.57       0.93
  *   blend/1000 alternating            1.19      0.47       1.19
  *
  * Spread, i.e. what the budget has to absorb: ≤0.13 KB across the five fresh
  * processes and ≤0.21 KB across six in-suite passes on every scene but
- * `filtered/100`, which holds 0.3% (295.5 fresh / 306.6 in-suite pass spread).
+ * `filtered/100`, which holds 0.24% (218.1–219.5 fresh, 229.0–229.6 across four
+ * in-suite passes).
  *
  * `scrolling-world/10000` is measured the same way but stays out of the gate:
  * fresh it is the steadiest scene here (1.65 KB/frame, 4.5%), in-suite it is
  * bimodal at 14.6 vs 19.8 KB/frame between passes. See `ALLOCATION_REPORT_ONLY`.
  *
  * ── Ratchet history ─────────────────────────────────────────────
+ * 2026-08-16b: `filtered/100` ONLY, 306.55 → 229.59, after the effect path
+ * stopped building a whole render plan per filter pass and per composite. No
+ * other row is touched and no global re-baseline: the change reaches nothing
+ * outside the barrier path, every other scene re-measured identical, and a
+ * ratchet that moves rows a slice did not affect is how a table drifts away
+ * from what it is supposed to prove. The filter work continues, so this row is
+ * expected to ratchet again — each landed slice protects its own gain rather
+ * than leaving the next one to collect them all.
+ *
  * 2026-08-16: whole table re-measured after the steady-state allocation track
  * closed, and every budget moved down again — by two to three ORDERS of
  * magnitude on the scenes the track actually hit (`mesh/1000` 574.69 → 0.68,
@@ -173,7 +186,7 @@ const BASELINE_KB: Readonly<Record<string, number>> = {
   'nested/1000 d4': 1.2,
   'deep-hierarchy/1000 d16 1%': 1.01,
   'mesh/1000': 0.68,
-  'filtered/100': 306.55,
+  'filtered/100': 229.59,
   'blend/1000 plateau64': 0.93,
   'blend/1000 alternating': 1.19,
 };
