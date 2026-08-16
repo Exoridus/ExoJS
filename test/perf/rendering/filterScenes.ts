@@ -202,6 +202,44 @@ export const FILTER_ARCHETYPES: readonly AllocationArchetype[] = [
       }),
   },
 
+  // ── The retained capture's cull margin ───────────────────────────────────
+  // Filtered sprites parked OUTSIDE the view but inside the inflated capture
+  // rect (`RETAINED_CULL_MARGIN_RATIO` = 1/16, so 80 px horizontally on a
+  // 1280-wide view). A capturing collect admits them, so their barriers run and
+  // their composites are issued — while the enclosing frame never shows them.
+  // This is the one place where "the effect path only draws what it already
+  // decided to draw" is not obviously true, so it is measured rather than
+  // argued: the structural counters here must not move.
+  {
+    id: 'filter/color 100 margin',
+    rationale: 'Filtered nodes inside the capture cull margin but outside the view — the case where a composite draw is collected but not visible.',
+    warmup: WARMUP,
+    build: () => {
+      const [texture] = makeTextures(1);
+      const root = new Container();
+
+      // Half in view, half in the margin. A root whose whole subtree sits
+      // outside is culled at the root and never reaches the barrier path at
+      // all, so the visible half is what keeps the root — and the capture —
+      // alive for the other half to be admitted by the inflated rect.
+      for (let i = 0; i < 100; i++) {
+        const sprite = new Sprite(texture!);
+
+        if (i % 2 === 0) {
+          scatterInView(sprite, i, VIEW.w, VIEW.h);
+        } else {
+          // x beyond the view's right edge, still well inside the +80 px margin.
+          sprite.setPosition(VIEW.w + 1 + (i % 15), (i * 251) % (VIEW.h - 64));
+        }
+
+        sprite.addFilter(new ColorFilter());
+        root.addChild(sprite);
+      }
+
+      return { root, teardown: () => root.destroy() };
+    },
+  },
+
   // ── ONE filter over a large subtree ──────────────────────────────────────
   {
     id: 'filter/container 1000',
@@ -246,6 +284,7 @@ export const FILTERED_NODE_COUNT: Readonly<Record<string, number>> = {
   'filter/color 10': 10,
   'filter/color 100': 100,
   'filter/color 200': 200,
+  'filter/color 100 margin': 100,
   'filter/stack2 100': 100,
   'filter/stack3 100': 100,
   'filter/blur-q1 100': 100,
