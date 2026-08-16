@@ -139,7 +139,8 @@ const NO_GPU_TIMER_NOTE = 'frame time from rAF delta; no GPU timer';
  * submit-to-done wall clock rather than the rAF present cadence. This value is
  * de-vsynced GPU work, not a hardware timestamp — see {@link createWebGpuGpuTimer}.
  */
-const WEBGPU_SUBMIT_TIMER_NOTE = 'frame time from queue.onSubmittedWorkDone (submit→done wall-clock; de-vsynced GPU work, not a hardware timestamp)';
+const WEBGPU_SUBMIT_TIMER_NOTE =
+  'frame time from queue.onSubmittedWorkDone (submit→done wall-clock; de-vsynced GPU work, not a hardware timestamp). Warmup work is drained before the timed window, but queue completion is cumulative and consecutive timed frames are not isolated from each other, so a blocking frame can be counted by the frames submitted behind it — read p95 as an upper bound';
 
 /**
  * Per-frame GPU-time source. `available` is false for the inert fallback used

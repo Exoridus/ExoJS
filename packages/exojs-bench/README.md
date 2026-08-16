@@ -61,7 +61,18 @@ matters when reading a WebGL2 row against a WebGPU one:
 - **WebGPU** exposes no externally wireable hardware timestamp, so the harness
   measures the wall clock from `queue.submit` to `queue.onSubmittedWorkDone`.
   That is de-vsynced GPU work, but a CPU-observed interval carrying callback
-  latency — not a hardware timestamp.
+  latency — not a hardware timestamp. `onSubmittedWorkDone` resolves on
+  CUMULATIVE queue completion, so a sample is that frame's own work only while
+  the queue was empty when the frame was submitted. The harness guarantees that
+  at the warmup/timing boundary — it waits out everything the unpaced warmup
+  submitted before the first timed frame — but NOT between timed frames: a frame
+  heavy enough to block the compositor makes several `requestAnimationFrame`
+  callbacks fire back-to-back, and those frames' promises then resolve on the
+  same completion. One queue event can therefore appear as two or three
+  near-identical samples, which inflates `frameMsP95` (measured on a 1M-node
+  cell: `p95` 26.8ms against 4.5ms once the overlapping samples are attributed
+  to the frame that caused them). Read `frameMsP95` on a WebGPU row as an upper
+  bound, and prefer `cpuMs*` wherever the question allows it.
 - **Fallback**: the delta between consecutive `requestAnimationFrame` callbacks,
   which is display-present cadence rather than GPU work. Cells that fall back to
   it say so in their `note`.
