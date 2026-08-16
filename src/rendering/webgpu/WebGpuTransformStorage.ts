@@ -25,6 +25,17 @@ export class WebGpuTransformStorage {
   // per instance.
   private _tintStorageBuffer: GPUBuffer | null = null;
   private _tintAccountedBytes = 0;
+  /**
+   * Reused result record for {@link getBuffer}. Every caller reads it inside
+   * the statement that asks for it — it binds two buffers and a count and is
+   * done — and `getBuffer` runs once per flush, so a fresh record per call was
+   * ~16 KB/frame on a 300-flush effect frame.
+   */
+  private readonly _result = {
+    buffer: undefined as unknown as GPUBuffer,
+    tintBuffer: undefined as unknown as GPUBuffer,
+    count: 0,
+  };
 
   /**
    * Underlying shared transform buffer. Exposed for internal stats / tests
@@ -171,11 +182,13 @@ export class WebGpuTransformStorage {
       this._storageCount = snapshot.count;
     }
 
-    return {
-      buffer: this._storageBuffer!,
-      tintBuffer: this._tintStorageBuffer!,
-      count: snapshot.count,
-    };
+    const result = this._result;
+
+    result.buffer = this._storageBuffer!;
+    result.tintBuffer = this._tintStorageBuffer!;
+    result.count = snapshot.count;
+
+    return result;
   }
 
   public destroy(): void {

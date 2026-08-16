@@ -43,6 +43,18 @@ export interface WebGpuActiveRenderPass {
   readonly stencilRef: number;
 }
 
+/**
+ * The reused descriptor's `depthStencilAttachment` has to be assignable to
+ * `undefined` (a pass without a stencil clip clears it), which the generated
+ * WebGPU types do not allow under `exactOptionalPropertyTypes`.
+ */
+type ReusablePassDescriptor = Omit<GPURenderPassDescriptor, 'depthStencilAttachment'> & {
+  depthStencilAttachment?: GPURenderPassDepthStencilAttachment | undefined;
+};
+
+/** Hoisted: the encoder descriptor is a constant, and `acquirePass` runs per pass. */
+const commandEncoderDescriptor: GPUCommandEncoderDescriptor = { label: 'pass-coordinator:command-encoder' };
+
 interface StencilClipEntry {
   readonly shape: Geometry;
   readonly transform: Matrix;
@@ -97,6 +109,12 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
   private _stencilRef = 0;
   private _active: WebGpuActiveRenderPass | null = null;
   private _passHasDraws = false;
+  /** Reused render-pass descriptor and its colour-attachment list — see {@link acquirePass}. */
+  private readonly _colorAttachments: Array<GPURenderPassColorAttachment | null> = [null];
+  private readonly _passDescriptor: ReusablePassDescriptor = {
+    label: 'pass-coordinator:render-pass',
+    colorAttachments: this._colorAttachments,
+  };
 
   public constructor(backend: WebGpuPassBackend) {
     this._backend = backend;
@@ -176,17 +194,24 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
 
     const backend = this._backend;
     const stencilEnabled = this.stencilActive;
-    const descriptor: GPURenderPassDescriptor = {
-      label: 'pass-coordinator:render-pass',
-      colorAttachments: [backend.createColorAttachment()],
-    };
+    // Descriptor and attachment list are reused: `beginRenderPass` and
+    // `createCommandEncoder` read their descriptors synchronously, so neither
+    // has to survive the call. An effect-heavy frame opens hundreds of passes
+    // (501 on `filter/color 100`), where a fresh descriptor plus a fresh
+    // one-element array per pass is a measurable per-pass cost. The `_active`
+    // record below is deliberately NOT pooled — renderers compare it by
+    // identity to decide whether their draws are in the open pass.
+    const descriptor = this._passDescriptor;
 
-    if (stencilEnabled) {
-      descriptor.depthStencilAttachment = this._createStencilAttachment(backend.renderTarget);
-    }
+    this._colorAttachments[0] = backend.createColorAttachment();
+    descriptor.depthStencilAttachment = stencilEnabled ? this._createStencilAttachment(backend.renderTarget) : undefined;
 
-    const encoder = backend.device.createCommandEncoder({ label: 'pass-coordinator:command-encoder' });
-    const pass = encoder.beginRenderPass(descriptor);
+    const encoder = backend.device.createCommandEncoder(commandEncoderDescriptor);
+    // Cast, not `delete`: an absent optional dictionary member and one set to
+    // `undefined` are the same thing to WebIDL, while `delete` would push the
+    // reused descriptor into dictionary mode. `exactOptionalPropertyTypes` is
+    // what makes the two spellings differ to TypeScript, not to the browser.
+    const pass = encoder.beginRenderPass(descriptor as GPURenderPassDescriptor);
 
     this._passHasDraws = false;
     backend.stats.renderPasses++;

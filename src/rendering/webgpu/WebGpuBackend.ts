@@ -250,6 +250,18 @@ export class WebGpuBackend implements RenderBackend {
   private _renderTarget: RenderTarget;
   // Reused scratch for the device-pixel snap viewport rect (see _snapViewport).
   private readonly _snapViewportRect = { x: 0, y: 0, width: 0, height: 0 };
+  /** Reused record handed out by `_getAttachmentPixelSize` — see the contract there. */
+  private readonly _attachmentPixelSize = { width: 0, height: 0 };
+  /** Reused colour attachment + its clear value — see `createColorAttachment`. */
+  private readonly _clearValue = { r: 0, g: 0, b: 0, a: 0 };
+  private readonly _colorAttachment: GPURenderPassColorAttachment = {
+    view: undefined as unknown as GPUTextureView,
+    clearValue: this._clearValue,
+    loadOp: 'load',
+    storeOp: 'store',
+  };
+  /** Reused one-element command-buffer list for `submit`. */
+  private readonly _submitBatch: GPUCommandBuffer[] = [undefined as unknown as GPUCommandBuffer];
   private _renderer: Renderer | null = null;
   private _renderGroupTransform: Matrix | null = null;
   private _renderGroupTransformId = 0;
@@ -1069,6 +1081,14 @@ export class WebGpuBackend implements RenderBackend {
     }
   }
 
+  /**
+   * **The returned record is reused**, including its nested `clearValue`. The
+   * one caller (`WebGpuPassCoordinator.acquirePass`) hands it straight to
+   * `beginRenderPass`, which reads the descriptor synchronously — so nothing
+   * ever needs it to survive the call. An effect-heavy frame opens hundreds of
+   * passes (501 on `filter/color 100`), and two fresh records per pass was one
+   * of the larger remaining per-pass costs.
+   */
   public createColorAttachment(): GPURenderPassColorAttachment {
     const renderTarget = this._renderTarget;
     let view: GPUTextureView;
@@ -1087,21 +1107,25 @@ export class WebGpuBackend implements RenderBackend {
 
     this._clearRequested = false;
 
-    return {
-      view,
-      clearValue: {
-        r: this._clearColor.r / 255,
-        g: this._clearColor.g / 255,
-        b: this._clearColor.b / 255,
-        a: this._clearColor.a,
-      },
-      loadOp,
-      storeOp: 'store',
-    };
+    const attachment = this._colorAttachment;
+    const clearValue = this._clearValue;
+
+    clearValue.r = this._clearColor.r / 255;
+    clearValue.g = this._clearColor.g / 255;
+    clearValue.b = this._clearColor.b / 255;
+    clearValue.a = this._clearColor.a;
+
+    attachment.view = view;
+    attachment.loadOp = loadOp;
+
+    return attachment;
   }
 
   public submit(commandBuffer: GPUCommandBuffer): void {
-    this.device.queue.submit([commandBuffer]);
+    // Reused one-slot batch: `submit` copies the list synchronously, and an
+    // effect frame submits hundreds of times.
+    this._submitBatch[0] = commandBuffer;
+    this.device.queue.submit(this._submitBatch);
 
     if (this._renderTarget === this._rootRenderTarget) {
       this._hasPresentedFrame = true;
@@ -1140,14 +1164,29 @@ export class WebGpuBackend implements RenderBackend {
    * store (logical × pixelRatio), so a geometric stencil attachment for the root
    * must match these dimensions. RenderTexture targets back their colour and
    * stencil attachments with the same (logical) size.
+   *
+   * **The returned record is reused.** Read it (or destructure it) before the
+   * next call; it is never safe to keep. The reason is the call frequency:
+   * `_snapViewport` reaches it once per flush and once per replayed retained
+   * batch, so a fresh two-field literal per call was the single largest
+   * per-draw allocation in the WebGPU backend — 106 KB/frame on a 1000-flush
+   * frame, against a whole-frame total of 127 KB.
    * @internal
    */
   public _getAttachmentPixelSize(target: RenderTarget): { readonly width: number; readonly height: number } {
+    const size = this._attachmentPixelSize;
+
     if (target === this._rootRenderTarget) {
-      return { width: this._canvas.width, height: this._canvas.height };
+      size.width = this._canvas.width;
+      size.height = this._canvas.height;
+
+      return size;
     }
 
-    return { width: target.width, height: target.height };
+    size.width = target.width;
+    size.height = target.height;
+
+    return size;
   }
 
   public getTextureBinding(
