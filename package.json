@@ -150,6 +150,8 @@
     "perf:renderers:browser": "vitest run --project=browser-webgl-chromium webgl2-renderer-perf",
     "perf:renderers:alloc": "node --conditions=@codexo/source --import ./scripts/glsl-register.mjs --import tsx/esm test/perf/rendering/run-allocation.ts",
     "perf:renderers:alloc:cell": "node --conditions=@codexo/source --import ./scripts/glsl-register.mjs --import tsx/esm test/perf/rendering/run-allocation-cell.ts",
+    "perf:renderers:bootstrap": "node --conditions=@codexo/source --import ./scripts/glsl-register.mjs --import tsx/esm test/perf/rendering/run-bootstrap-allocation.ts",
+    "perf:renderers:bootstrap:cell": "node --expose-gc --max-old-space-size=8192 --conditions=@codexo/source --import ./scripts/glsl-register.mjs --import tsx/esm test/perf/rendering/run-bootstrap-cell.ts",
     "perf:bench:rendering": "tsx test/perf/rendering-benchmark.ts",
     "perf:bench:audio": "tsx test/perf/audio-benchmark.ts",
     "perf:bench:collision": "tsx test/perf/collision-benchmark.ts",
@@ -162,7 +164,8 @@
     "perf:profile": "tsx test/perf/profile-benchmark.ts",
     "perf:profile:gc": "node --expose-gc --import tsx/esm test/perf/profile-benchmark.ts",
     "size": "size-limit",
-    "prepare": "husky"
+    "prepare": "husky",
+    "perf:renderers:instance-cost": "node --expose-gc --max-old-space-size=8192 --conditions=@codexo/source --import ./scripts/glsl-register.mjs --import tsx/esm test/perf/rendering/run-instance-cost.ts"
   },
   "license": "MIT",
   "publishConfig": {
