@@ -46,6 +46,9 @@ interface RenderNodeSpriteLike extends Drawable {
 const isDestroyableFilter = (filter: Filter): filter is Filter & DestroyableFilter =>
   'destroy' in filter && typeof (filter as Partial<DestroyableFilter>).destroy === 'function';
 
+/** Shared empty result for every node that has no filter list of its own. */
+const NO_FILTERS: readonly Filter[] = [];
+
 /**
  * Acceptable mask sources for {@link RenderNode.mask}.
  *
@@ -350,16 +353,25 @@ export abstract class RenderNode extends SceneNode {
     return this;
   }
 
-  private readonly _filters: Filter[] = [];
-  private readonly _cacheBounds: Rectangle = new Rectangle();
+  /**
+   * Built on the first filter this node is given. Nodes without filters are the
+   * overwhelming majority in any real scene, and an always-allocated empty array
+   * costs every one of them a heap object for a feature it never uses; reads go
+   * through {@link NO_FILTERS} instead.
+   */
+  private _filters: Filter[] | null = null;
+  /**
+   * The bounds the bitmap cache was captured at — built on the first capture.
+   * A `Rectangle` is four heap objects (itself, its observable position and
+   * size, and the bound change callback), and only `cacheAsBitmap` nodes ever
+   * need one.
+   */
+  private _cacheBounds: Rectangle | null = null;
   private _cacheSprite: RenderNodeSpriteLike | null = null;
   private _captureView: View | null = null;
   /** Lazily built, then reused for every capture this node performs — see {@link _renderContentToTexture}. */
   private _capturePass: BackendTargetPass | null = null;
   private _captureContent: (() => void) | null = null;
-  private readonly _runCaptureContent = (): void => {
-    this._captureContent?.();
-  };
   private _mask: MaskSource = null;
   private _cacheAsBitmap = false;
   private _cacheDirty = true;
@@ -367,12 +379,21 @@ export abstract class RenderNode extends SceneNode {
   private _retainedRoot: RetainedRootRepresentation | null = null;
 
   public get filters(): readonly Filter[] {
-    return this._filters;
+    return this._filters ?? NO_FILTERS;
   }
 
   public set filters(filters: readonly Filter[]) {
-    this._filters.length = 0;
-    this._filters.push(...filters);
+    if (filters.length === 0) {
+      if (this._filters !== null) {
+        this._filters.length = 0;
+      }
+    } else {
+      const own = (this._filters ??= []);
+
+      own.length = 0;
+      own.push(...filters);
+    }
+
     this.invalidateCache();
   }
 
@@ -538,16 +559,16 @@ export abstract class RenderNode extends SceneNode {
   }
 
   public addFilter(filter: Filter): this {
-    this._filters.push(filter);
+    (this._filters ??= []).push(filter);
 
     return this.invalidateCache();
   }
 
   public removeFilter(filter: Filter): this {
-    const index = this._filters.indexOf(filter);
+    const index = this._filters?.indexOf(filter) ?? -1;
 
     if (index !== -1) {
-      this._filters.splice(index, 1);
+      this._filters!.splice(index, 1);
       this.invalidateCache();
     }
 
@@ -559,7 +580,7 @@ export abstract class RenderNode extends SceneNode {
   }
 
   public clearFilters(): this {
-    if (this._filters.length > 0) {
+    if (this._filters !== null && this._filters.length > 0) {
       this._filters.length = 0;
       this.invalidateCache();
     }
@@ -590,7 +611,13 @@ export abstract class RenderNode extends SceneNode {
 
   /** @internal */
   public _renderPlanHasBarrierEffects(): boolean {
-    return this._filters.length > 0 || this._mask !== null || this._cacheAsBitmap || this.clip || isAdvancedBlendMode(this._renderPlanGetBlendMode());
+    return (
+      (this._filters !== null && this._filters.length > 0) ||
+      this._mask !== null ||
+      this._cacheAsBitmap ||
+      this.clip ||
+      isAdvancedBlendMode(this._renderPlanGetBlendMode())
+    );
   }
 
   protected override _escapesTransformGroup(): boolean {
@@ -609,7 +636,7 @@ export abstract class RenderNode extends SceneNode {
 
   /** @internal */
   public _renderPlanGetFilters(): readonly Filter[] {
-    return this._filters;
+    return this._filters ?? NO_FILTERS;
   }
 
   /** @internal */
@@ -619,7 +646,7 @@ export abstract class RenderNode extends SceneNode {
 
   /** @internal */
   public _renderPlanCanReuseBitmapCache(left: number, top: number, width: number, height: number): boolean {
-    if (!this._cacheAsBitmap || this._cacheDirty || this._cacheTexture === null) {
+    if (!this._cacheAsBitmap || this._cacheDirty || this._cacheTexture === null || this._cacheBounds === null) {
       return false;
     }
 
@@ -644,7 +671,7 @@ export abstract class RenderNode extends SceneNode {
   /** @internal */
   public _renderPlanStoreCacheTexture(texture: RenderTexture, left: number, top: number, width: number, height: number): void {
     this._cacheTexture = texture;
-    this._cacheBounds.set(left, top, width, height);
+    (this._cacheBounds ??= new Rectangle()).set(left, top, width, height);
     this._cacheDirty = false;
   }
 
@@ -686,19 +713,24 @@ export abstract class RenderNode extends SceneNode {
       this._retainedRoot = null;
       unregisterRetainedRenderRoot();
     }
-    this._cacheBounds.destroy();
+    this._cacheBounds?.destroy();
+    this._cacheBounds = null;
     this._cacheSprite?.destroy();
     this._cacheSprite = null;
     this._captureView?.destroy();
     this._captureView = null;
 
-    for (const filter of this._filters) {
-      if (isDestroyableFilter(filter)) {
-        filter.destroy();
+    if (this._filters !== null) {
+      for (const filter of this._filters) {
+        if (isDestroyableFilter(filter)) {
+          filter.destroy();
+        }
       }
+
+      this._filters.length = 0;
+      this._filters = null;
     }
 
-    this._filters.length = 0;
     this._mask = null;
 
     if (this._signals !== null) {
@@ -740,7 +772,9 @@ export abstract class RenderNode extends SceneNode {
     // Staging is safe against nesting because the stack is per NODE: a filtered
     // subtree inside another filtered node captures through the inner node's
     // own pass. A node cannot be capturing inside itself.
-    this._capturePass ??= new BackendTargetPass(this._runCaptureContent);
+    // The indirection closure is built with the pass rather than held as a
+    // per-node field: every node paid for it, only capturing nodes use it.
+    this._capturePass ??= new BackendTargetPass(() => this._captureContent?.());
     this._captureContent = renderContent;
 
     try {
