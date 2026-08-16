@@ -34,6 +34,7 @@ import { getWebGpuBlendState } from './WebGpuBlendState';
 import { WebGpuPassArena } from './WebGpuPassArena';
 import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
 import { persistentPremultiplyMaskIndex, persistentUniformBytes, WebGpuPersistentSlotStore } from './WebGpuPersistentSlotStore';
+import { pipelineVariantKey, WebGpuPipelineVariantCache } from './webgpuPipelineCache';
 import {
   retainedGroupUniformBytes,
   type WebGpuRetainedBatchPayload,
@@ -344,7 +345,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   private _instanceData: ArrayBuffer = new ArrayBuffer(0);
   private _instanceFloat32 = new Float32Array(this._instanceData);
   private _instanceUint32 = new Uint32Array(this._instanceData);
-  private readonly _pipelines: Map<string, GPURenderPipeline> = new Map<string, GPURenderPipeline>();
+  private readonly _pipelines = new WebGpuPipelineVariantCache<GPURenderPipeline>();
 
   // Persistent-indexed path. Built on the first source a backend accepts rather
   // than at connect: an application whose roots never reach the tier should not
@@ -370,6 +371,11 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   // because the cached bind groups are built against a different layout.
   private _customTextureSetBindGroups = new WeakMap<Texture | RenderTexture, TextureSetBindGroupEntry[]>();
   private readonly _textureSlots = new Map<Texture | RenderTexture, number>();
+  // Per-call scratch for `_getOrCreateTextureBindGroup`. Grown to the widest
+  // slot capacity ever asked for (the default tier's and the custom path's
+  // differ) and never handed out: cache entries copy out of it.
+  private readonly _resolvedTextures: Array<Texture | RenderTexture> = [];
+  private readonly _resolvedBindings: Array<ReturnType<WebGpuBackend['getTextureBinding']>> = [];
   private _slotCount = 0;
   private _instanceCount = 0;
   // Highest transform-storage row referenced by the pending batch; drives the
@@ -1214,7 +1220,13 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     }
 
     this._uniformHazardPass = active;
-    this._uniformBuffersInPass.clear();
+
+    // Guarded: `Set.clear()` allocates a fresh backing table even when the set
+    // is already empty, and on the default (non-custom-material) path it always
+    // is — this runs once per flush.
+    if (this._uniformBuffersInPass.size > 0) {
+      this._uniformBuffersInPass.clear();
+    }
   }
 
   /**
@@ -1371,8 +1383,12 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     // survives a renderer switch, so any recorded draw is at risk, not just
     // one of ours.
     if (coordinator.passHasDraws) {
-      for (const texture of payload.textures) {
-        if (backend._textureUploadWouldMutate(texture)) {
+      // Indexed: this guard runs once per replayed batch, and the array
+      // iterator is not scalar-replaced here (measured).
+      const batchTextures = payload.textures;
+
+      for (let i = 0; i < batchTextures.length; i++) {
+        if (backend._textureUploadWouldMutate(batchTextures[i]!)) {
           coordinator.endPass();
           this._instanceArena.resetPass();
           break;
@@ -1544,14 +1560,14 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
         // (`:n`) variants are prewarmed; the stencil pipelines are created
         // lazily on the first clipped draw (a rare path not worth the upfront
         // compile cost), matching the mesh and text renderers.
-        const pipelineKey = `${blendMode}:${format}:n`;
+        const pipelineKey = pipelineVariantKey(blendMode, false);
 
-        if (this._pipelines.has(pipelineKey)) {
+        if (this._pipelines.has(format, pipelineKey)) {
           continue;
         }
 
         const promise = device.createRenderPipelineAsync(this._buildPipelineDescriptor(blendMode, format)).then(pipeline => {
-          this._pipelines.set(pipelineKey, pipeline);
+          this._pipelines.set(format, pipelineKey, pipeline);
         });
 
         promises.push(promise);
@@ -1641,11 +1657,21 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
   private _resetSlots(): void {
     if (this._slotCount > 0) {
+      // Deleted key by key rather than `Map.clear()`: V8's `clear` drops the
+      // backing table and allocates a fresh one, and this runs once per flush —
+      // 18 KB/frame on an effect scene that flushes 300 times. The table holds
+      // at most `_maxBatchTextures` entries, so the delete loop is the cheaper
+      // side on both counts.
       for (let i = 0; i < this._slotCount; i++) {
+        const texture = this._activeTextures[i];
+
+        if (texture !== null && texture !== undefined) {
+          this._textureSlots.delete(texture);
+        }
+
         this._activeTextures[i] = null;
       }
 
-      this._textureSlots.clear();
       this._slotCount = 0;
     }
   }
@@ -1675,8 +1701,17 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     const slotCapacity = custom ? spriteMaterialTextureSlots : this._maxBatchTextures;
     const fallbackTexture = textures[0] ?? Texture.empty;
     const fallbackBinding = backend.getTextureBinding(fallbackTexture, samplerOverride);
-    const resolvedTextures = new Array<Texture | RenderTexture>(slotCapacity);
-    const resolvedBindings = new Array<ReturnType<WebGpuBackend['getTextureBinding']>>(slotCapacity);
+    // Reused scratch, not two fresh arrays: this runs once per bound texture
+    // set per draw, and a cache HIT — the steady state — used to allocate both
+    // arrays anyway. They never outlive the call; the cache-miss path below
+    // copies out of them before storing anything.
+    const resolvedTextures = this._resolvedTextures;
+    const resolvedBindings = this._resolvedBindings;
+
+    if (resolvedTextures.length < slotCapacity) {
+      resolvedTextures.length = slotCapacity;
+      resolvedBindings.length = slotCapacity;
+    }
 
     for (let i = 0; i < slotCapacity; i++) {
       const texture = textures[i] ?? fallbackTexture;
@@ -1697,7 +1732,11 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       cache.set(fallbackTexture, entries);
     }
 
-    for (const entry of entries) {
+    // Indexed rather than `for…of`: this loop runs once per draw, and V8 does
+    // not scalar-replace the array iterator here (measured — see the WebGPU
+    // allocation audit).
+    for (let entryIndex = 0; entryIndex < entries.length; entryIndex++) {
+      const entry = entries[entryIndex]!;
       let texturesMatch = true;
 
       for (let i = 0; i < slotCapacity; i++) {
@@ -1724,8 +1763,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       }
 
       if (!bindingsMatch) {
-        entry.views = resolvedBindings.map(binding => binding.view);
-        entry.samplers = resolvedBindings.map(binding => binding.sampler);
+        entry.views = this._copyViews(resolvedBindings, slotCapacity);
+        entry.samplers = this._copySamplers(resolvedBindings, slotCapacity);
         entry.group = this._buildTextureBindGroup(device, resolvedBindings, custom);
       }
 
@@ -1734,10 +1773,13 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
     const group = this._buildTextureBindGroup(device, resolvedBindings, custom);
 
+    // Copied, not stored by reference: `resolvedTextures` is reused scratch and
+    // the entry has to survive the next call. `slice` rather than the whole
+    // array — the scratch may be longer than this flavour's slot capacity.
     entries.push({
-      textures: resolvedTextures,
-      views: resolvedBindings.map(binding => binding.view),
-      samplers: resolvedBindings.map(binding => binding.sampler),
+      textures: resolvedTextures.slice(0, slotCapacity),
+      views: this._copyViews(resolvedBindings, slotCapacity),
+      samplers: this._copySamplers(resolvedBindings, slotCapacity),
       group,
     });
 
@@ -1746,6 +1788,28 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     }
 
     return group;
+  }
+
+  /** Slot-capacity-bounded copy of the resolved views — the scratch may be longer. */
+  private _copyViews(resolvedBindings: ReadonlyArray<ReturnType<WebGpuBackend['getTextureBinding']>>, slotCapacity: number): GPUTextureView[] {
+    const views = new Array<GPUTextureView>(slotCapacity);
+
+    for (let i = 0; i < slotCapacity; i++) {
+      views[i] = resolvedBindings[i]!.view;
+    }
+
+    return views;
+  }
+
+  /** Counterpart of {@link _copyViews} for the samplers. */
+  private _copySamplers(resolvedBindings: ReadonlyArray<ReturnType<WebGpuBackend['getTextureBinding']>>, slotCapacity: number): GPUSampler[] {
+    const samplers = new Array<GPUSampler>(slotCapacity);
+
+    for (let i = 0; i < slotCapacity; i++) {
+      samplers[i] = resolvedBindings[i]!.sampler;
+    }
+
+    return samplers;
   }
 
   private _buildTextureBindGroup(
@@ -1779,8 +1843,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   }
 
   private _getPipeline(blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {
-    const pipelineKey = `${blendMode}:${format}:${stencil ? 's' : 'n'}`;
-    const existingPipeline = this._pipelines.get(pipelineKey);
+    const pipelineKey = pipelineVariantKey(blendMode, stencil);
+    const existingPipeline = this._pipelines.get(format, pipelineKey);
 
     if (existingPipeline) {
       return existingPipeline;
@@ -1792,7 +1856,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
     const pipeline = this._device.createRenderPipeline(this._buildPipelineDescriptor(blendMode, format, stencil));
 
-    this._pipelines.set(pipelineKey, pipeline);
+    this._pipelines.set(format, pipelineKey, pipeline);
 
     return pipeline;
   }

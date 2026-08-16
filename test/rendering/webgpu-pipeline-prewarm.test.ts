@@ -12,8 +12,10 @@
  *
  * These tests run the real prewarm against a stub device, then perform the
  * real lookup for every prewarmed combination and require ZERO synchronous
- * pipeline creations. A second sweep asserts no unreachable (suffix-less)
- * keys remain in any cache.
+ * pipeline creations. A second sweep asserts no unreachable (suffix-less) keys
+ * remain in the caches that are still keyed by a built string. The sprite
+ * renderer's cache no longer is — it keys on `(format, packed variant)` — so
+ * its second test asserts the same property behaviourally instead.
  */
 
 import { BlendModes } from '#rendering/types';
@@ -76,7 +78,7 @@ afterAll(() => {
 });
 
 describe('WebGpuSpriteRenderer pipeline prewarm', () => {
-  const setup = (): { renderer: WebGpuSpriteRenderer; stub: StubDevice; pipelines: Map<string, GPURenderPipeline> } => {
+  const setup = (): { renderer: WebGpuSpriteRenderer; stub: StubDevice } => {
     const renderer = new WebGpuSpriteRenderer();
     const stub = createStubDevice();
     const internals = renderer as unknown as {
@@ -84,7 +86,6 @@ describe('WebGpuSpriteRenderer pipeline prewarm', () => {
       _shaderModule: unknown;
       _pipelineLayout: unknown;
       _backend: unknown;
-      _pipelines: Map<string, GPURenderPipeline>;
     };
 
     internals._device = stub.device;
@@ -92,7 +93,7 @@ describe('WebGpuSpriteRenderer pipeline prewarm', () => {
     internals._pipelineLayout = {};
     internals._backend = {};
 
-    return { renderer, stub, pipelines: internals._pipelines };
+    return { renderer, stub };
   };
 
   test('prewarmed pipelines are found by the hot-path lookup (no synchronous compiles)', async () => {
@@ -111,16 +112,30 @@ describe('WebGpuSpriteRenderer pipeline prewarm', () => {
     expect(stub.syncCreates()).toBe(0);
   });
 
-  test('the pipeline cache holds no unreachable (suffix-less) keys after prewarm', async () => {
-    const { renderer, pipelines } = setup();
+  // The sprite cache is keyed structurally (format, then a packed
+  // blend-mode/stencil variant) rather than by a built string, so there is no
+  // key spelling left to assert. The property the string check stood for is
+  // asserted behaviourally instead, and more strictly: the prewarmed set is hit
+  // without a synchronous compile, and the set outside it still compiles — so a
+  // prewarm that filled the wrong variants would fail on one side or the other.
+  test('prewarm fills exactly the non-stencil variants, and the stencil ones stay lazy', async () => {
+    const { renderer, stub } = setup();
 
     await renderer.prewarmPipelines(formats);
 
-    expect(pipelines.size).toBe(prewarmedBlendModes.length * formats.length);
+    const lookup = renderer as unknown as { _getPipeline(blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline };
 
-    for (const key of pipelines.keys()) {
-      expect(key).toMatch(lookupKeyPattern);
+    for (const blendMode of prewarmedBlendModes) {
+      for (const format of formats) {
+        lookup._getPipeline(blendMode, format, false);
+      }
     }
+
+    expect(stub.syncCreates()).toBe(0);
+
+    lookup._getPipeline(BlendModes.Normal, formats[0]!, true);
+
+    expect(stub.syncCreates()).toBe(1);
   });
 });
 

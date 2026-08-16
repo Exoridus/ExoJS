@@ -97,6 +97,15 @@ interface ManagedWebGpuTextureState {
    * usual shape — allocation-free.
    */
   contiguousUploadView: Float32Array | Uint8Array | null;
+  /**
+   * The `(view, sampler)` pair `getTextureBinding` hands out for this texture
+   * when no material sampler override is in play. Owned by the state and
+   * refreshed in place rather than minted per call: the renderers resolve one
+   * binding per bound texture per draw, so a fresh two-field literal there was
+   * the last per-draw allocation left in the sprite path — ~20 KB/frame on a
+   * 1000-flush frame.
+   */
+  binding: { view: GPUTextureView; sampler: GPUSampler };
 }
 
 interface PixelClipBoundsState {
@@ -1150,10 +1159,22 @@ export class WebGpuBackend implements RenderBackend {
   } {
     const state = this._syncTexture(texture);
 
-    return {
-      view: state.view,
-      sampler: samplerOverride === null ? state.sampler : this._getMaterialSampler(texture, samplerOverride),
-    };
+    if (samplerOverride !== null) {
+      // Material overrides are a custom-material path and rare enough that a
+      // fresh record costs nothing measurable; giving them the state's own
+      // record would mean the default path and an override path could not be
+      // resolved in the same batch.
+      return { view: state.view, sampler: this._getMaterialSampler(texture, samplerOverride) };
+    }
+
+    // Refreshed in place: `_syncTexture` may have replaced the GPU texture (and
+    // therefore the view/sampler) on this very call.
+    const binding = state.binding;
+
+    binding.view = state.view;
+    binding.sampler = state.sampler;
+
+    return binding;
   }
 
   /**
@@ -2252,10 +2273,13 @@ export class WebGpuBackend implements RenderBackend {
 
       const mipLevelCount = this._getMipLevelCount(texture);
 
+      const view = gpuTexture.createView();
+      const sampler = this._createSampler(texture);
+
       state = {
         texture: gpuTexture,
-        view: gpuTexture.createView(),
-        sampler: this._createSampler(texture),
+        view,
+        sampler,
         version: -1,
         width: texture.width,
         height: texture.height,
@@ -2265,6 +2289,7 @@ export class WebGpuBackend implements RenderBackend {
         partialUploadScratch: null,
         partialUploadView: null,
         contiguousUploadView: null,
+        binding: { view, sampler },
       };
 
       state.accountedBytes = this._accountant.reallocate(0, this._estimateTextureBytes(texture, mipLevelCount));
