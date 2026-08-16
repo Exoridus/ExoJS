@@ -467,6 +467,12 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   private _indexBufferCapacity = 0;
   private _uniformBufferCapacity = 0;
   private _vertexData: ArrayBuffer = new ArrayBuffer(0);
+  /** Reused per-flush staging for the default path's uniform slots — see `flush`. */
+  private _defaultUniformStaging: ArrayBuffer = new ArrayBuffer(0);
+  private _defaultUniformStagingF32: Float32Array = new Float32Array(0);
+  /** Reused per-flush cursors for the custom-material paths — see `flush`. */
+  private readonly _customVertexCursors = new Map<Material, number>();
+  private readonly _customIndexCursors = new Map<Material, number>();
   private _float32View: Float32Array = new Float32Array(this._vertexData);
   private _uint32View: Uint32Array = new Uint32Array(this._vertexData);
   private _packedIndexData: Uint16Array = new Uint16Array(0);
@@ -778,8 +784,16 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // whole pass.
     let defaultVertices = 0;
     let defaultIndices = 0;
-    const customVertexCursors = new Map<Material, number>(); // running vertex count per material
-    const customIndexCursors = new Map<Material, number>();
+    // Reused, and cleared rather than rebuilt: a frame with no custom-material
+    // mesh never touches them, and rebuilding two Maps per flush is pure churn
+    // in a scene that flushes often.
+    const customVertexCursors = this._customVertexCursors; // running vertex count per material
+    const customIndexCursors = this._customIndexCursors;
+
+    if (customVertexCursors.size > 0) {
+      customVertexCursors.clear();
+      customIndexCursors.clear();
+    }
 
     for (let i = 0; i < this._drawCallCount; i++) {
       const dc = this._drawCalls[i] as { -readonly [K in keyof MeshDrawCall]: MeshDrawCall[K] };
@@ -865,8 +879,15 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
     // Phase 3: pack default-path vertex/index/uniform data.
     const defaultUniformBytes = defaultDrawCalls * this._uniformAlignment;
-    const defaultUniformData = defaultUniformBytes > 0 ? new ArrayBuffer(defaultUniformBytes) : null;
-    const defaultUniformF32 = defaultUniformData !== null ? new Float32Array(defaultUniformData) : null;
+    // Grown on demand and reused, like `_vertexData` / `_packedIndexData`
+    // beside it. A fresh buffer per flush is 256 bytes PER DRAW CALL of malloc
+    // and zero-fill — 256 KB every frame at a thousand meshes — and the bytes
+    // are dead the moment `writeBuffer` has copied them. Only the first
+    // `defaultUniformBytes` are uploaded, and every uploaded slot is fully
+    // written by the loop below, so stale contents beyond a slot's 32 declared
+    // bytes are padding no shader reads.
+    const defaultUniformData = defaultUniformBytes > 0 ? this._acquireDefaultUniformStaging(defaultUniformBytes) : null;
+    const defaultUniformF32 = defaultUniformData !== null ? this._defaultUniformStagingF32 : null;
 
     let defaultUniformIndex = 0;
 
@@ -1401,14 +1422,31 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
         matrix.combine(groupTransform);
       }
 
-      matrix.combine(backend.view.getTransform());
+      // The view is post-multiplied straight into the six affine components the
+      // bake needs, instead of through `matrix.combine(view)`. Writing the
+      // product back into the scratch matrix costs ~47 bytes per call in a
+      // browser V8 — nine double field stores — and this runs once per mesh, so
+      // it was 47 KB/frame at a thousand meshes, a third of that frame's total
+      // allocation. The projective row (`e`/`f`/`z`) is not read by the loop
+      // below, so nothing else needs the product. Same formula as
+      // {@link Matrix.combine}; keep the two in step.
+      const view = backend.view.getTransform();
+      const ma = matrix.a;
+      const mb = matrix.b;
+      const mx = matrix.x;
+      const mc = matrix.c;
+      const md = matrix.d;
+      const my = matrix.y;
+      const me = matrix.e;
+      const mf = matrix.f;
+      const mz = matrix.z;
 
-      const a = matrix.a;
-      const b = matrix.b;
-      const c = matrix.c;
-      const d = matrix.d;
-      const tx = matrix.x;
-      const ty = matrix.y;
+      const a = ma * view.a + mc * view.b + me * view.x;
+      const b = mb * view.a + md * view.b + mf * view.x;
+      const tx = mx * view.a + my * view.b + mz * view.x;
+      const c = ma * view.c + mc * view.d + me * view.y;
+      const d = mb * view.c + md * view.d + mf * view.y;
+      const ty = mx * view.c + my * view.d + mz * view.y;
 
       // vertices/uvs/colors are sized to vertexCount (×2 for the vec2 attrs);
       // sourceIndex/i stay within bounds for the whole loop.
@@ -2357,6 +2395,16 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   // ---------------------------------------------------------------------------
   // Custom-path helpers
   // ---------------------------------------------------------------------------
+
+  /** Grow-only staging for the default path's uniform block. Never shrinks. */
+  private _acquireDefaultUniformStaging(bytes: number): ArrayBuffer {
+    if (this._defaultUniformStaging.byteLength < bytes) {
+      this._defaultUniformStaging = new ArrayBuffer(bytes);
+      this._defaultUniformStagingF32 = new Float32Array(this._defaultUniformStaging);
+    }
+
+    return this._defaultUniformStaging;
+  }
 
   private _totalCustomDraws(): number {
     let total = 0;
