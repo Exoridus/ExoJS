@@ -8,6 +8,7 @@
     "bench:setup": "pnpm install --dir competitors --ignore-workspace && node competitors/link.mjs",
     "bench": "node --conditions=@codexo/source --import ../../scripts/glsl-register.mjs --import tsx/esm src/run.ts",
     "perf:baseline": "node --conditions=@codexo/source --import ../../scripts/glsl-register.mjs --import tsx/esm src/run.ts",
+    "timer": "node --conditions=@codexo/source --import ../../scripts/glsl-register.mjs --import tsx/esm src/runTimerProbe.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
     "test": "vitest run --root ../.. --project=exojs-bench"

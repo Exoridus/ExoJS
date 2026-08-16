@@ -1,3 +1,8 @@
+// Side-effect import: installs `globalThis.__runTimerProbe` for the frame-timer
+// methodology driver. It shares this page (and therefore the same Vite graph and
+// engine module instances) but never runs during a matrix cell.
+import './timerProbe';
+
 import { mutationSignature, selectMutationIndices } from '../../shared/mutation';
 import { createCpuTimer, median, percentile, shouldAbort } from '../../shared/timing';
 import { createExoJsAdapter } from '../adapters/exojs';

@@ -166,7 +166,8 @@
     "size": "size-limit",
     "prepare": "husky",
     "perf:renderers:instance-cost": "node --expose-gc --max-old-space-size=8192 --conditions=@codexo/source --import ./scripts/glsl-register.mjs --import tsx/esm test/perf/rendering/run-instance-cost.ts",
-    "perf:webgpu:alloc": "tsx test/perf/webgpu/run-webgpu-allocation.ts"
+    "perf:webgpu:alloc": "tsx test/perf/webgpu/run-webgpu-allocation.ts",
+    "perf:webgpu:timer": "pnpm --filter @codexo/exojs-bench timer"
   },
   "license": "MIT",
   "publishConfig": {
