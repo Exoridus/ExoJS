@@ -49,9 +49,22 @@ export class Sprite extends Drawable {
   private _texture: Texture | RenderTexture | null = null;
   private _textureFrame: Rectangle = new Rectangle();
   private _material: SpriteMaterial | null = null;
-  private _vertices: Float32Array = new Float32Array(8);
-  private _texCoords: Uint32Array = new Uint32Array(4);
-  private readonly _normals: [Vector, Vector, Vector, Vector] = [new Vector(), new Vector(), new Vector(), new Vector()];
+  /**
+   * Quad corner cache, built on the first {@link vertices} read. Nothing on the
+   * render path reads it — the renderers pack their own quad through
+   * {@link _packSourceQuad} — so only collision queries and direct API readers
+   * pay for it. An eight-element Float32Array costs ~248 retained bytes: the
+   * view, its buffer, and the backing store.
+   */
+  private _vertices: Float32Array | null = null;
+  /** Packed UV cache, built on the first {@link texCoords} read. Same reasoning as {@link _vertices}. */
+  private _texCoords: Uint32Array | null = null;
+  /**
+   * Built on the first {@link getNormals} call. Five heap objects (the tuple and
+   * its four vectors) that only the SAT collision path ever reads, so a sprite
+   * that is merely drawn never pays for them.
+   */
+  private _normals: [Vector, Vector, Vector, Vector] | null = null;
   // World-transform version the cached vertices/normals were last built at.
   // The Vertices/Normals flags cover local changes (texture frame, own
   // transform); this version compare additionally catches an ancestor moving
@@ -179,28 +192,29 @@ export class Sprite extends Drawable {
     // Settle the world transform first: its version reflects any ancestor move,
     // which the lazy cascade no longer eagerly flags on this sprite.
     const transform = this.getGlobalTransform();
+    const vertices = (this._vertices ??= new Float32Array(8));
 
     if (this.flags.hasMask(SpriteFlags.Vertices) || this._verticesBuiltAtVersion !== this._globalTransformVersion) {
       const { left, top, right, bottom } = this.getLocalBounds();
       const { a, b, x, c, d, y } = transform;
 
-      this._vertices[0] = left * a + top * b + x;
-      this._vertices[1] = left * c + top * d + y;
+      vertices[0] = left * a + top * b + x;
+      vertices[1] = left * c + top * d + y;
 
-      this._vertices[2] = right * a + top * b + x;
-      this._vertices[3] = right * c + top * d + y;
+      vertices[2] = right * a + top * b + x;
+      vertices[3] = right * c + top * d + y;
 
-      this._vertices[4] = right * a + bottom * b + x;
-      this._vertices[5] = right * c + bottom * d + y;
+      vertices[4] = right * a + bottom * b + x;
+      vertices[5] = right * c + bottom * d + y;
 
-      this._vertices[6] = left * a + bottom * b + x;
-      this._vertices[7] = left * c + bottom * d + y;
+      vertices[6] = left * a + bottom * b + x;
+      vertices[7] = left * c + bottom * d + y;
 
       this.flags.removeMask(SpriteFlags.Vertices);
       this._verticesBuiltAtVersion = this._globalTransformVersion;
     }
 
-    return this._vertices;
+    return vertices;
   }
 
   /**
@@ -214,6 +228,8 @@ export class Sprite extends Drawable {
       throw new Error('texCoords can only be calculated when the sprite has a texture');
     }
 
+    const coords = (this._texCoords ??= new Uint32Array(4));
+
     if (this.flags.popMask(SpriteFlags.TextureCoords)) {
       const { width, height } = this._texture;
       const { left, top, right, bottom } = this._textureFrame;
@@ -223,19 +239,19 @@ export class Sprite extends Drawable {
       const maxY = (((bottom / height) * 65535) & 65535) << 16;
 
       if (this._texture.flipY) {
-        this._texCoords[0] = maxY | minX;
-        this._texCoords[1] = maxY | maxX;
-        this._texCoords[2] = minY | maxX;
-        this._texCoords[3] = minY | minX;
+        coords[0] = maxY | minX;
+        coords[1] = maxY | maxX;
+        coords[2] = minY | maxX;
+        coords[3] = minY | minX;
       } else {
-        this._texCoords[0] = minY | minX;
-        this._texCoords[1] = minY | maxX;
-        this._texCoords[2] = maxY | maxX;
-        this._texCoords[3] = maxY | minX;
+        coords[0] = minY | minX;
+        coords[1] = minY | maxX;
+        coords[2] = maxY | maxX;
+        coords[3] = maxY | minX;
       }
     }
 
-    return this._texCoords;
+    return coords;
   }
 
   /**
@@ -378,6 +394,7 @@ export class Sprite extends Drawable {
     // sees the up-to-date value.
     // vertices is a fixed 8-element Float32Array (4 corners).
     const v = this.vertices;
+    const normals = (this._normals ??= [new Vector(), new Vector(), new Vector(), new Vector()]);
 
     if (this.flags.hasMask(SpriteFlags.Normals) || this._normalsBuiltAtVersion !== this._globalTransformVersion) {
       const x1 = v[0]!;
@@ -389,19 +406,19 @@ export class Sprite extends Drawable {
       const x4 = v[6]!;
       const y4 = v[7]!;
 
-      this._normals[0]
+      normals[0]
         .set(x2 - x1, y2 - y1)
         .rperp()
         .normalize();
-      this._normals[1]
+      normals[1]
         .set(x3 - x2, y3 - y2)
         .rperp()
         .normalize();
-      this._normals[2]
+      normals[2]
         .set(x4 - x3, y4 - y3)
         .rperp()
         .normalize();
-      this._normals[3]
+      normals[3]
         .set(x1 - x4, y1 - y4)
         .rperp()
         .normalize();
@@ -410,7 +427,7 @@ export class Sprite extends Drawable {
       this._normalsBuiltAtVersion = this._globalTransformVersion;
     }
 
-    return this._normals;
+    return normals;
   }
 
   /**
@@ -484,8 +501,12 @@ export class Sprite extends Drawable {
   public override destroy(): void {
     super.destroy();
 
-    for (const normal of this._normals) {
-      normal.destroy();
+    if (this._normals !== null) {
+      for (const normal of this._normals) {
+        normal.destroy();
+      }
+
+      this._normals = null;
     }
 
     this._textureFrame.destroy();
