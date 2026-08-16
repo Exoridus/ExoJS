@@ -5,6 +5,7 @@ import { playwright } from '@vitest/browser-playwright';
 import { webdriverio } from '@vitest/browser-webdriverio';
 import { defineConfig } from 'vitest/config';
 
+import { emitAllocationRecord, startHeapSampling, stopHeapSampling } from './test/perf/webgpu/heapSamplingCommands';
 import { resetParityEvidence, writeParityEvidence } from './test/rendering/parity/evidenceSink';
 
 // Note: Vite alias matching uses longest-first order. Subpath aliases must come
@@ -99,6 +100,10 @@ const renderingBrowserSetupFiles = [...browserSetupFiles, './test/rendering/brow
 // its evidence rows to these node-side commands.
 const parityCommands = { writeParityEvidence, resetParityEvidence };
 
+// The WebGPU allocation cell runs in the page; V8's allocation sampler is
+// reachable only over CDP, which lives on the node side. See the command module.
+const allocationCommands = { startHeapSampling, stopHeapSampling, emitAllocationRecord };
+
 export default defineConfig({
   test: {
     coverage: {
@@ -148,8 +153,15 @@ export default defineConfig({
         alias: aliasConfig,
         include: ['test/**/*.test.ts'],
         // The parity matrix runs in `browser-webgpu`: its runner imports the
-        // browser context module, which throws on import under jsdom.
-        exclude: ['test/rendering/browser/**/*.test.ts', 'test/rendering/parity/**/*.test.ts', 'test/perf/rendering/**/*.test.ts'],
+        // browser context module, which throws on import under jsdom. The
+        // WebGPU allocation cell is the same story one project further down
+        // (`browser-webgpu-alloc`) — it needs a real adapter and a CDP session.
+        exclude: [
+          'test/rendering/browser/**/*.test.ts',
+          'test/rendering/parity/**/*.test.ts',
+          'test/perf/rendering/**/*.test.ts',
+          'test/perf/webgpu/**/*.test.ts',
+        ],
         // `_particleGlslMocks` un-stubs the particle package's GLSL: the WebGPU
         // backend suite drives the particle renderer against a mock device, and
         // its render mode's `Material` carries both languages, so the stub's
@@ -355,6 +367,59 @@ export default defineConfig({
           browser: {
             enabled: true,
             commands: parityCommands,
+            headless: !webgpuCiHeaded,
+            provider: playwright({
+              launchOptions: {
+                channel: 'chromium',
+                args: [
+                  '--enable-unsafe-webgpu',
+                  '--enable-features=Vulkan',
+                  '--disable-vulkan-surface',
+                  '--ignore-gpu-blocklist',
+                  '--no-sandbox',
+                  '--disable-gpu-watchdog',
+                  '--disable-gpu-driver-bug-workarounds',
+                ],
+              },
+            }),
+            instances: [{ browser: 'chromium' }],
+          },
+        },
+      },
+
+      // ── browser-webgpu-alloc — the WebGPU allocation audit harness ───────
+      // Never part of `pnpm test`: it is driven one scene per invocation by
+      // `test/perf/webgpu/run-webgpu-allocation.ts`, because a steady-state
+      // allocation number is only a source of truth when nothing else rendered
+      // in the same process first (the lesson `scrolling-world/10000` records in
+      // `allocationScenes.ts`). The scene and the window shape arrive as
+      // build-time defines rather than as test names so the run stays a single
+      // test with a single browser.
+      //
+      // Same launch recipe as `browser-webgpu` on purpose — a measurement lane
+      // that configured the adapter differently from the lane that proves
+      // correctness would be measuring a renderer nobody ships.
+      {
+        ...browserBase,
+        define: {
+          ...browserBase.define,
+          __EXOJS_ALLOC_ID__: JSON.stringify(process.env['EXOJS_ALLOC_ID'] ?? ''),
+          __EXOJS_ALLOC_MODE__: JSON.stringify(process.env['EXOJS_ALLOC_MODE'] ?? 'alloc'),
+          __EXOJS_ALLOC_FRAMES__: JSON.stringify(Number(process.env['EXOJS_ALLOC_FRAMES'] ?? 200)),
+          __EXOJS_ALLOC_WARMUP__: JSON.stringify(Number(process.env['EXOJS_ALLOC_WARMUP'] ?? 0)),
+          __EXOJS_ALLOC_TOP__: JSON.stringify(Number(process.env['EXOJS_ALLOC_TOP'] ?? 0)),
+          __EXOJS_ALLOC_REPEATS__: JSON.stringify(Number(process.env['EXOJS_ALLOC_REPEATS'] ?? 1)),
+        },
+        test: {
+          name: 'browser-webgpu-alloc',
+          globals: true,
+          setupFiles: renderingBrowserSetupFiles,
+          include: ['test/perf/webgpu/webgpu-allocation-cell.test.ts'],
+          testTimeout: 600_000,
+          hookTimeout: 600_000,
+          browser: {
+            enabled: true,
+            commands: allocationCommands,
             headless: !webgpuCiHeaded,
             provider: playwright({
               launchOptions: {

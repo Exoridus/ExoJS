@@ -165,7 +165,8 @@
     "perf:profile:gc": "node --expose-gc --import tsx/esm test/perf/profile-benchmark.ts",
     "size": "size-limit",
     "prepare": "husky",
-    "perf:renderers:instance-cost": "node --expose-gc --max-old-space-size=8192 --conditions=@codexo/source --import ./scripts/glsl-register.mjs --import tsx/esm test/perf/rendering/run-instance-cost.ts"
+    "perf:renderers:instance-cost": "node --expose-gc --max-old-space-size=8192 --conditions=@codexo/source --import ./scripts/glsl-register.mjs --import tsx/esm test/perf/rendering/run-instance-cost.ts",
+    "perf:webgpu:alloc": "tsx test/perf/webgpu/run-webgpu-allocation.ts"
   },
   "license": "MIT",
   "publishConfig": {
