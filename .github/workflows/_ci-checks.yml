@@ -257,6 +257,15 @@ jobs:
       - name: Test (with coverage)
         run: pnpm test:coverage --reporter=default --reporter=junit --outputFile.junit=./test-results/unit.junit.xml
 
+      # Deliberately OUTSIDE the coverage run. Istanbul rewrites every statement
+      # and V8 then stops scalar-replacing what it otherwise would, so the
+      # allocation gate measures the instrumentation instead of the engine —
+      # `mesh/1000` reads 71 KB/frame instrumented against 0.65 KB/frame plain.
+      # No junit reporter here: the skip-budget check above reads the file the
+      # coverage run wrote, and a second writer would replace it.
+      - name: Allocation gate (no coverage instrumentation)
+        run: pnpm test:alloc
+
       # A skipped test is neither a pass nor a failure, so it vanishes from the
       # summary. This reads the report the step above just wrote and fails on any
       # skip without a recorded budget — the shape every silent-skip defect here

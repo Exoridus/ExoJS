@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { RenderPlanPlayer } from '#rendering/plan/RenderPlanPlayer';
+
 import { measureFrameAllocation } from './allocation';
 import type { AllocationArchetype } from './allocationScenes';
 import { ALLOCATION_ARCHETYPES } from './allocationScenes';
@@ -11,6 +13,9 @@ import { createWebGl2Harness } from './harness';
  * Samples the per-frame allocation RATE (throwaway garbage, not retained heap)
  * on the archetype catalog in `allocationScenes.ts` via the V8 allocation
  * sampling profiler (see `allocation.ts`).
+ *
+ * Lives in its own `rendering-alloc` vitest project and runs via
+ * `pnpm test:alloc` — NOT in `test:coverage`. See {@link INSTRUMENTED}.
  *
  * ── Methodology ─────────────────────────────────────────────────
  * The sampler is a STATISTICAL profiler (Poisson, one sample per 512 B), so a
@@ -41,7 +46,7 @@ import { createWebGl2Harness } from './harness';
  * Every gate logs a `[alloc]` line with the live median, the budget, the
  * environment, and the raw per-window samples. To re-measure, run
  *
- *   npx vitest run --project=rendering-perf test/perf/rendering/allocation.test.ts --disableConsoleIntercept
+ *   pnpm test:alloc --disableConsoleIntercept
  *
  * and read the medians off those lines. Update {@link BASELINE_KB} only when a
  * slice DELIBERATELY changes allocation, and record the reason next to the
@@ -71,9 +76,10 @@ const NOISE_FLOOR_KB = 50;
 /**
  * Budget band for scenes above {@link NOISE_FLOOR_KB}. Measured pass-to-pass
  * median spread on those scenes is ≤0.4% (see the table on {@link BASELINE_KB}),
- * so nearly the whole 15% is headroom for cross-machine drift — historically up
- * to ~8% between this dev box (Windows) and the Linux CI runner on the mesh
- * scene — and a real ≥15% allocation regression still fails the gate.
+ * so nearly the whole 15% is headroom for cross-machine drift. `filtered/100` is
+ * the only scene left above the floor, and it reads 329.89 KB/frame on the CI
+ * runner (Node v24.19.0 linux/x64) against 306.55 in-suite here — +7.6%, half
+ * the band — while a real ≥15% allocation regression still fails the gate.
  */
 const TOLERANCE_LARGE = 1.15;
 
@@ -85,8 +91,12 @@ const TOLERANCE_LARGE = 1.15;
  * TOLERATE: the widest fresh-process spread measured over five processes is
  * 0.13 KB/frame (`deep-hierarchy`), and the widest in-suite pass-to-pass median
  * spread is 0.21 KB — an order of magnitude below this, which is the margin the
- * platform floor itself needs (the CI runner's Node/OS pair moves the sampler's
- * baseline, and since it moves `empty` too, it moves every scene together).
+ * platform floor itself needs. Measured across the two platforms that run this
+ * gate, the floor moves together: the CI runner (Node v24.19.0 linux/x64) reads
+ * `empty` 0.96 / `static` 1.03 / `nested` 0.59 against 0.99 / 1.07 / 0.65 here,
+ * every scene inside the headroom. What does NOT move together is
+ * instrumentation — see {@link INSTRUMENTED}, and do not mistake one for the
+ * other.
  * CATCH: a regression in a retained frame arrives per node, per batch or per
  * scope, so it lands as a multiple of these baselines, not a percentage — one
  * 32-byte object per sprite is +32 KB/frame in `sprite/1000 static` against a
@@ -186,6 +196,23 @@ const median = (values: readonly number[]): number => {
 const MEASURE_ONLY = process.env['EXOJS_ALLOC_MEASURE'] === '1';
 
 /**
+ * Whether the engine source this suite measures has been rewritten by Istanbul.
+ *
+ * Read off a `src` function's own text rather than a global, because that is the
+ * thing that actually matters: coverage instrumentation only distorts the
+ * numbers for the files it rewrote, and `src/**` is what the include list
+ * covers. A counter probe per statement is not the problem — losing V8's escape
+ * analysis is. Instrumented, the plan walk stops scalar-replacing what it
+ * otherwise would and `mesh/1000` reads 71 KB/frame against 0.65 plain, on one
+ * machine with one Node build. Every baseline in {@link BASELINE_KB} is a plain
+ * number, so an instrumented run compares two different programs.
+ *
+ * This is why the gate lives in its own `rendering-alloc` vitest project and
+ * runs via `pnpm test:alloc`, outside `test:coverage`.
+ */
+const INSTRUMENTED = /\bcov_[0-9a-z]+\b/u.test(String(RenderPlanPlayer.play));
+
+/**
  * Budget in bytes/frame for an archetype: a relative band above the noise
  * floor, a fixed absolute headroom below it. `empty` is no longer special —
  * with every retained scene sitting at the harness floor, the floor sanity and
@@ -220,6 +247,19 @@ const measureMedianAllocation = async (archetype: AllocationArchetype): Promise<
 };
 
 describe('render-plan allocation gate', () => {
+  // Fails rather than skips: a silent skip is how this gate would come back
+  // green-but-blind if the suite were ever folded back into `test:coverage`.
+  it('measures uninstrumented engine source (guards the coverage split)', () => {
+    if (INSTRUMENTED) {
+      console.error(
+        '[alloc] INSTRUMENTED SOURCE — this suite was run under coverage instrumentation, which invalidates every ' +
+          'baseline in BASELINE_KB. Run it via `pnpm test:alloc` (project `rendering-alloc`), not `pnpm test:coverage`.',
+      );
+    }
+
+    expect(INSTRUMENTED).toBe(false);
+  });
+
   it('sampler counts dead garbage (guards the GC-inclusion flags)', async () => {
     const harness = createWebGl2Harness();
     const { root } = buildSpriteScene({ count: 0, textures: makeTextures(1) });
