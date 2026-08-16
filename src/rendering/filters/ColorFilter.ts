@@ -18,6 +18,8 @@ import { Filter } from './Filter';
 export class ColorFilter extends Filter {
   private readonly _color: Color;
   private readonly _sprite: Sprite = new Sprite(null);
+  /** One redirect pass, re-pointed per application — see {@link BackendTargetPass.reconfigure}. */
+  private readonly _pass: BackendTargetPass = new BackendTargetPass(backend => drawDrawableDirect(this._sprite, backend));
 
   public constructor(color: Color = Color.white) {
     super();
@@ -35,18 +37,7 @@ export class ColorFilter extends Filter {
     this._sprite.width = output.width;
     this._sprite.height = output.height;
 
-    backend.execute(
-      new BackendTargetPass(
-        () => {
-          drawDrawableDirect(this._sprite, backend);
-        },
-        {
-          target: output,
-          view: output.view,
-          clearColor: Color.transparentBlack,
-        },
-      ),
-    );
+    backend.execute(this._pass.retarget(output, output.view, Color.transparentBlack));
   }
 
   public override destroy(): void {

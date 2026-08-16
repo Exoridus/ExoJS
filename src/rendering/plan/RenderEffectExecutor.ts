@@ -7,20 +7,130 @@ import { Texture } from '#rendering/texture/Texture';
 
 import { type BarrierScope, ClipKind, type GroupScope } from './RenderScope';
 
+/**
+ * One barrier's in-flight state, held on a depth-indexed stack.
+ *
+ * The clip / rect-clip / mask chain is continuation-passing — each layer wraps
+ * the next and the innermost body does the actual work — and written the
+ * obvious way that means a fresh closure per layer per barrier per frame, plus
+ * the enclosing function's context. On a hundred filtered nodes that was the
+ * single largest steady-state allocation left in the effect path.
+ *
+ * Staging the state here instead lets every body be a static function allocated
+ * once. Barriers nest (a filtered node inside a filtered container), hence a
+ * stack rather than a single slot; the frames are reused across frames and
+ * across barriers, so the stack only ever grows to the deepest nesting the
+ * scene reaches.
+ */
+interface EffectFrame {
+  barrier: BarrierScope | null;
+  backend: RenderBackend | null;
+  playScope: ((scope: GroupScope) => void) | null;
+  /** Set on the `cacheAsBitmap` replay path — the baked texture to composite. */
+  cachedTexture: RenderTexture | null;
+  /** Set on the full path — the filter chain's output, or the capture when there are no filters. */
+  finalTexture: RenderTexture | null;
+  /**
+   * Set while resolving a NODE mask into its own target. Narrower than
+   * {@link MaskSource}: the texture-backed sources need no render pass, so only
+   * a node ever reaches the body that reads this.
+   */
+  maskSource: RenderNode | null;
+}
+
+const createFrame = (): EffectFrame => ({
+  barrier: null,
+  backend: null,
+  playScope: null,
+  cachedTexture: null,
+  finalTexture: null,
+  maskSource: null,
+});
+
 /** @internal */
 export class RenderEffectExecutor {
+  private static readonly _frames: EffectFrame[] = [];
+  private static _depth = 0;
+
+  /** The frame the currently executing body belongs to. */
+  private static _current(): EffectFrame {
+    // In range: bodies only run between a push and its matching pop.
+    return RenderEffectExecutor._frames[RenderEffectExecutor._depth - 1]!;
+  }
+
+  /** Body: play the barrier's child plan. Used by the effect-less and capture paths. */
+  private static readonly _playChildPlan = (): void => {
+    const frame = RenderEffectExecutor._current();
+
+    if (frame.barrier!.childPlan !== null) {
+      frame.playScope!(frame.barrier!.childPlan);
+    }
+  };
+
+  /** Body: draw the `cacheAsBitmap` texture straight back into the enclosing target. */
+  private static readonly _drawCachedTexture = (): void => {
+    const frame = RenderEffectExecutor._current();
+    const { barrier, backend, cachedTexture } = frame;
+
+    barrier!.node._renderPlanDrawTexture(backend!, cachedTexture!, barrier!.left, barrier!.top, barrier!.width, barrier!.height, barrier!.effect.blendMode);
+  };
+
+  /** Body: composite the filter chain's output back into the enclosing target. */
+  private static readonly _compositeFinalTexture = (): void => {
+    const frame = RenderEffectExecutor._current();
+    const { barrier, backend, finalTexture } = frame;
+    const { left, top, width, height, effect } = barrier!;
+
+    if (effect.needsBackdropBlend) {
+      backend!.composeWithBackdropBlend(finalTexture!, left, top, width, height, effect.blendMode);
+    } else {
+      barrier!.node._renderPlanDrawTexture(backend!, finalTexture!, left, top, width, height, effect.blendMode);
+    }
+  };
+
+  /** Body: render a node mask's own subtree into the mask target. */
+  private static readonly _renderMaskSource = (): void => {
+    const frame = RenderEffectExecutor._current();
+
+    frame.maskSource!.render(frame.backend!);
+  };
+
   public static play(barrier: BarrierScope, backend: RenderBackend, playScope: (scope: GroupScope) => void): void {
+    const depth = RenderEffectExecutor._depth;
+    const frame = (RenderEffectExecutor._frames[depth] ??= createFrame());
+
+    frame.barrier = barrier;
+    frame.backend = backend;
+    frame.playScope = playScope;
+    frame.cachedTexture = null;
+    frame.finalTexture = null;
+    frame.maskSource = null;
+    RenderEffectExecutor._depth = depth + 1;
+
+    try {
+      this._playFramed(barrier, backend, frame);
+    } finally {
+      RenderEffectExecutor._depth = depth;
+      // Drop the references rather than only the depth: a frame outlives the
+      // barrier it served, and holding the scope would pin its drawables until
+      // the same nesting depth is reached again.
+      frame.barrier = null;
+      frame.backend = null;
+      frame.playScope = null;
+      frame.cachedTexture = null;
+      frame.finalTexture = null;
+      frame.maskSource = null;
+    }
+  }
+
+  private static _playFramed(barrier: BarrierScope, backend: RenderBackend, frame: EffectFrame): void {
     const { node, effect } = barrier;
     const hasFilters = effect.filters.length > 0;
     const needsBitmapCache = effect.cacheAsBitmap;
     const { left, top, width, height } = barrier;
 
     if (!hasFilters && !needsBitmapCache && !effect.needsBackdropBlend) {
-      this._withClip(node, backend, barrier, () => {
-        if (barrier.childPlan !== null) {
-          playScope(barrier.childPlan);
-        }
-      });
+      this._withClip(node, backend, barrier, this._playChildPlan);
 
       return;
     }
@@ -29,9 +139,8 @@ export class RenderEffectExecutor {
       const cachedTexture = node._renderPlanGetCacheTexture();
 
       if (cachedTexture !== null) {
-        this._withClip(node, backend, barrier, () => {
-          node._renderPlanDrawTexture(backend, cachedTexture, left, top, width, height, effect.blendMode);
-        });
+        frame.cachedTexture = cachedTexture;
+        this._withClip(node, backend, barrier, this._drawCachedTexture);
       }
 
       return;
@@ -47,11 +156,7 @@ export class RenderEffectExecutor {
         pooledTexture = sourceTexture;
       }
 
-      node._renderPlanRenderToTexture(backend, sourceTexture, left, top, width, height, () => {
-        if (barrier.childPlan !== null) {
-          playScope(barrier.childPlan);
-        }
-      });
+      node._renderPlanRenderToTexture(backend, sourceTexture, left, top, width, height, this._playChildPlan);
 
       let finalTexture = sourceTexture;
 
@@ -88,13 +193,8 @@ export class RenderEffectExecutor {
         node._renderPlanStoreCacheTexture(cacheTexture!, left, top, width, height);
       }
 
-      this._withClip(node, backend, barrier, () => {
-        if (effect.needsBackdropBlend) {
-          backend.composeWithBackdropBlend(finalTexture, left, top, width, height, effect.blendMode);
-        } else {
-          node._renderPlanDrawTexture(backend, finalTexture, left, top, width, height, effect.blendMode);
-        }
-      });
+      frame.finalTexture = finalTexture;
+      this._withClip(node, backend, barrier, this._compositeFinalTexture);
     } finally {
       if (pooledTexture !== null) {
         backend.releaseRenderTexture(pooledTexture);
@@ -179,8 +279,9 @@ export class RenderEffectExecutor {
 
       backend.composeWithAlphaMask(contentTexture, maskTexture, barrier.left, barrier.top, barrier.width, barrier.height, barrier.effect.blendMode);
     } finally {
-      for (const texture of releasePool) {
-        backend.releaseRenderTexture(texture);
+      for (let i = 0; i < releasePool.length; i++) {
+        // In-bounds: i < length.
+        backend.releaseRenderTexture(releasePool[i]!);
       }
     }
   }
@@ -194,12 +295,17 @@ export class RenderEffectExecutor {
   ): Texture | RenderTexture {
     if (!(mask instanceof Texture) && !(mask instanceof RenderTexture)) {
       const maskTexture = backend.acquireRenderTexture(barrier.width, barrier.height);
+      const frame = RenderEffectExecutor._current();
+      const previousMask = frame.maskSource;
 
       releasePool.push(maskTexture);
+      frame.maskSource = mask;
 
-      node._renderPlanRenderToTexture(backend, maskTexture, barrier.left, barrier.top, barrier.width, barrier.height, () => {
-        mask.render(backend);
-      });
+      try {
+        node._renderPlanRenderToTexture(backend, maskTexture, barrier.left, barrier.top, barrier.width, barrier.height, this._renderMaskSource);
+      } finally {
+        frame.maskSource = previousMask;
+      }
 
       return maskTexture;
     }

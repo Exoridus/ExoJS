@@ -1,5 +1,7 @@
+import type { Mutable } from '#core/types';
 import { type ReadonlyRectangle, Rectangle } from '#math/Rectangle';
 import type { Drawable } from '#rendering/Drawable';
+import type { Filter } from '#rendering/filters/Filter';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
@@ -114,8 +116,11 @@ interface SourceSelection {
  * playback semantics — the group uniform is suspended (the branch collected
  * world-space transforms) and fragment capture records a live re-dispatch.
  */
+/** Placeholder for a pooled descriptor's `filters` before its first fill. */
+const emptyFilters: readonly Filter[] = Object.freeze([]);
+
 const groupEscapeEffect: EffectDescriptor = Object.freeze({
-  filters: [],
+  filters: emptyFilters,
   clip: ClipKind.None,
   clipShape: null,
   maskSource: null,
@@ -211,6 +216,15 @@ export class RenderPlanBuilder {
   private _groupEntryPoolCursor = 0;
   private readonly _barrierEntryPool: BarrierScopeEntry[] = [];
   private _barrierEntryPoolCursor = 0;
+  // The barrier ENTRY was pooled; the scope and effect descriptor it points at
+  // were not, so every barrier still built two fresh objects per frame — on a
+  // path a static scene re-walks unchanged, because a barrier node never
+  // reaches the retained tier. Same cursor discipline as the pools above: reset
+  // per build, reused across frames, so a settled scene allocates none of them.
+  private readonly _barrierScopePool: Array<Mutable<BarrierScope>> = [];
+  private _barrierScopePoolCursor = 0;
+  private readonly _effectDescriptorPool: Array<Mutable<EffectDescriptor>> = [];
+  private _effectDescriptorPoolCursor = 0;
 
   // Reserved placement (replaces the per-call `{ seq, zIndex }` literal).
   private _reservedSeq = 0;
@@ -294,6 +308,8 @@ export class RenderPlanBuilder {
     this._drawEntryPoolCursor = 0;
     this._groupEntryPoolCursor = 0;
     this._barrierEntryPoolCursor = 0;
+    this._barrierScopePoolCursor = 0;
+    this._effectDescriptorPoolCursor = 0;
     this._drainScopeStack();
     this._hasPending = false;
     this._viewCullSuppression = 0;
@@ -417,16 +433,7 @@ export class RenderPlanBuilder {
         effect.cacheAsBitmap && node._renderPlanCanReuseBitmapCache(left, top, width, height)
           ? null
           : this._acquireGroupScope(this._resolvePreserveDrawOrder(node));
-      const barrierScope: BarrierScope = {
-        kind: RenderEntryKind.Barrier,
-        node,
-        effect,
-        childPlan,
-        left,
-        top,
-        width,
-        height,
-      };
+      const barrierScope = this._acquireBarrierScope(node, effect, childPlan, left, top, width, height);
 
       this._pushBarrierEntry(reservedSeq, reservedZ, barrierScope);
 
@@ -455,16 +462,7 @@ export class RenderPlanBuilder {
     // normal path (a nested boundary still gets its own transformNode scope).
     if (node.parent !== null && this._currentScope().transformNode === node.parent && node.parent._childEscapesTransformGroup(node)) {
       const childPlan = this._acquireGroupScope(this._resolvePreserveDrawOrder(node));
-      const barrierScope: BarrierScope = {
-        kind: RenderEntryKind.Barrier,
-        node,
-        effect: groupEscapeEffect,
-        childPlan,
-        left: 0,
-        top: 0,
-        width: 0,
-        height: 0,
-      };
+      const barrierScope = this._acquireBarrierScope(node, groupEscapeEffect, childPlan, 0, 0, 0, 0);
 
       this._pushBarrierEntry(reservedSeq, reservedZ, barrierScope);
       this._pushScope(childPlan);
@@ -1540,6 +1538,8 @@ export class RenderPlanBuilder {
     this._drawEntryPoolCursor = 0;
     this._groupEntryPoolCursor = 0;
     this._barrierEntryPoolCursor = 0;
+    this._barrierScopePoolCursor = 0;
+    this._effectDescriptorPoolCursor = 0;
     this._view = null;
     this._nodeIndex = 0;
     this._viewCullSuppression = 0;
@@ -1800,15 +1800,64 @@ export class RenderPlanBuilder {
     }
 
     const blendMode = node._renderPlanGetBlendMode();
-
-    return {
-      filters: node._renderPlanGetFilters(),
-      clip,
-      clipShape,
-      maskSource: mask,
-      cacheAsBitmap: node.cacheAsBitmap,
+    const descriptor = (this._effectDescriptorPool[this._effectDescriptorPoolCursor] ??= {
+      filters: emptyFilters,
+      clip: ClipKind.None,
+      clipShape: null,
+      maskSource: null,
+      cacheAsBitmap: false,
       blendMode,
-      needsBackdropBlend: isAdvancedBlendMode(blendMode),
-    };
+      needsBackdropBlend: false,
+    });
+
+    this._effectDescriptorPoolCursor++;
+
+    descriptor.filters = node._renderPlanGetFilters();
+    descriptor.clip = clip;
+    descriptor.clipShape = clipShape;
+    descriptor.maskSource = mask;
+    descriptor.cacheAsBitmap = node.cacheAsBitmap;
+    descriptor.blendMode = blendMode;
+    descriptor.needsBackdropBlend = isAdvancedBlendMode(blendMode);
+
+    return descriptor;
+  }
+
+  /**
+   * A barrier scope from the pool, filled in. Held only for the duration of the
+   * plan that produced it — the executor reads it during playback and keeps no
+   * reference past the frame.
+   */
+  private _acquireBarrierScope(
+    node: RenderNode,
+    effect: EffectDescriptor,
+    childPlan: GroupScope | null,
+    left: number,
+    top: number,
+    width: number,
+    height: number,
+  ): BarrierScope {
+    const scope = (this._barrierScopePool[this._barrierScopePoolCursor] ??= {
+      kind: RenderEntryKind.Barrier,
+      node,
+      effect,
+      childPlan,
+      left,
+      top,
+      width,
+      height,
+    });
+
+    this._barrierScopePoolCursor++;
+
+    scope.node = node;
+    scope.effect = effect;
+    scope.childPlan = childPlan;
+    scope.left = left;
+    scope.top = top;
+    scope.width = width;
+    scope.height = height;
+
+    return scope;
   }
 }

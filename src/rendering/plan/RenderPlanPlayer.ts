@@ -28,6 +28,22 @@ interface RenderGroupPlaybackContext {
 }
 
 interface RenderPlanPlaybackContext {
+  /**
+   * The barrier continuation, built ONCE per playback rather than per barrier.
+   *
+   * `RenderEffectExecutor.play` needs a `(scope) => void` to re-enter playback
+   * with, and the obvious inline arrow closes over `backend`, `hooks` and this
+   * context — a fresh closure for every barrier, every frame, which on a
+   * hundred filtered nodes is a hundred closures for one unchanging call.
+   * Everything it captures is constant for the whole `play()`, so it belongs on
+   * the context that is already created there.
+   *
+   * Built on FIRST use, not eagerly: a plan with no barrier never needs one,
+   * and nested plans are the common case for exactly that shape — a node mask
+   * renders its own subtree through its own `play()`, once per masked node per
+   * frame. Allocating it up front made those scenes worse, not better.
+   */
+  playChildScope: ((scope: GroupScope) => void) | null;
   passInstructionIndex: number;
   passGroupIndex: number;
   activeGroupTransform: Matrix | null;
@@ -148,6 +164,8 @@ export class RenderPlanPlayer {
     hooks._beginDrawPlan?.(plan.nodeCount);
 
     try {
+      const context = this._createPlaybackContext();
+
       for (const pass of plan.passes) {
         if (pass.target !== null && backend.renderTarget !== pass.target) {
           backend.setRenderTarget(pass.target);
@@ -161,7 +179,7 @@ export class RenderPlanPlayer {
           backend.clear(pass.clearColor);
         }
 
-        this._playScope(pass.root, backend, hooks, this._createPlaybackContext());
+        this._playScope(pass.root, backend, hooks, context);
       }
     } finally {
       hooks._endDrawPlan?.();
@@ -176,9 +194,7 @@ export class RenderPlanPlayer {
 
   private static _playScope(scope: RenderScope, backend: RenderBackend, hooks: RenderPlanPlaybackHooks, context: RenderPlanPlaybackContext): void {
     if (scope.kind === RenderEntryKind.Barrier) {
-      RenderEffectExecutor.play(scope, backend, childScope => {
-        this._playScope(childScope, backend, hooks, context);
-      });
+      RenderEffectExecutor.play(scope, backend, context.playChildScope ?? this._createChildScopeCallback(backend, hooks, context));
 
       return;
     }
@@ -392,9 +408,7 @@ export class RenderPlanPlayer {
         }
 
         try {
-          RenderEffectExecutor.play(entry.scope, backend, childScope => {
-            this._playScope(childScope, backend, hooks, context);
-          });
+          RenderEffectExecutor.play(entry.scope, backend, context.playChildScope ?? this._createChildScopeCallback(backend, hooks, context));
         } finally {
           if (suspended !== null) {
             context.activeGroupTransform = suspended;
@@ -482,8 +496,28 @@ export class RenderPlanPlayer {
   /** Shared marker-restore scratch for {@link _replayRetainedInstructions}. */
   private static readonly _replayOuterStack: Array<Matrix | null> = [];
 
+  /**
+   * Build and cache the context's barrier continuation — see
+   * {@link RenderPlanPlaybackContext.playChildScope}.
+   *
+   * Split from the null check at the call sites on purpose. V8 allocates a
+   * function's closure scope on ENTRY, so folding the check in here would pay
+   * for the arrow below on every barrier, cached or not, and the caching would
+   * buy nothing.
+   */
+  private static _createChildScopeCallback(
+    backend: RenderBackend,
+    hooks: RenderPlanPlaybackHooks,
+    context: RenderPlanPlaybackContext,
+  ): (scope: GroupScope) => void {
+    return (context.playChildScope = (childScope: GroupScope): void => {
+      this._playScope(childScope, backend, hooks, context);
+    });
+  }
+
   private static _createPlaybackContext(): RenderPlanPlaybackContext {
     return {
+      playChildScope: null,
       passInstructionIndex: 0,
       passGroupIndex: 0,
       activeGroupTransform: null,

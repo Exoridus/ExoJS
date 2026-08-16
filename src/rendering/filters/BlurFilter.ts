@@ -25,6 +25,8 @@ export interface BlurFilterOptions {
 export class BlurFilter extends Filter {
   private readonly _sprite: Sprite = new Sprite(null);
   private readonly _sampleTint: Color = Color.white.clone();
+  /** One redirect pass, re-pointed per application — see {@link BackendTargetPass.retarget}. */
+  private readonly _pass: BackendTargetPass = new BackendTargetPass(backend => this._drawSamples(backend));
   private _radius = 2;
   private _quality = 1;
 
@@ -52,10 +54,8 @@ export class BlurFilter extends Filter {
   }
 
   public apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture): void {
-    const radius = this._radius;
-    const quality = this._quality;
-    const steps = Math.max(1, quality * 2 + 1);
-    const sampleCount = radius <= 0 ? 1 : steps * 2;
+    const steps = Math.max(1, this._quality * 2 + 1);
+    const sampleCount = this._radius <= 0 ? 1 : steps * 2;
     const alpha = 1 / sampleCount;
 
     this._sampleTint.set(255, 255, 255, alpha);
@@ -63,30 +63,32 @@ export class BlurFilter extends Filter {
     this._sprite.width = output.width;
     this._sprite.height = output.height;
 
-    backend.execute(
-      new BackendTargetPass(
-        () => {
-          if (radius <= 0) {
-            drawDrawableDirect(this._sprite.setPosition(0, 0), backend);
+    backend.execute(this._pass.retarget(output, output.view, Color.transparentBlack));
+  }
 
-            return;
-          }
+  /**
+   * The pass body. A method rather than an inline closure so the sample loop
+   * reads its parameters off the instance instead of capturing them — the
+   * closure would otherwise be rebuilt for every filtered node, every frame.
+   */
+  private _drawSamples(backend: RenderBackend): void {
+    const radius = this._radius;
 
-          for (let step = 0; step < steps; step++) {
-            const t = steps === 1 ? 0 : step / (steps - 1);
-            const offset = (t * 2 - 1) * radius;
+    if (radius <= 0) {
+      drawDrawableDirect(this._sprite.setPosition(0, 0), backend);
 
-            drawDrawableDirect(this._sprite.setPosition(offset, 0), backend);
-            drawDrawableDirect(this._sprite.setPosition(0, offset), backend);
-          }
-        },
-        {
-          target: output,
-          view: output.view,
-          clearColor: Color.transparentBlack,
-        },
-      ),
-    );
+      return;
+    }
+
+    const steps = Math.max(1, this._quality * 2 + 1);
+
+    for (let step = 0; step < steps; step++) {
+      const t = steps === 1 ? 0 : step / (steps - 1);
+      const offset = (t * 2 - 1) * radius;
+
+      drawDrawableDirect(this._sprite.setPosition(offset, 0), backend);
+      drawDrawableDirect(this._sprite.setPosition(0, offset), backend);
+    }
   }
 
   public override destroy(): void {
