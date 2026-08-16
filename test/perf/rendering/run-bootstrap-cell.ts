@@ -304,6 +304,56 @@ let harness!: WebGl2Harness;
 let texture!: Texture;
 let root!: Container;
 
+/**
+ * Window-series mode (`--series <windows> [--window <frames>]`): build the scene,
+ * render frame 1, then sample every following window separately and print the
+ * per-frame rate for each.
+ *
+ * This is the discriminator between one-time ramp-up work and the V8
+ * optimisation-state artefact already documented on this scene family (a frame
+ * that reads megabytes attributed to a function containing no allocation, and
+ * reads kilobytes later with nothing changed). One-time work ends at a frame and
+ * the series steps down; the artefact decays as V8 tiers up. Neither is legible
+ * from a single averaged window, which is why the ramp total on its own cannot
+ * be classified.
+ */
+const seriesWindows = Number(flag('series') ?? 0);
+const seriesWindowFrames = Number(flag('window') ?? 25);
+
+if (seriesWindows > 0) {
+  harness = createWebGl2Harness();
+  texture = makeTextures(1)[0]!;
+  root = new Container();
+  buildInto(root, texture, 0, count);
+  harness.view.reset(VIEW.w / 2, VIEW.h / 2, VIEW.w, VIEW.h);
+
+  const beforeFrame = pingPongCamera(harness, 8);
+  const series: Array<{ firstFrame: number; bytesPerFrame: number; drawCalls: number; submittedNodes: number }> = [];
+
+  await phase('frame1', () => renderOnce(harness, root, beforeFrame));
+
+  for (let window = 0; window < seriesWindows; window++) {
+    const head = await sample(() => {
+      for (let i = 0; i < seriesWindowFrames; i++) {
+        renderOnce(harness, root, beforeFrame);
+      }
+    });
+
+    series.push({
+      firstFrame: 2 + window * seriesWindowFrames,
+      bytesPerFrame: sumSelfSize(head) / seriesWindowFrames,
+      drawCalls: harness.backend.stats.drawCalls,
+      submittedNodes: harness.backend.stats.submittedNodes,
+    });
+  }
+
+  root.destroy();
+  harness.destroy();
+
+  console.log(JSON.stringify({ mode: 'series', count, windowFrames: seriesWindowFrames, frame1Bytes: phases[0]!.allocBytes, series }));
+  process.exit(0);
+}
+
 await phase('harness', () => {
   harness = createWebGl2Harness();
 });
