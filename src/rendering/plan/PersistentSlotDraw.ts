@@ -18,6 +18,23 @@ export interface PersistentSlotBundle {
   readonly generation: number;
   /** Release the GPU resources (root destroy, source invalidation, backend switch). */
   destroy?(): void;
+  /**
+   * Whether the backend can hold a selection this size at all, asked before the
+   * slots are written and answered against the device's real limits.
+   *
+   * The question exists because the bound is a property of the SELECTION, not of
+   * the source: a store's buffers grow with the slots the camera hands out, and
+   * a root of ten million items whose view admits a few thousand needs a few
+   * thousand. Refusing such a root at acquisition — the only other place the
+   * decision could live — would withdraw the indexed path from exactly the
+   * scenes it exists for.
+   *
+   * A `false` is a REFUSAL, not an error: the plan drops the store and puts the
+   * root back on the ordinary path, which has no per-root allocation to
+   * overflow. A backend whose representation has no such ceiling omits the
+   * method.
+   */
+  canRepresent?(slots: number, orderEntries: number): boolean;
 }
 
 /**

@@ -1100,6 +1100,19 @@ export class RenderPlanBuilder {
     const slots = product.slots;
     const backend = this.backend as RenderBackend & PersistentSlotBackend;
 
+    // The store's buffers are sized by the slot space, and a device puts a hard
+    // ceiling on how large one of them may be. Asked here rather than at
+    // acquisition because only a finished selection knows the slot count, and
+    // before the write because past the ceiling the backend's allocation is
+    // rejected by the driver rather than by us. The refusal is remembered, so
+    // the root spends one selection finding out and then stays on the ordinary
+    // path — which has no per-root buffer to overflow.
+    if (bundle.canRepresent?.(slots.slotCount, slots.orderCount) === false) {
+      representation.refusePersistentSlots(this.backend);
+
+      return false;
+    }
+
     if (slots.enteredCount > 0) {
       backend._writePersistentSlots!(bundle, source, slots.entered, slots.enteredCount);
     }

@@ -34,6 +34,56 @@ const initialSlotCapacity = 1024;
 const slotsPerBlock = 256;
 
 /**
+ * WebGPU's spec-guaranteed defaults for the two limits that bound a persistent
+ * store's buffers.
+ *
+ * These are the values actually in force: a device requested without a
+ * `requiredLimits` entry is granted exactly the default, however much the
+ * adapter could have offered, and `WebGpuBackend` raises only the texture and
+ * sampler limits the batch layout needs. They double as the stand-in for a
+ * device that exposes no limits object at all — a conformant device is never
+ * granted less, so assuming them is the safe direction.
+ */
+const defaultMaxBufferSize = 2 ** 28; // 256 MiB
+const defaultMaxStorageBufferBindingSize = 2 ** 27; // 128 MiB
+
+/**
+ * Bytes the largest buffer of `capacity` slots may occupy on `device`.
+ *
+ * Both limits apply to every one of the four slot buffers: `createBuffer`
+ * rejects a size over `maxBufferSize`, and `createBindGroup` rejects a storage
+ * binding over `maxStorageBufferBindingSize` — which is the SMALLER of the two
+ * defaults, so on a device that asked for neither it is the one that bites.
+ */
+const storageBufferLimit = (device: GPUDevice): number => {
+  // Defensive optional access, as in `resolveSpriteBatchTextureSlots`: mocked
+  // devices in unit tests may not expose a limits object.
+  const limits = (device as { limits?: GPUSupportedLimits }).limits;
+
+  return Math.min(limits?.maxBufferSize ?? defaultMaxBufferSize, limits?.maxStorageBufferBindingSize ?? defaultMaxStorageBufferBindingSize);
+};
+
+/**
+ * The capacity {@link WebGpuPersistentSlotStore.ensureCapacity} settles on for
+ * `slots`, whatever the store currently holds.
+ *
+ * Independent of the current capacity because every capacity is a power of two
+ * at or above {@link initialSlotCapacity}: doubling from one of those reaches
+ * the same value as doubling from the initial one. That is what lets the limit
+ * be checked against a selection's slot count before the store has grown to it.
+ * @internal
+ */
+export const persistentSlotGrowthCapacity = (slots: number): number => {
+  let next = initialSlotCapacity;
+
+  while (next < slots) {
+    next *= 2;
+  }
+
+  return next;
+};
+
+/**
  * Bytes of the persistent pipeline's uniform block: mat4x4 projection + mat4x4
  * group + vec4 snap viewport + the premultiply mask, padded to the 16-byte
  * struct alignment WGSL requires.
@@ -222,6 +272,49 @@ export class WebGpuPersistentSlotStore implements PersistentSlotBundle {
       size: persistentUniformBytes,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
+  }
+
+  /**
+   * Whether a selection of `slots` slots and `orderEntries` order entries is
+   * representable on the device this store is connected to.
+   *
+   * All four slot buffers are `storage` bindings, so each is bounded by
+   * `min(maxBufferSize, maxStorageBufferBindingSize)` of the GRANTED device
+   * limits. Nothing raises either today, which puts the ceiling at the spec
+   * default of 128 MiB per binding — 4 194 304 slots at 32 bytes of transform
+   * row — on every device, however much the adapter would have offered.
+   *
+   * Answered against the SELECTION rather than against the source, because the
+   * source is not the bound: a root of ten million items whose camera admits a
+   * few thousand needs a few thousand slots, and refusing it at acquisition
+   * would cost the indexed path exactly the scenes it exists for. Answered
+   * BEFORE the growth allocates, because past the ceiling `createBuffer` still
+   * succeeds and `createBindGroup` does not — the root would keep selecting,
+   * keep uploading, and silently draw nothing behind an uncaptured validation
+   * error.
+   *
+   * A refusal is not a failure: the plan drops back to the streamed sprite
+   * path, which has no per-root buffer to overflow because it flushes.
+   */
+  public canRepresent(slots: number, orderEntries: number): boolean {
+    const device = this._device;
+
+    if (device === null) {
+      return false;
+    }
+
+    const limit = storageBufferLimit(device);
+    const capacity = persistentSlotGrowthCapacity(slots);
+
+    // Transform and quad rows are the widest and equal, so they are what breaks
+    // first; the tint and order streams are measured anyway, because a layout
+    // change must not leave one of them silently unbounded.
+    return (
+      capacity * transformBytesPerSlot <= limit &&
+      capacity * quadBytesPerSlot <= limit &&
+      capacity * tintBytesPerSlot <= limit &&
+      persistentSlotGrowthCapacity(orderEntries) * orderBytesPerEntry <= limit
+    );
   }
 
   /**
