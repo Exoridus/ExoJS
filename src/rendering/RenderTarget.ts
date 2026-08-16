@@ -160,10 +160,25 @@ export class RenderTarget {
   }
 
   public mapCoordsToPixel(point: Vector, view: View = this._view): Vector {
-    const viewport = this.getViewport(view);
-    const normalized = point.clone().transform(view.getTransform());
+    return this._mapCoordsToPixelInPlace(point.clone(), view);
+  }
 
-    return normalized.set((((normalized.x + 1) / 2) * viewport.width + viewport.left) | 0, (((-normalized.y + 1) / 2) * viewport.height + viewport.top) | 0);
+  /**
+   * {@link mapCoordsToPixel} without the defensive copy: transforms `point` in
+   * place and returns it.
+   *
+   * The public method must not touch its argument, so it clones — and the clip
+   * path calls it twice per scissor push, i.e. twice per clipped or masked
+   * barrier per frame, always on a scratch vector the caller already owns and
+   * is about to overwrite. Callers that own their point use this instead.
+   * @internal
+   */
+  public _mapCoordsToPixelInPlace(point: Vector, view: View = this._view): Vector {
+    const viewport = this.getViewport(view);
+
+    point.transform(view.getTransform());
+
+    return point.set((((point.x + 1) / 2) * viewport.width + viewport.left) | 0, (((-point.y + 1) / 2) * viewport.height + viewport.top) | 0);
   }
 
   public destroy(): void {

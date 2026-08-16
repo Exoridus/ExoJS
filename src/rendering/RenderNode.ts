@@ -354,6 +354,12 @@ export abstract class RenderNode extends SceneNode {
   private readonly _cacheBounds: Rectangle = new Rectangle();
   private _cacheSprite: RenderNodeSpriteLike | null = null;
   private _captureView: View | null = null;
+  /** Lazily built, then reused for every capture this node performs — see {@link _renderContentToTexture}. */
+  private _capturePass: BackendTargetPass | null = null;
+  private _captureContent: (() => void) | null = null;
+  private readonly _runCaptureContent = (): void => {
+    this._captureContent?.();
+  };
   private _mask: MaskSource = null;
   private _cacheAsBitmap = false;
   private _cacheDirty = true;
@@ -613,7 +619,16 @@ export abstract class RenderNode extends SceneNode {
 
   /** @internal */
   public _renderPlanCanReuseBitmapCache(left: number, top: number, width: number, height: number): boolean {
-    return this._cacheAsBitmap && !this._cacheDirty && this._cacheTexture !== null && this._cacheBounds.equals({ x: left, y: top, width, height });
+    if (!this._cacheAsBitmap || this._cacheDirty || this._cacheTexture === null) {
+      return false;
+    }
+
+    // Compared field by field rather than through `equals`, which takes a rect
+    // and so needed an object literal built here — once per cached barrier per
+    // frame, purely to be read and thrown away.
+    const bounds = this._cacheBounds;
+
+    return bounds.x === left && bounds.y === top && bounds.width === width && bounds.height === height;
   }
 
   /** @internal */
@@ -717,18 +732,22 @@ export abstract class RenderNode extends SceneNode {
       this._captureView.reset(left + width / 2, top + height / 2, width, height);
     }
 
-    backend.execute(
-      new BackendTargetPass(
-        () => {
-          renderContent();
-        },
-        {
-          target,
-          view: this._captureView,
-          clearColor: Color.transparentBlack,
-        },
-      ),
-    );
+    // The pass, its options object and the body closure were all built fresh
+    // here, once per barrier per frame. The pass is now owned by the node and
+    // re-pointed; the body is a bound method that reads the staged content
+    // callback, so it is allocated once instead of per capture.
+    //
+    // Staging is safe against nesting because the stack is per NODE: a filtered
+    // subtree inside another filtered node captures through the inner node's
+    // own pass. A node cannot be capturing inside itself.
+    this._capturePass ??= new BackendTargetPass(this._runCaptureContent);
+    this._captureContent = renderContent;
+
+    try {
+      backend.execute(this._capturePass.retarget(target, this._captureView, Color.transparentBlack));
+    } finally {
+      this._captureContent = null;
+    }
   }
 
   private _drawTexture(backend: RenderBackend, texture: RenderTexture, x: number, y: number, width: number, height: number, blendMode: BlendModes): void {

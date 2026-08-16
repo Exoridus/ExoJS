@@ -251,8 +251,20 @@ export class WebGl2Backend implements RenderBackend {
   private readonly _materialSamplers = new Map<string, WebGLSampler>();
   private readonly _renderTargetDestroyHandlers: Map<RenderTarget, () => void> = new Map<RenderTarget, () => void>();
   private readonly _renderTexturePool: RenderTexturePool = new RenderTexturePool();
-  private readonly _clipBoundsStack: Rectangle[] = [];
+  /**
+   * Resolved scissor rectangles in target pixels, innermost at
+   * `_clipDepth - 1`.
+   *
+   * Grow-only and reused: the entries are plain mutable records rewritten on
+   * push, and {@link _clipDepth} — not `length` — says how many are live. A
+   * clip push happens once per clipped or masked barrier per frame, so
+   * allocating the record (plus the intersection's) there put four objects per
+   * barrier on the steady-state path for a stack that never gets deep.
+   */
   private readonly _clipPixelStack: PixelClipBoundsState[] = [];
+  private _clipDepth = 0;
+  /** Scratch for the incoming rect before it is intersected into its slot. */
+  private readonly _clipPixelScratch: PixelClipBoundsState = { x: 0, y: 0, width: 0, height: 0 };
   private readonly _clipPointA: Vector = new Vector();
   private readonly _clipPointB: Vector = new Vector();
   private readonly _maskCompositor: WebGl2MaskCompositor = new WebGl2MaskCompositor();
@@ -814,32 +826,34 @@ export class WebGl2Backend implements RenderBackend {
   public pushScissorRect(bounds: Rectangle): this {
     this._flushActiveRenderer();
 
-    this._clipBoundsStack.push(bounds.clone());
+    const depth = this._clipDepth;
+    const slot = (this._clipPixelStack[depth] ??= { x: 0, y: 0, width: 0, height: 0 });
+    const scratch = this._toClipPixels(bounds, this._clipPixelScratch);
 
-    const nextClip = this._toClipPixels(bounds);
-    const previousClip = this._clipPixelStack.length > 0 ? this._clipPixelStack[this._clipPixelStack.length - 1] : null;
-    const resolvedClip = previousClip ? this._intersectClips(previousClip, nextClip) : nextClip;
+    if (depth > 0) {
+      // In range: depth > 0 means a resolved clip is already on the stack.
+      this._intersectClips(this._clipPixelStack[depth - 1]!, scratch, slot);
+    } else {
+      slot.x = scratch.x;
+      slot.y = scratch.y;
+      slot.width = scratch.width;
+      slot.height = scratch.height;
+    }
 
-    this._clipPixelStack.push(resolvedClip);
+    this._clipDepth = depth + 1;
     this._applyClipState();
 
     return this;
   }
 
   public popScissorRect(): this {
-    if (this._clipBoundsStack.length === 0) {
+    if (this._clipDepth === 0) {
       return this;
     }
 
     this._flushActiveRenderer();
 
-    const removedClip = this._clipBoundsStack.pop();
-
-    if (removedClip) {
-      removedClip.destroy();
-    }
-
-    this._clipPixelStack.pop();
+    this._clipDepth--;
     this._applyClipState();
 
     return this;
@@ -1791,12 +1805,8 @@ export class WebGl2Backend implements RenderBackend {
     this._destroyManagedResources();
     this._renderTexturePool.destroy();
 
-    for (const clipBounds of this._clipBoundsStack) {
-      clipBounds.destroy();
-    }
-
-    this._clipBoundsStack.length = 0;
     this._clipPixelStack.length = 0;
+    this._clipDepth = 0;
     this._clipPointA.destroy();
     this._clipPointB.destroy();
 
@@ -2289,7 +2299,7 @@ export class WebGl2Backend implements RenderBackend {
       state.version = target.version;
     }
 
-    if (this._clipPixelStack.length > 0) {
+    if (this._clipDepth > 0) {
       this._applyClipState();
     }
   }
@@ -2617,9 +2627,10 @@ export class WebGl2Backend implements RenderBackend {
     return state;
   }
 
-  private _toClipPixels(bounds: Rectangle): PixelClipBoundsState {
-    const topLeft = this._renderTarget.mapCoordsToPixel(this._clipPointA.set(bounds.left, bounds.top));
-    const bottomRight = this._renderTarget.mapCoordsToPixel(this._clipPointB.set(bounds.right, bounds.bottom));
+  /** Writes into `out` and returns it — see {@link _clipPixelStack} for why nothing here allocates. */
+  private _toClipPixels(bounds: Rectangle, out: PixelClipBoundsState): PixelClipBoundsState {
+    const topLeft = this._renderTarget._mapCoordsToPixelInPlace(this._clipPointA.set(bounds.left, bounds.top));
+    const bottomRight = this._renderTarget._mapCoordsToPixelInPlace(this._clipPointB.set(bounds.right, bounds.bottom));
     const minX = Math.min(topLeft.x, bottomRight.x);
     const maxX = Math.max(topLeft.x, bottomRight.x);
     const minY = Math.min(topLeft.y, bottomRight.y);
@@ -2634,39 +2645,38 @@ export class WebGl2Backend implements RenderBackend {
     const height = Math.max(0, bottom - yTop);
     const y = Math.max(0, targetHeight - bottom);
 
-    return {
-      x,
-      y,
-      width,
-      height,
-    };
+    out.x = x;
+    out.y = y;
+    out.width = width;
+    out.height = height;
+
+    return out;
   }
 
-  private _intersectClips(first: PixelClipBoundsState, second: PixelClipBoundsState): PixelClipBoundsState {
+  /** Writes the intersection into `out`, which may alias neither input. */
+  private _intersectClips(first: PixelClipBoundsState, second: PixelClipBoundsState, out: PixelClipBoundsState): void {
     const left = Math.max(first.x, second.x);
     const bottom = Math.max(first.y, second.y);
     const right = Math.min(first.x + first.width, second.x + second.width);
     const top = Math.min(first.y + first.height, second.y + second.height);
 
-    return {
-      x: left,
-      y: bottom,
-      width: Math.max(0, right - left),
-      height: Math.max(0, top - bottom),
-    };
+    out.x = left;
+    out.y = bottom;
+    out.width = Math.max(0, right - left);
+    out.height = Math.max(0, top - bottom);
   }
 
   private _applyClipState(): void {
     const gl = this._context;
 
-    if (this._clipPixelStack.length === 0) {
+    if (this._clipDepth === 0) {
       gl.disable(gl.SCISSOR_TEST);
 
       return;
     }
 
     // In-bounds: the empty-stack case returned above, so the top entry exists.
-    const clip = this._clipPixelStack[this._clipPixelStack.length - 1]!;
+    const clip = this._clipPixelStack[this._clipDepth - 1]!;
     const scaleX = this._renderTarget.root && this._renderTarget.width > 0 ? this._canvas.width / this._renderTarget.width : 1;
     const scaleY = this._renderTarget.root && this._renderTarget.height > 0 ? this._canvas.height / this._renderTarget.height : 1;
     const x = Math.floor(clip.x * scaleX);
