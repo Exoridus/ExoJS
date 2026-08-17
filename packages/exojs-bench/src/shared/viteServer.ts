@@ -169,11 +169,19 @@ export interface StartViteServerOptions {
    * nor `navigator.gpu` is available on the phone.
    */
   readonly https?: { readonly key: string | Buffer; readonly cert: string | Buffer };
+  /**
+   * Extra compile-time constants folded into the served modules, on top of the
+   * engine's `__DEV__` / `__VERSION__` / `__REVISION__`. Values are inserted
+   * verbatim, so a string must arrive already JSON-encoded. Used by the DPR
+   * probe to stamp the serving commit into a capture the tester copies off a
+   * phone, where no shell is available to record it.
+   */
+  readonly extraDefine?: Readonly<Record<string, string>>;
 }
 
 /** Starts a programmatic Vite dev server rooted at a harness page directory. */
 export const startViteServer = async (options: StartViteServerOptions): Promise<ViteDevServer> => {
-  const { pageDir, version, host = '127.0.0.1', https } = options;
+  const { pageDir, version, host = '127.0.0.1', https, extraDefine } = options;
   const vite = await loadVite();
   const server = await vite.createServer({
     configFile: false,
@@ -214,7 +222,7 @@ export const startViteServer = async (options: StartViteServerOptions): Promise<
     // source still resolves to local `.ts` files via the `#*` alias and is never
     // pre-bundled.
     optimizeDeps: { noDiscovery: true, include: resolvableCompetitors() },
-    define: { __DEV__: String(ENGINE_DEV_BUILD), __VERSION__: JSON.stringify(version), __REVISION__: JSON.stringify('baseline') },
+    define: { __DEV__: String(ENGINE_DEV_BUILD), __VERSION__: JSON.stringify(version), __REVISION__: JSON.stringify('baseline'), ...extraDefine },
     plugins: [realShaderPlugin, devGlobalsPlugin(version)],
   });
 
