@@ -393,6 +393,8 @@ export abstract class RenderNode extends SceneNode {
   }
 
   public set filters(filters: readonly Filter[]) {
+    this._detachFilterOwnership();
+
     if (filters.length === 0) {
       if (this._filters !== null) {
         this._filters.length = 0;
@@ -402,6 +404,11 @@ export abstract class RenderNode extends SceneNode {
 
       own.length = 0;
       own.push(...filters);
+
+      for (let index = 0; index < own.length; index++) {
+        // In-bounds: index < length.
+        own[index]!._attachOwner(this);
+      }
     }
 
     this.invalidateCache();
@@ -607,6 +614,9 @@ export abstract class RenderNode extends SceneNode {
 
   public addFilter(filter: Filter): this {
     (this._filters ??= []).push(filter);
+    // Registers this node as a consumer, so a later mutation of the filter's own
+    // state reaches back here without the application having to re-add it.
+    filter._attachOwner(this);
 
     return this.invalidateCache();
   }
@@ -616,10 +626,25 @@ export abstract class RenderNode extends SceneNode {
 
     if (index !== -1) {
       this._filters!.splice(index, 1);
+      filter._detachOwner(this);
       this.invalidateCache();
     }
 
     return this;
+  }
+
+  /** Drop this node from every filter it currently holds. */
+  private _detachFilterOwnership(): void {
+    const filters = this._filters;
+
+    if (filters === null) {
+      return;
+    }
+
+    for (let index = 0; index < filters.length; index++) {
+      // In-bounds: index < length.
+      filters[index]!._detachOwner(this);
+    }
   }
 
   public static setInternalSpriteFactory(factory: (() => RenderNodeSpriteLike) | null): void {
@@ -628,6 +653,7 @@ export abstract class RenderNode extends SceneNode {
 
   public clearFilters(): this {
     if (this._filters !== null && this._filters.length > 0) {
+      this._detachFilterOwnership();
       this._filters.length = 0;
       this.invalidateCache();
     }
@@ -769,6 +795,8 @@ export abstract class RenderNode extends SceneNode {
     this._captureView = null;
 
     if (this._filters !== null) {
+      this._detachFilterOwnership();
+
       for (const filter of this._filters) {
         if (isDestroyableFilter(filter)) {
           filter.destroy();

@@ -41,6 +41,7 @@ export class ColorFilter extends Filter {
   }
 
   public override destroy(): void {
+    super.destroy();
     this._sprite.destroy();
     this._color.destroy();
   }

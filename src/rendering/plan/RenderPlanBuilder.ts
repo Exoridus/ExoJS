@@ -9,6 +9,7 @@ import { BlendModes, isAdvancedBlendMode } from '#rendering/types';
 import type { View } from '#rendering/View';
 
 import type { DerivedRootProduct } from './DerivedRootProduct';
+import { EffectBoundsResolver } from './effectBounds';
 import { type EntryPlacementState, reserveEntryPlacement } from './EntryPlacement';
 import type { PersistentSlotBackend } from './PersistentSlotDraw';
 import { type DrawCommand, materialKeyForcesFlush, RenderEntryKind } from './RenderCommand';
@@ -198,6 +199,12 @@ export class RenderPlanBuilder {
    * a barrier and has no scope to pair with.
    */
   private readonly _resolutionStack: number[] = [];
+  /**
+   * Shared across every barrier. Barriers nest, but a barrier reads its four
+   * integers out before collecting its children, so no nested collect can
+   * observe a half-built domain.
+   */
+  private readonly _effectBounds = new EffectBoundsResolver();
 
   private readonly _plan = new MutableRenderPlan();
   private readonly _groupPool: MutableGroupScope[] = [];
@@ -448,16 +455,19 @@ export class RenderPlanBuilder {
       let height = 0;
 
       if (needsBounds) {
-        const bounds = node.getBounds();
-
-        if (bounds.width <= 0 || bounds.height <= 0) {
+        // The barrier's capture domain — the source bounds run through the
+        // filter chain's output-bounds contract, then quantised edge by edge.
+        // The capture view, the target allocation, the texture cache's identity
+        // and the composite placement all read it from here, so both backends
+        // consume one calculation (see `effectBounds.ts`). `false` means there
+        // is nothing to capture, an empty drawable included.
+        if (!this._effectBounds.resolve(node.getBounds(), effect.filters)) {
           return;
         }
 
-        left = Math.floor(bounds.left);
-        top = Math.floor(bounds.top);
-        width = Math.max(1, Math.ceil(bounds.width));
-        height = Math.max(1, Math.ceil(bounds.height));
+        // Destructured in one statement because the four are one value; the
+        // locals are declared above so the effect-less path can share them.
+        ({ left, top, width, height } = this._effectBounds);
       }
 
       // Resolution the barrier's internal targets are allocated at. Resolved

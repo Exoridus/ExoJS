@@ -103,6 +103,9 @@ describe('SDF edge width under an anisotropic node scale', () => {
 
     // Both cells put the same vertical density on screen and differ only in the
     // horizontal one, so the crossbar's ramp may not move between them.
-    expect(anisotropic.barRamp, `bar ramp must not follow the horizontal scale: ${isotropic.barRamp} vs ${anisotropic.barRamp}`).toBeCloseTo(isotropic.barRamp, 0);
+    expect(anisotropic.barRamp, `bar ramp must not follow the horizontal scale: ${isotropic.barRamp} vs ${anisotropic.barRamp}`).toBeCloseTo(
+      isotropic.barRamp,
+      0,
+    );
   });
 });

@@ -248,6 +248,7 @@ export class WebGpuShaderFilter extends Filter {
   }
 
   public override destroy(): void {
+    super.destroy();
     if (this._connection !== null) {
       this._connection.vertexBuffer.destroy();
       this._connection.resolutionBuffer.destroy();

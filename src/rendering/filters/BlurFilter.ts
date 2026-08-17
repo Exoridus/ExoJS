@@ -1,4 +1,5 @@
 import { Color } from '#core/Color';
+import type { ReadonlyRectangle, Rectangle } from '#math/Rectangle';
 import { BackendTargetPass } from '#rendering/BackendTargetPass';
 import { drawDrawableDirect } from '#rendering/plan/drawDrawableDirect';
 import type { RenderBackend } from '#rendering/RenderBackend';
@@ -56,7 +57,12 @@ export class BlurFilter extends Filter {
   }
 
   public set radius(radius: number) {
-    this._radius = Math.max(0, radius);
+    const next = Math.max(0, radius);
+
+    if (this._radius !== next) {
+      this._radius = next;
+      this.invalidate();
+    }
   }
 
   public get quality(): number {
@@ -64,7 +70,28 @@ export class BlurFilter extends Filter {
   }
 
   public set quality(quality: number) {
-    this._quality = Math.max(1, Math.floor(quality));
+    const next = Math.max(1, Math.floor(quality));
+
+    if (this._quality !== next) {
+      this._quality = next;
+      this.invalidate();
+    }
+  }
+
+  /**
+   * The blur reaches `radius` logical units outside its input on every edge.
+   *
+   * Read off the sampling loop rather than assumed: {@link _drawSamples} draws
+   * the input at offsets spread evenly over `[-radius, +radius]` along each axis
+   * separately, so the furthest an output texel's value can travel from its
+   * source is exactly `radius`, and only axis-aligned — the diagonal corner is
+   * covered by the box the two axes span. `quality` adds samples between those
+   * extremes and does not change the reach.
+   */
+  public override getOutputBounds(input: ReadonlyRectangle, output: Rectangle): void {
+    const radius = this._radius;
+
+    output.set(input.x - radius, input.y - radius, input.width + radius * 2, input.height + radius * 2);
   }
 
   public apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture, resolution = 1): void {
@@ -112,6 +139,7 @@ export class BlurFilter extends Filter {
   }
 
   public override destroy(): void {
+    super.destroy();
     this._sampleTint.destroy();
     this._sprite.destroy();
   }

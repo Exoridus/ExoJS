@@ -257,6 +257,7 @@ export class LutFilter extends Filter {
     if (this._backendFilter !== null) {
       this._backendFilter.uniforms.uLut = lut;
     }
+    this.invalidate();
     return this;
   }
 
@@ -268,6 +269,7 @@ export class LutFilter extends Filter {
   }
 
   public override destroy(): void {
+    super.destroy();
     if (this._backendFilter !== null) {
       this._backendFilter.destroy();
       this._backendFilter = null;
