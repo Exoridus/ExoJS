@@ -895,6 +895,20 @@ jobs:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: pnpm site:build
 
+      # The bytes that just passed `gates site` + `site:build` ARE the bytes
+      # GitHub Pages serves: deploy-pages.yml downloads this artifact from this
+      # run and deploys it verbatim, instead of checking the sources out and
+      # producing a second, ungated build of its own. The commit in the name
+      # binds the artifact to a single commit on both sides of the handover, so
+      # a mismatched pair fails to resolve rather than deploying silently.
+      - name: Upload site artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-dist-${{ github.sha }}
+          path: site/dist/
+          retention-days: 1
+          if-no-files-found: error
+
   required-ci:
     name: Required CI
     if: ${{ always() }}
