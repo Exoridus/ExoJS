@@ -1,13 +1,12 @@
-import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 
-import { srcConditions } from '@codexo/exojs-config/vitest';
 import { chromium } from 'playwright';
 
 import type { BaseProvenance, LibraryProvenance } from '../shared/provenance';
 import { readLibraryProvenance } from '../shared/provenance';
+import type { ViteDevServer } from '../shared/viteServer';
+import { LIBRARY_ARMS, readEngineVersion, startViteServer as startPageServer } from '../shared/viteServer';
 import { buildMatrix } from './archetypes';
 import type { ArchetypeSpec, Backend, CellResult, CellSpec, EngineAdapter } from './EngineAdapter';
 import type { MatrixSelection } from './selection';
@@ -22,6 +21,11 @@ export { applySelection, type MatrixSelection } from './selection';
 // Re-exported so `rendering/index.ts` and the CLI keep importing `LibraryProvenance`
 // from the rendering barrel unchanged while the definition lives in `shared/`.
 export type { LibraryProvenance } from '../shared/provenance';
+
+// Re-exported so `runTimerProbe.ts` and the CLI keep importing the engine-version
+// stamp from `driver` unchanged while the definition lives beside the Vite server
+// factory it is passed to.
+export { readEngineVersion } from '../shared/viteServer';
 
 /**
  * Provenance stamped onto every baseline run. Without it a wall-clock number is
@@ -88,21 +92,8 @@ const resolveSlotTier = (maxSampledTextures: number | null, maxSamplers: number 
   return tier;
 };
 
-/** Minimal surface of the programmatic Vite dev server the driver consumes. */
-interface ViteDevServer {
-  listen: () => Promise<unknown>;
-  close: () => Promise<unknown>;
-  resolvedUrls: { local: string[]; network: string[] } | null;
-}
-
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PAGE_DIR = resolve(HERE, 'page');
-// This file now lives at `packages/exojs-bench/src/rendering/driver.ts`, so the
-// repository root is four levels up (rendering → src → exojs-bench → packages →
-// root), not three as it was under the old `test/perf/baseline/` location.
-const REPO_ROOT = resolve(HERE, '..', '..', '..', '..');
-/** The engine's TypeScript source root the harness benchmarks (`<repo>/src`). */
-const ENGINE_SRC = resolve(REPO_ROOT, 'src');
 
 /** Chromium flag set for the WebGL2 browser. Pinning the device scale factor keeps `devicePixelRatio` at 1 so canvas backing size is deterministic. NO `--use-angle=swiftshader`: that would force a software rasterizer and make every timing worthless. */
 export const LAUNCH_FLAGS: readonly string[] = ['--force-device-scale-factor=1'];
@@ -117,25 +108,6 @@ export const WEBGPU_LAUNCH_FLAGS: readonly string[] = [...LAUNCH_FLAGS, '--enabl
 
 /** Adapter identity substrings that name a software WebGPU implementation rather than a real GPU. */
 const SOFTWARE_WEBGPU_PATTERN = /swiftshader|lavapipe|llvmpipe|warp|software|basic render/i;
-
-/** Shader extensions the engine imports as text. */
-const SHADER_EXTENSIONS = ['.vert', '.frag', '.glsl'] as const;
-
-/** ExoJS package version, read from the repository root manifest. */
-export const readEngineVersion = (): string => {
-  const manifest = JSON.parse(readFileSync(resolve(REPO_ROOT, 'package.json'), 'utf8')) as { version?: string };
-
-  return manifest.version ?? '0.0.0';
-};
-
-/**
- * Competitor library arms whose installed version + resolution are stamped into
- * every report header (via the shared {@link readLibraryProvenance}) and, when
- * resolvable, pre-bundled by Vite (see {@link resolvableCompetitors}). Pinned
- * exact in `@codexo/exojs-bench`'s devDependencies, so an "ExoJS vs X" number is
- * auditable against a reproducible build.
- */
-const LIBRARY_ARMS = ['pixi.js', 'phaser', 'excalibur'] as const;
 
 /**
  * Adapter capability descriptors known to the driver. Only `engine`, `config`
@@ -193,160 +165,14 @@ const ADAPTER_CAPABILITIES: readonly EngineAdapter[] = [
 ];
 
 /**
- * The subset of {@link LIBRARY_ARMS} actually resolvable from this package, so
- * Vite's `optimizeDeps.include` only pre-bundles competitors that are present. A
- * competitor left unlinked (no `bench:setup`) is simply omitted rather than
- * crashing esbuild's optimizer at server startup — an ExoJS-only run then needs
- * none of the competitor deps present.
- */
-const resolvableCompetitors = (): string[] => {
-  const nodeRequire = createRequire(import.meta.url);
-
-  return LIBRARY_ARMS.filter(name => {
-    try {
-      nodeRequire.resolve(name);
-
-      return true;
-    } catch {
-      return false;
-    }
-  });
-};
-
-/**
- * Load Vite through the copy vitest already depends on. Vite is not a direct
- * dependency of this package (adding one would drift the lockfile), but it is
- * present in the store as a transitive dependency of vitest, so we resolve it
- * from there and import it dynamically.
- */
-const loadVite = async (): Promise<{ createServer: (config: Record<string, unknown>) => Promise<ViteDevServer> }> => {
-  const nodeRequire = createRequire(import.meta.url);
-  const viteEntry = createRequire(nodeRequire.resolve('vitest')).resolve('vite');
-
-  return import(pathToFileURL(viteEntry).href) as Promise<{ createServer: (config: Record<string, unknown>) => Promise<ViteDevServer> }>;
-};
-
-/**
- * Serves `.vert`/`.frag`/`.glsl` imports as their REAL source text (mirrors the
- * production `rollup-plugin-string`). This is the deliberate inverse of the
- * vitest browser project's `shaderStubPlugin`, which replaces shaders with `""`
- * — benchmarking a renderer with empty shaders measures nothing.
- */
-const realShaderPlugin = {
-  name: 'baseline-real-shader',
-  transform(code: string, id: string): { code: string } | undefined {
-    if (SHADER_EXTENSIONS.some(extension => id.endsWith(extension))) {
-      return { code: `export default ${JSON.stringify(code)}` };
-    }
-
-    return undefined;
-  },
-};
-
-/**
- * `__DEV__` value the engine graph is compiled with for the benchmark.
+ * Starts a programmatic Vite dev server rooted at the matrix harness page.
  *
- * MUST be `false`: the competitor arms are pre-bundled from their published npm
- * dist (`optimizeDeps.include`), i.e. their PRODUCTION builds with dev-only
- * guards already stripped. Measuring exojs source with `__DEV__=true` therefore
- * pits an unshipped dev build — carrying per-frame dev diagnostics that can scan
- * the whole captured set on a clean retained frame — against competitors' prod
- * builds. That asymmetry inflated the exojs numbers by 20-30x on the
- * static-heavy retained arm alone (2.3 ms vs the real ~0.1 ms prod floor).
- * `false` compiles the same
- * path a shipped exojs game runs, making the cross-arm comparison apples-to-apples.
+ * Thin wrapper over the shared factory in `shared/viteServer.ts` — the Vite
+ * configuration (engine `#*` alias, real-shader transform, dev globals, COOP /
+ * COEP isolation headers) is identical for every page this package serves, so it
+ * lives in one place; only the page root differs.
  */
-const ENGINE_DEV_BUILD = false;
-
-/**
- * Installs the compile-time build flags (`__DEV__`, `__VERSION__`,
- * `__REVISION__`) as real globals before any engine module evaluates. Vite's
- * `define` replaces literal references, but modules pre-bundled by esbuild's
- * optimizer do not see `define`; installing globals covers both paths (mirrors
- * the browser test suite's `_setup-dev-global`).
- */
-const devGlobalsPlugin = (version: string) => ({
-  name: 'baseline-dev-globals',
-  transformIndexHtml(): Array<{ tag: string; injectTo: string; children: string }> {
-    return [
-      {
-        tag: 'script',
-        injectTo: 'head-prepend',
-        children: `globalThis.__DEV__=${String(ENGINE_DEV_BUILD)};globalThis.__VERSION__=${JSON.stringify(version)};globalThis.__REVISION__="baseline";`,
-      },
-    ];
-  },
-});
-
-/**
- * Response headers that place the harness page in a cross-origin-isolated
- * context. `crossOriginIsolated === true` lifts the browser's Spectre-mitigation
- * clamp on `performance.now()` (~100µs in a non-isolated context) back to high
- * resolution (~5µs), so the CPU timer can actually resolve the small per-frame
- * costs the low-node-count cells sit on instead of quantising them to the timer
- * floor. It also unlocks `SharedArrayBuffer`. Isolation requires BOTH:
- *   - COOP `same-origin` — severs the opener relationship.
- *   - COEP `require-corp` — every subresource must opt in via CORP/CORS.
- * Every resource the harness loads (the page, `harness.ts`, engine source,
- * shaders) is served by this same Vite origin, so it is same-origin and passes
- * the COEP check without a CORP header; textures are generated in-page from a
- * canvas, never fetched. `CORP: same-origin` is set defensively so any
- * same-origin subresource is unambiguously embeddable.
- */
-const CROSS_ORIGIN_ISOLATION_HEADERS: Readonly<Record<string, string>> = {
-  'Cross-Origin-Opener-Policy': 'same-origin',
-  'Cross-Origin-Embedder-Policy': 'require-corp',
-  'Cross-Origin-Resource-Policy': 'same-origin',
-};
-
-/** Starts a programmatic Vite dev server rooted at the harness page. */
-export const startViteServer = async (version: string): Promise<ViteDevServer> => {
-  const vite = await loadVite();
-  const server = await vite.createServer({
-    configFile: false,
-    root: PAGE_DIR,
-    logLevel: 'warn',
-    // Allow the harness (under page/) to import engine source above its root.
-    // The COOP/COEP/CORP headers make the page `crossOriginIsolated`, restoring
-    // high-resolution `performance.now()` for the CPU timer (see the constant).
-    server: { host: '127.0.0.1', fs: { allow: [REPO_ROOT] }, headers: { ...CROSS_ORIGIN_ISOLATION_HEADERS } },
-    // Resolve the engine's `#*` subpath imports to its TypeScript source.
-    //
-    // Under the OLD location (`test/perf/baseline/`, inside the repo-root
-    // package) the harness's `#core/*` imports resolved through the ROOT
-    // package.json `imports` map with the `@codexo/source` condition. Now that
-    // the harness is its own package, the nearest package.json to the adapter
-    // files is `@codexo/exojs-bench`'s — which deliberately does NOT redefine
-    // `#*` (Node forbids an `imports` target escaping the package with `../`).
-    // A single alias maps every `#…` specifier straight to `<repo>/src/…`,
-    // reproducing the root map's pure `#* → ./src/*` wildcard exactly. Engine
-    // modules imported through it still resolve their OWN internal `#*` imports
-    // via the root package.json map + `@codexo/source` condition below, so the
-    // engine graph is measured exactly as it ships. `.vert`/`.frag` specifiers
-    // carry their extension and are handled by `realShaderPlugin`'s transform.
-    resolve: { alias: [{ find: /^#(.*)$/, replacement: `${ENGINE_SRC}/$1` }], conditions: srcConditions },
-    ssr: { resolve: { conditions: srcConditions } },
-    // `noDiscovery` keeps the automatic dep scanner OFF — it runs esbuild over
-    // the whole import graph, which would choke on the engine's `.vert`/`.frag`
-    // imports the real-shader plugin only handles in the transform pass. But the
-    // competitor arms are real npm dependencies whose bundles/transitive deps
-    // include CommonJS modules (e.g. Pixi's `eventemitter3`); without
-    // pre-bundling, the browser's native ESM loader rejects them ("does not
-    // provide an export named 'default'"). Explicitly `include` each RESOLVABLE
-    // competitor so esbuild pre-bundles it and its CJS deps with interop, WITHOUT
-    // scanning the engine graph. A competitor that is not linked is omitted here
-    // (see `resolvableCompetitors`) rather than crashing the optimizer. Engine
-    // source still resolves to local `.ts` files via the `#*` alias and is never
-    // pre-bundled.
-    optimizeDeps: { noDiscovery: true, include: resolvableCompetitors() },
-    define: { __DEV__: String(ENGINE_DEV_BUILD), __VERSION__: JSON.stringify(version), __REVISION__: JSON.stringify('baseline') },
-    plugins: [realShaderPlugin, devGlobalsPlugin(version)],
-  });
-
-  await server.listen();
-
-  return server;
-};
+export const startViteServer = async (version: string): Promise<ViteDevServer> => startPageServer({ pageDir: PAGE_DIR, version });
 
 /**
  * In-page snippet: read the unmasked WebGL2 renderer string for provenance
