@@ -196,3 +196,16 @@ export interface RenderBackend {
   flush(): this;
   destroy(): void;
 }
+
+/**
+ * Sanitize a configured `canvas.pixelRatio` into a usable raster density.
+ *
+ * A backend built from a stand-in application object (a test, a probe page, a
+ * canvas measured before layout) may be handed nothing, a zero or a `NaN`. A
+ * glyph atlas is keyed on this number and sized by it, so a bad value must
+ * collapse to the logical-pixel default here rather than mint an unusable
+ * cache entry several layers down.
+ */
+export function sanitizeSurfacePixelRatio(pixelRatio: number | undefined): number {
+  return pixelRatio !== undefined && Number.isFinite(pixelRatio) && pixelRatio > 0 ? pixelRatio : 1;
+}

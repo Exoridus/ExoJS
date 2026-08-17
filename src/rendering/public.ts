@@ -92,6 +92,7 @@ export type { BmFontChar, BmFontData } from '#rendering/text/BmFont';
 export { BmFont } from '#rendering/text/BmFont';
 export type { AtlasMode } from '#rendering/text/GlyphAtlas';
 export { GlyphAtlas } from '#rendering/text/GlyphAtlas';
+export { GlyphMetrics } from '#rendering/text/GlyphMetrics';
 export type { FontFormat, HTMLTextOptions } from '#rendering/text/HTMLText';
 export { HTMLText } from '#rendering/text/HTMLText';
 export type { LayoutOptions } from '#rendering/text/LayoutOptions';

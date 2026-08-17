@@ -8,7 +8,7 @@
  */
 
 /** One scene the probe can render. */
-export type ProbeSceneId = 'baseline' | 'color-filter' | 'blur' | 'cache-texture' | 'cache-dirty' | 'overdraw';
+export type ProbeSceneId = 'baseline' | 'color-filter' | 'blur' | 'cache-texture' | 'cache-dirty' | 'overdraw' | 'text-ratio';
 
 /**
  * Which internal-target resolution a cell renders under.
@@ -89,6 +89,13 @@ export const PROBE_SCENES: readonly ProbeSceneSpec[] = [
     usesInternalTarget: false,
     purpose: 'Stacked full-stage quads — the fill-rate ladder DPR multiplies quadratically.',
   },
+  {
+    id: 'text-ratio',
+    label: 'Text pixelRatio',
+    usesInternalTarget: false,
+    purpose:
+      'Runtime SDF text at 9, 11 and 16px, rasterized at an explicit `Text.pixelRatio`. Answers what raising the TEXT raster density alone buys, without paying for a denser main surface.',
+  },
 ];
 
 /**
@@ -106,7 +113,34 @@ export interface ProbeCell {
   readonly scene: ProbeSceneId;
   readonly mode: ProbeMode;
   readonly pixelRatio: number;
+  /**
+   * `Text.pixelRatio` handed to the scene's text nodes, or omitted to let them
+   * INHERIT the application's ratio — which is the shipped default and what
+   * every other scene runs.
+   *
+   * Only the `text-ratio` scene sets it. The interesting comparison is not a
+   * ladder but four named pairs (see {@link TEXT_RATIO_CELLS}), so this axis is
+   * enumerated rather than crossed with {@link PROBE_PIXEL_RATIOS}.
+   */
+  readonly textPixelRatio?: number;
 }
+
+/**
+ * The four cells of the text-density comparison, in run order.
+ *
+ * A → B → C hold the SURFACE at 2 and raise only the glyph raster; D raises the
+ * whole surface to 3 as well. Reading them in that order answers the question
+ * the iPhone measurement left open: how much of the sharpness a DPR-3 surface
+ * buys for small text can be had by rasterizing the glyphs at 3 while the rest
+ * of the frame stays at 2 — which is the trade a phone actually cares about,
+ * since fill rate scales with the surface and not with the atlas.
+ */
+export const TEXT_RATIO_CELLS: readonly ProbeCell[] = [
+  { scene: 'text-ratio', mode: 'inherit', pixelRatio: 2, textPixelRatio: 1 },
+  { scene: 'text-ratio', mode: 'inherit', pixelRatio: 2, textPixelRatio: 2 },
+  { scene: 'text-ratio', mode: 'inherit', pixelRatio: 2, textPixelRatio: 3 },
+  { scene: 'text-ratio', mode: 'inherit', pixelRatio: 3, textPixelRatio: 3 },
+];
 
 /**
  * Build the run order.
@@ -124,6 +158,15 @@ export const buildProbeMatrix = (
   const cells: ProbeCell[] = [];
 
   for (const scene of scenes) {
+    // The text-density scene has its own enumerated cells: crossing it with the
+    // ratio ladder would measure twelve combinations to answer a four-way
+    // question, and three of the twelve would be pairs nobody would ship.
+    if (scene.id === 'text-ratio') {
+      cells.push(...TEXT_RATIO_CELLS);
+
+      continue;
+    }
+
     const modes: readonly ProbeMode[] = scene.usesInternalTarget ? ['inherit', 'logical'] : ['inherit'];
 
     for (const mode of modes) {
@@ -163,6 +206,20 @@ export interface ProbeCellResult {
   readonly configuredPixelRatio: number;
   /** `Application.pixelRatio` as the engine resolved it (must equal `configuredPixelRatio`). */
   readonly enginePixelRatio: number | null;
+  /**
+   * `Text.pixelRatio` this cell's text nodes were built with, or `null` when
+   * they inherited the application's ratio — which is every cell outside the
+   * `text-ratio` scene.
+   */
+  readonly textPixelRatio: number | null;
+  /**
+   * `Text.rasterPixelRatio` as the engine resolved it for the scene's text, or
+   * `null` when the cell drew no runtime text. Recorded separately from
+   * {@link textPixelRatio} because the inherit path is exactly the thing under
+   * test: without an override this must come out equal to
+   * {@link enginePixelRatio}, and a capture where it does not is the finding.
+   */
+  readonly textRasterPixelRatio: number | null;
   /** CSS size of the canvas element, in CSS pixels. */
   readonly cssWidth: number;
   readonly cssHeight: number;
@@ -274,8 +331,12 @@ export interface ProbeResult {
  *   the stage size became a run parameter. A version-1 or -2 capture is still
  *   readable — map `current` onto `logical` and `parent-resolution` onto
  *   `inherit`, and read its stage as 360 × 360.
+ * - `3` → `4`: runtime text became HiDPI-aware. A `text-ratio` scene was added
+ *   with its own four enumerated cells, and every result carries
+ *   `textPixelRatio` / `textRasterPixelRatio`. In a version-3 capture both are
+ *   absent and every cell's text rasterized at 1 regardless of its DPR.
  */
-export const PROBE_SCHEMA_VERSION = 3;
+export const PROBE_SCHEMA_VERSION = 4;
 
 /**
  * Total pixels across every internal target a cell allocated, counting each

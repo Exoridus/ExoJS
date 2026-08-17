@@ -34,10 +34,19 @@ export const BLUR_RADIUS = 6;
 /** Blur sample quality. Kept low: the probe measures target SIZE cost, not filter quality. */
 export const BLUR_QUALITY = 2;
 
+/** Logical font sizes the `text-ratio` scene renders, smallest first. */
+export const TEXT_RATIO_FONT_SIZES = [9, 11, 16] as const;
+
 /** One built scene plus everything the runner needs to drive and dismantle it. */
 export interface ProbeScene {
   /** The node the probe renders each frame. */
   readonly root: Container;
+  /**
+   * The runtime text nodes this scene owns, so the runner can record the raster
+   * density the engine actually resolved for them. Empty for a scene with no
+   * runtime text.
+   */
+  readonly textNodes: readonly Text[];
   /**
    * Nodes with `cacheAsTexture` enabled, whose cache texture the probe
    * instruments. Empty for every other scene.
@@ -55,6 +64,12 @@ export interface ProbeSceneOptions {
   readonly stageWidth: number;
   /** Logical stage height in CSS units. */
   readonly stageHeight: number;
+  /**
+   * `Text.pixelRatio` for the scene's runtime text, or omitted to let it inherit
+   * the application's ratio. Only the `text-ratio` scene reads it — every other
+   * scene must keep measuring the shipped default.
+   */
+  readonly textPixelRatio?: number;
   /**
    * Which arm the cell runs. `logical` pins `Filter.resolution` and
    * `RenderNode.cacheResolution` to 1, reproducing the pre-`NEU-S4` sizing
@@ -134,7 +149,7 @@ const createFlatTexture = (): Texture => {
  * the surface's real resolution — and, when the content sits behind an effect or
  * a texture cache, of the INTERNAL target's resolution instead.
  */
-const buildSharpContent = (stageSize: number, withText: boolean): { node: Container; textures: Texture[]; spin: Graphics } => {
+const buildSharpContent = (stageSize: number, withText: boolean): { node: Container; textures: Texture[]; spin: Graphics; textNodes: Text[] } => {
   const content = new Container();
   const edgeTexture = createEdgeTexture(64);
   const sprite = new Sprite(edgeTexture);
@@ -181,6 +196,8 @@ const buildSharpContent = (stageSize: number, withText: boolean): { node: Contai
   content.addChild(rings);
   content.addChild(spin);
 
+  const textNodes: Text[] = [];
+
   if (withText) {
     const caption = new Text('Fan, rings and star are vector geometry.', {
       fontSize: 11,
@@ -199,9 +216,76 @@ const buildSharpContent = (stageSize: number, withText: boolean): { node: Contai
 
     content.addChild(caption);
     content.addChild(small);
+    textNodes.push(caption, small);
   }
 
-  return { node: content, textures: [edgeTexture], spin };
+  return { node: content, textures: [edgeTexture], spin, textNodes };
+};
+
+/**
+ * Build the `text-ratio` scene: the same sentence at 9, 11 and 16px, twice —
+ * once as plain fill and once with an outline — over a flat panel.
+ *
+ * Deliberately nothing but text. Every other scene mixes geometry, a sprite and
+ * an effect so a tester can judge the SURFACE resolution; this one exists to
+ * judge the GLYPH raster alone, and any hairline beside it would draw the eye
+ * to a difference that has nothing to do with the question.
+ *
+ * The outlined row is not decoration: the outline reach is stated in logical
+ * units and encoded in the SDF buffer, so a raster density that quietly changed
+ * it would show up here as a thinner or fatter edge rather than as a sharper
+ * glyph.
+ */
+const buildTextRatioScene = (stageWidth: number, stageHeight: number, textPixelRatio: number | undefined): ProbeScene => {
+  const root = new Container();
+  const panel = new Graphics();
+
+  panel.fillStyle = new Color(16, 22, 30);
+  panel.drawRectangle(0, 0, stageWidth, stageHeight);
+  root.addChild(panel);
+
+  const textNodes: Text[] = [];
+  const margin = Math.min(stageWidth, stageHeight) * 0.06;
+  let y = margin;
+
+  for (const fontSize of TEXT_RATIO_FONT_SIZES) {
+    const plain = new Text(`${fontSize}px — Handgloves quickly 0123456789`, {
+      fontSize,
+      fillColor: new Color(236, 242, 248),
+      ...(textPixelRatio !== undefined && { pixelRatio: textPixelRatio }),
+    });
+
+    plain.setPosition(margin, y);
+    y += fontSize * 1.9;
+
+    const outlined = new Text(`${fontSize}px outlined — Handgloves quickly`, {
+      fontSize,
+      fillColor: new Color(255, 208, 96),
+      outlineColor: new Color(10, 14, 20),
+      outlineWidth: 0.12,
+      ...(textPixelRatio !== undefined && { pixelRatio: textPixelRatio }),
+    });
+
+    outlined.setPosition(margin, y);
+    y += fontSize * 2.6;
+
+    root.addChild(plain);
+    root.addChild(outlined);
+    textNodes.push(plain, outlined);
+  }
+
+  return {
+    root,
+    cacheNodes: [],
+    textNodes,
+    update(): void {
+      // Static on purpose: a moving glyph cannot be judged for sharpness, and
+      // this scene is a sharpness comparison rather than a timing one.
+    },
+    dispose(): void {
+      root.destroy();
+    },
+  };
 };
 
 /** Build the `overdraw` scene: `OVERDRAW_LAYERS` full-stage quads at low alpha. */
@@ -224,6 +308,7 @@ const buildOverdrawScene = (stageWidth: number, stageHeight: number): ProbeScene
   return {
     root,
     cacheNodes: [],
+    textNodes: [],
     update(frame: number): void {
       // A one-unit wobble so the frame is never a literal repeat of the last —
       // it changes no fill-rate property, it only stops a driver from treating
@@ -274,9 +359,13 @@ export const createProbeScene = (id: ProbeSceneId, options: ProbeSceneOptions): 
     return buildOverdrawScene(stageWidth, stageHeight);
   }
 
+  if (id === 'text-ratio') {
+    return buildTextRatioScene(stageWidth, stageHeight, options.textPixelRatio);
+  }
+
   const caches = id === 'cache-texture' || id === 'cache-dirty';
   const root = new Container();
-  const { node: content, textures, spin } = buildSharpContent(stageSize, !caches);
+  const { node: content, textures, spin, textNodes } = buildSharpContent(stageSize, !caches);
   const filters: Array<ColorFilter | BlurFilter> = [];
 
   root.addChild(content);
@@ -312,6 +401,7 @@ export const createProbeScene = (id: ProbeSceneId, options: ProbeSceneOptions): 
   return {
     root,
     cacheNodes,
+    textNodes,
     update(frame: number): void {
       if (id === 'cache-texture') {
         // Static: the cache bakes once and replays, which is what a bitmap cache

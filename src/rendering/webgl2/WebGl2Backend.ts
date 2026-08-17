@@ -24,6 +24,7 @@ import {
   stampRetainedBatchGeneration,
 } from '#rendering/plan/RetainedInstructionSet';
 import type { RenderBackend } from '#rendering/RenderBackend';
+import { sanitizeSurfacePixelRatio } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { InstanceDataView } from '#rendering/RenderBatch';
 import type { Renderer } from '#rendering/Renderer';
@@ -293,6 +294,8 @@ export class WebGl2Backend implements RenderBackend {
   // with GL_INVALID_VALUE and leave every transform fetch reading an incomplete
   // texture (a black frame). Re-read after a context restore.
   private _maxTextureSize = 0;
+  /** The application's `canvas.pixelRatio`, sanitized once — see {@link surfacePixelRatio}. */
+  private readonly _surfacePixelRatio: number;
   private _renderTarget: RenderTarget;
   // Device-pixel viewport rect last handed to `gl.viewport` (x, y, width,
   // height). Cached at the bind seam so the vertex shaders can map a drawable's
@@ -358,6 +361,7 @@ export class WebGl2Backend implements RenderBackend {
     const clearColor = app.options.clearColor;
     const webglAttributes = renderingOptions.webglAttributes;
     const debug = renderingOptions.debug ?? false;
+    this._surfacePixelRatio = sanitizeSurfacePixelRatio(canvasOptions.pixelRatio);
     this._canvas = app.canvas;
 
     const gl = this._createContext(webglAttributes);
@@ -431,6 +435,21 @@ export class WebGl2Backend implements RenderBackend {
     const logicalWidth = this._rootRenderTarget.width;
 
     return logicalWidth > 0 ? this._canvas.width / logicalWidth : 1;
+  }
+
+  /**
+   * The application's configured `canvas.pixelRatio`.
+   *
+   * Deliberately NOT {@link rootResolution}, even though the two agree in every
+   * ordinary sizing mode. This is the number a rasterizer keys a cache on, and
+   * it has to be stable and quantized to be safe there: under `'letterbox'`
+   * sizing the root target stays at the design size while the backing store
+   * tracks the parent's fitted rectangle, so `rootResolution` is an arbitrary
+   * float that moves on every window resize — keying a glyph atlas on it would
+   * mint a fresh set of pages per resize step.
+   */
+  public get surfacePixelRatio(): number {
+    return this._surfacePixelRatio;
   }
 
   public get maxTextureSize(): number {

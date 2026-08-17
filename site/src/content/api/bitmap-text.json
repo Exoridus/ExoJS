@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 101,
+  "memberCount": 102,
   "counts": {
     "constructors": 1,
     "methods": 43,
-    "properties": 43,
+    "properties": 44,
     "events": 14
   },
   "sections": [
@@ -2812,6 +2812,27 @@
           "params": [],
           "returnType": null,
           "description": "When true, material-aware overlap reordering is disabled for this node's draw-order scope. Draw commands are submitted in exact document order (after scope-local z-sorting), preserving the painter's guarantee irrespective of material compatibility or AABB safety analysis. Adjacency coalescing of consecutive same-material draws still applies; it does not change visual output order."
+        },
+        {
+          "name": "rasterPixelRatio",
+          "signature": "rasterPixelRatio: number",
+          "signatureTokens": [
+            {
+              "text": "rasterPixelRatio",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Device pixels per logical pixel this node's glyphs are rasterized at. 1 for everything whose glyph source is fixed at build time — a BitmapText draws from an atlas somebody else already rasterized, and whatever density that atlas was built at is baked into its own metrics. Text overrides this with the density it resolved for the surface it is drawn on. The renderers read it to convert style lengths that are expressed in logical pixels but applied in atlas texels — the shadow offset is the only one today."
         },
         {
           "name": "rotation",

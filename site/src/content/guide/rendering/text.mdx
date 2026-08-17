@@ -202,7 +202,7 @@ this.backdrop = new Panel({
 
 Both reads resolve a pending layout pass first, so the number you get always reflects the changes you have made — including a style mutation on the line above.
 
-To measure without a node at all — sizing a button before you have anything to put in it, deciding whether a caption fits — use the static counterpart. It takes the same options as the constructor and runs the same layout pass against the same shared atlas, so it answers exactly what the node's `textBounds` would:
+To measure without a node at all — sizing a button before you have anything to put in it, deciding whether a caption fits — use the static counterpart. It takes the same options as the constructor and runs the same layout pass over the same shared font metrics, so it answers exactly what the node's `textBounds` would:
 
 ```ts
 import { BitmapText, Text, type BmFont } from '@codexo/exojs';
@@ -213,11 +213,33 @@ const { width } = Text.measure('Continue', { fontSize: 24 });
 const { height } = BitmapText.measure('Continue', font, { scale: 2 });
 ```
 
-`Text.measure` rasterizes any glyph the shared atlas has not seen yet, so measuring an unfamiliar string is not free and does claim atlas space. `BitmapText.measure` reads a pre-built atlas and costs nothing beyond the layout.
+`Text.measure` costs one canvas measurement per glyph it has not seen before and nothing else: it creates no atlas, rasterizes no glyph and claims no atlas space. Its answer is therefore also independent of `pixelRatio` — see below. `BitmapText.measure` reads a pre-built atlas and costs nothing beyond the layout.
+
+## HiDPI: glyph raster density
+
+Glyphs are rasterized onto a real pixel grid, so on a high-density display they need more of them. A text node therefore rasterizes at the `pixelRatio` of the [`Application`](/ExoJS/en/api/application/) that draws it — set `canvas.pixelRatio: 2` and its glyphs are rendered from a 2x font onto a 2x atlas tile. You do not have to do anything for that; it is the default, and it is deterministic: nothing in the text stack consults `window.devicePixelRatio`, so an application pinned at 2 renders text at 2 on a device that reports 3.
+
+Small type is where a device's remaining density is still visible. `Text.pixelRatio` raises the glyph raster for one node alone, without making the whole surface — and its fill rate — denser:
+
+```ts
+import { Application, Text } from '@codexo/exojs';
+
+const app = new Application({ canvas: { pixelRatio: 2 } });
+
+// Inherits the application's ratio: rasterized at 2.
+const label = new Text('Ammo 24/60', { fontSize: 9 });
+
+// Overridden: rasterized at 3 while the surface stays at 2.
+const crisp = new Text('Ammo 24/60', { fontSize: 9, pixelRatio: 3 });
+```
+
+Both nodes lay out identically. The logical font size, the advances, kerning, wrapping, line breaks, alignment, the reach of an outline or shadow, and everything `textBounds` and `Text.measure` report are the same at every ratio — only sharpness, atlas tile size and memory change. `text.pixelRatio` reports the override and is `undefined` when there is none; assign `undefined` to go back to inheriting. `text.rasterPixelRatio` reports the density actually in force.
+
+The cost is roughly the square of the ratio. Measured over an ASCII set at 9, 11 and 16px: 146k atlas texels at ratio 1, 582k at ratio 2 and 1.29M at ratio 3 — enough to push that set from one 1024x1024 page to two. Raise it for the labels that need it, not for a whole UI.
 
 ## Text constraints
 
-- One glyph atlas is shared per font variant (family, style, weight, colour mode, SDF radius), so nodes that differ only in size or colour reuse the same atlas — and nodes that differ in family or weight do not. The atlas grows by adding 1024×1024 pages as needed; large sets of unique glyph/size combinations cost VRAM rather than failing, but a single glyph larger than one page throws.
+- One glyph atlas is shared per font variant (family, style, weight, colour mode, SDF radius, raster pixel ratio), so nodes that differ only in size or colour reuse the same atlas — and nodes that differ in family, weight or pixel ratio do not. The atlas grows by adding 1024×1024 pages as needed; large sets of unique glyph/size combinations cost VRAM rather than failing, but a single glyph larger than one page throws.
 - `Text` does not expose per-character styling. Use separate `Text` instances for mixed-style strings.
 - `Text` is a leaf drawable, not a container — it takes no children.
 - Loader-based `FontAsset` loading is the built-in path for custom fonts; any font family available to the browser's canvas text engine can be used once loaded.

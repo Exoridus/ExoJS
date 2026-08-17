@@ -28,11 +28,11 @@ import { getBackendDevice } from './webgpu-test-helpers';
  * construction. `alpha`/`premultipliedAlpha` are off and `preserveDrawingBuffer`
  * is on so a rendered frame can be read back unmodified.
  */
-export const makeTestApp = (canvas: HTMLCanvasElement, size: number): Application =>
+export const makeTestApp = (canvas: HTMLCanvasElement, size: number, pixelRatio?: number): Application =>
   ({
     canvas,
     options: {
-      canvas: { width: size, height: size },
+      canvas: { width: size, height: size, ...(pixelRatio !== undefined && { pixelRatio }) },
       clearColor: Color.black,
       rendering: {
         debug: false,
@@ -89,8 +89,8 @@ export const webGl2Available = (): boolean => {
   }
 };
 
-export const createWebGl2TestBackend = async (size: number): Promise<WebGl2Backend> => {
-  const app = makeTestApp(makeTestCanvas(size), size);
+export const createWebGl2TestBackend = async (size: number, pixelRatio?: number): Promise<WebGl2Backend> => {
+  const app = makeTestApp(makeTestCanvas(size), size, pixelRatio);
   const backend = new WebGl2Backend(app);
 
   await backend.initialize();
@@ -99,8 +99,8 @@ export const createWebGl2TestBackend = async (size: number): Promise<WebGl2Backe
   return backend;
 };
 
-export const createWebGpuTestBackend = async (size: number): Promise<WebGpuBackend> => {
-  const backend = new WebGpuBackend(makeTestApp(makeTestCanvas(size), size));
+export const createWebGpuTestBackend = async (size: number, pixelRatio?: number): Promise<WebGpuBackend> => {
+  const backend = new WebGpuBackend(makeTestApp(makeTestCanvas(size), size, pixelRatio));
 
   wireCoreRenderers(backend);
   await backend.initialize();

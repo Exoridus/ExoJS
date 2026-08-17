@@ -299,6 +299,10 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
   // ── Collection (called during scene traversal) ───────────────────────────
 
   private _collectText(node: Text): void {
+    // Before the layout pass, not after: this is what a node with no explicit
+    // `pixelRatio` inherits, and the pass it drives is the one that resolves
+    // which atlas the node rasterizes into.
+    node._setSurfacePixelRatio(this.getBackend().surfacePixelRatio);
     node.syncDirty();
     const { pageQuads, atlas } = node;
     if (pageQuads.length === 0 || atlas === null) return;
@@ -395,9 +399,13 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     arr[base + 23] = sc.a;
 
     // Shadow offset + gradient axis (texel 6)
-    // Store raw pixel offsets; shaders divide by u_pageSize to get UV offset.
-    arr[base + 24] = style.shadowOffsetX;
-    arr[base + 25] = style.shadowOffsetY;
+    // Stored in ATLAS TEXELS; the shaders divide by u_pageSize to get the UV
+    // offset. The style states the offset in LOGICAL pixels, and one logical
+    // pixel is `rasterPixelRatio` texels — without the scale a shadow would
+    // shorten by exactly that factor as the glyph raster got denser.
+    const texelsPerLogicalPixel = node.rasterPixelRatio;
+    arr[base + 24] = style.shadowOffsetX * texelsPerLogicalPixel;
+    arr[base + 25] = style.shadowOffsetY * texelsPerLogicalPixel;
     arr[base + 26] = style.gradientAxis === 'vertical' ? 1 : 0;
     arr[base + 27] = 0;
 

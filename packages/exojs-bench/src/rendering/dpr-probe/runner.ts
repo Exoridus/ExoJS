@@ -232,7 +232,12 @@ export const runProbeCell = async (options: RunProbeCellOptions): Promise<ProbeC
 
   try {
     booted = await bootProbeApplication(canvas, stage, cell.pixelRatio, backend);
-    scene = createProbeScene(cell.scene, { stageWidth: stage.width, stageHeight: stage.height, mode: cell.mode });
+    scene = createProbeScene(cell.scene, {
+      stageWidth: stage.width,
+      stageHeight: stage.height,
+      mode: cell.mode,
+      ...(cell.textPixelRatio !== undefined && { textPixelRatio: cell.textPixelRatio }),
+    });
 
     const { app, gpuTimer } = booted;
     const instrumentation = instrumentCell(app, scene);
@@ -300,6 +305,11 @@ export const runProbeCell = async (options: RunProbeCellOptions): Promise<ProbeC
       mode: cell.mode,
       configuredPixelRatio: cell.pixelRatio,
       enginePixelRatio: app.pixelRatio,
+      textPixelRatio: cell.textPixelRatio ?? null,
+      // Read AFTER the frames have run: a node resolves its raster density
+      // while the renderer collects it, so asking before the first draw would
+      // record the pre-attachment default rather than what was measured.
+      textRasterPixelRatio: scene.textNodes[0]?.rasterPixelRatio ?? null,
       cssWidth: parseFloat(canvas.style.width) || canvas.clientWidth,
       cssHeight: parseFloat(canvas.style.height) || canvas.clientHeight,
       backingWidth,
@@ -328,6 +338,8 @@ export const runProbeCell = async (options: RunProbeCellOptions): Promise<ProbeC
       mode: cell.mode,
       configuredPixelRatio: cell.pixelRatio,
       enginePixelRatio: booted?.app.pixelRatio ?? null,
+      textPixelRatio: cell.textPixelRatio ?? null,
+      textRasterPixelRatio: scene?.textNodes[0]?.rasterPixelRatio ?? null,
       cssWidth: parseFloat(canvas.style.width) || 0,
       cssHeight: parseFloat(canvas.style.height) || 0,
       backingWidth: canvas.width,
@@ -379,13 +391,20 @@ export const startVisualPreview = async (options: {
   scene: ProbeSceneId;
   mode: ProbeMode;
   pixelRatio: number;
+  /** `Text.pixelRatio` for the previewed scene's text; omitted means inherit. */
+  textPixelRatio?: number;
   stage: StageSize;
   backend: ProbeBackendRequest;
   host: HTMLElement;
 }): Promise<VisualPreview> => {
   const canvas = freshStageCanvas(options.host);
   const booted = await bootProbeApplication(canvas, options.stage, options.pixelRatio, options.backend);
-  const scene = createProbeScene(options.scene, { stageWidth: options.stage.width, stageHeight: options.stage.height, mode: options.mode });
+  const scene = createProbeScene(options.scene, {
+    stageWidth: options.stage.width,
+    stageHeight: options.stage.height,
+    mode: options.mode,
+    ...(options.textPixelRatio !== undefined && { textPixelRatio: options.textPixelRatio }),
+  });
   const recorder = createTargetRecorder();
   const restores: RestoreInstrumentation[] = [instrumentAcquireRenderTexture(booted.app.backend as unknown as RenderTextureAcquirer, recorder)];
 

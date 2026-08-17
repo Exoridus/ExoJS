@@ -1,3 +1,5 @@
+import { assert } from '#core/dev';
+
 import { AbstractText } from './AbstractText';
 import type { AtlasMode } from './GlyphAtlas';
 import type { GlyphAtlas } from './GlyphAtlas';
@@ -10,6 +12,17 @@ import { TextStyle } from './TextStyle';
 import type { TextLayoutResult, TextPageQuads, TextSize } from './types';
 
 export type { TextPageQuads };
+
+/**
+ * Reject a raster density that cannot mean anything — `0`, negative, `NaN`,
+ * `Infinity`. Not clamped: a silently corrected ratio would rasterize an atlas
+ * the caller never asked for and hide the typo that produced it.
+ */
+function assertPixelRatio(value: number): number {
+  assert(Number.isFinite(value) && value > 0, `Text pixelRatio must be a positive finite number (got ${value}).`);
+
+  return value;
+}
 
 /**
  * Construction options for a {@link Text} node — a flat merge of visual
@@ -26,6 +39,30 @@ export interface TextOptions extends TextStyleOptions, LayoutOptions {
   colorGlyphs?: boolean;
   /** SDF buffer radius in pixels. Construction-only. */
   sdfRadius?: number;
+  /**
+   * Device pixels per logical pixel this node's glyphs are RASTERIZED at.
+   *
+   * Omit it and the node inherits the `pixelRatio` of the {@link Application}
+   * it is drawn by — which is the deterministic default, and the only thing that
+   * ever happens without an explicit opt-in. Nothing in the text stack reads
+   * `window.devicePixelRatio`; there is no silent supersampling.
+   *
+   * Set it to raise glyph raster density for THIS node alone, without paying the
+   * fill rate of a denser main surface — the case small runtime SDF labels on a
+   * DPR-3 phone actually need:
+   *
+   * ```ts
+   * const app = new Application({ canvas: { pixelRatio: 2 } });
+   *
+   * new Text('9px label', { fontSize: 9 });                 // rasterized at 2
+   * new Text('9px label', { fontSize: 9, pixelRatio: 3 });  // rasterized at 3
+   * ```
+   *
+   * The logical font size, layout, advances and line breaks are identical in
+   * both — only the raster grid behind the glyphs changes. Must be a positive
+   * finite number.
+   */
+  pixelRatio?: number;
 }
 
 /**
@@ -58,6 +95,11 @@ export interface TextOptions extends TextStyleOptions, LayoutOptions {
  *
  * Enable colour-glyph (emoji) mode via `colorGlyphs: true` in the constructor
  * options. Colour-glyph nodes use the `text-color` shader instead of `text-sdf`.
+ *
+ * Glyphs are rasterized at the {@link Application}'s `pixelRatio`, so text is
+ * crisp on a HiDPI surface without any opt-in. {@link TextOptions.pixelRatio}
+ * raises that density for one node alone — the small-label case on a DPR-3
+ * phone — without changing its layout by so much as a line break.
  * @stable
  */
 export class Text extends AbstractText {
@@ -67,10 +109,27 @@ export class Text extends AbstractText {
   private _destroyed = false;
   private _faceLoadVersion = 0;
 
+  /**
+   * The explicit raster-density override, or `0` for "none".
+   *
+   * `0` is an internal sentinel and never leaves the class: the public property
+   * reports `undefined` when there is no override, because that is the honest
+   * answer — the node inherits, it does not carry a ratio of its own.
+   */
+  private _pixelRatio = 0;
+
+  /**
+   * Raster density of the surface this node was last collected for, pushed in
+   * by the renderer. Starts at 1 so a node that is measured or bounds-read
+   * before it has ever been drawn still has a defined, non-global answer.
+   */
+  private _surfacePixelRatio = 1;
+
   public constructor(text: string, options: TextOptions = {}) {
     super(text, new TextStyle(options), options);
     this._colorGlyphs = options.colorGlyphs ?? false;
     this._sdfRadius = options.sdfRadius ?? SDF_RADIUS;
+    this._pixelRatio = options.pixelRatio === undefined ? 0 : assertPixelRatio(options.pixelRatio);
 
     const face = this._extractFace(options);
     if (face !== null) void this._loadFace(face);
@@ -79,11 +138,15 @@ export class Text extends AbstractText {
   /**
    * Advance extent `text` would occupy under `options`, without constructing
    * a node. Takes the same options as the constructor and gives the same
-   * answer as the resulting node's `textBounds` — it runs the identical
-   * layout pass against the identical shared atlas, so the two cannot drift.
+   * answer as the resulting node's `textBounds` — it runs the identical layout
+   * pass over the identical shared metrics, so the two cannot drift.
    *
-   * Rasterizes any glyph not yet in that atlas: measuring an unseen string is
-   * not free, and it does claim atlas space.
+   * Costs one canvas measurement per glyph it has not seen before, and nothing
+   * else: no atlas is created, no glyph is rasterized, and no page is claimed.
+   * The answer is therefore independent of `pixelRatio`, of which
+   * {@link Application} exists, and of whether anything has been rendered yet —
+   * `colorGlyphs`, `sdfRadius` and `pixelRatio` are ignored here because none of
+   * them can move a line break.
    *
    * ```ts
    * const { width } = Text.measure('Continue', { fontSize: 24 });
@@ -96,12 +159,12 @@ export class Text extends AbstractText {
 
     const style = new TextStyle(options);
 
-    return layoutText(text, style, options, Text._acquireAtlas(style, options.colorGlyphs ?? false, options.sdfRadius ?? SDF_RADIUS)).advance;
+    return layoutText(text, style, options, getDefaultGlyphAtlasPool().getMetrics(style.fontFamily, style.fontStyle, style.fontWeight)).advance;
   }
 
-  /** The one place a Text resolves its atlas, so a measurement cannot pick a different one. */
-  private static _acquireAtlas(style: TextStyle, colorGlyphs: boolean, sdfRadius: number): GlyphAtlas {
-    return getDefaultGlyphAtlasPool().getAtlas(style.fontFamily, style.fontStyle, style.fontWeight, colorGlyphs ? 'color' : 'sdf', sdfRadius);
+  /** The one place a Text resolves its atlas, so two passes cannot pick different ones. */
+  private static _acquireAtlas(style: TextStyle, colorGlyphs: boolean, sdfRadius: number, pixelRatio: number): GlyphAtlas {
+    return getDefaultGlyphAtlasPool().getAtlas(style.fontFamily, style.fontStyle, style.fontWeight, colorGlyphs ? 'color' : 'sdf', sdfRadius, pixelRatio);
   }
 
   public get style(): TextStyle {
@@ -133,6 +196,63 @@ export class Text extends AbstractText {
    */
   public get sdfRadius(): number {
     return this._sdfRadius;
+  }
+
+  /**
+   * The EXPLICIT raster-density override, or `undefined` when this node
+   * inherits the {@link Application}'s `pixelRatio`.
+   *
+   * Reports what was set, not what is in force: a node with no override answers
+   * `undefined` rather than the ratio it happens to be rasterizing at, because
+   * the inherited value belongs to the surface and can differ between two
+   * applications drawing the same node. {@link rasterPixelRatio} is the resolved
+   * number.
+   *
+   * Assigning `undefined` drops an override and returns the node to inheriting.
+   * Any other value must be a positive finite number.
+   */
+  public get pixelRatio(): number | undefined {
+    return this._pixelRatio > 0 ? this._pixelRatio : undefined;
+  }
+
+  public set pixelRatio(v: number | undefined) {
+    const next = v === undefined ? 0 : assertPixelRatio(v);
+
+    if (this._pixelRatio === next) return;
+
+    this._pixelRatio = next;
+    // 'font' rather than 'layout': the atlas this node draws from is keyed on
+    // the ratio, so the change invalidates the glyph source itself.
+    this._markDirty('font');
+  }
+
+  /**
+   * The resolved raster density — the explicit {@link pixelRatio} when there is
+   * one, otherwise the `pixelRatio` of the surface this node was last collected
+   * for (1 until it has been collected once).
+   */
+  public override get rasterPixelRatio(): number {
+    return this._pixelRatio > 0 ? this._pixelRatio : this._surfacePixelRatio;
+  }
+
+  /**
+   * Tell this node the raster density of the surface it is about to be drawn on.
+   *
+   * Called by the backend text renderers during collection, which is the
+   * earliest point where a node and a concrete surface are both in hand — a
+   * `Text` constructor knows no {@link Application}, and materializing an
+   * inherited ratio there would mean reading a global. A node with an explicit
+   * override records the value but keeps rasterizing at its own.
+   * @internal
+   */
+  public _setSurfacePixelRatio(pixelRatio: number): void {
+    const next = Number.isFinite(pixelRatio) && pixelRatio > 0 ? pixelRatio : 1;
+
+    if (this._surfacePixelRatio === next) return;
+
+    this._surfacePixelRatio = next;
+
+    if (this._pixelRatio === 0) this._markDirty('font');
   }
 
   /**
@@ -188,7 +308,7 @@ export class Text extends AbstractText {
 
     if (this._destroyed || version !== this._faceLoadVersion) return;
 
-    Text._acquireAtlas(this._style, this._colorGlyphs, this._sdfRadius).clear();
+    Text._acquireAtlas(this._style, this._colorGlyphs, this._sdfRadius, this.rasterPixelRatio).clear();
     this._markDirty('font');
   }
 
@@ -199,7 +319,8 @@ export class Text extends AbstractText {
 
     // Only a 'font' change can invalidate which atlas this node draws from;
     // a re-flow reuses the one already resolved.
-    const atlas = hint === 'font' || this._atlas === null ? Text._acquireAtlas(this._style, this._colorGlyphs, this._sdfRadius) : this._atlas;
+    const atlas =
+      hint === 'font' || this._atlas === null ? Text._acquireAtlas(this._style, this._colorGlyphs, this._sdfRadius, this.rasterPixelRatio) : this._atlas;
 
     this._atlas = atlas;
 

@@ -26,6 +26,7 @@ import {
   stampRetainedBatchGeneration,
 } from '#rendering/plan/RetainedInstructionSet';
 import type { RenderBackend } from '#rendering/RenderBackend';
+import { sanitizeSurfacePixelRatio } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { InstanceDataView } from '#rendering/RenderBatch';
 import type { Renderer } from '#rendering/Renderer';
@@ -202,6 +203,8 @@ export class WebGpuBackend implements RenderBackend {
   public readonly onRenderError = new Signal<[RenderError]>();
 
   private readonly _canvas: HTMLCanvasElement;
+  /** The application's `canvas.pixelRatio`, sanitized once — see {@link surfacePixelRatio}. */
+  private readonly _surfacePixelRatio: number;
   private readonly _rootRenderTarget: RenderTarget;
   private _clearColor: Color = new Color();
   private _deviceLost = false;
@@ -308,6 +311,7 @@ export class WebGpuBackend implements RenderBackend {
     const clearColor = app.options.clearColor;
 
     this._canvas = app.canvas;
+    this._surfacePixelRatio = sanitizeSurfacePixelRatio(canvasOptions.pixelRatio);
     this._rootRenderTarget = new RenderTarget(width, height, true);
     this._renderTarget = this._rootRenderTarget;
 
@@ -339,6 +343,21 @@ export class WebGpuBackend implements RenderBackend {
     const logicalWidth = this._rootRenderTarget.width;
 
     return logicalWidth > 0 ? this._canvas.width / logicalWidth : 1;
+  }
+
+  /**
+   * The application's configured `canvas.pixelRatio`.
+   *
+   * Deliberately NOT {@link rootResolution}, even though the two agree in every
+   * ordinary sizing mode. This is the number a rasterizer keys a cache on, and
+   * it has to be stable and quantized to be safe there: under `'letterbox'`
+   * sizing the root target stays at the design size while the backing store
+   * tracks the parent's fitted rectangle, so `rootResolution` is an arbitrary
+   * float that moves on every window resize — keying a glyph atlas on it would
+   * mint a fresh set of pages per resize step.
+   */
+  public get surfacePixelRatio(): number {
+    return this._surfacePixelRatio;
   }
 
   /**

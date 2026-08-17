@@ -81,6 +81,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "GenericDualAnalogGamepadMapping",
   "Geometry",
   "GlyphAtlas",
+  "GlyphMetrics",
   "Gradient",
   "Graphics",
   "HTMLText",

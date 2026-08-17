@@ -17,6 +17,28 @@ release and includes intentional breaking changes; see **Changed** and
 
 ### Added
 
+- **HiDPI runtime text — `Text.pixelRatio`.** Runtime SDF and colour glyphs are
+  rasterized at the pixel ratio of the `Application` that draws them, instead of
+  always at one device pixel per logical unit. A `pixelRatio: 2` surface renders
+  its text from a 2x font onto 2x atlas tiles with no opt-in, and the resolution
+  is deterministic: nothing in the text stack reads `window.devicePixelRatio`, so
+  an application pinned at 2 renders text at 2 on a device reporting 3. The new
+  `TextOptions.pixelRatio` / `Text.pixelRatio` overrides it for one node — the
+  case small labels on a DPR-3 phone need, where a denser glyph raster is wanted
+  but a denser main surface is not affordable. Omitted means inherit, and the
+  property reads back `undefined` rather than a materialized number; a value that
+  cannot be a density (`0`, negative, `NaN`, `Infinity`) is rejected, not clamped.
+  `Text.rasterPixelRatio` reports the density in force.
+
+  The logical layout is unaffected at every ratio: advances, kerning, wrapping,
+  line breaks, alignment, `textBounds`, `Text.measure` and the logical reach of an
+  outline or shadow are identical, because the SDF buffer scales with the raster
+  grid and the metrics layout consumes never touch it. Only sharpness, tile size
+  and memory change — measured over an ASCII set at 9/11/16px, 146k atlas texels
+  at ratio 1, 582k at 2 and 1.29M at 3, which is where that set outgrows a single
+  1024x1024 page. The pixel ratio is part of the glyph atlas's identity, so two
+  applications at different densities no longer share one set of pages.
+
 - **Multiphase `System` contract.** A `System` implements any subset of
   `fixedUpdate`/`update`/`draw` (previously `update` + `destroy` were
   required); `app.systems`/`scene.systems` dispatch each phase in ascending
@@ -253,6 +275,15 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
 
 ### Changed
 
+- **`Text.measure` no longer rasterizes.** It used to run its layout pass against
+  the shared glyph atlas, so measuring an unfamiliar string rasterized every glyph
+  in it and claimed atlas space. It now reads the font variant's logical metrics
+  directly — one canvas measurement per unseen glyph, no atlas created, no page
+  claimed. This is what makes the answer independent of `pixelRatio` and of which
+  `Application` happens to exist, and it still agrees exactly with the
+  `textBounds` of a node built from the same options. `colorGlyphs`, `sdfRadius`
+  and `pixelRatio` are accepted and ignored there: none of them can move a line
+  break.
 - **BREAKING — effect and cache render targets now inherit the surface
   resolution.** An internal target (filter input, every filter output, alpha
   mask, `cacheAsTexture`) used to be `ceil(logical bounds)` texels no matter how

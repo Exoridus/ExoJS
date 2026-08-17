@@ -185,6 +185,7 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "GlyphAtlas: class",
   "GlyphInfo: interface",
   "GlyphKey: type alias",
+  "GlyphMetrics: class",
   "GlyphPlacement: interface",
   "GlyphProvider: interface",
   "Gradient: class",

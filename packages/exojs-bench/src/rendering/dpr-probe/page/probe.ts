@@ -46,6 +46,7 @@ const stageHost = element('stage-host');
 const sceneButtons = element('scene-buttons');
 const dprButtons = element('dpr-buttons');
 const modeButtons = element('mode-buttons');
+const textRatioButtons = element('text-ratio-buttons');
 const stageButtons = element('stage-buttons');
 const visualReadout = element('visual-readout');
 const visualProgress = element('visual-progress');
@@ -67,10 +68,14 @@ const engineAutoPixelRatio = Math.min(window.devicePixelRatio || 1, ENGINE_MAX_A
 const timerResolutionMs = measureTimerResolutionMs();
 
 /** Live UI state for the visual (unmeasured) preview. */
-const visual: { scene: ProbeSceneId; dpr: number; mode: ProbeMode; preview: VisualPreview | null } = {
+const visual: { scene: ProbeSceneId; dpr: number; mode: ProbeMode; textRatio: number | null; preview: VisualPreview | null } = {
   scene: 'baseline',
   dpr: engineAutoPixelRatio,
   mode: 'inherit',
+  // `null` is the shipped default — no override, so the text inherits the
+  // application's ratio. It is a distinct choice from any number, which is why
+  // it gets its own button rather than being spelled as one of them.
+  textRatio: null,
   preview: null,
 };
 
@@ -190,6 +195,7 @@ const refreshPreview = async (): Promise<void> => {
       scene: visual.scene,
       mode: visual.mode,
       pixelRatio: visual.dpr,
+      ...(visual.textRatio !== null && { textPixelRatio: visual.textRatio }),
       stage: resolveStage(),
       backend: backendRequest(),
       host: stageHost,
@@ -197,7 +203,7 @@ const refreshPreview = async (): Promise<void> => {
 
     visual.preview = preview;
     visualReadout.textContent = [
-      `${visual.scene}  ·  DPR ${visual.dpr}  ·  ${visual.mode}  ·  ${preview.backendType}`,
+      `${visual.scene}  ·  DPR ${visual.dpr}  ·  text ${visual.textRatio === null ? `inherit (${visual.dpr})` : visual.textRatio}  ·  ${visual.mode}  ·  ${preview.backendType}`,
       `css ${preview.cssWidth}×${preview.cssHeight}  ·  backing ${preview.backingWidth}×${preview.backingHeight} (${preview.backingWidth * preview.backingHeight} px)`,
       `internal targets: ${describeTargets({ internalTargets: preview.internalTargets })}`,
       PROBE_SCENES.find(scene => scene.id === visual.scene)?.purpose ?? '',
@@ -237,6 +243,23 @@ const buildControls = (): void => {
     });
   }
 
+  // Only meaningful for the `text-ratio` scene; left live for every scene so a
+  // tester can sanity-check that it changes nothing elsewhere.
+  const textRatios: ReadonlyArray<{ id: string; label: string; value: number | null }> = [
+    { id: 'inherit', label: 'inherit', value: null },
+    { id: '1', label: '1', value: 1 },
+    { id: '2', label: '2', value: 2 },
+    { id: '3', label: '3', value: 3 },
+  ];
+
+  for (const ratio of textRatios) {
+    addButton(textRatioButtons, ratio.id, ratio.label, () => {
+      visual.textRatio = ratio.value;
+      setPressed(textRatioButtons, ratio.id);
+      void refreshPreview();
+    });
+  }
+
   const stages: ReadonlyArray<{ id: 'fixed' | 'fill'; label: string }> = [
     { id: 'fixed', label: `fixed ${STAGE_SIZE}x${STAGE_SIZE}` },
     { id: 'fill', label: 'fill the screen' },
@@ -254,10 +277,11 @@ const buildControls = (): void => {
   setPressed(sceneButtons, visual.scene);
   setPressed(dprButtons, String(visual.dpr));
   setPressed(modeButtons, visual.mode);
+  setPressed(textRatioButtons, visual.textRatio === null ? 'inherit' : String(visual.textRatio));
   setPressed(stageButtons, stagePreset);
 };
 
-const HEADERS = ['scene', 'mode', 'dpr', 'backing', 'main px', 'internal', 'int/main', 'cpu med', 'cpu p95', 'gpu med', 'raf med', 'frames'];
+const HEADERS = ['scene', 'mode', 'dpr', 'text px', 'backing', 'main px', 'internal', 'int/main', 'cpu med', 'cpu p95', 'gpu med', 'raf med', 'frames'];
 
 const renderResults = (): void => {
   resultsTable.replaceChildren();
@@ -277,6 +301,12 @@ const renderResults = (): void => {
       result.scene,
       result.mode,
       String(result.configuredPixelRatio),
+      // Both halves, because the inherit path is the contract under test: an
+      // overridden cell reads `3`, an inheriting one reads `= 2` and a capture
+      // where the resolved half disagrees with the DPR column is the finding.
+      result.textPixelRatio === null
+        ? `= ${result.textRasterPixelRatio ?? '—'}`
+        : `${result.textPixelRatio}${result.textRasterPixelRatio === result.textPixelRatio ? '' : ` (got ${result.textRasterPixelRatio ?? '—'})`}`,
       `${result.backingWidth}×${result.backingHeight}`,
       String(result.mainPixelCount),
       describeTargets(result),
@@ -313,7 +343,9 @@ const buildNotes = (backendSelected: string, webgpuTimestampQuery: boolean | nul
     'The `cache-texture` scene is static: the cache is baked once and replayed, so its CPU column is a REPLAY cost and its interesting property is sharpness. The `cache-dirty` scene is the same content moved every frame, so the cache re-bakes every frame - that column is the bake cost, and it is the one that scales with the target resolution.',
     `Cells are ordered scene → mode → ascending DPR, so the four ratios of one pair are adjacent in time. Each result carries \`index\` and \`startOffsetMs\` so a thermal drift across the run stays visible.`,
     `Warmup is ${WARMUP_FRAMES} frames and the measured window is ${DEFAULT_MEASURE_MS} ms for every cell alike.`,
-    'The `cache-texture` scene omits the two text nodes the other scenes carry. Measured on desktop Chromium while building this probe: a `cacheAsTexture` container containing a `Text` node draws NOTHING on WebGL2 — text and non-text siblings alike — while the same scene renders on WebGPU and the same content behind a filter renders on both. Since iOS Safari is always WebGL2, keeping the text would have made this whole arm a black rectangle.',
+    'The `cache-texture` scene omits the two text nodes the other scenes carry. It was measured while building this probe that a `cacheAsTexture` container containing a `Text` node drew NOTHING on WebGL2 — text and non-text siblings alike — while the same scene rendered on WebGPU. That defect has since been fixed (a texture upload leaked `UNPACK_PREMULTIPLY_ALPHA_WEBGL` into the next one) and is pinned by browser tests on both backends; the omission is kept so a capture stays comparable with the ones taken before the fix.',
+    'The `text-ratio` scene is the only one that sets `Text.pixelRatio`. Its four cells hold the SURFACE at 2 while raising only the glyph raster (1 → 2 → 3), then raise both to 3, so the sharpness a denser atlas buys can be told apart from the sharpness a denser surface buys. Every other scene leaves the option unset, which is the shipped default: the text inherits `Application.pixelRatio`.',
+    'Nothing in the text stack reads `window.devicePixelRatio`. A cell whose `textPixelRatio` is null must report a `textRasterPixelRatio` equal to its `enginePixelRatio`; anything else is a defect, not a device quirk.',
   ];
 
   if (!window.crossOriginIsolated) {
@@ -410,8 +442,10 @@ const runCells = async (cells: readonly ProbeCell[], measureMs: number, label: s
     for (let i = 0; i < cells.length; i++) {
       const cell = cells[i]!;
 
-      setStatus(`${label} — cell ${i + 1}/${cells.length}: ${cell.scene} · ${cell.mode} · DPR ${cell.pixelRatio}`);
-      setProgress(`${i + 1}/${cells.length} · ${cell.scene} · ${cell.mode} · DPR ${cell.pixelRatio}`, 'running');
+      const textArm = cell.textPixelRatio === undefined ? '' : ` · text ${cell.textPixelRatio}`;
+
+      setStatus(`${label} — cell ${i + 1}/${cells.length}: ${cell.scene} · ${cell.mode} · DPR ${cell.pixelRatio}${textArm}`);
+      setProgress(`${i + 1}/${cells.length} · ${cell.scene} · ${cell.mode} · DPR ${cell.pixelRatio}${textArm}`, 'running');
       stageHost.scrollIntoView({ block: 'center' });
 
       const result = await runProbeCell({

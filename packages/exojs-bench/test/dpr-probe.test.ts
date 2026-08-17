@@ -9,6 +9,7 @@ import {
   PROBE_SCENES,
   PROBE_SCHEMA_VERSION,
   serializeProbeResult,
+  TEXT_RATIO_CELLS,
   totalInternalTargetPixels,
 } from '../src/rendering/dpr-probe/matrix';
 import { createWebGpuGpuTimer, WEBGPU_NO_TIMESTAMP_NOTE } from '../src/rendering/page/gpuFrameTimer';
@@ -27,10 +28,13 @@ import { createWebGpuGpuTimer, WEBGPU_NO_TIMESTAMP_NOTE } from '../src/rendering
 describe('probe matrix', () => {
   test('covers every scene at every pixel ratio, with a probe arm only where an internal target exists', () => {
     const cells = buildProbeMatrix();
-    const withTarget = PROBE_SCENES.filter(scene => scene.usesInternalTarget).length;
-    const withoutTarget = PROBE_SCENES.length - withTarget;
+    const laddered = PROBE_SCENES.filter(scene => scene.id !== 'text-ratio');
+    const withTarget = laddered.filter(scene => scene.usesInternalTarget).length;
+    const withoutTarget = laddered.length - withTarget;
 
-    expect(cells).toHaveLength((withTarget * 2 + withoutTarget) * PROBE_PIXEL_RATIOS.length);
+    // The text-density scene is enumerated rather than crossed with the ladder,
+    // so it contributes its own four cells and not four per ratio.
+    expect(cells).toHaveLength((withTarget * 2 + withoutTarget) * PROBE_PIXEL_RATIOS.length + TEXT_RATIO_CELLS.length);
 
     for (const scene of PROBE_SCENES) {
       const modes = new Set(cells.filter(cell => cell.scene === scene.id).map(cell => cell.mode));
@@ -61,8 +65,34 @@ describe('probe matrix', () => {
       }
     }
 
-    for (const group of groups) {
+    for (const group of groups.slice(0, -1)) {
       expect(group).toEqual([...PROBE_PIXEL_RATIOS]);
+    }
+
+    // The last group is the enumerated text-density arm, which is a set of named
+    // pairs rather than a ladder — it still has to be adjacent in time.
+    expect(groups[groups.length - 1]).toEqual(TEXT_RATIO_CELLS.map(cell => cell.pixelRatio));
+  });
+
+  test('gives the text-density scene four named pairs rather than a ratio ladder', () => {
+    const cells = buildProbeMatrix().filter(cell => cell.scene === 'text-ratio');
+
+    expect(cells).toEqual(TEXT_RATIO_CELLS);
+
+    // Three cells hold the surface at 2 and move only the glyph raster; the
+    // fourth raises both. That is what separates "denser atlas" from "denser
+    // surface" — losing it would leave the comparison unable to answer either.
+    expect(cells.map(cell => [cell.pixelRatio, cell.textPixelRatio])).toEqual([
+      [2, 1],
+      [2, 2],
+      [2, 3],
+      [3, 3],
+    ]);
+  });
+
+  test('leaves every other scene on the inherited text density', () => {
+    for (const cell of buildProbeMatrix().filter(cell => cell.scene !== 'text-ratio')) {
+      expect(cell.textPixelRatio).toBeUndefined();
     }
   });
 
@@ -209,6 +239,8 @@ const sampleCell: ProbeCellResult = {
   mode: 'inherit',
   configuredPixelRatio: 3,
   enginePixelRatio: 3,
+  textPixelRatio: null,
+  textRasterPixelRatio: 3,
   cssWidth: 360,
   cssHeight: 360,
   backingWidth: 1080,
