@@ -168,6 +168,13 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
 
   private _quadIndex = 0;
   private _maxNodeIndex = 0;
+  // Chunk nodes booked against the PENDING batch, and whether the chunk being
+  // rendered right now has already been booked. One chunk emits one tile
+  // instance per tile, so the recorded batch's `submittedNodes` contribution is
+  // this count and not `_quadIndex`. A chunk whose pages/runs span several
+  // batches is booked once, against the batch its first run lands in.
+  private _batchNodeCount = 0;
+  private _nodeBooked = false;
   private _currentBlendMode: BlendModes | null = null;
   private _currentTexture: Texture | null = null;
   private _currentView: View | null = null;
@@ -191,6 +198,8 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
 
   public render(node: TileChunkNode): void {
     const pages = node.pages;
+
+    this._nodeBooked = false;
 
     if (pages.length === 0) {
       return;
@@ -274,6 +283,14 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
     const u32 = this._instanceUint32;
     const baseWord = nodeIndex & TILE_ROW_MASK;
 
+    // Booked here rather than in render(): any flush the page/run loops trigger
+    // has already happened, so the chunk lands on the batch that actually holds
+    // its first tile.
+    if (!this._nodeBooked) {
+      this._nodeBooked = true;
+      this._batchNodeCount++;
+    }
+
     for (let i = 0; i < count; i++) {
       const q = quads[offset + i]!;
       const idx = this._quadIndex * wordsPerInstance;
@@ -327,6 +344,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
     if (this._quadIndex === 0 || backend === null || instanceBuffer === null || vao === null) {
       this._quadIndex = 0;
       this._maxNodeIndex = 0;
+      this._batchNodeCount = 0;
       return;
     }
 
@@ -360,11 +378,15 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
         this._currentBlendMode ?? BlendModes.Normal,
         this._recordTextures,
         1,
+        null,
+        null,
+        this._batchNodeCount,
       );
     }
 
     this._quadIndex = 0;
     this._maxNodeIndex = 0;
+    this._batchNodeCount = 0;
   }
 
   /**
@@ -556,6 +578,8 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
     this._hasWrittenGroup = false;
     this._quadIndex = 0;
     this._maxNodeIndex = 0;
+    this._batchNodeCount = 0;
+    this._nodeBooked = false;
   }
 
   public destroy(): void {

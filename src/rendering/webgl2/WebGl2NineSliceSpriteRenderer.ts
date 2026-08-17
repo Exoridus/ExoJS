@@ -168,6 +168,13 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
 
   private _quadIndex = 0;
   private _maxNodeIndex = 0;
+  // Render nodes booked against the PENDING batch, and whether the node being
+  // rendered right now has already been booked. One node emits up to nine quad
+  // instances, so the recorded batch's `submittedNodes` contribution is this
+  // count and not `_quadIndex`. A node whose quads chunk across several batches
+  // is booked once, against the batch its first chunk lands in.
+  private _batchNodeCount = 0;
+  private _nodeBooked = false;
   private _currentBlendMode: BlendModes | null = null;
   private _currentTexture: Texture | RenderTexture | null = null;
   private _currentView: View | null = null;
@@ -198,6 +205,8 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
     // is never mutated. Shared quad edges snap identically in-shader, keeping
     // the internal seams closed.
     const quads: readonly NineSliceQuad[] = sprite.quads;
+
+    this._nodeBooked = false;
 
     if (quads.length === 0) {
       return;
@@ -266,6 +275,14 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
     const u32 = this._instanceUint32;
     const flipY = texture.flipY;
 
+    // Booked here rather than in render(): any flush this node's chunking loop
+    // triggers has already happened, so the node lands on the batch that
+    // actually holds its first quad.
+    if (!this._nodeBooked) {
+      this._nodeBooked = true;
+      this._batchNodeCount++;
+    }
+
     for (let i = start; i < end; i++) {
       // In-bounds: callers pass `[start, end)` ⊆ `[0, quads.length)`.
       const q = quads[i]!;
@@ -304,6 +321,7 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
     if (this._quadIndex === 0 || backend === null || instanceBuffer === null || vao === null) {
       this._quadIndex = 0;
       this._maxNodeIndex = 0;
+      this._batchNodeCount = 0;
       return;
     }
 
@@ -337,11 +355,15 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
         this._currentBlendMode ?? BlendModes.Normal,
         this._recordTextures,
         1,
+        null,
+        null,
+        this._batchNodeCount,
       );
     }
 
     this._quadIndex = 0;
     this._maxNodeIndex = 0;
+    this._batchNodeCount = 0;
   }
 
   /**
@@ -522,6 +544,8 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
     this._hasWrittenGroup = false;
     this._quadIndex = 0;
     this._maxNodeIndex = 0;
+    this._batchNodeCount = 0;
+    this._nodeBooked = false;
   }
 
   public destroy(): void {

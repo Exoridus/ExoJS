@@ -1456,16 +1456,20 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       quadCount: batch.indexCount / 6,
     };
 
+    // The batch's instances are its glyph quads; its NODES are the text runs the
+    // quads came from — a single run contributes one to `submittedNodes` however
+    // many glyphs it draws, on this tier as on the live one.
     backend._recordRetainedBatch(
       this,
       vertexBytes,
       vertexByteLength,
-      this._nodeCount,
+      rendererData.quadCount,
       BlendModes.Normal,
       batch.atlasTextures,
       batch.atlasTextures.length,
       null,
       rendererData,
+      this._nodeCount,
     );
 
     this._recordedCaptureFrames.add(frame);

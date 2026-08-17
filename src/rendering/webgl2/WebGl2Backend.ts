@@ -1604,6 +1604,13 @@ export class WebGl2Backend implements RenderBackend {
    * batch instruction referencing that bundle is appended to EVERY open
    * frame's set (outer sets hold inner bundles' batches verbatim).
    * Called by capable renderers from `flush()` while a capture is open.
+   *
+   * `nodeCount` is the batch's `stats.submittedNodes` contribution and defaults
+   * to `instanceCount` (one instance is one node). A renderer whose node expands
+   * into several instances must pass its own count — see
+   * {@link RetainedBatchInstruction.nodeCount}. It is the LAST parameter on
+   * purpose: inserting it next to `instanceCount` would silently shift the
+   * existing optional trailing arguments at every cross-package call site.
    * @internal
    */
   public _recordRetainedBatch(
@@ -1615,6 +1622,7 @@ export class WebGl2Backend implements RenderBackend {
     textureCount: number,
     geometry: WebGl2RetainedGeometryRef | null = null,
     rendererData: unknown = null,
+    nodeCount: number = instanceCount,
   ): void {
     const captures = this._retainedCaptures;
 
@@ -1664,6 +1672,7 @@ export class WebGl2Backend implements RenderBackend {
       bundle: innermost.bundle,
       generation: retainedGenerationUnstamped,
       instanceCount,
+      nodeCount,
       drawCalls: 1,
       payload,
     };
@@ -1806,7 +1815,9 @@ export class WebGl2Backend implements RenderBackend {
     payload.replayer._replayRetainedBatch(payload);
     this._stats.batches++;
     this._stats.drawCalls += batch.drawCalls;
-    this._stats.submittedNodes += batch.instanceCount;
+    // Nodes, not instances: a batch whose renderer expands one node into many
+    // instances records its own node count (see RetainedBatchInstruction).
+    this._stats.submittedNodes += batch.nodeCount ?? batch.instanceCount;
   }
 
   public destroy(): void {

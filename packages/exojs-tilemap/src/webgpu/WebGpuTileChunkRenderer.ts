@@ -190,6 +190,13 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
 
   private _quadIndex = 0;
   private _maxNodeIndex = 0;
+  // Chunk nodes booked against the PENDING batch, and whether the chunk being
+  // rendered right now has already been booked. One chunk emits one tile
+  // instance per tile, so the recorded batch's `submittedNodes` contribution is
+  // this count and not `_quadIndex`. A chunk whose pages span several batches is
+  // booked once, against the batch its first page lands in.
+  private _batchNodeCount = 0;
+  private _nodeBooked = false;
   private _currentBlendMode: BlendModes | null = null;
   private _currentTexture: Texture | null = null;
 
@@ -292,6 +299,8 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     this._instancePassBytes = 0;
     this._quadIndex = 0;
     this._maxNodeIndex = 0;
+    this._batchNodeCount = 0;
+    this._nodeBooked = false;
     this._currentBlendMode = null;
     this._currentTexture = null;
     this._writtenView = null;
@@ -307,6 +316,8 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     }
 
     const pages = node.pages;
+
+    this._nodeBooked = false;
 
     if (pages.length === 0) {
       return;
@@ -365,6 +376,14 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     backend.setBlendMode(blendMode);
 
     this._ensureStagingCapacity(this._quadIndex + quads.length);
+
+    // Booked after the flush decision above, so the chunk lands on the batch
+    // that actually holds its first tile; the flag keeps a multi-page chunk from
+    // being booked once per page.
+    if (!this._nodeBooked) {
+      this._nodeBooked = true;
+      this._batchNodeCount++;
+    }
 
     const f32 = this._instanceFloat32;
     const u32 = this._instanceUint32;
@@ -545,7 +564,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     // already poisoned the capture in render().
     if (this._quadIndex > 0 && backend._retainedCaptureActive && blendMode !== null && texture !== null) {
       this._recordTextures[0] = texture;
-      backend._recordRetainedBatch(this, this._instanceData, flushBytes, this._quadIndex, blendMode, this._recordTextures, 1);
+      backend._recordRetainedBatch(this, this._instanceData, flushBytes, this._quadIndex, blendMode, this._recordTextures, 1, null, null, this._batchNodeCount);
     }
 
     // The pass is deliberately left OPEN. It ends at genuine boundaries only
@@ -554,6 +573,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     // one pass and one submit rather than N.
     this._quadIndex = 0;
     this._maxNodeIndex = 0;
+    this._batchNodeCount = 0;
     this._currentBlendMode = null;
     this._currentTexture = null;
   }

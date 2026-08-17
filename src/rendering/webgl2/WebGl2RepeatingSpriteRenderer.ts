@@ -326,6 +326,15 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
   private _geoBuf: WebGl2RenderBuffer | null = null;
   private _geoVao: WebGl2VertexArrayObject | null = null;
   private _geoQuadCount = 0;
+  // Render nodes booked against the PENDING geometry batch, and whether the
+  // sprite being rendered right now has already been booked. One node expands
+  // into a Cartesian product of tile quads, so the recorded batch's
+  // `submittedNodes` contribution is this count and not `_geoQuadCount`. A sprite
+  // whose quads chunk across several batches is booked once, against the batch
+  // its first chunk lands in. Shader-path sprites are never recorded (they poison
+  // the capture), so they are never booked either.
+  private _geoBatchNodeCount = 0;
+  private _geoNodeBooked = false;
 
   /**
    * Sampler cache keyed by wrapS/wrapT/scaleMode packed into one number. A
@@ -434,6 +443,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
       this._currentModeY = modeY;
       this._writeShaderInstance(sprite, nodeIndex);
     } else {
+      this._geoNodeBooked = false;
       this._writeGeoQuads(sprite, nodeIndex);
     }
   }
@@ -513,6 +523,14 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
 
       const f32 = this._geoF32;
       const u32 = this._geoU32;
+
+      // Booked here rather than in render(): any flush the chunking loop
+      // triggers has already happened, so the node lands on the batch that
+      // actually holds its first quad.
+      if (!this._geoNodeBooked) {
+        this._geoNodeBooked = true;
+        this._geoBatchNodeCount++;
+      }
 
       for (let i = 0; i < chunk; i++) {
         // In-bounds: `offset + i < offset + chunk <= quads.length`.
@@ -663,10 +681,14 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
         this._currentBlendMode ?? BlendModes.Normal,
         this._recordTextureScratch,
         1,
+        null,
+        null,
+        this._geoBatchNodeCount,
       );
     }
 
     this._geoQuadCount = 0;
+    this._geoBatchNodeCount = 0;
   }
 
   // ── Retained-batch record/replay ──────────────────────────────────────────
@@ -804,6 +826,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
   private _resetBatchState(): void {
     this._shaderQuadCount = 0;
     this._geoQuadCount = 0;
+    this._geoBatchNodeCount = 0;
     this._maxNodeIndex = 0;
     this._currentTexture = null;
     this._currentBlendMode = null;

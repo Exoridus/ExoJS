@@ -684,15 +684,19 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       shaderType,
     };
 
+    // The batch's instances are its glyph quads; its NODES are the text runs the
+    // quads came from — a single run contributes one to `submittedNodes` however
+    // many glyphs it draws, on this tier as on the live one.
     backend._recordRetainedBatch(
       this,
       this._uint32View.subarray(0, wordCount),
-      this._nodeCount,
+      quadCount,
       BlendModes.Normal,
       atlases,
       atlases.length,
       null,
       rendererData,
+      this._nodeCount,
     );
 
     this._recordedCaptures.add(bundle);

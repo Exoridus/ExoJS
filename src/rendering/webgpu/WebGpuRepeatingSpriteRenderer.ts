@@ -321,6 +321,11 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
   private _geoInstF32 = new Float32Array(this._geoInstData);
   private _geoInstU32 = new Uint32Array(this._geoInstData);
   private _geoQuadCount = 0;
+  // Render nodes booked against the PENDING geometry batch. One node expands into
+  // a Cartesian product of tile quads, so the recorded batch's `submittedNodes`
+  // contribution is this count and not `_geoQuadCount`. Shader-path sprites are
+  // never recorded (they poison the capture), so they are never booked either.
+  private _geoBatchNodeCount = 0;
 
   // Shared batch state
   private _maxNodeIndex = 0;
@@ -422,6 +427,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
 
     this._shaderQuadCount = 0;
     this._geoQuadCount = 0;
+    this._geoBatchNodeCount = 0;
     this._maxNodeIndex = 0;
     this._currentTexture = null;
     this._currentBlendMode = null;
@@ -540,6 +546,11 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     const words = geoStrideBytes / 4;
 
     this._ensureGeoCapacity(this._geoQuadCount + quads.length);
+
+    // render() already flushed if this node cannot join the pending batch, and
+    // all of its quads then go into that one batch — the staging array grows
+    // instead of chunking — so one increment here is exact.
+    this._geoBatchNodeCount++;
 
     const f32 = this._geoInstF32;
     const u32 = this._geoInstU32;
@@ -677,6 +688,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     // Batch flushes no longer submit; the backend ends the pass at boundaries.
     this._shaderQuadCount = 0;
     this._geoQuadCount = 0;
+    this._geoBatchNodeCount = 0;
     this._maxNodeIndex = 0;
     this._currentTexture = null;
     this._currentBlendMode = null;
@@ -775,6 +787,9 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
         this._currentBlendMode,
         this._recordTextureScratch,
         1,
+        null,
+        null,
+        this._geoBatchNodeCount,
       );
     }
   }

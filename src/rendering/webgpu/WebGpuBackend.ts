@@ -1515,8 +1515,11 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     // Parity with the live path: draw() counts submitted nodes before any
-    // flush-time visibility decision (mask/scissor) can drop the batch.
-    this._stats.submittedNodes += batch.instanceCount;
+    // flush-time visibility decision (mask/scissor) can drop the batch — and it
+    // counts NODES, so a batch whose renderer expands one node into many
+    // instances contributes its recorded node count (see
+    // RetainedBatchInstruction), not its instance count.
+    this._stats.submittedNodes += batch.nodeCount ?? batch.instanceCount;
     this._setActiveRenderer(payload.renderer);
     payload.renderer._replayRetainedBatch(payload);
   }
@@ -1594,6 +1597,13 @@ export class WebGpuBackend implements RenderBackend {
    * packed instance bytes (owned by the INNERMOST capture's bundle),
    * resolves the recorded texture views, and appends one shared instruction
    * to every active set.
+   *
+   * `nodeCount` is the batch's `stats.submittedNodes` contribution and defaults
+   * to `instanceCount` (one instance is one node). A renderer whose node expands
+   * into several instances must pass its own count — see
+   * {@link RetainedBatchInstruction.nodeCount}. It is the LAST parameter on
+   * purpose: inserting it next to `instanceCount` would silently shift the
+   * existing optional trailing arguments at every cross-package call site.
    * @internal
    */
   public _recordRetainedBatch(
@@ -1606,6 +1616,7 @@ export class WebGpuBackend implements RenderBackend {
     slotCount: number,
     geometry: WebGpuRetainedGeometryRef | null = null,
     rendererData: unknown = null,
+    nodeCount: number = instanceCount,
   ): void {
     const frames = this._retainedCaptureFrames;
 
@@ -1671,6 +1682,7 @@ export class WebGpuBackend implements RenderBackend {
       bundle: owner.bundle,
       generation: retainedGenerationUnstamped,
       instanceCount,
+      nodeCount,
       drawCalls: 1,
       payload,
     };

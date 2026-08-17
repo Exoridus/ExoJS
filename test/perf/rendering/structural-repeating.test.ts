@@ -48,6 +48,23 @@ describe('structural — RepeatingSprite', () => {
     });
   });
 
+  it('geometry path: submittedNodes counts nodes, not Cartesian-product instances, on every tier', () => {
+    withHarness(harness => {
+      const { root } = buildRepeatingScene({ count: 4, textures: makeTextures(1), path: 'geometry', width: 128, height: 128 });
+
+      // Dirty live collect, entry replay + record, then the recorded tier twice.
+      const tiers = [measureFrame(harness, root), measureFrame(harness, root), measureFrame(harness, root), measureFrame(harness, root)];
+
+      for (const tier of tiers) {
+        // 2×2 tiles per sprite — the instance count the node expands into.
+        expect(tier.instances).toBe(4 * 4);
+        expect(tier.visibleNodes).toBe(4);
+      }
+
+      root.destroy();
+    });
+  });
+
   it('no multi-texture batching on either path: 8 cyclic textures → one draw per switch', () => {
     for (const path of ['shader', 'geometry'] as const) {
       withHarness(harness => {

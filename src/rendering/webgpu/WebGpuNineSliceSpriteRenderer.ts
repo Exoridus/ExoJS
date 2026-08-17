@@ -199,6 +199,10 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
 
   private _quadIndex = 0;
   private _maxNodeIndex = 0;
+  // Render nodes booked against the PENDING batch. One node emits up to nine
+  // quad instances, so the recorded batch's `submittedNodes` contribution is
+  // this count and not `_quadIndex`.
+  private _batchNodeCount = 0;
   private _currentBlendMode: BlendModes | null = null;
   private _currentTexture: Texture | RenderTexture | null = null;
 
@@ -279,6 +283,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
     this._instanceUint32 = new Uint32Array(this._instanceData);
     this._quadIndex = 0;
     this._maxNodeIndex = 0;
+    this._batchNodeCount = 0;
     this._currentBlendMode = null;
     this._currentTexture = null;
   }
@@ -329,6 +334,11 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
     backend.setBlendMode(blendMode);
 
     this._ensureInstanceCapacity(this._quadIndex + quads.length);
+
+    // Booked after the flush decision above, so the node lands on the batch that
+    // holds its quads. All of this node's quads go into that one batch — the
+    // arena grows instead of chunking — so one increment is exact.
+    this._batchNodeCount++;
 
     const f32 = this._instanceFloat32;
     const u32 = this._instanceUint32;
@@ -497,12 +507,16 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
         this._currentBlendMode,
         this._recordTextures,
         1,
+        null,
+        null,
+        this._batchNodeCount,
       );
     }
 
     // Batch flushes no longer submit; the backend ends the pass at boundaries.
     this._quadIndex = 0;
     this._maxNodeIndex = 0;
+    this._batchNodeCount = 0;
     this._currentBlendMode = null;
     this._currentTexture = null;
   }

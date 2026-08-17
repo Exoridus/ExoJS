@@ -242,7 +242,36 @@ describe('WebGPU renderer matrix: NineSlice retained instruction replay cells', 
     }
   });
 
-  test('cell 3 — group move on the cached path relocates nine-slice pixels WITHOUT recapture', async ctx => {
+  test('cell 3 — submittedNodes counts nodes, not the 9 quad instances per nine-slice, on every tier', async ctx => {
+    const backend = await setupBackend();
+    const scene = buildScene();
+
+    try {
+      // Three render nodes: the live outside sprite plus the group's two
+      // nine-slices, which expand to 9 quad instances each. `renderScene`
+      // resets the stats per frame, so each reading is that frame's own.
+      const tiers: number[] = [];
+
+      // F1 dirty collect, F2 entry replay + record, F3/F4 recorded tier.
+      for (let frame = 0; frame < 4; frame++) {
+        if (!(await renderScene(ctx, backend, scene.root))) {
+          return;
+        }
+
+        tiers.push(backend.stats.submittedNodes);
+      }
+
+      // Pin the tier so the parity below cannot pass because the group stopped
+      // reaching the recorded tier.
+      expect(fragmentOf(scene.group).instructions?.hasRecording).toBe(true);
+      expect(tiers).toEqual([3, 3, 3, 3]);
+    } finally {
+      scene.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('cell 4 — group move on the cached path relocates nine-slice pixels WITHOUT recapture', async ctx => {
     const backend = await setupBackend();
     const scene = buildScene();
 
