@@ -343,6 +343,21 @@ export class RetainedRootRepresentation {
     return bundle;
   }
 
+  /**
+   * Drop the slot store and refuse the indexed path for as long as this source
+   * lives — the backend has answered that it cannot represent the root.
+   *
+   * Sticky for the same reason an acquisition refusal is: the answer is a
+   * property of the source and the device, so asking again next frame would
+   * re-run the backend's walk over every item to be told the same thing. A
+   * rebuilt source releases the representation and with it the refusal.
+   */
+  public refusePersistentSlots(backend: RenderBackend): void {
+    this.releasePersistentSlots();
+    this._slotBackend = backend;
+    this._slotsRefused = true;
+  }
+
   /** Drop the slot store (source invalidation, backend switch, root destroy). */
   public releasePersistentSlots(): void {
     this._slotBundle?.destroy?.();
