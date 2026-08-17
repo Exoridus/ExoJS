@@ -163,7 +163,7 @@ describe('RenderPassInspectorLayer', () => {
 
   test('update collects entries for nodes with active filter chains', () => {
     const blur = makeFilter('BlurFilter');
-    const color = makeFilter('ColorFilter');
+    const color = makeFilter('ColorMatrixFilter');
     const root = makeNode({
       className: 'Sprite',
       filters: [blur, color],

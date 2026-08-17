@@ -1,4 +1,4 @@
-import { Application, BlurFilter, Color, ColorFilter, RenderBackendType, type RenderingContext, Scene, Sprite, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+import { Application, BlurFilter, Color, ColorMatrixFilter, RenderBackendType, type RenderingContext, Scene, Sprite, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 
@@ -13,7 +13,7 @@ const wgsl = `@group(0) @binding(1) var uTexture:texture_2d<f32>; @group(0) @bin
 class FilterStackScene extends Scene {
     private sprite!: Sprite;
     private blur!: BlurFilter;
-    private tint!: ColorFilter;
+    private tint!: ColorMatrixFilter;
     private custom!: WebGl2ShaderFilter | WebGpuShaderFilter;
     // The filter chain is applied in this fixed order; each entry can be toggled.
     private active = { blur: true, tint: true, custom: true };
@@ -26,7 +26,7 @@ class FilterStackScene extends Scene {
 
         this.sprite = new Sprite(this.loader.get(PRIMARY_RAMP)).setAnchor(0.5).setScale(4).setPosition(width / 2, height / 2);
         this.blur = new BlurFilter({ radius: 4, quality: 2 });
-        this.tint = new ColorFilter(new Color(140, 210, 255));
+        this.tint = new ColorMatrixFilter().tint(new Color(140, 210, 255));
         this.custom =
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl })

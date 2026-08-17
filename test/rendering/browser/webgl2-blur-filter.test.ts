@@ -11,7 +11,7 @@ import { describe, expect, test } from 'vitest';
 
 import { Color } from '#core/Color';
 import { BlurFilter } from '#rendering/filters/BlurFilter';
-import { ColorFilter } from '#rendering/filters/ColorFilter';
+import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 
 import { createWebGl2TestBackend, readWebGl2Pixel, renderWebGl2Once } from './_backendSetup';
 import { BLUR_SCENE_SIZE, blurScene, CLEAR, DIAGONAL, ON_AXIS, OUTSIDE_HIGH, OUTSIDE_LOW } from './_blurFilterFixture';
@@ -20,7 +20,7 @@ const RADIUS = 8;
 const QUALITY = 4;
 
 const withScene = async (
-  filters: () => readonly [BlurFilter, ...ColorFilter[]],
+  filters: () => readonly [BlurFilter, ...ColorMatrixFilter[]],
   read: (pixel: (x: number, y: number) => readonly number[]) => void,
   origin?: number,
 ): Promise<void> => {
@@ -91,7 +91,7 @@ describe('BlurFilter kernel shape (WebGL2)', () => {
 
   test('a blur composes with a second filter in the chain', async () => {
     await withScene(
-      () => [new BlurFilter({ radius: RADIUS, quality: QUALITY }), new ColorFilter(new Color(255, 0, 0))],
+      () => [new BlurFilter({ radius: RADIUS, quality: QUALITY }), new ColorMatrixFilter().tint(new Color(255, 0, 0))],
       pixel => {
         const corner = pixel(DIAGONAL[0], DIAGONAL[1]);
 

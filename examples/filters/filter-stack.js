@@ -1,5 +1,5 @@
 // Auto-generated from filter-stack.ts — edit the .ts source, not this file.
-import { Application, BlurFilter, Color, ColorFilter, RenderBackendType, Scene, Sprite, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+import { Application, BlurFilter, Color, ColorMatrixFilter, RenderBackendType, Scene, Sprite, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const PRIMARY_RAMP = assets.technical.color.primaryRamp;
 const glsl = `#version 300 es
@@ -20,7 +20,7 @@ class FilterStackScene extends Scene {
         const { width, height } = app;
         this.sprite = new Sprite(this.loader.get(PRIMARY_RAMP)).setAnchor(0.5).setScale(4).setPosition(width / 2, height / 2);
         this.blur = new BlurFilter({ radius: 4, quality: 2 });
-        this.tint = new ColorFilter(new Color(140, 210, 255));
+        this.tint = new ColorMatrixFilter().tint(new Color(140, 210, 255));
         this.custom =
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl })

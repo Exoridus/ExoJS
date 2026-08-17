@@ -149,8 +149,19 @@ export class WebGl2ShaderFilter extends Filter {
   private readonly _fragmentSource: string;
   private readonly _vertexSource: string;
 
+  /** One redirect pass, re-pointed per application — see {@link BackendTargetPass.retarget}. */
+  private readonly _pass: BackendTargetPass = new BackendTargetPass(backend => this._run(backend));
+  /** Reused upload buffers for the auto-bound uniforms, so a frame allocates none. */
+  private readonly _slotScratch = new Int32Array(1);
+  private readonly _resolutionScratch = new Float32Array(2);
+  /** One reused buffer per non-texture user uniform — see {@link _marshalValue}. */
+  private readonly _scratch = new Map<string, Float32Array>();
+
   private _shader: Shader | null = null;
   private _connection: WebGl2Connection | null = null;
+  /** The textures the running pass reads from and writes to, staged by {@link apply}. */
+  private _passInput: RenderTexture | null = null;
+  private _passOutput: RenderTexture | null = null;
 
   public constructor(options: WebGl2ShaderFilterOptions) {
     super();
@@ -211,63 +222,75 @@ export class WebGl2ShaderFilter extends Filter {
 
     this._ensureConnected(gl2Backend);
 
+    // Staged on the instance rather than captured: the pass object and its body
+    // are built once per filter, so a filtered node costs no allocation per
+    // frame — which it did while both were rebuilt inside every `apply`.
+    this._passInput = input;
+    this._passOutput = output;
+
+    backend.execute(this._pass.retarget(output, output.view, Color.transparentBlack));
+  }
+
+  /** The pass body — see {@link _pass}. */
+  private _run(backend: RenderBackend): void {
+    const gl2 = backend as WebGl2Backend;
     const shader = this._shader!;
+    const input = this._passInput!;
+    const output = this._passOutput!;
 
-    backend.execute(
-      new BackendTargetPass(
-        b => {
-          const gl2 = b as WebGl2Backend;
+    // Bind shader (calls ShaderProgram.bind → gl.useProgram + sync dirty uniforms)
+    gl2.bindShader(shader);
 
-          // Bind shader (calls ShaderProgram.bind → gl.useProgram + sync dirty uniforms)
-          gl2.bindShader(shader);
+    // Auto-bind input texture to slot 0 (uTexture)
+    gl2.bindTexture(input, 0);
 
-          // Auto-bind input texture to slot 0 (uTexture)
-          gl2.bindTexture(input, 0);
+    if (shader.uniforms.has('uTexture')) {
+      this._slotScratch[0] = 0;
+      shader.getUniform('uTexture').setValue(this._slotScratch);
+    }
 
-          if (shader.uniforms.has('uTexture')) {
-            shader.getUniform('uTexture').setValue(new Int32Array([0]));
-          }
+    // Auto-bind uResolution
+    if (shader.uniforms.has('uResolution')) {
+      this._resolutionScratch[0] = output.width;
+      this._resolutionScratch[1] = output.height;
+      shader.getUniform('uResolution').setValue(this._resolutionScratch);
+    }
 
-          // Auto-bind uResolution
-          if (shader.uniforms.has('uResolution')) {
-            shader.getUniform('uResolution').setValue(new Float32Array([output.width, output.height]));
-          }
+    // Sync user uniforms — texture uniforms start at slot 1
+    let textureSlot = 1;
 
-          // Sync user uniforms — texture uniforms start at slot 1
-          let textureSlot = 1;
+    for (const name in this._uniforms) {
+      if (!shader.uniforms.has(name)) {
+        continue;
+      }
 
-          for (const [name, value] of Object.entries(this._uniforms)) {
-            if (!shader.uniforms.has(name)) {
-              continue;
-            }
+      // In-bounds: `name` comes from `this._uniforms`' own keys.
+      const value = this._uniforms[name]!;
+      const uniform = shader.getUniform(name);
 
-            const uniform = shader.getUniform(name);
+      if (value instanceof Texture) {
+        gl2.bindTexture(value, textureSlot);
+        this._slotScratch[0] = textureSlot;
+        uniform.setValue(this._slotScratch);
+        textureSlot++;
+      } else {
+        uniform.setValue(this._marshalValue(name, value));
+      }
+    }
 
-            if (value instanceof Texture) {
-              gl2.bindTexture(value, textureSlot);
-              uniform.setValue(new Int32Array([textureSlot]));
-              textureSlot++;
-            } else {
-              uniform.setValue(this._marshalValue(value));
-            }
-          }
+    // Flush dirty uniforms to the GPU
+    shader.sync();
 
-          // Flush dirty uniforms to the GPU
-          shader.sync();
+    // Draw the fullscreen quad
+    const connection = this._connection!;
 
-          // Draw the fullscreen quad
-          const connection = this._connection!;
+    gl2.bindVertexArrayObject(connection.vao);
+    connection.vao.draw(4, 0, RenderingPrimitives.TriangleStrip);
 
-          gl2.bindVertexArrayObject(connection.vao);
-          connection.vao.draw(4, 0, RenderingPrimitives.TriangleStrip);
-        },
-        {
-          target: output,
-          view: output.view,
-          clearColor: Color.transparentBlack,
-        },
-      ),
-    );
+    // The fullscreen quad is a real GPU draw and has to be counted as one —
+    // it goes straight through the VAO rather than a renderer, so nothing else
+    // sees it. The WebGPU half already counts its own.
+    gl2.stats.drawCalls++;
   }
 
   public override destroy(): void {
@@ -402,17 +425,32 @@ export class WebGl2ShaderFilter extends Filter {
   /**
    * Marshal a non-texture uniform value to a TypedArray suitable for
    * {@link ShaderUniform.setValue}.
+   *
+   * A typed array passes straight through. Numbers and tuples are copied into a
+   * per-name buffer kept for the filter's lifetime: this runs once per uniform
+   * per frame, and allocating the buffer here made every filtered node cost
+   * garbage proportional to its uniform count.
    */
-  private _marshalValue(value: Exclude<ShaderFilterUniformValue, Texture>): Float32Array | Int32Array {
+  private _marshalValue(name: string, value: Exclude<ShaderFilterUniformValue, Texture>): Float32Array | Int32Array {
     if (value instanceof Float32Array || value instanceof Int32Array) {
       return value;
     }
 
-    if (typeof value === 'number') {
-      return new Float32Array([value]);
+    const components = value as unknown as readonly number[];
+    const length = typeof value === 'number' ? 1 : (components.length ?? 0);
+    let buffer = this._scratch.get(name);
+
+    if (buffer?.length !== length) {
+      buffer = new Float32Array(length);
+      this._scratch.set(name, buffer);
     }
 
-    // readonly tuple [a, b], [a, b, c], or [a, b, c, d]
-    return new Float32Array(value as readonly number[]);
+    if (typeof value === 'number') {
+      buffer[0] = value;
+    } else {
+      buffer.set(components);
+    }
+
+    return buffer;
   }
 }

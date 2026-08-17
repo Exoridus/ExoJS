@@ -18,7 +18,7 @@
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
-import { ColorFilter } from '#rendering/filters/ColorFilter';
+import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import { Sprite } from '#rendering/sprite/Sprite';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
@@ -165,7 +165,7 @@ describe('WebGPU effect target resolution', () => {
     const texture = createSolidTexture('#ffffff');
     const filtered = createSubject(texture);
     const cached = createSubject(texture);
-    const filter = new ColorFilter(Color.white);
+    const filter = new ColorMatrixFilter().tint(Color.white);
     const recorder = recordTargetSizes(backend);
 
     filtered.filters = [filter];

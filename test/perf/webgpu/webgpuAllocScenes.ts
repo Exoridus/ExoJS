@@ -19,7 +19,7 @@
  */
 import { Container } from '#rendering/Container';
 import { BlurFilter } from '#rendering/filters/BlurFilter';
-import { ColorFilter } from '#rendering/filters/ColorFilter';
+import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import type { RenderNode } from '#rendering/RenderNode';
 import { Sprite } from '#rendering/sprite/Sprite';
 import type { Texture } from '#rendering/texture/Texture';
@@ -192,7 +192,7 @@ export const WEBGPU_ALLOC_ARCHETYPES: readonly WebGpuAllocArchetype[] = [
     rationale: 'One barrier + one offscreen target + one Filter.apply per sprite — the WebGPU effect path at its most repetitive.',
     warmup: EFFECT_WARMUP,
     frames: EFFECT_FRAMES,
-    build: () => decoratedSprites(100, makeCanvasTexture(), sprite => sprite.addFilter(new ColorFilter())),
+    build: () => decoratedSprites(100, makeCanvasTexture(), sprite => sprite.addFilter(new ColorMatrixFilter())),
   },
   {
     id: 'filter/blur-q3 100',
@@ -218,7 +218,7 @@ export const WEBGPU_ALLOC_ARCHETYPES: readonly WebGpuAllocArchetype[] = [
         group.addChild(sprite);
       }
 
-      group.addFilter(new ColorFilter());
+      group.addFilter(new ColorMatrixFilter());
       root.addChild(group);
 
       return { root, teardown: () => root.destroy() };

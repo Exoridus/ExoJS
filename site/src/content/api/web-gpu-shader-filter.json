@@ -231,7 +231,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Release any GPU-side resources held by this filter (uniform buffers, pipelines, intermediate textures). The base drops the attachment list; subclasses with GPU state (BlurFilter, ColorFilter) override and call super.destroy()."
+          "description": "Release any GPU-side resources held by this filter (uniform buffers, pipelines, intermediate textures). The base drops the attachment list; subclasses with GPU state (BlurFilter, ColorMatrixFilter) override and call super.destroy()."
         },
         {
           "name": "getOutputBounds",

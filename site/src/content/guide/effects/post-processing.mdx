@@ -126,7 +126,7 @@ The two glow/base passes each set a tint on the shared `bunny` sprite, then rend
 Instead of a single filter, pass the output through a chain — one `CallbackRenderPass` per filter step, bracketed by a scene render and a composite:
 
 ```ts
-import { BlurFilter, CallbackRenderPass, Color, ColorFilter, Graphics, RenderingContext, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
+import { BlurFilter, CallbackRenderPass, Color, ColorMatrixFilter, Graphics, RenderingContext, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
 
 class FilterChainScene extends Scene {
     private scene!: Graphics;
@@ -134,7 +134,7 @@ class FilterChainScene extends Scene {
     private tmpRt!: RenderTexture;
     private outRt!: RenderTexture;
     private blur!: BlurFilter;
-    private color!: ColorFilter;
+    private color!: ColorMatrixFilter;
     private final!: Sprite;
     private pipeline!: RenderPipeline;
 
@@ -144,7 +144,7 @@ class FilterChainScene extends Scene {
         this.tmpRt = new RenderTexture(800, 600);
         this.outRt = new RenderTexture(800, 600);
         this.blur = new BlurFilter({ radius: 6, quality: 2 });
-        this.color = new ColorFilter(new Color(140, 190, 255));
+        this.color = new ColorMatrixFilter().tint(new Color(140, 190, 255));
         this.final = new Sprite(this.outRt);
 
         this.pipeline = new RenderPipeline()

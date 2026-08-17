@@ -9,7 +9,7 @@
 
 import { Color } from '#core/Color';
 import { BlurFilter } from '#rendering/filters/BlurFilter';
-import { ColorFilter } from '#rendering/filters/ColorFilter';
+import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import { Filter } from '#rendering/filters/Filter';
 import { WebGl2ShaderFilter } from '#rendering/filters/WebGl2ShaderFilter';
 import { WebGpuShaderFilter } from '#rendering/filters/WebGpuShaderFilter';
@@ -133,31 +133,18 @@ describe('every stock filter owns its own invalidation', () => {
     expect(node.invalidations).toBe(afterAttach + 1);
   });
 
-  test('assigning a colour to a ColorFilter notifies the owner', () => {
+  test('re-tinting a ColorMatrixFilter notifies the owner', () => {
     const node = new CountingNode();
-    const filter = new ColorFilter(Color.white);
+    const filter = new ColorMatrixFilter().tint(Color.white);
 
     node.addFilter(filter);
 
     const afterAttach = node.invalidations;
 
-    filter.color = new Color(255, 0, 0);
+    filter.reset().tint(new Color(255, 0, 0));
 
-    expect(filter.color.equals({ r: 255, g: 0, b: 0 })).toBe(true);
-    expect(node.invalidations).toBe(afterAttach + 1);
-  });
-
-  test('assigning the colour it already has notifies nobody', () => {
-    const node = new CountingNode();
-    const filter = new ColorFilter(new Color(10, 20, 30, 1));
-
-    node.addFilter(filter);
-
-    const afterAttach = node.invalidations;
-
-    filter.color = new Color(10, 20, 30, 1);
-
-    expect(node.invalidations).toBe(afterAttach);
+    // Two writes, two notifications — the point is that neither is silent.
+    expect(node.invalidations).toBe(afterAttach + 2);
   });
 });
 

@@ -15,7 +15,7 @@
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
-import { ColorFilter } from '#rendering/filters/ColorFilter';
+import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
@@ -84,10 +84,10 @@ const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
 };
 
 /** A small filtered sprite in the top-left corner, leaving the rest of the surface untouched. */
-const createFilteredSubject = (texture: Texture): { root: Container; filter: ColorFilter } => {
+const createFilteredSubject = (texture: Texture): { root: Container; filter: ColorMatrixFilter } => {
   const root = new Container();
   const sprite = new Sprite(texture);
-  const filter = new ColorFilter(Color.white);
+  const filter = new ColorMatrixFilter().tint(Color.white);
 
   sprite.width = 16;
   sprite.height = 16;

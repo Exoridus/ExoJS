@@ -21,12 +21,12 @@ Each filter you attach re-renders that node's output once more per frame — a t
 Filters go on the drawable. The array is processed in order — filter 0 receives the node's raw render, filter 1 receives filter 0's output, and so on:
 
 ```ts
-import { BlurFilter, Color, ColorFilter, Sprite } from '@codexo/exojs';
+import { BlurFilter, Color, ColorMatrixFilter, Sprite } from '@codexo/exojs';
 
 let sprite: Sprite;
 
 const blur = new BlurFilter({ radius: 3, quality: 2 });
-const tint = new ColorFilter(new Color(140, 210, 255));
+const tint = new ColorMatrixFilter().tint(new Color(140, 210, 255));
 
 sprite.filters = [blur, tint];
 ```
@@ -45,7 +45,7 @@ Set `cacheAsTexture = true` on a filtered subtree that doesn't change each frame
 
 ## BlurFilter
 
-A box blur, not a shader — it works by rendering the input texture multiple times at symmetric pixel offsets with additive blending. Higher quality produces more offset samples per axis and a smoother result at the cost of more draw calls:
+A separable Gaussian blur, built from draw calls rather than a shader: the input is swept along X into a scratch target, then that scratch is swept along Y into the output, each sweep summing Gaussian-weighted offset copies additively. Chaining the two sweeps is what makes the kernel isotropic — it reaches diagonally, not only along the axes. Higher quality produces more taps per sweep and a smoother result at the cost of more draw calls:
 
 ```ts
 import { BlurFilter, Sprite } from '@codexo/exojs';
@@ -61,33 +61,38 @@ blur.radius = tween.progress * 12;
 blur.quality = 3;
 ```
 
-`radius` clamps to >= 0 (0 = no blur). `quality` floors to >= 1 and controls sample count: `quality * 2 + 1` samples per axis. For most cases quality 1 or 2 is sufficient — higher values are useful for large-radius fast-moving blurs where undersampling creates visible gaps.
+`radius` clamps to >= 0 (0 = no blur). `quality` floors to >= 1 and controls the tap count: `quality * 2 + 1` per sweep, spread evenly across `[-radius, +radius]`. Their spacing is therefore `radius / quality` — a wide blur wants a higher quality or the kernel shows as bands.
 
 A blur reaches `radius` logical units outside the drawable it is applied to, on every edge, and that extra extent is part of what gets rendered — see [Effects can change a drawable's extent](#effects-can-change-a-drawables-extent). `quality` changes the smoothness, not the reach.
 
-## ColorFilter
+## ColorMatrixFilter
 
-Multiplies the rendered output by a tint color. The simplest filter — one multiplicative blend:
+One affine color transform of everything the filter is handed — `RGBA' = M·RGBA + bias`, carried as a 4×5 row-major matrix. Brightness, contrast, saturation, inversion, sepia and flat tinting are all the same matrix, so they are conveniences that concatenate onto it rather than a filter class each:
 
 ```ts
-import { Color, ColorFilter, Sprite } from '@codexo/exojs';
+import { Color, ColorMatrixFilter, Sprite } from '@codexo/exojs';
 
 declare const sprite: Sprite;
 
-const color = new ColorFilter(new Color(255, 160, 120));
-sprite.filters = [color];
+const grade = new ColorMatrixFilter().grayscale().brightness(1.1);
+sprite.filters = [grade];
 
-// Live — mutate the color without rebuilding anything
-color.color.set(180, 220, 255);
+// Live — every convenience concatenates and invalidates, no rebuild needed
+grade.reset().tint(new Color(255, 160, 120));
+
+// Or hand it a matrix directly: swap red and blue, leave alpha alone
+grade.matrix = [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0];
 ```
 
-Use for tinting, flash effects, fade-to-black, or any per-drawable color manipulation that should happen after the node's own tint and blend mode are applied.
+The transform runs on straight alpha — the shader divides the premultiplied sample by its alpha, transforms, and multiplies it back — so a half-transparent edge grades the same way an opaque pixel does.
+
+For a plain per-drawable multiply, prefer [`Drawable.tint`](/ExoJS/en/guide/rendering/sprites/): it costs no render target at all. Reach for this filter when the transform is more than a multiply, or when it has to cover a whole subtree as one image.
 
 ## LutFilter
 
 Maps every pixel through a Look-Up Table texture. Two modes:
 
-- **1D LUT** (palette): `N×1` texture, indexed by a single channel. Palette cycling, posterisation, indexed-color effects.
+- **RGB 1D LUT** (`'rgb1d'`): `N×1` texture holding three independent per-channel curves — red graded through the LUT's red channel, green through green, blue through blue. Levels/curves-style grading, color ramps, posterisation.
 - **3D LUT** (color grading): `N²×N` unwrapped cube texture with trilinear interpolation. Cinematic color grading, film stock emulation, tone mapping.
 
 ```ts no-check
@@ -134,13 +139,13 @@ sprite.filters = [waveFilter];
 // Update uniforms per frame
 update(delta) {
     this._time += delta.seconds;
-    waveFilter.uniforms.uTime = this._time;
+    waveFilter.setUniform('uTime', this._time);
 }
 ```
 
 Use `WebGpuShaderFilter` identically for WebGPU — same `fragmentSource` and `uniforms` shape, only the shader language differs (WGSL instead of GLSL). For backend-portable filters, construct the appropriate variant based on `app.backend.backendType`.
 
-Both auto-bind `uTexture` (the filter input) and `uResolution` (output dimensions) — you don't declare these in your fragment source unless you want to read them. Custom uniforms are set from the `uniforms` map before each pass. Accepted value types: `number`, `[n, n]`/`[n, n, n]`/`[n, n, n, n]` tuples, `Float32Array`, `Int32Array`, `Texture`, and `RenderTexture`.
+Both auto-bind `uTexture` (the filter input) and `uResolution` (output dimensions) — you don't declare these in your fragment source unless you want to read them. Write custom uniforms with `setUniform(name, value)` or `setUniforms({ ... })`: they are flushed before each pass AND they invalidate the nodes rendering the filter, which writing into the read-only `uniforms` view could not do. Accepted value types: `number`, `[n, n]`/`[n, n, n]`/`[n, n, n, n]` tuples, `Float32Array`, `Int32Array`, `Texture`, and `RenderTexture`.
 
 ## Composition and layering
 
@@ -178,7 +183,7 @@ declare const sprite: Sprite; // 100 x 50 logical units
 sprite.filters = [new BlurFilter({ radius: 8 }), new BlurFilter({ radius: 4 })];
 ```
 
-Filters that only recolour what they are handed — `ColorFilter`, `LutFilter`, most custom shader filters — preserve their input bounds and need to do nothing. A custom filter that samples away from its own fragment should override `getOutputBounds` so its result is not clipped:
+Filters that only recolour what they are handed — `ColorMatrixFilter`, `LutFilter`, most custom shader filters — preserve their input bounds and need to do nothing. A custom filter that samples away from its own fragment should override `getOutputBounds` so its result is not clipped:
 
 ```ts
 import { Filter, type ReadonlyRectangle, type Rectangle } from '@codexo/exojs';

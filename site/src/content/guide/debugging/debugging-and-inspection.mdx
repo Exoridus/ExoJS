@@ -159,7 +159,7 @@ Each frame, `RenderPassInspectorLayer` walks the scene graph and collects an ent
 
 - **Total pass count** across all filtered drawables (one pass per filter, plus one per mask).
 - **Per-drawable rows** showing the constructor name (`Sprite`, `Container`, `Mesh`, `Graphics`) and the drawable's bounding-box dimensions.
-- **Filter sequence** indented under each drawable, in execution order, by constructor name (`BlurFilter`, `ColorFilter`, `LutFilter`, `WebGpuShaderFilter`, …).
+- **Filter sequence** indented under each drawable, in execution order, by constructor name (`BlurFilter`, `ColorMatrixFilter`, `LutFilter`, `WebGpuShaderFilter`, …).
 - **Flags** — `[mask]` when the drawable has an active mask (mask passes add to the total), `[cached]` when `cacheAsTexture` is set (cached drawables apply filters once, not per frame).
 
 The panel does not show drawables with zero filters — they are invisible to the render-pipeline inspector because they contribute no extra passes beyond the main batch draw.
@@ -253,7 +253,7 @@ The panel renders in the top-left corner of the screen (at x=200 to avoid overla
 Render Passes: 7
 Sprite 512x256 [cached]
   0. BlurFilter
-  1. ColorFilter
+  1. ColorMatrixFilter
 Container 800x600
   0. WebGpuShaderFilter
   1. BlurFilter
@@ -271,7 +271,7 @@ Common pass-reduction strategies, in order of impact:
 
 1. **Remove filters you don't need.** Every filter the panel lists is active. If a `BlurFilter` on a background element is invisible under a solid overlay, removing it saves a pass.
 2. **Enable `cacheAsTexture`** on filtered drawables that don't change every frame. The inspector shows `[cached]` when active. Cached drawables bake their filters once and skip per-frame re-application.
-3. **Consolidate filter stacks.** Two `ColorFilter` instances on the same drawable cost two passes. Most color adjustments (brightness, contrast, saturation) can be combined into a single `ColorFilter` or replaced with a custom shader filter (`WebGl2ShaderFilter` or `WebGpuShaderFilter`) that applies both in one pass.
+3. **Consolidate filter stacks.** Two `ColorMatrixFilter` instances on the same drawable cost two passes. Most color adjustments (brightness, contrast, saturation) can be combined into a single `ColorMatrixFilter` or replaced with a custom shader filter (`WebGl2ShaderFilter` or `WebGpuShaderFilter`) that applies both in one pass.
 4. **Reduce drawable size.** Filter passes render at the drawable's bounding-box resolution (ceil). A 2048×2048 sprite with a blur costs far more than a 256×256 one with the same blur radius. The panel shows the resolution each drawable renders at.
 
 ### External GPU capture tools

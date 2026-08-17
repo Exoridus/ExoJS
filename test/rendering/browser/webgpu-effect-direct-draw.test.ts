@@ -1,7 +1,7 @@
 /**
  * WebGPU half of the effect direct-draw pixel coverage.
  *
- * `RenderNode._drawTexture` and the stock `ColorFilter` / `BlurFilter` are
+ * `RenderNode._drawTexture` and the stock `ColorMatrixFilter` / `BlurFilter` are
  * backend-neutral — they go through `backend.execute` and `backend.draw` — so
  * the switch to `drawDrawableDirect` changes the WebGPU path as much as the
  * WebGL2 one. WebGPU is also where it could plausibly break differently: a pass
@@ -23,7 +23,7 @@ import { describe, expect, test } from 'vitest';
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
-import { ColorFilter } from '#rendering/filters/ColorFilter';
+import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
@@ -63,7 +63,7 @@ const createBackend = async (): Promise<WebGpuBackend> => {
 };
 
 describe('effect direct-draw pixel behaviour (WebGPU)', () => {
-  test('a ColorFilter composites back into the frame, not into its own target', async ctx => {
+  test('a ColorMatrixFilter composites back into the frame, not into its own target', async ctx => {
     const backend = await createBackend();
     const texture = solidTexture('#ffffff');
     const root = new Container();
@@ -72,7 +72,7 @@ describe('effect direct-draw pixel behaviour (WebGPU)', () => {
 
     try {
       sprite.setPosition(16, 16);
-      filtered.addFilter(new ColorFilter(new Color(255, 0, 0)));
+      filtered.addFilter(new ColorMatrixFilter().tint(new Color(255, 0, 0)));
       filtered.addChild(sprite);
       root.addChild(filtered);
 
@@ -103,8 +103,8 @@ describe('effect direct-draw pixel behaviour (WebGPU)', () => {
     try {
       first.setPosition(8, 8);
       second.setPosition(40, 40);
-      first.addFilter(new ColorFilter(new Color(255, 0, 0)));
-      second.addFilter(new ColorFilter(new Color(0, 0, 255)));
+      first.addFilter(new ColorMatrixFilter().tint(new Color(255, 0, 0)));
+      second.addFilter(new ColorMatrixFilter().tint(new Color(0, 0, 255)));
       root.addChild(first);
       root.addChild(second);
 
@@ -132,7 +132,7 @@ describe('effect direct-draw pixel behaviour (WebGPU)', () => {
 
     try {
       sprite.setPosition(16, 16);
-      filtered.addFilter(new ColorFilter(new Color(0, 255, 0)));
+      filtered.addFilter(new ColorMatrixFilter().tint(new Color(0, 255, 0)));
       filtered.cacheAsTexture = true;
       filtered.addChild(sprite);
       root.addChild(filtered);

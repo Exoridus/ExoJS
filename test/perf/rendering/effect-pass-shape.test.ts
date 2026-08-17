@@ -1,7 +1,7 @@
 /**
  * SHAPE gate for the effect path's nested draws.
  *
- * `ColorFilter.apply`, `BlurFilter.apply` and `RenderNode._drawTexture` issue
+ * `ColorMatrixFilter.apply`, `BlurFilter.apply` and `RenderNode._drawTexture` issue
  * their quads through `drawDrawableDirect`, which wraps each draw in the
  * backend's plan-depth bracket. That bracket is not decoration: ending a NESTED
  * plan flushes the active renderer and REWINDS the transform rows the draw
@@ -31,7 +31,7 @@ import { describe, expect, it } from 'vitest';
 
 import { Container } from '#rendering/Container';
 import { BlurFilter } from '#rendering/filters/BlurFilter';
-import { ColorFilter } from '#rendering/filters/ColorFilter';
+import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import { Sprite } from '#rendering/sprite/Sprite';
 
 import { makeTextures, scatterInView } from './fixtures';
@@ -59,16 +59,19 @@ const buildScene = (decorate: (sprite: Sprite) => void): Container => {
 describe('effect pass shape', () => {
   it('a single-pass filter costs one capture pass and one filter pass per node', () => {
     const harness = createWebGl2Harness();
-    const root = buildScene(sprite => sprite.addFilter(new ColorFilter()));
+    const root = buildScene(sprite => sprite.addFilter(new ColorMatrixFilter()));
 
     try {
       const frame = measureSteadyFrame(harness, root);
 
       // Two passes and two acquired targets per filtered node; three draws —
-      // the subject into the capture, the filter quad, the composite.
+      // the subject into the capture, the filter quad, the composite. The
+      // filter's quad goes through its own VAO rather than a drawable, so it
+      // pushes no transform row: the byte column is one row per node lighter
+      // than it was when this filter drew through a Sprite.
       expect(frame.renderPasses).toBe(2 * NODES);
       expect(frame.drawCalls).toBe(3 * NODES);
-      expect(frame.transformUploadBytes).toBe(9568);
+      expect(frame.transformUploadBytes).toBe(6400);
     } finally {
       root.destroy();
       harness.destroy();

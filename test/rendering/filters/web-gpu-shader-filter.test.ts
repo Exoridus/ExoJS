@@ -421,12 +421,12 @@ describe('WebGpuShaderFilter', () => {
     filter.destroy();
   });
 
-  // 5. uniforms map is mutable
-  test('uniforms map allows runtime mutation via property assignment', () => {
+  // 5. uniforms are written through the setters, which also invalidate
+  test('setUniform writes a value the uniforms view then reports', () => {
     const filter = new WebGpuShaderFilter({ fragmentSource: minimalFragSrc });
 
-    filter.uniforms['uTime'] = 1.234;
-    filter.uniforms['uColor'] = [1, 0.5, 0, 1] as unknown as readonly [number, number, number, number];
+    filter.setUniform('uTime', 1.234);
+    filter.setUniform('uColor', [1, 0.5, 0, 1] as unknown as readonly [number, number, number, number]);
 
     expect(filter.uniforms['uTime']).toBe(1.234);
     expect(filter.uniforms['uColor']).toEqual([1, 0.5, 0, 1]);

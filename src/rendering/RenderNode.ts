@@ -78,10 +78,14 @@ export type MaskSource = Rectangle | Texture | RenderTexture | RenderNode | null
 /**
  * {@link SceneNode} that can produce visual output. Adds the rendering
  * pipeline features on top of the structural transform/bounds carried by
- * SceneNode: `tint`, `blendMode`, post-process `filters`, an
- * optional `mask` (via {@link MaskSource}), texture caching
- * (`cacheAsTexture`), and the interaction surface
- * (`interactive`, `draggable`, all the pointer Signals).
+ * SceneNode: post-process `filters`, an optional `mask` (via
+ * {@link MaskSource}), a hard `clip`, texture caching (`cacheAsTexture`), and
+ * the interaction surface (`interactive`, `draggable`, all the pointer
+ * Signals).
+ *
+ * `tint` and `blendMode` are NOT here — they belong to {@link Drawable}, the
+ * subclass that actually issues geometry. A {@link Container} has neither; to
+ * recolour a whole subtree, put a {@link ColorMatrixFilter} on it.
  *
  * `RenderNode.render(backend)` is the per-frame visual entry point. The
  * base implementation collects a render plan, optimizes local ordering,

@@ -61,7 +61,7 @@ export const PROBE_SCENES: readonly ProbeSceneSpec[] = [
     id: 'color-filter',
     label: 'Color filter',
     usesInternalTarget: true,
-    purpose: 'One ColorFilter over the baseline content — the simplest internal render target.',
+    purpose: 'One ColorMatrixFilter over the baseline content — the simplest internal render target.',
   },
   {
     id: 'blur',

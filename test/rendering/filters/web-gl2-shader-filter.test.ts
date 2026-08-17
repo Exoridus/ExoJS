@@ -331,12 +331,12 @@ describe('WebGl2ShaderFilter', () => {
     filter.destroy();
   });
 
-  // 5. uniforms map is mutable
-  test('uniforms map allows runtime mutation via property assignment', () => {
+  // 5. uniforms are written through the setters, which also invalidate
+  test('setUniform writes a value the uniforms view then reports', () => {
     const filter = new WebGl2ShaderFilter({ fragmentSource: minimalFragSrc });
 
-    filter.uniforms['uTime'] = 1.234;
-    filter.uniforms['uColor'] = [1, 0.5, 0, 1] as unknown as readonly [number, number, number, number];
+    filter.setUniform('uTime', 1.234);
+    filter.setUniform('uColor', [1, 0.5, 0, 1] as unknown as readonly [number, number, number, number]);
 
     expect(filter.uniforms['uTime']).toBe(1.234);
     expect(filter.uniforms['uColor']).toEqual([1, 0.5, 0, 1]);
@@ -461,9 +461,9 @@ describe('WebGl2ShaderFilter', () => {
   // 11. Number -> Float32Array marshalling
   test('marshals number uniform value to Float32Array([n])', () => {
     const filter = new WebGl2ShaderFilter({ fragmentSource: minimalFragSrc });
-    const marshal = (filter as unknown as Record<string, (v: ShaderFilterUniformValue) => unknown>)['_marshalValue'].bind(filter);
+    const marshal = (filter as unknown as Record<string, (name: string, v: ShaderFilterUniformValue) => unknown>)['_marshalValue'].bind(filter);
 
-    const result = marshal(3.14) as Float32Array;
+    const result = marshal('uScalar', 3.14) as Float32Array;
 
     expect(result).toBeInstanceOf(Float32Array);
     expect(result.length).toBe(1);
@@ -475,9 +475,9 @@ describe('WebGl2ShaderFilter', () => {
   // 12. Tuple -> Float32Array marshalling
   test('marshals 2-tuple to Float32Array([a, b])', () => {
     const filter = new WebGl2ShaderFilter({ fragmentSource: minimalFragSrc });
-    const marshal = (filter as unknown as Record<string, (v: ShaderFilterUniformValue) => unknown>)['_marshalValue'].bind(filter);
+    const marshal = (filter as unknown as Record<string, (name: string, v: ShaderFilterUniformValue) => unknown>)['_marshalValue'].bind(filter);
 
-    const result = marshal([0.5, 1.0] as unknown as readonly [number, number]) as Float32Array;
+    const result = marshal('uPair', [0.5, 1.0] as unknown as readonly [number, number]) as Float32Array;
 
     expect(result).toBeInstanceOf(Float32Array);
     expect(Array.from(result)).toEqual([0.5, 1.0]);
@@ -487,9 +487,9 @@ describe('WebGl2ShaderFilter', () => {
 
   test('marshals 4-tuple to Float32Array of length 4', () => {
     const filter = new WebGl2ShaderFilter({ fragmentSource: minimalFragSrc });
-    const marshal = (filter as unknown as Record<string, (v: ShaderFilterUniformValue) => unknown>)['_marshalValue'].bind(filter);
+    const marshal = (filter as unknown as Record<string, (name: string, v: ShaderFilterUniformValue) => unknown>)['_marshalValue'].bind(filter);
 
-    const result = marshal([1, 0, 0.5, 0.75] as unknown as readonly [number, number, number, number]) as Float32Array;
+    const result = marshal('uQuad', [1, 0, 0.5, 0.75] as unknown as readonly [number, number, number, number]) as Float32Array;
 
     expect(result).toBeInstanceOf(Float32Array);
     expect(result.length).toBe(4);
@@ -500,10 +500,10 @@ describe('WebGl2ShaderFilter', () => {
   // 13. Float32Array pass-through
   test('passes through Float32Array without re-allocation', () => {
     const filter = new WebGl2ShaderFilter({ fragmentSource: minimalFragSrc });
-    const marshal = (filter as unknown as Record<string, (v: ShaderFilterUniformValue) => unknown>)['_marshalValue'].bind(filter);
+    const marshal = (filter as unknown as Record<string, (name: string, v: ShaderFilterUniformValue) => unknown>)['_marshalValue'].bind(filter);
     const arr = new Float32Array([1, 2, 3, 4]);
 
-    expect(marshal(arr)).toBe(arr);
+    expect(marshal('uArray', arr)).toBe(arr);
 
     filter.destroy();
   });
@@ -511,10 +511,10 @@ describe('WebGl2ShaderFilter', () => {
   // 14. Int32Array pass-through
   test('passes through Int32Array without re-allocation', () => {
     const filter = new WebGl2ShaderFilter({ fragmentSource: minimalFragSrc });
-    const marshal = (filter as unknown as Record<string, (v: ShaderFilterUniformValue) => unknown>)['_marshalValue'].bind(filter);
+    const marshal = (filter as unknown as Record<string, (name: string, v: ShaderFilterUniformValue) => unknown>)['_marshalValue'].bind(filter);
     const arr = new Int32Array([7, 8]);
 
-    expect(marshal(arr)).toBe(arr);
+    expect(marshal('uArray', arr)).toBe(arr);
 
     filter.destroy();
   });

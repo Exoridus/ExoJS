@@ -43,7 +43,7 @@
  */
 import { Container } from '#rendering/Container';
 import { BlurFilter } from '#rendering/filters/BlurFilter';
-import { ColorFilter } from '#rendering/filters/ColorFilter';
+import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import type { Filter } from '#rendering/filters/Filter';
 import type { RenderNode } from '#rendering/RenderNode';
 import { Sprite } from '#rendering/sprite/Sprite';
@@ -105,7 +105,7 @@ const buildFilteredContainer = (count: number, filters: readonly Filter[], cache
 const colorFilterScene = (count: number, filtersPerNode: number): AllocationScene =>
   buildDecoratedSprites(count, sprite => {
     for (let i = 0; i < filtersPerNode; i++) {
-      sprite.addFilter(new ColorFilter());
+      sprite.addFilter(new ColorMatrixFilter());
     }
   });
 
@@ -232,7 +232,7 @@ export const FILTER_ARCHETYPES: readonly AllocationArchetype[] = [
           sprite.setPosition(VIEW.w + 1 + (i % 15), (i * 251) % (VIEW.h - 64));
         }
 
-        sprite.addFilter(new ColorFilter());
+        sprite.addFilter(new ColorMatrixFilter());
         root.addChild(sprite);
       }
 
@@ -245,13 +245,13 @@ export const FILTER_ARCHETYPES: readonly AllocationArchetype[] = [
     id: 'filter/container 1000',
     rationale: 'One filter over a 1000-sprite subtree: one barrier, one target, one filter pass, a thousand drawables.',
     warmup: WARMUP,
-    build: () => buildFilteredContainer(1000, [new ColorFilter()], false),
+    build: () => buildFilteredContainer(1000, [new ColorMatrixFilter()], false),
   },
   {
     id: 'filter/container-cached 1000',
     rationale: 'The same subtree with cacheAsTexture. After the bake the filter pass should not run per frame at all — verifies that it does not.',
     warmup: WARMUP,
-    build: () => buildFilteredContainer(1000, [new ColorFilter()], true),
+    build: () => buildFilteredContainer(1000, [new ColorMatrixFilter()], true),
   },
 ];
 

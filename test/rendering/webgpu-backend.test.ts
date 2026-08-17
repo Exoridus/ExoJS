@@ -7,7 +7,7 @@ import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
 import { Drawable } from '#rendering/Drawable';
-import { ColorFilter } from '#rendering/filters/ColorFilter';
+import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import { Graphics } from '#rendering/primitives/Graphics';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { Renderer } from '#rendering/Renderer';
@@ -1955,7 +1955,7 @@ describe('WebGpuBackend', () => {
       sourceCanvas.width = 16;
       sourceCanvas.height = 16;
       texture.updateSource();
-      sprite.addFilter(new ColorFilter(Color.red));
+      sprite.addFilter(new ColorMatrixFilter().tint(Color.red));
 
       await manager.initialize();
 
@@ -1964,7 +1964,11 @@ describe('WebGpuBackend', () => {
       manager.flush();
 
       expect(environment.encoder.beginRenderPass.mock.calls.length).toBeGreaterThanOrEqual(3);
-      expect(environment.pass.drawIndexed.mock.calls.length).toBeGreaterThanOrEqual(3);
+      // The subject into the capture and the composite back out are indexed
+      // quads; the filter's own pass is a shader over a fullscreen
+      // triangle-strip, so it lands on `draw` rather than `drawIndexed`.
+      expect(environment.pass.drawIndexed.mock.calls.length).toBeGreaterThanOrEqual(2);
+      expect(environment.pass.draw.mock.calls.length).toBeGreaterThanOrEqual(1);
       sprite.destroy();
       manager.destroy();
     } finally {

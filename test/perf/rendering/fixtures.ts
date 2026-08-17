@@ -9,7 +9,7 @@
  */
 import { Container } from '#rendering/Container';
 import type { Drawable } from '#rendering/Drawable';
-import { ColorFilter } from '#rendering/filters/ColorFilter';
+import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import { Mesh } from '#rendering/mesh/Mesh';
 import { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
@@ -306,7 +306,7 @@ export interface FilteredSceneConfig {
 }
 
 /**
- * `count` sprites each carrying a {@link ColorFilter}, so the plan emits a
+ * `count` sprites each carrying a {@link ColorMatrixFilter}, so the plan emits a
  * Barrier scope + child plan per sprite (the effect-node path through
  * `RenderEffectExecutor` and the per-scope plan playback 2c made allocation-free).
  */
@@ -319,7 +319,7 @@ export const buildFilteredScene = (config: FilteredSceneConfig): SpriteScene => 
     const texture = textures[assignIndex(assign, i, count, textures.length)];
     const sprite = new Sprite(texture);
 
-    sprite.addFilter(new ColorFilter());
+    sprite.addFilter(new ColorMatrixFilter());
     scatterInView(sprite, i, viewW, viewH);
     root.addChild(sprite);
     sprites.push(sprite);

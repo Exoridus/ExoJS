@@ -19,7 +19,7 @@ export interface FilterOwner {
  * Filters are rendered into a temporary {@link RenderTexture} (the `output`)
  * that is composited back onto the scene after all filters in the chain have
  * been applied. Subclasses implement {@link apply} to run their shader pass.
- * Stock implementations: {@link BlurFilter}, {@link ColorFilter}.
+ * Stock implementations: {@link BlurFilter}, {@link ColorMatrixFilter}.
  * User-supplied GLSL/WGSL shaders: {@link WebGl2ShaderFilter},
  * {@link WebGpuShaderFilter}.
  */
@@ -150,7 +150,7 @@ export abstract class Filter {
   /**
    * Release any GPU-side resources held by this filter (uniform buffers,
    * pipelines, intermediate textures). The base drops the attachment list;
-   * subclasses with GPU state ({@link BlurFilter}, {@link ColorFilter})
+   * subclasses with GPU state ({@link BlurFilter}, {@link ColorMatrixFilter})
    * override and call `super.destroy()`.
    */
   public destroy(): void {

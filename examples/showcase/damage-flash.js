@@ -1,11 +1,10 @@
 // Auto-generated from damage-flash.ts — edit the .ts source, not this file.
-import { Application, Color, ColorFilter, Scene, Signal, Sprite } from '@codexo/exojs';
+import { Application, Color, Scene, Signal, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 class DamageFlashScene extends Scene {
     hit;
     ship;
-    filterColor;
-    filter;
+    flashColor;
     hud;
     hits = 0;
     init() {
@@ -13,9 +12,9 @@ class DamageFlashScene extends Scene {
         const { width, height } = app;
         this.hit = new Signal();
         this.ship = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setScale(2.2).setPosition(width / 2, height / 2);
-        this.filterColor = new Color(255, 255, 255, 1);
-        this.filter = new ColorFilter(this.filterColor);
-        this.ship.filters = [this.filter];
+        // A single drawable's flash is a tint, not a filter: it multiplies in
+        // the sprite shader and costs no render target.
+        this.flashColor = new Color(255, 255, 255, 1);
         this.hud = mountControls({
             title: 'Damage Flash',
             controls: [{ keys: 'Click', action: 'flash the ship' }],
@@ -24,12 +23,17 @@ class DamageFlashScene extends Scene {
         this.hit.add(() => {
             this.hits++;
             this.hud.setStatus(`Hits: ${this.hits}`);
-            this.filterColor.set(255, 120, 120, 1);
-            app.tweens.create(this.filterColor).to({ r: 255, g: 255, b: 255 }, 0.2).start();
+            this.flashColor.set(255, 120, 120, 1);
+            app.tweens.create(this.flashColor).to({ r: 255, g: 255, b: 255 }, 0.2).start();
         });
         app.input.onPointerTap.add(() => {
             this.hit.dispatch();
         });
+    }
+    update() {
+        // The tween moves the Color; handing it to setTint is what tells the
+        // renderer about it.
+        this.ship.setTint(this.flashColor);
     }
     draw(context) {
         context.render(this.ship);

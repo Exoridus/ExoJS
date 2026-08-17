@@ -15,7 +15,7 @@ import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
 import { BlurFilter } from '#rendering/filters/BlurFilter';
-import { ColorFilter } from '#rendering/filters/ColorFilter';
+import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import { Sprite } from '#rendering/sprite/Sprite';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
@@ -143,7 +143,7 @@ describe('WebGL2 effect target resolution', () => {
     const backend = await createBackend(2);
     const texture = createSolidTexture('#ffffff');
     const { root } = createSubject(texture);
-    const filter = new ColorFilter(Color.white);
+    const filter = new ColorMatrixFilter().tint(Color.white);
     const recorder = recordTargetSizes(backend);
 
     root.filters = [filter];
@@ -178,7 +178,7 @@ describe('WebGL2 effect target resolution', () => {
     const backend = await createBackend(1);
     const texture = createSolidTexture('#ffffff');
     const { root } = createSubject(texture);
-    const filter = new ColorFilter(Color.white);
+    const filter = new ColorMatrixFilter().tint(Color.white);
     const recorder = recordTargetSizes(backend);
 
     root.filters = [filter];
@@ -206,8 +206,8 @@ describe('WebGL2 effect target resolution', () => {
     const backend = await createBackend(2);
     const texture = createSolidTexture('#ffffff');
     const { root } = createSubject(texture);
-    const cheap = new ColorFilter(Color.white);
-    const inheriting = new ColorFilter(Color.white);
+    const cheap = new ColorMatrixFilter().tint(Color.white);
+    const inheriting = new ColorMatrixFilter().tint(Color.white);
     const recorder = recordTargetSizes(backend);
 
     cheap.resolution = 0.5;

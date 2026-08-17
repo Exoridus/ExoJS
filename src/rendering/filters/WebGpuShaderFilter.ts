@@ -160,7 +160,15 @@ export class WebGpuShaderFilter extends Filter {
   private readonly _fragmentSource: string;
   private readonly _vertexSource: string;
 
+  /** One redirect pass, re-pointed per application — see {@link BackendTargetPass.retarget}. */
+  private readonly _pass: BackendTargetPass = new BackendTargetPass(backend => this._run(backend));
+  /** `vec2<f32>` padded to the buffer's 16 bytes, reused so a frame allocates none. */
+  private readonly _resolutionScratch = new Float32Array(4);
+
   private _connection: WebGpuConnection | null = null;
+  /** The textures the running pass reads from and writes to, staged by {@link apply}. */
+  private _passInput: RenderTexture | null = null;
+  private _passOutput: RenderTexture | null = null;
 
   public constructor(options: WebGpuShaderFilterOptions) {
     super();
@@ -218,57 +226,59 @@ export class WebGpuShaderFilter extends Filter {
 
     this._ensureConnected(gpuBackend, output);
 
+    // Staged on the instance rather than captured: the pass object and its body
+    // are built once per filter, so a filtered node costs no allocation per
+    // frame — which it did while both were rebuilt inside every `apply`.
+    this._passInput = input;
+    this._passOutput = output;
+
+    backend.execute(this._pass.retarget(output, output.view, Color.transparentBlack));
+  }
+
+  /** The pass body — see {@link _pass}. */
+  private _run(backend: RenderBackend): void {
+    const gpu = backend as WebGpuBackend;
     const conn = this._connection!;
+    const device = conn.device;
+    const input = this._passInput!;
+    const output = this._passOutput!;
 
-    backend.execute(
-      new BackendTargetPass(
-        b => {
-          const gpu = b as WebGpuBackend;
-          const device = conn.device;
+    // ---- Update auto-bound resolution uniform ----
+    this._resolutionScratch[0] = output.width;
+    this._resolutionScratch[1] = output.height;
 
-          // ---- Update auto-bound resolution uniform ----
-          const resData = new Float32Array([output.width, output.height, 0, 0]);
+    device.queue.writeBuffer(conn.resolutionBuffer, 0, this._resolutionScratch);
 
-          device.queue.writeBuffer(conn.resolutionBuffer, 0, resData);
+    // ---- Build auto-bind group (group 0) ----
+    const inputBinding = gpu.getTextureBinding(input);
+    const autoBindGroup = device.createBindGroup({
+      layout: conn.autoBindGroupLayout,
+      entries: [
+        { binding: 0, resource: { buffer: conn.resolutionBuffer } },
+        { binding: 1, resource: inputBinding.view },
+        { binding: 2, resource: conn.sampler },
+      ],
+    });
 
-          // ---- Build auto-bind group (group 0) ----
-          const inputBinding = gpu.getTextureBinding(input);
-          const autoBindGroup = device.createBindGroup({
-            layout: conn.autoBindGroupLayout,
-            entries: [
-              { binding: 0, resource: { buffer: conn.resolutionBuffer } },
-              { binding: 1, resource: inputBinding.view },
-              { binding: 2, resource: conn.sampler },
-            ],
-          });
+    // ---- Build user bind group (group 1) ----
+    const userBindGroup = this._buildUserBindGroup(gpu, conn);
 
-          // ---- Build user bind group (group 1) ----
-          const userBindGroup = this._buildUserBindGroup(gpu, conn);
+    // ---- Encode render pass ----
+    // The coordinator owns the GPU pass (it runs inside the surrounding
+    // BackendTargetPass child pass, so load/clear is already resolved to
+    // a clear of the output target) and ends + submits it below.
+    const pass = gpu._passCoordinator.acquirePass().pass;
 
-          // ---- Encode render pass ----
-          // The coordinator owns the GPU pass (it runs inside the surrounding
-          // BackendTargetPass child pass, so load/clear is already resolved to
-          // a clear of the output target) and ends + submits it below.
-          const pass = gpu._passCoordinator.acquirePass().pass;
+    pass.setPipeline(conn.pipeline);
+    pass.setVertexBuffer(0, conn.vertexBuffer);
+    pass.setBindGroup(0, autoBindGroup);
+    pass.setBindGroup(1, userBindGroup);
+    pass.draw(4);
 
-          pass.setPipeline(conn.pipeline);
-          pass.setVertexBuffer(0, conn.vertexBuffer);
-          pass.setBindGroup(0, autoBindGroup);
-          pass.setBindGroup(1, userBindGroup);
-          pass.draw(4);
+    gpu._passCoordinator.markPassDraws();
+    gpu.stats.drawCalls++;
 
-          gpu._passCoordinator.markPassDraws();
-          gpu.stats.drawCalls++;
-
-          gpu._passCoordinator.endPass();
-        },
-        {
-          target: output,
-          view: output.view,
-          clearColor: Color.transparentBlack,
-        },
-      ),
-    );
+    gpu._passCoordinator.endPass();
   }
 
   public override destroy(): void {

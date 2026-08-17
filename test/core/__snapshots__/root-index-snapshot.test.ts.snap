@@ -52,7 +52,6 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "Collision",
   "CollisionType",
   "Color",
-  "ColorFilter",
   "ColorMatrixFilter",
   "ConcurrentSceneNavigationError",
   "Container",

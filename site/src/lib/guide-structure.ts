@@ -426,7 +426,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                 examples: [
                     'filters/blur-filter',
                     'filters/chromatic-aberration',
-                    'filters/color-filter',
+                    'filters/color-matrix-filter',
                     'filters/crt-scanlines',
                     'filters/custom-fragment-shader',
                     'filters/filter-stack',
@@ -435,7 +435,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                     'filters/palette-cycling',
                     'showcase/color-grading',
                 ],
-                apiLinks: ['filter', 'color-filter', 'blur-filter'],
+                apiLinks: ['filter', 'color-matrix-filter', 'blur-filter'],
             },
             {
                 slug: 'particles',

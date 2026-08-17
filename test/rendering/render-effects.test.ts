@@ -4,7 +4,6 @@ import { BackendTargetPass } from '#rendering/BackendTargetPass';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import { BlurFilter } from '#rendering/filters/BlurFilter';
-import { ColorFilter } from '#rendering/filters/ColorFilter';
 import { Filter } from '#rendering/filters/Filter';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
@@ -171,20 +170,10 @@ describe('render effects', () => {
     texture.destroy();
   });
 
-  test('built-in ColorFilter runs a composition pass', () => {
-    const { runtime, draw } = createRuntime();
-    const input = new RenderTexture(16, 16);
-    const output = new RenderTexture(16, 16);
-    const filter = new ColorFilter(new Color(255, 64, 64, 0.5));
-
-    filter.apply(runtime, input, output);
-
-    expect(draw).toHaveBeenCalledTimes(1);
-
-    filter.destroy();
-    input.destroy();
-    output.destroy();
-  });
+  // `ColorMatrixFilter` is not covered here: it runs a compiled shader over a
+  // fullscreen quad rather than issuing drawables, so this backend stand-in
+  // cannot execute it at all. Its passes and pixels are covered by
+  // `browser/webgl2-color-matrix-filter.test.ts` and its WebGPU twin.
 
   test('built-in BlurFilter performs multi-sample composition', () => {
     const { runtime, draw } = createRuntime();

@@ -104,7 +104,7 @@ this.filter = new WebGl2ShaderFilter({
 }
 
 update() {
-    this.filter.uniforms.uProgress = this.progress.v;
+    this.filter.setUniform('uProgress', this.progress.v);
     this.label.text = `${(this.progress.v * 100) | 0}%`;
 }
 ```

@@ -1,5 +1,5 @@
 import { BlurFilter } from '#rendering/filters/BlurFilter';
-import { ColorFilter } from '#rendering/filters/ColorFilter';
+import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import type { Filter } from '#rendering/filters/Filter';
 import { clampResolutionToTextureSize, resolveBarrierResolution, targetTexels } from '#rendering/plan/targetResolution';
 
@@ -22,8 +22,8 @@ const withResolution = <T extends Filter>(filter: T, resolution: number | 'inher
 
 describe('resolveBarrierResolution', () => {
   test('a filter inherits the enclosing target resolution by default', () => {
-    expect(resolveBarrierResolution(2, { cacheAsTexture: false, cacheResolution: 'inherit', filters: [new ColorFilter()] })).toBe(2);
-    expect(resolveBarrierResolution(3, { cacheAsTexture: false, cacheResolution: 'inherit', filters: [new ColorFilter()] })).toBe(3);
+    expect(resolveBarrierResolution(2, { cacheAsTexture: false, cacheResolution: 'inherit', filters: [new ColorMatrixFilter()] })).toBe(2);
+    expect(resolveBarrierResolution(3, { cacheAsTexture: false, cacheResolution: 'inherit', filters: [new ColorMatrixFilter()] })).toBe(3);
   });
 
   test('a cache inherits the enclosing target resolution by default', () => {
@@ -35,8 +35,8 @@ describe('resolveBarrierResolution', () => {
   });
 
   test('an explicit filter resolution overrides inheritance in both directions', () => {
-    expect(resolveBarrierResolution(2, { cacheAsTexture: false, cacheResolution: 'inherit', filters: [withResolution(new ColorFilter(), 1)] })).toBe(1);
-    expect(resolveBarrierResolution(1, { cacheAsTexture: false, cacheResolution: 'inherit', filters: [withResolution(new ColorFilter(), 4)] })).toBe(4);
+    expect(resolveBarrierResolution(2, { cacheAsTexture: false, cacheResolution: 'inherit', filters: [withResolution(new ColorMatrixFilter(), 1)] })).toBe(1);
+    expect(resolveBarrierResolution(1, { cacheAsTexture: false, cacheResolution: 'inherit', filters: [withResolution(new ColorMatrixFilter(), 4)] })).toBe(4);
   });
 
   test('an explicit cache resolution overrides inheritance', () => {
@@ -44,7 +44,7 @@ describe('resolveBarrierResolution', () => {
   });
 
   test('a chain runs at the LOWEST resolution any of its filters asks for', () => {
-    const filters = [withResolution(new ColorFilter(), 2), withResolution(new BlurFilter(), 0.5), new ColorFilter()];
+    const filters = [withResolution(new ColorMatrixFilter(), 2), withResolution(new BlurFilter(), 0.5), new ColorMatrixFilter()];
 
     // Not 2, not 3 (the inherited value of the third filter) — one cheap filter
     // pulls the whole chain down, because the chain shares one target size.
@@ -52,13 +52,15 @@ describe('resolveBarrierResolution', () => {
   });
 
   test('a cache and its filters are minimised together', () => {
-    expect(resolveBarrierResolution(3, { cacheAsTexture: true, cacheResolution: 2, filters: [withResolution(new ColorFilter(), 1)] })).toBe(1);
-    expect(resolveBarrierResolution(3, { cacheAsTexture: true, cacheResolution: 1, filters: [withResolution(new ColorFilter(), 2)] })).toBe(1);
+    expect(resolveBarrierResolution(3, { cacheAsTexture: true, cacheResolution: 2, filters: [withResolution(new ColorMatrixFilter(), 1)] })).toBe(1);
+    expect(resolveBarrierResolution(3, { cacheAsTexture: true, cacheResolution: 1, filters: [withResolution(new ColorMatrixFilter(), 2)] })).toBe(1);
   });
 
   test('a nonsensical override falls back to inheritance rather than producing an unusable target', () => {
     for (const bad of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
-      expect(resolveBarrierResolution(2, { cacheAsTexture: false, cacheResolution: 'inherit', filters: [withResolution(new ColorFilter(), bad)] })).toBe(2);
+      expect(resolveBarrierResolution(2, { cacheAsTexture: false, cacheResolution: 'inherit', filters: [withResolution(new ColorMatrixFilter(), bad)] })).toBe(
+        2,
+      );
       expect(resolveBarrierResolution(2, { cacheAsTexture: true, cacheResolution: bad, filters: noFilters })).toBe(2);
     }
   });

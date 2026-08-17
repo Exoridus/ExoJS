@@ -1,7 +1,7 @@
 import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
 import { BlurFilter } from '#rendering/filters/BlurFilter';
-import { ColorFilter } from '#rendering/filters/ColorFilter';
+import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import { Graphics } from '#rendering/primitives/Graphics';
 import type { RenderNode } from '#rendering/RenderNode';
 import { Sprite } from '#rendering/sprite/Sprite';
@@ -14,7 +14,7 @@ import type { ProbeMode, ProbeSceneId } from './matrix';
  * Scenes for the manual DPR / internal-target probe.
  *
  * Every scene is built from PUBLIC engine API only — `Graphics`, `Sprite`,
- * `Text`, `ColorFilter`, `BlurFilter`, `cacheAsTexture`. Nothing here is a new
+ * `Text`, `ColorMatrixFilter`, `BlurFilter`, `cacheAsTexture`. Nothing here is a new
  * engine feature; the probe measures paths a user already has.
  */
 
@@ -371,12 +371,12 @@ export const createProbeScene = (id: ProbeSceneId, options: ProbeSceneOptions): 
   const caches = id === 'cache-texture' || id === 'cache-dirty';
   const root = new Container();
   const { node: content, textures, spin, textNodes } = buildSharpContent(stageSize, !caches);
-  const filters: Array<ColorFilter | BlurFilter> = [];
+  const filters: Array<ColorMatrixFilter | BlurFilter> = [];
 
   root.addChild(content);
 
   if (id === 'color-filter') {
-    const filter = new ColorFilter(new Color(255, 214, 170));
+    const filter = new ColorMatrixFilter().tint(new Color(255, 214, 170));
 
     filter.resolution = pinned;
     filters.push(filter);

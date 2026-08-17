@@ -8,7 +8,7 @@ describe('root index public API exports', () => {
     expect(exo.View).toBeDefined();
     expect(exo.RenderTexture).toBeDefined();
     expect(exo.BlurFilter).toBeDefined();
-    expect(exo.ColorFilter).toBeDefined();
+    expect(exo.ColorMatrixFilter).toBeDefined();
     expect(exo.createRenderStats).toBeDefined();
   });
 });
