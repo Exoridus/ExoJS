@@ -49,6 +49,8 @@ export { View, ViewFlags } from './View';
 export type { BlurFilterOptions } from '#rendering/filters/BlurFilter';
 export { BlurFilter } from '#rendering/filters/BlurFilter';
 export { ColorFilter } from '#rendering/filters/ColorFilter';
+export type { ColorMatrixEntries } from '#rendering/filters/ColorMatrixFilter';
+export { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 export { Filter } from '#rendering/filters/Filter';
 export type { LutFilterOptions, LutMode } from '#rendering/filters/LutFilter';
 export { LutFilter } from '#rendering/filters/LutFilter';

@@ -125,19 +125,20 @@ export class BlurFilter extends Filter {
       this._weights = new Float32Array(taps);
     }
 
+    const tapWeight = (tap: number): number => {
+      const t = taps === 1 ? 0 : (tap / (taps - 1)) * 2 - 1;
+
+      return Math.exp(-2 * t * t);
+    };
+
     let total = 0;
 
     for (let tap = 0; tap < taps; tap++) {
-      const t = taps === 1 ? 0 : (tap / (taps - 1)) * 2 - 1;
-      const weight = Math.exp(-2 * t * t);
-
-      this._weights[tap] = weight;
-      total += weight;
+      total += tapWeight(tap);
     }
 
     for (let tap = 0; tap < taps; tap++) {
-      // In-bounds: tap < taps === this._weights.length.
-      this._weights[tap] /= total;
+      this._weights[tap] = tapWeight(tap) / total;
     }
   }
 

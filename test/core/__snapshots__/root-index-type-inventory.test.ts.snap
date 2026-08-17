@@ -111,6 +111,8 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "CollisionType: const enum",
   "Color: class",
   "ColorFilter: class",
+  "ColorMatrixEntries: type alias",
+  "ColorMatrixFilter: class",
   "ColorTextureFormat: type alias",
   "ConcurrentSceneNavigationError: class",
   "ConstructorOf: type alias",

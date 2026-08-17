@@ -1,0 +1,75 @@
+{
+  "title": "ColorMatrixEntries",
+  "description": "A 4×5 row-major colour matrix: four rows of `[r, g, b, a, offset]`.",
+  "symbol": "ColorMatrixEntries",
+  "kind": "type",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A 4×5 row-major colour matrix: four rows of `[r, g, b, a, offset]`."
+      ],
+      "importLine": "import { ColorMatrixEntries } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "ColorMatrixEntries",
+          "signature": "readonly number[]",
+          "signatureTokens": [
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/filters/ColorMatrixFilter.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/ColorMatrixFilter.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/filters/ColorMatrixFilter.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/ColorMatrixFilter.ts"
+}
