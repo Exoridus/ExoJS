@@ -262,7 +262,12 @@ const buildTextRatioScene = (stageWidth: number, stageHeight: number, textPixelR
       fontSize,
       fillColor: new Color(255, 208, 96),
       outlineColor: new Color(10, 14, 20),
-      outlineWidth: 0.12,
+      // Reach is `outlineWidth × sdfRadius` LOGICAL pixels, so a single constant
+      // is not one look across three font sizes: 0.12 is 0.96px per side, which
+      // is the whole stem of a 9px glyph and turns the row into a dark blob
+      // instead of a legible density comparison. Scaled to a quarter of the cap
+      // height so all three rows carry a visually comparable outline.
+      outlineWidth: Math.min(0.12, fontSize / 200),
       ...(textPixelRatio !== undefined && { pixelRatio: textPixelRatio }),
     });
 

@@ -16,10 +16,11 @@ uniform mat3 u_group;
 uniform vec4 u_viewport;
 uniform sampler2D u_nodeData;
 
-flat out int  v_nodeIndex;
-flat out uint v_textureSlot;
-     out vec2 v_texcoord;
-     out vec2 v_gradUV;
+flat out int   v_nodeIndex;
+flat out uint  v_textureSlot;
+flat out float v_pxPerUnit;
+     out vec2  v_texcoord;
+     out vec2  v_gradUV;
 
 void main(void) {
     int ni = int(a_packedNodeSlot & 0x00ffffffu);
@@ -51,9 +52,27 @@ void main(void) {
         clip += (floor(originDevice + 0.5) - originDevice) * 2.0 / max(u_viewport.zw, vec2(1.0));
     }
 
+    // Device pixels one LOCAL unit of this node covers on screen.
+    //
+    // The fragment stage needs it to size an antialiased edge against the pixel
+    // it actually lands on. Taken from the transform rather than from a hardware
+    // derivative (`fwidth`) on purpose: derivatives are implementation-defined,
+    // so the GLSL and WGSL stages would disagree on the edge ramp by a few
+    // percent and the cross-backend parity claim would drop from bit-exact to
+    // approximate. This is exact for the affine, unrotated-or-uniformly-scaled
+    // case text is drawn in, and it folds in the node transform, the group
+    // transform, the camera's zoom and the device pixel ratio alike — every
+    // route by which a glyph's on-screen density is decided.
+    //
+    // Column 0 of the composed mat3 is the image of the local +x direction; a
+    // direction ignores translation, hence the zero third component. Clip space
+    // spans 2 across the viewport, so half the viewport size converts it.
+    vec2 unitClip = (u_projection * u_group * xf * vec3(1.0, 0.0, 0.0)).xy;
+
     gl_Position = vec4(clip, 0.0, 1.0);
     v_texcoord  = a_texcoord;
     v_nodeIndex = ni;
+    v_pxPerUnit = length(unitClip * u_viewport.zw * 0.5);
     v_textureSlot = a_packedNodeSlot >> 24u;
 
     vec2 bSize = t9.zw;

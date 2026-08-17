@@ -159,9 +159,11 @@ describe('the SDF atlas is sampled as a continuous field', () => {
     node.destroy();
     backend.destroy();
 
-    // Measured on this scene: 211 distinct intensities linearly filtered, 12
-    // with NEAREST — the field collapses onto the twelve texel values the
-    // magnified tile happens to cover. The floor sits far from both.
+    // Measured on this scene: 185 distinct intensities linearly filtered, 2 with
+    // NEAREST. The two are that far apart because the sampler and the shader's
+    // derivative-based edge width compound — a piecewise constant field has no
+    // gradient inside a texel, so the fade it is entitled to collapses too and
+    // the frame is left pure black and white.
     expect(distinct).toBeGreaterThan(80);
   });
 });

@@ -60,14 +60,19 @@ export interface TextOptions extends TextStyleOptions, LayoutOptions {
    * both — only the raster grid behind the glyphs changes. Must be a positive
    * finite number.
    *
-   * The value to want is usually the inherited one: sharpness peaks where one
-   * atlas texel lands on one device pixel, and both directions away from that
-   * cost something (below it the field is stretched, above it the extra texels
-   * are thrown away and the memory is spent anyway — the cost is roughly the
-   * square of the ratio). Raise it for content whose ON-SCREEN density exceeds
-   * the surface ratio, which is what a node scaled up at runtime or drawn
-   * through a zoomed camera produces; lower it to trade sharpness for atlas
-   * memory.
+   * The value to want is usually the inherited one. Lowering it lowers the raster
+   * resolution the distance field is built from, so the quality floor it hits
+   * depends on the glyph — size, thinnest stroke, SDF radius, outline — rather
+   * than on the ratio alone, and small text reaches that floor first. Raising it
+   * costs roughly the square of the ratio, and bought no visible sharpness for
+   * unscaled screen text when measured on hardware.
+   *
+   * Raise it for content whose ON-SCREEN density exceeds the surface ratio — a
+   * node scaled up at runtime, or one drawn through a zoomed camera; lower it to
+   * trade sharpness for atlas memory, which is safe on large text and harmful on
+   * small. Antialiasing is not part of the trade: the shader sizes its edge against
+   * the node's on-screen extent, so an edge lands at about one device pixel at
+   * every ratio.
    */
   pixelRatio?: number;
 }

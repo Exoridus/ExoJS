@@ -266,6 +266,34 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
 
 ### Fixed
 
+- **SDF text antialiases against the pixel it lands on.** The `text-sdf` and
+  `text-msdf` shaders faded an edge over a constant width stated in FIELD units,
+  which is a fixed distance in logical pixels and therefore a different number of
+  device pixels in every situation: a hard, aliased step wherever the glyph was
+  dense, and a multi-pixel smear wherever it was magnified — a label scaled up
+  4x faded over roughly four device pixels. The width is now derived from how
+  many device pixels one of the node's local units covers, so an edge lands at
+  about one device pixel whatever the atlas density, the surface ratio, the
+  node's scale and the camera's zoom jointly did to it. Measured on a scanline
+  crossing two stems, the ramp went from 0/4/5 partially-lit pixels at scale
+  1/2/4 to a flat 4/4/3.
+
+  It is computed from the transform rather than from a hardware derivative
+  (`fwidth`) because derivatives are implementation-defined: the GLSL and WGSL
+  stages then disagree on the ramp by up to 47 of 255 on the edge pixels, which
+  would have cost the cross-backend parity matrix its bit-exact evidence for
+  text. Derived from the transform the two are byte-identical on every pixel,
+  ramp included. `fwidth` remains the fallback where the field's scale is
+  unknown, which today is `BitmapText`'s MSDF path — an offline atlas carries no
+  distance range in its font data.
+
+  `shadowBlur` is separated out by the same change. It used to share one number
+  with the antialiasing width, so it widened the fill and outline edges as well
+  and carried a floor that applied even with no shadow; it is now the shadow's
+  own softness, still stated in field units so an authored blur covers the same
+  logical distance at every raster density, and it can only ever widen the
+  shadow edge.
+
 - **The runtime glyph atlas is filtered linearly.** Its pages are `DataTexture`s,
   and that class defaults to `NEAREST` — correct for the lookup tables it exists
   for, where a row must read back as the exact number written, and wrong for a

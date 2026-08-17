@@ -37,10 +37,10 @@ import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './
 // Texel 1 : (b,  d,  0,  ty)  — mat3 column-major: col1 + translate.y
 // Texel 2 : (r,  g,  b,  a )  — fillColor (linear 0-1)
 // Texel 3 : (r,  g,  b,  a )  — outlineColor
-// Texel 4 : (outlineMin, shadowAlpha, softness, gradientEnabled)
+// Texel 4 : (outlineMin, shadowAlpha, shadowBlur, gradientEnabled)
 //             outlineMin = 0.5 → disabled; < 0.5 → enabled with that threshold
 // Texel 5 : (r,  g,  b,  a )  — shadowColor
-// Texel 6 : (shadowOffX_px, shadowOffY_px, gradientVertical, 0)
+// Texel 6 : (shadowOffX_px, shadowOffY_px, gradientVertical, sdfRadius_logical)
 // Texel 7 : (r,  g,  b,  a )  — gradientTop
 // Texel 8 : (r,  g,  b,  a )  — gradientBottom
 // Texel 9 : (minX, minY, w, h) — text block bounds (local space, for gradient UV)
@@ -383,12 +383,17 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     arr[base + 14] = oc.b / 255;
     arr[base + 15] = oc.a;
 
-    // Params (texel 4): outlineMin, shadowAlpha, softness, gradientEnabled
+    // Params (texel 4): outlineMin, shadowAlpha, shadowBlur, gradientEnabled
     // outlineMin = 0.5 → disabled; 0.5 - outlineWidth when enabled
     const outlineMin = style.outlineWidth > 0 ? Math.max(0, 0.5 - style.outlineWidth) : 0.5;
     arr[base + 16] = outlineMin;
     arr[base + 17] = style.shadowAlpha;
-    arr[base + 18] = Math.max(0.03, style.shadowBlur * 0.1);
+    // Shadow blur only. This used to carry a 0.03 floor because the same
+    // number was the shader's antialiasing width, and a node without a shadow
+    // still needed an edge to fade over; the shaders now derive that width per
+    // fragment from the field's screen-space gradient, so a floor here would
+    // only smear the shadow of a node that asked for none.
+    arr[base + 18] = style.shadowBlur * 0.1;
     arr[base + 19] = style.gradientColors !== null ? 1 : 0;
 
     // Shadow color (texel 5)
@@ -407,7 +412,12 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     arr[base + 24] = style.shadowOffsetX * texelsPerLogicalPixel;
     arr[base + 25] = style.shadowOffsetY * texelsPerLogicalPixel;
     arr[base + 26] = style.gradientAxis === 'vertical' ? 1 : 0;
-    arr[base + 27] = 0;
+    // The node's SDF buffer radius in LOGICAL pixels, which is the field's scale:
+    // the distance value moves by 1/radius per logical unit whatever the atlas
+    // density. The fragment stage sizes its antialiased edge from it. Zero means
+    // "unknown", which is the honest answer for a BitmapText — an offline MSDF
+    // atlas carries no distance range — and selects the derivative fallback.
+    arr[base + 27] = node instanceof Text ? node.sdfRadius : 0;
 
     // Gradient top (texel 7)
     const gc = style.gradientColors;

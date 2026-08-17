@@ -235,9 +235,13 @@ const crisp = new Text('Ammo 24/60', { fontSize: 9, pixelRatio: 3 });
 
 Both nodes lay out identically. The logical font size, the advances, kerning, wrapping, line breaks, alignment, the reach of an outline or shadow, and everything `textBounds` and `Text.measure` report are the same at every ratio — only sharpness, atlas tile size and memory change. `text.pixelRatio` reports the override and is `undefined` when there is none; assign `undefined` to go back to inheriting. `text.rasterPixelRatio` reports the density actually in force.
 
-**The value to want is usually the inherited one.** Sharpness peaks where one atlas texel lands on one device pixel, which is what inheriting gives you, and both directions away from that cost something: below it the field is stretched over more pixels than it describes, above it the extra texels are resampled away while the memory is spent anyway. The cost is roughly the square of the ratio — measured over an ASCII set at 9, 11 and 16px: 146k atlas texels at ratio 1, 582k at ratio 2 and 1.29M at ratio 3, enough to push that set from one 1024x1024 page to two.
+**The value to want is usually the inherited one.** Lowering it lowers the raster resolution the distance field is built from, so the quality floor it eventually hits depends on the glyph — its size, the thinnest stroke in the typeface, the SDF radius, an outline — rather than on the ratio alone. Small text reaches that floor first: on an iPhone 13 Pro, 9 and 11px rows pinned to ratio 1 lost their stems while the 16px row held.
 
-That leaves two honest uses. Raise it when a node's **on-screen** density exceeds the surface ratio — a label scaled up at runtime, or one drawn through a zoomed camera, samples its atlas at more device pixels than the surface ratio suggests. Lower it to trade sharpness for atlas memory on text that is small, static or far away.
+Raising it costs roughly the square of the ratio. Measured over an ASCII set at 9, 11 and 16px: 146k atlas texels at ratio 1, 582k at ratio 2 and 1.29M at ratio 3, enough to push that set from one 1024x1024 page to two. For unscaled screen text at those sizes, the same device showed no visible gain from going above the inherited ratio — which is what makes `inherit` the right default rather than a compromise.
+
+The case for raising it is content whose **on-screen** density exceeds the surface ratio: a label scaled up at runtime, or one drawn through a zoomed camera, samples its atlas over more device pixels than the surface ratio suggests. The case for lowering it is trading sharpness for atlas memory — safe on large text, harmful on small.
+
+Antialiasing is not part of this decision. The shader derives its edge width from how many device pixels the node covers on screen, so a glyph fades over about one device pixel however its atlas density, the surface ratio, its own scale and the camera's zoom combined to put it there. The three concerns stay separate: `pixelRatio` decides how much glyph information is stored, the atlas sampler decides how it is reconstructed between texels, and the shader decides how wide the reconstructed edge lands on the screen.
 
 ## Text constraints
 

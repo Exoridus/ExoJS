@@ -42,9 +42,9 @@ import { stencilContentDepthStencilState } from './WebGpuStencilState';
 // [ni*10+1]: (b,  d,  0,  ty)   transform col 1+2
 // [ni*10+2]: (r,  g,  b,  a )   fillColor
 // [ni*10+3]: (r,  g,  b,  a )   outlineColor
-// [ni*10+4]: (outlineMin, shadowAlpha, softness, gradientEnabled)
+// [ni*10+4]: (outlineMin, shadowAlpha, shadowBlur, gradientEnabled)
 // [ni*10+5]: (r,  g,  b,  a )   shadowColor
-// [ni*10+6]: (shadowOffX_px, shadowOffY_px, gradientVertical, 0)
+// [ni*10+6]: (shadowOffX_px, shadowOffY_px, gradientVertical, sdfRadius_logical)
 // [ni*10+7]: (r,  g,  b,  a )   gradientTop
 // [ni*10+8]: (r,  g,  b,  a )   gradientBottom
 // [ni*10+9]: (minX, minY, w, h) text block bounds
@@ -203,6 +203,7 @@ struct VertexOutput {
     @location(1)                    gradUV   : vec2<f32>,
     @location(2) @interpolate(flat) nodeIdx  : u32,
     @location(3) @interpolate(flat) textureSlot : u32,
+    @location(4) @interpolate(flat) pxPerUnit : f32,
 };
 
 @vertex
@@ -253,12 +254,20 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
         gradUV = clamp((input.position - t9.xy) / bSize, vec2<f32>(0.0), vec2<f32>(1.0));
     }
 
+    // Device pixels one LOCAL unit of this node covers on screen — see the
+    // matching comment in text.vert. Column 0 of the composed mat3 is the image
+    // of the local +x direction, and clip space spans 2 across the viewport.
+    // Derived from the transform rather than from a hardware derivative so this
+    // stage and the GLSL one agree bit for bit on the edge ramp.
+    let unitClip = (proj * grp * xf * vec3<f32>(1.0, 0.0, 0.0)).xy;
+
     var out: VertexOutput;
     out.clipPos  = clipPos;
     out.texcoord = input.texcoord;
     out.gradUV   = gradUV;
     out.nodeIdx  = ni;
     out.textureSlot = input.packedNodeSlot >> ${textAtlasSlotShift}u;
+    out.pxPerUnit = length(unitClip * frame.viewport.zw * 0.5);
     return out;
 }
 
@@ -279,7 +288,7 @@ fn fragmentSdf(in: VertexOutput) -> @location(0) vec4<f32> {
 
     let outlineMin   = tParams.x;
     let shadowAlpha  = tParams.y;
-    let soft         = max(tParams.z, 0.001);
+    let blur         = tParams.z;
     let gradEnabled  = tParams.w;
     let pageSize     = f32(atlasTextureDimensions(in.textureSlot).x);
     let shadowOffset = tShadow2.xy / pageSize;
@@ -288,15 +297,30 @@ fn fragmentSdf(in: VertexOutput) -> @location(0) vec4<f32> {
     let uvDx = dpdx(in.texcoord);
     let uvDy = dpdy(in.texcoord);
     let sd   = sampleTexture(in.textureSlot, in.texcoord, uvDx, uvDy).r;
-    let fill = smoothstep(0.5 - soft, 0.5 + soft, sd);
+
+    // Mirrors text-sdf.frag: the edge fades over one DEVICE pixel rather than
+    // over a constant in field units, so atlas density, surface ratio, node
+    // scale and camera zoom all arrive at the same on-screen edge. The field
+    // moves by 1/sdfRadius per local unit, so the width follows from the
+    // transform; the derivative is the fallback for an atlas whose field scale
+    // is unknown.
+    let radius = tShadow2.w;
+    var aa = max(fwidth(sd) * 0.5, 0.0001);
+    if (radius > 0.0 && in.pxPerUnit > 0.0) {
+        aa = max(0.5 / (radius * in.pxPerUnit), 0.0001);
+    }
+    let fill = smoothstep(0.5 - aa, 0.5 + aa, sd);
 
     let shadowSd = sampleTexture(in.textureSlot, in.texcoord - shadowOffset, uvDx, uvDy).r;
 
     let outline = select(0.0,
-        smoothstep(outlineMin - soft, outlineMin + soft, sd) * (1.0 - fill),
+        smoothstep(outlineMin - aa, outlineMin + aa, sd) * (1.0 - fill),
         outlineMin < 0.5);
 
-    let shadow = smoothstep(0.5 - soft, 0.5 + soft, shadowSd)
+    // shadowBlur is an authored look and stays in field units, so it covers the
+    // same logical distance at every raster density. It only ever widens.
+    let shadowSoft = max(aa, blur);
+    let shadow = smoothstep(0.5 - shadowSoft, 0.5 + shadowSoft, shadowSd)
                  * shadowAlpha * (1.0 - fill) * (1.0 - outline);
 
     var fillColor : vec4<f32>;
@@ -333,7 +357,7 @@ fn fragmentMsdf(in: VertexOutput) -> @location(0) vec4<f32> {
 
     let outlineMin   = tParams.x;
     let shadowAlpha  = tParams.y;
-    let soft         = max(tParams.z, 0.001);
+    let blur         = tParams.z;
     let gradEnabled  = tParams.w;
     let pageSize     = f32(atlasTextureDimensions(in.textureSlot).x);
     let shadowOffset = tShadow2.xy / pageSize;
@@ -343,16 +367,22 @@ fn fragmentMsdf(in: VertexOutput) -> @location(0) vec4<f32> {
     let uvDy = dpdy(in.texcoord);
     let msd  = sampleTexture(in.textureSlot, in.texcoord, uvDx, uvDy).rgb;
     let sd   = median3(msd.r, msd.g, msd.b);
-    let fill = smoothstep(0.5 - soft, 0.5 + soft, sd);
+
+    // See the SDF stage. An MSDF atlas is built offline and carries no distance
+    // range in its font data, so its field scale is unknown and the width has to
+    // come from the hardware derivative.
+    let aa   = max(fwidth(sd) * 0.5, 0.0001);
+    let fill = smoothstep(0.5 - aa, 0.5 + aa, sd);
+    let shadowSoft = max(aa, blur);
 
     let shadowMsd = sampleTexture(in.textureSlot, in.texcoord - shadowOffset, uvDx, uvDy).rgb;
     let shadowSd  = median3(shadowMsd.r, shadowMsd.g, shadowMsd.b);
 
     let outline = select(0.0,
-        smoothstep(outlineMin - soft, outlineMin + soft, sd) * (1.0 - fill),
+        smoothstep(outlineMin - aa, outlineMin + aa, sd) * (1.0 - fill),
         outlineMin < 0.5);
 
-    let shadow = smoothstep(0.5 - soft, 0.5 + soft, shadowSd)
+    let shadow = smoothstep(0.5 - shadowSoft, 0.5 + shadowSoft, shadowSd)
                  * shadowAlpha * (1.0 - fill) * (1.0 - outline);
 
     var fillColor : vec4<f32>;
@@ -1028,7 +1058,12 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     const outlineMin = style.outlineWidth > 0 ? Math.max(0, 0.5 - style.outlineWidth) : 0.5;
     arr[base + 16] = outlineMin;
     arr[base + 17] = style.shadowAlpha;
-    arr[base + 18] = Math.max(0.03, style.shadowBlur * 0.1);
+    // Shadow blur only. This used to carry a 0.03 floor because the same
+    // number was the shader's antialiasing width, and a node without a shadow
+    // still needed an edge to fade over; the shaders now derive that width per
+    // fragment from the field's screen-space gradient, so a floor here would
+    // only smear the shadow of a node that asked for none.
+    arr[base + 18] = style.shadowBlur * 0.1;
     arr[base + 19] = style.gradientColors !== null ? 1 : 0;
 
     const sc = style.shadowColor;
@@ -1045,7 +1080,11 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     arr[base + 24] = style.shadowOffsetX * texelsPerLogicalPixel;
     arr[base + 25] = style.shadowOffsetY * texelsPerLogicalPixel;
     arr[base + 26] = style.gradientAxis === 'vertical' ? 1 : 0;
-    arr[base + 27] = 0;
+    // The node's SDF buffer radius in LOGICAL pixels — the field's scale, which
+    // the fragment stage sizes its antialiased edge from. Zero means "unknown"
+    // (a BitmapText's offline MSDF atlas carries no distance range) and selects
+    // the derivative fallback.
+    arr[base + 27] = node instanceof Text ? node.sdfRadius : 0;
 
     const gc = style.gradientColors;
     if (gc !== null) {

@@ -4,9 +4,10 @@ precision mediump float;
 uniform sampler2D u_nodeData;  // RGBA32F per-node data (see WebGl2TextRenderer)
 uniform float     u_pageSize;  // atlas page size in px (for shadow UV conversion)
 
-flat in int  v_nodeIndex;
-     in vec2 v_texcoord;
-     in vec2 v_gradUV;
+flat in int   v_nodeIndex;
+flat in float v_pxPerUnit;
+     in vec2  v_texcoord;
+     in vec2  v_gradUV;
 
 layout(location = 0) out vec4 fragColor;
 
@@ -20,7 +21,7 @@ void main(void) {
   // Same node data layout as text-sdf.frag
   vec4 tFill    = texelFetch(u_nodeData, ivec2(2, ni), 0);
   vec4 tOutline = texelFetch(u_nodeData, ivec2(3, ni), 0);
-  vec4 tParams  = texelFetch(u_nodeData, ivec2(4, ni), 0); // (outlineMin, shadowAlpha, softness, gradientEnabled)
+  vec4 tParams  = texelFetch(u_nodeData, ivec2(4, ni), 0); // (outlineMin, shadowAlpha, shadowBlur, gradientEnabled)
   vec4 tShadow  = texelFetch(u_nodeData, ivec2(5, ni), 0);
   vec4 tShadow2 = texelFetch(u_nodeData, ivec2(6, ni), 0); // (shadowOffX_px, shadowOffY_px, gradientVertical, 0)
   vec4 tGradTop = texelFetch(u_nodeData, ivec2(7, ni), 0);
@@ -28,23 +29,30 @@ void main(void) {
 
   float outlineMin   = tParams.x;
   float shadowAlpha  = tParams.y;
-  float soft         = max(tParams.z, 0.001);
+  float blur         = tParams.z;
   float gradEnabled  = tParams.w;
   vec2  shadowOffset = tShadow2.xy / u_pageSize;
   float gradVertical = tShadow2.z;
 
   vec3  msd  = sampleBase(v_textureSlot, v_texcoord).rgb;
   float sd   = median(msd.r, msd.g, msd.b);
-  float fill = smoothstep(0.5 - soft, 0.5 + soft, sd);
+
+  // See text-sdf.frag: the edge fades over one DEVICE pixel rather than over a
+  // constant in field units. An MSDF atlas is built offline and carries no
+  // distance range in its font data, so its field scale is unknown here and the
+  // width has to come from the hardware derivative.
+  float aa   = max(fwidth(sd) * 0.5, 0.0001);
+  float fill = smoothstep(0.5 - aa, 0.5 + aa, sd);
 
   float outline = outlineMin < 0.5
-    ? smoothstep(outlineMin - soft, outlineMin + soft, sd) * (1.0 - fill)
+    ? smoothstep(outlineMin - aa, outlineMin + aa, sd) * (1.0 - fill)
     : 0.0;
 
-  vec3  shadowMsd = sampleBase(v_textureSlot, v_texcoord - shadowOffset).rgb;
-  float shadowSd  = median(shadowMsd.r, shadowMsd.g, shadowMsd.b);
-  float shadow    = smoothstep(0.5 - soft, 0.5 + soft, shadowSd)
-                    * shadowAlpha * (1.0 - fill) * (1.0 - outline);
+  float shadowSoft = max(aa, blur);
+  vec3  shadowMsd  = sampleBase(v_textureSlot, v_texcoord - shadowOffset).rgb;
+  float shadowSd   = median(shadowMsd.r, shadowMsd.g, shadowMsd.b);
+  float shadow     = smoothstep(0.5 - shadowSoft, 0.5 + shadowSoft, shadowSd)
+                     * shadowAlpha * (1.0 - fill) * (1.0 - outline);
 
   vec4 fillColor;
   if (gradEnabled > 0.5) {
