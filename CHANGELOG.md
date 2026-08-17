@@ -23,10 +23,12 @@ release and includes intentional breaking changes; see **Changed** and
   its text from a 2x font onto 2x atlas tiles with no opt-in, and the resolution
   is deterministic: nothing in the text stack reads `window.devicePixelRatio`, so
   an application pinned at 2 renders text at 2 on a device reporting 3. The new
-  `TextOptions.pixelRatio` / `Text.pixelRatio` overrides it for one node — the
-  case small labels on a DPR-3 phone need, where a denser glyph raster is wanted
-  but a denser main surface is not affordable. Omitted means inherit, and the
-  property reads back `undefined` rather than a materialized number; a value that
+  `TextOptions.pixelRatio` / `Text.pixelRatio` decouples one node's glyph raster
+  from the surface — for content whose on-screen density exceeds the surface
+  ratio (a node scaled up at runtime, a zoomed camera), or to trade sharpness for
+  atlas memory. Omitted means inherit, which is the value to want: sharpness
+  peaks at one atlas texel per device pixel. The property reads back `undefined`
+  rather than a materialized number; a value that
   cannot be a density (`0`, negative, `NaN`, `Infinity`) is rejected, not clamped.
   `Text.rasterPixelRatio` reports the density in force.
 
@@ -264,6 +266,17 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
 
 ### Fixed
 
+- **The runtime glyph atlas is filtered linearly.** Its pages are `DataTexture`s,
+  and that class defaults to `NEAREST` — correct for the lookup tables it exists
+  for, where a row must read back as the exact number written, and wrong for a
+  signed distance field, where bilinear reconstruction between texels is the
+  whole reason the field is resolution-independent. Text drawn at anything other
+  than one atlas texel per device pixel was therefore sampled from a piecewise
+  constant field: staircased when magnified (a node scaled up, or a `pixelRatio`
+  below the surface it is drawn on), jittered when minified. Measured on a
+  4x-magnified glyph, the frame held 12 distinct intensities before and 211
+  after. Colour pages were already linear and are now explicitly so, so the two
+  page kinds visibly agree.
 - **An effect capture no longer repaints the application background.** A filter,
   mask or `cacheAsTexture` capture clears its own target to transparent black,
   and `backend.clear(colour)` writes the colour it is handed through to the

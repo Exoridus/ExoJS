@@ -1,7 +1,7 @@
 import { Signal } from '#core/Signal';
 import { DataTexture } from '#rendering/texture/DataTexture';
 import { Texture } from '#rendering/texture/Texture';
-import { TextureFormat } from '#rendering/types';
+import { ScaleModes, TextureFormat } from '#rendering/types';
 
 import { cssFontString, GlyphMetrics } from './GlyphMetrics';
 import { GlyphSdf } from './GlyphSdf';
@@ -128,12 +128,25 @@ export class AtlasPage {
     if (mode === 'sdf') {
       this._sdfBuffer = new Uint8Array(width * height);
       this._sdfTexture = new DataTexture({ width, height, format: TextureFormat.R8, data: this._sdfBuffer });
+      // A DataTexture defaults to NEAREST, which is right for the lookup tables
+      // that class exists for — a transform row must be read back as the exact
+      // number that was written. An SDF page is the opposite kind of data: it
+      // stores a CONTINUOUS distance, and bilinear reconstruction of it between
+      // texels is the entire reason a distance field is resolution-independent.
+      // Sampled with NEAREST the field is piecewise constant, so a glyph drawn
+      // at anything other than one atlas texel per device pixel gets a staircased
+      // edge (magnified) or a jittered one (minified) — which is exactly what a
+      // raised or lowered `Text.pixelRatio` produces.
+      this._sdfTexture.setScaleMode(ScaleModes.Linear);
       this._sdfTexture.setSize(width, height);
       this.texture = this._sdfTexture;
     } else {
       const { canvas, ctx } = makeCtx(width, height);
       this._ctx = ctx;
       this.texture = new Texture(canvas as HTMLCanvasElement);
+      // Already the `Texture` default; stated so the two page kinds visibly
+      // agree on how a glyph is filtered.
+      this.texture.setScaleMode(ScaleModes.Linear);
       this.texture.setSize(width, height);
     }
   }

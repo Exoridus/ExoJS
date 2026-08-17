@@ -47,9 +47,7 @@ export interface TextOptions extends TextStyleOptions, LayoutOptions {
    * ever happens without an explicit opt-in. Nothing in the text stack reads
    * `window.devicePixelRatio`; there is no silent supersampling.
    *
-   * Set it to raise glyph raster density for THIS node alone, without paying the
-   * fill rate of a denser main surface — the case small runtime SDF labels on a
-   * DPR-3 phone actually need:
+   * Set it to decouple this node's glyph raster from the surface:
    *
    * ```ts
    * const app = new Application({ canvas: { pixelRatio: 2 } });
@@ -61,6 +59,15 @@ export interface TextOptions extends TextStyleOptions, LayoutOptions {
    * The logical font size, layout, advances and line breaks are identical in
    * both — only the raster grid behind the glyphs changes. Must be a positive
    * finite number.
+   *
+   * The value to want is usually the inherited one: sharpness peaks where one
+   * atlas texel lands on one device pixel, and both directions away from that
+   * cost something (below it the field is stretched, above it the extra texels
+   * are thrown away and the memory is spent anyway — the cost is roughly the
+   * square of the ratio). Raise it for content whose ON-SCREEN density exceeds
+   * the surface ratio, which is what a node scaled up at runtime or drawn
+   * through a zoomed camera produces; lower it to trade sharpness for atlas
+   * memory.
    */
   pixelRatio?: number;
 }
@@ -98,8 +105,8 @@ export interface TextOptions extends TextStyleOptions, LayoutOptions {
  *
  * Glyphs are rasterized at the {@link Application}'s `pixelRatio`, so text is
  * crisp on a HiDPI surface without any opt-in. {@link TextOptions.pixelRatio}
- * raises that density for one node alone — the small-label case on a DPR-3
- * phone — without changing its layout by so much as a line break.
+ * decouples one node's glyph raster from the surface without changing its
+ * layout by so much as a line break.
  * @stable
  */
 export class Text extends AbstractText {

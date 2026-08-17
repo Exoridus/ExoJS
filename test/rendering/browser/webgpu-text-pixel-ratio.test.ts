@@ -140,6 +140,34 @@ describe('style lengths stated in logical pixels', () => {
   });
 });
 
+describe('the SDF atlas is sampled as a continuous field', () => {
+  // The sampler mode lives on the texture and is pinned once in the WebGL2
+  // suite; what this cell adds is that WebGPU's own sampler translation honours
+  // it. Under NEAREST a magnified glyph resolves into blocks and the frame
+  // collapses onto the handful of texel values the tile covers.
+  test('keeps a magnified glyph smooth rather than blocky', async ctx => {
+    const backend = await createWebGpuTestBackend(size, 1);
+    const node = new Text('O', { fontSize: 24, pixelRatio: 1, fillColor: new Color(255, 255, 255) });
+
+    node.setPosition(20, 10);
+    node.setScale(4);
+
+    if (!(await renderWebGpuOnce(ctx, backend, node))) return;
+
+    const frame = readWebGpuFrame(backend, size);
+    const seen = new Set<number>();
+
+    for (let i = 0; i < frame.length; i += 4) {
+      seen.add(frame[i]!);
+    }
+
+    node.destroy();
+    backend.destroy();
+
+    expect(seen.size).toBeGreaterThan(80);
+  });
+});
+
 describe('logical layout is independent of the raster density', () => {
   // The cross-backend claim in one cell: the same string, laid out on this
   // backend at three densities, produces one advance extent.

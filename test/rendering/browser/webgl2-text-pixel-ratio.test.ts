@@ -107,6 +107,66 @@ describe('SDF rasterization at a pixel ratio', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Atlas filtering
+// ---------------------------------------------------------------------------
+
+describe('the SDF atlas is sampled as a continuous field', () => {
+  const size = 128;
+
+  /**
+   * How many distinct intensities the frame contains.
+   *
+   * This is the direct read of whether the distance field is being
+   * reconstructed between texels. Sampled with NEAREST the field is piecewise
+   * constant, so a magnified glyph resolves into blocks and the whole frame
+   * collapses onto the handful of values its atlas texels happen to hold;
+   * sampled linearly the same glyph produces a full ramp.
+   */
+  const distinctIntensities = (frame: Uint8Array): number => {
+    const seen = new Set<number>();
+
+    for (let i = 0; i < frame.length; i += 4) {
+      seen.add(frame[i]!);
+    }
+
+    return seen.size;
+  };
+
+  test('pins the page sampler to linear filtering', () => {
+    const pool = new GlyphAtlasPool();
+    const sdf = pool.getAtlas(FAMILY, 'normal', '400', 'sdf');
+    const color = pool.getAtlas(FAMILY, 'normal', '400', 'color');
+
+    // ScaleModes.Linear === GL_LINEAR. A DataTexture defaults to NEAREST, which
+    // is right for a lookup table and wrong for a distance field.
+    expect(sdf.pages[0]!.texture.scaleMode).toBe(0x2601);
+    expect(color.pages[0]!.texture.scaleMode).toBe(0x2601);
+  });
+
+  // A glyph magnified past its atlas density is the case every ratio mismatch
+  // produces — a node scaled up at runtime, or a `pixelRatio` below the surface
+  // it is drawn on. Under NEAREST this frame is a staircase.
+  test('keeps a magnified glyph smooth rather than blocky', async () => {
+    const backend = await createWebGl2TestBackend(size, 1);
+    const node = new Text('O', { fontSize: 24, pixelRatio: 1, fillColor: new Color(255, 255, 255) });
+
+    node.setPosition(20, 10);
+    node.setScale(4);
+    renderWebGl2Once(backend, node, Color.black);
+
+    const distinct = distinctIntensities(readWebGl2Frame(backend, size));
+
+    node.destroy();
+    backend.destroy();
+
+    // Measured on this scene: 211 distinct intensities linearly filtered, 12
+    // with NEAREST — the field collapses onto the twelve texel values the
+    // magnified tile happens to cover. The floor sits far from both.
+    expect(distinct).toBeGreaterThan(80);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Logical layout invariance
 // ---------------------------------------------------------------------------
 

@@ -219,7 +219,7 @@ const { height } = BitmapText.measure('Continue', font, { scale: 2 });
 
 Glyphs are rasterized onto a real pixel grid, so on a high-density display they need more of them. A text node therefore rasterizes at the `pixelRatio` of the [`Application`](/ExoJS/en/api/application/) that draws it — set `canvas.pixelRatio: 2` and its glyphs are rendered from a 2x font onto a 2x atlas tile. You do not have to do anything for that; it is the default, and it is deterministic: nothing in the text stack consults `window.devicePixelRatio`, so an application pinned at 2 renders text at 2 on a device that reports 3.
 
-Small type is where a device's remaining density is still visible. `Text.pixelRatio` raises the glyph raster for one node alone, without making the whole surface — and its fill rate — denser:
+`Text.pixelRatio` decouples one node's glyph raster from the surface it is drawn on:
 
 ```ts
 import { Application, Text } from '@codexo/exojs';
@@ -235,7 +235,9 @@ const crisp = new Text('Ammo 24/60', { fontSize: 9, pixelRatio: 3 });
 
 Both nodes lay out identically. The logical font size, the advances, kerning, wrapping, line breaks, alignment, the reach of an outline or shadow, and everything `textBounds` and `Text.measure` report are the same at every ratio — only sharpness, atlas tile size and memory change. `text.pixelRatio` reports the override and is `undefined` when there is none; assign `undefined` to go back to inheriting. `text.rasterPixelRatio` reports the density actually in force.
 
-The cost is roughly the square of the ratio. Measured over an ASCII set at 9, 11 and 16px: 146k atlas texels at ratio 1, 582k at ratio 2 and 1.29M at ratio 3 — enough to push that set from one 1024x1024 page to two. Raise it for the labels that need it, not for a whole UI.
+**The value to want is usually the inherited one.** Sharpness peaks where one atlas texel lands on one device pixel, which is what inheriting gives you, and both directions away from that cost something: below it the field is stretched over more pixels than it describes, above it the extra texels are resampled away while the memory is spent anyway. The cost is roughly the square of the ratio — measured over an ASCII set at 9, 11 and 16px: 146k atlas texels at ratio 1, 582k at ratio 2 and 1.29M at ratio 3, enough to push that set from one 1024x1024 page to two.
+
+That leaves two honest uses. Raise it when a node's **on-screen** density exceeds the surface ratio — a label scaled up at runtime, or one drawn through a zoomed camera, samples its atlas at more device pixels than the surface ratio suggests. Lower it to trade sharpness for atlas memory on text that is small, static or far away.
 
 ## Text constraints
 
