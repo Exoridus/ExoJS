@@ -9,6 +9,7 @@ import type { BlendModes } from '#rendering/types';
 import type { View } from '#rendering/View';
 
 import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
+import { requireRepresentableStorageGrowth } from './webgpuStorageLimits';
 
 /** Bytes of one transform slot (2 × vec4<f32>, matches the WGSL `TransformSlot`). */
 export const retainedTransformSlotBytes = 32;
@@ -301,6 +302,38 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
    */
   public ensureCapacity(device: GPUDevice, instanceBytes: number, transformBytes: number, tintBytes: number): void {
     let recreated = false;
+
+    // Both storage bindings are measured against the connected device BEFORE any
+    // buffer here is destroyed or created — including the instance buffer, which
+    // is a vertex binding and representable on its own. Past the ceiling
+    // `createBuffer` still succeeds and `createBindGroup` does not, so allocating
+    // first would leave the bundle holding a set the device cannot bind, with the
+    // failure surfacing as an uncaptured validation error a frame later. The two
+    // grow independently, so each is measured on its own row width rather than
+    // inferred from the wider one.
+    if (this._transformBuffer === null || this._transformCapacity < transformBytes) {
+      const capacity = growCapacity(this._transformCapacity, transformBytes);
+
+      requireRepresentableStorageGrowth(device, {
+        store: 'retained group transform storage',
+        resource: 'sprite:retained-transform-buffer',
+        requestedRows: Math.ceil(transformBytes / retainedTransformSlotBytes),
+        capacityRows: capacity / retainedTransformSlotBytes,
+        capacityBytes: capacity,
+      });
+    }
+
+    if (this._tintBuffer === null || this._tintCapacity < tintBytes) {
+      const capacity = growCapacity(this._tintCapacity, tintBytes);
+
+      requireRepresentableStorageGrowth(device, {
+        store: 'retained group tint storage',
+        resource: 'sprite:retained-tint-buffer',
+        requestedRows: Math.ceil(tintBytes / retainedTintSlotBytes),
+        capacityRows: capacity / retainedTintSlotBytes,
+        capacityBytes: capacity,
+      });
+    }
 
     if (this._instanceBuffer === null || this._instanceCapacity < instanceBytes) {
       const capacity = growCapacity(this._instanceCapacity, instanceBytes);
