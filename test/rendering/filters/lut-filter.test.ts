@@ -428,10 +428,10 @@ describe('LutFilter construction and options', () => {
     expect(filter.lut.height).toBe(17);
   });
 
-  test('1d mode builds a 1D identity LUT', () => {
-    const filter = new LutFilter({ mode: '1d' });
+  test('rgb1d mode builds a 1D identity LUT', () => {
+    const filter = new LutFilter({ mode: 'rgb1d' });
 
-    expect(filter.mode).toBe('1d');
+    expect(filter.mode).toBe('rgb1d');
     expect(filter.lut.width).toBe(256);
     expect(filter.lut.height).toBe(1);
   });
@@ -501,8 +501,8 @@ describe('LutFilter.apply — backend selection', () => {
     output.destroy();
   });
 
-  test('builds a WebGl2ShaderFilter on the WebGL2 backend for 1D mode (no uLutSize uniform)', () => {
-    const filter = new LutFilter({ mode: '1d' });
+  test('builds a WebGl2ShaderFilter on the WebGL2 backend for rgb1d mode (no uLutSize uniform)', () => {
+    const filter = new LutFilter({ mode: 'rgb1d' });
     const backend = makeWebGl2Backend();
     const input = new RenderTexture(16, 16);
     const output = new RenderTexture(16, 16);
@@ -543,11 +543,11 @@ describe('LutFilter.apply — backend selection', () => {
     }
   });
 
-  test('builds a WebGpuShaderFilter on the WebGPU backend for 1D mode', () => {
+  test('builds a WebGpuShaderFilter on the WebGPU backend for rgb1d mode', () => {
     const env = makeWebGpuEnv();
 
     try {
-      const filter = new LutFilter({ mode: '1d' });
+      const filter = new LutFilter({ mode: 'rgb1d' });
       const backend = makeWebGpuBackend(env.device);
       const input = new RenderTexture(16, 16);
       const output = new RenderTexture(16, 16);

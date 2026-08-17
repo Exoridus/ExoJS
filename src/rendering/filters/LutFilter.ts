@@ -9,13 +9,13 @@ import { WebGl2ShaderFilter } from './WebGl2ShaderFilter';
 import { WebGpuShaderFilter } from './WebGpuShaderFilter';
 
 /** Storage layout for a Look-Up Table texture. */
-export type LutMode = '1d' | '3d';
+export type LutMode = 'rgb1d' | '3d';
 
 /** Construction options for {@link LutFilter}. */
 export interface LutFilterOptions {
   /**
    * Storage mode of the LUT texture.
-   * - `'1d'` — texture is `N×1`, indexed by the source pixel's red channel. Used for palette mapping and indexed-color effects.
+   * - `'rgb1d'` — texture is `N×1`, holding three independent per-channel curves: red is graded through the LUT's red channel, green through green, blue through blue. Used for levels/curves-style grading, colour ramps and posterisation.
    * - `'3d'` — texture is `N²×N`, indexed by the full source RGB. Used for color grading, tone mapping, film emulation. Default `'3d'`.
    */
   mode?: LutMode;
@@ -26,7 +26,10 @@ export interface LutFilterOptions {
   size?: number;
 }
 
-const glsl1dFragment = `#version 300 es
+// Three independent lookups, one per channel — NOT one lookup indexed by red.
+// `textureSize` supplies N, so the sample lands on a texel centre for LUTs of
+// any width and an identity ramp is an exact no-op.
+const glslRgb1dFragment = `#version 300 es
 precision mediump float;
 uniform sampler2D uTexture;
 uniform sampler2D uLut;
@@ -34,8 +37,12 @@ in vec2 vUv;
 out vec4 fragColor;
 void main() {
     vec4 src = texture(uTexture, vUv);
-    vec3 graded = texture(uLut, vec2(src.r, 0.5)).rgb;
-    fragColor = vec4(graded, src.a);
+    float n = float(textureSize(uLut, 0).x);
+    vec3 coord = clamp(src.rgb, 0.0, 1.0) * ((n - 1.0) / n) + 0.5 / n;
+    float r = texture(uLut, vec2(coord.r, 0.5)).r;
+    float g = texture(uLut, vec2(coord.g, 0.5)).g;
+    float b = texture(uLut, vec2(coord.b, 0.5)).b;
+    fragColor = vec4(r, g, b, src.a);
 }
 `;
 
@@ -72,16 +79,20 @@ void main() {
 }
 `;
 
-const wgsl1dFragment = `
+const wgslRgb1dFragment = `
 @group(0) @binding(1) var uTexture: texture_2d<f32>;
 @group(0) @binding(2) var uSampler: sampler;
 @group(1) @binding(1) var uLut: texture_2d<f32>;
 
 @fragment
-fn fragMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
+fn main(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
     let src = textureSample(uTexture, uSampler, vUv);
-    let graded = textureSample(uLut, uSampler, vec2<f32>(src.r, 0.5)).rgb;
-    return vec4<f32>(graded, src.a);
+    let n = f32(textureDimensions(uLut).x);
+    let coord = clamp(src.rgb, vec3<f32>(0.0), vec3<f32>(1.0)) * ((n - 1.0) / n) + 0.5 / n;
+    let r = textureSample(uLut, uSampler, vec2<f32>(coord.r, 0.5)).r;
+    let g = textureSample(uLut, uSampler, vec2<f32>(coord.g, 0.5)).g;
+    let b = textureSample(uLut, uSampler, vec2<f32>(coord.b, 0.5)).b;
+    return vec4<f32>(r, g, b, src.a);
 }
 `;
 
@@ -115,7 +126,7 @@ fn sampleLut3d(c: vec3<f32>) -> vec3<f32> {
 }
 
 @fragment
-fn fragMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
+fn main(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
     let src = textureSample(uTexture, uSampler, vUv);
     return vec4<f32>(sampleLut3d(src.rgb), src.a);
 }
@@ -125,8 +136,12 @@ fn fragMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
  * A {@link Filter} that maps every pixel of the input through a Look-Up Table texture.
  *
  * Two storage modes:
- * - **1D LUT** (`N×1`, default `N=256`): indexed by the source's red channel only. Used for palette cycling, indexed-colour effects, and luminance-based recoloring.
+ * - **RGB 1D LUT** (`N×1`, default `N=256`): three independent per-channel curves — `R' = lut(src.r).r`, `G' = lut(src.g).g`, `B' = lut(src.b).b`, alpha untouched. Used for levels/curves-style grading, colour ramps, posterisation and animated recolouring.
  * - **3D LUT** (`N²×N` unwrapped cube): indexed by the full source RGB with trilinear interpolation between slices. Used for cinematic colour grading, tone mapping, film stock emulation, accessibility filters (color-blindness simulation), and similar standard colour-pipeline tasks. `N=17` matches DaVinci/OBS export defaults.
+ *
+ * A 1D LUT cannot express cross-channel mixing (that is what the 3D mode is
+ * for), and it is not an indexed-colour palette lookup: each channel only ever
+ * sees its own curve.
  *
  * ## Quick start
  *
@@ -136,10 +151,10 @@ fn fragMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
  * const filter = new LutFilter({ mode: '3d', size: 17 }).setLut(lut);
  * sprite.filters = [filter];
  *
- * // Palette cycling — rotate a 1D palette every frame:
- * const palette = LutFilter.identityLut1D();
- * const filter = new LutFilter({ mode: '1d' }).setLut(palette);
- * // Replace `palette.source` per frame with a shifted copy.
+ * // Animated per-channel curves — shift the ramp every frame:
+ * const ramp = LutFilter.identityLut1D();
+ * const filter = new LutFilter({ mode: 'rgb1d' }).setLut(ramp);
+ * // Replace `ramp.source` per frame with a shifted copy.
  * ```
  *
  * Internally creates a {@link WebGl2ShaderFilter} or {@link WebGpuShaderFilter} on first
@@ -147,11 +162,11 @@ fn fragMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
  */
 export class LutFilter extends Filter {
   /**
-   * Build a 1D identity LUT (`N×1` texture with smooth grayscale gradient).
+   * Build a 1D identity LUT (`N×1` texture with a smooth grayscale gradient).
    *
-   * Useful as a starting point: applying this LUT is a no-op, mutate
-   * `texture.source` to derive cycling palettes, posterization, sepia,
-   * grayscale, etc.
+   * Because all three channels carry the same ramp, applying this LUT in
+   * `'rgb1d'` mode is an exact no-op for ANY colour. Mutate `texture.source` to
+   * derive curves, posterization, contrast pushes, per-channel ramps, etc.
    */
   public static identityLut1D(size = 256): Texture {
     const canvas = document.createElement('canvas');
@@ -233,7 +248,7 @@ export class LutFilter extends Filter {
     super();
     this._mode = options.mode ?? '3d';
     this._size = Math.max(2, Math.floor(options.size ?? 17));
-    this._lut = this._mode === '1d' ? LutFilter.identityLut1D() : LutFilter.identityLut3D(this._size);
+    this._lut = this._mode === 'rgb1d' ? LutFilter.identityLut1D() : LutFilter.identityLut3D(this._size);
   }
 
   /** The LUT mode this filter was constructed with. */
@@ -284,12 +299,12 @@ export class LutFilter extends Filter {
     }
     if (backend.backendType === RenderBackendType.WebGpu) {
       return new WebGpuShaderFilter({
-        fragmentSource: is3d ? wgsl3dFragment : wgsl1dFragment,
+        fragmentSource: is3d ? wgsl3dFragment : wgslRgb1dFragment,
         uniforms,
       });
     }
     return new WebGl2ShaderFilter({
-      fragmentSource: is3d ? glsl3dFragment : glsl1dFragment,
+      fragmentSource: is3d ? glsl3dFragment : glslRgb1dFragment,
       uniforms,
     });
   }

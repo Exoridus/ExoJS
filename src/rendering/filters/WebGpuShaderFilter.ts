@@ -381,16 +381,19 @@ export class WebGpuShaderFilter extends Filter {
    *   binding 2, 4, 6, ... — sampler entries (paired with textures)
    */
   private _buildUserBindGroupLayout(device: GPUDevice): GPUBindGroupLayout {
-    const entries: GPUBindGroupLayoutEntry[] = [];
-    const hasScalarUniforms = Object.values(this.uniforms).some(v => !isTextureValue(v));
-
-    if (hasScalarUniforms) {
-      entries.push({
+    // Binding 0 is unconditional: `_buildUserBindGroup` always binds a uniform
+    // buffer there (a 16-byte dummy when there are no scalar uniforms), so a
+    // layout that omitted it rejected the bind group outright — which is what
+    // a texture-only filter such as `LutFilter`'s rgb1d mode produces. A layout
+    // entry the shader never reads is valid; a bind group entry the layout
+    // never declared is not.
+    const entries: GPUBindGroupLayoutEntry[] = [
+      {
         binding: 0,
         visibility: GPUShaderStage.FRAGMENT,
         buffer: { type: 'uniform' },
-      });
-    }
+      },
+    ];
 
     let bindingIndex = 1;
 
@@ -414,15 +417,6 @@ export class WebGpuShaderFilter extends Filter {
         sampler: {},
       });
       bindingIndex++;
-    }
-
-    // If no entries at all, add a dummy uniform buffer entry so the layout is valid
-    if (entries.length === 0) {
-      entries.push({
-        binding: 0,
-        visibility: GPUShaderStage.FRAGMENT,
-        buffer: { type: 'uniform' },
-      });
     }
 
     return device.createBindGroupLayout({ entries });
