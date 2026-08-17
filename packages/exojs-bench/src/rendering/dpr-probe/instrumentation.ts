@@ -4,7 +4,7 @@ import type { InternalTargetRecord, ProbeMode } from './matrix';
  * Bench-only instrumentation and A/B hook for the `NEU-S4` probe.
  *
  * Both halves work by shadowing a method ON AN INSTANCE the probe itself
- * constructed — the live backend and the probe's own `cacheAsBitmap` node —
+ * constructed — the live backend and the probe's own `cacheAsTexture` node —
  * never by touching a prototype and never by changing engine source. The engine
  * keeps its own contract: `RenderEffectExecutor` still passes LOGICAL barrier
  * bounds to `_renderPlanRenderToTexture` / `_renderPlanDrawTexture`, so a larger
@@ -21,7 +21,7 @@ export interface RenderTextureAcquirer {
   acquireRenderTexture(width: number, height: number): unknown;
 }
 
-/** Minimal structural surface of a `cacheAsBitmap` node this module patches. */
+/** Minimal structural surface of a `cacheAsTexture` node this module patches. */
 export interface CacheTextureOwner {
   _renderPlanEnsureCacheTexture(width: number, height: number): unknown;
 }
@@ -172,11 +172,11 @@ export const instrumentAcquireRenderTexture = (backend: RenderTextureAcquirer, r
 };
 
 /**
- * Shadow `_renderPlanEnsureCacheTexture` on ONE node so its `cacheAsBitmap`
+ * Shadow `_renderPlanEnsureCacheTexture` on ONE node so its `cacheAsTexture`
  * texture is recorded and, in probe mode, sized at `scale ×` the logical bounds.
  *
  * The node's cache BOUNDS stay logical — the engine stores them from the
- * barrier, not from the texture — so `_renderPlanCanReuseBitmapCache` and the
+ * barrier, not from the texture — so `_renderPlanCanReuseTextureCache` and the
  * replay draw are unaffected and the cache still invalidates on exactly the same
  * conditions.
  */

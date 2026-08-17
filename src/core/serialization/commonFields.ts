@@ -41,7 +41,7 @@ export function writeCommonFields(node: SceneNode, out: SerializedNode): void {
     if (node.cursor !== null) out.cursor = node.cursor;
     if (node.clip) out.clip = true;
     if (node.preserveDrawOrder) out.preserveDrawOrder = true;
-    if (node.cacheAsBitmap) out.cacheAsBitmap = true;
+    if (node.cacheAsTexture) out.cacheAsTexture = true;
 
     const clipShape = node.clipShape;
 
@@ -131,7 +131,7 @@ export function applyCommonFields(node: SceneNode, data: SerializedNode): void {
     if (typeof data.cursor === 'string') node.cursor = data.cursor;
     if (data.clip === true) node.clip = true;
     if (data.preserveDrawOrder === true) node.preserveDrawOrder = true;
-    if (data.cacheAsBitmap === true) node.cacheAsBitmap = true;
+    if (data.cacheAsTexture === true) node.cacheAsTexture = true;
 
     const clipShape = data.clipShape;
 

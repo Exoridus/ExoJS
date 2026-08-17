@@ -38,7 +38,7 @@
  *    regardless of groupIndex boundaries.
  *
  * Hard boundaries preserved by the optimizer:
- *   - Barrier entries (filter/mask/cacheAsBitmap effects)
+ *   - Barrier entries (filter/mask/cacheAsTexture effects)
  *   - Group scope entries (nested containers)
  *   - Material changes that force the batcher to flush (`forcesBatchFlush`):
  *     pipelineKey, crossing between the default and custom paths, and — on the
@@ -634,7 +634,7 @@ describe('render plan grouping key audit', () => {
         scope: {
           kind: RenderEntryKind.Barrier as const,
           node: a as unknown,
-          effect: { filters: [], clip: 0, maskSource: null, cacheAsBitmap: false, blendMode: 0 },
+          effect: { filters: [], clip: 0, maskSource: null, cacheAsTexture: false, blendMode: 0 },
           childPlan: null,
           left: 0,
           top: 0,

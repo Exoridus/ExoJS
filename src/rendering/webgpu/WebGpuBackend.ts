@@ -614,7 +614,7 @@ export class WebGpuBackend implements RenderBackend {
       this._drawPlanDepth--;
     }
 
-    // A nested plan (filter / cacheAsBitmap) just ended: flush its draws, then
+    // A nested plan (filter / cacheAsTexture) just ended: flush its draws, then
     // free its transform rows so the frame-scoped buffer only grows with
     // top-level render() calls. Top-level plans (depth back to 0) keep their rows
     // so cross-call batching survives to the frame-end flush.
@@ -624,7 +624,7 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     // Only assert balance at the outermost plan: a nested render() (e.g.
-    // cacheAsBitmap drawing its cache sprite) sees the still-open outer clips,
+    // cacheAsTexture drawing its cache sprite) sees the still-open outer clips,
     // which are not leaks.
     if (this._drawPlanDepth === 0 && this._passCoordinatorInstance !== null) {
       const unbalanced = this._passCoordinatorInstance.unbalancedStencilClips();

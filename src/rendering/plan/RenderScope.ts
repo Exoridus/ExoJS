@@ -27,7 +27,7 @@ export interface EffectDescriptor {
   readonly clip: ClipKind;
   readonly clipShape: Rectangle | Geometry | null;
   readonly maskSource: MaskSource;
-  readonly cacheAsBitmap: boolean;
+  readonly cacheAsTexture: boolean;
   readonly blendMode: BlendModes;
   /**
    * When `true`, the node uses a backdrop-aware blend mode (modes 5–17). The

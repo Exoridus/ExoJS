@@ -1,6 +1,6 @@
 {
   "title": "RenderNode",
-  "description": "SceneNode that can produce visual output. Adds the rendering pipeline features on top of the structural transform/bounds carried by SceneNode: `tint`, `blendMode`, post-process `filters`, an optional `mask` (via MaskSource), bitmap caching (`cacheAsBitmap`), and the interaction surface (`interactive`, `draggable`, all the pointer Signals). `RenderNode.render(backend)` is the per-frame visual entry point. The base implementation collects a render plan, optimizes local ordering, and plays it through the active backend. Subclasses of note: Container (children), Sprite (textured quad), Mesh (custom geometry), Graphics (immediate-mode shapes), Text (glyph-atlas text), Video (video texture), ParticleSystem (particles).",
+  "description": "SceneNode that can produce visual output. Adds the rendering pipeline features on top of the structural transform/bounds carried by SceneNode: `tint`, `blendMode`, post-process `filters`, an optional `mask` (via MaskSource), texture caching (`cacheAsTexture`), and the interaction surface (`interactive`, `draggable`, all the pointer Signals). `RenderNode.render(backend)` is the per-frame visual entry point. The base implementation collects a render plan, optimizes local ordering, and plays it through the active backend. Subclasses of note: Container (children), Sprite (textured quad), Mesh (custom geometry), Graphics (immediate-mode shapes), Text (glyph-atlas text), Video (video texture), ParticleSystem (particles).",
   "symbol": "RenderNode",
   "kind": "class",
   "subsystem": "rendering",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "SceneNode that can produce visual output. Adds the rendering pipeline features on top of the structural transform/bounds carried by SceneNode: `tint`, `blendMode`, post-process `filters`, an optional `mask` (via MaskSource), bitmap caching (`cacheAsBitmap`), and the interaction surface (`interactive`, `draggable`, all the pointer Signals).",
+        "SceneNode that can produce visual output. Adds the rendering pipeline features on top of the structural transform/bounds carried by SceneNode: `tint`, `blendMode`, post-process `filters`, an optional `mask` (via MaskSource), texture caching (`cacheAsTexture`), and the interaction surface (`interactive`, `draggable`, all the pointer Signals).",
         "`RenderNode.render(backend)` is the per-frame visual entry point. The base implementation collects a render plan, optimizes local ordering, and plays it through the active backend.",
         "Subclasses of note: Container (children), Sprite (textured quad), Mesh (custom geometry), Graphics (immediate-mode shapes), Text (glyph-atlas text), Video (video texture), ParticleSystem (particles)."
       ],
@@ -1637,11 +1637,11 @@
           "description": "Tab-traversal order among focusable nodes in the same focus scope. Lower values are visited first; equal values keep document (tree) order."
         },
         {
-          "name": "cacheAsBitmap",
-          "signature": "cacheAsBitmap: boolean",
+          "name": "cacheAsTexture",
+          "signature": "cacheAsTexture: boolean",
           "signatureTokens": [
             {
-              "text": "cacheAsBitmap",
+              "text": "cacheAsTexture",
               "kind": "name"
             },
             {
@@ -1655,7 +1655,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Bake this node's subtree into a RenderTexture once and replay that texture until the subtree changes, instead of walking and drawing it every frame. Worth it for a subtree that is expensive to draw and rarely changes. The cache is invalidated by anything that moves the node's world bounds — the node's own transform included — so a node that animates re-bakes every frame and is strictly slower than not caching it at all. Setting it to false frees the texture immediately."
         },
         {
           "name": "clip",

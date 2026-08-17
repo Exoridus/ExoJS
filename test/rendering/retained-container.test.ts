@@ -932,7 +932,7 @@ describe('RetainedContainer: invalidation gates and view independence', () => {
     const mid = new Container();
     const deep = new LeafDrawable('deep');
 
-    deep.cacheAsBitmap = true; // barrier at depth 2 -> mid's branch escapes (F13/R3)
+    deep.cacheAsTexture = true; // barrier at depth 2 -> mid's branch escapes (F13/R3)
     staticMid.addChild(new LeafDrawable('a'));
     mid.addChild(deep);
     group.addChild(staticMid);
@@ -953,7 +953,7 @@ describe('RetainedContainer: invalidation gates and view independence', () => {
 
     // Remove the deep barrier: the branch re-joins the group, capture, then
     // the whole group splices with no walk at all.
-    deep.cacheAsBitmap = false;
+    deep.cacheAsTexture = false;
     collectDraws(root, backend); // full collect + capture
 
     staticCollectSpy.mockClear();
@@ -1577,7 +1577,7 @@ describe('RetainedContainer: deep-barrier escape scoped to the offending sub-bra
       expect(escaped.scope.node).toBe(dirtyMid);
       expect(escaped.scope.effect.filters).toHaveLength(0);
       expect(escaped.scope.effect.maskSource).toBeNull();
-      expect(escaped.scope.effect.cacheAsBitmap).toBe(false);
+      expect(escaped.scope.effect.cacheAsTexture).toBe(false);
 
       const branchDraws: DrawCommand[] = [];
 

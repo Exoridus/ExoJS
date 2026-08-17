@@ -14,7 +14,7 @@ import type { ProbeSceneId } from './matrix';
  * Scenes for the manual DPR / internal-target probe.
  *
  * Every scene is built from PUBLIC engine API only — `Graphics`, `Sprite`,
- * `Text`, `ColorFilter`, `BlurFilter`, `cacheAsBitmap`. Nothing here is a new
+ * `Text`, `ColorFilter`, `BlurFilter`, `cacheAsTexture`. Nothing here is a new
  * engine feature; the probe measures paths a user already has.
  */
 
@@ -35,11 +35,11 @@ export interface ProbeScene {
   /** The node the probe renders each frame. */
   readonly root: Container;
   /**
-   * Nodes with `cacheAsBitmap` enabled, whose cache texture the probe
+   * Nodes with `cacheAsTexture` enabled, whose cache texture the probe
    * instruments. Empty for every other scene.
    */
   readonly cacheNodes: readonly RenderNode[];
-  /** Advance one frame. A static scene (see `cache-bitmap`) does nothing here. */
+  /** Advance one frame. A static scene (see `cache-texture`) does nothing here. */
   update(frame: number): void;
   /** Release every GPU resource the scene owns. */
   dispose(): void;
@@ -126,7 +126,7 @@ const createFlatTexture = (): Texture => {
  * The hairlines are the point. A 1-unit stroke is one device pixel at DPR 1,
  * two at DPR 2 and three at DPR 3, so its rendered sharpness is a direct read of
  * the surface's real resolution — and, when the content sits behind an effect or
- * a bitmap cache, of the INTERNAL target's resolution instead.
+ * a texture cache, of the INTERNAL target's resolution instead.
  */
 const buildSharpContent = (stageSize: number, withText: boolean): { node: Container; textures: Texture[]; spin: Graphics } => {
   const content = new Container();
@@ -238,7 +238,7 @@ const buildOverdrawScene = (stageSize: number): ProbeScene => {
 /**
  * Build one probe scene.
  *
- * `cache-bitmap` is deliberately the only STATIC scene: a bitmap cache exists to
+ * `cache-texture` is deliberately the only STATIC scene: a texture cache exists to
  * be baked once and replayed, and any per-frame mutation would change the node's
  * world bounds, invalidate the cache every frame and turn the scene into a
  * "re-bake a cache 60 times a second" benchmark — which is not what anyone runs
@@ -247,11 +247,11 @@ const buildOverdrawScene = (stageSize: number): ProbeScene => {
  *
  * It is also the only scene WITHOUT text, and not by preference. Measured while
  * building this probe (desktop Chromium, both backends, same page): a
- * `cacheAsBitmap` container that contains a `Text` node draws NOTHING on WebGL2
+ * `cacheAsTexture` container that contains a `Text` node draws NOTHING on WebGL2
  * — not the text and not its non-text siblings — while the identical scene
  * renders correctly on WebGPU, and while the same content behind a filter (no
  * cache) renders correctly on both. Since iOS Safari is always WebGL2, keeping
- * text here would have made the whole `cacheAsBitmap` arm a black rectangle on
+ * text here would have made the whole `cacheAsTexture` arm a black rectangle on
  * the device this probe exists for. The omission is stated in the run's notes
  * rather than quietly compensated for.
  */
@@ -263,7 +263,7 @@ export const createProbeScene = (id: ProbeSceneId, options: ProbeSceneOptions): 
   }
 
   const root = new Container();
-  const { node: content, textures, spin } = buildSharpContent(stageSize, id !== 'cache-bitmap');
+  const { node: content, textures, spin } = buildSharpContent(stageSize, id !== 'cache-texture');
   const filters: Array<ColorFilter | BlurFilter> = [];
 
   root.addChild(content);
@@ -289,12 +289,12 @@ export const createProbeScene = (id: ProbeSceneId, options: ProbeSceneOptions): 
 
   const cacheNodes: RenderNode[] = [];
 
-  if (id === 'cache-bitmap') {
-    content.cacheAsBitmap = true;
+  if (id === 'cache-texture') {
+    content.cacheAsTexture = true;
     cacheNodes.push(content);
   }
 
-  const animated = id !== 'cache-bitmap';
+  const animated = id !== 'cache-texture';
 
   return {
     root,

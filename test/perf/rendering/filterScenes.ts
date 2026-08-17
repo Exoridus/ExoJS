@@ -32,7 +32,7 @@
  * the scaling law: `blur-q{1,3}` varies DRAWS per filter pass while holding the
  * pass count at one, `container/1000` puts a single filter over a large subtree
  * (the opposite extreme from `color/100`), and `container-cached/1000` is that
- * same subtree with `cacheAsBitmap`, where the filter passes are supposed to
+ * same subtree with `cacheAsTexture`, where the filter passes are supposed to
  * stop running after the bake.
  *
  * Every scene here is STATIC — no `beforeFrame`. That is the point: a static
@@ -80,7 +80,7 @@ const buildDecoratedSprites = (count: number, decorate: (sprite: Sprite, index: 
 };
 
 /** One filtered container over `count` plain sprites — the opposite extreme from one filter per sprite. */
-const buildFilteredContainer = (count: number, filters: readonly Filter[], cacheAsBitmap: boolean): AllocationScene => {
+const buildFilteredContainer = (count: number, filters: readonly Filter[], cacheAsTexture: boolean): AllocationScene => {
   const [texture] = makeTextures(1);
   const root = new Container();
   const group = new Container();
@@ -96,7 +96,7 @@ const buildFilteredContainer = (count: number, filters: readonly Filter[], cache
     group.addFilter(filter);
   }
 
-  group.cacheAsBitmap = cacheAsBitmap;
+  group.cacheAsTexture = cacheAsTexture;
   root.addChild(group);
 
   return { root, teardown: () => root.destroy() };
@@ -249,7 +249,7 @@ export const FILTER_ARCHETYPES: readonly AllocationArchetype[] = [
   },
   {
     id: 'filter/container-cached 1000',
-    rationale: 'The same subtree with cacheAsBitmap. After the bake the filter pass should not run per frame at all — verifies that it does not.',
+    rationale: 'The same subtree with cacheAsTexture. After the bake the filter pass should not run per frame at all — verifies that it does not.',
     warmup: WARMUP,
     build: () => buildFilteredContainer(1000, [new ColorFilter()], true),
   },

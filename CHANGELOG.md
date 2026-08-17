@@ -242,6 +242,12 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
 
 ### Changed
 
+- **BREAKING — `RenderNode.cacheAsBitmap` is now `RenderNode.cacheAsTexture`.**
+  The cache has always been a `RenderTexture` on the GPU, never a bitmap;
+  "bitmap" suggested a CPU raster image. The serialized field
+  (`commonFields`) and the render-pass inspector's `cachedAsBitmap` snapshot
+  field follow the same rename (`cachedAsTexture`). No alias is kept — pre-1.0
+  breaks are clean breaks.
 - **The Core source export condition is now `@codexo/exojs-source`.** It was
   `@codexo/source`, which read like a package name rather than like "resolve
   `#*` to source" and did not match the `<package>-source` shape every

@@ -1570,7 +1570,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Assign a new texture, refreshing the texture frame to the full texture dimensions. Does **not** bump the texture's version. That signal means \"the source data has been mutated\"; replacing the sprite's texture reference is not that. Bumping it here would force the backend to re-allocate the GPU texture on the next bind — destroying any FBO content already rendered into a RenderTexture (the cacheAsBitmap and filter capture pipelines). Call updateTexture explicitly when you mutate the source."
+          "description": "Assign a new texture, refreshing the texture frame to the full texture dimensions. Does **not** bump the texture's version. That signal means \"the source data has been mutated\"; replacing the sprite's texture reference is not that. Bumping it here would force the backend to re-allocate the GPU texture on the next bind — destroying any FBO content already rendered into a RenderTexture (the cacheAsTexture and filter capture pipelines). Call updateTexture explicitly when you mutate the source."
         },
         {
           "name": "setTextureFrame",
@@ -2093,11 +2093,11 @@
           "description": ""
         },
         {
-          "name": "cacheAsBitmap",
-          "signature": "cacheAsBitmap: boolean",
+          "name": "cacheAsTexture",
+          "signature": "cacheAsTexture: boolean",
           "signatureTokens": [
             {
-              "text": "cacheAsBitmap",
+              "text": "cacheAsTexture",
               "kind": "name"
             },
             {
@@ -2111,7 +2111,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Bake this node's subtree into a RenderTexture once and replay that texture until the subtree changes, instead of walking and drawing it every frame. Worth it for a subtree that is expensive to draw and rarely changes. The cache is invalidated by anything that moves the node's world bounds — the node's own transform included — so a node that animates re-bakes every frame and is strictly slower than not caching it at all. Setting it to false frees the texture immediately."
         },
         {
           "name": "clip",

@@ -367,12 +367,12 @@ describe('render plan', () => {
     expect(failureRuntime.released).toHaveLength(failureRuntime.acquired.length);
   });
 
-  test('cacheAsBitmap cache hit skips subtree recollect and redraw', () => {
+  test('cacheAsTexture cache hit skips subtree recollect and redraw', () => {
     const { backend, drawEvents } = createRuntime();
     const container = new Container();
     const child = new BoxDrawable('child');
 
-    container.cacheAsBitmap = true;
+    container.cacheAsTexture = true;
     container.addChild(child);
 
     container.render(backend);
@@ -445,7 +445,7 @@ describe('render plan', () => {
     expect(draw).toHaveBeenCalledTimes(1);
   });
 
-  // Driven by a RenderNode mask, not by `cacheAsBitmap`. The bitmap-cache
+  // Driven by a RenderNode mask, not by `cacheAsTexture`. The bitmap-cache
   // composite used to render its cache sprite through `playRenderTree`, so it
   // nested a builder; it now hands the sprite to `drawDrawableDirect` and does
   // not. A node mask still renders its source subtree through a real nested

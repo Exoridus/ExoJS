@@ -257,7 +257,7 @@ export class RenderingContext implements DrawContext {
    *   `releaseRenderTexture()` on the backend, used for filter intermediates.
    *   Whoever acquires returns it; destroying a pooled texture instead of
    *   releasing it corrupts the pool.
-   * - **Node-owned** — {@link RenderNode}'s `cacheAsBitmap` texture. Entirely
+   * - **Node-owned** — {@link RenderNode}'s `cacheAsTexture` texture. Entirely
    *   internal; the node allocates, resizes and frees it.
    *
    * Using any of them after `destroy()` throws — see `assertLiveResource`.

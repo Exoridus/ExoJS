@@ -29,11 +29,11 @@
       "title": "Properties",
       "members": [
         {
-          "name": "cachedAsBitmap",
-          "signature": "cachedAsBitmap: boolean",
+          "name": "cachedAsTexture",
+          "signature": "cachedAsTexture: boolean",
           "signatureTokens": [
             {
-              "text": "cachedAsBitmap",
+              "text": "cachedAsTexture",
               "kind": "name"
             },
             {
@@ -47,7 +47,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Whether the drawable is bitmap-cached (cached drawables apply filters once, not per frame)."
+          "description": "Whether the drawable is texture-cached (cached drawables apply filters once, not per frame)."
         },
         {
           "name": "drawableLabel",

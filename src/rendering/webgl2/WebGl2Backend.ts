@@ -697,7 +697,7 @@ export class WebGl2Backend implements RenderBackend {
       this._drawPlanDepth--;
     }
 
-    // A nested plan (filter / cacheAsBitmap) just ended: flush its draws, then
+    // A nested plan (filter / cacheAsTexture) just ended: flush its draws, then
     // free its transform rows so the frame-scoped buffer only grows with
     // top-level render() calls. Top-level plans (depth back to 0) keep their rows
     // so cross-call batching survives to the frame-end flush.

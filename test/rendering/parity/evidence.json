@@ -8,8 +8,8 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -22,8 +22,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1791/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -35,8 +35,8 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -48,8 +48,8 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -62,8 +62,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1792/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -75,8 +75,8 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -88,8 +88,8 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -102,8 +102,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1024/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -115,8 +115,8 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -128,8 +128,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -142,8 +142,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "119/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -155,8 +155,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -168,8 +168,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -182,8 +182,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1023/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -195,8 +195,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -208,8 +208,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -222,8 +222,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1023/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -235,8 +235,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -248,8 +248,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -262,8 +262,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "2303/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -275,8 +275,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -288,8 +288,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -302,8 +302,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1023/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -315,8 +315,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -328,8 +328,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -342,8 +342,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "255/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -355,8 +355,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -368,8 +368,8 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -382,8 +382,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "768/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -395,8 +395,8 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -408,8 +408,8 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -422,8 +422,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "960/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -435,8 +435,8 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -448,8 +448,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -462,8 +462,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1020/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -475,8 +475,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -488,8 +488,8 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -502,8 +502,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "256/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -515,8 +515,8 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -528,8 +528,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -542,8 +542,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1023/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -555,8 +555,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -568,8 +568,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -582,8 +582,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1023/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -595,8 +595,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -608,8 +608,8 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -622,8 +622,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "397/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -635,8 +635,8 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -648,8 +648,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -662,8 +662,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1020/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -675,8 +675,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -688,8 +688,8 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -702,8 +702,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1020/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -715,8 +715,8 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -728,8 +728,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -742,8 +742,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "255/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -755,8 +755,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -768,8 +768,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -782,8 +782,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "255/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -795,8 +795,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -808,8 +808,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -822,8 +822,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "255/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -835,8 +835,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -848,8 +848,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -862,8 +862,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1020/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -875,8 +875,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -888,8 +888,8 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -902,8 +902,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1791/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -915,8 +915,8 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -928,8 +928,8 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -942,8 +942,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1792/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -955,8 +955,8 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -968,8 +968,8 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -982,8 +982,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1024/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -995,8 +995,8 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1008,8 +1008,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1022,8 +1022,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "119/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1035,8 +1035,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1048,8 +1048,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1062,8 +1062,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1023/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1075,8 +1075,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1088,8 +1088,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1102,8 +1102,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1023/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1115,8 +1115,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1128,8 +1128,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1142,8 +1142,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "2303/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1155,8 +1155,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1168,8 +1168,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1182,8 +1182,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1023/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1195,8 +1195,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1208,8 +1208,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1222,8 +1222,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "255/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1235,8 +1235,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1248,8 +1248,8 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1262,8 +1262,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "768/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1275,8 +1275,8 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1288,8 +1288,8 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1302,8 +1302,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "960/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1315,8 +1315,8 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1328,8 +1328,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1342,8 +1342,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1020/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1355,8 +1355,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1368,8 +1368,8 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1382,8 +1382,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "256/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1395,8 +1395,8 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1408,8 +1408,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1422,8 +1422,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1023/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1435,8 +1435,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1448,8 +1448,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1462,8 +1462,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1023/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1475,8 +1475,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1488,8 +1488,8 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1502,8 +1502,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "397/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1515,8 +1515,8 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1528,8 +1528,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1542,8 +1542,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1020/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1555,8 +1555,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1568,8 +1568,8 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1582,8 +1582,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1020/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1595,8 +1595,8 @@
     "support": "supported",
     "evidence": "frame-equal",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1608,8 +1608,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1622,8 +1622,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "255/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1635,8 +1635,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1648,8 +1648,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1662,8 +1662,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "255/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1675,8 +1675,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1688,8 +1688,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1702,8 +1702,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "255/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1715,8 +1715,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1728,8 +1728,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1742,8 +1742,8 @@
     "evidence": "sampled",
     "delta": null,
     "note": "1020/4096 pixels drawn",
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {
@@ -1755,8 +1755,8 @@
     "support": "supported",
     "evidence": "traced",
     "delta": 0,
-    "measuredAt": "2026-08-14",
-    "commit": "5f478b04",
+    "measuredAt": "2026-08-17",
+    "commit": "160d77c9",
     "platform": "win32"
   },
   {

@@ -55,7 +55,7 @@ export interface MeshOptions {
  *
  * `Mesh` lives alongside {@link Sprite} as a public Drawable: it has the
  * same transform (position/rotation/scale/origin), tint, blendMode,
- * filters, masks, and cacheAsBitmap — but the geometry it renders is
+ * filters, masks, and cacheAsTexture — but the geometry it renders is
  * user-supplied rather than implied by a texture frame. The intended use
  * cases are:
  *

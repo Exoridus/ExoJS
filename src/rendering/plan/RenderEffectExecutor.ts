@@ -26,7 +26,7 @@ interface EffectFrame {
   barrier: BarrierScope | null;
   backend: RenderBackend | null;
   playScope: ((scope: GroupScope) => void) | null;
-  /** Set on the `cacheAsBitmap` replay path — the baked texture to composite. */
+  /** Set on the `cacheAsTexture` replay path — the baked texture to composite. */
   cachedTexture: RenderTexture | null;
   /** Set on the full path — the filter chain's output, or the capture when there are no filters. */
   finalTexture: RenderTexture | null;
@@ -67,7 +67,7 @@ export class RenderEffectExecutor {
     }
   };
 
-  /** Body: draw the `cacheAsBitmap` texture straight back into the enclosing target. */
+  /** Body: draw the `cacheAsTexture` texture straight back into the enclosing target. */
   private static readonly _drawCachedTexture = (): void => {
     const frame = RenderEffectExecutor._current();
     const { barrier, backend, cachedTexture } = frame;
@@ -126,16 +126,16 @@ export class RenderEffectExecutor {
   private static _playFramed(barrier: BarrierScope, backend: RenderBackend, frame: EffectFrame): void {
     const { node, effect } = barrier;
     const hasFilters = effect.filters.length > 0;
-    const needsBitmapCache = effect.cacheAsBitmap;
+    const needsTextureCache = effect.cacheAsTexture;
     const { left, top, width, height } = barrier;
 
-    if (!hasFilters && !needsBitmapCache && !effect.needsBackdropBlend) {
+    if (!hasFilters && !needsTextureCache && !effect.needsBackdropBlend) {
       this._withClip(node, backend, barrier, this._playChildPlan);
 
       return;
     }
 
-    if (needsBitmapCache && barrier.childPlan === null) {
+    if (needsTextureCache && barrier.childPlan === null) {
       const cachedTexture = node._renderPlanGetCacheTexture();
 
       if (cachedTexture !== null) {
@@ -146,11 +146,11 @@ export class RenderEffectExecutor {
       return;
     }
 
-    const cacheTexture = needsBitmapCache ? node._renderPlanEnsureCacheTexture(width, height) : null;
+    const cacheTexture = needsTextureCache ? node._renderPlanEnsureCacheTexture(width, height) : null;
     let pooledTexture: RenderTexture | null = null;
 
     try {
-      const sourceTexture = needsBitmapCache && !hasFilters ? cacheTexture! : backend.acquireRenderTexture(width, height);
+      const sourceTexture = needsTextureCache && !hasFilters ? cacheTexture! : backend.acquireRenderTexture(width, height);
 
       if (sourceTexture !== cacheTexture) {
         pooledTexture = sourceTexture;
@@ -163,7 +163,7 @@ export class RenderEffectExecutor {
       if (hasFilters) {
         for (let index = 0; index < effect.filters.length; index++) {
           const isLast = index === effect.filters.length - 1;
-          const output = isLast && needsBitmapCache ? cacheTexture! : backend.acquireRenderTexture(width, height);
+          const output = isLast && needsTextureCache ? cacheTexture! : backend.acquireRenderTexture(width, height);
 
           try {
             // In-bounds: index < effect.filters.length.
@@ -189,7 +189,7 @@ export class RenderEffectExecutor {
         }
       }
 
-      if (needsBitmapCache) {
+      if (needsTextureCache) {
         node._renderPlanStoreCacheTexture(cacheTexture!, left, top, width, height);
       }
 

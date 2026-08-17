@@ -261,7 +261,7 @@ export class Sprite extends Drawable {
    * has been mutated"; replacing the sprite's texture reference is not that.
    * Bumping it here would force the backend to re-allocate the GPU texture on
    * the next bind — destroying any FBO content already rendered into a
-   * {@link RenderTexture} (the cacheAsBitmap and filter capture pipelines).
+   * {@link RenderTexture} (the cacheAsTexture and filter capture pipelines).
    * Call {@link updateTexture} explicitly when you mutate the source.
    */
   public setTexture(texture: Texture | RenderTexture | null): this {

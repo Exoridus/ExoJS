@@ -118,7 +118,7 @@ const cases: readonly MutatorCase[] = [
   drawableCase('filters setter', 'content', n => (n.filters = [new NoopFilter()])),
   drawableCase('addFilter', 'content', n => n.addFilter(new NoopFilter())),
   drawableCase('mask setter', 'content', n => (n.mask = new Rectangle(0, 0, 8, 8))),
-  drawableCase('cacheAsBitmap setter', 'content', n => (n.cacheAsBitmap = true)),
+  drawableCase('cacheAsTexture setter', 'content', n => (n.cacheAsTexture = true)),
   drawableCase('invalidateCache', 'content', n => n.invalidateCache()),
   drawableCase('invalidateContent', 'content', n => n.invalidateContent()),
   // Drawable visual-source family — content-dirty.

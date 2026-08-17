@@ -22,7 +22,7 @@ Reach for immediate mode when wrapping each item in a node would be wasteful and
 - **Many like items as one draw call** — thousands of tiles, bullets, grass blades, sparks. A `RenderBatch` uploads the geometry once and submits every instance in a single instanced draw, where the scene graph would batch (or fail to batch) per node.
 - **Throwaway frames** — when the set of things to draw changes completely every frame, building and tearing down nodes costs more than just drawing.
 
-Stay with the scene graph when you need its services: parenting and transform inheritance, hit-testing, culling, filters, masks, `cacheAsBitmap`, or the editor/serialization tooling. Immediate mode is a deliberate escape hatch, not a replacement — you can freely mix both in the same `draw`.
+Stay with the scene graph when you need its services: parenting and transform inheritance, hit-testing, culling, filters, masks, `cacheAsTexture`, or the editor/serialization tooling. Immediate mode is a deliberate escape hatch, not a replacement — you can freely mix both in the same `draw`.
 
 ## Building geometry
 

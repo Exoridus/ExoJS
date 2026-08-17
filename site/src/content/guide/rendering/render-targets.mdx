@@ -143,9 +143,9 @@ draw(context: RenderingContext) {
 
 **Staging for post-processing.** Render a scene into a `RenderTexture`, apply a filter to the sprite that displays it, and render the result to the canvas. The [Post-processing](/ExoJS/en/guide/effects/post-processing/) chapter covers this pattern in detail.
 
-## RenderTexture vs. cacheAsBitmap
+## RenderTexture vs. cacheAsTexture
 
-`cacheAsBitmap` on a `RenderNode` bakes the node's subtree into an internal texture automatically. Use `cacheAsBitmap` when the cached content doesn't need to be repositioned, scaled, filtered, or displayed in multiple places — it's a simple on/off toggle. Use a `RenderTexture` when you need explicit control over when the cache updates, what view it uses, or how the result is displayed (multiple sprites, custom sampler settings, composited with blend modes).
+`cacheAsTexture` on a `RenderNode` bakes the node's subtree into an internal texture automatically. Use `cacheAsTexture` when the cached content doesn't need to be repositioned, scaled, filtered, or displayed in multiple places — it's a simple on/off toggle. Use a `RenderTexture` when you need explicit control over when the cache updates, what view it uses, or how the result is displayed (multiple sprites, custom sampler settings, composited with blend modes).
 
 ## Lifecycle
 

@@ -29,7 +29,7 @@ export interface BackendTargetPassOptions {
  * even if the callback throws. This makes it safe to nest passes or use in try/finally chains without manual
  * cleanup.
  *
- * Engine-internal target-redirect primitive: used by the stock filters, `RenderNode`'s bitmap/cache capture,
+ * Engine-internal target-redirect primitive: used by the stock filters, `RenderNode`'s texture-cache capture,
  * and the high-level `RenderNodePass` / `CallbackRenderPass` `{ target }` redirect. Not part of the public
  * surface — high-level code sets `{ target }` on a leaf pass instead.
  * @internal

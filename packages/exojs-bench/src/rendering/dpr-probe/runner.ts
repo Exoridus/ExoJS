@@ -209,7 +209,7 @@ const instrumentCell = (
  * timed window → collect → tear down.
  *
  * The recorded frame is the FIRST frame, not a frame in the middle, because a
- * `cacheAsBitmap` node allocates its cache texture exactly once — on the bake —
+ * `cacheAsTexture` node allocates its cache texture exactly once — on the bake —
  * and replays without allocating afterwards. Arming later would report "this
  * scene has no internal target", which is the opposite of true.
  */
@@ -244,7 +244,7 @@ export const runProbeCell = async (options: RunProbeCellOptions): Promise<ProbeC
       app.backend.flush();
     };
 
-    // Frame 0, recorded: the only frame on which a bitmap cache allocates.
+    // Frame 0, recorded: the only frame on which a texture cache allocates.
     instrumentation.recorder.arm();
     renderOnce(0);
     instrumentation.recorder.disarm();
@@ -408,7 +408,7 @@ export const startVisualPreview = async (options: {
   };
 
   // Arm across the FIRST frame only, so the readout shows per-frame target
-  // shapes and, for `cacheAsBitmap`, catches the one frame that bakes.
+  // shapes and, for `cacheAsTexture`, catches the one frame that bakes.
   recorder.arm();
   loop();
   recorder.disarm();

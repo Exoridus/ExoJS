@@ -158,7 +158,7 @@ describe('effect direct-draw pixel behaviour (WebGL2)', () => {
     }
   });
 
-  test('a filtered subtree with cacheAsBitmap renders the same pixels on the baked frame as on the first', async () => {
+  test('a filtered subtree with cacheAsTexture renders the same pixels on the baked frame as on the first', async () => {
     const backend = await createWebGl2TestBackend(SIZE);
     const texture = solidTexture('#ffffff');
     const root = new Container();
@@ -168,7 +168,7 @@ describe('effect direct-draw pixel behaviour (WebGL2)', () => {
     try {
       sprite.setPosition(16, 16);
       filtered.addFilter(new ColorFilter(new Color(0, 0, 255)));
-      filtered.cacheAsBitmap = true;
+      filtered.cacheAsTexture = true;
       filtered.addChild(sprite);
       root.addChild(filtered);
 

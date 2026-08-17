@@ -119,7 +119,7 @@ The fragment holds the whole previously-collected command range, so it keeps ref
 
 ## Effects on children: supported, with one depth rule
 
-Nodes with filters, a mask, a clip, or `cacheAsBitmap` are supported as **direct** children of a `RetainedContainer`. They stay in world space and re-collect every frame, layered correctly with the retained remainder.
+Nodes with filters, a mask, a clip, or `cacheAsTexture` are supported as **direct** children of a `RetainedContainer`. They stay in world space and re-collect every frame, layered correctly with the retained remainder.
 
 Nesting such an effect-bearing node _deeper_ than one level below the group boundary disengages the whole group: it falls back to rendering as an exact plain `Container` — correct pixels, no retention — and warns once in a development build. Keep effect-heavy nodes at the top level of the group, or move them out of it.
 

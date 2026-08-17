@@ -138,7 +138,7 @@ describe('RenderPlan WebGL2 browser regressions', () => {
     }
   });
 
-  test('cacheAsBitmap renders cached output correctly across two renders', async () => {
+  test('cacheAsTexture renders cached output correctly across two renders', async () => {
     const { backend } = await createBackend();
     const texture = createSolidTexture('#ff0000');
     const root = new Container();
@@ -147,7 +147,7 @@ describe('RenderPlan WebGL2 browser regressions', () => {
 
     try {
       sprite.setPosition(16, 16);
-      cachedContainer.cacheAsBitmap = true;
+      cachedContainer.cacheAsTexture = true;
       cachedContainer.addChild(sprite);
       root.addChild(cachedContainer);
 

@@ -2035,7 +2035,7 @@ describe('WebGpuBackend', () => {
       sourceCanvas.height = 16;
       texture.updateSource();
 
-      container.cacheAsBitmap = true;
+      container.cacheAsTexture = true;
       container.addChild(sprite);
 
       await manager.initialize();

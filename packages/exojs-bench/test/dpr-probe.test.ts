@@ -112,7 +112,7 @@ const createFakeBackend = (): { acquireRenderTexture: (width: number, height: nu
   };
 };
 
-/** A `cacheAsBitmap` node stand-in with the same recording behaviour. */
+/** A `cacheAsTexture` node stand-in with the same recording behaviour. */
 const createFakeCacheNode = (): { _renderPlanEnsureCacheTexture: (width: number, height: number) => unknown; calls: [number, number][] } => {
   const calls: [number, number][] = [];
 

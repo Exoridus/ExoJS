@@ -330,7 +330,7 @@ describe('renderTo', () => {
 });
 
 /**
- * The renderTo / BackendTargetPass / cacheAsBitmap / mask / filter capture paths
+ * The renderTo / BackendTargetPass / cacheAsTexture / mask / filter capture paths
  * all rely on a single backend invariant: switching the render target must drain
  * the active renderer into the OLD target first, so the buffered batch is not
  * misrouted into the target we are switching to. WebGpuBackend already holds this;

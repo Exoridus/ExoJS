@@ -383,7 +383,7 @@ describe('render effects', () => {
     const child = new Sprite(texture);
 
     container.addChild(child);
-    container.cacheAsBitmap = true;
+    container.cacheAsTexture = true;
 
     container.render(runtime);
     container.render(runtime);

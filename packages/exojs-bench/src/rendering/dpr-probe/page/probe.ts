@@ -245,10 +245,10 @@ const buildNotes = (backendSelected: string, webgpuTimestampQuery: boolean | nul
   const notes = [
     'The `parent-resolution` mode is a BENCH-ONLY probe: it shadows `acquireRenderTexture` / `_renderPlanEnsureCacheTexture` on the probe\'s own instances so the internal target is allocated at `logical size × pixelRatio`. Production rendering code is unchanged, and nothing here is an implementation of NEU-S4.',
     'The blur radius is multiplied by the same factor in probe mode. Radius is expressed in TARGET texels, so leaving it alone would shrink the blur in logical space and make the probe arm look sharper for a reason unrelated to resolution.',
-    'The `cache-bitmap` scene is static by design: a bitmap cache is baked once and replayed, and any per-frame mutation would change the node\'s world bounds and re-bake it every frame. Its CPU column is therefore a replay cost, and its interesting property is sharpness, not milliseconds.',
+    'The `cache-texture` scene is static by design: a texture cache is baked once and replayed, and any per-frame mutation would change the node\'s world bounds and re-bake it every frame. Its CPU column is therefore a replay cost, and its interesting property is sharpness, not milliseconds.',
     `Cells are ordered scene → mode → ascending DPR, so the four ratios of one pair are adjacent in time. Each result carries \`index\` and \`startOffsetMs\` so a thermal drift across the run stays visible.`,
     `Warmup is ${WARMUP_FRAMES} frames and the measured window is ${DEFAULT_MEASURE_MS} ms for every cell alike.`,
-    'The `cache-bitmap` scene omits the two text nodes the other scenes carry. Measured on desktop Chromium while building this probe: a `cacheAsBitmap` container containing a `Text` node draws NOTHING on WebGL2 — text and non-text siblings alike — while the same scene renders on WebGPU and the same content behind a filter renders on both. Since iOS Safari is always WebGL2, keeping the text would have made this whole arm a black rectangle.',
+    'The `cache-texture` scene omits the two text nodes the other scenes carry. Measured on desktop Chromium while building this probe: a `cacheAsTexture` container containing a `Text` node draws NOTHING on WebGL2 — text and non-text siblings alike — while the same scene renders on WebGPU and the same content behind a filter renders on both. Since iOS Safari is always WebGL2, keeping the text would have made this whole arm a black rectangle.',
   ];
 
   if (!window.crossOriginIsolated) {

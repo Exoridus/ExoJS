@@ -8,7 +8,7 @@
  */
 
 /** One scene the probe can render. */
-export type ProbeSceneId = 'baseline' | 'color-filter' | 'blur' | 'cache-bitmap' | 'overdraw';
+export type ProbeSceneId = 'baseline' | 'color-filter' | 'blur' | 'cache-texture' | 'overdraw';
 
 /**
  * Which internal-target sizing rule a cell renders under.
@@ -66,11 +66,11 @@ export const PROBE_SCENES: readonly ProbeSceneSpec[] = [
     purpose: 'One BlurFilter over the baseline content — a fill-rate / bandwidth sensitive effect on the same target.',
   },
   {
-    id: 'cache-bitmap',
-    label: 'cacheAsBitmap',
+    id: 'cache-texture',
+    label: 'cacheAsTexture',
     usesInternalTarget: true,
     purpose:
-      'The baseline content behind cacheAsBitmap — the case the audit expects to lose visible sharpness on HiDPI. Static (a cache is baked once and replayed) and WITHOUT the text nodes: a cacheAsBitmap container containing Text draws nothing at all on WebGL2, which is the backend every iOS browser uses.',
+      'The baseline content behind cacheAsTexture — the case the audit expects to lose visible sharpness on HiDPI. Static (a cache is baked once and replayed) and WITHOUT the text nodes: a cacheAsTexture container containing Text draws nothing at all on WebGL2, which is the backend every iOS browser uses.',
   },
   {
     id: 'overdraw',
@@ -129,7 +129,7 @@ export const buildProbeMatrix = (
 export interface InternalTargetRecord {
   /**
    * `pooled` — obtained from `backend.acquireRenderTexture` (filter input /
-   * filter output / mask). `cache` — the node-owned `cacheAsBitmap` texture.
+   * filter output / mask). `cache` — the node-owned `cacheAsTexture` texture.
    */
   readonly kind: 'pooled' | 'cache';
   /** Width the engine asked for, i.e. `ceil` of the barrier's logical bounds. */
@@ -250,8 +250,15 @@ export interface ProbeResult {
   readonly notes: readonly string[];
 }
 
-/** Current {@link ProbeResult.schemaVersion}. */
-export const PROBE_SCHEMA_VERSION = 1;
+/**
+ * Current {@link ProbeResult.schemaVersion}.
+ *
+ * `2` renamed the cache scene's id from `cache-bitmap` to `cache-texture`,
+ * following the engine's `cacheAsBitmap` → `cacheAsTexture` rename. A version-1
+ * capture is otherwise field-for-field identical and stays comparable; only the
+ * scene id differs.
+ */
+export const PROBE_SCHEMA_VERSION = 2;
 
 /**
  * Total pixels across every internal target a cell allocated, counting each

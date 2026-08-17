@@ -39,8 +39,8 @@ The [Render pipeline debugging](/ExoJS/en/guide/debugging/debugging-and-inspecti
 The `RenderPassInspector` counts the live passes each frame. When your frame budget slips, it points straight at the node whose filter stack is responsible.
 </Callout>
 
-<Callout type="hint" title="Bake static filtered subtrees with `cacheAsBitmap`">
-Set `cacheAsBitmap = true` on a filtered subtree that doesn't change each frame: the chain runs once, then draws as a single cached texture instead of re-running every filter every frame.
+<Callout type="hint" title="Bake static filtered subtrees with `cacheAsTexture`">
+Set `cacheAsTexture = true` on a filtered subtree that doesn't change each frame: the chain runs once, then draws as a single cached texture instead of re-running every filter every frame.
 </Callout>
 
 ## BlurFilter
@@ -158,7 +158,7 @@ world.addChild(enemy);  // enemy is drawn into same RT, then blurred
 
 Filters on individual children inside an unfiltered container each get their own pass. The cost model: one filtered container with N children costs 1 + filter_count passes (children batch into one RT). N individually filtered children cost N * (1 + filter_count) passes.
 
-For static subtrees that don't change every frame, set `container.cacheAsBitmap = true`. The filter chain bakes once and subsequent frames skip the per-frame re-rendering — one texture draw instead of the full subtree + filters.
+For static subtrees that don't change every frame, set `container.cacheAsTexture = true`. The filter chain bakes once and subsequent frames skip the per-frame re-rendering — one texture draw instead of the full subtree + filters.
 
 ## Filters vs. mesh materials
 

@@ -284,13 +284,13 @@ describe('RenderTo WebGL2 browser', () => {
     }
   });
 
-  test('cacheAsBitmap capture+composite path keeps pixels in the right targets', async () => {
+  test('cacheAsTexture capture+composite path keeps pixels in the right targets', async () => {
     const backend = await createBackend();
     const cacheTexture = new RenderTexture(16, 16);
     const sourceTexture = createSolidTexture('#ff0000', 16, 16);
     const captureSprite = new Sprite(sourceTexture);
     captureSprite.setPosition(16, 16);
-    captureSprite.cacheAsBitmap = true;
+    captureSprite.cacheAsTexture = true;
     const captureView = new View(24, 24, 16, 16);
 
     type HookedBackend = WebGl2Backend & {
@@ -351,13 +351,13 @@ describe('RenderTo WebGL2 browser', () => {
     }
   });
 
-  test('cacheAsBitmap sprite lands in the RenderTexture via BackendTargetPass', async () => {
+  test('cacheAsTexture sprite lands in the RenderTexture via BackendTargetPass', async () => {
     const backend = await createBackend();
     const cacheTexture = new RenderTexture(16, 16);
     const sourceTexture = createSolidTexture('#ff0000', 16, 16);
     const captureSprite = new Sprite(sourceTexture);
     captureSprite.setPosition(16, 16);
-    captureSprite.cacheAsBitmap = true;
+    captureSprite.cacheAsTexture = true;
     const captureView = new View(24, 24, 16, 16);
 
     try {

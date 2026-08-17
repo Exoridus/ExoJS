@@ -123,7 +123,7 @@ describe('effect direct-draw pixel behaviour (WebGPU)', () => {
     }
   });
 
-  test('a cacheAsBitmap replay draws the baked texture without re-running the filter', async ctx => {
+  test('a cacheAsTexture replay draws the baked texture without re-running the filter', async ctx => {
     const backend = await createBackend();
     const texture = solidTexture('#ffffff');
     const root = new Container();
@@ -133,7 +133,7 @@ describe('effect direct-draw pixel behaviour (WebGPU)', () => {
     try {
       sprite.setPosition(16, 16);
       filtered.addFilter(new ColorFilter(new Color(0, 255, 0)));
-      filtered.cacheAsBitmap = true;
+      filtered.cacheAsTexture = true;
       filtered.addChild(sprite);
       root.addChild(filtered);
 

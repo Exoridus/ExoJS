@@ -62,7 +62,7 @@ const NO_FILTERS: readonly Filter[] = [];
  * - `RenderTexture` — same alpha-mask semantics as `Texture` for a
  *   dynamic/offscreen source.
  * - `RenderNode` — the mask node's full visual output (after its own
- *   transform, filters, cacheAsBitmap, etc.) is rendered into an
+ *   transform, filters, cacheAsTexture, etc.) is rendered into an
  *   intermediate render texture and used as the alpha mask. Acceptable
  *   sources include `Sprite`, `Graphics`, `Container`, and any other
  *   class that extends `RenderNode`. Bare `SceneNode` instances are
@@ -78,8 +78,8 @@ export type MaskSource = Rectangle | Texture | RenderTexture | RenderNode | null
  * {@link SceneNode} that can produce visual output. Adds the rendering
  * pipeline features on top of the structural transform/bounds carried by
  * SceneNode: `tint`, `blendMode`, post-process `filters`, an
- * optional `mask` (via {@link MaskSource}), bitmap caching
- * (`cacheAsBitmap`), and the interaction surface
+ * optional `mask` (via {@link MaskSource}), texture caching
+ * (`cacheAsTexture`), and the interaction surface
  * (`interactive`, `draggable`, all the pointer Signals).
  *
  * `RenderNode.render(backend)` is the per-frame visual entry point. The
@@ -361,9 +361,9 @@ export abstract class RenderNode extends SceneNode {
    */
   private _filters: Filter[] | null = null;
   /**
-   * The bounds the bitmap cache was captured at — built on the first capture.
+   * The bounds the texture cache was captured at — built on the first capture.
    * A `Rectangle` is four heap objects (itself, its observable position and
-   * size, and the bound change callback), and only `cacheAsBitmap` nodes ever
+   * size, and the bound change callback), and only `cacheAsTexture` nodes ever
    * need one.
    */
   private _cacheBounds: Rectangle | null = null;
@@ -373,7 +373,7 @@ export abstract class RenderNode extends SceneNode {
   private _capturePass: BackendTargetPass | null = null;
   private _captureContent: (() => void) | null = null;
   private _mask: MaskSource = null;
-  private _cacheAsBitmap = false;
+  private _cacheAsTexture = false;
   private _cacheDirty = true;
   private _cacheTexture: RenderTexture | null = null;
   private _retainedRoot: RetainedRootRepresentation | null = null;
@@ -543,16 +543,29 @@ export abstract class RenderNode extends SceneNode {
     // Overridden by Drawable/Container.
   }
 
-  public get cacheAsBitmap(): boolean {
-    return this._cacheAsBitmap;
+  /**
+   * Bake this node's subtree into a {@link RenderTexture} once and replay that
+   * texture until the subtree changes, instead of walking and drawing it every
+   * frame.
+   *
+   * Worth it for a subtree that is expensive to draw and rarely changes. The
+   * cache is invalidated by anything that moves the node's world bounds — the
+   * node's own transform included — so a node that animates re-bakes every
+   * frame and is strictly slower than not caching it at all.
+   *
+   * Setting it to `false` frees the texture immediately.
+   * @stable
+   */
+  public get cacheAsTexture(): boolean {
+    return this._cacheAsTexture;
   }
 
-  public set cacheAsBitmap(cacheAsBitmap: boolean) {
-    if (this._cacheAsBitmap !== cacheAsBitmap) {
-      this._cacheAsBitmap = cacheAsBitmap;
+  public set cacheAsTexture(cacheAsTexture: boolean) {
+    if (this._cacheAsTexture !== cacheAsTexture) {
+      this._cacheAsTexture = cacheAsTexture;
       this.invalidateCache();
 
-      if (!cacheAsBitmap) {
+      if (!cacheAsTexture) {
         this._destroyCacheTexture();
       }
     }
@@ -614,7 +627,7 @@ export abstract class RenderNode extends SceneNode {
     return (
       (this._filters !== null && this._filters.length > 0) ||
       this._mask !== null ||
-      this._cacheAsBitmap ||
+      this._cacheAsTexture ||
       this.clip ||
       isAdvancedBlendMode(this._renderPlanGetBlendMode())
     );
@@ -645,8 +658,8 @@ export abstract class RenderNode extends SceneNode {
   }
 
   /** @internal */
-  public _renderPlanCanReuseBitmapCache(left: number, top: number, width: number, height: number): boolean {
-    if (!this._cacheAsBitmap || this._cacheDirty || this._cacheTexture === null || this._cacheBounds === null) {
+  public _renderPlanCanReuseTextureCache(left: number, top: number, width: number, height: number): boolean {
+    if (!this._cacheAsTexture || this._cacheDirty || this._cacheTexture === null || this._cacheBounds === null) {
       return false;
     }
 

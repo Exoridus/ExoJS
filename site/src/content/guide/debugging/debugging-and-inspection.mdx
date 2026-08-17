@@ -160,7 +160,7 @@ Each frame, `RenderPassInspectorLayer` walks the scene graph and collects an ent
 - **Total pass count** across all filtered drawables (one pass per filter, plus one per mask).
 - **Per-drawable rows** showing the constructor name (`Sprite`, `Container`, `Mesh`, `Graphics`) and the drawable's bounding-box dimensions.
 - **Filter sequence** indented under each drawable, in execution order, by constructor name (`BlurFilter`, `ColorFilter`, `LutFilter`, `WebGpuShaderFilter`, …).
-- **Flags** — `[mask]` when the drawable has an active mask (mask passes add to the total), `[cached]` when `cacheAsBitmap` is set (cached drawables apply filters once, not per frame).
+- **Flags** — `[mask]` when the drawable has an active mask (mask passes add to the total), `[cached]` when `cacheAsTexture` is set (cached drawables apply filters once, not per frame).
 
 The panel does not show drawables with zero filters — they are invisible to the render-pipeline inspector because they contribute no extra passes beyond the main batch draw.
 
@@ -237,7 +237,7 @@ update(delta: Time) {
             `${entry.drawableLabel} ${entry.width}x${entry.height}` +
             ` filters=[${filterNames}]` +
             (entry.hasMask ? ' mask' : '') +
-            (entry.cachedAsBitmap ? ' cached' : ''),
+            (entry.cachedAsTexture ? ' cached' : ''),
         );
     }
 }
@@ -270,7 +270,7 @@ A filter pass means the GPU renders some geometry into a temporary render target
 Common pass-reduction strategies, in order of impact:
 
 1. **Remove filters you don't need.** Every filter the panel lists is active. If a `BlurFilter` on a background element is invisible under a solid overlay, removing it saves a pass.
-2. **Enable `cacheAsBitmap`** on filtered drawables that don't change every frame. The inspector shows `[cached]` when active. Cached drawables bake their filters once and skip per-frame re-application.
+2. **Enable `cacheAsTexture`** on filtered drawables that don't change every frame. The inspector shows `[cached]` when active. Cached drawables bake their filters once and skip per-frame re-application.
 3. **Consolidate filter stacks.** Two `ColorFilter` instances on the same drawable cost two passes. Most color adjustments (brightness, contrast, saturation) can be combined into a single `ColorFilter` or replaced with a custom shader filter (`WebGl2ShaderFilter` or `WebGpuShaderFilter`) that applies both in one pass.
 4. **Reduce drawable size.** Filter passes render at the drawable's bounding-box resolution (ceil). A 2048×2048 sprite with a blur costs far more than a 256×256 one with the same blur radius. The panel shows the resolution each drawable renders at.
 
@@ -295,7 +295,7 @@ These labels are visible in tools that surface WebGPU pass labels (for example, 
 
 - **During development** — keep the inspector on while building filter stacks. You see immediately when adding a filter to a container increases the pass count.
 - **During profiling** — when a scene's frame time is higher than expected, enable the inspector to rule out (or confirm) filter pass overhead as the cause.
-- **In CI** — snapshot `inspector.entries` and `inspector.totalPasses` on a known scene to catch regressions. A PR that accidentally enables `cacheAsBitmap: false` or adds an unintended filter won't change visual output but will show up as a pass-count increase.
+- **In CI** — snapshot `inspector.entries` and `inspector.totalPasses` on a known scene to catch regressions. A PR that accidentally enables `cacheAsTexture: false` or adds an unintended filter won't change visual output but will show up as a pass-count increase.
 
 ## Examples
 

@@ -37,8 +37,8 @@ const retainedDiagnosticThreshold = 108;
  * device origin, so a position-snapped node inside a translated/scaled group
  * still lands on the device-pixel grid (and stays recordable). Group-wide fades are done
  * per-drawable tint (the engine has no inherited alpha) or via
- * {@link RenderNode.cacheAsBitmap}. Nodes with filters/mask/clip/
- * cacheAsBitmap are supported as DIRECT children (they stay world-space and
+ * {@link RenderNode.cacheAsTexture}. Nodes with filters/mask/clip/
+ * cacheAsTexture are supported as DIRECT children (they stay world-space and
  * re-collect every frame); nesting one deeper pushes ONLY the direct child
  * branch containing it out of the group — that sub-branch renders
  * world-space and re-collects every frame like a direct barrier child, while
@@ -529,7 +529,7 @@ export class RetainedContainer extends Container {
     if (__DEV__ && this._escapedBranches.size > 0 && !this._deepBarrierWarned) {
       this._deepBarrierWarned = true;
       logger.warn(
-        `RetainedContainer${this.name ? ` '${this.name}'` : ''} contains a node with filters/mask/clip/cacheAsBitmap ` +
+        `RetainedContainer${this.name ? ` '${this.name}'` : ''} contains a node with filters/mask/clip/cacheAsTexture ` +
           'nested deeper than one level below the group boundary. That sub-branch leaves the transform group and ' +
           're-collects in world space every frame — retention and the group transform stay active for the rest of ' +
           'the group — until the effect-bearing node is moved up to a direct child of the group or out of it.',

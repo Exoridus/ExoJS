@@ -124,7 +124,7 @@ const groupEscapeEffect: EffectDescriptor = Object.freeze({
   clip: ClipKind.None,
   clipShape: null,
   maskSource: null,
-  cacheAsBitmap: false,
+  cacheAsTexture: false,
   blendMode: BlendModes.Normal,
   needsBackdropBlend: false,
 });
@@ -410,7 +410,7 @@ export class RenderPlanBuilder {
     if (node._renderPlanHasBarrierEffects()) {
       const effect = this._createEffectDescriptor(node);
       const hasAlphaMask = effect.maskSource !== null && !(effect.maskSource instanceof Rectangle);
-      const needsBounds = effect.cacheAsBitmap || effect.filters.length > 0 || hasAlphaMask || (effect.needsBackdropBlend ?? false);
+      const needsBounds = effect.cacheAsTexture || effect.filters.length > 0 || hasAlphaMask || (effect.needsBackdropBlend ?? false);
       let left = 0;
       let top = 0;
       let width = 0;
@@ -430,7 +430,7 @@ export class RenderPlanBuilder {
       }
 
       const childPlan =
-        effect.cacheAsBitmap && node._renderPlanCanReuseBitmapCache(left, top, width, height)
+        effect.cacheAsTexture && node._renderPlanCanReuseTextureCache(left, top, width, height)
           ? null
           : this._acquireGroupScope(this._resolvePreserveDrawOrder(node));
       const barrierScope = this._acquireBarrierScope(node, effect, childPlan, left, top, width, height);
@@ -518,7 +518,7 @@ export class RenderPlanBuilder {
    * otherwise have to re-implement semantics that already have exactly one
    * owner:
    *
-   * - **Barrier / effect nodes.** Filters, masks, `cacheAsBitmap`, clipping and
+   * - **Barrier / effect nodes.** Filters, masks, `cacheAsTexture`, clipping and
    *   backdrop blending live in the barrier entry and the effect executor. The
    *   retained fragment already stores such a node as a live re-dispatch, and
    *   the source does the same rather than growing a second copy of it.
@@ -1818,7 +1818,7 @@ export class RenderPlanBuilder {
       clip: ClipKind.None,
       clipShape: null,
       maskSource: null,
-      cacheAsBitmap: false,
+      cacheAsTexture: false,
       blendMode,
       needsBackdropBlend: false,
     });
@@ -1829,7 +1829,7 @@ export class RenderPlanBuilder {
     descriptor.clip = clip;
     descriptor.clipShape = clipShape;
     descriptor.maskSource = mask;
-    descriptor.cacheAsBitmap = node.cacheAsBitmap;
+    descriptor.cacheAsTexture = node.cacheAsTexture;
     descriptor.blendMode = blendMode;
     descriptor.needsBackdropBlend = isAdvancedBlendMode(blendMode);
 
