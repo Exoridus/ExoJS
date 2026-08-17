@@ -22,24 +22,52 @@ export const GUARANTEED_BROWSERS = ['chromium', 'firefox'] as const;
 
 export const EVIDENCE_PATH = 'test/rendering/parity/evidence.json';
 
+/** Provenance of one browser's rows. Owned by the runner, except `release`. */
+export interface EvidenceStamp {
+  commit: string;
+  measuredAt?: string;
+  platform?: string;
+  release?: string;
+}
+
 export interface EvidenceRow {
   browser: string;
-  commit: string;
-  release?: string;
   [key: string]: unknown;
 }
 
-export function parseEvidence(json: string): EvidenceRow[] {
-  const parsed: unknown = JSON.parse(json);
-
-  if (!Array.isArray(parsed)) {
-    throw new Error(`${EVIDENCE_PATH} must contain an array of evidence rows.`);
-  }
-
-  return parsed as EvidenceRow[];
+/**
+ * The artifact: one stamp per browser, then the observations.
+ *
+ * Provenance lives beside the rows rather than on them so a re-measurement that
+ * finds nothing new changes one line instead of every one — see
+ * `test/rendering/parity/evidenceSink.ts` for the full reasoning.
+ */
+export interface EvidenceDocument {
+  stamps: Record<string, EvidenceStamp>;
+  rows: EvidenceRow[];
 }
 
-export function readEvidence(repoRoot: string): EvidenceRow[] {
+export function parseEvidence(json: string): EvidenceDocument {
+  const parsed: unknown = JSON.parse(json);
+
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    throw new Error(`${EVIDENCE_PATH} must contain an object with "stamps" and "rows".`);
+  }
+
+  const { stamps, rows } = parsed as Partial<EvidenceDocument>;
+
+  if (typeof stamps !== 'object' || stamps === null || Array.isArray(stamps)) {
+    throw new Error(`${EVIDENCE_PATH} must contain a "stamps" object keyed by browser.`);
+  }
+
+  if (!Array.isArray(rows)) {
+    throw new Error(`${EVIDENCE_PATH} must contain a "rows" array.`);
+  }
+
+  return { stamps, rows };
+}
+
+export function readEvidence(repoRoot: string): EvidenceDocument {
   return parseEvidence(readFileSync(`${repoRoot}/${EVIDENCE_PATH}`, 'utf8'));
 }
 
@@ -50,21 +78,24 @@ export function readEvidence(repoRoot: string): EvidenceRow[] {
  * `head` is HEAD as it stands *before* the release script creates its bump
  * commit — that is the tree the measurement ran against.
  */
-export function staleEvidenceReasons(rows: readonly EvidenceRow[], head: string): string[] {
+export function staleEvidenceReasons(doc: EvidenceDocument, head: string): string[] {
   const reasons: string[] = [];
 
   for (const browser of GUARANTEED_BROWSERS) {
-    const forBrowser = rows.filter(row => row.browser === browser);
-
-    if (forBrowser.length === 0) {
+    if (!doc.rows.some(row => row.browser === browser)) {
       reasons.push(`${browser}: no rows at all`);
       continue;
     }
 
-    const mismatched = [...new Set(forBrowser.filter(row => row.commit !== head).map(row => row.commit))];
+    const stamp = doc.stamps[browser];
 
-    if (mismatched.length > 0) {
-      reasons.push(`${browser}: measured at ${mismatched.join(', ')}, HEAD is ${head}`);
+    if (stamp === undefined) {
+      reasons.push(`${browser}: rows present but never stamped`);
+      continue;
+    }
+
+    if (stamp.commit !== head) {
+      reasons.push(`${browser}: measured at ${stamp.commit}, HEAD is ${head}`);
     }
   }
 
@@ -72,7 +103,7 @@ export function staleEvidenceReasons(rows: readonly EvidenceRow[], head: string)
 }
 
 /**
- * Stamps the release onto every guaranteed-browser row, returning the new rows.
+ * Stamps the release onto every guaranteed browser, returning a new document.
  *
  * The parity runner cannot do this: it executes before the release, when
  * `package.json` still carries the previous version. It owns
@@ -81,10 +112,16 @@ export function staleEvidenceReasons(rows: readonly EvidenceRow[], head: string)
  * Non-guaranteed browsers are left untouched — stamping them would extend the
  * claim to rows nobody promised to keep current.
  */
-export function stampRelease(rows: readonly EvidenceRow[], version: string): EvidenceRow[] {
-  return rows.map(row => ((GUARANTEED_BROWSERS as readonly string[]).includes(row.browser) ? { ...row, release: version } : row));
+export function stampRelease(doc: EvidenceDocument, version: string): EvidenceDocument {
+  const stamps: Record<string, EvidenceStamp> = {};
+
+  for (const [browser, stamp] of Object.entries(doc.stamps)) {
+    stamps[browser] = (GUARANTEED_BROWSERS as readonly string[]).includes(browser) ? { ...stamp, release: version } : stamp;
+  }
+
+  return { stamps, rows: doc.rows };
 }
 
-export function writeEvidence(repoRoot: string, rows: readonly EvidenceRow[]): void {
-  writeFileSync(`${repoRoot}/${EVIDENCE_PATH}`, `${JSON.stringify(rows, null, 2)}\n`, 'utf8');
+export function writeEvidence(repoRoot: string, doc: EvidenceDocument): void {
+  writeFileSync(`${repoRoot}/${EVIDENCE_PATH}`, `${JSON.stringify(doc, null, 2)}\n`, 'utf8');
 }

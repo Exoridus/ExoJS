@@ -56,16 +56,24 @@ export interface EvidenceRow {
 }
 
 /**
- * A row as it is stored: what the runner observed, plus when and from where.
+ * When and from where one browser's rows were measured.
  *
- * Chromium re-measures on every CI run, Firefox and WebKit only when someone
- * runs them on a machine with a display. Without a stamp the file would read
- * as uniformly current, so a stale WebKit row would look exactly like a fresh
- * Chromium one. Day resolution keeps the diff quiet — the question a reader
- * has is "how old is this", not "at what second".
+ * Held once per browser rather than repeated on every row. The stamp changes
+ * on every re-measurement while the observations usually do not, so folding it
+ * into the rows made a run that found nothing new rewrite the whole file —
+ * hundreds of lines of pure noise in the diff, and a conflict on every branch
+ * that had also run the suite. One stamp per browser keeps a no-change run to
+ * a single changed line, and leaves two branches that measured the same
+ * behaviour with byte-identical rows.
+ *
+ * Chromium re-measures whenever someone runs the lane, Firefox and WebKit only
+ * on a machine with a display. Without a stamp the file would read as uniformly
+ * current, so a stale WebKit row would look exactly like a fresh Chromium one.
+ * Day resolution keeps the diff quiet — the question a reader has is "how old
+ * is this", not "at what second".
  */
-export interface StampedEvidenceRow extends EvidenceRow {
-  /** `YYYY-MM-DD` of the run that produced this row. */
+export interface EvidenceStamp {
+  /** `YYYY-MM-DD` of the run that produced this browser's rows. */
   readonly measuredAt: string;
   /** Short commit the run was made from, or `unknown` outside a git checkout. */
   readonly commit: string;
@@ -79,37 +87,59 @@ export interface StampedEvidenceRow extends EvidenceRow {
    */
   readonly platform: string;
   /**
-   * Release this row is published as part of, e.g. `0.16.0`.
+   * Release these rows are published as part of, e.g. `0.16.0`.
    *
    * Written by `release:cut`, not by this sink — the runner executes before the
-   * release, when `package.json` still carries the previous version. Absent on
-   * rows measured since the last release, which is the honest reading: they are
-   * current data, but no release has claimed them yet.
+   * release, when `package.json` still carries the previous version. Absent for
+   * a browser measured since the last release, which is the honest reading: it
+   * is current data, but no release has claimed it yet.
    */
   readonly release?: string;
+}
+
+/** The artifact as it is stored: measurement provenance, then the observations. */
+export interface EvidenceDocument {
+  /** Keyed by browser name. */
+  readonly stamps: Readonly<Record<string, EvidenceStamp>>;
+  readonly rows: readonly EvidenceRow[];
 }
 
 const OUTPUT = 'test/rendering/parity/evidence.json';
 
 /**
+ * Opt-in for rewriting the artifact.
+ *
+ * The parity specs are part of the `browser-webgpu` project, so they run on
+ * every push as a backend-comparison gate — but a gate run has no business
+ * rewriting a published, committed file. Only the `test:parity*` scripts set
+ * this, so an ordinary run leaves the working tree clean and a measurement run
+ * still records what it found.
+ */
+const WRITE_ENV = 'EXOJS_WRITE_PARITY_EVIDENCE';
+
+/**
  * Rows accumulate across spec files within one vitest run: each browser spec
  * calls this as it finishes, and the last write holds the full set.
  */
-const collected = new Map<string, StampedEvidenceRow>();
+const collected = new Map<string, EvidenceRow>();
 
 const keyOf = (row: EvidenceRow): string => `${row.browser}|${row.backend}|${row.scene}|${row.property}`;
 
-/** Rows already on disk, minus every browser the current run is reporting on. */
-const carriedOverRows = (target: string, reportedBrowsers: ReadonlySet<string>): StampedEvidenceRow[] => {
-  if (!existsSync(target)) return [];
+/** The artifact on disk, or an empty one when it is absent or unreadable. */
+const readExisting = (target: string): EvidenceDocument => {
+  if (!existsSync(target)) return { stamps: {}, rows: [] };
 
   try {
-    const previous = JSON.parse(readFileSync(target, 'utf8')) as StampedEvidenceRow[];
+    const parsed = JSON.parse(readFileSync(target, 'utf8')) as Partial<EvidenceDocument>;
 
-    return previous.filter(row => !reportedBrowsers.has(row.browser));
+    if (!Array.isArray(parsed.rows) || typeof parsed.stamps !== 'object' || parsed.stamps === null) {
+      return { stamps: {}, rows: [] };
+    }
+
+    return { stamps: parsed.stamps, rows: parsed.rows };
   } catch {
     // A corrupt or hand-edited artifact is replaced rather than merged into.
-    return [];
+    return { stamps: {}, rows: [] };
   }
 };
 
@@ -123,34 +153,52 @@ const currentCommit = (): string => {
 };
 
 /**
- * Merges rows into the run's collection and rewrites the artifact.
+ * Merges rows into the run's collection and, when this run is a measurement
+ * run, rewrites the artifact.
  *
- * A run only ever speaks for the browsers it actually exercised: rows for other
- * browsers are carried over from the existing file, so running the Chromium
- * lane does not erase what the Firefox lane recorded. Rows for a browser that
- * *is* in this run are fully replaced, so stale combinations disappear when a
- * scene or property is removed.
+ * A run only ever speaks for the browsers it actually exercised: rows and
+ * stamps for other browsers are carried over from the existing file, so running
+ * the Chromium lane does not erase what the Firefox lane recorded. Rows for a
+ * browser that *is* in this run are fully replaced, so stale combinations
+ * disappear when a scene or property is removed.
  *
  * Returns the row count so a spec can assert the handoff happened rather than
- * trusting a silent void.
+ * trusting a silent void — including on a gate run, where the count is what the
+ * run observed and nothing is written.
  */
 export const writeParityEvidence = (_ctx: unknown, rows: readonly EvidenceRow[]): number => {
-  const measuredAt = new Date().toISOString().slice(0, 10);
-  const commit = currentCommit();
-  const { platform } = process;
-
   for (const row of rows) {
-    collected.set(keyOf(row), { ...row, measuredAt, commit, platform });
+    collected.set(keyOf(row), row);
   }
 
   const target = resolve(process.cwd(), OUTPUT);
+  const existing = readExisting(target);
   const reportedBrowsers = new Set([...collected.values()].map(row => row.browser));
-  const merged = [...carriedOverRows(target, reportedBrowsers), ...collected.values()].sort((a, b) => keyOf(a).localeCompare(keyOf(b)));
+  const mergedRows = [...existing.rows.filter(row => !reportedBrowsers.has(row.browser)), ...collected.values()].sort((a, b) =>
+    keyOf(a).localeCompare(keyOf(b)),
+  );
+
+  if (process.env[WRITE_ENV] === undefined) {
+    return mergedRows.length;
+  }
+
+  const measuredAt = new Date().toISOString().slice(0, 10);
+  const commit = currentCommit();
+  const { platform } = process;
+  const stamps: Record<string, EvidenceStamp> = {};
+
+  for (const browser of [...new Set([...Object.keys(existing.stamps), ...reportedBrowsers])].sort()) {
+    // A re-measurement drops the previous `release`: the claim belongs to the
+    // release step, and rows measured since then are explicitly unclaimed.
+    stamps[browser] = reportedBrowsers.has(browser) ? { measuredAt, commit, platform } : existing.stamps[browser]!;
+  }
+
+  const merged: EvidenceDocument = { stamps, rows: mergedRows };
 
   mkdirSync(dirname(target), { recursive: true });
   writeFileSync(target, `${JSON.stringify(merged, null, 2)}\n`, 'utf8');
 
-  return merged.length;
+  return mergedRows.length;
 };
 
 /** Drops everything collected so far; the runner calls this once per run. */

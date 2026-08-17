@@ -26,13 +26,21 @@ interface Row {
   readonly browser: string;
   readonly backend: Backend;
   readonly support: Support;
+}
+
+/**
+ * Provenance is held once per browser, not repeated on every row — a
+ * re-measurement that finds nothing new must not rewrite the whole artifact.
+ */
+interface Stamp {
   readonly measuredAt?: string;
   readonly commit?: string;
-  /** Release this row is published under, stamped by `release:cut`. */
+  /** Release this browser's rows are published under, stamped by `release:cut`. */
   readonly release?: string;
 }
 
-const rows = evidence as readonly Row[];
+const rows = evidence.rows as readonly Row[];
+const stamps = Object.values(evidence.stamps as Readonly<Record<string, Stamp>>);
 
 /** Browser column order: the ones we measure first, then anything else alphabetically. */
 const PREFERRED = ['chromium', 'firefox', 'webkit'];
@@ -71,18 +79,18 @@ const TITLE = {
   untested: 'no measurement on record',
 } as const;
 
-const stamps = rows.filter(row => row.measuredAt !== undefined);
-const lastMeasured = stamps.length > 0 ? stamps.map(row => row.measuredAt!).sort().at(-1) : undefined;
+const measuredDays = stamps.map(stamp => stamp.measuredAt).filter((day): day is string => day !== undefined);
+const lastMeasured = measuredDays.length > 0 ? measuredDays.sort().at(-1) : undefined;
 const measuredFeatures = new Set(rows.map(row => row.feature));
 const coverage = `${RENDER_FEATURES.filter(feature => measuredFeatures.has(feature.name)).length} of ${RENDER_FEATURES.length}`;
 
 /**
- * The release this table is published as part of, written onto the rows by
+ * The release this table is published as part of, written onto the stamps by
  * `release:cut`. Absent means measured since the last release and not yet
  * claimed by one — current data, but no version stands behind it, and saying so
  * is more useful than implying a guarantee that was never cut.
  */
-const claimed = [...new Set(rows.map(row => row.release).filter((release): release is string => release !== undefined))].sort();
+const claimed = [...new Set(stamps.map(stamp => stamp.release).filter((release): release is string => release !== undefined))].sort();
 const claimedIn = claimed.at(-1);
 ---
 

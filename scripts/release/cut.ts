@@ -32,7 +32,15 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
-import { EVIDENCE_PATH, type EvidenceRow, GUARANTEED_BROWSERS, readEvidence, staleEvidenceReasons, stampRelease, writeEvidence } from './parity-evidence.ts';
+import {
+  EVIDENCE_PATH,
+  type EvidenceDocument,
+  GUARANTEED_BROWSERS,
+  readEvidence,
+  staleEvidenceReasons,
+  stampRelease,
+  writeEvidence,
+} from './parity-evidence.ts';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -109,9 +117,9 @@ function assertTagAbsent(version: string): void {
  * Deliberately not a CI browser lane: the run is bound to the moment the claim
  * gets published, not to every push.
  */
-function assertEvidenceFresh(rows: readonly EvidenceRow[]): void {
+function assertEvidenceFresh(doc: EvidenceDocument): void {
   const head = execSync('git rev-parse --short HEAD', { encoding: 'utf8', cwd: repoRoot }).trim();
-  const stale = staleEvidenceReasons(rows, head);
+  const stale = staleEvidenceReasons(doc, head);
 
   if (stale.length > 0) {
     die(
