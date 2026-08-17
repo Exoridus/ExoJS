@@ -6,10 +6,10 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 5,
+  "memberCount": 7,
   "counts": {
     "constructors": 1,
-    "methods": 2,
+    "methods": 4,
     "properties": 2,
     "events": 0
   },
@@ -231,7 +231,104 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Release any GPU-side resources held by this filter (uniform buffers, pipelines, intermediate textures). Default is a no-op for stateless filters; subclasses with state (BlurFilter, ColorFilter) override."
+          "description": "Release any GPU-side resources held by this filter (uniform buffers, pipelines, intermediate textures). The base drops the attachment list; subclasses with GPU state (BlurFilter, ColorFilter) override and call super.destroy()."
+        },
+        {
+          "name": "getOutputBounds",
+          "signature": "getOutputBounds(input: ReadonlyRectangle, output: Rectangle): void",
+          "signatureTokens": [
+            {
+              "text": "getOutputBounds",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "input",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyRectangle",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "output",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Rectangle",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "input",
+              "type": "ReadonlyRectangle",
+              "optional": false
+            },
+            {
+              "name": "output",
+              "type": "Rectangle",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "The logical bounds this effect can produce from the logical bounds it is given — the contract that lets an effect change a drawable's visual extent instead of being clipped by the geometry it was captured from. Both rectangles are in the capture domain's LOGICAL units, the same ones RenderNode.getBounds reports. They are not device pixels: the target a pass runs against is separately allocated at bounds × resolution texels, so an expansion of 8 stays 8 logical units at every pixel ratio. The default is the identity — an effect that only recolours what it is given (a colour matrix, a LUT) needs no override. An effect that reaches outside its input (a blur, a glow) must declare that reach, and one that reaches asymmetrically (a drop shadow) may move the edges independently: ts public override getOutputBounds(input: ReadonlyRectangle, output: Rectangle): void { output.set(input.x - this.radius, input.y - this.radius, input.width + this.radius * 2, input.height + this.radius * 2); }  In a CHAIN each filter is asked in turn, with the previous filter's output as its input, and the barrier's capture domain is the union of the source bounds and every stage's answer. A bounds-REDUCING effect is therefore represented — the domain simply keeps the room its predecessors needed, so no pass is ever clipped by a target smaller than what it declared. input and output are never the same object, so an implementation may read input freely while writing output. Called once per frame for every filtered node, so it must not allocate."
+        },
+        {
+          "name": "invalidate",
+          "signature": "invalidate(): void",
+          "signatureTokens": [
+            {
+              "text": "invalidate",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Tell every node this filter is attached to that its rendered output is out of date. Call it after mutating anything that changes what the filter draws or how far it reaches — the stock filters do this from their own setters. Without it a cached or retained representation of the owning node keeps replaying the result the filter produced before the change."
         }
       ],
       "paragraphs": [],

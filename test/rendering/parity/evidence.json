@@ -2,7 +2,7 @@
   "stamps": {
     "chromium": {
       "measuredAt": "2026-08-17",
-      "commit": "3a7092cf",
+      "commit": "aec3a3af",
       "platform": "win32"
     },
     "firefox": {
@@ -501,7 +501,7 @@
       "support": "supported",
       "evidence": "sampled",
       "delta": null,
-      "note": "397/4096 pixels drawn"
+      "note": "417/4096 pixels drawn"
     },
     {
       "scene": "text/sdf-glyphs",
@@ -1183,7 +1183,7 @@
       "support": "supported",
       "evidence": "sampled",
       "delta": null,
-      "note": "397/4096 pixels drawn"
+      "note": "417/4096 pixels drawn"
     },
     {
       "scene": "text/sdf-glyphs",

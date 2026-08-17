@@ -63,6 +63,8 @@ blur.quality = 3;
 
 `radius` clamps to >= 0 (0 = no blur). `quality` floors to >= 1 and controls sample count: `quality * 2 + 1` samples per axis. For most cases quality 1 or 2 is sufficient — higher values are useful for large-radius fast-moving blurs where undersampling creates visible gaps.
 
+A blur reaches `radius` logical units outside the drawable it is applied to, on every edge, and that extra extent is part of what gets rendered — see [Effects can change a drawable's extent](#effects-can-change-a-drawables-extent). `quality` changes the smoothness, not the reach.
+
 ## ColorFilter
 
 Multiplies the rendered output by a tint color. The simplest filter — one multiplicative blend:
@@ -159,6 +161,52 @@ world.addChild(enemy);  // enemy is drawn into same RT, then blurred
 Filters on individual children inside an unfiltered container each get their own pass. The cost model: one filtered container with N children costs 1 + filter_count passes (children batch into one RT). N individually filtered children cost N * (1 + filter_count) passes.
 
 For static subtrees that don't change every frame, set `container.cacheAsTexture = true`. The filter chain bakes once and subsequent frames skip the per-frame re-rendering — one texture draw instead of the full subtree + filters.
+
+## Effects can change a drawable's extent
+
+A drawable's own bounds are not necessarily the bounds of what it finally looks like. An effect may reach outside what it was given — a blur is the obvious case — and the renderer has to reserve room for that before it captures anything.
+
+Every filter answers one question: *given these logical bounds, what bounds can I produce?* ExoJS asks each filter in the chain in turn, with the previous filter's answer as its input, and allocates the capture domain from the resulting rectangle:
+
+```ts
+import { BlurFilter, Sprite } from '@codexo/exojs';
+
+declare const sprite: Sprite; // 100 x 50 logical units
+
+// 8 units of reach, then 4 more out of that result: 12 units on every edge,
+// so the capture domain is 124 x 74 and the composite lands 12 units up-left.
+sprite.filters = [new BlurFilter({ radius: 8 }), new BlurFilter({ radius: 4 })];
+```
+
+Filters that only recolour what they are handed — `ColorFilter`, `LutFilter`, most custom shader filters — preserve their input bounds and need to do nothing. A custom filter that samples away from its own fragment should override `getOutputBounds` so its result is not clipped:
+
+```ts
+import { Filter, type ReadonlyRectangle, type Rectangle } from '@codexo/exojs';
+
+class GlowFilter extends Filter {
+  public constructor(public spread: number) {
+    super();
+  }
+
+  public override getOutputBounds(input: ReadonlyRectangle, output: Rectangle): void {
+    output.set(input.x - this.spread, input.y - this.spread, input.width + this.spread * 2, input.height + this.spread * 2);
+  }
+
+  public apply(): void {
+    // ...the glow passes
+  }
+}
+```
+
+The edges move independently, so an effect that only reaches one way — a drop shadow — declares exactly that, and one that reduces its output declares that instead.
+
+The bounds are always in **logical units**, never device pixels. Rendering the same chain on a `pixelRatio: 2` surface allocates twice the texels on each axis; the blur's 8-unit reach is still 8 units.
+
+<Callout type="note" title="A clip still cuts">
+Effects expand what a drawable looks like; `clip` is how you take that back. A node with `clip = true` confines its final, filtered output to its clip region, blur tail included. That is intentional, not a bug — reach for it when a filtered node has to stay inside a panel.
+</Callout>
+
+Mutating a filter after attaching it is enough on its own. `blur.radius = 12` tells every node the filter is attached to that its output is stale, so a `cacheAsTexture` node re-bakes at the new extent; you never have to remove and re-add the filter. A custom filter with state of its own should call `this.invalidate()` after a change that affects what it draws.
 
 ## Filter resolution
 

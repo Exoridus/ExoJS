@@ -17,6 +17,27 @@ release and includes intentional breaking changes; see **Changed** and
 
 ### Added
 
+- **Effects declare the bounds they produce.** A drawable's source bounds were
+  assumed to be its final visual bounds, so an effect that reaches outside what
+  it was handed had nowhere to put the result — a `BlurFilter` was clipped by its
+  own input on all four sides, and its tail was not faint but absent. `Filter`
+  now answers a `Bounds -> Bounds` question via `getOutputBounds(input, output)`,
+  defaulting to the identity so a colour matrix, a LUT or an existing custom
+  filter needs no change. A chain composes sequentially — each filter asked with
+  its predecessor's output — and the capture domain is the union of the source
+  bounds and every stage's answer, which represents asymmetric effects (a drop
+  shadow) and bounds-reducing ones (a crop) rather than only symmetric padding.
+  Bounds stay in LOGICAL units at every pixel ratio: a `pixelRatio: 2` surface
+  allocates twice the texels and the blur's 8-unit reach is still 8 units. An
+  explicit `clip` remains intentionally restrictive and still cuts the expanded
+  result.
+
+  Mutating an attached filter is now enough on its own. `blur.radius = 12` marks
+  every node the filter is attached to as dirty — including shared attachments —
+  so a `cacheAsTexture` node re-bakes at the new extent instead of replaying the
+  result the filter produced before the change. A custom filter with state of its
+  own calls `this.invalidate()`.
+
 - **HiDPI runtime text — `Text.pixelRatio`.** Runtime SDF and colour glyphs are
   rasterized at the pixel ratio of the `Application` that draws them, instead of
   always at one device pixel per logical unit. A `pixelRatio: 2` surface renders
@@ -265,6 +286,31 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
   `unregister`, and no scene-level scope.
 
 ### Fixed
+
+- **Capture quantisation no longer drops a pixel at a fractional edge.** An
+  effect's render target was sized `floor(origin)` by `ceil(size)`, rounded
+  independently, which is short whenever the fractional origin pushes the far
+  edge past what `ceil(size)` covers — `x = 0.25, width = 10.5` spans to 10.75
+  and got 10. Both edges are now rounded outward: `floor(min)` and `ceil(max)`.
+
+- **A resized render target is viewed from its own centre.** `RenderTexture`
+  `setSize` restated the default view's extent and left its centre at half the
+  ORIGINAL size, so a target resized from 38 to 60 rendered the region
+  `[-11, 49]` — content shifted by the half-difference and the far edge outside
+  the target. Visible on a `cacheAsTexture` node whose capture domain grows: a
+  cached square with its blur grown from radius 3 to 14 read a lit span of
+  `[51, 93]` where the same node built at 14 reads `[34, 93]`.
+
+- **SDF text edges follow the density their own normal lands on.** The
+  analytical screen-space width came from a single scalar — device pixels per
+  local unit along the local +x direction — which describes the whole projected
+  footprint only under a similarity transform. Under a non-uniform scale every
+  edge, horizontal ones included, was sized against the horizontal density.
+  Measured on 'H' at 48px, phase-averaged over four subpixel placements, the
+  crossbar's ramp read 0.50 at `scale(4, 4)` and 2.50 at `scale(1, 4)` — both put
+  the same vertical density on screen. The fragment stage now recovers the edge
+  normal from the field and projects the footprint onto it, behind a branch that
+  is flat per node so the isotropic path is unchanged.
 
 - **SDF text antialiases against the pixel it lands on.** The `text-sdf` and
   `text-msdf` shaders faded an edge over a constant width stated in FIELD units,

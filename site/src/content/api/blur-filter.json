@@ -6,10 +6,10 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 6,
+  "memberCount": 8,
   "counts": {
     "constructors": 1,
-    "methods": 2,
+    "methods": 4,
     "properties": 3,
     "events": 0
   },
@@ -222,7 +222,104 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Release any GPU-side resources held by this filter (uniform buffers, pipelines, intermediate textures). Default is a no-op for stateless filters; subclasses with state (BlurFilter, ColorFilter) override."
+          "description": "Release any GPU-side resources held by this filter (uniform buffers, pipelines, intermediate textures). The base drops the attachment list; subclasses with GPU state (BlurFilter, ColorFilter) override and call super.destroy()."
+        },
+        {
+          "name": "getOutputBounds",
+          "signature": "getOutputBounds(input: ReadonlyRectangle, output: Rectangle): void",
+          "signatureTokens": [
+            {
+              "text": "getOutputBounds",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "input",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyRectangle",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "output",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Rectangle",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "input",
+              "type": "ReadonlyRectangle",
+              "optional": false
+            },
+            {
+              "name": "output",
+              "type": "Rectangle",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "The blur reaches radius logical units outside its input on every edge. Read off the sampling loop rather than assumed: _drawSamples draws the input at offsets spread evenly over [-radius, +radius] along each axis separately, so the furthest an output texel's value can travel from its source is exactly radius, and only axis-aligned — the diagonal corner is covered by the box the two axes span. quality adds samples between those extremes and does not change the reach."
+        },
+        {
+          "name": "invalidate",
+          "signature": "invalidate(): void",
+          "signatureTokens": [
+            {
+              "text": "invalidate",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Tell every node this filter is attached to that its rendered output is out of date. Call it after mutating anything that changes what the filter draws or how far it reaches — the stock filters do this from their own setters. Without it a cached or retained representation of the owning node keeps replaying the result the filter produced before the change."
         }
       ],
       "paragraphs": [],
