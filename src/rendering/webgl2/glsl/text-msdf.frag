@@ -5,7 +5,7 @@ uniform sampler2D u_nodeData;  // RGBA32F per-node data (see WebGl2TextRenderer)
 uniform float     u_pageSize;  // atlas page size in px (for shadow UV conversion)
 
 flat in int   v_nodeIndex;
-flat in float v_pxPerUnit;
+flat in vec4  v_pxAxes;
      in vec2  v_texcoord;
      in vec2  v_gradUV;
 

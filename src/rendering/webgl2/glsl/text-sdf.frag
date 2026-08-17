@@ -5,7 +5,7 @@ uniform sampler2D u_nodeData;  // RGBA32F per-node data (see WebGl2TextRenderer)
 uniform float     u_pageSize;  // atlas page size in px (for shadow UV conversion)
 
 flat in int   v_nodeIndex;
-flat in float v_pxPerUnit;
+flat in vec4  v_pxAxes;
      in vec2  v_texcoord;
      in vec2  v_gradUV;
 
@@ -47,16 +47,52 @@ void main(void) {
   //
   // The field moves by 1/sdfRadius per LOCAL unit — the atlas density cancels,
   // because a denser atlas packs proportionally more texels into the same local
-  // extent — so `1 / (radius * pxPerUnit)` is how far it moves across one device
+  // extent — so `1 / (radius * density)` is how far it moves across one device
   // pixel, and half of that puts a half-pixel of fade on either side of the
   // threshold. `fwidth` would answer the same question, but with an
   // implementation-defined derivative that makes the GLSL and WGSL stages
   // disagree on the ramp; it stays as the fallback for an atlas whose field
   // scale is unknown (an MSDF atlas carries no distance range).
+  //
+  // `density` is the device pixels one local unit covers ALONG THE EDGE'S OWN
+  // NORMAL. Under a similarity transform every direction shares one density and
+  // the x axis answers for all of them, which is the branch nearly every glyph
+  // takes. Under a non-uniform scale they differ: sizing a horizontal edge
+  // against the horizontal density leaves it aliased or smeared by exactly the
+  // anisotropy ratio. The normal comes from the field itself — a forward
+  // difference over one atlas texel — because the glyph quad maps local space to
+  // UV with an axis-aligned positive scale, so a direction is the same in both.
   float radius = tShadow2.w;
-  float aa = radius > 0.0 && v_pxPerUnit > 0.0
-    ? max(0.5 / (radius * v_pxPerUnit), 0.0001)
-    : max(fwidth(sd) * 0.5, 0.0001);
+  vec2  axisX  = v_pxAxes.xy;
+  vec2  axisY  = v_pxAxes.zw;
+  float densityX = length(axisX);
+  float densityY = length(axisY);
+  float aa;
+
+  if (radius > 0.0 && densityX > 0.0) {
+    float density = densityX;
+
+    // Flat per node, so the branch is coherent across the whole draw and the two
+    // extra taps cost nothing on the isotropic path.
+    if (abs(densityY - densityX) > 0.001 * max(densityX, densityY)) {
+      float texel = 1.0 / u_pageSize;
+      float sdU = sampleBase(v_textureSlot, v_texcoord + vec2(texel, 0.0)).r;
+      float sdV = sampleBase(v_textureSlot, v_texcoord + vec2(0.0, texel)).r;
+      vec2  grad = vec2(sdU - sd, sdV - sd);
+      float gradLength = length(grad);
+
+      if (gradLength > 1e-6) {
+        vec2 normal = grad / gradLength;
+
+        density = max(length(axisX * normal.x + axisY * normal.y), 1e-6);
+      }
+    }
+
+    aa = max(0.5 / (radius * density), 0.0001);
+  } else {
+    aa = max(fwidth(sd) * 0.5, 0.0001);
+  }
+
   float fill = smoothstep(0.5 - aa, 0.5 + aa, sd);
 
   float outline = outlineMin < 0.5

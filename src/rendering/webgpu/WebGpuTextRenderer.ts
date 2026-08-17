@@ -203,7 +203,7 @@ struct VertexOutput {
     @location(1)                    gradUV   : vec2<f32>,
     @location(2) @interpolate(flat) nodeIdx  : u32,
     @location(3) @interpolate(flat) textureSlot : u32,
-    @location(4) @interpolate(flat) pxPerUnit : f32,
+    @location(4) @interpolate(flat) pxAxes : vec4<f32>,
 };
 
 @vertex
@@ -254,12 +254,16 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
         gradUV = clamp((input.position - t9.xy) / bSize, vec2<f32>(0.0), vec2<f32>(1.0));
     }
 
-    // Device pixels one LOCAL unit of this node covers on screen — see the
-    // matching comment in text.vert. Column 0 of the composed mat3 is the image
-    // of the local +x direction, and clip space spans 2 across the viewport.
-    // Derived from the transform rather than from a hardware derivative so this
-    // stage and the GLSL one agree bit for bit on the edge ramp.
-    let unitClip = (proj * grp * xf * vec3<f32>(1.0, 0.0, 0.0)).xy;
+    // The device-pixel images of the local +x and +y directions — see the
+    // matching comment in text.vert. Both columns rather than only column 0: a
+    // single scalar describes the projected footprint only under a similarity
+    // transform, and the fragment stage picks the density the edge's own normal
+    // lands on. Clip space spans 2 across the viewport. Derived from the
+    // transform rather than from a hardware derivative so this stage and the
+    // GLSL one agree bit for bit on the edge ramp.
+    let composed  = proj * grp * xf;
+    let unitClipX = (composed * vec3<f32>(1.0, 0.0, 0.0)).xy;
+    let unitClipY = (composed * vec3<f32>(0.0, 1.0, 0.0)).xy;
 
     var out: VertexOutput;
     out.clipPos  = clipPos;
@@ -267,7 +271,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     out.gradUV   = gradUV;
     out.nodeIdx  = ni;
     out.textureSlot = input.packedNodeSlot >> ${textAtlasSlotShift}u;
-    out.pxPerUnit = length(unitClip * frame.viewport.zw * 0.5);
+    out.pxAxes = vec4<f32>(unitClipX * frame.viewport.zw * 0.5, unitClipY * frame.viewport.zw * 0.5);
     return out;
 }
 
@@ -303,11 +307,33 @@ fn fragmentSdf(in: VertexOutput) -> @location(0) vec4<f32> {
     // scale and camera zoom all arrive at the same on-screen edge. The field
     // moves by 1/sdfRadius per local unit, so the width follows from the
     // transform; the derivative is the fallback for an atlas whose field scale
-    // is unknown.
+    // is unknown. The density is taken along the edge's own normal, recovered
+    // from the field by a forward difference, so a non-uniform scale sizes
+    // horizontal and vertical edges independently.
     let radius = tShadow2.w;
+    let axisX = in.pxAxes.xy;
+    let axisY = in.pxAxes.zw;
+    let densityX = length(axisX);
+    let densityY = length(axisY);
     var aa = max(fwidth(sd) * 0.5, 0.0001);
-    if (radius > 0.0 && in.pxPerUnit > 0.0) {
-        aa = max(0.5 / (radius * in.pxPerUnit), 0.0001);
+    if (radius > 0.0 && densityX > 0.0) {
+        var density = densityX;
+
+        if (abs(densityY - densityX) > 0.001 * max(densityX, densityY)) {
+            let texel = 1.0 / pageSize;
+            let sdU = sampleTexture(in.textureSlot, in.texcoord + vec2<f32>(texel, 0.0), uvDx, uvDy).r;
+            let sdV = sampleTexture(in.textureSlot, in.texcoord + vec2<f32>(0.0, texel), uvDx, uvDy).r;
+            let grad = vec2<f32>(sdU - sd, sdV - sd);
+            let gradLength = length(grad);
+
+            if (gradLength > 1e-6) {
+                let normal = grad / gradLength;
+
+                density = max(length(axisX * normal.x + axisY * normal.y), 1e-6);
+            }
+        }
+
+        aa = max(0.5 / (radius * density), 0.0001);
     }
     let fill = smoothstep(0.5 - aa, 0.5 + aa, sd);
 
