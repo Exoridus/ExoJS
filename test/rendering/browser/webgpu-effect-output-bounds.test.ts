@@ -142,19 +142,20 @@ describe('WebGPU consumes the same planned effect bounds', () => {
   });
 
   test('the capture domain matches the one WebGL2 allocates', async ctx => {
-    // The same three targets at the same size the WebGL2 cell pins: a chain of
-    // two 6-unit blurs puts a 12-unit margin on every side of a 32-square. Any
-    // backend-local recomputation of the expansion would show up here.
+    // The same targets at the same size the WebGL2 cell pins: a chain of two
+    // 6-unit blurs puts a 12-unit margin on every side of a 32-square. Any
+    // backend-local recomputation of the expansion would show up here. Five
+    // borrows — three chain targets plus one separable-blur scratch each.
     const scene = await render(ctx, { radii: [6, 6] });
 
     if (scene === null) return;
 
     try {
-      expect(scene.sizes).toEqual([
-        [contentSide + 24, contentSide + 24],
-        [contentSide + 24, contentSide + 24],
-        [contentSide + 24, contentSide + 24],
-      ]);
+      expect(scene.sizes).toHaveLength(5);
+
+      for (const recorded of scene.sizes) {
+        expect(recorded).toEqual([contentSide + 24, contentSide + 24]);
+      }
     } finally {
       scene.dispose();
     }

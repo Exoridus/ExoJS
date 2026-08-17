@@ -248,8 +248,10 @@ describe('a blur is not clipped by the bounds it was captured from', () => {
     try {
       // The outer tail of a chained blur is a fraction of a fraction of white —
       // the composition question is where the SIGNAL ends, not where it crosses
-      // the threshold the single-pass cells use.
-      const faint = 2;
+      // the threshold the single-pass cells use. The Gaussian kernel puts the
+      // outermost tap at e⁻² of the centre, so twelve units out lands on 2/255;
+      // one is the lowest floor that can tell it from the single blur's 0.
+      const faint = 1;
       const singleSpan = litSpanOnRow(single.frame, centre, faint)!;
       const chainedSpan = litSpanOnRow(chained.frame, centre, faint)!;
 
@@ -268,11 +270,14 @@ describe('a blur is not clipped by the bounds it was captured from', () => {
     // of 6 give a 32-square a 12-unit margin on every side, not 6 and not 24.
     const sizes = await recordedTargetSizes({ radii: [6, 6] });
 
-    expect(sizes).toEqual([
-      [contentSide + 24, contentSide + 24],
-      [contentSide + 24, contentSide + 24],
-      [contentSide + 24, contentSide + 24],
-    ]);
+    // Three chain targets plus the scratch each separable blur borrows for its
+    // horizontal sweep. What the domain contract pins is that every one of them
+    // is the SAME rectangle — the sequence's, not each filter's own.
+    expect(sizes).toHaveLength(5);
+
+    for (const recorded of sizes) {
+      expect(recorded).toEqual([contentSide + 24, contentSide + 24]);
+    }
   });
 
   test('a node without effects allocates no target at all', async () => {

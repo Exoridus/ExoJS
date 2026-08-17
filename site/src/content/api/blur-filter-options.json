@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Taps per side of each sweep: a sweep takes quality * 2 + 1 of them, spread evenly across [-radius, +radius]. It buys smoothness, not reach. Because the taps always span the whole radius, their SPACING is radius / quality — so a wide blur wants a higher quality or the kernel shows as bands. Default 1, which is three taps: cheap, and honest only for small radii."
         },
         {
           "name": "radius",

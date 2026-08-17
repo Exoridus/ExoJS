@@ -1,6 +1,6 @@
 {
   "title": "BlurFilter",
-  "description": "Box-blur Filter implemented as multiple additive sprite passes. The blur is approximated by rendering the input texture `quality * 2 + 1` times offset symmetrically along each axis by up to ±`radius` logical units and blending them additively. Higher `quality` values add more samples and produce a smoother result at the cost of additional draw calls.",
+  "description": "Gaussian blur Filter, run as two separable passes. The input is swept along X into a scratch target, then that scratch is swept along Y into the output, each sweep taking `quality * 2 + 1` taps spread over ±`radius` logical units and weighted by a Gaussian. Because the two sweeps are chained rather than summed, the effective 2D kernel is their product — a real isotropic blur that reaches diagonally as well as along the axes. (Summing the two sweeps into one target instead, which is what this filter used to do, produces a cross: a pixel diagonally off a corner is touched by neither sweep and stays black at any radius.) Higher `quality` values add taps and smooth the result at the cost of extra draw calls; they do not change how far the blur reaches.",
   "symbol": "BlurFilter",
   "kind": "class",
   "subsystem": "rendering",
@@ -19,8 +19,10 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Box-blur Filter implemented as multiple additive sprite passes.",
-        "The blur is approximated by rendering the input texture `quality * 2 + 1` times offset symmetrically along each axis by up to ±`radius` logical units and blending them additively. Higher `quality` values add more samples and produce a smoother result at the cost of additional draw calls."
+        "Gaussian blur Filter, run as two separable passes.",
+        "The input is swept along X into a scratch target, then that scratch is swept along Y into the output, each sweep taking `quality * 2 + 1` taps spread over ±`radius` logical units and weighted by a Gaussian. Because the two sweeps are chained rather than summed, the effective 2D kernel is their product — a real isotropic blur that reaches diagonally as well as along the axes.",
+        "(Summing the two sweeps into one target instead, which is what this filter used to do, produces a cross: a pixel diagonally off a corner is touched by neither sweep and stays black at any radius.)",
+        "Higher `quality` values add taps and smooth the result at the cost of extra draw calls; they do not change how far the blur reaches."
       ],
       "importLine": "import { BlurFilter } from '@codexo/exojs'",
       "sourceLink": null
@@ -290,7 +292,7 @@
             }
           ],
           "returnType": "void",
-          "description": "The blur reaches radius logical units outside its input on every edge. Read off the sampling loop rather than assumed: _drawSamples draws the input at offsets spread evenly over [-radius, +radius] along each axis separately, so the furthest an output texel's value can travel from its source is exactly radius, and only axis-aligned — the diagonal corner is covered by the box the two axes span. quality adds samples between those extremes and does not change the reach."
+          "description": "The blur reaches radius logical units outside its input on every edge. Read off the sampling loop rather than assumed: each sweep draws its source at offsets spread evenly over [-radius, +radius], so the horizontal sweep moves a value at most radius in x and the vertical one at most radius in y. Chaining them means a value can travel radius in BOTH — the corner of the box, which is exactly what this rectangle already declares. quality adds taps between those extremes and does not change the reach."
         },
         {
           "name": "invalidate",
@@ -370,7 +372,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Taps per side of each sweep — see BlurFilterOptions.quality."
         },
         {
           "name": "radius",

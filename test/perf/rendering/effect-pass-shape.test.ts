@@ -82,15 +82,17 @@ describe('effect pass shape', () => {
     try {
       const frame = measureSteadyFrame(harness, root);
 
-      // Pass count is unchanged from the single-pass filter — a blur is ONE
-      // filter pass with many draws inside it, which is exactly why the draw
-      // and byte columns are the ones that say whether the bracket is intact.
-      expect(frame.renderPasses).toBe(2 * NODES);
+      // A separable blur is two sweeps — horizontal into a borrowed scratch,
+      // vertical into the output — so it costs one pass more than a
+      // single-pass filter. What the bracket is measured by is still the draw
+      // and byte columns: the taps inside each sweep must not stack up.
+      expect(frame.renderPasses).toBe(3 * NODES);
       // 14 offset samples + the subject + the composite, per node.
       expect(frame.drawCalls).toBe(16 * NODES);
-      // Without the per-draw rewind this reads 116288: every sample's row
-      // survives to the end of the frame instead of being handed back.
-      expect(frame.transformUploadBytes).toBe(48000);
+      // Without the per-draw rewind this reads six figures: every tap's row
+      // survives to the end of the frame instead of being handed back. The
+      // second sweep costs one row per node on top of the single-sweep 48000.
+      expect(frame.transformUploadBytes).toBe(51200);
     } finally {
       root.destroy();
       harness.destroy();
