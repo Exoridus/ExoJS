@@ -1,6 +1,6 @@
 /// <reference types="@webgpu/types" />
 
-import type { Color } from '#core/Color';
+import { Color } from '#core/Color';
 import { Matrix } from '#math/Matrix';
 import type { Rectangle } from '#math/Rectangle';
 import type { Geometry } from '#rendering/geometry/Geometry';
@@ -67,6 +67,18 @@ interface StencilClipEntry {
  * @internal
  */
 export interface WebGpuPassBackend {
+  /**
+   * The persistent clear colour, read and restored around a child pass —
+   * `clear(colour)` writes through to it.
+   */
+  readonly clearColor: Color;
+  /**
+   * Set the persistent clear colour. Restoring it after a child pass has to go
+   * through this rather than mutating {@link clearColor} in place: on WebGL2 the
+   * value is mirrored into GL state here and nowhere else per frame, so an
+   * in-place write would leave the object and the context disagreeing.
+   */
+  setClearColor(color: Color): unknown;
   readonly renderTarget: RenderTarget;
   readonly view: View;
   readonly device: GPUDevice;
@@ -100,6 +112,13 @@ export interface WebGpuPassBackend {
  */
 export class WebGpuPassCoordinator implements RenderPassCoordinator {
   private readonly _backend: WebGpuPassBackend;
+  /**
+   * Scratch colour used only to restore the clear colour after a child pass.
+   * One per coordinator rather than one per pass: child passes nest, but each
+   * level holds its own four channel values in locals and restores
+   * innermost-first, so a single instance is never read across levels.
+   */
+  private readonly _clearColorScratch = new Color();
   private readonly _stencil = new WebGpuStencilClipper();
   private readonly _stencilDepths = new Map<RenderTarget, number>();
   private readonly _stencilStacks = new Map<RenderTarget, StencilClipEntry[]>();
@@ -286,6 +305,13 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
   public withChildPass(descriptor: RenderPassDescriptor, body: () => void): void {
     const previousTarget = this._backend.renderTarget;
     const previousView = this._backend.view;
+    // The clear colour is pass state too, and `backend.clear(colour)` writes it
+    // through to the persistent one. Without restoring it, a single effect
+    // capture -- which clears to transparent black -- silently repaints every
+    // later frame's background: the app's `clearColor` is gone for the rest of
+    // the session. Saved as four numbers rather than a cloned Color because
+    // child passes nest and this is the effect path's hot loop.
+    const { r: previousR, g: previousG, b: previousB, a: previousA } = this._backend.clearColor;
 
     this.beginPass(descriptor);
 
@@ -297,6 +323,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
       // before the bind switches back.
       this._backend.setRenderTarget(previousTarget);
       this._backend.setView(previousView);
+      this._backend.setClearColor(this._clearColorScratch.set(previousR, previousG, previousB, previousA));
     }
   }
 

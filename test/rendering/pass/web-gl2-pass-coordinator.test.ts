@@ -21,7 +21,16 @@ const createMockBackend = (root: RenderTarget) => {
   const setView = vi.fn((view: View | null) => {
     currentView = view ?? currentTarget.view;
   });
-  const clear = vi.fn((_color?: Color) => undefined);
+  // A live clear colour the coordinator reads and restores, mirroring the real
+  // backends: `clear(colour)` writes through to it, so the restore is
+  // observable.
+  const clearColor = new Color(20, 20, 40);
+  const setClearColor = vi.fn((color: Color) => {
+    clearColor.copy(color);
+  });
+  const clear = vi.fn((color?: Color) => {
+    if (color) clearColor.copy(color);
+  });
   const flush = vi.fn(() => undefined);
   const pushScissorRect = vi.fn((_bounds: Rectangle) => undefined);
   const popScissorRect = vi.fn(() => undefined);
@@ -29,6 +38,8 @@ const createMockBackend = (root: RenderTarget) => {
   const popStencilClip = vi.fn(() => undefined);
 
   const backend: WebGl2PassBackend = {
+    clearColor,
+    setClearColor,
     get renderTarget() {
       return currentTarget;
     },
@@ -45,7 +56,7 @@ const createMockBackend = (root: RenderTarget) => {
     popStencilClip,
   };
 
-  return { backend, setRenderTarget, setView, clear, flush, pushScissorRect, popScissorRect, pushStencilClip, popStencilClip };
+  return { backend, setRenderTarget, setView, clear, clearColor, setClearColor, flush, pushScissorRect, popScissorRect, pushStencilClip, popStencilClip };
 };
 
 const descriptor = (

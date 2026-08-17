@@ -34,7 +34,15 @@ const createMockBackend = (
   const setView = vi.fn((view: View | null) => {
     currentView = view ?? currentTarget.view;
   });
-  const clear = vi.fn((_color?: Color) => undefined);
+  // A live clear colour the coordinator reads and restores, mirroring the real
+  // backend: `clear(colour)` writes through to it, so the restore is observable.
+  const clearColor = new Color(20, 20, 40);
+  const setClearColor = vi.fn((color: Color) => {
+    clearColor.copy(color);
+  });
+  const clear = vi.fn((color?: Color) => {
+    if (color) clearColor.copy(color);
+  });
   const flush = vi.fn(() => undefined);
   const pushScissorRect = vi.fn((_bounds: Rectangle) => undefined);
   const popScissorRect = vi.fn(() => undefined);
@@ -53,6 +61,8 @@ const createMockBackend = (
   const stats = createRenderStats();
 
   const backend: WebGpuPassBackend = {
+    clearColor,
+    setClearColor,
     get renderTarget() {
       return currentTarget;
     },

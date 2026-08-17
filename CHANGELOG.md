@@ -240,6 +240,17 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
   An extension's lifetime is exactly its application's: there is no runtime
   `unregister`, and no scene-level scope.
 
+### Fixed
+
+- **An effect capture no longer repaints the application background.** A filter,
+  mask or `cacheAsTexture` capture clears its own target to transparent black,
+  and `backend.clear(colour)` writes the colour it is handed through to the
+  persistent one — which the pass coordinator saved and restored for the target,
+  the view and the stencil state, but not for the clear colour. One filtered or
+  cached node was therefore enough to clear every LATER frame to transparent
+  black instead of `clearColor`, for the rest of the session. Found on a real
+  device while measuring `NEU-S4`.
+
 ### Changed
 
 - **BREAKING — effect and cache render targets now inherit the surface

@@ -49,6 +49,7 @@ const modeButtons = element('mode-buttons');
 const stageButtons = element('stage-buttons');
 const visualReadout = element('visual-readout');
 const visualProgress = element('visual-progress');
+const visualTitle = element('visual-title');
 const runMatrixButton = element<HTMLButtonElement>('run-matrix');
 const runSustained2Button = element<HTMLButtonElement>('run-sustained-2');
 const runSustained3Button = element<HTMLButtonElement>('run-sustained-3');
@@ -122,6 +123,11 @@ const setStatus = (text: string, warn = false): void => {
  */
 const setProgress = (text: string, state: 'running' | 'done' | 'error' | 'idle'): void => {
   visualProgress.textContent = text;
+
+  // REPLACES the section title rather than sitting beside it: the cell line is
+  // long enough that both together wrap to a second row on a phone, which moves
+  // the canvas down mid-run and makes it hard to compare what is on screen.
+  visualTitle.hidden = state !== 'idle';
 
   if (state === 'idle') {
     visualProgress.removeAttribute('data-state');

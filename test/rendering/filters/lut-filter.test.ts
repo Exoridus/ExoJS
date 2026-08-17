@@ -1,5 +1,6 @@
 import type { MockInstance } from 'vitest';
 
+import { Color } from '#core/Color';
 /**
  * LutFilter unit tests.
  *
@@ -189,6 +190,14 @@ function makeWebGl2Backend(): RenderBackend & WebGl2Backend {
     composeWithAlphaMask() {
       return this;
     },
+    // The pass coordinator reads and restores this around a child pass; a fake
+    // without it crashes the redirect these tests exercise.
+    clearColor: new Color(0, 0, 0),
+    setClearColor(color: Color) {
+      (this as unknown as { clearColor: Color }).clearColor.copy(color);
+
+      return this;
+    },
     acquireRenderTexture(w: number, h: number) {
       return new RenderTexture(w, h);
     },
@@ -302,6 +311,14 @@ function makeWebGpuBackend(device: GPUDevice): RenderBackend & WebGpuBackend {
       return false;
     },
     composeWithAlphaMask() {
+      return this;
+    },
+    // The pass coordinator reads and restores this around a child pass; a fake
+    // without it crashes the redirect these tests exercise.
+    clearColor: new Color(0, 0, 0),
+    setClearColor(color: Color) {
+      (this as unknown as { clearColor: Color }).clearColor.copy(color);
+
       return this;
     },
     acquireRenderTexture(w: number, h: number) {

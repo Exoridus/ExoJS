@@ -57,7 +57,7 @@
         letter-spacing: 0;
         text-transform: none;
         color: var(--accent);
-        text-align: right;
+        white-space: nowrap;
       }
 
       .progress[data-state='done'] {
@@ -217,7 +217,7 @@
     </section>
 
     <section>
-      <h2>Look at it<span id="visual-progress" class="progress"></span></h2>
+      <h2><span id="visual-title">Look at it</span><span id="visual-progress" class="progress"></span></h2>
       <div id="stage-host"></div>
       <div class="row"><span>Scene</span><span id="scene-buttons" style="display: contents"></span></div>
       <div class="row"><span>DPR</span><span id="dpr-buttons" style="display: contents"></span></div>
