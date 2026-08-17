@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 10,
+  "memberCount": 11,
   "counts": {
     "constructors": 1,
     "methods": 6,
-    "properties": 3,
+    "properties": 4,
     "events": 0
   },
   "sections": [
@@ -91,7 +91,7 @@
       "members": [
         {
           "name": "apply",
-          "signature": "apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture): void",
+          "signature": "apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture, resolution: number): void",
           "signatureTokens": [
             {
               "text": "apply",
@@ -146,6 +146,22 @@
               "kind": "type"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "resolution",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -173,10 +189,15 @@
               "name": "output",
               "type": "RenderTexture",
               "optional": false
+            },
+            {
+              "name": "resolution",
+              "type": "number",
+              "optional": false
             }
           ],
           "returnType": "void",
-          "description": "Execute one filter pass: sample from input, write the result to output. Both textures are the same dimensions as the filtered drawable's bounding box."
+          "description": "Execute one filter pass: sample from input, write the result to output. Both textures are bounds × resolution texels — NOT the drawable's logical bounding box. Any parameter a subclass expresses in pixels (a blur radius, a displacement amount) is in LOGICAL units by convention and must be multiplied by resolution before it is used as a texel offset; otherwise the effect shrinks by 1/resolution on a HiDPI display. Parameters expressed as a fraction of the target (or as pure colour maths) need no adjustment. The engine always passes resolution. It is optional for the hand-rolled case — a post-processing chain that creates its own RenderTextures and calls apply directly — where the textures are whatever size the caller made them and 1 is the honest answer."
         },
         {
           "name": "destroy",
@@ -412,6 +433,27 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "resolution",
+          "signature": "resolution: TargetResolution",
+          "signatureTokens": [
+            {
+              "text": "resolution",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TargetResolution",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Resolution this filter's render targets are rasterized at, in device pixels per logical unit. 'inherit' (the default) matches the surface the result is composited into, so a filtered subtree stays as sharp as its surroundings on a HiDPI display. Lower it for a filter whose output is low-frequency anyway — a heavy blur at 0.5 costs a quarter of the fragments and is hard to tell apart. A filter CHAIN shares one target size, so the whole chain runs at the lowest resolution any of its filters asks for. ts const blur = new BlurFilter({ radius: 8 }); blur.resolution = 0.5; // half-resolution blur, quarter the fill cost "
+        },
         {
           "name": "lut",
           "signature": "lut: Texture",

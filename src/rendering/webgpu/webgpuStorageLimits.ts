@@ -17,6 +17,13 @@ import { RenderError } from '#rendering/RenderError';
 export const defaultMaxBufferSize = 2 ** 28; // 256 MiB
 export const defaultMaxStorageBufferBindingSize = 2 ** 27; // 128 MiB
 
+/**
+ * WebGPU's spec default for `maxTextureDimension2D`, the ceiling on either axis
+ * of a 2D texture. Same reasoning as the two above: a device that asked for no
+ * raise is granted exactly this, and a conformant device is never granted less.
+ */
+export const WEBGPU_DEFAULT_MAX_TEXTURE_DIMENSION_2D = 8192;
+
 /** The granted limits of `device`, with the spec defaults standing in for a device that exposes none. */
 const grantedLimits = (device: GPUDevice): { readonly maxBufferSize: number; readonly maxStorageBufferBindingSize: number } => {
   // Defensive optional access, as in `resolveSpriteBatchTextureSlots`: mocked

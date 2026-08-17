@@ -58,6 +58,7 @@ import {
   type WebGpuRetainedNodeIndexRange,
 } from './WebGpuRetainedGroupResources';
 import { baseSpriteBatchTextureSlots, maxSpriteBatchTextureSlots } from './WebGpuSpriteRenderer';
+import { WEBGPU_DEFAULT_MAX_TEXTURE_DIMENSION_2D } from './webgpuStorageLimits';
 import { WebGpuTransformStorage } from './WebGpuTransformStorage';
 
 interface ManagedWebGpuTextureState {
@@ -324,6 +325,34 @@ export class WebGpuBackend implements RenderBackend {
 
   public get renderTarget(): RenderTarget {
     return this._renderTarget;
+  }
+
+  /**
+   * Device pixels per logical unit of the canvas root target.
+   *
+   * Derived rather than stored: the root target carries the LOGICAL size while
+   * the canvas backing store carries `logical × pixelRatio`, so the ratio
+   * between them is always current — including after a `resize()` that changes
+   * only one of the two.
+   */
+  public get rootResolution(): number {
+    const logicalWidth = this._rootRenderTarget.width;
+
+    return logicalWidth > 0 ? this._canvas.width / logicalWidth : 1;
+  }
+
+  /**
+   * `maxTextureDimension2D` of the granted device.
+   *
+   * The spec DEFAULT stands in when no limits object is reachable — a device
+   * that exposes none is either a test double or non-conformant, and a
+   * conformant device is never granted less, so assuming the default is the safe
+   * direction (the same rule `webgpuStorageLimits` follows).
+   */
+  public get maxTextureSize(): number {
+    const limits = (this._device as { limits?: GPUSupportedLimits } | null)?.limits;
+
+    return limits?.maxTextureDimension2D ?? WEBGPU_DEFAULT_MAX_TEXTURE_DIMENSION_2D;
   }
 
   public get device(): GPUDevice {

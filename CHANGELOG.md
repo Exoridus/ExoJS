@@ -242,6 +242,26 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
 
 ### Changed
 
+- **BREAKING — effect and cache render targets now inherit the surface
+  resolution.** An internal target (filter input, every filter output, alpha
+  mask, `cacheAsTexture`) used to be `ceil(logical bounds)` texels no matter how
+  large the surface it was composited into, so on a `pixelRatio: 2` display a
+  filtered or cached subtree rasterized at half the linear detail it was then
+  sampled over — a third on `pixelRatio: 3`. Targets now inherit the resolution
+  of the target they are composited into, and the two new knobs opt out of it:
+  `Filter.resolution` and `RenderNode.cacheResolution`, both `'inherit'` by
+  default, both accepting a number. A filter chain shares one target size, so it
+  runs at the lowest resolution any of its filters asks for. Very large barriers
+  are clamped to the device's maximum texture size rather than failing.
+
+  Two consequences worth planning for. Effect cost on a HiDPI display rises with
+  the pixel ratio, where it was previously flat — measured on an iPhone 13 Pro,
+  a blur that held 22 ms at every ratio costs 28 ms at ratio 3 once its target
+  inherits. And `Filter.apply` gains a fourth argument, the target resolution:
+  any custom filter with a pixel-valued parameter must scale it, because those
+  parameters are now LOGICAL units. `BlurFilter.radius` already does, so a blur
+  covers the same on-screen distance as before.
+
 - **BREAKING — `RenderNode.cacheAsBitmap` is now `RenderNode.cacheAsTexture`.**
   The cache has always been a `RenderTexture` on the GPU, never a bitmap;
   "bitmap" suggested a CPU raster image. The serialized field

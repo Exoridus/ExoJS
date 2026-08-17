@@ -50,6 +50,11 @@ const createRuntime = (): MockRuntime => {
 
   const runtime: RenderBackend = {
     backendType: RenderBackendType.WebGl2,
+    // Resolution 1 keeps every internal target at its logical size, which is
+    // what these tests assert on. The pixel-ratio behaviour of the same targets
+    // is covered by the browser DPR lanes, where a real surface exists.
+    rootResolution: 1,
+    maxTextureSize: 4096,
     stats,
     get renderTarget() {
       return currentTarget;

@@ -419,6 +419,24 @@ export class WebGl2Backend implements RenderBackend {
     return this._renderTarget.view;
   }
 
+  /**
+   * Device pixels per logical unit of the canvas root target.
+   *
+   * Derived rather than stored: the root target carries the LOGICAL size while
+   * the canvas backing store carries `logical × pixelRatio`, so the ratio
+   * between them is always current — including after a `resize()` that changes
+   * only one of the two.
+   */
+  public get rootResolution(): number {
+    const logicalWidth = this._rootRenderTarget.width;
+
+    return logicalWidth > 0 ? this._canvas.width / logicalWidth : 1;
+  }
+
+  public get maxTextureSize(): number {
+    return this._maxTextureSize;
+  }
+
   public get clearColor(): Color {
     return this._clearColor;
   }

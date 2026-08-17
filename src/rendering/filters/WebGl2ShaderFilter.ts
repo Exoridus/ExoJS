@@ -176,7 +176,7 @@ export class WebGl2ShaderFilter extends Filter {
    * uniforms, and render the input texture into `output`. Throws if the
    * active backend is WebGPU — use {@link WebGpuShaderFilter} on WebGPU.
    */
-  public apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture): void {
+  public apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture, _resolution = 1): void {
     if (backend.backendType === RenderBackendType.WebGpu) {
       throw new Error('WebGl2ShaderFilter requires the WebGL2 backend. Use WebGpuShaderFilter on WebGPU.');
     }

@@ -160,6 +160,29 @@ Filters on individual children inside an unfiltered container each get their own
 
 For static subtrees that don't change every frame, set `container.cacheAsTexture = true`. The filter chain bakes once and subsequent frames skip the per-frame re-rendering — one texture draw instead of the full subtree + filters.
 
+## Filter resolution
+
+A filter renders into an off-screen target, and that target has a **resolution**: device pixels per logical unit. By default (`'inherit'`) it matches the surface the result is composited into, so a filtered subtree is exactly as sharp as everything around it — on a `pixelRatio: 2` display the target is twice the logical size on each axis.
+
+Lower it for a filter whose output has no fine detail to lose. A blur is the obvious case: at half resolution it costs a quarter of the fragments and is hard to tell apart.
+
+```ts
+import { BlurFilter, Container } from '@codexo/exojs';
+
+const blur = new BlurFilter({ radius: 8 });
+const world = new Container();
+
+blur.resolution = 0.5; // quarter the fill cost, low-frequency output anyway
+world.filters = [blur];
+```
+
+Two things to know before reaching for it:
+
+- **A chain shares one target size**, so the whole chain runs at the lowest resolution any of its filters asks for. One filter at `0.5` makes every filter in that list render at `0.5`.
+- **Pixel-valued filter parameters are in logical units**, not target texels. `BlurFilter.radius` covers the same on-screen distance at every resolution and every device pixel ratio; the filter scales it into texels itself. A custom filter that offsets by pixels has to do the same with the `resolution` argument its `apply` receives.
+
+Very large filtered subtrees are clamped: if `bounds × resolution` would exceed the device's maximum texture size, the resolution drops until it fits rather than the frame failing.
+
 ## Filters vs. mesh materials
 
 A filter transforms a drawable's rendered pixels — it operates on the 2D output, in screen texture space. A `MeshMaterial` replaces the drawable's vertex and fragment stages entirely — it operates in geometry space. The distinction matters:

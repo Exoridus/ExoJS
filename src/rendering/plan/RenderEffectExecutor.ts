@@ -6,6 +6,7 @@ import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 
 import { type BarrierScope, ClipKind, type GroupScope } from './RenderScope';
+import { targetTexels } from './targetResolution';
 
 /**
  * One barrier's in-flight state, held on a depth-indexed stack.
@@ -127,7 +128,14 @@ export class RenderEffectExecutor {
     const { node, effect } = barrier;
     const hasFilters = effect.filters.length > 0;
     const needsTextureCache = effect.cacheAsTexture;
-    const { left, top, width, height } = barrier;
+    const { left, top, width, height, resolution } = barrier;
+    // The one place the two coordinate systems meet. Every TEXTURE is allocated
+    // in texels; every capture view, composite and cache bound stays in the
+    // logical units the plan built. Rendering the logical view into a larger
+    // texture is what supersamples it; drawing it back at the logical size is
+    // what resolves it against the surface.
+    const texelWidth = targetTexels(width, resolution);
+    const texelHeight = targetTexels(height, resolution);
 
     if (!hasFilters && !needsTextureCache && !effect.needsBackdropBlend) {
       this._withClip(node, backend, barrier, this._playChildPlan);
@@ -146,11 +154,11 @@ export class RenderEffectExecutor {
       return;
     }
 
-    const cacheTexture = needsTextureCache ? node._renderPlanEnsureCacheTexture(width, height) : null;
+    const cacheTexture = needsTextureCache ? node._renderPlanEnsureCacheTexture(texelWidth, texelHeight) : null;
     let pooledTexture: RenderTexture | null = null;
 
     try {
-      const sourceTexture = needsTextureCache && !hasFilters ? cacheTexture! : backend.acquireRenderTexture(width, height);
+      const sourceTexture = needsTextureCache && !hasFilters ? cacheTexture! : backend.acquireRenderTexture(texelWidth, texelHeight);
 
       if (sourceTexture !== cacheTexture) {
         pooledTexture = sourceTexture;
@@ -163,11 +171,11 @@ export class RenderEffectExecutor {
       if (hasFilters) {
         for (let index = 0; index < effect.filters.length; index++) {
           const isLast = index === effect.filters.length - 1;
-          const output = isLast && needsTextureCache ? cacheTexture! : backend.acquireRenderTexture(width, height);
+          const output = isLast && needsTextureCache ? cacheTexture! : backend.acquireRenderTexture(texelWidth, texelHeight);
 
           try {
             // In-bounds: index < effect.filters.length.
-            effect.filters[index]!.apply(backend, finalTexture, output);
+            effect.filters[index]!.apply(backend, finalTexture, output, resolution);
           } catch (error) {
             if (output !== cacheTexture) {
               backend.releaseRenderTexture(output);
@@ -190,7 +198,7 @@ export class RenderEffectExecutor {
       }
 
       if (needsTextureCache) {
-        node._renderPlanStoreCacheTexture(cacheTexture!, left, top, width, height);
+        node._renderPlanStoreCacheTexture(cacheTexture!, left, top, width, height, resolution);
       }
 
       frame.finalTexture = finalTexture;
@@ -269,7 +277,7 @@ export class RenderEffectExecutor {
       return;
     }
 
-    const contentTexture = backend.acquireRenderTexture(barrier.width, barrier.height);
+    const contentTexture = backend.acquireRenderTexture(targetTexels(barrier.width, barrier.resolution), targetTexels(barrier.height, barrier.resolution));
     const releasePool: RenderTexture[] = [contentTexture];
 
     try {
@@ -294,7 +302,7 @@ export class RenderEffectExecutor {
     releasePool: RenderTexture[],
   ): Texture | RenderTexture {
     if (!(mask instanceof Texture) && !(mask instanceof RenderTexture)) {
-      const maskTexture = backend.acquireRenderTexture(barrier.width, barrier.height);
+      const maskTexture = backend.acquireRenderTexture(targetTexels(barrier.width, barrier.resolution), targetTexels(barrier.height, barrier.resolution));
       const frame = RenderEffectExecutor._current();
       const previousMask = frame.maskSource;
 

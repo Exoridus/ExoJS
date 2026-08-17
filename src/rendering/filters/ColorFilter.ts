@@ -31,7 +31,7 @@ export class ColorFilter extends Filter {
     return this._color;
   }
 
-  public apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture): void {
+  public apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture, _resolution = 1): void {
     this._sprite.setTexture(input).setBlendMode(BlendModes.Normal).setTint(this._color).setPosition(0, 0).setRotation(0).setScale(1, 1);
 
     this._sprite.width = output.width;

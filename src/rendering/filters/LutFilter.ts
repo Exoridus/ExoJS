@@ -260,11 +260,11 @@ export class LutFilter extends Filter {
     return this;
   }
 
-  public apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture): void {
+  public apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture, resolution = 1): void {
     if (this._backendFilter === null) {
       this._backendFilter = this._createBackendFilter(backend);
     }
-    this._backendFilter.apply(backend, input, output);
+    this._backendFilter.apply(backend, input, output, resolution);
   }
 
   public override destroy(): void {

@@ -16,6 +16,7 @@ import type { Texture } from '#rendering/texture/Texture';
 import { BackendTargetPass } from './BackendTargetPass';
 import type { Drawable } from './Drawable';
 import type { RenderBackend } from './RenderBackend';
+import type { TargetResolution } from './types';
 import { BlendModes, isAdvancedBlendMode } from './types';
 import { View } from './View';
 
@@ -374,6 +375,15 @@ export abstract class RenderNode extends SceneNode {
   private _captureContent: (() => void) | null = null;
   private _mask: MaskSource = null;
   private _cacheAsTexture = false;
+  private _cacheResolution: TargetResolution = 'inherit';
+  /**
+   * Effective resolution the current cache texture was baked at. Compared on
+   * reuse alongside the bounds: a cache baked for a DPR-1 surface is the wrong
+   * texture for a DPR-2 one even though its logical bounds are unchanged, and
+   * without this a `resize()` that only changes the pixel ratio would replay a
+   * stale, half-resolution bake forever.
+   */
+  private _cacheBakedResolution = 0;
   private _cacheDirty = true;
   private _cacheTexture: RenderTexture | null = null;
   private _retainedRoot: RetainedRootRepresentation | null = null;
@@ -571,6 +581,30 @@ export abstract class RenderNode extends SceneNode {
     }
   }
 
+  /**
+   * Resolution the {@link cacheAsTexture} texture is baked at, in device pixels
+   * per logical unit.
+   *
+   * `'inherit'` (the default) matches the surface the cache is composited into,
+   * so enabling the cache does not soften the picture on a HiDPI display. Pin it
+   * to a number to trade sharpness for memory and bake cost — a cache is
+   * `resolution²` texels, so `1` on a DPR-3 phone is a ninth of the VRAM and a
+   * ninth of the fill per re-bake.
+   *
+   * Changing it invalidates the cache.
+   * @stable
+   */
+  public get cacheResolution(): TargetResolution {
+    return this._cacheResolution;
+  }
+
+  public set cacheResolution(cacheResolution: TargetResolution) {
+    if (this._cacheResolution !== cacheResolution) {
+      this._cacheResolution = cacheResolution;
+      this.invalidateCache();
+    }
+  }
+
   public addFilter(filter: Filter): this {
     (this._filters ??= []).push(filter);
 
@@ -658,8 +692,8 @@ export abstract class RenderNode extends SceneNode {
   }
 
   /** @internal */
-  public _renderPlanCanReuseTextureCache(left: number, top: number, width: number, height: number): boolean {
-    if (!this._cacheAsTexture || this._cacheDirty || this._cacheTexture === null || this._cacheBounds === null) {
+  public _renderPlanCanReuseTextureCache(left: number, top: number, width: number, height: number, resolution: number): boolean {
+    if (!this._cacheAsTexture || this._cacheDirty || this._cacheTexture === null || this._cacheBounds === null || this._cacheBakedResolution !== resolution) {
       return false;
     }
 
@@ -682,9 +716,10 @@ export abstract class RenderNode extends SceneNode {
   }
 
   /** @internal */
-  public _renderPlanStoreCacheTexture(texture: RenderTexture, left: number, top: number, width: number, height: number): void {
+  public _renderPlanStoreCacheTexture(texture: RenderTexture, left: number, top: number, width: number, height: number, resolution: number): void {
     this._cacheTexture = texture;
     (this._cacheBounds ??= new Rectangle()).set(left, top, width, height);
+    this._cacheBakedResolution = resolution;
     this._cacheDirty = false;
   }
 
@@ -823,6 +858,7 @@ export abstract class RenderNode extends SceneNode {
       this._cacheTexture = null;
     }
 
+    this._cacheBakedResolution = 0;
     this._cacheDirty = true;
   }
 

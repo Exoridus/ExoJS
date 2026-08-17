@@ -29,6 +29,7 @@ import type { RetainedFragmentEntry, RetainedFragmentGroup, RetainedGroupFragmen
 import type { RetainedInstructionSet } from './RetainedInstructionSet';
 import type { RetainedDrawData } from './RetainedRecordPool';
 import type { RetainedRootRepresentation } from './RetainedRootRepresentation';
+import { clampResolutionToTextureSize, resolveBarrierResolution } from './targetResolution';
 
 /**
  * Collect-time view of the backend's retained-batch hooks.
@@ -190,6 +191,13 @@ export class RenderPlanBuilder {
 
   public backend!: RenderBackend;
   private _view: View | null = null;
+  /**
+   * Effective resolution of the target each enclosing barrier renders into,
+   * innermost last. Empty while collecting into the canvas root, whose
+   * resolution comes from the backend instead of being pushed — the root is not
+   * a barrier and has no scope to pair with.
+   */
+  private readonly _resolutionStack: number[] = [];
 
   private readonly _plan = new MutableRenderPlan();
   private readonly _groupPool: MutableGroupScope[] = [];
@@ -303,6 +311,7 @@ export class RenderPlanBuilder {
   public build(root: RenderNode, backend: RenderBackend): RenderPlan {
     this.backend = backend;
     this._view = null;
+    this._resolutionStack.length = 0;
     this._plan.reset();
     this._groupPoolCursor = 0;
     this._drawEntryPoolCursor = 0;
@@ -396,6 +405,28 @@ export class RenderPlanBuilder {
     return this._view;
   }
 
+  /**
+   * Effective resolution of the target being collected into — the innermost
+   * enclosing barrier's, or the canvas root's when there is none.
+   */
+  private _currentTargetResolution(): number {
+    const depth = this._resolutionStack.length;
+
+    if (depth > 0) {
+      // Every pushed value came through the sanitising branch below.
+      return this._resolutionStack[depth - 1]!;
+    }
+
+    const rootResolution = this.backend.rootResolution;
+
+    // A backend that reports a non-finite or non-positive root resolution
+    // (a stand-in in a test, a canvas measured before layout) must not be able
+    // to turn every effect target into a NaN-sized texture several layers down,
+    // where the cause is unrecoverable. Fall back to logical size — the
+    // behaviour that shipped before targets inherited anything.
+    return Number.isFinite(rootResolution) && rootResolution > 0 ? rootResolution : 1;
+  }
+
   public emitNode(node: RenderNode, seq?: number): void {
     this._reserveEntryPlacement(seq, node.zIndex);
     const reservedSeq = this._reservedSeq;
@@ -429,20 +460,40 @@ export class RenderPlanBuilder {
         height = Math.max(1, Math.ceil(bounds.height));
       }
 
+      // Resolution the barrier's internal targets are allocated at. Resolved
+      // against the ENCLOSING target's, so a filter inside a cached container
+      // composes with it instead of jumping back to the root's, and clamped so a
+      // large subtree on a high-ratio display cannot ask the device for a
+      // texture it would refuse (see `targetResolution.ts`).
+      const parentResolution = this._currentTargetResolution();
+      const resolution = needsBounds
+        ? clampResolutionToTextureSize(
+            resolveBarrierResolution(parentResolution, {
+              cacheAsTexture: effect.cacheAsTexture,
+              cacheResolution: node.cacheResolution,
+              filters: effect.filters,
+            }),
+            width,
+            height,
+            this.backend.maxTextureSize,
+          )
+        : parentResolution;
       const childPlan =
-        effect.cacheAsTexture && node._renderPlanCanReuseTextureCache(left, top, width, height)
+        effect.cacheAsTexture && node._renderPlanCanReuseTextureCache(left, top, width, height, resolution)
           ? null
           : this._acquireGroupScope(this._resolvePreserveDrawOrder(node));
-      const barrierScope = this._acquireBarrierScope(node, effect, childPlan, left, top, width, height);
+      const barrierScope = this._acquireBarrierScope(node, effect, childPlan, left, top, width, height, resolution);
 
       this._pushBarrierEntry(reservedSeq, reservedZ, barrierScope);
 
       if (childPlan !== null) {
         this._pushScope(childPlan);
+        this._resolutionStack.push(resolution);
 
         try {
           node._collectForRenderPlan(this);
         } finally {
+          this._resolutionStack.pop();
           this._popScope();
         }
       }
@@ -462,7 +513,7 @@ export class RenderPlanBuilder {
     // normal path (a nested boundary still gets its own transformNode scope).
     if (node.parent !== null && this._currentScope().transformNode === node.parent && node.parent._childEscapesTransformGroup(node)) {
       const childPlan = this._acquireGroupScope(this._resolvePreserveDrawOrder(node));
-      const barrierScope = this._acquireBarrierScope(node, groupEscapeEffect, childPlan, 0, 0, 0, 0);
+      const barrierScope = this._acquireBarrierScope(node, groupEscapeEffect, childPlan, 0, 0, 0, 0, this._currentTargetResolution());
 
       this._pushBarrierEntry(reservedSeq, reservedZ, barrierScope);
       this._pushScope(childPlan);
@@ -1554,6 +1605,7 @@ export class RenderPlanBuilder {
     this._barrierScopePoolCursor = 0;
     this._effectDescriptorPoolCursor = 0;
     this._view = null;
+    this._resolutionStack.length = 0;
     this._nodeIndex = 0;
     this._viewCullSuppression = 0;
     this._retentionRoot = null;
@@ -1849,6 +1901,7 @@ export class RenderPlanBuilder {
     top: number,
     width: number,
     height: number,
+    resolution: number,
   ): BarrierScope {
     const scope = (this._barrierScopePool[this._barrierScopePoolCursor] ??= {
       kind: RenderEntryKind.Barrier,
@@ -1859,6 +1912,7 @@ export class RenderPlanBuilder {
       top,
       width,
       height,
+      resolution,
     });
 
     this._barrierScopePoolCursor++;
@@ -1870,6 +1924,7 @@ export class RenderPlanBuilder {
     scope.top = top;
     scope.width = width;
     scope.height = height;
+    scope.resolution = resolution;
 
     return scope;
   }

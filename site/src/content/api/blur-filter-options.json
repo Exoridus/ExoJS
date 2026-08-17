@@ -76,7 +76,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Blur extent in LOGICAL units — unchanged by the display's pixel ratio."
         }
       ],
       "paragraphs": [],

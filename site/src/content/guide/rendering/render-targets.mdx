@@ -147,6 +147,23 @@ draw(context: RenderingContext) {
 
 `cacheAsTexture` on a `RenderNode` bakes the node's subtree into an internal texture automatically. Use `cacheAsTexture` when the cached content doesn't need to be repositioned, scaled, filtered, or displayed in multiple places — it's a simple on/off toggle. Use a `RenderTexture` when you need explicit control over when the cache updates, what view it uses, or how the result is displayed (multiple sprites, custom sampler settings, composited with blend modes).
 
+## Cache resolution
+
+The cache texture inherits the resolution of the surface it is composited into, so turning caching on does not soften the picture on a HiDPI display. On a `pixelRatio: 3` phone a 200 × 200 logical subtree bakes into a 600 × 600 texture.
+
+That is nine times the memory of a logical-size bake, and nine times the fill on every re-bake. `cacheResolution` is the knob when the trade is worth making the other way:
+
+```ts
+import { Container } from '@codexo/exojs';
+
+const backdrop = new Container();
+
+backdrop.cacheAsTexture = true;
+backdrop.cacheResolution = 1; // logical size regardless of the display
+```
+
+Changing `cacheResolution` invalidates the cache, as does anything that moves the node's world bounds — including its own transform. A node that animates re-bakes every frame and is strictly slower cached than uncached, whatever its resolution.
+
 ## Lifecycle
 
 `RenderTexture` owns GPU resources. Call `destroy()` when the texture is no longer needed to release the backing framebuffer and texture. The engine does not garbage-collect GPU objects automatically.

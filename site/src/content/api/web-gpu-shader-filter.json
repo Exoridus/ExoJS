@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 4,
+  "memberCount": 5,
   "counts": {
     "constructors": 1,
     "methods": 2,
-    "properties": 1,
+    "properties": 2,
     "events": 0
   },
   "sections": [
@@ -96,7 +96,7 @@
       "members": [
         {
           "name": "apply",
-          "signature": "apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture): void",
+          "signature": "apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture, _resolution: number): void",
           "signatureTokens": [
             {
               "text": "apply",
@@ -151,6 +151,22 @@
               "kind": "type"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "_resolution",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -177,6 +193,11 @@
             {
               "name": "output",
               "type": "RenderTexture",
+              "optional": false
+            },
+            {
+              "name": "_resolution",
+              "type": "number",
               "optional": false
             }
           ],
@@ -221,6 +242,27 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "resolution",
+          "signature": "resolution: TargetResolution",
+          "signatureTokens": [
+            {
+              "text": "resolution",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TargetResolution",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Resolution this filter's render targets are rasterized at, in device pixels per logical unit. 'inherit' (the default) matches the surface the result is composited into, so a filtered subtree stays as sharp as its surroundings on a HiDPI display. Lower it for a filter whose output is low-frequency anyway — a heavy blur at 0.5 costs a quarter of the fragments and is hard to tell apart. A filter CHAIN shares one target size, so the whole chain runs at the lowest resolution any of its filters asks for. ts const blur = new BlurFilter({ radius: 8 }); blur.resolution = 0.5; // half-resolution blur, quarter the fill cost "
+        },
         {
           "name": "uniforms",
           "signature": "uniforms: Record<string, ShaderFilterUniformValue>",
