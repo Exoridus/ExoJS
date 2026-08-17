@@ -6,6 +6,8 @@ import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { DrawCommand } from '#rendering/plan/RenderCommand';
 import { TRANSFORM_FLOATS_PER_ROW, TRANSFORM_TINT_BYTES_PER_ROW, TransformBuffer } from '#rendering/TransformBuffer';
 
+import { requireRepresentableStorageGrowth } from './webgpuStorageLimits';
+
 const slotFloatCount = TRANSFORM_FLOATS_PER_ROW;
 const tintSlotBytes = TRANSFORM_TINT_BYTES_PER_ROW;
 
@@ -225,6 +227,27 @@ export class WebGpuTransformStorage {
     // how many rows they cover.
     const nextSlotCount = nextCapacity / (slotFloatCount * Float32Array.BYTES_PER_ELEMENT);
     const nextTintCapacity = nextSlotCount * tintSlotBytes;
+
+    // Both bindings are measured before EITHER buffer is touched: the storage is
+    // the path a persistent store's refusal falls back onto, and there is nothing
+    // below it to fall back to in turn, so an unrepresentable growth has to leave
+    // the current buffers intact and say why rather than allocate half of a set
+    // the device cannot bind. Measured on the capacity the doubling above settled
+    // on, which is the size that actually reaches `createBindGroup`.
+    requireRepresentableStorageGrowth(device, {
+      store: 'shared transform storage',
+      resource: 'transform:storage-buffer',
+      requestedRows: requiredCount,
+      capacityRows: nextSlotCount,
+      capacityBytes: nextCapacity,
+    });
+    requireRepresentableStorageGrowth(device, {
+      store: 'shared tint storage',
+      resource: 'transform:tint-storage-buffer',
+      requestedRows: requiredCount,
+      capacityRows: nextSlotCount,
+      capacityBytes: nextTintCapacity,
+    });
 
     this._storageBuffer?.destroy();
     this._storageBuffer = device.createBuffer({

@@ -11,6 +11,7 @@ import { BlendModes } from '#rendering/types';
 
 import type { WebGpuBackend } from './WebGpuBackend';
 import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
+import { storageBufferLimit } from './webgpuStorageLimits';
 
 const floatsPerTransformRow = TRANSFORM_FLOATS_PER_ROW;
 const floatsPerQuadRecord = SOURCE_QUAD_FLOATS;
@@ -32,36 +33,6 @@ const initialSlotCapacity = 1024;
  * scrolling view were admitted together, so their slots were too.
  */
 const slotsPerBlock = 256;
-
-/**
- * WebGPU's spec-guaranteed defaults for the two limits that bound a persistent
- * store's buffers.
- *
- * These are the values actually in force: a device requested without a
- * `requiredLimits` entry is granted exactly the default, however much the
- * adapter could have offered, and `WebGpuBackend` raises only the texture and
- * sampler limits the batch layout needs. They double as the stand-in for a
- * device that exposes no limits object at all — a conformant device is never
- * granted less, so assuming them is the safe direction.
- */
-const defaultMaxBufferSize = 2 ** 28; // 256 MiB
-const defaultMaxStorageBufferBindingSize = 2 ** 27; // 128 MiB
-
-/**
- * Bytes the largest buffer of `capacity` slots may occupy on `device`.
- *
- * Both limits apply to every one of the four slot buffers: `createBuffer`
- * rejects a size over `maxBufferSize`, and `createBindGroup` rejects a storage
- * binding over `maxStorageBufferBindingSize` — which is the SMALLER of the two
- * defaults, so on a device that asked for neither it is the one that bites.
- */
-const storageBufferLimit = (device: GPUDevice): number => {
-  // Defensive optional access, as in `resolveSpriteBatchTextureSlots`: mocked
-  // devices in unit tests may not expose a limits object.
-  const limits = (device as { limits?: GPUSupportedLimits }).limits;
-
-  return Math.min(limits?.maxBufferSize ?? defaultMaxBufferSize, limits?.maxStorageBufferBindingSize ?? defaultMaxStorageBufferBindingSize);
-};
 
 /**
  * The capacity {@link WebGpuPersistentSlotStore.ensureCapacity} settles on for
