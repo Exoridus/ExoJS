@@ -48,6 +48,7 @@ const dprButtons = element('dpr-buttons');
 const modeButtons = element('mode-buttons');
 const stageButtons = element('stage-buttons');
 const visualReadout = element('visual-readout');
+const visualProgress = element('visual-progress');
 const runMatrixButton = element<HTMLButtonElement>('run-matrix');
 const runSustained2Button = element<HTMLButtonElement>('run-sustained-2');
 const runSustained3Button = element<HTMLButtonElement>('run-sustained-3');
@@ -110,6 +111,25 @@ const backendRequest = (): ProbeBackendRequest => backendSelect.value as ProbeBa
 const setStatus = (text: string, warn = false): void => {
   statusEl.textContent = text;
   statusEl.classList.toggle('warn', warn);
+};
+
+/**
+ * Mirror the run's progress beside the "Look at it" title.
+ *
+ * The measure controls and the results table are far below the canvas on a phone,
+ * so during a run the tester is looking at the stage with no indication of how
+ * far along it is — or whether it finished at all. This keeps both in one view.
+ */
+const setProgress = (text: string, state: 'running' | 'done' | 'error' | 'idle'): void => {
+  visualProgress.textContent = text;
+
+  if (state === 'idle') {
+    visualProgress.removeAttribute('data-state');
+
+    return;
+  }
+
+  visualProgress.dataset['state'] = state;
 };
 
 const formatMs = (value: number | null): string => (value === null ? '—' : value.toFixed(2));
@@ -385,6 +405,7 @@ const runCells = async (cells: readonly ProbeCell[], measureMs: number, label: s
       const cell = cells[i]!;
 
       setStatus(`${label} — cell ${i + 1}/${cells.length}: ${cell.scene} · ${cell.mode} · DPR ${cell.pixelRatio}`);
+      setProgress(`${i + 1}/${cells.length} · ${cell.scene} · ${cell.mode} · DPR ${cell.pixelRatio}`, 'running');
       stageHost.scrollIntoView({ block: 'center' });
 
       const result = await runProbeCell({
@@ -402,9 +423,11 @@ const runCells = async (cells: readonly ProbeCell[], measureMs: number, label: s
       refreshJson();
     }
 
-    setStatus(`${label} — done (${cells.length} cells). Press Copy JSON.`);
+    setStatus(`${label} — done (${cells.length} cells). Press Submit to host or Copy JSON.`);
+    setProgress(`DONE — ${cells.length}/${cells.length}`, 'done');
   } catch (error) {
     setStatus(`${label} — aborted: ${error instanceof Error ? error.message : String(error)}`, true);
+    setProgress('ABORTED', 'error');
   } finally {
     busy = false;
     runMatrixButton.disabled = false;

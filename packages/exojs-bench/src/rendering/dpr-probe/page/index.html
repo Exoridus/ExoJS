@@ -43,6 +43,30 @@
         color: var(--muted);
         text-transform: uppercase;
         letter-spacing: 0.04em;
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 8px;
+      }
+
+      /* Run progress, shown beside the section title so it stays in view while
+         the tester is watching the canvas rather than the results table. */
+      .progress {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+        letter-spacing: 0;
+        text-transform: none;
+        color: var(--accent);
+        text-align: right;
+      }
+
+      .progress[data-state='done'] {
+        color: var(--ok);
+        font-weight: 600;
+      }
+
+      .progress[data-state='error'] {
+        color: var(--warn);
       }
 
       section {
@@ -193,7 +217,7 @@
     </section>
 
     <section>
-      <h2>Look at it</h2>
+      <h2>Look at it<span id="visual-progress" class="progress"></span></h2>
       <div id="stage-host"></div>
       <div class="row"><span>Scene</span><span id="scene-buttons" style="display: contents"></span></div>
       <div class="row"><span>DPR</span><span id="dpr-buttons" style="display: contents"></span></div>
