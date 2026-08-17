@@ -2634,6 +2634,19 @@ export class WebGl2Backend implements RenderBackend {
       this._accountant.recordTextureUpload(texture.width * texture.height * RGBA8_BYTES_PER_PIXEL);
     }
 
+    // Pixel-store state is upload-local, never inherited — the same discipline
+    // the UNPACK_ALIGNMENT restore above follows. GL keeps
+    // UNPACK_PREMULTIPLY_ALPHA_WEBGL globally, so leaving it set lets the NEXT
+    // upload multiply its RGB channels by its alpha channel. A renderer-private
+    // raw upload that never calls pixelStorei itself — the text renderer's
+    // RGBA32F node-data texture is the only one today — then inherits it, and
+    // in a float payload the "alpha" slot carries real data (a transform's
+    // `ty`, an ink-bounds height), so the result is arbitrary geometry rather
+    // than merely darker pixels.
+    if (texture.premultiplyAlpha) {
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+    }
+
     if (texture.generateMipMap && (texture instanceof RenderTexture || texture.source !== null)) {
       gl.generateMipmap(gl.TEXTURE_2D);
     }
