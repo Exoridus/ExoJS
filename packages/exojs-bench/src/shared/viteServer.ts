@@ -177,11 +177,17 @@ export interface StartViteServerOptions {
    * phone, where no shell is available to record it.
    */
   readonly extraDefine?: Readonly<Record<string, string>>;
+  /**
+   * Extra Vite plugins appended after the built-in ones. Used by the DPR probe
+   * to mount a submit endpoint, so a capture taken on a phone lands in the
+   * repository directly instead of being copied across devices by hand.
+   */
+  readonly extraPlugins?: readonly unknown[];
 }
 
 /** Starts a programmatic Vite dev server rooted at a harness page directory. */
 export const startViteServer = async (options: StartViteServerOptions): Promise<ViteDevServer> => {
-  const { pageDir, version, host = '127.0.0.1', https, extraDefine } = options;
+  const { pageDir, version, host = '127.0.0.1', https, extraDefine, extraPlugins = [] } = options;
   const vite = await loadVite();
   const server = await vite.createServer({
     configFile: false,
@@ -223,7 +229,7 @@ export const startViteServer = async (options: StartViteServerOptions): Promise<
     // pre-bundled.
     optimizeDeps: { noDiscovery: true, include: resolvableCompetitors() },
     define: { __DEV__: String(ENGINE_DEV_BUILD), __VERSION__: JSON.stringify(version), __REVISION__: JSON.stringify('baseline'), ...extraDefine },
-    plugins: [realShaderPlugin, devGlobalsPlugin(version)],
+    plugins: [realShaderPlugin, devGlobalsPlugin(version), ...extraPlugins],
   });
 
   await server.listen();

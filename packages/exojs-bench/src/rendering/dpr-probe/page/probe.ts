@@ -52,6 +52,7 @@ const runSustained2Button = element<HTMLButtonElement>('run-sustained-2');
 const runSustained3Button = element<HTMLButtonElement>('run-sustained-3');
 const statusEl = element('status');
 const resultsTable = element<HTMLTableElement>('results');
+const submitButton = element<HTMLButtonElement>('submit-json');
 const copyButton = element<HTMLButtonElement>('copy-json');
 const clearButton = element<HTMLButtonElement>('clear-results');
 const jsonOutput = element<HTMLTextAreaElement>('json-output');
@@ -397,6 +398,40 @@ runSustained2Button.addEventListener('click', () => {
 
 runSustained3Button.addEventListener('click', () => {
   void runCells([{ scene: 'blur', mode: 'current', pixelRatio: 3 }], SUSTAINED_MEASURE_MS, 'sustained DPR 3');
+});
+
+/**
+ * Send the capture to the machine serving the page, which writes it into the
+ * repository's scratch directory.
+ *
+ * `Copy JSON` stays as the fallback rather than being replaced: the clipboard
+ * route needs no server support and works if the endpoint is ever missing, and
+ * moving 30 KB of JSON from a phone to a desktop by hand is exactly the friction
+ * this button removes.
+ */
+submitButton.addEventListener('click', () => {
+  refreshJson();
+  submitButton.disabled = true;
+  setStatus('submitting…');
+
+  void fetch('/submit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: jsonOutput.value })
+    .then(async response => {
+      const payload = (await response.json().catch(() => ({}))) as { path?: string; error?: string };
+
+      if (!response.ok) {
+        setStatus(`submit failed (${response.status}): ${payload.error ?? 'unknown'} — use Copy JSON instead.`, true);
+
+        return;
+      }
+
+      setStatus(`saved on the host as ${payload.path ?? '(path not reported)'}`);
+    })
+    .catch((error: unknown) => {
+      setStatus(`submit failed: ${error instanceof Error ? error.message : String(error)} — use Copy JSON instead.`, true);
+    })
+    .finally(() => {
+      submitButton.disabled = false;
+    });
 });
 
 copyButton.addEventListener('click', () => {
