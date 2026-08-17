@@ -1,7 +1,7 @@
 import { requestTimestampFeature } from '../../page/gpuFrameTimer';
 import type { ProbeCell, ProbeCellResult, ProbeMode, ProbeResult, ProbeSceneId } from '../matrix';
 import { buildProbeMatrix, PROBE_PIXEL_RATIOS, PROBE_SCENES, PROBE_SCHEMA_VERSION, serializeProbeResult } from '../matrix';
-import type { ProbeBackendRequest, VisualPreview } from '../runner';
+import type { ProbeBackendRequest, StageSize, VisualPreview } from '../runner';
 import { DEFAULT_MEASURE_MS, measureTimerResolutionMs, runProbeCell, startVisualPreview, SUSTAINED_MEASURE_MS, WARMUP_FRAMES } from '../runner';
 import { STAGE_SIZE } from '../scenes';
 
@@ -46,6 +46,7 @@ const stageHost = element('stage-host');
 const sceneButtons = element('scene-buttons');
 const dprButtons = element('dpr-buttons');
 const modeButtons = element('mode-buttons');
+const stageButtons = element('stage-buttons');
 const visualReadout = element('visual-readout');
 const runMatrixButton = element<HTMLButtonElement>('run-matrix');
 const runSustained2Button = element<HTMLButtonElement>('run-sustained-2');
@@ -67,8 +68,32 @@ const timerResolutionMs = measureTimerResolutionMs();
 const visual: { scene: ProbeSceneId; dpr: number; mode: ProbeMode; preview: VisualPreview | null } = {
   scene: 'baseline',
   dpr: engineAutoPixelRatio,
-  mode: 'current',
+  mode: 'inherit',
   preview: null,
+};
+
+/**
+ * Logical stage the run uses.
+ *
+ * `fixed` is a 360 x 360 square — small, identical on every device, and
+ * therefore the only preset whose numbers compare across devices. `fill` takes
+ * the usable area of THIS device, which is what a real full-screen game renders
+ * and roughly twice the pixel count of the square on a phone. Captured once when
+ * a run starts: a stage that changed mid-run would make the cells incomparable.
+ */
+let stagePreset: 'fixed' | 'fill' = 'fixed';
+
+const resolveStage = (): StageSize => {
+  if (stagePreset === 'fixed') {
+    return { width: STAGE_SIZE, height: STAGE_SIZE };
+  }
+
+  // Leave room for the page's own padding so the canvas never forces a
+  // horizontal scroll, which would change the layout mid-run.
+  const width = Math.max(160, Math.floor(document.documentElement.clientWidth - 44));
+  const height = Math.max(160, Math.floor(document.documentElement.clientHeight - 44));
+
+  return { width, height };
 };
 
 const collected: ProbeCellResult[] = [];
@@ -92,16 +117,14 @@ const formatMs = (value: number | null): string => (value === null ? '—' : val
 const describeTargets = (result: Pick<ProbeCellResult, 'internalTargets'>): string =>
   result.internalTargets.length === 0
     ? 'none'
-    : result.internalTargets
-        .map(target => `${target.kind} ${target.logicalWidth}×${target.logicalHeight} → ${target.actualWidth}×${target.actualHeight}${target.count > 1 ? ` ×${target.count}` : ''}`)
-        .join(', ');
+    : result.internalTargets.map(target => `${target.kind} ${target.width}×${target.height}${target.count > 1 ? ` ×${target.count}` : ''}`).join(', ');
 
 const renderEnvironment = (): void => {
   environmentEl.textContent = [
     `git ${meta.gitSha}  ·  exojs ${meta.engineVersion}`,
     `devicePixelRatio ${window.devicePixelRatio}  ·  engine auto would pick ${engineAutoPixelRatio}`,
     `crossOriginIsolated ${String(window.crossOriginIsolated)}  ·  performance.now() resolution ${timerResolutionMs.toFixed(4)} ms`,
-    `navigator.gpu ${'gpu' in navigator ? 'present' : 'absent'}  ·  stage ${STAGE_SIZE}×${STAGE_SIZE} CSS px`,
+    `navigator.gpu ${'gpu' in navigator ? 'present' : 'absent'}  ·  stage ${stagePreset} ${resolveStage().width}×${resolveStage().height} CSS px`,
   ].join('\n');
 };
 
@@ -141,6 +164,7 @@ const refreshPreview = async (): Promise<void> => {
       scene: visual.scene,
       mode: visual.mode,
       pixelRatio: visual.dpr,
+      stage: resolveStage(),
       backend: backendRequest(),
       host: stageHost,
     });
@@ -175,8 +199,8 @@ const buildControls = (): void => {
   }
 
   const modes: ReadonlyArray<{ id: ProbeMode; label: string }> = [
-    { id: 'current', label: 'current' },
-    { id: 'parent-resolution', label: 'parent-resolution probe' },
+    { id: 'inherit', label: 'inherit (default)' },
+    { id: 'logical', label: 'logical (resolution 1)' },
   ];
 
   for (const mode of modes) {
@@ -187,9 +211,24 @@ const buildControls = (): void => {
     });
   }
 
+  const stages: ReadonlyArray<{ id: 'fixed' | 'fill'; label: string }> = [
+    { id: 'fixed', label: `fixed ${STAGE_SIZE}x${STAGE_SIZE}` },
+    { id: 'fill', label: 'fill the screen' },
+  ];
+
+  for (const stage of stages) {
+    addButton(stageButtons, stage.id, stage.label, () => {
+      stagePreset = stage.id;
+      setPressed(stageButtons, stage.id);
+      renderEnvironment();
+      void refreshPreview();
+    });
+  }
+
   setPressed(sceneButtons, visual.scene);
   setPressed(dprButtons, String(visual.dpr));
   setPressed(modeButtons, visual.mode);
+  setPressed(stageButtons, stagePreset);
 };
 
 const HEADERS = ['scene', 'mode', 'dpr', 'backing', 'main px', 'internal', 'int/main', 'cpu med', 'cpu p95', 'gpu med', 'raf med', 'frames'];
@@ -210,7 +249,7 @@ const renderResults = (): void => {
     const row = resultsTable.insertRow();
     const values = [
       result.scene,
-      result.mode === 'current' ? 'current' : 'probe',
+      result.mode,
       String(result.configuredPixelRatio),
       `${result.backingWidth}×${result.backingHeight}`,
       String(result.mainPixelCount),
@@ -243,9 +282,9 @@ const renderResults = (): void => {
  */
 const buildNotes = (backendSelected: string, webgpuTimestampQuery: boolean | null): string[] => {
   const notes = [
-    'The `parent-resolution` mode is a BENCH-ONLY probe: it shadows `acquireRenderTexture` / `_renderPlanEnsureCacheTexture` on the probe\'s own instances so the internal target is allocated at `logical size × pixelRatio`. Production rendering code is unchanged, and nothing here is an implementation of NEU-S4.',
-    'The blur radius is multiplied by the same factor in probe mode. Radius is expressed in TARGET texels, so leaving it alone would shrink the blur in logical space and make the probe arm look sharper for a reason unrelated to resolution.',
-    'The `cache-texture` scene is static by design: a texture cache is baked once and replayed, and any per-frame mutation would change the node\'s world bounds and re-bake it every frame. Its CPU column is therefore a replay cost, and its interesting property is sharpness, not milliseconds.',
+    'Both modes are ordinary production settings since NEU-S4 shipped: `inherit` leaves `Filter.resolution` / `RenderNode.cacheResolution` at their default, `logical` pins both to 1 and reproduces the pre-NEU-S4 sizing exactly. No bench-only sizing hook is involved; every cell measures the production path.',
+    'BlurFilter.radius is in LOGICAL units, so it is identical in both arms - the filter converts it into target texels itself. The arms therefore blur over the same on-screen distance and differ only in how finely it is sampled.',
+    'The `cache-texture` scene is static: the cache is baked once and replayed, so its CPU column is a REPLAY cost and its interesting property is sharpness. The `cache-dirty` scene is the same content moved every frame, so the cache re-bakes every frame - that column is the bake cost, and it is the one that scales with the target resolution.',
     `Cells are ordered scene → mode → ascending DPR, so the four ratios of one pair are adjacent in time. Each result carries \`index\` and \`startOffsetMs\` so a thermal drift across the run stays visible.`,
     `Warmup is ${WARMUP_FRAMES} frames and the measured window is ${DEFAULT_MEASURE_MS} ms for every cell alike.`,
     'The `cache-texture` scene omits the two text nodes the other scenes carry. Measured on desktop Chromium while building this probe: a `cacheAsTexture` container containing a `Text` node draws NOTHING on WebGL2 — text and non-text siblings alike — while the same scene renders on WebGPU and the same content behind a filter renders on both. Since iOS Safari is always WebGL2, keeping the text would have made this whole arm a black rectangle.',
@@ -263,6 +302,12 @@ const buildNotes = (backendSelected: string, webgpuTimestampQuery: boolean | nul
     notes.push('The granted WebGPU device exposed no `timestamp-query` feature, so this run has no hardware GPU clock.');
   }
 
+  notes.push(
+    stagePreset === 'fixed'
+      ? `The stage is a fixed ${STAGE_SIZE}x${STAGE_SIZE} CSS square, far smaller than a full-screen game. It is the preset that compares across devices; use "fill the screen" for a number that reflects what an app actually renders.`
+      : "The stage was the device's usable area, so these numbers reflect a full-screen app but do not compare to a capture taken on a differently sized screen.",
+  );
+
   notes.push('rafDeltaMs* is PRESENTATION CADENCE, not GPU time. On a vsync-paced device it reads ~16.7 ms for anything the device keeps up with and only rises once it does not.');
 
   return notes;
@@ -276,6 +321,7 @@ const buildNotes = (backendSelected: string, webgpuTimestampQuery: boolean | nul
  * `backendSelected` was guessed would be exactly the kind of invented fact this
  * probe exists to avoid.
  */
+let runStage: StageSize = { width: STAGE_SIZE, height: STAGE_SIZE };
 let lastBackendSelected: string | null = null;
 let lastWebgpuTimestampQuery: boolean | null = null;
 let lastGpuTimerSource = 'not determined yet';
@@ -299,8 +345,9 @@ const buildResult = (): ProbeResult => {
     gpuTimerSource: lastGpuTimerSource,
     crossOriginIsolated: window.crossOriginIsolated,
     timerResolutionMs,
-    stageWidth: STAGE_SIZE,
-    stageHeight: STAGE_SIZE,
+    stageWidth: runStage.width,
+    stageHeight: runStage.height,
+    stagePreset,
     cells: collected,
     notes: buildNotes(backendSelected, lastWebgpuTimestampQuery),
   };
@@ -328,6 +375,11 @@ const runCells = async (cells: readonly ProbeCell[], measureMs: number, label: s
   const runStartedAt = performance.now();
   const backend = backendRequest();
 
+  // Frozen for the whole run: `fill` reads the viewport, and a rotation or a
+  // browser-chrome change mid-run would silently make the later cells a
+  // different measurement than the earlier ones.
+  runStage = resolveStage();
+
   try {
     for (let i = 0; i < cells.length; i++) {
       const cell = cells[i]!;
@@ -338,6 +390,7 @@ const runCells = async (cells: readonly ProbeCell[], measureMs: number, label: s
       const result = await runProbeCell({
         cell,
         backend,
+        stage: runStage,
         host: stageHost,
         index: collected.length,
         runStartedAt,
@@ -365,7 +418,7 @@ const runCells = async (cells: readonly ProbeCell[], measureMs: number, label: s
  * so the capture states them as observed facts.
  */
 const probeEnvironmentOnce = async (): Promise<void> => {
-  const preview = await startVisualPreview({ scene: 'baseline', mode: 'current', pixelRatio: 1, backend: backendRequest(), host: stageHost });
+  const preview = await startVisualPreview({ scene: 'baseline', mode: 'inherit', pixelRatio: 1, stage: resolveStage(), backend: backendRequest(), host: stageHost });
 
   lastBackendSelected = preview.backendType;
   await preview.stop();
@@ -393,11 +446,11 @@ runMatrixButton.addEventListener('click', () => {
 });
 
 runSustained2Button.addEventListener('click', () => {
-  void runCells([{ scene: 'blur', mode: 'current', pixelRatio: 2 }], SUSTAINED_MEASURE_MS, 'sustained DPR 2');
+  void runCells([{ scene: 'blur', mode: 'inherit', pixelRatio: 2 }], SUSTAINED_MEASURE_MS, 'sustained DPR 2');
 });
 
 runSustained3Button.addEventListener('click', () => {
-  void runCells([{ scene: 'blur', mode: 'current', pixelRatio: 3 }], SUSTAINED_MEASURE_MS, 'sustained DPR 3');
+  void runCells([{ scene: 'blur', mode: 'inherit', pixelRatio: 3 }], SUSTAINED_MEASURE_MS, 'sustained DPR 3');
 });
 
 /**

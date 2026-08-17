@@ -1,19 +1,22 @@
-import type { InternalTargetRecord, ProbeMode } from './matrix';
+import type { InternalTargetRecord } from './matrix';
 
 /**
- * Bench-only instrumentation and A/B hook for the `NEU-S4` probe.
+ * Internal-target instrumentation for the `NEU-S4` probe.
  *
- * Both halves work by shadowing a method ON AN INSTANCE the probe itself
- * constructed — the live backend and the probe's own `cacheAsTexture` node —
- * never by touching a prototype and never by changing engine source. The engine
- * keeps its own contract: `RenderEffectExecutor` still passes LOGICAL barrier
- * bounds to `_renderPlanRenderToTexture` / `_renderPlanDrawTexture`, so a larger
- * texture is rendered through the same logical `View` (supersampled) and
- * composited back at the same logical size. Nothing downstream of the
- * allocation is aware of the change.
+ * RECORDING ONLY. Until `NEU-S4` shipped, this module also SIZED the targets: it
+ * shadowed the allocation calls so they handed back `logical × pixelRatio`
+ * textures, which is how the correction was priced before it existed. That half
+ * is gone — the engine sizes its own targets now, and the probe's two arms are
+ * ordinary `Filter.resolution` / `RenderNode.cacheResolution` settings.
  *
- * This is a measurement device, not a fix. It answers "what would the
- * correction cost", and it deliberately has no way to reach production code.
+ * What remains is the observation: a shadow on the probe's OWN backend and node
+ * instances that records the size the engine asked for. Nothing here changes
+ * what is allocated, so every cell measures the production path exactly.
+ *
+ * There is deliberately no "logical size" column any more. The logical bounds
+ * are a property of the scene, not of an allocation, and the probe measures them
+ * directly: the `logical` arm pins every target to resolution 1, so its recorded
+ * sizes ARE the logical bounds.
  */
 
 /** Minimal structural surface of a render backend this module patches. */
@@ -55,32 +58,11 @@ const shadowMethod = (target: object, name: string, replacement: (...args: never
   };
 };
 
-/**
- * Target-size multiplier for a cell.
- *
- * `current` is exactly 1 — the production contract, byte for byte. The probe arm
- * multiplies by the parent surface's effective resolution, which is the sizing
- * rule the audit says an internal target would need in order to match the main
- * surface texel for texel.
- */
-export const resolveProbeScale = (mode: ProbeMode, pixelRatio: number): number => (mode === 'current' ? 1 : pixelRatio);
-
-/**
- * Scale one axis of a requested target size.
- *
- * Rounded (not floored) so a 1.5× probe of a 201-unit bound lands on 302 rather
- * than 301, and clamped at 1 so a degenerate bound can never ask for a zero-size
- * texture.
- */
-export const scaleTargetSize = (size: number, scale: number): number => Math.max(1, Math.round(size * scale));
-
 /** One target allocation as it happened. */
 export interface TargetAllocation {
   readonly kind: InternalTargetRecord['kind'];
-  readonly logicalWidth: number;
-  readonly logicalHeight: number;
-  readonly actualWidth: number;
-  readonly actualHeight: number;
+  readonly width: number;
+  readonly height: number;
 }
 
 /**
@@ -105,8 +87,7 @@ export interface TargetRecorder {
 }
 
 /** Key that makes two allocations the same shape for the summary. */
-const allocationKey = (allocation: TargetAllocation): string =>
-  `${allocation.kind}|${allocation.logicalWidth}x${allocation.logicalHeight}|${allocation.actualWidth}x${allocation.actualHeight}`;
+const allocationKey = (allocation: TargetAllocation): string => `${allocation.kind}|${allocation.width}x${allocation.height}`;
 
 export const createTargetRecorder = (): TargetRecorder => {
   let armed = false;
@@ -137,10 +118,8 @@ export const createTargetRecorder = (): TargetRecorder => {
 
         byShape.set(key, {
           kind: allocation.kind,
-          logicalWidth: allocation.logicalWidth,
-          logicalHeight: allocation.logicalHeight,
-          actualWidth: allocation.actualWidth,
-          actualHeight: allocation.actualHeight,
+          width: allocation.width,
+          height: allocation.height,
           count: (existing?.count ?? 0) + 1,
         });
       }
@@ -151,44 +130,26 @@ export const createTargetRecorder = (): TargetRecorder => {
 };
 
 /**
- * Shadow `acquireRenderTexture` on ONE backend instance so every pooled effect
- * target (filter input, each filter output, mask targets) is recorded and, in
- * probe mode, allocated at `scale ×` the size the engine asked for.
- *
- * The pool is keyed by the size it is handed, so a probe-mode cell simply pools
- * larger textures; `releaseRenderTexture` needs no counterpart.
+ * Record every pooled effect target the backend hands out — filter input, each
+ * filter output, mask targets.
  */
-export const instrumentAcquireRenderTexture = (backend: RenderTextureAcquirer, recorder: TargetRecorder, scale: number): RestoreInstrumentation => {
+export const instrumentAcquireRenderTexture = (backend: RenderTextureAcquirer, recorder: TargetRecorder): RestoreInstrumentation => {
   const original = backend.acquireRenderTexture.bind(backend);
 
   return shadowMethod(backend, 'acquireRenderTexture', ((width: number, height: number): unknown => {
-    const actualWidth = scaleTargetSize(width, scale);
-    const actualHeight = scaleTargetSize(height, scale);
+    recorder.record({ kind: 'pooled', width, height });
 
-    recorder.record({ kind: 'pooled', logicalWidth: width, logicalHeight: height, actualWidth, actualHeight });
-
-    return original(actualWidth, actualHeight);
+    return original(width, height);
   }) as (...args: never[]) => unknown);
 };
 
-/**
- * Shadow `_renderPlanEnsureCacheTexture` on ONE node so its `cacheAsTexture`
- * texture is recorded and, in probe mode, sized at `scale ×` the logical bounds.
- *
- * The node's cache BOUNDS stay logical — the engine stores them from the
- * barrier, not from the texture — so `_renderPlanCanReuseTextureCache` and the
- * replay draw are unaffected and the cache still invalidates on exactly the same
- * conditions.
- */
-export const instrumentCacheTexture = (node: CacheTextureOwner, recorder: TargetRecorder, scale: number): RestoreInstrumentation => {
+/** Record the node-owned `cacheAsTexture` texture as the engine sizes it. */
+export const instrumentCacheTexture = (node: CacheTextureOwner, recorder: TargetRecorder): RestoreInstrumentation => {
   const original = node._renderPlanEnsureCacheTexture.bind(node);
 
   return shadowMethod(node, '_renderPlanEnsureCacheTexture', ((width: number, height: number): unknown => {
-    const actualWidth = scaleTargetSize(width, scale);
-    const actualHeight = scaleTargetSize(height, scale);
+    recorder.record({ kind: 'cache', width, height });
 
-    recorder.record({ kind: 'cache', logicalWidth: width, logicalHeight: height, actualWidth, actualHeight });
-
-    return original(actualWidth, actualHeight);
+    return original(width, height);
   }) as (...args: never[]) => unknown);
 };

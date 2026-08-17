@@ -7,11 +7,11 @@ import { median, percentile } from '../../shared/timing';
 import type { GpuFrameTimer } from '../page/gpuFrameTimer';
 import { createWebGl2GpuTimer, createWebGpuGpuTimer, noopGpuTimer } from '../page/gpuFrameTimer';
 import type { RenderTextureAcquirer, RestoreInstrumentation, TargetRecorder } from './instrumentation';
-import { createTargetRecorder, instrumentAcquireRenderTexture, instrumentCacheTexture, resolveProbeScale } from './instrumentation';
+import { createTargetRecorder, instrumentAcquireRenderTexture, instrumentCacheTexture } from './instrumentation';
 import type { InternalTargetRecord, ProbeCell, ProbeCellResult, ProbeMode, ProbeSceneId } from './matrix';
 import { internalToMainPixelRatio } from './matrix';
 import type { ProbeScene } from './scenes';
-import { createProbeScene, STAGE_SIZE } from './scenes';
+import { createProbeScene } from './scenes';
 
 /** Backend the tester can ask the probe for. */
 export type ProbeBackendRequest = 'auto' | 'webgl2' | 'webgpu';
@@ -96,9 +96,9 @@ interface ProbeApplication {
  * the things under measurement here rather than something to work around
  * silently.
  */
-const bootProbeApplication = async (canvas: HTMLCanvasElement, pixelRatio: number, backend: ProbeBackendRequest): Promise<ProbeApplication> => {
+const bootProbeApplication = async (canvas: HTMLCanvasElement, stage: StageSize, pixelRatio: number, backend: ProbeBackendRequest): Promise<ProbeApplication> => {
   const app = new Application({
-    canvas: { element: canvas, width: STAGE_SIZE, height: STAGE_SIZE, pixelRatio },
+    canvas: { element: canvas, width: stage.width, height: stage.height, pixelRatio },
     backend: { type: backend },
     clearColor: new Color(12, 16, 22),
     hello: false,
@@ -136,9 +136,17 @@ const nextFrame = async (): Promise<number> =>
   });
 
 /** Everything {@link runProbeCell} needs beyond the cell itself. */
+/** Logical (CSS) stage every cell in a run renders at. Fixed for the whole run. */
+export interface StageSize {
+  readonly width: number;
+  readonly height: number;
+}
+
 export interface RunProbeCellOptions {
   readonly cell: ProbeCell;
   readonly backend: ProbeBackendRequest;
+  /** Logical stage, captured once at run start so the cells stay comparable. */
+  readonly stage: StageSize;
   /** DOM element the stage canvas is (re)created inside. */
   readonly host: HTMLElement;
   /** Position in the run order, copied into the result. */
@@ -179,16 +187,12 @@ const captureLooseErrors = (sink: string[]): (() => void) => {
 };
 
 /** Instrumentation installed for one cell, and how to take it back off. */
-const instrumentCell = (
-  app: Application,
-  scene: ProbeScene,
-  scale: number,
-): { recorder: TargetRecorder; restore: RestoreInstrumentation } => {
+const instrumentCell = (app: Application, scene: ProbeScene): { recorder: TargetRecorder; restore: RestoreInstrumentation } => {
   const recorder = createTargetRecorder();
-  const restores: RestoreInstrumentation[] = [instrumentAcquireRenderTexture(app.backend as unknown as RenderTextureAcquirer, recorder, scale)];
+  const restores: RestoreInstrumentation[] = [instrumentAcquireRenderTexture(app.backend as unknown as RenderTextureAcquirer, recorder)];
 
   for (const node of scene.cacheNodes) {
-    restores.push(instrumentCacheTexture(node, recorder, scale));
+    restores.push(instrumentCacheTexture(node, recorder));
   }
 
   return {
@@ -214,11 +218,10 @@ const instrumentCell = (
  * scene has no internal target", which is the opposite of true.
  */
 export const runProbeCell = async (options: RunProbeCellOptions): Promise<ProbeCellResult> => {
-  const { cell, backend, host, index, runStartedAt } = options;
+  const { cell, backend, host, index, runStartedAt, stage } = options;
   const measureMs = options.measureMs ?? DEFAULT_MEASURE_MS;
   const errors: string[] = [];
   const canvas = freshStageCanvas(host);
-  const scale = resolveProbeScale(cell.mode, cell.pixelRatio);
 
   let booted: ProbeApplication | null = null;
   let scene: ProbeScene | null = null;
@@ -228,11 +231,11 @@ export const runProbeCell = async (options: RunProbeCellOptions): Promise<ProbeC
   const stopErrorCapture = captureLooseErrors(errors);
 
   try {
-    booted = await bootProbeApplication(canvas, cell.pixelRatio, backend);
-    scene = createProbeScene(cell.scene, { stageSize: STAGE_SIZE, probeScale: scale });
+    booted = await bootProbeApplication(canvas, stage, cell.pixelRatio, backend);
+    scene = createProbeScene(cell.scene, { stageWidth: stage.width, stageHeight: stage.height, mode: cell.mode });
 
     const { app, gpuTimer } = booted;
-    const instrumentation = instrumentCell(app, scene, scale);
+    const instrumentation = instrumentCell(app, scene);
 
     restore = instrumentation.restore;
 
@@ -376,18 +379,18 @@ export const startVisualPreview = async (options: {
   scene: ProbeSceneId;
   mode: ProbeMode;
   pixelRatio: number;
+  stage: StageSize;
   backend: ProbeBackendRequest;
   host: HTMLElement;
 }): Promise<VisualPreview> => {
   const canvas = freshStageCanvas(options.host);
-  const scale = resolveProbeScale(options.mode, options.pixelRatio);
-  const booted = await bootProbeApplication(canvas, options.pixelRatio, options.backend);
-  const scene = createProbeScene(options.scene, { stageSize: STAGE_SIZE, probeScale: scale });
+  const booted = await bootProbeApplication(canvas, options.stage, options.pixelRatio, options.backend);
+  const scene = createProbeScene(options.scene, { stageWidth: options.stage.width, stageHeight: options.stage.height, mode: options.mode });
   const recorder = createTargetRecorder();
-  const restores: RestoreInstrumentation[] = [instrumentAcquireRenderTexture(booted.app.backend as unknown as RenderTextureAcquirer, recorder, scale)];
+  const restores: RestoreInstrumentation[] = [instrumentAcquireRenderTexture(booted.app.backend as unknown as RenderTextureAcquirer, recorder)];
 
   for (const node of scene.cacheNodes) {
-    restores.push(instrumentCacheTexture(node, recorder, scale));
+    restores.push(instrumentCacheTexture(node, recorder));
   }
 
   let running = true;

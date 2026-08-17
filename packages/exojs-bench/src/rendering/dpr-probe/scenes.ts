@@ -8,7 +8,7 @@ import { Sprite } from '#rendering/sprite/Sprite';
 import { Text } from '#rendering/text/Text';
 import { Texture } from '#rendering/texture/Texture';
 
-import type { ProbeSceneId } from './matrix';
+import type { ProbeMode, ProbeSceneId } from './matrix';
 
 /**
  * Scenes for the manual DPR / internal-target probe.
@@ -18,7 +18,11 @@ import type { ProbeSceneId } from './matrix';
  * engine feature; the probe measures paths a user already has.
  */
 
-/** Logical (CSS) side length of the probe stage. Fits an iPhone 13 Pro's 390pt portrait width with margin. */
+/**
+ * Logical (CSS) side length of the FIXED stage preset. Fits an iPhone 13 Pro's
+ * 390 pt portrait width with margin, and being fixed it is the preset that stays
+ * comparable across devices.
+ */
 export const STAGE_SIZE = 360;
 
 /** Full-stage quads the `overdraw` scene stacks. Chosen so DPR 3 is genuinely fill-bound on a phone without wedging it. */
@@ -47,14 +51,16 @@ export interface ProbeScene {
 
 /** Options every scene builder takes. */
 export interface ProbeSceneOptions {
-  /** Logical stage width/height in CSS units. */
-  readonly stageSize: number;
+  /** Logical stage width in CSS units. */
+  readonly stageWidth: number;
+  /** Logical stage height in CSS units. */
+  readonly stageHeight: number;
   /**
-   * Internal-target multiplier the cell runs at (1 in `current` mode). Scenes
-   * use it only to keep an effect's LOGICAL appearance constant — see the blur
-   * radius below — never to change what is drawn.
+   * Which arm the cell runs. `logical` pins `Filter.resolution` and
+   * `RenderNode.cacheResolution` to 1, reproducing the pre-`NEU-S4` sizing
+   * through ordinary public API; `inherit` leaves both at their default.
    */
-  readonly probeScale: number;
+  readonly mode: ProbeMode;
 }
 
 /**
@@ -199,7 +205,7 @@ const buildSharpContent = (stageSize: number, withText: boolean): { node: Contai
 };
 
 /** Build the `overdraw` scene: `OVERDRAW_LAYERS` full-stage quads at low alpha. */
-const buildOverdrawScene = (stageSize: number): ProbeScene => {
+const buildOverdrawScene = (stageWidth: number, stageHeight: number): ProbeScene => {
   const root = new Container();
   const texture = createFlatTexture();
   const layers: Sprite[] = [];
@@ -207,8 +213,8 @@ const buildOverdrawScene = (stageSize: number): ProbeScene => {
   for (let i = 0; i < OVERDRAW_LAYERS; i++) {
     const layer = new Sprite(texture);
 
-    layer.width = stageSize;
-    layer.height = stageSize;
+    layer.width = stageWidth;
+    layer.height = stageHeight;
     layer.setPosition(0, 0);
     layer.setTint(new Color(40 + ((i * 9) % 200), 90, 200 - ((i * 7) % 160), 0.25));
     root.addChild(layer);
@@ -256,14 +262,21 @@ const buildOverdrawScene = (stageSize: number): ProbeScene => {
  * rather than quietly compensated for.
  */
 export const createProbeScene = (id: ProbeSceneId, options: ProbeSceneOptions): ProbeScene => {
-  const { stageSize, probeScale } = options;
+  const { stageWidth, stageHeight, mode } = options;
+  const stageSize = Math.min(stageWidth, stageHeight);
+  // `logical` reproduces the pre-NEU-S4 sizing through ordinary public API
+  // rather than through a bench hook: pin both knobs to 1 device pixel per
+  // logical unit. `inherit` leaves them at their default and is what a user
+  // gets without touching anything.
+  const pinned = mode === 'logical' ? 1 : 'inherit';
 
   if (id === 'overdraw') {
-    return buildOverdrawScene(stageSize);
+    return buildOverdrawScene(stageWidth, stageHeight);
   }
 
+  const caches = id === 'cache-texture' || id === 'cache-dirty';
   const root = new Container();
-  const { node: content, textures, spin } = buildSharpContent(stageSize, id !== 'cache-texture');
+  const { node: content, textures, spin } = buildSharpContent(stageSize, !caches);
   const filters: Array<ColorFilter | BlurFilter> = [];
 
   root.addChild(content);
@@ -271,38 +284,52 @@ export const createProbeScene = (id: ProbeSceneId, options: ProbeSceneOptions): 
   if (id === 'color-filter') {
     const filter = new ColorFilter(new Color(255, 214, 170));
 
+    filter.resolution = pinned;
     filters.push(filter);
     content.filters = [filter];
   }
 
   if (id === 'blur') {
-    // Radius is expressed in TARGET texels, so a probe-mode target that is
-    // `probeScale` times larger would blur over `1 / probeScale` of the logical
-    // width it does today. Scaling the radius with the target keeps the two arms
-    // visually comparable; without it the probe arm would look sharper for a
-    // reason that has nothing to do with resolution.
-    const filter = new BlurFilter({ radius: BLUR_RADIUS * probeScale, quality: BLUR_QUALITY });
+    // `radius` is in LOGICAL units since NEU-S4, so it is NOT scaled here — the
+    // filter converts it into target texels itself. Both arms therefore blur
+    // over the same on-screen distance and differ only in how finely it is
+    // sampled, which is exactly the comparison this scene is for.
+    const filter = new BlurFilter({ radius: BLUR_RADIUS, quality: BLUR_QUALITY });
 
+    filter.resolution = pinned;
     filters.push(filter);
     content.filters = [filter];
   }
 
   const cacheNodes: RenderNode[] = [];
 
-  if (id === 'cache-texture') {
+  if (caches) {
     content.cacheAsTexture = true;
+    content.cacheResolution = pinned;
     cacheNodes.push(content);
   }
-
-  const animated = id !== 'cache-texture';
 
   return {
     root,
     cacheNodes,
     update(frame: number): void {
-      if (animated) {
-        spin.setRotation(frame * 0.01);
+      if (id === 'cache-texture') {
+        // Static: the cache bakes once and replays, which is what a bitmap cache
+        // is for and the only honest way to measure the REPLAY cost.
+        return;
       }
+
+      if (id === 'cache-dirty') {
+        // Moving the cached node changes its world bounds, so the cache is
+        // invalidated and re-baked every frame. That is the cost the static
+        // scene structurally cannot show, and the one that scales with the
+        // target resolution.
+        content.setPosition(Math.sin(frame * 0.1) * 8, 0);
+
+        return;
+      }
+
+      spin.setRotation(frame * 0.01);
     },
     dispose(): void {
       root.destroy();

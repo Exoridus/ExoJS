@@ -1,12 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import {
-  createTargetRecorder,
-  instrumentAcquireRenderTexture,
-  instrumentCacheTexture,
-  resolveProbeScale,
-  scaleTargetSize,
-} from '../src/rendering/dpr-probe/instrumentation';
+import { createTargetRecorder, instrumentAcquireRenderTexture, instrumentCacheTexture } from '../src/rendering/dpr-probe/instrumentation';
 import type { ProbeCellResult, ProbeResult } from '../src/rendering/dpr-probe/matrix';
 import {
   buildProbeMatrix,
@@ -41,7 +35,7 @@ describe('probe matrix', () => {
     for (const scene of PROBE_SCENES) {
       const modes = new Set(cells.filter(cell => cell.scene === scene.id).map(cell => cell.mode));
 
-      expect([...modes].sort()).toEqual(scene.usesInternalTarget ? ['current', 'parent-resolution'] : ['current']);
+      expect([...modes].sort()).toEqual(scene.usesInternalTarget ? ['inherit', 'logical'] : ['inherit']);
     }
   });
 
@@ -77,27 +71,6 @@ describe('probe matrix', () => {
   });
 });
 
-describe('probe scale', () => {
-  test('the current arm is exactly the production contract at every pixel ratio', () => {
-    for (const ratio of PROBE_PIXEL_RATIOS) {
-      expect(resolveProbeScale('current', ratio)).toBe(1);
-    }
-  });
-
-  test('the probe arm scales with the parent surface resolution', () => {
-    for (const ratio of PROBE_PIXEL_RATIOS) {
-      expect(resolveProbeScale('parent-resolution', ratio)).toBe(ratio);
-    }
-  });
-
-  test('rounds and never asks for a zero-size texture', () => {
-    expect(scaleTargetSize(201, 1.5)).toBe(302);
-    expect(scaleTargetSize(200, 3)).toBe(600);
-    expect(scaleTargetSize(200, 1)).toBe(200);
-    expect(scaleTargetSize(0, 2)).toBe(1);
-  });
-});
-
 /** A backend stand-in that records the sizes it was asked to allocate. */
 const createFakeBackend = (): { acquireRenderTexture: (width: number, height: number) => unknown; calls: [number, number][] } => {
   const calls: [number, number][] = [];
@@ -127,52 +100,40 @@ const createFakeCacheNode = (): { _renderPlanEnsureCacheTexture: (width: number,
 };
 
 describe('internal-target instrumentation', () => {
-  test('the current arm allocates exactly the size the engine asked for and records both figures', () => {
+  test('records the texel size the engine allocated, and changes nothing about it', () => {
     const backend = createFakeBackend();
     const recorder = createTargetRecorder();
-    const restore = instrumentAcquireRenderTexture(backend, recorder, resolveProbeScale('current', 3));
+    const restore = instrumentAcquireRenderTexture(backend, recorder);
 
     recorder.arm();
-    backend.acquireRenderTexture(200, 150);
+    backend.acquireRenderTexture(608, 644);
     recorder.disarm();
     restore();
 
-    expect(backend.calls).toEqual([[200, 150]]);
-    expect(recorder.summary()).toEqual([{ kind: 'pooled', logicalWidth: 200, logicalHeight: 150, actualWidth: 200, actualHeight: 150, count: 1 }]);
+    // Passed straight through: the engine sizes its own targets since NEU-S4,
+    // and a probe that resized them would stop measuring the production path.
+    expect(backend.calls).toEqual([[608, 644]]);
+    expect(recorder.summary()).toEqual([{ kind: 'pooled', width: 608, height: 644, count: 1 }]);
   });
 
-  test('the probe arm allocates the logical size times the parent resolution, keeping the logical request visible', () => {
-    const backend = createFakeBackend();
-    const recorder = createTargetRecorder();
-    const restore = instrumentAcquireRenderTexture(backend, recorder, resolveProbeScale('parent-resolution', 3));
-
-    recorder.arm();
-    backend.acquireRenderTexture(200, 150);
-    recorder.disarm();
-    restore();
-
-    expect(backend.calls).toEqual([[600, 450]]);
-    expect(recorder.summary()).toEqual([{ kind: 'pooled', logicalWidth: 200, logicalHeight: 150, actualWidth: 600, actualHeight: 450, count: 1 }]);
-  });
-
-  test('the cache texture is instrumented the same way and tagged apart from pooled targets', () => {
+  test('the cache texture is recorded the same way and tagged apart from pooled targets', () => {
     const node = createFakeCacheNode();
     const recorder = createTargetRecorder();
-    const restore = instrumentCacheTexture(node, recorder, resolveProbeScale('parent-resolution', 2));
+    const restore = instrumentCacheTexture(node, recorder);
 
     recorder.arm();
-    node._renderPlanEnsureCacheTexture(180, 90);
+    node._renderPlanEnsureCacheTexture(592, 406);
     recorder.disarm();
     restore();
 
-    expect(node.calls).toEqual([[360, 180]]);
-    expect(recorder.summary()[0]?.kind).toBe('cache');
+    expect(node.calls).toEqual([[592, 406]]);
+    expect(recorder.summary()).toEqual([{ kind: 'cache', width: 592, height: 406, count: 1 }]);
   });
 
   test('restoring puts the original method back, so the probe cannot leak into a later cell', () => {
     const backend = createFakeBackend();
     const recorder = createTargetRecorder();
-    const restore = instrumentAcquireRenderTexture(backend, recorder, 2);
+    const restore = instrumentAcquireRenderTexture(backend, recorder);
 
     restore();
     recorder.arm();
@@ -186,7 +147,7 @@ describe('internal-target instrumentation', () => {
     const backend = createFakeBackend();
     const recorder = createTargetRecorder();
 
-    instrumentAcquireRenderTexture(backend, recorder, 1);
+    instrumentAcquireRenderTexture(backend, recorder);
 
     backend.acquireRenderTexture(10, 10);
     expect(recorder.summary()).toEqual([]);
@@ -198,8 +159,8 @@ describe('internal-target instrumentation', () => {
     recorder.disarm();
 
     expect(recorder.summary()).toEqual([
-      { kind: 'pooled', logicalWidth: 10, logicalHeight: 10, actualWidth: 10, actualHeight: 10, count: 2 },
-      { kind: 'pooled', logicalWidth: 20, logicalHeight: 20, actualWidth: 20, actualHeight: 20, count: 1 },
+      { kind: 'pooled', width: 10, height: 10, count: 2 },
+      { kind: 'pooled', width: 20, height: 20, count: 1 },
     ]);
   });
 
@@ -207,39 +168,36 @@ describe('internal-target instrumentation', () => {
     const backend = createFakeBackend();
     const recorder = createTargetRecorder();
 
-    instrumentAcquireRenderTexture(backend, recorder, 1);
+    instrumentAcquireRenderTexture(backend, recorder);
     recorder.arm();
     backend.acquireRenderTexture(10, 10);
     recorder.arm();
     backend.acquireRenderTexture(20, 20);
     recorder.disarm();
 
-    expect(recorder.summary().map(record => record.actualWidth)).toEqual([20]);
+    expect(recorder.summary().map(record => record.width)).toEqual([20]);
   });
 });
 
 describe('internal-target pixel accounting', () => {
   test('counts every allocation, so a two-pass filter chain costs twice', () => {
-    expect(
-      totalInternalTargetPixels([{ kind: 'pooled', logicalWidth: 100, logicalHeight: 100, actualWidth: 100, actualHeight: 100, count: 2 }]),
-    ).toBe(20_000);
+    expect(totalInternalTargetPixels([{ kind: 'pooled', width: 100, height: 100, count: 2 }])).toBe(20_000);
   });
 
-  test('reproduces the finding: under the current contract an effect target covers 1/DPR-squared of the device pixels it is drawn over', () => {
-    const logical = [{ kind: 'pooled' as const, logicalWidth: 200, logicalHeight: 200, actualWidth: 200, actualHeight: 200, count: 1 }];
+  test('reproduces the finding the probe was built for, and the fix', () => {
+    // A 200x200 logical barrier on a 360x360 CSS stage at DPR 2: the surface is
+    // 720x720 device pixels. Pinned to resolution 1 the target covers a quarter
+    // of the pixels it is sampled over; inheriting, it covers all of them.
+    const pinned = [{ kind: 'pooled' as const, width: 200, height: 200, count: 1 }];
+    const inherited = [{ kind: 'pooled' as const, width: 400, height: 400, count: 1 }];
 
-    // A 200x200 logical barrier on a 360x360 CSS stage, at DPR 2 the surface is
-    // 720x720 device pixels and the same content is sampled over 400x400 of them.
-    expect(internalToMainPixelRatio(logical, 720 * 720) ?? 0).toBeCloseTo((200 * 200) / (720 * 720), 10);
-
-    const probed = [{ kind: 'pooled' as const, logicalWidth: 200, logicalHeight: 200, actualWidth: 400, actualHeight: 400, count: 1 }];
-
-    expect((internalToMainPixelRatio(probed, 720 * 720) ?? 0) / (internalToMainPixelRatio(logical, 720 * 720) ?? 1)).toBeCloseTo(4, 10);
+    expect(internalToMainPixelRatio(pinned, 720 * 720) ?? 0).toBeCloseTo((200 * 200) / (720 * 720), 10);
+    expect((internalToMainPixelRatio(inherited, 720 * 720) ?? 0) / (internalToMainPixelRatio(pinned, 720 * 720) ?? 1)).toBeCloseTo(4, 10);
   });
 
   test('is null rather than zero when a cell allocated no internal target', () => {
     expect(internalToMainPixelRatio([], 1000)).toBeNull();
-    expect(internalToMainPixelRatio([{ kind: 'cache', logicalWidth: 1, logicalHeight: 1, actualWidth: 1, actualHeight: 1, count: 1 }], 0)).toBeNull();
+    expect(internalToMainPixelRatio([{ kind: 'cache', width: 1, height: 1, count: 1 }], 0)).toBeNull();
   });
 });
 
@@ -248,7 +206,7 @@ const sampleCell: ProbeCellResult = {
   index: 0,
   startOffsetMs: 12.5,
   scene: 'blur',
-  mode: 'parent-resolution',
+  mode: 'inherit',
   configuredPixelRatio: 3,
   enginePixelRatio: 3,
   cssWidth: 360,
@@ -256,7 +214,7 @@ const sampleCell: ProbeCellResult = {
   backingWidth: 1080,
   backingHeight: 1080,
   mainPixelCount: 1_166_400,
-  internalTargets: [{ kind: 'pooled', logicalWidth: 200, logicalHeight: 200, actualWidth: 600, actualHeight: 600, count: 2 }],
+  internalTargets: [{ kind: 'pooled', width: 600, height: 600, count: 2 }],
   internalToMainPixelRatio: 0.617,
   warmupFrames: 40,
   measuredFrames: 360,
@@ -288,6 +246,7 @@ const sampleResult: ProbeResult = {
   timerResolutionMs: 0.005,
   stageWidth: 360,
   stageHeight: 360,
+  stagePreset: 'fixed',
   cells: [sampleCell],
   notes: ['bench-only probe'],
 };

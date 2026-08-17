@@ -8,19 +8,23 @@
  */
 
 /** One scene the probe can render. */
-export type ProbeSceneId = 'baseline' | 'color-filter' | 'blur' | 'cache-texture' | 'overdraw';
+export type ProbeSceneId = 'baseline' | 'color-filter' | 'blur' | 'cache-texture' | 'cache-dirty' | 'overdraw';
 
 /**
- * Which internal-target sizing rule a cell renders under.
+ * Which internal-target resolution a cell renders under.
  *
- * - `current` — today's production contract, untouched: an effect / cache target
- *   is `ceil(logical bounds)` texels regardless of the surface's resolution.
- * - `parent-resolution` — the BENCH-ONLY probe of the hypothetical `NEU-S4`
- *   correction: the same target at `logical size × parent effective resolution`.
- *   It exists to price the correction, not to implement it (see
- *   `instrumentation.ts`).
+ * Both arms are now ordinary production settings — `NEU-S4` shipped, and the
+ * bench-only sizing hook it was measured with is gone:
+ *
+ * - `inherit` — the default. `Filter.resolution` / `RenderNode.cacheResolution`
+ *   left at `'inherit'`, so an internal target matches the surface resolution.
+ * - `logical` — both pinned to `1`, which reproduces the pre-`NEU-S4` behaviour
+ *   exactly and is what a user picks to trade sharpness for fill rate.
+ *
+ * The comparison is therefore no longer "today vs a hypothetical fix" but "the
+ * new default vs the escape hatch", which is the decision a user actually makes.
  */
-export type ProbeMode = 'current' | 'parent-resolution';
+export type ProbeMode = 'inherit' | 'logical';
 
 /** Static description of a probe scene. */
 export interface ProbeSceneSpec {
@@ -70,7 +74,14 @@ export const PROBE_SCENES: readonly ProbeSceneSpec[] = [
     label: 'cacheAsTexture',
     usesInternalTarget: true,
     purpose:
-      'The baseline content behind cacheAsTexture — the case the audit expects to lose visible sharpness on HiDPI. Static (a cache is baked once and replayed) and WITHOUT the text nodes: a cacheAsTexture container containing Text draws nothing at all on WebGL2, which is the backend every iOS browser uses.',
+      'The baseline content behind cacheAsTexture, baked once and replayed — the case that used to lose visible sharpness on HiDPI. WITHOUT the text nodes: a cacheAsTexture container containing Text draws nothing at all on WebGL2, which is the backend every iOS browser uses.',
+  },
+  {
+    id: 'cache-dirty',
+    label: 'cacheAsTexture (dirty)',
+    usesInternalTarget: true,
+    purpose:
+      'The same cached content, but moved every frame so its world bounds change and the cache re-bakes. This is the cost the static scene cannot measure, and the one that scales with the target resolution.',
   },
   {
     id: 'overdraw',
@@ -113,7 +124,7 @@ export const buildProbeMatrix = (
   const cells: ProbeCell[] = [];
 
   for (const scene of scenes) {
-    const modes: readonly ProbeMode[] = scene.usesInternalTarget ? ['current', 'parent-resolution'] : ['current'];
+    const modes: readonly ProbeMode[] = scene.usesInternalTarget ? ['inherit', 'logical'] : ['inherit'];
 
     for (const mode of modes) {
       for (const pixelRatio of pixelRatios) {
@@ -125,22 +136,18 @@ export const buildProbeMatrix = (
   return cells;
 };
 
-/** One class of internal render target a cell allocated, aggregated over the measured frames. */
+/** One class of internal render target a cell allocated, per frame. */
 export interface InternalTargetRecord {
   /**
    * `pooled` — obtained from `backend.acquireRenderTexture` (filter input /
    * filter output / mask). `cache` — the node-owned `cacheAsTexture` texture.
    */
   readonly kind: 'pooled' | 'cache';
-  /** Width the engine asked for, i.e. `ceil` of the barrier's logical bounds. */
-  readonly logicalWidth: number;
-  /** Height the engine asked for. */
-  readonly logicalHeight: number;
-  /** Width actually allocated (equal to `logicalWidth` in `current` mode). */
-  readonly actualWidth: number;
-  /** Height actually allocated. */
-  readonly actualHeight: number;
-  /** How often a target of this exact shape was allocated during the measured window. */
+  /** Texel width the engine allocated. */
+  readonly width: number;
+  /** Texel height the engine allocated. */
+  readonly height: number;
+  /** How often a target of this exact shape was allocated in the recorded frame. */
   readonly count: number;
 }
 
@@ -168,8 +175,9 @@ export interface ProbeCellResult {
   readonly internalTargets: readonly InternalTargetRecord[];
   /**
    * Total internal-target pixels divided by {@link mainPixelCount}, or `null`
-   * when the cell allocated none. This is the number `NEU-S4` is about: under
-   * `current` it falls by `1/pixelRatio²` as the surface grows.
+   * when the cell allocated none. This is the number `NEU-S4` was about: under
+   * `logical` it falls by `1/pixelRatio²` as the surface grows, under `inherit`
+   * it holds constant.
    */
   readonly internalToMainPixelRatio: number | null;
   /** Frames rendered before the measured window opened. */
@@ -241,9 +249,15 @@ export interface ProbeResult {
   readonly crossOriginIsolated: boolean;
   /** Smallest non-zero `performance.now()` delta observed on this device, in milliseconds. */
   readonly timerResolutionMs: number;
-  /** Logical (CSS) stage size every cell renders at. */
+  /**
+   * Logical (CSS) stage size every cell in this run rendered at. Captured once
+   * at run start: a stage that changed mid-run would make the cells
+   * incomparable, which is the one thing the matrix must not allow.
+   */
   readonly stageWidth: number;
   readonly stageHeight: number;
+  /** Which stage the tester chose — a fixed square, or the device's usable area. */
+  readonly stagePreset: 'fixed' | 'fill';
   /** Results, in run order. */
   readonly cells: readonly ProbeCellResult[];
   /** Caveats that apply to the whole capture. */
@@ -253,19 +267,22 @@ export interface ProbeResult {
 /**
  * Current {@link ProbeResult.schemaVersion}.
  *
- * `2` renamed the cache scene's id from `cache-bitmap` to `cache-texture`,
- * following the engine's `cacheAsBitmap` → `cacheAsTexture` rename. A version-1
- * capture is otherwise field-for-field identical and stays comparable; only the
- * scene id differs.
+ * - `1` → `2`: the cache scene's id followed the engine's `cacheAsBitmap` →
+ *   `cacheAsTexture` rename.
+ * - `2` → `3`: `NEU-S4` shipped. The modes are now `inherit` / `logical` rather
+ *   than `current` / `parent-resolution`, a `cache-dirty` scene was added, and
+ *   the stage size became a run parameter. A version-1 or -2 capture is still
+ *   readable — map `current` onto `logical` and `parent-resolution` onto
+ *   `inherit`, and read its stage as 360 × 360.
  */
-export const PROBE_SCHEMA_VERSION = 2;
+export const PROBE_SCHEMA_VERSION = 3;
 
 /**
  * Total pixels across every internal target a cell allocated, counting each
  * allocation (a two-filter chain allocates twice and costs twice).
  */
 export const totalInternalTargetPixels = (records: readonly InternalTargetRecord[]): number =>
-  records.reduce((sum, record) => sum + record.actualWidth * record.actualHeight * record.count, 0);
+  records.reduce((sum, record) => sum + record.width * record.height * record.count, 0);
 
 /**
  * Internal-target pixels relative to the main surface, or `null` when the cell
