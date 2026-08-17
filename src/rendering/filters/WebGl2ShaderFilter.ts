@@ -49,10 +49,11 @@ export interface WebGl2ShaderFilterOptions {
   vertexSource?: string;
 
   /**
-   * Initial uniform values. Can be updated at runtime by writing
-   * to the `uniforms` property:
+   * Initial uniform values. Update them at runtime through
+   * `setUniform` / `setUniforms`, which also invalidate the nodes
+   * rendering the filter:
    *
-   *   filter.uniforms.uTime = performance.now() / 1000;
+   *   filter.setUniform('uTime', performance.now() / 1000);
    */
   uniforms?: Record<string, ShaderFilterUniformValue>;
 
@@ -133,7 +134,7 @@ interface WebGl2Connection {
  * });
  *
  * // Update uniforms each frame:
- * filter.uniforms.uTime = performance.now() / 1000;
+ * filter.setUniform('uTime', performance.now() / 1000);
  * sprite.filters = [filter];
  * ```
  *
@@ -143,14 +144,7 @@ interface WebGl2Connection {
  * before each draw. User uniforms start at texture slot 1.
  */
 export class WebGl2ShaderFilter extends Filter {
-  /**
-   * Mutable map of uniform values. Set values via property
-   * assignment; they are flushed to the GPU before each apply().
-   *
-   *   filter.uniforms.uTime = 1.234;
-   *   filter.uniforms.uColor = [1, 0.5, 0, 1];  // vec4
-   */
-  public readonly uniforms: Record<string, ShaderFilterUniformValue>;
+  private readonly _uniforms: Record<string, ShaderFilterUniformValue>;
 
   private readonly _fragmentSource: string;
   private readonly _vertexSource: string;
@@ -168,7 +162,39 @@ export class WebGl2ShaderFilter extends Filter {
     const autoUpgrade = options.autoUpgrade !== false;
     this._fragmentSource = autoUpgrade ? upgradeFragmentShaderToGl300(options.fragmentSource) : options.fragmentSource;
     this._vertexSource = options.vertexSource ?? defaultVertexSource;
-    this.uniforms = { ...(options.uniforms ?? {}) };
+    this._uniforms = { ...(options.uniforms ?? {}) };
+  }
+
+  /**
+   * The current uniform values, for reading.
+   *
+   * Deliberately not writable: a value written straight into this record would
+   * reach the GPU on the next draw but tell nobody, so a cached or retained
+   * representation of the owning node would keep replaying the frame the old
+   * value produced. Write through {@link setUniform} / {@link setUniforms}.
+   */
+  public get uniforms(): Readonly<Record<string, ShaderFilterUniformValue>> {
+    return this._uniforms;
+  }
+
+  /** Set one uniform and notify every node rendering this filter. */
+  public setUniform(name: string, value: ShaderFilterUniformValue): this {
+    this._uniforms[name] = value;
+    this.invalidate();
+
+    return this;
+  }
+
+  /** Set several uniforms, notifying once for the batch. */
+  public setUniforms(values: Readonly<Record<string, ShaderFilterUniformValue>>): this {
+    for (const name of Object.keys(values)) {
+      // In-bounds: `name` comes from `values`' own keys.
+      this._uniforms[name] = values[name]!;
+    }
+
+    this.invalidate();
+
+    return this;
   }
 
   /**
@@ -210,7 +236,7 @@ export class WebGl2ShaderFilter extends Filter {
           // Sync user uniforms — texture uniforms start at slot 1
           let textureSlot = 1;
 
-          for (const [name, value] of Object.entries(this.uniforms)) {
+          for (const [name, value] of Object.entries(this._uniforms)) {
             if (!shader.uniforms.has(name)) {
               continue;
             }
@@ -257,8 +283,8 @@ export class WebGl2ShaderFilter extends Filter {
       this._shader = null;
     }
 
-    for (const key of Object.keys(this.uniforms)) {
-      delete this.uniforms[key];
+    for (const key of Object.keys(this._uniforms)) {
+      delete this._uniforms[key];
     }
   }
 

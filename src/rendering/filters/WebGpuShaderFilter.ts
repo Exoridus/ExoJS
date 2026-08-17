@@ -39,10 +39,11 @@ export interface WebGpuShaderFilterOptions {
   vertexSource?: string;
 
   /**
-   * Initial uniform values. Can be updated at runtime by writing
-   * to the `uniforms` property:
+   * Initial uniform values. Update them at runtime through
+   * `setUniform` / `setUniforms`, which also invalidate the nodes
+   * rendering the filter:
    *
-   *   filter.uniforms.uTime = performance.now() / 1000;
+   *   filter.setUniform('uTime', performance.now() / 1000);
    */
   uniforms?: Record<string, ShaderFilterUniformValue>;
 }
@@ -134,7 +135,7 @@ interface WebGpuConnection {
  * });
  *
  * // Update uniforms each frame:
- * filter.uniforms.uTime = performance.now() / 1000;
+ * filter.setUniform('uTime', performance.now() / 1000);
  * sprite.filters = [filter];
  * ```
  *
@@ -154,14 +155,7 @@ interface WebGpuConnection {
  * `@binding(1)` (texture) and `@binding(N+1)` (sampler), in declaration order.
  */
 export class WebGpuShaderFilter extends Filter {
-  /**
-   * Mutable map of uniform values. Set values via property assignment;
-   * they are flushed to the GPU before each apply().
-   *
-   *   filter.uniforms.uTime = 1.234;
-   *   filter.uniforms.uColor = [1, 0.5, 0, 1];  // vec4
-   */
-  public readonly uniforms: Record<string, ShaderFilterUniformValue>;
+  private readonly _uniforms: Record<string, ShaderFilterUniformValue>;
 
   private readonly _fragmentSource: string;
   private readonly _vertexSource: string;
@@ -177,7 +171,37 @@ export class WebGpuShaderFilter extends Filter {
 
     this._fragmentSource = options.fragmentSource;
     this._vertexSource = options.vertexSource ?? defaultVertexSource;
-    this.uniforms = { ...(options.uniforms ?? {}) };
+    this._uniforms = { ...(options.uniforms ?? {}) };
+  }
+
+  /**
+   * The current uniform values, for reading.
+   *
+   * Deliberately not writable — see {@link WebGl2ShaderFilter.uniforms}. Write
+   * through {@link setUniform} / {@link setUniforms}.
+   */
+  public get uniforms(): Readonly<Record<string, ShaderFilterUniformValue>> {
+    return this._uniforms;
+  }
+
+  /** Set one uniform and notify every node rendering this filter. */
+  public setUniform(name: string, value: ShaderFilterUniformValue): this {
+    this._uniforms[name] = value;
+    this.invalidate();
+
+    return this;
+  }
+
+  /** Set several uniforms, notifying once for the batch. */
+  public setUniforms(values: Readonly<Record<string, ShaderFilterUniformValue>>): this {
+    for (const name of Object.keys(values)) {
+      // In-bounds: `name` comes from `values`' own keys.
+      this._uniforms[name] = values[name]!;
+    }
+
+    this.invalidate();
+
+    return this;
   }
 
   /**
@@ -256,8 +280,8 @@ export class WebGpuShaderFilter extends Filter {
       this._connection = null;
     }
 
-    for (const key of Object.keys(this.uniforms)) {
-      delete this.uniforms[key];
+    for (const key of Object.keys(this._uniforms)) {
+      delete this._uniforms[key];
     }
   }
 
@@ -397,7 +421,7 @@ export class WebGpuShaderFilter extends Filter {
 
     let bindingIndex = 1;
 
-    for (const value of Object.values(this.uniforms)) {
+    for (const value of Object.values(this._uniforms)) {
       if (!isTextureValue(value)) {
         continue;
       }
@@ -432,7 +456,7 @@ export class WebGpuShaderFilter extends Filter {
     const entries: GPUBindGroupEntry[] = [];
 
     // ---- Collect scalar uniforms and marshal into a UBO ----
-    const scalarEntries = Object.entries(this.uniforms).filter(([, v]) => !isTextureValue(v));
+    const scalarEntries = Object.entries(this._uniforms).filter(([, v]) => !isTextureValue(v));
 
     if (scalarEntries.length > 0) {
       // Each uniform gets a 16-byte aligned slot (conservative WGSL alignment)
@@ -501,7 +525,7 @@ export class WebGpuShaderFilter extends Filter {
     // ---- Texture/sampler entries ----
     let bindingIndex = 1;
 
-    for (const [, value] of Object.entries(this.uniforms)) {
+    for (const [, value] of Object.entries(this._uniforms)) {
       if (!isTextureValue(value)) {
         continue;
       }

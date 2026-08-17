@@ -70,7 +70,7 @@ class ChromaticAberrationScene extends Scene {
     }
 
     private applyIntensity(): void {
-        this.filter.uniforms.uOffset = this.intensity * MAX_OFFSET;
+        this.filter.setUniform('uOffset', this.intensity * MAX_OFFSET);
         this.hud.setStatus(this.statusText());
     }
 

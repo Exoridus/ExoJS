@@ -40,7 +40,7 @@ class LoadingProgressWithShaderScene extends Scene {
     }
 
     override update(): void {
-        this.filter.uniforms.uProgress = this.progress.v;
+        this.filter.setUniform('uProgress', this.progress.v);
         this.label.text = `${(this.progress.v * 100) | 0}%`;
     }
 

@@ -1,15 +1,15 @@
 {
   "title": "WebGpuShaderFilter",
-  "description": "A high-level Filter subclass that renders the input texture through a user-provided WGSL fragment shader on the **WebGPU** backend. For the WebGL2 backend use WebGl2ShaderFilter. ## Usage ```ts const filter = new WebGpuShaderFilter({ fragmentSource: ` @group(0) @binding(0) var<uniform> uResolution: vec2<f32>; @group(0) @binding(1) var uTexture: texture_2d<f32>; @group(0) @binding(2) var uSampler: sampler; @fragment fn main(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> { return textureSample(uTexture, uSampler, vUv); } `, uniforms: { uTime: 0.0 }, }); // Update uniforms each frame: filter.uniforms.uTime = performance.now() / 1000; sprite.filters = [filter]; ``` ## Auto-bound uniforms (group 0) - `@binding(0)` — `var<uniform> uResolution: vec2<f32>` (output dimensions) - `@binding(1)` — `var uTexture: texture_2d<f32>` (filter input) - `@binding(2)` — `var uSampler: sampler` ## User uniforms (group 1) All non-texture user uniforms are packed into a single uniform buffer at `@binding(0)`. Each member occupies a 16-byte aligned slot (conservative alignment). Declare your WGSL struct to match this layout. Texture/RenderTexture uniforms are bound as separate entries starting at `@binding(1)` (texture) and `@binding(N+1)` (sampler), in declaration order.",
+  "description": "A high-level Filter subclass that renders the input texture through a user-provided WGSL fragment shader on the **WebGPU** backend. For the WebGL2 backend use WebGl2ShaderFilter. ## Usage ```ts const filter = new WebGpuShaderFilter({ fragmentSource: ` @group(0) @binding(0) var<uniform> uResolution: vec2<f32>; @group(0) @binding(1) var uTexture: texture_2d<f32>; @group(0) @binding(2) var uSampler: sampler; @fragment fn main(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> { return textureSample(uTexture, uSampler, vUv); } `, uniforms: { uTime: 0.0 }, }); // Update uniforms each frame: filter.setUniform('uTime', performance.now() / 1000); sprite.filters = [filter]; ``` ## Auto-bound uniforms (group 0) - `@binding(0)` — `var<uniform> uResolution: vec2<f32>` (output dimensions) - `@binding(1)` — `var uTexture: texture_2d<f32>` (filter input) - `@binding(2)` — `var uSampler: sampler` ## User uniforms (group 1) All non-texture user uniforms are packed into a single uniform buffer at `@binding(0)`. Each member occupies a 16-byte aligned slot (conservative alignment). Declare your WGSL struct to match this layout. Texture/RenderTexture uniforms are bound as separate entries starting at `@binding(1)` (texture) and `@binding(N+1)` (sampler), in declaration order.",
   "symbol": "WebGpuShaderFilter",
   "kind": "class",
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 7,
+  "memberCount": 9,
   "counts": {
     "constructors": 1,
-    "methods": 4,
+    "methods": 6,
     "properties": 2,
     "events": 0
   },
@@ -24,7 +24,7 @@
         "## Usage",
         "```ts const filter = new WebGpuShaderFilter({ fragmentSource: ` @group(0) @binding(0) var<uniform> uResolution: vec2<f32>; @group(0) @binding(1) var uTexture: texture_2d<f32>; @group(0) @binding(2) var uSampler: sampler;",
         "@fragment fn main(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> { return textureSample(uTexture, uSampler, vUv); } `, uniforms: { uTime: 0.0 }, });",
-        "// Update uniforms each frame: filter.uniforms.uTime = performance.now() / 1000; sprite.filters = [filter]; ```",
+        "// Update uniforms each frame: filter.setUniform('uTime', performance.now() / 1000); sprite.filters = [filter]; ```",
         "## Auto-bound uniforms (group 0)",
         "- `@binding(0)` — `var<uniform> uResolution: vec2<f32>` (output dimensions) - `@binding(1)` — `var uTexture: texture_2d<f32>` (filter input) - `@binding(2)` — `var uSampler: sampler`",
         "## User uniforms (group 1)",
@@ -329,6 +329,153 @@
           "params": [],
           "returnType": "void",
           "description": "Tell every node this filter is attached to that its rendered output is out of date. Call it after mutating anything that changes what the filter draws or how far it reaches — the stock filters do this from their own setters. Without it a cached or retained representation of the owning node keeps replaying the result the filter produced before the change."
+        },
+        {
+          "name": "setUniform",
+          "signature": "setUniform(name: string, value: ShaderFilterUniformValue): this",
+          "signatureTokens": [
+            {
+              "text": "setUniform",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShaderFilterUniformValue",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "value",
+              "type": "ShaderFilterUniformValue",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Set one uniform and notify every node rendering this filter."
+        },
+        {
+          "name": "setUniforms",
+          "signature": "setUniforms(values: Readonly<Record<string, ShaderFilterUniformValue>>): this",
+          "signatureTokens": [
+            {
+              "text": "setUniforms",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "values",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShaderFilterUniformValue",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "values",
+              "type": "Readonly<Record<string, ShaderFilterUniformValue>>",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Set several uniforms, notifying once for the batch."
         }
       ],
       "paragraphs": [],
@@ -362,7 +509,7 @@
         },
         {
           "name": "uniforms",
-          "signature": "uniforms: Record<string, ShaderFilterUniformValue>",
+          "signature": "uniforms: Readonly<Record<string, ShaderFilterUniformValue>>",
           "signatureTokens": [
             {
               "text": "uniforms",
@@ -370,6 +517,14 @@
             },
             {
               "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
               "kind": "punctuation"
             },
             {
@@ -395,11 +550,15 @@
             {
               "text": ">",
               "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Mutable map of uniform values. Set values via property assignment; they are flushed to the GPU before each apply(). filter.uniforms.uTime = 1.234; filter.uniforms.uColor = [1, 0.5, 0, 1]; // vec4"
+          "description": "The current uniform values, for reading. Deliberately not writable — see WebGl2ShaderFilter.uniforms. Write through setUniform / setUniforms."
         }
       ],
       "paragraphs": [],

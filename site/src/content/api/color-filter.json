@@ -370,7 +370,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "The multiplier colour. Read-only in practice: assign a Color to change it. Mutating the returned instance in place reaches the GPU on the next draw but notifies nobody, so a cached or retained representation of the owning node keeps replaying the frame the old colour produced."
         }
       ],
       "paragraphs": [],

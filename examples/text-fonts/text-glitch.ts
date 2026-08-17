@@ -49,7 +49,7 @@ class TextGlitchScene extends Scene {
     }
 
     override update(): void {
-        this.filter.uniforms.uShift = (Math.random() - 0.5) * 0.01;
+        this.filter.setUniform('uShift', (Math.random() - 0.5) * 0.01);
     }
 
     override draw(context: RenderingContext): void {

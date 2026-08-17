@@ -7,8 +7,12 @@
  * notification, its attachment lifecycle and its behaviour under sharing.
  */
 
+import { Color } from '#core/Color';
 import { BlurFilter } from '#rendering/filters/BlurFilter';
+import { ColorFilter } from '#rendering/filters/ColorFilter';
 import { Filter } from '#rendering/filters/Filter';
+import { WebGl2ShaderFilter } from '#rendering/filters/WebGl2ShaderFilter';
+import { WebGpuShaderFilter } from '#rendering/filters/WebGpuShaderFilter';
 import { RenderNode } from '#rendering/RenderNode';
 
 class CountingNode extends RenderNode {
@@ -82,6 +86,78 @@ describe('a mutated filter reaches the nodes that render it', () => {
     // The filter is still attached exactly once — the invalidation came from
     // the mutation itself.
     expect(node.filters).toEqual([blur]);
+  });
+});
+
+describe('every stock filter owns its own invalidation', () => {
+  test('a shader filter uniform written through setUniform notifies the owner', () => {
+    const node = new CountingNode();
+    const filter = new WebGl2ShaderFilter({ fragmentSource: 'void main() {}', uniforms: { uTime: 0 } });
+
+    node.addFilter(filter);
+
+    const afterAttach = node.invalidations;
+
+    filter.setUniform('uTime', 1.5);
+
+    expect(filter.uniforms['uTime']).toBe(1.5);
+    expect(node.invalidations).toBe(afterAttach + 1);
+  });
+
+  test('setUniforms notifies once for a whole batch', () => {
+    const node = new CountingNode();
+    const filter = new WebGl2ShaderFilter({ fragmentSource: 'void main() {}', uniforms: { uTime: 0, uStrength: 0 } });
+
+    node.addFilter(filter);
+
+    const afterAttach = node.invalidations;
+
+    filter.setUniforms({ uTime: 2, uStrength: 0.5 });
+
+    expect(filter.uniforms['uTime']).toBe(2);
+    expect(filter.uniforms['uStrength']).toBe(0.5);
+    expect(node.invalidations).toBe(afterAttach + 1);
+  });
+
+  test('the WebGPU shader filter carries the same contract', () => {
+    const node = new CountingNode();
+    const filter = new WebGpuShaderFilter({ fragmentSource: 'void main() {}', uniforms: { uTime: 0 } });
+
+    node.addFilter(filter);
+
+    const afterAttach = node.invalidations;
+
+    filter.setUniform('uTime', 3);
+
+    expect(filter.uniforms['uTime']).toBe(3);
+    expect(node.invalidations).toBe(afterAttach + 1);
+  });
+
+  test('assigning a colour to a ColorFilter notifies the owner', () => {
+    const node = new CountingNode();
+    const filter = new ColorFilter(Color.white);
+
+    node.addFilter(filter);
+
+    const afterAttach = node.invalidations;
+
+    filter.color = new Color(255, 0, 0);
+
+    expect(filter.color.equals({ r: 255, g: 0, b: 0 })).toBe(true);
+    expect(node.invalidations).toBe(afterAttach + 1);
+  });
+
+  test('assigning the colour it already has notifies nobody', () => {
+    const node = new CountingNode();
+    const filter = new ColorFilter(new Color(10, 20, 30, 1));
+
+    node.addFilter(filter);
+
+    const afterAttach = node.invalidations;
+
+    filter.color = new Color(10, 20, 30, 1);
+
+    expect(node.invalidations).toBe(afterAttach);
   });
 });
 

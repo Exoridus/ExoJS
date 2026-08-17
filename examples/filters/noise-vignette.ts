@@ -65,7 +65,7 @@ class NoiseVignetteScene extends Scene {
             value: this.intensity,
             onChange: value => {
                 this.intensity = value;
-                this.filter.uniforms.uIntensity = value;
+                this.filter.setUniform('uIntensity', value);
                 this.hud.setStatus(this.statusText());
             },
         });
@@ -77,7 +77,7 @@ class NoiseVignetteScene extends Scene {
 
     override update(delta: Time): void {
         this.time += delta.seconds;
-        this.filter.uniforms.uTime = this.time;
+        this.filter.setUniform('uTime', this.time);
     }
 
     override draw(context: RenderingContext): void {

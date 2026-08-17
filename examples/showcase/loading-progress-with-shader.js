@@ -34,7 +34,7 @@ class LoadingProgressWithShaderScene extends Scene {
         app.tweens.create(this.progress).to({ v: 1 }, 2.4).start();
     }
     update() {
-        this.filter.uniforms.uProgress = this.progress.v;
+        this.filter.setUniform('uProgress', this.progress.v);
         this.label.text = `${(this.progress.v * 100) | 0}%`;
     }
     draw(context) {

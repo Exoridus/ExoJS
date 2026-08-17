@@ -27,8 +27,25 @@ export class ColorFilter extends Filter {
     this._color = color.clone();
   }
 
+  /**
+   * The multiplier colour.
+   *
+   * Read-only in practice: assign a {@link Color} to change it. Mutating the
+   * returned instance in place reaches the GPU on the next draw but notifies
+   * nobody, so a cached or retained representation of the owning node keeps
+   * replaying the frame the old colour produced.
+   */
   public get color(): Color {
     return this._color;
+  }
+
+  public set color(color: Color) {
+    if (this._color.equals(color)) {
+      return;
+    }
+
+    this._color.copy(color);
+    this.invalidate();
   }
 
   public apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture, _resolution = 1): void {

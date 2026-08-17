@@ -119,7 +119,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Initial uniform values. Can be updated at runtime by writing to the uniforms property: filter.uniforms.uTime = performance.now() / 1000;"
+          "description": "Initial uniform values. Update them at runtime through setUniform / setUniforms, which also invalidate the nodes rendering the filter: filter.setUniform('uTime', performance.now() / 1000);"
         },
         {
           "name": "vertexSource",

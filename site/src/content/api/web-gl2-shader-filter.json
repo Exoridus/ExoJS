@@ -1,15 +1,15 @@
 {
   "title": "WebGl2ShaderFilter",
-  "description": "A high-level Filter subclass that renders the input texture through a user-provided GLSL fragment shader on the **WebGL2** backend. For the WebGPU backend use WebGpuShaderFilter. ## Usage ```ts const filter = new WebGl2ShaderFilter({ fragmentSource: ` #version 300 es precision mediump float; uniform sampler2D uTexture; uniform vec2 uResolution; uniform float uTime; in vec2 vUv; out vec4 fragColor; void main() { fragColor = texture(uTexture, vUv); } `, uniforms: { uTime: 0.0 }, }); // Update uniforms each frame: filter.uniforms.uTime = performance.now() / 1000; sprite.filters = [filter]; ``` ## Auto-bound uniforms The backend automatically sets `uTexture` (slot 0) and `uResolution` before each draw. User uniforms start at texture slot 1.",
+  "description": "A high-level Filter subclass that renders the input texture through a user-provided GLSL fragment shader on the **WebGL2** backend. For the WebGPU backend use WebGpuShaderFilter. ## Usage ```ts const filter = new WebGl2ShaderFilter({ fragmentSource: ` #version 300 es precision mediump float; uniform sampler2D uTexture; uniform vec2 uResolution; uniform float uTime; in vec2 vUv; out vec4 fragColor; void main() { fragColor = texture(uTexture, vUv); } `, uniforms: { uTime: 0.0 }, }); // Update uniforms each frame: filter.setUniform('uTime', performance.now() / 1000); sprite.filters = [filter]; ``` ## Auto-bound uniforms The backend automatically sets `uTexture` (slot 0) and `uResolution` before each draw. User uniforms start at texture slot 1.",
   "symbol": "WebGl2ShaderFilter",
   "kind": "class",
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 7,
+  "memberCount": 9,
   "counts": {
     "constructors": 1,
-    "methods": 4,
+    "methods": 6,
     "properties": 2,
     "events": 0
   },
@@ -23,7 +23,7 @@
         "For the WebGPU backend use WebGpuShaderFilter.",
         "## Usage",
         "```ts const filter = new WebGl2ShaderFilter({ fragmentSource: ` #version 300 es precision mediump float; uniform sampler2D uTexture; uniform vec2 uResolution; uniform float uTime; in vec2 vUv; out vec4 fragColor; void main() { fragColor = texture(uTexture, vUv); } `, uniforms: { uTime: 0.0 }, });",
-        "// Update uniforms each frame: filter.uniforms.uTime = performance.now() / 1000; sprite.filters = [filter]; ```",
+        "// Update uniforms each frame: filter.setUniform('uTime', performance.now() / 1000); sprite.filters = [filter]; ```",
         "## Auto-bound uniforms",
         "The backend automatically sets `uTexture` (slot 0) and `uResolution` before each draw. User uniforms start at texture slot 1."
       ],
@@ -325,6 +325,153 @@
           "params": [],
           "returnType": "void",
           "description": "Tell every node this filter is attached to that its rendered output is out of date. Call it after mutating anything that changes what the filter draws or how far it reaches — the stock filters do this from their own setters. Without it a cached or retained representation of the owning node keeps replaying the result the filter produced before the change."
+        },
+        {
+          "name": "setUniform",
+          "signature": "setUniform(name: string, value: ShaderFilterUniformValue): this",
+          "signatureTokens": [
+            {
+              "text": "setUniform",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShaderFilterUniformValue",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "value",
+              "type": "ShaderFilterUniformValue",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Set one uniform and notify every node rendering this filter."
+        },
+        {
+          "name": "setUniforms",
+          "signature": "setUniforms(values: Readonly<Record<string, ShaderFilterUniformValue>>): this",
+          "signatureTokens": [
+            {
+              "text": "setUniforms",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "values",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShaderFilterUniformValue",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "values",
+              "type": "Readonly<Record<string, ShaderFilterUniformValue>>",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Set several uniforms, notifying once for the batch."
         }
       ],
       "paragraphs": [],
@@ -358,7 +505,7 @@
         },
         {
           "name": "uniforms",
-          "signature": "uniforms: Record<string, ShaderFilterUniformValue>",
+          "signature": "uniforms: Readonly<Record<string, ShaderFilterUniformValue>>",
           "signatureTokens": [
             {
               "text": "uniforms",
@@ -366,6 +513,14 @@
             },
             {
               "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
               "kind": "punctuation"
             },
             {
@@ -391,11 +546,15 @@
             {
               "text": ">",
               "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Mutable map of uniform values. Set values via property assignment; they are flushed to the GPU before each apply(). filter.uniforms.uTime = 1.234; filter.uniforms.uColor = [1, 0.5, 0, 1]; // vec4"
+          "description": "The current uniform values, for reading. Deliberately not writable: a value written straight into this record would reach the GPU on the next draw but tell nobody, so a cached or retained representation of the owning node would keep replaying the frame the old value produced. Write through setUniform / setUniforms."
         }
       ],
       "paragraphs": [],

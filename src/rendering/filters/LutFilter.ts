@@ -270,7 +270,7 @@ export class LutFilter extends Filter {
   public setLut(lut: Texture): this {
     this._lut = lut;
     if (this._backendFilter !== null) {
-      this._backendFilter.uniforms.uLut = lut;
+      this._backendFilter.setUniform('uLut', lut);
     }
     this.invalidate();
     return this;
