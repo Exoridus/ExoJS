@@ -64,7 +64,7 @@ describe('README "Minimal working example"', () => {
         // fails to resolve and every export downgrades to `any`, masking
         // real type errors in the snippet under test.
         resolvePackageJsonImports: true,
-        customConditions: ['@codexo/source', '@codexo/exojs-particles-source'],
+        customConditions: ['@codexo/exojs-source', '@codexo/exojs-particles-source'],
         baseUrl: repoRoot,
         paths: {
           '@codexo/exojs': ['./src/index.ts'],

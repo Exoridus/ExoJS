@@ -36,7 +36,7 @@ import { createWebGl2Harness } from './harness';
  * V8 settled into — both need one scene per process. That is
  * `run-allocation-cell.ts`:
  *
- *   node --conditions=@codexo/source --import ./scripts/glsl-register.mjs --import tsx/esm \
+ *   node --conditions=@codexo/exojs-source --import ./scripts/glsl-register.mjs --import tsx/esm \
  *     test/perf/rendering/run-allocation-cell.ts --id "mesh/1000" --profile
  *
  * Never mix its numbers with this gate's inside one table; {@link BASELINE_KB}
@@ -53,7 +53,7 @@ import { createWebGl2Harness } from './harness';
  * number the way the entries below do.
  *
  * The standalone `pnpm perf:renderers:alloc` launcher measures the same scenes
- * the same way and is source-accurate too (it passes `--conditions=@codexo/source`,
+ * the same way and is source-accurate too (it passes `--conditions=@codexo/exojs-source`,
  * so `#*` resolves to `src`, not a `dist` build). It reports ONE window per
  * scene rather than a median, and it additionally covers the nine-slice /
  * repeating / tilemap families and the 1M reference stage — use it for a broad

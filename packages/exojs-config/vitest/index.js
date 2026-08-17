@@ -10,7 +10,7 @@ import { createWorkletPlugin } from '../worklet-plugin.js';
  * imports condition so `#*` resolves to ./src during tests, plus the standard
  * conditions that keep normal dependency resolution intact (browser-first).
  */
-export const srcConditions = ['@codexo/source', '@codexo/exojs-particles-source', 'module', 'browser', 'import', 'default'];
+export const srcConditions = ['@codexo/exojs-source', '@codexo/exojs-particles-source', 'module', 'browser', 'import', 'default'];
 
 /** Stubs `.vert`/`.frag` shader imports to an empty string in unit tests. */
 export const shaderStubPlugin = {

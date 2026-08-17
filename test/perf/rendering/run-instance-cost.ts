@@ -92,7 +92,7 @@ if (type === undefined) {
       [
         '--expose-gc',
         '--max-old-space-size=8192',
-        '--conditions=@codexo/source',
+        '--conditions=@codexo/exojs-source',
         '--import',
         './scripts/glsl-register.mjs',
         '--import',

@@ -18,15 +18,15 @@ const buildMode = process.env.EXOJS_ENV === 'development' ? 'development' : 'pro
 
 const defines = createBuildDefinesFromRepo({ mode: buildMode, packageDir: rootDir });
 
-// Activates the package-private `@codexo/source` condition in package.json#imports
+// Activates the package-private `@codexo/exojs-source` condition in package.json#imports
 // so `#*` resolves to ./src/*.ts at build time. preserveModules then rewrites the
 // resolved paths to relative specifiers in the emitted ESM tree. The trailing
 // standard conditions keep normal dependency resolution intact.
-const sourceConditions = ['@codexo/source', 'browser', 'module', 'import', 'default'];
+const sourceConditions = ['@codexo/exojs-source', 'browser', 'module', 'import', 'default'];
 
 // Full-bundle source conditions: includes per-package source conditions for the
 // extension packages that use # subpath imports internally (e.g. exojs-particles).
-const fullSourceConditions = ['@codexo/source', '@codexo/exojs-particles-source', 'browser', 'module', 'import', 'default'];
+const fullSourceConditions = ['@codexo/exojs-source', '@codexo/exojs-particles-source', 'browser', 'module', 'import', 'default'];
 
 // Resolves @codexo/exojs-<name> → packages/exojs-<name>/src/index.ts so the
 // full IIFE bundle can be built entirely from TypeScript source without requiring

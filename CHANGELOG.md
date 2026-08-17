@@ -242,6 +242,14 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
 
 ### Changed
 
+- **The Core source export condition is now `@codexo/exojs-source`.** It was
+  `@codexo/source`, which read like a package name rather than like "resolve
+  `#*` to source" and did not match the `<package>-source` shape every
+  extension already used (`@codexo/exojs-particles-source`). Purely internal:
+  the condition only selects between `src` and `dist` for package-private `#*`
+  imports and never appears in a consumer's import. Anything running the engine
+  from source (`node --conditions=…`, a `tsconfig.json` `customConditions`
+  entry) must use the new name.
 - **BREAKING — `Material.sampler` is now a real base-texture binding override.**
   It contains only `scaleMode` and `wrapMode`, applies to the drawable's base
   texture across WebGPU and WebGL2 (including particle materials), and leaves

@@ -7,7 +7,7 @@
  *   pnpm perf:renderers:alloc --reference     # …plus the 1M scrolling-world stage
  *
  * SOURCE-ACCURATE. The `perf:renderers:alloc` script passes
- * `--conditions=@codexo/source` (so the `#*` imports resolve to `src`, NOT to a
+ * `--conditions=@codexo/exojs-source` (so the `#*` imports resolve to `src`, NOT to a
  * `dist` build) and `--import ./scripts/glsl-register.mjs` — a node ESM loader
  * hook that loads `.vert`/`.frag` as source text (the node/tsx counterpart of the
  * vitest `realShaderPlugin`) and installs the `__DEV__`/`__VERSION__`/

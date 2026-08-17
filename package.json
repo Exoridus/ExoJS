@@ -60,7 +60,7 @@
     "#*.vert": "./src/*.vert",
     "#*.frag": "./src/*.frag",
     "#*": {
-      "@codexo/source": "./src/*.ts",
+      "@codexo/exojs-source": "./src/*.ts",
       "types": "./dist/esm/*.d.ts",
       "default": "./dist/esm/*.js"
     }
@@ -148,10 +148,10 @@
     "perf:renderers": "tsx test/perf/rendering/run-sweep.ts full",
     "perf:renderers:quick": "tsx test/perf/rendering/run-sweep.ts quick",
     "perf:renderers:browser": "vitest run --project=browser-webgl-chromium webgl2-renderer-perf",
-    "perf:renderers:alloc": "node --conditions=@codexo/source --import ./scripts/glsl-register.mjs --import tsx/esm test/perf/rendering/run-allocation.ts",
-    "perf:renderers:alloc:cell": "node --conditions=@codexo/source --import ./scripts/glsl-register.mjs --import tsx/esm test/perf/rendering/run-allocation-cell.ts",
-    "perf:renderers:bootstrap": "node --conditions=@codexo/source --import ./scripts/glsl-register.mjs --import tsx/esm test/perf/rendering/run-bootstrap-allocation.ts",
-    "perf:renderers:bootstrap:cell": "node --expose-gc --max-old-space-size=8192 --conditions=@codexo/source --import ./scripts/glsl-register.mjs --import tsx/esm test/perf/rendering/run-bootstrap-cell.ts",
+    "perf:renderers:alloc": "node --conditions=@codexo/exojs-source --import ./scripts/glsl-register.mjs --import tsx/esm test/perf/rendering/run-allocation.ts",
+    "perf:renderers:alloc:cell": "node --conditions=@codexo/exojs-source --import ./scripts/glsl-register.mjs --import tsx/esm test/perf/rendering/run-allocation-cell.ts",
+    "perf:renderers:bootstrap": "node --conditions=@codexo/exojs-source --import ./scripts/glsl-register.mjs --import tsx/esm test/perf/rendering/run-bootstrap-allocation.ts",
+    "perf:renderers:bootstrap:cell": "node --expose-gc --max-old-space-size=8192 --conditions=@codexo/exojs-source --import ./scripts/glsl-register.mjs --import tsx/esm test/perf/rendering/run-bootstrap-cell.ts",
     "perf:bench:rendering": "tsx test/perf/rendering-benchmark.ts",
     "perf:bench:audio": "tsx test/perf/audio-benchmark.ts",
     "perf:bench:collision": "tsx test/perf/collision-benchmark.ts",
@@ -165,7 +165,7 @@
     "perf:profile:gc": "node --expose-gc --import tsx/esm test/perf/profile-benchmark.ts",
     "size": "size-limit",
     "prepare": "husky",
-    "perf:renderers:instance-cost": "node --expose-gc --max-old-space-size=8192 --conditions=@codexo/source --import ./scripts/glsl-register.mjs --import tsx/esm test/perf/rendering/run-instance-cost.ts",
+    "perf:renderers:instance-cost": "node --expose-gc --max-old-space-size=8192 --conditions=@codexo/exojs-source --import ./scripts/glsl-register.mjs --import tsx/esm test/perf/rendering/run-instance-cost.ts",
     "perf:webgpu:alloc": "tsx test/perf/webgpu/run-webgpu-allocation.ts",
     "perf:webgpu:timer": "pnpm --filter @codexo/exojs-bench timer"
   },

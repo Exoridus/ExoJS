@@ -10,13 +10,13 @@
  *     `default` (exactly like the vitest/rollup transforms).
  *
  *  2. **Workspace package specifiers.** `@codexo/exojs` and the extension packages
- *     (`@codexo/exojs-tilemap` etc.) do NOT expose a `@codexo/source` export
- *     condition, so `--conditions=@codexo/source` cannot redirect them to `src`;
+ *     (`@codexo/exojs-tilemap` etc.) do NOT expose a `@codexo/exojs-source` export
+ *     condition, so `--conditions=@codexo/exojs-source` cannot redirect them to `src`;
  *     the vitest config aliases them explicitly, and so do we. Their package-
- *     internal `#*` imports still resolve to `src` via the `@codexo/source`
+ *     internal `#*` imports still resolve to `src` via the `@codexo/exojs-source`
  *     condition (passed on the node command line).
  *
- * Pair with `--conditions=@codexo/source`. Entrypoint: `scripts/glsl-register.mjs`.
+ * Pair with `--conditions=@codexo/exojs-source`. Entrypoint: `scripts/glsl-register.mjs`.
  */
 import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';

@@ -39,7 +39,7 @@ const CELL = 'test/perf/rendering/run-bootstrap-cell.ts';
 const nodeArgs = (count: number): string[] => [
   '--expose-gc',
   '--max-old-space-size=8192',
-  '--conditions=@codexo/source',
+  '--conditions=@codexo/exojs-source',
   '--import',
   './scripts/glsl-register.mjs',
   '--import',

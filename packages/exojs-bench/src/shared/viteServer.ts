@@ -209,7 +209,7 @@ export const startViteServer = async (options: StartViteServerOptions): Promise<
     // escaping the package with `../`). A single alias maps every `#…` specifier
     // straight to `<repo>/src/…`, reproducing the root map's pure `#* → ./src/*`
     // wildcard exactly. Engine modules imported through it still resolve their OWN
-    // internal `#*` imports via the root package.json map + `@codexo/source`
+    // internal `#*` imports via the root package.json map + `@codexo/exojs-source`
     // condition below, so the engine graph is measured exactly as it ships.
     // `.vert`/`.frag` specifiers carry their extension and are handled by
     // `realShaderPlugin`'s transform.

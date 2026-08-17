@@ -51,7 +51,7 @@ export function verifyRuntimePackage(dir, opts) {
     const star = pkg.imports['#*'];
     const conds = star && typeof star === 'object' ? Object.keys(star) : [];
     ok('imports `#*` conditional', conds.length > 0);
-    ok('imports has package source condition', conds.some((c) => SOURCE_CONDITION_RE.test(c) || c === '@codexo/source'));
+    ok('imports has package source condition', conds.some((c) => SOURCE_CONDITION_RE.test(c)));
     ok('imports default -> dist', star?.default?.includes('dist/esm'));
   }
 

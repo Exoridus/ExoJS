@@ -39,7 +39,7 @@
     // tsconfig.examples.json does for the example catalog. Without this the
     // program silently falls back to `dist/`, which makes the result depend on
     // whether the machine has built — green locally, red in CI.
-    "customConditions": ["@codexo/source", "@codexo/exojs-particles-source"],
+    "customConditions": ["@codexo/exojs-source", "@codexo/exojs-particles-source"],
     "paths": {
       "@codexo/exojs": ["./src/index.ts"],
       "@codexo/exojs/extensions": ["./src/extensions/index.ts"],

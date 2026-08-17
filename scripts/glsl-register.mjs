@@ -1,7 +1,7 @@
 /**
  * Source-accurate node/tsx entrypoint for the perf-bench scripts.
  *
- * Use via `node --conditions=@codexo/source --import ./scripts/glsl-register.mjs
+ * Use via `node --conditions=@codexo/exojs-source --import ./scripts/glsl-register.mjs
  * --import tsx/esm <script>`. It does the two things a plain node/tsx run lacks
  * to evaluate the engine source (rather than the last `dist` build):
  *
