@@ -148,36 +148,48 @@ export default defineConfig({
     },
     projects: [
       // ── jsdom unit/integration projects (Core + extensions) ──────────────
-      createJsdomTestProject({
-        name: 'exojs',
-        alias: aliasConfig,
-        include: ['test/**/*.test.ts'],
-        // The parity matrix runs in `browser-webgpu`: its runner imports the
-        // browser context module, which throws on import under jsdom. The
-        // WebGPU allocation cell is the same story one project further down
-        // (`browser-webgpu-alloc`) — it needs a real adapter and a CDP session.
-        exclude: [
-          'test/rendering/browser/**/*.test.ts',
-          'test/rendering/parity/**/*.test.ts',
-          'test/perf/rendering/**/*.test.ts',
-          'test/perf/webgpu/**/*.test.ts',
-        ],
-        // `_particleGlslMocks` un-stubs the particle package's GLSL: the WebGPU
-        // backend suite drives the particle renderer against a mock device, and
-        // its render mode's `Material` carries both languages, so the stub's
-        // empty GLSL would fail `ShaderSource` validation before the WGSL path
-        // is ever reached.
-        setupFiles: ['./test/setup-env.vitest.ts', './test/rendering/_particleGlslMocks.ts'],
-      }),
-      createJsdomTestProject({
-        name: 'exojs-particles',
-        alias: aliasConfig,
-        include: ['packages/exojs-particles/test/**/*.test.ts'],
-        // Same reason as the `exojs` project above: a spec that reaches a render
-        // mode's `Material` needs real GLSL, because `ShaderSource` rejects the
-        // stub's empty string before the material is ever handed to a backend.
-        setupFiles: ['./test/setup-env.vitest.ts', './test/rendering/_particleGlslMocks.ts'],
-      }),
+      // `exojs` and `exojs-particles` are the only jsdom projects whose `src/`
+      // actually imports `.vert`/`.frag` files (core WebGL2 renderers and the
+      // particle render modes, respectively) — every other jsdom project below
+      // only reaches the engine through `@codexo/exojs`'s public surface, which
+      // loads backends lazily and never touches GLSL at module scope. Both are
+      // switched to `realShaderPlugin` (the same real-text loader `rendering-perf`
+      // and `rendering-alloc` use below) so a `.vert`/`.frag` import here resolves
+      // to the shipped source instead of `shaderStubPlugin`'s empty string — the
+      // biggest test project (`test:core`) previously ran every spec against a
+      // blank shader, which made GLSL regressions invisible outside the 3 browser
+      // lanes and `rendering-perf`. jsdom has no WebGL2 context to actually
+      // compile against (that's what the browser lanes are for), so
+      // `test/rendering/shader-source-structure.test.ts` adds a GPU-free
+      // structural check instead. This also retires the `_particleGlslMocks.ts`
+      // per-path `vi.mock` workaround: with real text loaded for every shader,
+      // `ShaderSource`'s non-empty-string validation no longer needs un-stubbing.
+      {
+        ...createJsdomTestProject({
+          name: 'exojs',
+          alias: aliasConfig,
+          include: ['test/**/*.test.ts'],
+          // The parity matrix runs in `browser-webgpu`: its runner imports the
+          // browser context module, which throws on import under jsdom. The
+          // WebGPU allocation cell is the same story one project further down
+          // (`browser-webgpu-alloc`) — it needs a real adapter and a CDP session.
+          exclude: [
+            'test/rendering/browser/**/*.test.ts',
+            'test/rendering/parity/**/*.test.ts',
+            'test/perf/rendering/**/*.test.ts',
+            'test/perf/webgpu/**/*.test.ts',
+          ],
+        }),
+        plugins: [realShaderPlugin, workletTransformPlugin],
+      },
+      {
+        ...createJsdomTestProject({
+          name: 'exojs-particles',
+          alias: aliasConfig,
+          include: ['packages/exojs-particles/test/**/*.test.ts'],
+        }),
+        plugins: [realShaderPlugin, workletTransformPlugin],
+      },
       createJsdomTestProject({
         name: 'exojs-tilemap',
         alias: aliasConfig,
