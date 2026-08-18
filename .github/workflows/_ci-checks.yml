@@ -750,16 +750,17 @@ jobs:
         run: pnpm install --frozen-lockfile --ignore-scripts
 
       # Every lane's `junit-*` artifact, merged into one directory. A
-      # path-gated lane that didn't run this time simply contributes nothing —
-      # `if-no-artifact-found: warn` (the default) so a docs-only PR's missing
-      # audio/tilemap-worker artifact doesn't fail this job.
+      # path-gated lane that didn't run this time simply contributes nothing:
+      # a `pattern` matching fewer artifacts than expected only warns, so a
+      # docs-only PR's missing audio/tilemap-worker artifact doesn't fail here.
+      # Matching NOTHING at all is still fatal, but one step later and with a
+      # better message — the checker refuses to read zero reports as zero skips.
       - name: Download JUnit reports from every lane
         uses: actions/download-artifact@v4
         with:
           pattern: junit-*
           path: test-results
           merge-multiple: true
-          if-no-artifact-found: warn
 
       - name: Check skipped tests against the budget (all lanes combined)
         run: pnpm test:skips:check
