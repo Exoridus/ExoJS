@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Auto-upgrade legacy GLSL ES 1.00 fragment source to GLSL ES 3.00. Default true — Shadertoy/ISF-style and modern 3.00 sources are both accepted. Set to false for strict 3.00 input, which turns legacy constructs into compile errors instead of silently rewriting them. Only the fragment source is upgraded: a 1.00-style glsl.vertex fails to compile as written."
+          "description": "Auto-upgrade legacy GLSL ES 1.00 fragment source to GLSL ES 3.00. Default true - Shadertoy/ISF-style and modern 3.00 sources are both accepted. Set to false for strict 3.00 input, which turns legacy constructs into compile errors instead of silently rewriting them. Only the fragment source is upgraded: a 1.00-style glsl.vertex fails to compile as written."
         },
         {
           "name": "glsl",
@@ -137,7 +137,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "WGSL source for the WebGPU backend — one module carrying both entry points, the same convention ShaderSource uses for materials. The fragment entry point must be fragmentMain. A module that declares no @vertex stage gets the default fullscreen-quad vertex stage (vertexMain, plus its VsOut struct) prepended; a module that declares one must name it vertexMain and emit @location(0) vUv: vec2<f32>."
+          "description": "WGSL source for the WebGPU backend - one module carrying both entry points, the same convention ShaderSource uses for materials. The fragment entry point must be fragmentMain. A module that declares no @vertex stage gets the default fullscreen-quad vertex stage (vertexMain, plus its VsOut struct) prepended; a module that declares one must name it vertexMain and emit @location(0) vUv: vec2<f32>."
         }
       ],
       "paragraphs": [],

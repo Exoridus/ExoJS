@@ -1,6 +1,6 @@
 {
   "title": "ColorMatrixFilter",
-  "description": "A Filter that runs one affine colour transform over everything it is given: `RGBA' = M·RGBA + bias`, carried as a 4×5 row-major matrix of four `[r, g, b, a, offset]` rows. One matrix expresses brightness, contrast, saturation, hue-ish channel mixing, inversion, sepia and flat tinting — so there is one filter class rather than one per operation. The conveniences below CONCATENATE onto the current matrix in call order, and reset goes back to the identity. ```ts // Desaturate a whole subtree and lift it slightly. subtree.filters = [new ColorMatrixFilter().grayscale().brightness(1.1)]; // Damage flash: multiply the subtree by red for a few frames. flash.tint(Color.red); ``` For a cheap per-drawable multiply, use Drawable.tint instead — it costs no render target at all. Reach for this filter when the transform is more than a multiply, or when it has to cover a whole subtree as one image. For non-linear, authored grading use LutFilter. Colour operations run on STRAIGHT alpha: the shader divides the premultiplied sample by its alpha, transforms, and multiplies back, so a half-transparent edge grades the same way an opaque pixel does. Runs on a ShaderFilter carrying both a GLSL and a WGSL source, so it works on either backend without the caller choosing one.",
+  "description": "A Filter that runs one affine colour transform over everything it is given: `RGBA' = M·RGBA + bias`, carried as a 4×5 row-major matrix of four `[r, g, b, a, offset]` rows. One matrix expresses brightness, contrast, saturation, hue-ish channel mixing, inversion, sepia and flat tinting - so there is one filter class rather than one per operation. The conveniences below CONCATENATE onto the current matrix in call order, and reset goes back to the identity. ```ts // Desaturate a whole subtree and lift it slightly. subtree.filters = [new ColorMatrixFilter().grayscale().brightness(1.1)]; // Damage flash: multiply the subtree by red for a few frames. flash.tint(Color.red); ``` For a cheap per-drawable multiply, use Drawable.tint instead - it costs no render target at all. Reach for this filter when the transform is more than a multiply, or when it has to cover a whole subtree as one image. For non-linear, authored grading use LutFilter. Colour operations run on STRAIGHT alpha: the shader divides the premultiplied sample by its alpha, transforms, and multiplies back, so a half-transparent edge grades the same way an opaque pixel does. Runs on a ShaderFilter carrying both a GLSL and a WGSL source, so it works on either backend without the caller choosing one.",
   "symbol": "ColorMatrixFilter",
   "kind": "class",
   "subsystem": "rendering",
@@ -20,10 +20,10 @@
       "members": [],
       "paragraphs": [
         "A Filter that runs one affine colour transform over everything it is given: `RGBA' = M·RGBA + bias`, carried as a 4×5 row-major matrix of four `[r, g, b, a, offset]` rows.",
-        "One matrix expresses brightness, contrast, saturation, hue-ish channel mixing, inversion, sepia and flat tinting — so there is one filter class rather than one per operation. The conveniences below CONCATENATE onto the current matrix in call order, and reset goes back to the identity.",
+        "One matrix expresses brightness, contrast, saturation, hue-ish channel mixing, inversion, sepia and flat tinting - so there is one filter class rather than one per operation. The conveniences below CONCATENATE onto the current matrix in call order, and reset goes back to the identity.",
         "```ts // Desaturate a whole subtree and lift it slightly. subtree.filters = [new ColorMatrixFilter().grayscale().brightness(1.1)];",
         "// Damage flash: multiply the subtree by red for a few frames. flash.tint(Color.red); ```",
-        "For a cheap per-drawable multiply, use Drawable.tint instead — it costs no render target at all. Reach for this filter when the transform is more than a multiply, or when it has to cover a whole subtree as one image. For non-linear, authored grading use LutFilter.",
+        "For a cheap per-drawable multiply, use Drawable.tint instead - it costs no render target at all. Reach for this filter when the transform is more than a multiply, or when it has to cover a whole subtree as one image. For non-linear, authored grading use LutFilter.",
         "Colour operations run on STRAIGHT alpha: the shader divides the premultiplied sample by its alpha, transforms, and multiplies back, so a half-transparent edge grades the same way an opaque pixel does.",
         "Runs on a ShaderFilter carrying both a GLSL and a WGSL source, so it works on either backend without the caller choosing one."
       ],
@@ -198,7 +198,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Execute one filter pass: sample from input, write the result to output. Both textures are bounds × resolution texels — NOT the drawable's logical bounding box. Any parameter a subclass expresses in pixels (a blur radius, a displacement amount) is in LOGICAL units by convention and must be multiplied by resolution before it is used as a texel offset; otherwise the effect shrinks by 1/resolution on a HiDPI display. Parameters expressed as a fraction of the target (or as pure colour maths) need no adjustment. The engine always passes resolution. It is optional for the hand-rolled case — a post-processing chain that creates its own RenderTextures and calls apply directly — where the textures are whatever size the caller made them and 1 is the honest answer."
+          "description": "Execute one filter pass: sample from input, write the result to output. Both textures are bounds × resolution texels - NOT the drawable's logical bounding box. Any parameter a subclass expresses in pixels (a blur radius, a displacement amount) is in LOGICAL units by convention and must be multiplied by resolution before it is used as a texel offset; otherwise the effect shrinks by 1/resolution on a HiDPI display. Parameters expressed as a fraction of the target (or as pure colour maths) need no adjustment. The engine always passes resolution. It is optional for the hand-rolled case - a post-processing chain that creates its own RenderTextures and calls apply directly - where the textures are whatever size the caller made them and 1 is the honest answer."
         },
         {
           "name": "brightness",
@@ -389,7 +389,7 @@
             }
           ],
           "returnType": "void",
-          "description": "The logical bounds this effect can produce from the logical bounds it is given — the contract that lets an effect change a drawable's visual extent instead of being clipped by the geometry it was captured from. Both rectangles are in the capture domain's LOGICAL units, the same ones RenderNode.getBounds reports. They are not device pixels: the target a pass runs against is separately allocated at bounds × resolution texels, so an expansion of 8 stays 8 logical units at every pixel ratio. The default is the identity — an effect that only recolours what it is given (a colour matrix, a LUT) needs no override. An effect that reaches outside its input (a blur, a glow) must declare that reach, and one that reaches asymmetrically (a drop shadow) may move the edges independently: ts public override getOutputBounds(input: ReadonlyRectangle, output: Rectangle): void { output.set(input.x - this.radius, input.y - this.radius, input.width + this.radius * 2, input.height + this.radius * 2); }  In a CHAIN each filter is asked in turn, with the previous filter's output as its input, and the barrier's capture domain is the union of the source bounds and every stage's answer. A bounds-REDUCING effect is therefore represented — the domain simply keeps the room its predecessors needed, so no pass is ever clipped by a target smaller than what it declared. input and output are never the same object, so an implementation may read input freely while writing output. Called once per frame for every filtered node, so it must not allocate."
+          "description": "The logical bounds this effect can produce from the logical bounds it is given - the contract that lets an effect change a drawable's visual extent instead of being clipped by the geometry it was captured from. Both rectangles are in the capture domain's LOGICAL units, the same ones RenderNode.getBounds reports. They are not device pixels: the target a pass runs against is separately allocated at bounds × resolution texels, so an expansion of 8 stays 8 logical units at every pixel ratio. The default is the identity - an effect that only recolours what it is given (a colour matrix, a LUT) needs no override. An effect that reaches outside its input (a blur, a glow) must declare that reach, and one that reaches asymmetrically (a drop shadow) may move the edges independently: ts public override getOutputBounds(input: ReadonlyRectangle, output: Rectangle): void { output.set(input.x - this.radius, input.y - this.radius, input.width + this.radius * 2, input.height + this.radius * 2); }  In a CHAIN each filter is asked in turn, with the previous filter's output as its input, and the barrier's capture domain is the union of the source bounds and every stage's answer. A bounds-REDUCING effect is therefore represented - the domain simply keeps the room its predecessors needed, so no pass is ever clipped by a target smaller than what it declared. input and output are never the same object, so an implementation may read input freely while writing output. Called once per frame for every filtered node, so it must not allocate."
         },
         {
           "name": "grayscale",
@@ -418,7 +418,7 @@
           ],
           "params": [],
           "returnType": "this",
-          "description": "Collapse every channel onto its luminance — saturate at 0."
+          "description": "Collapse every channel onto its luminance - saturate at 0."
         },
         {
           "name": "invalidate",
@@ -447,7 +447,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Tell every node this filter is attached to that its rendered output is out of date. Call it after mutating anything that changes what the filter draws or how far it reaches — the stock filters do this from their own setters. Without it a cached or retained representation of the owning node keeps replaying the result the filter produced before the change."
+          "description": "Tell every node this filter is attached to that its rendered output is out of date. Call it after mutating anything that changes what the filter draws or how far it reaches - the stock filters do this from their own setters. Without it a cached or retained representation of the owning node keeps replaying the result the filter produced before the change."
         },
         {
           "name": "invert",
@@ -675,7 +675,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Multiply by a flat colour, alpha included — the same arithmetic Drawable.tint applies per drawable, here over the whole subtree the filter is attached to."
+          "description": "Multiply by a flat colour, alpha included - the same arithmetic Drawable.tint applies per drawable, here over the whole subtree the filter is attached to."
         }
       ],
       "paragraphs": [],
@@ -705,7 +705,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Resolution this filter's render targets are rasterized at, in device pixels per logical unit. 'inherit' (the default) matches the surface the result is composited into, so a filtered subtree stays as sharp as its surroundings on a HiDPI display. Lower it for a filter whose output is low-frequency anyway — a heavy blur at 0.5 costs a quarter of the fragments and is hard to tell apart. A filter CHAIN shares one target size, so the whole chain runs at the lowest resolution any of its filters asks for. ts const blur = new BlurFilter({ radius: 8 }); blur.resolution = 0.5; // half-resolution blur, quarter the fill cost "
+          "description": "Resolution this filter's render targets are rasterized at, in device pixels per logical unit. 'inherit' (the default) matches the surface the result is composited into, so a filtered subtree stays as sharp as its surroundings on a HiDPI display. Lower it for a filter whose output is low-frequency anyway - a heavy blur at 0.5 costs a quarter of the fragments and is hard to tell apart. A filter CHAIN shares one target size, so the whole chain runs at the lowest resolution any of its filters asks for. ts const blur = new BlurFilter({ radius: 8 }); blur.resolution = 0.5; // half-resolution blur, quarter the fill cost "
         },
         {
           "name": "matrix",

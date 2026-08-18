@@ -1,6 +1,6 @@
 {
   "title": "Text",
-  "description": "GPU-accelerated text node that rasterizes individual glyphs into a shared per-font-variant GlyphAtlas using the SDF (Signed Distance Field) technique and renders them through the `text-sdf` shader. Style mutations are applied automatically before the next draw — no manual `update()` call required. Mutating `text.style` any number of times in the same frame is cheap; the geometry is rebuilt at most once, on demand. ```ts const label = new Text('Hello', { fontSize: 24 }); scene.addChild(label); label.style.fillColor = new Color(255, 0, 0); // cheap — no atlas work label.style.outlineWidth = 0.08; // cheap — only shader uniforms // changes are picked up automatically on the next render pass ``` **FontFace-first:** load fonts via FontFactory before constructing the node, then pass the loaded `FontFace` via the `font` style option. The label renders immediately with the correct glyphs — no async waiting needed. ```ts const face = await loader.load(Asset.type('font', 'roboto.woff2', { family: 'Roboto' })); const label = new Text('Score: 0', { font: face, fontSize: 24 }); scene.addChild(label); // renders immediately with Roboto ``` Enable colour-glyph (emoji) mode via `colorGlyphs: true` in the constructor options. Colour-glyph nodes use the `text-color` shader instead of `text-sdf`. Glyphs are rasterized at the Application's `pixelRatio`, so text is crisp on a HiDPI surface without any opt-in. TextOptions.pixelRatio decouples one node's glyph raster from the surface without changing its layout by so much as a line break.",
+  "description": "GPU-accelerated text node that rasterizes individual glyphs into a shared per-font-variant GlyphAtlas using the SDF (Signed Distance Field) technique and renders them through the `text-sdf` shader. Style mutations are applied automatically before the next draw - no manual `update()` call required. Mutating `text.style` any number of times in the same frame is cheap; the geometry is rebuilt at most once, on demand. ```ts const label = new Text('Hello', { fontSize: 24 }); scene.addChild(label); label.style.fillColor = new Color(255, 0, 0); // cheap - no atlas work label.style.outlineWidth = 0.08; // cheap - only shader uniforms // changes are picked up automatically on the next render pass ``` **FontFace-first:** load fonts via FontFactory before constructing the node, then pass the loaded `FontFace` via the `font` style option. The label renders immediately with the correct glyphs - no async waiting needed. ```ts const face = await loader.load(Asset.type('font', 'roboto.woff2', { family: 'Roboto' })); const label = new Text('Score: 0', { font: face, fontSize: 24 }); scene.addChild(label); // renders immediately with Roboto ``` Enable colour-glyph (emoji) mode via `colorGlyphs: true` in the constructor options. Colour-glyph nodes use the `text-color` shader instead of `text-sdf`. Glyphs are rasterized at the Application's `pixelRatio`, so text is crisp on a HiDPI surface without any opt-in. TextOptions.pixelRatio decouples one node's glyph raster from the surface without changing its layout by so much as a line break.",
   "symbol": "Text",
   "kind": "class",
   "subsystem": "rendering",
@@ -20,10 +20,10 @@
       "members": [],
       "paragraphs": [
         "GPU-accelerated text node that rasterizes individual glyphs into a shared per-font-variant GlyphAtlas using the SDF (Signed Distance Field) technique and renders them through the `text-sdf` shader.",
-        "Style mutations are applied automatically before the next draw — no manual `update()` call required. Mutating `text.style` any number of times in the same frame is cheap; the geometry is rebuilt at most once, on demand.",
+        "Style mutations are applied automatically before the next draw - no manual `update()` call required. Mutating `text.style` any number of times in the same frame is cheap; the geometry is rebuilt at most once, on demand.",
         "```ts const label = new Text('Hello', { fontSize: 24 }); scene.addChild(label);",
-        "label.style.fillColor = new Color(255, 0, 0); // cheap — no atlas work label.style.outlineWidth = 0.08; // cheap — only shader uniforms // changes are picked up automatically on the next render pass ```",
-        "**FontFace-first:** load fonts via FontFactory before constructing the node, then pass the loaded `FontFace` via the `font` style option. The label renders immediately with the correct glyphs — no async waiting needed.",
+        "label.style.fillColor = new Color(255, 0, 0); // cheap - no atlas work label.style.outlineWidth = 0.08; // cheap - only shader uniforms // changes are picked up automatically on the next render pass ```",
+        "**FontFace-first:** load fonts via FontFactory before constructing the node, then pass the loaded `FontFace` via the `font` style option. The label renders immediately with the correct glyphs - no async waiting needed.",
         "```ts const face = await loader.load(Asset.type('font', 'roboto.woff2', { family: 'Roboto' })); const label = new Text('Score: 0', { font: face, fontSize: 24 }); scene.addChild(label); // renders immediately with Roboto ```",
         "Enable colour-glyph (emoji) mode via `colorGlyphs: true` in the constructor options. Colour-glyph nodes use the `text-color` shader instead of `text-sdf`.",
         "Glyphs are rasterized at the Application's `pixelRatio`, so text is crisp on a HiDPI surface without any opt-in. TextOptions.pixelRatio decouples one node's glyph raster from the surface without changing its layout by so much as a line break."
@@ -574,7 +574,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Releases everything this node owns, including GPU-side resources. Calling it is mandatory for a node that has acted as a render root: from its first recorded frame such a node owns a group-scoped instance, transform and tint buffer, and the backend holds that bundle until the node is destroyed or the backend itself is. Dropping the last reference is not enough — GPU lifetime is deterministic here on purpose and is not tied to garbage collection."
+          "description": "Releases everything this node owns, including GPU-side resources. Calling it is mandatory for a node that has acted as a render root: from its first recorded frame such a node owns a group-scoped instance, transform and tint buffer, and the backend holds that bundle until the node is destroyed or the backend itself is. Dropping the last reference is not enough - GPU lifetime is deterministic here on purpose and is not tied to garbage collection."
         },
         {
           "name": "focus",
@@ -1944,7 +1944,7 @@
             }
           ],
           "returnType": "TextSize",
-          "description": "Advance extent text would occupy under options, without constructing a node. Takes the same options as the constructor and gives the same answer as the resulting node's textBounds — it runs the identical layout pass over the identical shared metrics, so the two cannot drift. Costs one canvas measurement per glyph it has not seen before, and nothing else: no atlas is created, no glyph is rasterized, and no page is claimed. The answer is therefore independent of pixelRatio, of which Application exists, and of whether anything has been rendered yet — colorGlyphs, sdfRadius and pixelRatio are ignored here because none of them can move a line break. ts const { width } = Text.measure('Continue', { fontSize: 24 }); button.width = width + 32; "
+          "description": "Advance extent text would occupy under options, without constructing a node. Takes the same options as the constructor and gives the same answer as the resulting node's textBounds - it runs the identical layout pass over the identical shared metrics, so the two cannot drift. Costs one canvas measurement per glyph it has not seen before, and nothing else: no atlas is created, no glyph is rasterized, and no page is claimed. The answer is therefore independent of pixelRatio, of which Application exists, and of whether anything has been rendered yet - colorGlyphs, sdfRadius and pixelRatio are ignored here because none of them can move a line break. ts const { width } = Text.measure('Continue', { fontSize: 24 }); button.width = width + 32; "
         },
         {
           "name": "setInternalSpriteFactory",
@@ -2304,7 +2304,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Bake this node's subtree into a RenderTexture once and replay that texture until the subtree changes, instead of walking and drawing it every frame. Worth it for a subtree that is expensive to draw and rarely changes. The cache is invalidated by anything that moves the node's world bounds — the node's own transform included — so a node that animates re-bakes every frame and is strictly slower than not caching it at all. Setting it to false frees the texture immediately."
+          "description": "Bake this node's subtree into a RenderTexture once and replay that texture until the subtree changes, instead of walking and drawing it every frame. Worth it for a subtree that is expensive to draw and rarely changes. The cache is invalidated by anything that moves the node's world bounds - the node's own transform included - so a node that animates re-bakes every frame and is strictly slower than not caching it at all. Setting it to false frees the texture immediately."
         },
         {
           "name": "cacheResolution",
@@ -2325,7 +2325,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Resolution the cacheAsTexture texture is baked at, in device pixels per logical unit. 'inherit' (the default) matches the surface the cache is composited into, so enabling the cache does not soften the picture on a HiDPI display. Pin it to a number to trade sharpness for memory and bake cost — a cache is resolution² texels, so 1 on a DPR-3 phone is a ninth of the VRAM and a ninth of the fill per re-bake. Changing it invalidates the cache."
+          "description": "Resolution the cacheAsTexture texture is baked at, in device pixels per logical unit. 'inherit' (the default) matches the surface the cache is composited into, so enabling the cache does not soften the picture on a HiDPI display. Pin it to a number to trade sharpness for memory and bake cost - a cache is resolution² texels, so 1 on a DPR-3 phone is a ninth of the VRAM and a ninth of the fill per re-bake. Changing it invalidates the cache."
         },
         {
           "name": "clip",
@@ -2604,7 +2604,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The mask source that controls visibility of this node's render output. See MaskSource for accepted source types and their semantics. Setting to null removes any active mask. Setting a RenderNode that is this is rejected (a node cannot mask itself). Indirect cycles (a.mask = b; b.mask = a) are rejected as well: the candidate's mask chain is walked and any cycle — whether it closes on this or was already present in the chain — fails the assignment."
+          "description": "The mask source that controls visibility of this node's render output. See MaskSource for accepted source types and their semantics. Setting to null removes any active mask. Setting a RenderNode that is this is rejected (a node cannot mask itself). Indirect cycles (a.mask = b; b.mask = a) are rejected as well: the candidate's mask chain is walked and any cycle - whether it closes on this or was already present in the chain - fails the assignment."
         },
         {
           "name": "origin",
@@ -2800,7 +2800,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The resolved raster density — the explicit pixelRatio when there is one, otherwise the pixelRatio of the surface this node was last collected for (1 until it has been collected once)."
+          "description": "The resolved raster density - the explicit pixelRatio when there is one, otherwise the pixelRatio of the surface this node was last collected for (1 until it has been collected once)."
         },
         {
           "name": "rotation",

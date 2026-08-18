@@ -1,6 +1,6 @@
 {
   "title": "ShaderFilterUniformValue",
-  "description": "A scalar number, vector tuple, typed array, or texture — the value types a ShaderFilter accepts for a user uniform and marshals to the active backend.",
+  "description": "A scalar number, vector tuple, typed array, or texture - the value types a ShaderFilter accepts for a user uniform and marshals to the active backend.",
   "symbol": "ShaderFilterUniformValue",
   "kind": "type",
   "subsystem": "rendering",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A scalar number, vector tuple, typed array, or texture — the value types a ShaderFilter accepts for a user uniform and marshals to the active backend."
+        "A scalar number, vector tuple, typed array, or texture - the value types a ShaderFilter accepts for a user uniform and marshals to the active backend."
       ],
       "importLine": "import { ShaderFilterUniformValue } from '@codexo/exojs'",
       "sourceLink": null

@@ -1,6 +1,6 @@
 {
   "title": "ShaderFilterBackendError",
-  "description": "A ShaderFilter was applied on a backend it carries no source for. Thrown when the filter first attaches to a backend — before any program, pipeline or buffer is created — so a WGSL-less filter fails the moment a WebGPU backend touches it rather than somewhere inside a draw.",
+  "description": "A ShaderFilter was applied on a backend it carries no source for. Thrown when the filter first attaches to a backend - before any program, pipeline or buffer is created - so a WGSL-less filter fails the moment a WebGPU backend touches it rather than somewhere inside a draw.",
   "symbol": "ShaderFilterBackendError",
   "kind": "class",
   "subsystem": "rendering",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "A ShaderFilter was applied on a backend it carries no source for.",
-        "Thrown when the filter first attaches to a backend — before any program, pipeline or buffer is created — so a WGSL-less filter fails the moment a WebGPU backend touches it rather than somewhere inside a draw."
+        "Thrown when the filter first attaches to a backend - before any program, pipeline or buffer is created - so a WGSL-less filter fails the moment a WebGPU backend touches it rather than somewhere inside a draw."
       ],
       "importLine": "import { ShaderFilterBackendError } from '@codexo/exojs'",
       "sourceLink": null

@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Storage mode of the LUT texture. - 'rgb1d' — texture is N×1, holding three independent per-channel curves: red is graded through the LUT's red channel, green through green, blue through blue. Used for levels/curves-style grading, colour ramps and posterisation. - '3d' — texture is N²×N, indexed by the full source RGB. Used for color grading, tone mapping, film emulation. Default '3d'."
+          "description": "Storage mode of the LUT texture. - 'rgb1d' - texture is N×1, holding three independent per-channel curves: red is graded through the LUT's red channel, green through green, blue through blue. Used for levels/curves-style grading, colour ramps and posterisation. - '3d' - texture is N²×N, indexed by the full source RGB. Used for color grading, tone mapping, film emulation. Default '3d'."
         },
         {
           "name": "size",

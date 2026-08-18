@@ -338,7 +338,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Schedule attack → decay → sustain on the target gain parameter starting at atTime (audioContext.currentTime). elapsedMs resumes an envelope that had already run for that long when it was frozen (see Envelope.hold): the schedule is laid out as if the note had been triggered elapsedMs ago, so the parameter is pinned to the value the envelope had reached and only the stages still ahead are scheduled. A stage already behind the resume point is skipped rather than replayed — that is what keeps a paused voice from starting its attack over, and equally from finding the envelope run out against a clock that kept ticking while it was silent."
+          "description": "Schedule attack → decay → sustain on the target gain parameter starting at atTime (audioContext.currentTime). elapsedMs resumes an envelope that had already run for that long when it was frozen (see Envelope.hold): the schedule is laid out as if the note had been triggered elapsedMs ago, so the parameter is pinned to the value the envelope had reached and only the stages still ahead are scheduled. A stage already behind the resume point is skipped rather than replayed - that is what keeps a paused voice from starting its attack over, and equally from finding the envelope run out against a clock that kept ticking while it was silent."
         }
       ],
       "paragraphs": [],

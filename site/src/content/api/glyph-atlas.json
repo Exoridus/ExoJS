@@ -1,6 +1,6 @@
 {
   "title": "GlyphAtlas",
-  "description": "A per-font-variant glyph atlas with automatic multi-page growth. In `'sdf'` mode (default) each atlas page is a single-channel R8 `DataTexture` populated by GlyphSdf. One `GlyphSdf` instance is kept per raster font size so the atlas can mix sizes efficiently. In `'color'` mode pages are RGBA canvas textures that preserve full glyph colour data for emoji and colour fonts. **Pixel ratio.** An atlas rasterizes at `pixelRatio` device pixels per logical pixel: a glyph asked for at logical size 9 in a ratio-3 atlas is rendered from a 27px font, and every raster-derived number it hands back is divided by the ratio again so the caller keeps working in logical units. The ratio is part of the atlas's identity (GlyphAtlasPool) — it has to be, because the pool is process-wide and two applications at different densities must not share one set of pages. The LOGICAL metrics layout consumes (advance, kerning) come from the ratio-independent GlyphMetrics instead, so the same string lays out identically at every ratio.",
+  "description": "A per-font-variant glyph atlas with automatic multi-page growth. In `'sdf'` mode (default) each atlas page is a single-channel R8 `DataTexture` populated by GlyphSdf. One `GlyphSdf` instance is kept per raster font size so the atlas can mix sizes efficiently. In `'color'` mode pages are RGBA canvas textures that preserve full glyph colour data for emoji and colour fonts. **Pixel ratio.** An atlas rasterizes at `pixelRatio` device pixels per logical pixel: a glyph asked for at logical size 9 in a ratio-3 atlas is rendered from a 27px font, and every raster-derived number it hands back is divided by the ratio again so the caller keeps working in logical units. The ratio is part of the atlas's identity (GlyphAtlasPool) - it has to be, because the pool is process-wide and two applications at different densities must not share one set of pages. The LOGICAL metrics layout consumes (advance, kerning) come from the ratio-independent GlyphMetrics instead, so the same string lays out identically at every ratio.",
   "symbol": "GlyphAtlas",
   "kind": "class",
   "subsystem": "rendering",
@@ -22,7 +22,7 @@
         "A per-font-variant glyph atlas with automatic multi-page growth.",
         "In `'sdf'` mode (default) each atlas page is a single-channel R8 `DataTexture` populated by GlyphSdf. One `GlyphSdf` instance is kept per raster font size so the atlas can mix sizes efficiently.",
         "In `'color'` mode pages are RGBA canvas textures that preserve full glyph colour data for emoji and colour fonts.",
-        "**Pixel ratio.** An atlas rasterizes at `pixelRatio` device pixels per logical pixel: a glyph asked for at logical size 9 in a ratio-3 atlas is rendered from a 27px font, and every raster-derived number it hands back is divided by the ratio again so the caller keeps working in logical units. The ratio is part of the atlas's identity (GlyphAtlasPool) — it has to be, because the pool is process-wide and two applications at different densities must not share one set of pages. The LOGICAL metrics layout consumes (advance, kerning) come from the ratio-independent GlyphMetrics instead, so the same string lays out identically at every ratio."
+        "**Pixel ratio.** An atlas rasterizes at `pixelRatio` device pixels per logical pixel: a glyph asked for at logical size 9 in a ratio-3 atlas is rendered from a 27px font, and every raster-derived number it hands back is divided by the ratio again so the caller keeps working in logical units. The ratio is part of the atlas's identity (GlyphAtlasPool) - it has to be, because the pool is process-wide and two applications at different densities must not share one set of pages. The LOGICAL metrics layout consumes (advance, kerning) come from the ratio-independent GlyphMetrics instead, so the same string lays out identically at every ratio."
       ],
       "importLine": "import { GlyphAtlas } from '@codexo/exojs'",
       "sourceLink": null
@@ -556,7 +556,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "SDF buffer radius in LOGICAL pixels — the outline/shadow reach this atlas can encode. Independent of pixelRatio: the raster buffer grows with the ratio so the logical reach stays put."
+          "description": "SDF buffer radius in LOGICAL pixels - the outline/shadow reach this atlas can encode. Independent of pixelRatio: the raster buffer grows with the ratio so the logical reach stays put."
         }
       ],
       "paragraphs": [],

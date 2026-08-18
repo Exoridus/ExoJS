@@ -1,6 +1,6 @@
 {
   "title": "BlurFilter",
-  "description": "Gaussian blur Filter, run as two separable passes. The input is swept along X into a scratch target, then that scratch is swept along Y into the output, each sweep taking `quality * 2 + 1` taps spread over ±`radius` logical units and weighted by a Gaussian. Because the two sweeps are chained rather than summed, the effective 2D kernel is their product — a real isotropic blur that reaches diagonally as well as along the axes. (Summing the two sweeps into one target instead, which is what this filter used to do, produces a cross: a pixel diagonally off a corner is touched by neither sweep and stays black at any radius.) Higher `quality` values add taps and smooth the result at the cost of extra draw calls; they do not change how far the blur reaches.",
+  "description": "Gaussian blur Filter, run as two separable passes. The input is swept along X into a scratch target, then that scratch is swept along Y into the output, each sweep taking `quality * 2 + 1` taps spread over ±`radius` logical units and weighted by a Gaussian. Because the two sweeps are chained rather than summed, the effective 2D kernel is their product - a real isotropic blur that reaches diagonally as well as along the axes. (Summing the two sweeps into one target instead, which is what this filter used to do, produces a cross: a pixel diagonally off a corner is touched by neither sweep and stays black at any radius.) Higher `quality` values add taps and smooth the result at the cost of extra draw calls; they do not change how far the blur reaches.",
   "symbol": "BlurFilter",
   "kind": "class",
   "subsystem": "rendering",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Gaussian blur Filter, run as two separable passes.",
-        "The input is swept along X into a scratch target, then that scratch is swept along Y into the output, each sweep taking `quality * 2 + 1` taps spread over ±`radius` logical units and weighted by a Gaussian. Because the two sweeps are chained rather than summed, the effective 2D kernel is their product — a real isotropic blur that reaches diagonally as well as along the axes.",
+        "The input is swept along X into a scratch target, then that scratch is swept along Y into the output, each sweep taking `quality * 2 + 1` taps spread over ±`radius` logical units and weighted by a Gaussian. Because the two sweeps are chained rather than summed, the effective 2D kernel is their product - a real isotropic blur that reaches diagonally as well as along the axes.",
         "(Summing the two sweeps into one target instead, which is what this filter used to do, produces a cross: a pixel diagonally off a corner is touched by neither sweep and stays black at any radius.)",
         "Higher `quality` values add taps and smooth the result at the cost of extra draw calls; they do not change how far the blur reaches."
       ],
@@ -195,7 +195,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Execute one filter pass: sample from input, write the result to output. Both textures are bounds × resolution texels — NOT the drawable's logical bounding box. Any parameter a subclass expresses in pixels (a blur radius, a displacement amount) is in LOGICAL units by convention and must be multiplied by resolution before it is used as a texel offset; otherwise the effect shrinks by 1/resolution on a HiDPI display. Parameters expressed as a fraction of the target (or as pure colour maths) need no adjustment. The engine always passes resolution. It is optional for the hand-rolled case — a post-processing chain that creates its own RenderTextures and calls apply directly — where the textures are whatever size the caller made them and 1 is the honest answer."
+          "description": "Execute one filter pass: sample from input, write the result to output. Both textures are bounds × resolution texels - NOT the drawable's logical bounding box. Any parameter a subclass expresses in pixels (a blur radius, a displacement amount) is in LOGICAL units by convention and must be multiplied by resolution before it is used as a texel offset; otherwise the effect shrinks by 1/resolution on a HiDPI display. Parameters expressed as a fraction of the target (or as pure colour maths) need no adjustment. The engine always passes resolution. It is optional for the hand-rolled case - a post-processing chain that creates its own RenderTextures and calls apply directly - where the textures are whatever size the caller made them and 1 is the honest answer."
         },
         {
           "name": "destroy",
@@ -292,7 +292,7 @@
             }
           ],
           "returnType": "void",
-          "description": "The blur reaches radius logical units outside its input on every edge. Read off the sampling loop rather than assumed: each sweep draws its source at offsets spread evenly over [-radius, +radius], so the horizontal sweep moves a value at most radius in x and the vertical one at most radius in y. Chaining them means a value can travel radius in BOTH — the corner of the box, which is exactly what this rectangle already declares. quality adds taps between those extremes and does not change the reach."
+          "description": "The blur reaches radius logical units outside its input on every edge. Read off the sampling loop rather than assumed: each sweep draws its source at offsets spread evenly over [-radius, +radius], so the horizontal sweep moves a value at most radius in x and the vertical one at most radius in y. Chaining them means a value can travel radius in BOTH - the corner of the box, which is exactly what this rectangle already declares. quality adds taps between those extremes and does not change the reach."
         },
         {
           "name": "invalidate",
@@ -321,7 +321,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Tell every node this filter is attached to that its rendered output is out of date. Call it after mutating anything that changes what the filter draws or how far it reaches — the stock filters do this from their own setters. Without it a cached or retained representation of the owning node keeps replaying the result the filter produced before the change."
+          "description": "Tell every node this filter is attached to that its rendered output is out of date. Call it after mutating anything that changes what the filter draws or how far it reaches - the stock filters do this from their own setters. Without it a cached or retained representation of the owning node keeps replaying the result the filter produced before the change."
         }
       ],
       "paragraphs": [],
@@ -351,7 +351,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Resolution this filter's render targets are rasterized at, in device pixels per logical unit. 'inherit' (the default) matches the surface the result is composited into, so a filtered subtree stays as sharp as its surroundings on a HiDPI display. Lower it for a filter whose output is low-frequency anyway — a heavy blur at 0.5 costs a quarter of the fragments and is hard to tell apart. A filter CHAIN shares one target size, so the whole chain runs at the lowest resolution any of its filters asks for. ts const blur = new BlurFilter({ radius: 8 }); blur.resolution = 0.5; // half-resolution blur, quarter the fill cost "
+          "description": "Resolution this filter's render targets are rasterized at, in device pixels per logical unit. 'inherit' (the default) matches the surface the result is composited into, so a filtered subtree stays as sharp as its surroundings on a HiDPI display. Lower it for a filter whose output is low-frequency anyway - a heavy blur at 0.5 costs a quarter of the fragments and is hard to tell apart. A filter CHAIN shares one target size, so the whole chain runs at the lowest resolution any of its filters asks for. ts const blur = new BlurFilter({ radius: 8 }); blur.resolution = 0.5; // half-resolution blur, quarter the fill cost "
         },
         {
           "name": "quality",
@@ -372,7 +372,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Taps per side of each sweep — see BlurFilterOptions.quality."
+          "description": "Taps per side of each sweep - see BlurFilterOptions.quality."
         },
         {
           "name": "radius",

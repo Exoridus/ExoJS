@@ -502,7 +502,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Releases everything this node owns, including GPU-side resources. Calling it is mandatory for a node that has acted as a render root: from its first recorded frame such a node owns a group-scoped instance, transform and tint buffer, and the backend holds that bundle until the node is destroyed or the backend itself is. Dropping the last reference is not enough — GPU lifetime is deterministic here on purpose and is not tied to garbage collection."
+          "description": "Releases everything this node owns, including GPU-side resources. Calling it is mandatory for a node that has acted as a render root: from its first recorded frame such a node owns a group-scoped instance, transform and tint buffer, and the backend holds that bundle until the node is destroyed or the backend itself is. Dropping the last reference is not enough - GPU lifetime is deterministic here on purpose and is not tied to garbage collection."
         },
         {
           "name": "focus",
@@ -1982,7 +1982,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Assign a new texture, refreshing the texture frame to the full texture dimensions. Does **not** bump the texture's version. That signal means \"the source data has been mutated\"; replacing the sprite's texture reference is not that. Bumping it here would force the backend to re-allocate the GPU texture on the next bind — destroying any FBO content already rendered into a RenderTexture (the cacheAsTexture and filter capture pipelines). Call updateTexture explicitly when you mutate the source."
+          "description": "Assign a new texture, refreshing the texture frame to the full texture dimensions. Does **not** bump the texture's version. That signal means \"the source data has been mutated\"; replacing the sprite's texture reference is not that. Bumping it here would force the backend to re-allocate the GPU texture on the next bind - destroying any FBO content already rendered into a RenderTexture (the cacheAsTexture and filter capture pipelines). Call updateTexture explicitly when you mutate the source."
         },
         {
           "name": "setTextureFrame",
@@ -2801,7 +2801,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Bake this node's subtree into a RenderTexture once and replay that texture until the subtree changes, instead of walking and drawing it every frame. Worth it for a subtree that is expensive to draw and rarely changes. The cache is invalidated by anything that moves the node's world bounds — the node's own transform included — so a node that animates re-bakes every frame and is strictly slower than not caching it at all. Setting it to false frees the texture immediately."
+          "description": "Bake this node's subtree into a RenderTexture once and replay that texture until the subtree changes, instead of walking and drawing it every frame. Worth it for a subtree that is expensive to draw and rarely changes. The cache is invalidated by anything that moves the node's world bounds - the node's own transform included - so a node that animates re-bakes every frame and is strictly slower than not caching it at all. Setting it to false frees the texture immediately."
         },
         {
           "name": "cacheResolution",
@@ -2822,7 +2822,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Resolution the cacheAsTexture texture is baked at, in device pixels per logical unit. 'inherit' (the default) matches the surface the cache is composited into, so enabling the cache does not soften the picture on a HiDPI display. Pin it to a number to trade sharpness for memory and bake cost — a cache is resolution² texels, so 1 on a DPR-3 phone is a ninth of the VRAM and a ninth of the fill per re-bake. Changing it invalidates the cache."
+          "description": "Resolution the cacheAsTexture texture is baked at, in device pixels per logical unit. 'inherit' (the default) matches the surface the cache is composited into, so enabling the cache does not soften the picture on a HiDPI display. Pin it to a number to trade sharpness for memory and bake cost - a cache is resolution² texels, so 1 on a DPR-3 phone is a ninth of the VRAM and a ninth of the fill per re-bake. Changing it invalidates the cache."
         },
         {
           "name": "clip",
@@ -3131,7 +3131,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The mask source that controls visibility of this node's render output. See MaskSource for accepted source types and their semantics. Setting to null removes any active mask. Setting a RenderNode that is this is rejected (a node cannot mask itself). Indirect cycles (a.mask = b; b.mask = a) are rejected as well: the candidate's mask chain is walked and any cycle — whether it closes on this or was already present in the chain — fails the assignment."
+          "description": "The mask source that controls visibility of this node's render output. See MaskSource for accepted source types and their semantics. Setting to null removes any active mask. Setting a RenderNode that is this is rejected (a node cannot mask itself). Indirect cycles (a.mask = b; b.mask = a) are rejected as well: the candidate's mask chain is walked and any cycle - whether it closes on this or was already present in the chain - fails the assignment."
         },
         {
           "name": "material",

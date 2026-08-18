@@ -139,7 +139,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Extra AssetDefinitions keys that resolve to the same handler as type but are distinct global kinds in their own right (their own placeholder strategy + suffix inference) — e.g. srt sharing the subtitle handler with its primary vtt type. Declaring an alias here folds its global registration into defineAsset's own registration step instead of a bespoke top-level registerAssetKind/registerExtensionKind call next to the binding."
+          "description": "Extra AssetDefinitions keys that resolve to the same handler as type but are distinct global kinds in their own right (their own placeholder strategy + suffix inference) - e.g. srt sharing the subtitle handler with its primary vtt type. Declaring an alias here folds its global registration into defineAsset's own registration step instead of a bespoke top-level registerAssetKind/registerExtensionKind call next to the binding."
         },
         {
           "name": "create",
