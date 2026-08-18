@@ -6,11 +6,11 @@
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "advanced",
-  "memberCount": 7,
+  "memberCount": 8,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 7,
+    "properties": 8,
     "events": 0
   },
   "sections": [
@@ -28,6 +28,119 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "aliases",
+          "signature": "aliases?: readonly { extensions?: readonly string[]; isValue?: boolean; type: keyof AssetDefinitions }[]",
+          "signatureTokens": [
+            {
+              "text": "aliases",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extensions",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "isValue",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "keyof",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetDefinitions",
+              "kind": "type"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Extra AssetDefinitions keys that resolve to the same handler as type but are distinct global kinds in their own right (their own placeholder strategy + suffix inference) — e.g. srt sharing the subtitle handler with its primary vtt type. Declaring an alias here folds its global registration into defineAsset's own registration step instead of a bespoke top-level registerAssetKind/registerExtensionKind call next to the binding."
+        },
         {
           "name": "create",
           "signature": "create: (loader: Loader) => AssetHandler<Result, Options>",

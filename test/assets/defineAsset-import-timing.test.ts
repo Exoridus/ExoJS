@@ -22,4 +22,10 @@ describe('defineAsset import-timing regression', () => {
     // Value kind → a deferred AssetRef.
     expect(catalog.level).toBeInstanceOf(AssetRef);
   });
+
+  it('resolves the "srt" alias kind too — proves alias registration (defineAsset\'s `aliases` list) runs on the same import, not only the primary "vtt" type', () => {
+    const catalog = Assets.from({ captions: 'movie.srt' });
+
+    expect(catalog.captions).toBeInstanceOf(AssetRef);
+  });
 });

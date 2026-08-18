@@ -19,9 +19,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { Video } from '#rendering/video/Video';
 
 import { Asset } from './Asset';
-import { registerAssetKind } from './assetKindRegistry';
 import { defineAsset } from './defineAsset';
-import { registerExtensionKind } from './extensionKindRegistry';
 import type { AssetConstructor } from './FactoryRegistry';
 import type { AssetLoaderContext, Loader } from './Loader';
 import { soundSeamlessAdapter, textureSeamlessAdapter } from './seamless';
@@ -182,15 +180,17 @@ const svgBinding = defineAsset({
 });
 
 // Subtitle serves two value types through one handler. `defineAsset` registers
-// its primary type `vtt` (+ the `vtt` suffix); the `srt` alias type — a distinct
-// AssetDefinitions key sharing this handler — is registered explicitly so both
-// suffixes resolve to a value leaf and both load via the subtitle handler
-// (routed at runtime by `typeNames: ['vtt', 'srt']`).
+// its primary type `vtt` (+ the `vtt` suffix) globally; the `srt` alias type — a
+// distinct AssetDefinitions key sharing this handler — rides the `aliases` list
+// so it gets the same global (kind + extension) registration through the one
+// declarative call, and both suffixes load via the subtitle handler (routed at
+// runtime by `typeNames: ['vtt', 'srt']`).
 const subtitleBinding = defineAsset({
   ctor: SubtitleAsset as unknown as AssetConstructor<VTTCue[]>,
   type: 'vtt',
   typeNames: ['vtt', 'srt'],
   extensions: ['vtt'],
+  aliases: [{ type: 'srt', extensions: ['srt'] }],
   create: () => {
     const factory = new SubtitleFactory();
     return {
@@ -207,9 +207,6 @@ const subtitleBinding = defineAsset({
     };
   },
 });
-
-registerAssetKind('srt', { isValue: true });
-registerExtensionKind('srt', 'srt');
 
 const xmlBinding = defineAsset({
   ctor: XmlAsset,
