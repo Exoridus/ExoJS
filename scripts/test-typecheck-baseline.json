@@ -74,7 +74,7 @@
     "test/perf/rendering/harness.ts": 1,
     "test/perf/rendering/scenarios.ts": 5,
     "test/rendering/browser/webgl2-particles.test.ts": 1,
-    "test/rendering/browser/webgl2-shader-compile.test.ts": 2,
+    "test/rendering/browser/webgl2-shader-compile.test.ts": 1,
     "test/rendering/browser/webgpu-draw-geometry.test.ts": 1,
     "test/rendering/browser/webgpu-particles.test.ts": 1,
     "test/rendering/browser/webgpu-prewarm-bindgroup-cache.test.ts": 1,

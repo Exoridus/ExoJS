@@ -56,5 +56,11 @@
     }
   },
   "include": ["test/**/*", "src/typings.d.ts", "test/typings.d.ts"],
-  "exclude": ["dist", "node_modules"]
+  // `.tsx` type-test fixtures target a package this program cannot resolve
+  // (react lives in the react package's own tree, and the JSX runtime comes
+  // from its tsconfig). Checked here, every assertion in them would silently
+  // widen to `any` and the negative cases would report as unused directives —
+  // a gate that reads green precisely because it stopped checking. They have a
+  // dedicated project instead; see `typecheck:type-tests`.
+  "exclude": ["dist", "node_modules", "test/type-tests/**/*.tsx"]
 }

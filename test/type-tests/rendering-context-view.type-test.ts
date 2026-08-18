@@ -8,9 +8,9 @@
 import {
   type CaptureOptions,
   type DrawContext,
-  Geometry,
-  Matrix,
-  RenderBatch,
+  type Geometry,
+  type Matrix,
+  type RenderBatch,
   RenderingContext,
   type RenderNode,
   RenderTexture,
@@ -40,7 +40,7 @@ ctx.drawBatch(batch, { view });
 // renderTo's `target` is required — the off-screen destination, unlike the
 // optional `view` override shared by the other draw verbs.
 ctx.renderTo(node, { target: new RenderTexture(64, 64) });
-ctx.renderTo(node, { target: new RenderTexture(64, 64), view, clear: undefined });
+ctx.renderTo(node, { target: new RenderTexture(64, 64), view });
 // @ts-expect-error — renderTo's `target` cannot be omitted.
 ctx.renderTo(node, { view });
 

@@ -112,7 +112,6 @@ const startApplication = async (backend: BackendChoice, sink: ErrorSink): Promis
         // Readback happens outside a compositing frame, but an explicit
         // preserve keeps the assertion independent of when the browser presents.
         preserveDrawingBuffer: true,
-        stencil: false,
         depth: false,
       },
     },

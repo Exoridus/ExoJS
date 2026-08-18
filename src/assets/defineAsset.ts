@@ -41,7 +41,7 @@ export interface DefineAssetDescriptor<Result, Options> {
    * step instead of a bespoke top-level `registerAssetKind`/`registerExtensionKind`
    * call next to the binding.
    */
-  readonly aliases?: readonly { readonly type: keyof AssetDefinitions; readonly isValue?: boolean; readonly extensions?: readonly string[] }[];
+  readonly aliases?: ReadonlyArray<{ readonly type: keyof AssetDefinitions; readonly isValue?: boolean; readonly extensions?: readonly string[] }>;
   /** Loader-local handler factory, called once per Loader by `materializeAssetBindings`. */
   readonly create: (loader: Loader) => AssetHandler<Result, Options>;
 }

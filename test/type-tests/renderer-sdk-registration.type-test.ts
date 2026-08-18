@@ -14,7 +14,7 @@ import {
   RenderBackendType,
   type Renderer,
   RendererRegistry,
-  WebGl2Backend,
+  type WebGl2Backend,
 } from '@codexo/exojs/renderer-sdk';
 
 // Two distinct drawable subtypes — distinguished by a literal `kind` field so
