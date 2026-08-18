@@ -27,13 +27,16 @@ describe('text atlas fragment prologue', () => {
   });
 
   // A GLSL ES 3.00 fragment shader defaults `sampler2D` to `lowp`, whose step
-  // around the threshold is 2^-6. The edge fades over about +/- one device
-  // pixel, so on an atlas magnified past its own density only a handful of
-  // those steps land inside the band and the glyph reads as a staircase. A
-  // driver that treats `lowp` as fp32 anyway (desktop ANGLE, SwiftShader) hides
-  // it; one that honours it (Mesa's llvmpipe) does not. `precision highp float`
-  // in the fragment does not cover this: sampler precision is declared
+  // is 2^-6. The edge fades over about +/- one device pixel, so on an atlas
+  // magnified past its own density only a handful of those steps would land
+  // inside the band and the glyph would read as a staircase. `precision highp
+  // float` in the fragment does not cover this: sampler precision is declared
   // separately and governs what `texture()` returns.
+  //
+  // Asserted over the composed source rather than a rendered frame because the
+  // adapters that honour the qualifier are not the ones tests run on here -
+  // desktop ANGLE and SwiftShader compute at fp32 whatever it says, so no frame
+  // available to this suite can tell the two declarations apart.
   test('samples the distance field at fp32', () => {
     expect(samplerPrecisions(composed).every(precision => precision === 'highp')).toBe(true);
   });

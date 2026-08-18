@@ -2,9 +2,11 @@
 // The edge math runs in fp32 even though nothing else here needs it: the
 // antialiased band is a few thousandths of the field wide, while fp16's spacing
 // around the 0.5 threshold is 2^-11. A driver that honours `mediump` as real
-// half-float (Mesa's llvmpipe does; desktop ANGLE and SwiftShader do not)
-// therefore quantises the whole ramp to ~10 distinct intensities, which reads
-// as a hard, blocky edge on a magnified glyph.
+// half-float would therefore quantise the ramp itself rather than the value
+// being ramped, which reads as a hard edge on a magnified glyph. Desktop ANGLE
+// and SwiftShader compute `mediump` at fp32 regardless, so this is a guarantee
+// for hardware that honours the qualifier, not a fix for a defect visible on a
+// workstation.
 precision highp float;
 
 uniform sampler2D u_nodeData;  // RGBA32F per-node data (see WebGl2TextRenderer)
