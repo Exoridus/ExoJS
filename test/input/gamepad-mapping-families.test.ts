@@ -119,7 +119,7 @@ describe('the device-specific button slot at index 17', () => {
   });
 
   // The raw Steam Controller is not normalized by Chromium at all, so it keeps
-  // the bare generic layout — including no slot-17 entry. See NEU-H2.
+  // the bare generic layout - including no slot-17 entry.
   test('the Steam Controller claims nothing there', () => {
     expect(slot17(new SteamControllerGamepadMapping())).toBeUndefined();
   });

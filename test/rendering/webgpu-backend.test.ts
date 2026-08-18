@@ -422,7 +422,7 @@ const createCustomRenderer = <Target extends Drawable>(): Renderer<WebGpuBackend
 
 /**
  * Install core renderer bindings on a directly-constructed WebGpuBackend.
- * Required after PR-2: core renderers are no longer registered in the backend constructor.
+ * Core renderers are no longer registered in the backend constructor.
  */
 function installCoreRenderers(backend: WebGpuBackend, renderingOptions: RenderingApplicationOptions = {}): void {
   const bindings = buildCoreRendererBindings(renderingOptions);

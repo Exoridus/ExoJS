@@ -362,7 +362,7 @@ describe('SceneAudio — dormancy gate widens to Ready/Suspended, rejects Destro
     expect(() => audio.play(fakePlayable)).toThrow(/destroy/i);
   });
 
-  // ME-41: SceneAudio detects pausable voices by duck-typing `pause`/`resume`.
+  // SceneAudio detects pausable voices by duck-typing `pause`/`resume`.
   // The mocks above satisfy that by construction, so they cannot catch a real
   // voice type that never implemented `Pausable` — which is exactly how every
   // `Sound` ambience kept playing through scene.pause()/suspend(). These two

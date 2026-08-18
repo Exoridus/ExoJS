@@ -89,7 +89,7 @@ describe('SoundVoice — Pausable', () => {
     vi.restoreAllMocks();
   });
 
-  // ME-41: SceneAudio detects pausable voices by duck-typing `pause`/`resume`,
+  // SceneAudio detects pausable voices by duck-typing `pause`/`resume`,
   // and AudioStreamVoice used to be the only implementation — so every Sound
   // ambience kept playing straight through scene.pause()/suspend().
   test('pause() retires the running source without ending the voice', () => {

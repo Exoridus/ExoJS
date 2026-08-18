@@ -81,11 +81,11 @@ export interface SceneTransitionFrame {
 export interface SceneTransitionSession {
   /** Advance time-based progress. Called once per frame. */
   update(delta: Time): void;
-  /** Draw this session's own visual output — not the scene itself; it does not share the render-surface the scene draws to. */
+  /** Draw this transition session's own visual output - not the scene itself; it does not share the render-surface the scene draws to. */
   render(context: RenderingContext, frame: SceneTransitionFrame): void;
-  /** `true` once this session has fully finished. Must never be `true` before {@link SceneTransitionEnvironment.committed} is also `true` — see {@link SceneTransitionLifecycleError}. */
+  /** `true` once this transition session has fully finished. Must never be `true` before {@link SceneTransitionEnvironment.committed} is also `true` - see {@link SceneTransitionLifecycleError}. */
   readonly done: boolean;
-  /** Which render layer this session's output composites against, read live every frame. May change mid-session for composed sessions. */
+  /** Which render layer this transition session's output composites against, read live every frame. May change mid-session for composed sessions. */
   readonly placement: 'scene' | 'screen';
   /** Called exactly once, regardless of exit path (normal completion, pre-commit abort, post-commit failure, or the Director being destroyed mid-session). No further `update()`/`render()` calls follow. */
   destroy(): void;

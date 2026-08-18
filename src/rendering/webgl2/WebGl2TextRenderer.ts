@@ -191,7 +191,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
 
   // Retained-batch state: the renderer-owned, grow-only quad-index buffer (the
   // standard `0,1,2, 0,2,3` glyph pattern shared by every recorded batch) and
-  // which capture windows have already recorded a Text batch this session
+  // which capture windows have already recorded a Text batch
   // (nesting-safe — one entry per capture-open call).
   private _retainedQuadIndexBuffer: WebGl2RenderBuffer | null = null;
   private _retainedQuadCapacity = 0;

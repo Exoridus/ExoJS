@@ -52,7 +52,7 @@ describe('playback while the AudioContext is locked', () => {
     logger._resetOnce();
   });
 
-  // ME-39: `SoundVoice` starts its buffer source in its own constructor with
+  // `SoundVoice` starts its buffer source in its own constructor with
   // `source.start(0, offset)`. A suspended context's `currentTime` stands
   // still, so every such call is scheduled at the same instant and the whole
   // backlog fires at once on the unlock gesture. Skipping is the only sane

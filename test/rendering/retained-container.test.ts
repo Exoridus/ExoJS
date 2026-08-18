@@ -1054,7 +1054,7 @@ describe('RetainedContainer: alpha/tint staleness guard', () => {
   test('the engine has no container-level alpha/tint surface that could bypass invalidation', () => {
     const group = new RetainedContainer();
 
-    // Pin the D-P2 ground truth: if someone later ADDS Container.alpha or
+    // Pin the ground truth: if someone later ADDS Container.alpha or
     // Container.tint, this test fails and forces them to decide the guard
     // shape (fold into per-group uniform data vs invalidate) explicitly.
     expect('alpha' in group).toBe(false);

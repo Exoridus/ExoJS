@@ -11,15 +11,15 @@ import type { AssetHandler } from '#extensions/Extension';
  * Hardening coverage for the readiness (`idle`/`loading`/`ready`/`failed`) x
  * residency (`claimed`/`unclaimed`) state model, exercised through the
  * consolidated `Asset.type(...)` / `get()` / `load()` surface Task 4
- * introduced. `AssetResidency`'s own contract is untouched by this task —
+ * introduced. `AssetResidency`'s own contract is untouched by this task -
  * this test documents existing behavior, it does not extend it.
  *
- * Methodology mirrors the SG-006 seeded-random-mutation pattern used for
+ * Methodology mirrors the seeded-random-mutation pattern used for
  * scene-graph safety (`test/rendering/container.test.ts`, the "random
  * add/remove/setChildIndex sequences" test): a deterministic seeded PRNG
  * drives a long sequence of random operations against a live `Loader`, and
  * the invariants that must hold regardless of history are re-checked after
- * EVERY step — not just at a handful of hand-picked scenarios. A fixed
+ * EVERY step - not just at a handful of hand-picked scenarios. A fixed
  * 3-example test (this file's original draft) cannot reach the interleavings
  * this walk does: claim-then-release-then-reclaim-before-settle, releasing
  * mid-flight, failing then abandoning, settling out of issue order, etc.
@@ -28,26 +28,26 @@ import type { AssetHandler } from '#extensions/Extension';
  * used instead of a built-in type so the fetch itself is fully
  * test-controlled (no network/audio/image decoding to mock) while still
  * exercising the REAL `AssetTypeRegistry`/`AssetResidency`/`assetKindRegistry`
- * machinery — the same code every built-in type runs through.
+ * machinery - the same code every built-in type runs through.
  *
  * Two disjoint key namespaces drive two complementary sub-machines per step,
  * chosen at random by the same PRNG:
  *
- * - "r*" keys — claim/residency, via `_adopt`/`_release` (the `get()`
+ * - "r*" keys - claim/residency, via `_adopt`/`_release` (the `get()`
  *   surface's claim path). Exercises: idle -> loading -> ready/failed,
  *   claim-count > 0 never evicts, refcount-0 evicts a resident payload,
  *   free-on-arrival when the last claim releases mid-fetch.
- * - "l*" keys — store-before-fetch dedup and failure healing, via `load()`
+ * - "l*" keys - store-before-fetch dedup and failure healing, via `load()`
  *   (`AssetResidency._loadSingleAsset`'s identity-based dedup). Exercises:
  *   an already-stored or already-in-flight key never triggers a second
  *   fetch; a failed key's next `load()` retries and can heal to stored.
  *
  * (The `get()`-adopt path does NOT itself retry a `'failed'` handle on
- * re-claim — only the bare-path `get(str)`/`get(Asset.type(value...))`
+ * re-claim - only the bare-path `get(str)`/`get(Asset.type(value...))`
  * surfaces do, via `_getSeamless`/`_getRef`'s explicit failed-state check;
  * `_adopt`'s branches have no such check. This is a real, unchanged
  * characteristic of `AssetResidency`, not a gap this task introduces or
- * fixes — the "r*" channel's model deliberately does not assert a retry
+ * fixes - the "r*" channel's model deliberately does not assert a retry
  * that the implementation does not perform, and the "l*" channel is where
  * failure-healing is actually exercised.)
  */

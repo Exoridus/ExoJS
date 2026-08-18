@@ -147,7 +147,7 @@ describe('AudioListener', () => {
     listener.destroy();
   });
 
-  // ME-35: `ctx.listener` is process-wide, so it is pinned at the origin once
+  // `ctx.listener` is process-wide, so it is pinned at the origin once
   // at setup and never moved. A moving listener reaches the mix through each
   // voice's RELATIVE panner position instead — see
   // test/audio/listener-virtualization.test.ts.

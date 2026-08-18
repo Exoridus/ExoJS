@@ -295,7 +295,7 @@ export default defineConfig({
       // — "This browser or hardware does not support WebGL" — while
       // `continue-on-error` kept the check green. The cause is not configuration
       // but Firefox itself: it disables WebGL in headless mode, and no
-      // preference overrides that (playwright#1032, #21783 — still current). A
+      // preference overrides that (playwright#1032, vitest#21783 - still current). A
       // window is the only configuration with a context, so CI runs this headed
       // against xvfb's virtual display, the same recipe the Chromium WebGPU lane
       // uses. Locally it stays headless: Windows and macOS need no X server and

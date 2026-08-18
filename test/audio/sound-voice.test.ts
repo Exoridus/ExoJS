@@ -502,7 +502,7 @@ describe('SoundVoice — capabilities', () => {
     sound.destroy();
   });
 
-  // NEU-D6: `seek()` clamps inclusively, so seeking to the very end yields an
+  // `seek()` clamps inclusively, so seeking to the very end yields an
   // offset equal to the window end. A zero-length remainder must play nothing,
   // not fall back to an uncapped start that spills into the rest of the atlas.
   test('seeking to the very end of a non-looping clip does not spill into the buffer', () => {

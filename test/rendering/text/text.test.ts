@@ -315,7 +315,7 @@ describe('Text', () => {
     expect(text.pageQuads[0]).not.toBe(quadsBefore);
   });
 
-  // ME-60: the class doc promises "rebuilt at most once, on demand". Every
+  // The class doc promises "rebuilt at most once, on demand". Every
   // setter used to lay the text out on the spot, so a label updated three
   // times in a frame paid for three full passes and threw two of them away.
   test('a run of mutations costs exactly one layout pass', () => {

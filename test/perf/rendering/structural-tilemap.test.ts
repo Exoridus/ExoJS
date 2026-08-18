@@ -54,7 +54,7 @@ describe('structural — Tilemap', () => {
       // The stats contract: `submittedNodes` counts RENDER NODES, never GPU
       // instances, on every render tier. One chunk node emits 1024 tile
       // instances in a single recorded batch, and the replayed batch reports the
-      // node it was recorded from — so this reads 1 here exactly as it does on
+      // node it was recorded from, so this reads 1 here exactly as it does on
       // the live and entry-replay tiers.
       expect(result.visibleNodes).toBe(1);
 
