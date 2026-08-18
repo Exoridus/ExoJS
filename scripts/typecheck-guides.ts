@@ -11,6 +11,14 @@
  *
  * Diagnostics with no file at all (bad config, missing lib) are always
  * reported: those are failures of the gate itself, not of a dependency.
+ *
+ * A `no-check`-tagged fence never reaches this program at all — it is dropped
+ * before extraction (see `extract-guide-snippets.ts`), which is exactly the
+ * blind spot `check-guide-no-check-reasons.ts` (run right before this script
+ * in `pnpm typecheck:guides`, see package.json) exists to budget: a per-file,
+ * frozen, monotonically-decreasing ratchet on `no-check` blocks that carry no
+ * recorded reason, the same shape as this file's own `partial`-block budget
+ * (`guide-partial-baseline.ts`) but for a different bucket.
  */
 import { relative, resolve } from 'node:path';
 
