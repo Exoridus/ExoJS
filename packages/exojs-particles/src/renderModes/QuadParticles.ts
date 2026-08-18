@@ -9,7 +9,7 @@ import { ParticleBufferLayout } from './ParticleBufferLayout';
 import { instanceAttributes, instanceStrideBytes, ParticleInstanceWriter } from './ParticleInstanceWriter';
 import { ParticleMaterial } from './ParticleMaterial';
 import { ParticleRenderMode } from './ParticleRenderMode';
-import quadParticleWgsl from './wgsl/quad-particles.wgsl';
+import quadParticleWgslModule from './wgsl/quad-particles.wgsl';
 
 const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
 
@@ -23,7 +23,7 @@ const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
  * it from `gl_VertexID`, so both backends need nothing beyond this mode's own
  * interleaved buffer and index buffer.
  */
-export { quadParticleWgsl };
+export const quadParticleWgsl: string = quadParticleWgslModule;
 
 /**
  * The default render mode: one textured, rotated, tinted quad per particle,

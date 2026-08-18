@@ -13,10 +13,12 @@
  * from. Marking the export `@internal` is not enough on its own - the emit has
  * to be told to drop internals (`stripInternal`).
  *
- * Runs against the built `dist` trees, so `pnpm build` has to have run first.
+ * Runs against the built `dist` trees, so they have to exist and be current -
+ * the root build covers the core alone, the extension packages build per
+ * package. A tree older than its own source is refused rather than judged.
  */
 
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 const REPO_ROOT = join(import.meta.dirname, '..');
@@ -26,22 +28,42 @@ const REPO_ROOT = join(import.meta.dirname, '..');
 const UNRESOLVABLE_SPECIFIER = /\.(?:vert|frag|glsl|wgsl|comp)['"]|\?worklet['"]/;
 const IMPORT_LINE = /^\s*(?:import|export)\b[^\n]*from\s*['"][^'"]+['"]/;
 
+interface DeclarationRoot {
+  /** The dist tree to scan. */
+  readonly dist: string;
+  /** The source tree it is built from, used to tell a stale tree from a fresh one. */
+  readonly src: string;
+}
+
 /** Declaration trees to scan: the core package plus every extension package. */
-function declarationRoots(): string[] {
-  const roots = [join(REPO_ROOT, 'dist')];
+function declarationRoots(): DeclarationRoot[] {
+  const roots: DeclarationRoot[] = [{ dist: join(REPO_ROOT, 'dist'), src: join(REPO_ROOT, 'src') }];
   const packagesDir = join(REPO_ROOT, 'packages');
 
   if (existsSync(packagesDir)) {
     for (const entry of readdirSync(packagesDir, { withFileTypes: true })) {
       if (!entry.isDirectory()) continue;
 
-      const dist = join(packagesDir, entry.name, 'dist');
-
-      if (existsSync(dist)) roots.push(dist);
+      roots.push({ dist: join(packagesDir, entry.name, 'dist'), src: join(packagesDir, entry.name, 'src') });
     }
   }
 
-  return roots.filter(root => existsSync(root));
+  return roots.filter(root => existsSync(root.dist));
+}
+
+/** Newest mtime under `dir`, or 0 when it does not exist. */
+function newestMtime(dir: string): number {
+  if (!existsSync(dir)) return 0;
+
+  let newest = 0;
+
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+
+    newest = Math.max(newest, entry.isDirectory() ? newestMtime(full) : statSync(full).mtimeMs);
+  }
+
+  return newest;
 }
 
 function declarationFiles(dir: string): string[] {
@@ -73,11 +95,42 @@ if (roots.length === 0) {
   process.exit(1);
 }
 
+// Only trees that actually carry declarations are this gate's business; a
+// package that publishes plain JS (the app scaffolder) has nothing to judge.
+const declarationTrees = roots.map(root => ({ ...root, files: declarationFiles(root.dist) })).filter(root => root.files.length > 0);
+
+// A tree older than its own source is the one way this gate can report a clean
+// run over declarations nobody has emitted yet. `pnpm build` at the repository
+// root rebuilds the core only, so a change under `packages/*/src` leaves that
+// package's declarations behind and the scan reads the previous release's.
+// Refusing to judge is the only honest answer there.
+//
+// Local only: on CI the trees arrive as a build artifact of an upstream job, so
+// freshness is a property of the pipeline rather than of the file times, which
+// the artifact download carries over from the upload and are meaningless here.
+const stale = process.env.CI
+  ? []
+  : declarationTrees.filter(root => newestMtime(root.dist) < newestMtime(root.src)).map(root => relative(REPO_ROOT, root.dist).replaceAll('\\', '/'));
+
+if (stale.length > 0) {
+  console.error(
+    [
+      `verify:declaration-imports: ${stale.length} dist tree(s) older than their source:`,
+      '',
+      ...stale.map(tree => `    ${tree}`),
+      '',
+      'The declarations these would be judged against are not the ones this source emits.',
+      'Rebuild them first - the extension packages are built per package, not by the root build.',
+    ].join('\n'),
+  );
+  process.exit(1);
+}
+
 const violations: Violation[] = [];
 let scanned = 0;
 
-for (const root of roots) {
-  for (const file of declarationFiles(root)) {
+for (const { files } of declarationTrees) {
+  for (const file of files) {
     scanned++;
 
     const lines = readFileSync(file, 'utf8').split(/\r?\n/);
@@ -111,4 +164,6 @@ if (violations.length > 0) {
   process.exit(1);
 }
 
-console.log(`verify:declaration-imports: ${scanned} declaration file(s) scanned across ${roots.length} dist tree(s), all imports resolvable by a consumer.`);
+console.log(
+  `verify:declaration-imports: ${scanned} declaration file(s) scanned across ${declarationTrees.length} dist tree(s), all imports resolvable by a consumer.`,
+);

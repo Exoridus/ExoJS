@@ -9,7 +9,7 @@ import { assertVertexGeometryCompatible, ParticleBufferLayout } from './Particle
 import { instanceAttributes, instanceStrideBytes, ParticleInstanceWriter } from './ParticleInstanceWriter';
 import { ParticleMaterial } from './ParticleMaterial';
 import { ParticleRenderMode } from './ParticleRenderMode';
-import meshParticleWgsl from './wgsl/mesh-particles.wgsl';
+import meshParticleWgslModule from './wgsl/mesh-particles.wgsl';
 
 /** Floats one entry of the normalised mesh vertex table occupies: x, y, u, v. */
 const floatsPerMeshVertex = 4;
@@ -135,7 +135,7 @@ const readMeshTable = (mesh: Geometry, out: Float32Array | null = null): Float32
  * mode, so `localBounds` and `uvBounds` are declared but unused here: a mesh
  * carries its own local footprint rather than taking it from the texture frame.
  */
-export { meshParticleWgsl };
+export const meshParticleWgsl: string = meshParticleWgslModule;
 
 /**
  * One caller-supplied mesh per particle, drawn as a single instanced draw.

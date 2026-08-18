@@ -8,7 +8,7 @@ import vertexSource from './glsl/ribbon.vert';
 import { ParticleBufferLayout } from './ParticleBufferLayout';
 import { ParticleMaterial } from './ParticleMaterial';
 import { ParticleRenderMode } from './ParticleRenderMode';
-import ribbonParticleWgsl from './wgsl/ribbon-particles.wgsl';
+import ribbonParticleWgslModule from './wgsl/ribbon-particles.wgsl';
 
 const vertexStrideBytes = 20;
 const wordsPerVertex = vertexStrideBytes / Float32Array.BYTES_PER_ELEMENT;
@@ -36,7 +36,7 @@ export interface RibbonParticlesOptions {
  * carries its own final positions and UVs, and only the projection, the system
  * transform and the premultiply flag are read.
  */
-export { ribbonParticleWgsl };
+export const ribbonParticleWgsl: string = ribbonParticleWgslModule;
 
 /**
  * A connected triangle strip through the system's particles: one ribbon per
