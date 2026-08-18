@@ -261,17 +261,24 @@ jobs:
       # and V8 then stops scalar-replacing what it otherwise would, so the
       # allocation gate measures the instrumentation instead of the engine —
       # `mesh/1000` reads 71 KB/frame instrumented against 0.65 KB/frame plain.
-      # No junit reporter here: the skip-budget check above reads the file the
+      # No junit reporter here: the `skip-budget` job below reads the file the
       # coverage run wrote, and a second writer would replace it.
       - name: Allocation gate (no coverage instrumentation)
         run: pnpm test:alloc
 
       # A skipped test is neither a pass nor a failure, so it vanishes from the
-      # summary. This reads the report the step above just wrote and fails on any
-      # skip without a recorded budget — the shape every silent-skip defect here
-      # has had so far.
-      - name: Check skipped tests against the budget
-        run: pnpm test:skips:check
+      # summary. The budget check itself runs once, in the `skip-budget` job,
+      # against every lane's JUnit report combined — not here per-lane — because
+      # a `ctx.skip()` inside a browser/WebGPU spec never shows up in THIS job's
+      # report at all. This step just hands that job the unit lane's half.
+      - name: Upload JUnit report for the skip-budget gate
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-unit
+          path: ./test-results/unit.junit.xml
+          retention-days: 1
+          if-no-files-found: warn
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v6.0.2
@@ -371,6 +378,16 @@ jobs:
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
 
+      # See the unit-tests job's matching step: fed into the `skip-budget` job.
+      - name: Upload JUnit report for the skip-budget gate
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-browser-webgl
+          path: ./test-results/browser-webgl.junit.xml
+          retention-days: 1
+          if-no-files-found: warn
+
   # Blocking lane. Chromium WebGPU is run against Mesa lavapipe (a real Vulkan
   # software rasterizer) instead of Chromium's bundled SwiftShader WebGPU
   # fallback — the three.js-proven recipe for getting actual GPU-path coverage
@@ -450,6 +467,20 @@ jobs:
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
 
+      # See the unit-tests job's matching step: fed into the `skip-budget` job.
+      # This is the lane where the runtime `ctx.skip('WebGPU device lost
+      # mid-test — …')` calls actually fire — Mesa lavapipe's software adapter
+      # loses the device under load in a way a real GPU adapter does not — so
+      # this artifact is the one that makes them visible to the budget at all.
+      - name: Upload JUnit report for the skip-budget gate
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-browser-webgpu
+          path: ./test-results/browser-webgpu.junit.xml
+          retention-days: 1
+          if-no-files-found: warn
+
   # The WebGL2 half of this lane is a required gate: running headed under xvfb
   # gives Firefox a real WebGL2 context, and it has been at 262/262 since. It is
   # the only lane covering a second engine, so a regression there should block.
@@ -513,7 +544,22 @@ jobs:
           EXOJS_FIREFOX_CI_HEADED: '1'
           LIBGL_ALWAYS_SOFTWARE: '1'
           GALLIUM_DRIVER: llvmpipe
-        run: xvfb-run -a pnpm test:browser:webgl:firefox
+        # No `--` before the args (see the unit-tests step note).
+        run: xvfb-run -a pnpm test:browser:webgl:firefox --reporter=default --reporter=junit --outputFile.junit=./test-results/browser-webgl-firefox.junit.xml
+
+      # See the unit-tests job's matching step: fed into the `skip-budget` job.
+      # Only the blocking WebGL2 half — the WebGPU half below is non-blocking
+      # and does not run in CI by default (see the job comment above), so
+      # folding its skips into the global budget would make a required gate
+      # depend on a lane CI does not reliably execute.
+      - name: Upload JUnit report for the skip-budget gate
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-browser-webgl-firefox
+          path: ./test-results/browser-webgl-firefox.junit.xml
+          retention-days: 1
+          if-no-files-found: warn
 
       # Non-blocking on purpose: no WebGPU adapter without a real display (see
       # the job comment). Kept in the lane so the log records what a headless
@@ -579,6 +625,18 @@ jobs:
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
 
+      # See the unit-tests job's matching step: fed into the `skip-budget` job.
+      # Path-gated like the job itself — absent on a run where this lane did
+      # not execute at all, which the aggregator tolerates (see that job).
+      - name: Upload JUnit report for the skip-budget gate
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-browser-audio
+          path: ./test-results/browser-audio.junit.xml
+          retention-days: 1
+          if-no-files-found: warn
+
   # Runs WorkerSampledChunkSource's real-Worker round trip in headless Chromium
   # — jsdom implements neither Worker nor URL.createObjectURL. Path-gated to
   # `tilemapWorker` so it only runs when exojs-tilemap (or a shared root)
@@ -635,6 +693,76 @@ jobs:
           flags: browser-tilemap-worker
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
+
+      # See the unit-tests job's matching step: fed into the `skip-budget` job.
+      # Path-gated like the job itself — absent on a run where this lane did
+      # not execute at all, which the aggregator tolerates (see that job).
+      - name: Upload JUnit report for the skip-budget gate
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-browser-tilemap-worker
+          path: ./test-results/browser-tilemap-worker.junit.xml
+          retention-days: 1
+          if-no-files-found: warn
+
+  # Aggregates the JUnit report every test lane above just uploaded and runs
+  # the skip-budget gate against ALL of them combined — one global budget per
+  # suite file, not one per lane (see scripts/check-skipped-tests.ts). This is
+  # deliberately its own job, downstream of every lane, rather than a step
+  # inside `unit-tests`: a runtime `ctx.skip('WebGPU device lost mid-test — …')`
+  # only ever appears in `browser-tests-webgpu-chromium`'s report, so checking
+  # from inside the unit lane alone could never see it — exactly the blind spot
+  # this gate exists to close.
+  #
+  # `needs` lists every lane that MAY upload a `junit-*` artifact so this job
+  # waits for all of them; `!cancelled()` (rather than the default implicit
+  # `success()`) still runs it when a path-gated lane (audio/tilemap-worker)
+  # was skipped, since the download step below tolerates a pattern matching
+  # zero artifacts. It does NOT run after an outright cancellation.
+  skip-budget:
+    name: Skip Budget
+    needs: [changes, unit-tests, browser-tests, browser-tests-webgpu-chromium, browser-tests-firefox, browser-tests-audio, browser-tests-tilemap-worker]
+    if: ${{ !cancelled() && needs.changes.outputs.engine == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ inputs.pnpm-version }}
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ inputs.node-version }}
+          check-latest: true
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # Every lane's `junit-*` artifact, merged into one directory. A
+      # path-gated lane that didn't run this time simply contributes nothing —
+      # `if-no-artifact-found: warn` (the default) so a docs-only PR's missing
+      # audio/tilemap-worker artifact doesn't fail this job.
+      - name: Download JUnit reports from every lane
+        uses: actions/download-artifact@v4
+        with:
+          pattern: junit-*
+          path: test-results
+          merge-multiple: true
+          if-no-artifact-found: warn
+
+      - name: Check skipped tests against the budget (all lanes combined)
+        run: pnpm test:skips:check
 
   # Builds the core package and all extension packages exactly once, then
   # publishes the resulting dist trees as a shared artifact. `package-verify`
@@ -925,6 +1053,7 @@ jobs:
         browser-tests-firefox,
         browser-tests-audio,
         browser-tests-tilemap-worker,
+        skip-budget,
         build,
         package-verify,
         site-build,
@@ -949,6 +1078,7 @@ jobs:
           BROWSER_FIREFOX_RESULT: ${{ needs['browser-tests-firefox'].result }}
           BROWSER_AUDIO_RESULT: ${{ needs['browser-tests-audio'].result }}
           BROWSER_TILEMAP_WORKER_RESULT: ${{ needs['browser-tests-tilemap-worker'].result }}
+          SKIP_BUDGET_RESULT: ${{ needs['skip-budget'].result }}
           BUILD_RESULT: ${{ needs.build.result }}
           PACKAGE_VERIFY_RESULT: ${{ needs['package-verify'].result }}
           SITE_BUILD_RESULT: ${{ needs['site-build'].result }}
@@ -965,6 +1095,7 @@ jobs:
           echo "browser-tests-firefox: $BROWSER_FIREFOX_RESULT"
           echo "browser-tests-audio: $BROWSER_AUDIO_RESULT"
           echo "browser-tests-tilemap-worker: $BROWSER_TILEMAP_WORKER_RESULT"
+          echo "skip-budget: $SKIP_BUDGET_RESULT"
           echo "build: $BUILD_RESULT"
           echo "package-verify: $PACKAGE_VERIFY_RESULT"
           echo "site-build: $SITE_BUILD_RESULT"
@@ -994,6 +1125,7 @@ jobs:
             "browser-tests-firefox=$BROWSER_FIREFOX_RESULT" \
             "browser-tests-audio=$BROWSER_AUDIO_RESULT" \
             "browser-tests-tilemap-worker=$BROWSER_TILEMAP_WORKER_RESULT" \
+            "skip-budget=$SKIP_BUDGET_RESULT" \
             "build=$BUILD_RESULT" \
             "package-verify=$PACKAGE_VERIFY_RESULT" \
             "site-build=$SITE_BUILD_RESULT"; do
@@ -1021,6 +1153,7 @@ jobs:
               "browser-tests=$BROWSER_TESTS_RESULT" \
               "browser-tests-webgpu-chromium=$BROWSER_WEBGPU_RESULT" \
               "browser-tests-firefox=$BROWSER_FIREFOX_RESULT" \
+              "skip-budget=$SKIP_BUDGET_RESULT" \
               "build=$BUILD_RESULT" \
               "package-verify=$PACKAGE_VERIFY_RESULT"; do
               name="${entry%%=*}"
