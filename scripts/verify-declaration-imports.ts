@@ -104,7 +104,7 @@ if (violations.length > 0) {
       'names one fails every consumer type-check while passing every gate here.',
       '',
       'Resolve it by keeping the value out of the emitted declarations: mark the export `@internal`',
-      "(the emit drops internals through `stripInternal`), or give it an explicit `string` type at the",
+      '(the emit drops internals through `stripInternal`), or give it an explicit `string` type at the',
       'export site so the declaration no longer has to name the module it came from.',
     ].join('\n'),
   );

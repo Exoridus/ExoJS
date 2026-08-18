@@ -887,6 +887,13 @@ jobs:
       - name: Verify core package exports
         run: pnpm verify:exports
 
+      # A published .d.ts may only import what a consumer can resolve. Catches
+      # the shader/worklet specifiers here rather than in the release job's
+      # external-consumer smoke, which is the only other place that reads the
+      # emitted declarations the way a consumer does.
+      - name: Verify declaration imports
+        run: pnpm verify:declaration-imports
+
       # Lockstep versions + peer-range coherence + deterministic publish-order
       # matrix across all four published packages (the same gates release.yml
       # runs before a publish).
