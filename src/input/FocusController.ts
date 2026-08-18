@@ -144,15 +144,13 @@ export class FocusController implements FocusHooks {
   /**
    * Whether `node` may hold keyboard focus at all: {@link RenderNode.focusable}
    * must be set, and a {@link Widget} must additionally be
-   * {@link Widget.enabled}. A disabled widget stops responding to input the
-   * moment it is disabled, so leaving it in the Tab order would strand focus
-   * on something that swallows every key it receives.
-   *
-   * Only the widget's OWN `enabled` flag is consulted — a disabled ancestor
-   * does not (yet) disable its children.
+   * {@link Widget.effectiveEnabled}. A widget that is effectively disabled —
+   * its own flag, or that of a disabled ancestor widget — stops responding to
+   * input the moment it becomes so, so leaving it in the Tab order would
+   * strand focus on something that swallows every key it receives.
    */
   private _isFocusEligible(node: RenderNode): boolean {
-    return node.focusable && (!(node instanceof Widget) || node.enabled);
+    return node.focusable && (!(node instanceof Widget) || node.effectiveEnabled);
   }
 
   /**
@@ -520,9 +518,11 @@ export class FocusController implements FocusHooks {
    * different Application must not be Tab-reachable just because the tree walk
    * still finds it.
    *
-   * A disabled widget is skipped as a Tab STOP but its subtree is still
-   * walked: only the widget's own `enabled` flag is local to it, so an
-   * enabled control nested inside a disabled container stays reachable.
+   * An effectively-disabled widget is skipped as a Tab STOP but its subtree
+   * is still walked — {@link Widget.effectiveEnabled} already accounts for
+   * every ancestor, so a descendant nested inside a disabled container
+   * correctly stops being reachable too, and re-enabling the container makes
+   * it reachable again without this walk needing to change.
    */
   private _collectInto(node: RenderNode, out: RenderNode[]): void {
     if (!node.visible) {

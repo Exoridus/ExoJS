@@ -1,4 +1,5 @@
 import { Container } from '#rendering/Container';
+import type { RenderNode } from '#rendering/RenderNode';
 
 import type { UIRoot } from './UIRoot';
 
@@ -37,6 +38,7 @@ export abstract class Widget extends Container {
   protected _uiWidth = 0;
   protected _uiHeight = 0;
   private _enabled = true;
+  private _effectiveEnabled = true;
   private _uiAnchor: WidgetAnchor | null = null;
   private _uiAnchorOffsetX = 0;
   private _uiAnchorOffsetY = 0;
@@ -74,10 +76,10 @@ export abstract class Widget extends Container {
   }
 
   /**
-   * Whether the widget responds to input. Disabled widgets typically dim and
-   * ignore clicks, and are skipped by keyboard focus — they drop out of the
-   * Tab order and reject programmatic focus while disabled. Only the widget's
-   * own flag counts; disabling a container does not disable its children.
+   * The widget's own enabled flag, independent of any ancestor's. Disabling a
+   * container widget does not change this on its children — see
+   * {@link effectiveEnabled} for the value interaction and keyboard focus
+   * actually consult, and for what disabling a container does to them.
    */
   public get enabled(): boolean {
     return this._enabled;
@@ -86,8 +88,25 @@ export abstract class Widget extends Container {
   public set enabled(value: boolean) {
     if (this._enabled !== value) {
       this._enabled = value;
-      this._onEnabledChanged(value);
+      this._refreshEffectiveEnabled();
     }
+  }
+
+  /**
+   * Whether the widget responds to input right now: its own {@link enabled}
+   * flag AND every Widget ancestor's — `ownEnabled && parent.effectiveEnabled`.
+   * This is what interaction (e.g. {@link Button} activation) and keyboard
+   * focus actually gate on. Disabled widgets typically dim and ignore clicks,
+   * and are skipped by keyboard focus — they drop out of the Tab order and
+   * reject programmatic focus while effectively disabled.
+   *
+   * Disabling a container widget does not touch its children's OWN
+   * {@link enabled} flag — only their effective state. Re-enabling the
+   * container makes a child whose own flag was never touched effectively
+   * enabled again automatically.
+   */
+  public get effectiveEnabled(): boolean {
+    return this._effectiveEnabled;
   }
 
   /**
@@ -127,9 +146,75 @@ export abstract class Widget extends Container {
     // Overridden by subclasses that draw a sized background.
   }
 
-  /** React to an enabled/disabled change. Override in subclasses. */
-  protected _onEnabledChanged(_enabled: boolean): void {
+  /**
+   * React to an {@link effectiveEnabled} change — fired whenever it flips,
+   * whether the widget's own {@link enabled} flag changed or an ancestor
+   * widget's did. Override in subclasses.
+   */
+  protected _onEnabledChanged(_effectiveEnabled: boolean): void {
     // Overridden by interactive subclasses (e.g. Button dimming).
+  }
+
+  /**
+   * Recompute {@link effectiveEnabled} from the current own flag and parent
+   * chain. No-ops if it did not actually change; otherwise fires
+   * {@link _onEnabledChanged} and pushes the same recompute into every Widget
+   * descendant — an ancestor's effective state changing is the only way a
+   * descendant's effective state can change without its own {@link enabled}
+   * flag ever being touched. Stops descending into a subtree the moment its
+   * own effective value turns out unchanged: everything beneath it is
+   * derived from that same value, so it cannot have changed either.
+   */
+  private _refreshEffectiveEnabled(): void {
+    const next = this._enabled && this._parentEffectiveEnabled();
+
+    if (next === this._effectiveEnabled) {
+      return;
+    }
+
+    this._effectiveEnabled = next;
+    this._onEnabledChanged(next);
+
+    for (const child of this.children) {
+      this._cascadeEffectiveEnabledInto(child);
+    }
+  }
+
+  /** Push an effective-enabled recompute into `node`: directly if it is a Widget, or forwarded to Widget descendants through any plain (non-Widget) Container in between. */
+  private _cascadeEffectiveEnabledInto(node: RenderNode): void {
+    if (node instanceof Widget) {
+      node._refreshEffectiveEnabled();
+
+      return;
+    }
+
+    if (node instanceof Container) {
+      for (const child of node.children) {
+        this._cascadeEffectiveEnabledInto(child);
+      }
+    }
+  }
+
+  /** The nearest Widget ancestor's {@link effectiveEnabled}, or `true` when this widget has none (root effective state is always enabled). */
+  private _parentEffectiveEnabled(): boolean {
+    for (let current = this.parent; current !== null; current = current.parent) {
+      if (current instanceof Widget) {
+        return current.effectiveEnabled;
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * @internal — recompute {@link effectiveEnabled} on reparenting (attach or
+   * detach), since the nearest Widget ancestor — and so the value inherited
+   * from it — can change without this widget's own {@link enabled} ever
+   * being touched.
+   */
+  public override _setParent(parent: Container | null): void {
+    super._setParent(parent);
+    this._refreshEffectiveEnabled();
   }
 
   public override destroy(): void {

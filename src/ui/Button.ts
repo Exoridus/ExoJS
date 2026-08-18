@@ -112,7 +112,7 @@ export class Button extends Widget {
   };
 
   private readonly _onPointerDown = (): void => {
-    if (this.enabled) {
+    if (this.effectiveEnabled) {
       this._state = 'pressed';
       this._draw();
     }
@@ -123,7 +123,7 @@ export class Button extends Widget {
   };
 
   private readonly _activate = (): void => {
-    if (this.enabled) {
+    if (this.effectiveEnabled) {
       this.onClick.dispatch(this);
     }
   };
@@ -134,7 +134,7 @@ export class Button extends Widget {
     // `channel` is a generic numeric input channel (KeyEvent.channel is `number`),
     // intentionally compared against the Keyboard enum constants — see KeyEvent docs.
     // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- widening casts are redundant here, so the suppression is the only honest option
-    if (this.enabled && (channel === Keyboard.Enter || channel === Keyboard.Space)) {
+    if (this.effectiveEnabled && (channel === Keyboard.Enter || channel === Keyboard.Space)) {
       event.preventDefault();
       this.onClick.dispatch(this);
     }
@@ -143,7 +143,7 @@ export class Button extends Widget {
   private _refreshState(): void {
     let state: ButtonState = 'normal';
 
-    if (!this.enabled) {
+    if (!this.effectiveEnabled) {
       state = 'disabled';
     } else if (this._pointerInside) {
       state = 'hover';
@@ -153,8 +153,8 @@ export class Button extends Widget {
     this._draw();
   }
 
-  protected override _onEnabledChanged(enabled: boolean): void {
-    this.interactive = enabled;
+  protected override _onEnabledChanged(effectiveEnabled: boolean): void {
+    this.interactive = effectiveEnabled;
     this._refreshState();
   }
 

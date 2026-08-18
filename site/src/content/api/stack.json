@@ -6,11 +6,11 @@
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 106,
+  "memberCount": 107,
   "counts": {
     "constructors": 1,
     "methods": 48,
-    "properties": 43,
+    "properties": 44,
     "events": 14
   },
   "sections": [
@@ -154,7 +154,7 @@
         },
         {
           "name": "_onEnabledChanged",
-          "signature": "_onEnabledChanged(_enabled: boolean): void",
+          "signature": "_onEnabledChanged(_effectiveEnabled: boolean): void",
           "signatureTokens": [
             {
               "text": "_onEnabledChanged",
@@ -165,7 +165,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "_enabled",
+              "text": "_effectiveEnabled",
               "kind": "param"
             },
             {
@@ -191,13 +191,13 @@
           ],
           "params": [
             {
-              "name": "_enabled",
+              "name": "_effectiveEnabled",
               "type": "boolean",
               "optional": false
             }
           ],
           "returnType": "void",
-          "description": "React to an enabled/disabled change. Override in subclasses."
+          "description": "React to an effectiveEnabled change — fired whenever it flips, whether the widget's own enabled flag changed or an ancestor widget's did. Override in subclasses."
         },
         {
           "name": "_relayout",
@@ -2849,6 +2849,27 @@
           "description": "Flow direction ('row' or 'column')."
         },
         {
+          "name": "effectiveEnabled",
+          "signature": "effectiveEnabled: boolean",
+          "signatureTokens": [
+            {
+              "text": "effectiveEnabled",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the widget responds to input right now: its own enabled flag AND every Widget ancestor's — ownEnabled && parent.effectiveEnabled. This is what interaction (e.g. Button activation) and keyboard focus actually gate on. Disabled widgets typically dim and ignore clicks, and are skipped by keyboard focus — they drop out of the Tab order and reject programmatic focus while effectively disabled. Disabling a container widget does not touch its children's OWN enabled flag — only their effective state. Re-enabling the container makes a child whose own flag was never touched effectively enabled again automatically."
+        },
+        {
           "name": "enabled",
           "signature": "enabled: boolean",
           "signatureTokens": [
@@ -2867,7 +2888,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Whether the widget responds to input. Disabled widgets typically dim and ignore clicks, and are skipped by keyboard focus — they drop out of the Tab order and reject programmatic focus while disabled. Only the widget's own flag counts; disabling a container does not disable its children."
+          "description": "The widget's own enabled flag, independent of any ancestor's. Disabling a container widget does not change this on its children — see effectiveEnabled for the value interaction and keyboard focus actually consult, and for what disabling a container does to them."
         },
         {
           "name": "filters",
