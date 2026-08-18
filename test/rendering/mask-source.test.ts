@@ -323,6 +323,93 @@ describe('RenderNode.mask — MaskSource union', () => {
       drawable.destroy();
     });
 
+    test('a two-node mask cycle is rejected at runtime', () => {
+      const a = new TestDrawable();
+      const b = new TestDrawable();
+
+      a.mask = b;
+
+      expect(() => {
+        b.mask = a;
+      }).toThrow(/mask cycle/i);
+      expect(b.mask).toBeNull();
+
+      a.destroy();
+      b.destroy();
+    });
+
+    test('a three-node mask cycle is rejected at runtime', () => {
+      const a = new TestDrawable();
+      const b = new TestDrawable();
+      const c = new TestDrawable();
+
+      a.mask = b;
+      b.mask = c;
+
+      expect(() => {
+        c.mask = a;
+      }).toThrow(/mask cycle/i);
+      expect(c.mask).toBeNull();
+
+      a.destroy();
+      b.destroy();
+      c.destroy();
+    });
+
+    test('an already cyclic candidate chain terminates and fails closed', () => {
+      const a = new TestDrawable();
+      const b = new TestDrawable();
+      const outsider = new TestDrawable();
+
+      // Force a cycle that bypasses the setter guard, emulating corrupted state.
+      Reflect.set(a, '_mask', b);
+      Reflect.set(b, '_mask', a);
+
+      expect(() => {
+        outsider.mask = a;
+      }).toThrow(/mask cycle/i);
+      expect(outsider.mask).toBeNull();
+
+      Reflect.set(a, '_mask', null);
+      Reflect.set(b, '_mask', null);
+
+      a.destroy();
+      b.destroy();
+      outsider.destroy();
+    });
+
+    test('a long acyclic mask chain is accepted', () => {
+      const nodes = Array.from({ length: 8 }, () => new TestDrawable());
+
+      for (let i = 0; i < nodes.length - 1; i++) {
+        nodes[i]!.mask = nodes[i + 1]!;
+      }
+
+      expect(nodes[0]!.mask).toBe(nodes[1]);
+      expect(nodes[6]!.mask).toBe(nodes[7]);
+
+      for (const node of nodes) {
+        node.mask = null;
+        node.destroy();
+      }
+    });
+
+    test('replacing an existing mask with another acyclic mask is allowed', () => {
+      const subject = new TestDrawable();
+      const first = new TestDrawable();
+      const second = new TestDrawable();
+
+      subject.mask = first;
+      subject.mask = second;
+
+      expect(subject.mask).toBe(second);
+
+      subject.mask = null;
+      subject.destroy();
+      first.destroy();
+      second.destroy();
+    });
+
     test('mask = null after a non-null mask removes any active mask', () => {
       const { runtime, composeCalls, drawCalls } = createRuntime();
       const drawable = new TestDrawable();

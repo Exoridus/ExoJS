@@ -2590,7 +2590,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The mask source that controls visibility of this node's render output. See MaskSource for accepted source types and their semantics. Setting to null removes any active mask. Setting a RenderNode that is this is rejected (a node cannot mask itself); other cycles (mask of mask of self) are not detected."
+          "description": "The mask source that controls visibility of this node's render output. See MaskSource for accepted source types and their semantics. Setting to null removes any active mask. Setting a RenderNode that is this is rejected (a node cannot mask itself). Indirect cycles (a.mask = b; b.mask = a) are rejected as well: the candidate's mask chain is walked and any cycle — whether it closes on this or was already present in the chain — fails the assignment."
         },
         {
           "name": "origin",

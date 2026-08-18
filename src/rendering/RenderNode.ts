@@ -424,7 +424,10 @@ export abstract class RenderNode extends SceneNode {
    * semantics. Setting to `null` removes any active mask.
    *
    * Setting a `RenderNode` that is `this` is rejected (a node cannot
-   * mask itself); other cycles (mask of mask of self) are not detected.
+   * mask itself). Indirect cycles (`a.mask = b; b.mask = a`) are rejected
+   * as well: the candidate's mask chain is walked and any cycle — whether
+   * it closes on `this` or was already present in the chain — fails the
+   * assignment.
    */
   public get mask(): MaskSource {
     return this._mask;
@@ -433,6 +436,18 @@ export abstract class RenderNode extends SceneNode {
   public set mask(mask: MaskSource) {
     if (mask === this) {
       throw new Error('A RenderNode cannot use itself as its own mask source.');
+    }
+
+    if (mask instanceof RenderNode) {
+      const seen = new Set<RenderNode>([this]);
+
+      for (let node: MaskSource = mask; node instanceof RenderNode; node = node._mask) {
+        if (seen.has(node)) {
+          throw new Error('A RenderNode mask assignment must not create a mask cycle.');
+        }
+
+        seen.add(node);
+      }
     }
 
     if (this._mask !== mask) {
