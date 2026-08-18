@@ -70,19 +70,27 @@ export const spriteVertexGlsl: string = spriteVertexGlslModule;
  * fragment (`webgl2/glsl/sprite.frag`): GLSL ES 3.00 forbids indexing an array
  * of samplers with a non-dynamically-uniform expression, which a per-instance
  * slot is not.
+ *
+ * `samplerPrecision` sets what `texture()` returns. The default matches the
+ * fragment-stage default for `sampler2D` and is right for a colour texture,
+ * whose 8 bits per channel it already covers. A caller sampling a distance
+ * field has to raise it: there the returned value is compared against a
+ * threshold with a band a fraction of a texel wide, so the sampler's step size
+ * becomes the number of distinct intensities the antialiased edge can have.
  * @internal
  */
-export const buildSpriteMaterialSlotGlsl = (textureSlots: number): string => {
-  const samplers = Array.from({ length: textureSlots }, (_, slot) => `uniform sampler2D u_texture${slot};`).join('\n');
+export const buildSpriteMaterialSlotGlsl = (textureSlots: number, samplerPrecision: 'lowp' | 'mediump' | 'highp' = 'lowp'): string => {
+  // GLSL ES 3.00 orders a qualifier list storage-then-precision, so the
+  // qualifier goes between `uniform` and the type, not ahead of it.
+  const samplers = Array.from({ length: textureSlots }, (_, slot) => `uniform ${samplerPrecision} sampler2D u_texture${slot};`).join('\n');
   // The last slot is the else branch so every uint value maps to a texture.
   const dispatch = Array.from({ length: textureSlots - 1 }, (_, slot) => `    if (slot == ${slot}u) return texture(u_texture${slot}, uv);`).join('\n');
 
   // Every FLOAT-typed declaration carries an explicit precision qualifier: a
   // GLSL ES 3.00 fragment shader has no default float precision, and the
   // prologue is spliced ahead of whatever `precision` statement the author
-  // wrote, so an unqualified `vec4` here would not compile. `uint` and
-  // `sampler2D` do have fragment-stage defaults (mediump / lowp) and stay
-  // unqualified — the sampler precision matches the default sprite fragment.
+  // wrote, so an unqualified `vec4` here would not compile. `uint` has a
+  // fragment-stage default and stays unqualified.
   return `${samplers}
 
 // Engine-owned base-texture varying: the slot this instance's texture occupies
@@ -116,7 +124,7 @@ export const spriteMaterialPrologueGlsl = buildSpriteMaterialSlotGlsl(spriteMate
  * `#extension` requires to sit.
  * @internal
  */
-export const composeSpriteMaterialFragmentGlsl = (fragment: string): string => {
+export const composeSpriteMaterialFragmentGlsl = (fragment: string, prologue: string = spriteMaterialPrologueGlsl): string => {
   const lines = fragment.split('\n');
   let insertAt = 0;
 
@@ -142,7 +150,7 @@ export const composeSpriteMaterialFragmentGlsl = (fragment: string): string => {
     break;
   }
 
-  return [...lines.slice(0, insertAt), spriteMaterialPrologueGlsl, ...lines.slice(insertAt)].join('\n');
+  return [...lines.slice(0, insertAt), prologue, ...lines.slice(insertAt)].join('\n');
 };
 
 /**
