@@ -6,6 +6,7 @@ import { type BitmapText } from '#rendering/text/BitmapText';
 import type { TextPageQuads } from '#rendering/text/Text';
 import { Text } from '#rendering/text/Text';
 import { composeTextAtlasFragmentGlsl, packTextNodeAtlasSlot, textAtlasTextureSlots, textNodeIndexMask } from '#rendering/text/textAtlasTextureSlots';
+import { packTextNodeData, packTextNodeTransform, textNodeDataFloats, textNodeDataTexels } from '#rendering/text/textNodeDataPacker';
 import { DataTexture } from '#rendering/texture/DataTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import { BlendModes, BufferTypes, BufferUsage, IndexElementTypes, RenderingPrimitives, TextureFormat } from '#rendering/types';
@@ -48,8 +49,8 @@ import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './
 // The shaders divide shadowOffset by u_pageSize (a per-batch uniform shared by
 // compatible atlas textures) to convert px → UV space.
 
-const nodeTexels = 10;
-const nodeFloats = nodeTexels * 4; // 40 floats per node
+const nodeTexels = textNodeDataTexels;
+const nodeFloats = textNodeDataFloats;
 
 const identityGroupMat3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
 
@@ -348,103 +349,12 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
   }
 
   // ── Node data packing ────────────────────────────────────────────────────
+  // The 10-texel/40-float layout is packed by the shared, backend-free
+  // `packTextNodeData` (mirrors `WebGpuTextRenderer`, byte for byte) — see
+  // `textNodeDataPacker.ts` for the texel-by-texel layout comment.
 
   private _packNodeData(ni: number, node: Text | BitmapText): void {
-    const arr = this._nodeDataArray;
-    const base = ni * nodeFloats;
-    const style = node.style;
-
-    // Transform (texels 0-1)
-    // In-bounds: `toArray(false)` returns the fixed 9-element mat3 column-major array.
-    const m = node.getGlobalTransform().toArray(false); // col-major: [a,c,0, b,d,0, tx,ty,1]
-    arr[base + 0] = m[0]!; // a
-    arr[base + 1] = m[1]!; // c
-    // texel 0's spare `.z` carries the snap-mode flag the vertex shader reads to
-    // decide whether to snap the glyph origin to the device-pixel grid —
-    // this turns Text position snapping from a silent no-op into a real feature.
-    arr[base + 2] = node.pixelSnapMode; // snap-mode flag
-    arr[base + 3] = m[6]!; // tx
-    arr[base + 4] = m[3]!; // b
-    arr[base + 5] = m[4]!; // d
-    arr[base + 6] = m[5]!; // 0
-    arr[base + 7] = m[7]!; // ty
-
-    // Fill color (texel 2)
-    const fc = style.fillColor;
-    arr[base + 8] = fc.r / 255;
-    arr[base + 9] = fc.g / 255;
-    arr[base + 10] = fc.b / 255;
-    arr[base + 11] = fc.a;
-
-    // Outline color (texel 3)
-    const oc = style.outlineColor;
-    arr[base + 12] = oc.r / 255;
-    arr[base + 13] = oc.g / 255;
-    arr[base + 14] = oc.b / 255;
-    arr[base + 15] = oc.a;
-
-    // Params (texel 4): outlineMin, shadowAlpha, shadowBlur, gradientEnabled
-    // outlineMin = 0.5 → disabled; 0.5 - outlineWidth when enabled
-    const outlineMin = style.outlineWidth > 0 ? Math.max(0, 0.5 - style.outlineWidth) : 0.5;
-    arr[base + 16] = outlineMin;
-    arr[base + 17] = style.shadowAlpha;
-    // Shadow blur only. This used to carry a 0.03 floor because the same
-    // number was the shader's antialiasing width, and a node without a shadow
-    // still needed an edge to fade over; the shaders now derive that width per
-    // fragment from the field's screen-space gradient, so a floor here would
-    // only smear the shadow of a node that asked for none.
-    arr[base + 18] = style.shadowBlur * 0.1;
-    arr[base + 19] = style.gradientColors !== null ? 1 : 0;
-
-    // Shadow color (texel 5)
-    const sc = style.shadowColor;
-    arr[base + 20] = sc.r / 255;
-    arr[base + 21] = sc.g / 255;
-    arr[base + 22] = sc.b / 255;
-    arr[base + 23] = sc.a;
-
-    // Shadow offset + gradient axis (texel 6)
-    // Stored in ATLAS TEXELS; the shaders divide by u_pageSize to get the UV
-    // offset. The style states the offset in LOGICAL pixels, and one logical
-    // pixel is `rasterPixelRatio` texels — without the scale a shadow would
-    // shorten by exactly that factor as the glyph raster got denser.
-    const texelsPerLogicalPixel = node.rasterPixelRatio;
-    arr[base + 24] = style.shadowOffsetX * texelsPerLogicalPixel;
-    arr[base + 25] = style.shadowOffsetY * texelsPerLogicalPixel;
-    arr[base + 26] = style.gradientAxis === 'vertical' ? 1 : 0;
-    // The node's SDF buffer radius in LOGICAL pixels, which is the field's scale:
-    // the distance value moves by 1/radius per logical unit whatever the atlas
-    // density. The fragment stage sizes its antialiased edge from it. Zero means
-    // "unknown", which is the honest answer for a BitmapText — an offline MSDF
-    // atlas carries no distance range — and selects the derivative fallback.
-    arr[base + 27] = node instanceof Text ? node.sdfRadius : 0;
-
-    // Gradient top (texel 7)
-    const gc = style.gradientColors;
-    if (gc !== null) {
-      arr[base + 28] = gc[0].r / 255;
-      arr[base + 29] = gc[0].g / 255;
-      arr[base + 30] = gc[0].b / 255;
-      arr[base + 31] = gc[0].a;
-      // Gradient bottom (texel 8)
-      arr[base + 32] = gc[1].r / 255;
-      arr[base + 33] = gc[1].g / 255;
-      arr[base + 34] = gc[1].b / 255;
-      arr[base + 35] = gc[1].a;
-    } else {
-      arr[base + 28] = arr[base + 29] = arr[base + 30] = arr[base + 31] = 0;
-      arr[base + 32] = arr[base + 33] = arr[base + 34] = arr[base + 35] = 0;
-    }
-
-    // Text ink bounds (texel 9): (minX, minY, width, height)
-    // Vertex shader uses these to compute normalized gradient UV, so it needs
-    // the rectangle the glyph quads actually cover — not the advance extent,
-    // whose origin is (0, 0) while the SDF quads start at a negative offset.
-    const ink = node.getLocalBounds();
-    arr[base + 36] = ink.x;
-    arr[base + 37] = ink.y;
-    arr[base + 38] = ink.width;
-    arr[base + 39] = ink.height;
+    packTextNodeData(this._nodeDataArray, ni * nodeFloats, node);
   }
 
   // ── Flush ────────────────────────────────────────────────────────────────
@@ -889,18 +799,9 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       return false;
     }
 
-    // Column-major mat3 [a c 0 | b d 0 | tx ty 1] — indices 0..8 always valid.
-    const m = drawable.getGlobalTransform().toArray(false);
     const row = this._patchRowScratch;
 
-    row[0] = m[0]!; // a
-    row[1] = m[1]!; // c
-    row[2] = drawable.pixelSnapMode; // snap-mode flag (texel 0's spare .z)
-    row[3] = m[6]!; // tx
-    row[4] = m[3]!; // b
-    row[5] = m[4]!; // d
-    row[6] = m[5]!; // 0
-    row[7] = m[7]!; // ty
+    packTextNodeTransform(row, 0, drawable);
 
     state.nodeDataFloats.set(row, localIndex * nodeFloats);
     state.nodeDataTexture.commitRect(0, localIndex, 2, 1);
