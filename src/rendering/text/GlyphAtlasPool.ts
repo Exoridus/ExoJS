@@ -25,7 +25,7 @@ import { GlyphMetrics } from './GlyphMetrics';
  * applications at different densities are the ordinary case, and without the
  * ratio the second one would draw from the first one's raster grid. Strict
  * per-backend isolation for mixed-backend multi-app setups is a deferred
- * enhancement — it would require routing the pool through the render context,
+ * enhancement - it would require routing the pool through the render context,
  * which text layout reaches before a node is attached to a scene.
  * @advanced
  */

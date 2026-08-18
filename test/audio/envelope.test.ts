@@ -238,7 +238,7 @@ describe('Envelope', () => {
       env.hold(param, 0.05);
 
       expect(param.cancelAndHoldAtTime).toHaveBeenCalledWith(0.05);
-      // A hold is not a release — nothing ramps to zero.
+      // A hold is not a release - nothing ramps to zero.
       expect(param.setTargetAtTime).not.toHaveBeenCalled();
     });
 

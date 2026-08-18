@@ -1,12 +1,13 @@
 import type { InternalTargetRecord } from './matrix';
 
 /**
- * Internal-target instrumentation for the `NEU-S4` probe.
+ * Internal-target instrumentation for the DPR probe.
  *
- * RECORDING ONLY. Until `NEU-S4` shipped, this module also SIZED the targets: it
+ * RECORDING ONLY. Until internal targets began inheriting the surface resolution,
+ * this module also SIZED them: it
  * shadowed the allocation calls so they handed back `logical × pixelRatio`
  * textures, which is how the correction was priced before it existed. That half
- * is gone — the engine sizes its own targets now, and the probe's two arms are
+ * is gone - the engine sizes its own targets now, and the probe's two arms are
  * ordinary `Filter.resolution` / `RenderNode.cacheResolution` settings.
  *
  * What remains is the observation: a shadow on the probe's OWN backend and node
@@ -71,7 +72,7 @@ export interface TargetAllocation {
  * Arming is per frame rather than per cell on purpose: an effect target is
  * acquired again every frame, so recording the whole measured window would
  * produce a count that is really a frame count in disguise. The probe arms the
- * recorder for exactly one frame, so `count` reads as "per frame" — which is the
+ * recorder for exactly one frame, so `count` reads as "per frame" - which is the
  * figure that multiplies into a cost.
  */
 export interface TargetRecorder {
@@ -130,7 +131,7 @@ export const createTargetRecorder = (): TargetRecorder => {
 };
 
 /**
- * Record every pooled effect target the backend hands out — filter input, each
+ * Record every pooled effect target the backend hands out - filter input, each
  * filter output, mask targets.
  */
 export const instrumentAcquireRenderTexture = (backend: RenderTextureAcquirer, recorder: TargetRecorder): RestoreInstrumentation => {

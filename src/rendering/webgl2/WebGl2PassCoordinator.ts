@@ -18,7 +18,7 @@ export interface WebGl2PassBackend {
   readonly renderTarget: RenderTarget;
   readonly view: View;
   /**
-   * The persistent clear colour, read and restored around a child pass —
+   * The persistent clear colour, read and restored around a child pass -
    * `clear(colour)` writes through to it.
    */
   readonly clearColor: Color;

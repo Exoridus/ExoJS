@@ -5,7 +5,7 @@
  * one from the other, so nothing but a test stops the two from drifting apart.
  * Pixel parity catches drift only where a browser with both backends runs the
  * effect and the difference is visible; this reads the sources themselves and
- * compares what they DECLARE — uniform names and their order, texture and
+ * compares what they DECLARE - uniform names and their order, texture and
  * sampler slots, the varying the fragment stage receives, and the entry points
  * the pipeline binds.
  *
@@ -55,7 +55,7 @@ const wgslTypeForGlsl: Readonly<Record<string, string>> = {
 };
 
 // ---------------------------------------------------------------------------
-// Source readers — regex-level, no grammar. Enough for the declarations the
+// Source readers - regex-level, no grammar. Enough for the declarations the
 // filter contract pins down, and nothing beyond them.
 // ---------------------------------------------------------------------------
 
@@ -142,7 +142,7 @@ function wgslEntryPoint(source: string, stage: 'vertex' | 'fragment'): WgslEntry
 describe.each(pairs)('$name shader pair', ({ source }) => {
   test('ships both languages', () => {
     // A stock filter that carried only one language would crash on the other
-    // backend under `backend: 'auto'` — the whole reason the pair exists.
+    // backend under `backend: 'auto'` - the whole reason the pair exists.
     expect(source.glsl).not.toBeNull();
     expect(source.wgsl).not.toBeNull();
   });
@@ -188,7 +188,7 @@ describe.each(pairs)('$name shader pair', ({ source }) => {
   test('declares the same user uniforms, in the same order and of matching types', () => {
     // Order is load-bearing on WebGPU: every non-texture uniform is packed into
     // one buffer, one 16-byte slot each, in the order the filter was given them
-    // — so a reordered WGSL struct reads another uniform's bytes.
+    // - so a reordered WGSL struct reads another uniform's bytes.
     const glslScalars = glslUniforms(source.glsl!.fragment).filter(u => !autoBoundNames.has(u.name) && !glslSamplerTypes.has(u.type));
     const userUniformBinding = wgslBindings(source.wgsl!).find(b => b.group === 1 && b.binding === 0);
     const wgslScalars = userUniformBinding !== undefined ? wgslStructMembers(source.wgsl!, userUniformBinding.type) : [];

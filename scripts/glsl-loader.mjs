@@ -1,6 +1,6 @@
 /**
  * Node ESM loader hook making a plain `node --import tsx/esm` run source-accurate
- * for the in-repo perf benches — the node/tsx counterpart of the vitest config's
+ * for the in-repo perf benches - the node/tsx counterpart of the vitest config's
  * `realShaderPlugin` + `aliasConfig`. Two jobs:
  *
  *  1. **Shader imports.** Engine modules import shaders as

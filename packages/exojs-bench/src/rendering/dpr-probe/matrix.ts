@@ -1,6 +1,6 @@
 /**
  * Cell matrix, result shape and serialization for the manual DPR / internal
- * render-target probe (`NEU-S4`).
+ * render-target probe.
  *
  * Pure data + pure functions on purpose: everything here is exercised from a
  * Node test, while the engine-touching halves (`scenes.ts`, `page/probe.ts`) can
@@ -13,12 +13,13 @@ export type ProbeSceneId = 'baseline' | 'color-filter' | 'blur' | 'cache-texture
 /**
  * Which internal-target resolution a cell renders under.
  *
- * Both arms are now ordinary production settings — `NEU-S4` shipped, and the
+ * Both arms are now ordinary production settings - internal targets inherit the
+ * surface resolution, and the
  * bench-only sizing hook it was measured with is gone:
  *
- * - `inherit` — the default. `Filter.resolution` / `RenderNode.cacheResolution`
+ * - `inherit` - the default. `Filter.resolution` / `RenderNode.cacheResolution`
  *   left at `'inherit'`, so an internal target matches the surface resolution.
- * - `logical` — both pinned to `1`, which reproduces the pre-`NEU-S4` behaviour
+ * - `logical` - both pinned to `1`, which reproduces the pre-inheritance behaviour
  *   exactly and is what a user picks to trade sharpness for fill rate.
  *
  * The comparison is therefore no longer "today vs a hypothetical fix" but "the
@@ -102,7 +103,7 @@ export const PROBE_SCENES: readonly ProbeSceneSpec[] = [
  * Device pixel ratios every scene is measured at.
  *
  * `3` is the iPhone 13 Pro's native ratio and is reachable only by passing
- * `canvas.pixelRatio` explicitly — the engine's `auto` policy clamps to 2
+ * `canvas.pixelRatio` explicitly - the engine's `auto` policy clamps to 2
  * (`Application.resolveAutoPixelRatio`), which is exactly the default under
  * question here.
  */
@@ -115,7 +116,7 @@ export interface ProbeCell {
   readonly pixelRatio: number;
   /**
    * `Text.pixelRatio` handed to the scene's text nodes, or omitted to let them
-   * INHERIT the application's ratio — which is the shipped default and what
+   * INHERIT the application's ratio - which is the shipped default and what
    * every other scene runs.
    *
    * Only the `text-ratio` scene sets it. The interesting comparison is not a
@@ -132,7 +133,7 @@ export interface ProbeCell {
  * whole surface to 3 as well. Reading them in that order answers the question
  * the iPhone measurement left open: how much of the sharpness a DPR-3 surface
  * buys for small text can be had by rasterizing the glyphs at 3 while the rest
- * of the frame stays at 2 — which is the trade a phone actually cares about,
+ * of the frame stays at 2 - which is the trade a phone actually cares about,
  * since fill rate scales with the surface and not with the atlas.
  */
 export const TEXT_RATIO_CELLS: readonly ProbeCell[] = [
@@ -182,8 +183,8 @@ export const buildProbeMatrix = (
 /** One class of internal render target a cell allocated, per frame. */
 export interface InternalTargetRecord {
   /**
-   * `pooled` — obtained from `backend.acquireRenderTexture` (filter input /
-   * filter output / mask). `cache` — the node-owned `cacheAsTexture` texture.
+   * `pooled` - obtained from `backend.acquireRenderTexture` (filter input /
+   * filter output / mask). `cache` - the node-owned `cacheAsTexture` texture.
    */
   readonly kind: 'pooled' | 'cache';
   /** Texel width the engine allocated. */
@@ -196,7 +197,7 @@ export interface InternalTargetRecord {
 
 /** Everything the probe measured for one cell. */
 export interface ProbeCellResult {
-  /** Position in the run order — 0-based, ascending, never reused. */
+  /** Position in the run order - 0-based, ascending, never reused. */
   readonly index: number;
   /** Milliseconds between the start of the whole run and the start of this cell's measured window. */
   readonly startOffsetMs: number;
@@ -208,7 +209,7 @@ export interface ProbeCellResult {
   readonly enginePixelRatio: number | null;
   /**
    * `Text.pixelRatio` this cell's text nodes were built with, or `null` when
-   * they inherited the application's ratio — which is every cell outside the
+   * they inherited the application's ratio - which is every cell outside the
    * `text-ratio` scene.
    */
   readonly textPixelRatio: number | null;
@@ -226,13 +227,13 @@ export interface ProbeCellResult {
   /** Backing-store size of the canvas element, in device pixels. */
   readonly backingWidth: number;
   readonly backingHeight: number;
-  /** `backingWidth × backingHeight` — the main surface's pixel count. */
+  /** `backingWidth × backingHeight` - the main surface's pixel count. */
   readonly mainPixelCount: number;
   /** Every distinct internal target shape this cell allocated. Empty for the effect-free scenes. */
   readonly internalTargets: readonly InternalTargetRecord[];
   /**
    * Total internal-target pixels divided by {@link mainPixelCount}, or `null`
-   * when the cell allocated none. This is the number `NEU-S4` was about: under
+   * when the cell allocated none. This is the number the probe exists for: under
    * `logical` it falls by `1/pixelRatio²` as the surface grows, under `inherit`
    * it holds constant.
    */
@@ -248,7 +249,7 @@ export interface ProbeCellResult {
   readonly cpuMsP95: number | null;
   /**
    * Per-frame HARDWARE GPU time, or `null` when no hardware clock existed. Never
-   * derived from frame cadence — see {@link ProbeResult.gpuTimerSource}.
+   * derived from frame cadence - see {@link ProbeResult.gpuTimerSource}.
    */
   readonly gpuMsMedian: number | null;
   readonly gpuMsP95: number | null;
@@ -273,7 +274,7 @@ export interface ProbeResult {
   readonly engineVersion: string;
   /** ISO timestamp taken when the run finished. */
   readonly timestamp: string;
-  /** Raw `navigator.userAgent`. Never parsed into a device name — see {@link deviceLabel}. */
+  /** Raw `navigator.userAgent`. Never parsed into a device name - see {@link deviceLabel}. */
   readonly userAgent: string;
   /**
    * Device name the TESTER typed into the probe page. The user agent is not
@@ -286,7 +287,7 @@ export interface ProbeResult {
   /** The host's own `window.devicePixelRatio`. */
   readonly devicePixelRatio: number;
   /**
-   * What the engine's `auto` policy WOULD pick here — `min(devicePixelRatio, 2)`
+   * What the engine's `auto` policy WOULD pick here - `min(devicePixelRatio, 2)`
    * (`Application.resolveAutoPixelRatio`). Recorded so the "is the default
    * sensible" question can be answered from the capture alone.
    */
@@ -302,7 +303,7 @@ export interface ProbeResult {
   readonly webgpuTimestampQuery: boolean | null;
   /** Where the `gpuMs*` columns came from, or why they are null. */
   readonly gpuTimerSource: string;
-  /** `crossOriginIsolated` — false means `performance.now()` is coarsened. */
+  /** `crossOriginIsolated` - false means `performance.now()` is coarsened. */
   readonly crossOriginIsolated: boolean;
   /** Smallest non-zero `performance.now()` delta observed on this device, in milliseconds. */
   readonly timerResolutionMs: number;
@@ -313,7 +314,7 @@ export interface ProbeResult {
    */
   readonly stageWidth: number;
   readonly stageHeight: number;
-  /** Which stage the tester chose — a fixed square, or the device's usable area. */
+  /** Which stage the tester chose - a fixed square, or the device's usable area. */
   readonly stagePreset: 'fixed' | 'fill';
   /** Results, in run order. */
   readonly cells: readonly ProbeCellResult[];
@@ -326,10 +327,11 @@ export interface ProbeResult {
  *
  * - `1` → `2`: the cache scene's id followed the engine's `cacheAsBitmap` →
  *   `cacheAsTexture` rename.
- * - `2` → `3`: `NEU-S4` shipped. The modes are now `inherit` / `logical` rather
+ * - `2` → `3`: internal targets began inheriting the surface resolution. The modes
+ *   are now `inherit` / `logical` rather
  *   than `current` / `parent-resolution`, a `cache-dirty` scene was added, and
  *   the stage size became a run parameter. A version-1 or -2 capture is still
- *   readable — map `current` onto `logical` and `parent-resolution` onto
+ *   readable - map `current` onto `logical` and `parent-resolution` onto
  *   `inherit`, and read its stage as 360 × 360.
  * - `3` → `4`: runtime text became HiDPI-aware. A `text-ratio` scene was added
  *   with its own four enumerated cells, and every result carries

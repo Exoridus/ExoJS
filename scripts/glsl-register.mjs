@@ -10,7 +10,7 @@
  *  2. Installs the build-time constants (`__DEV__`/`__VERSION__`/`__REVISION__`)
  *     as real globals. The engine references the bare `__DEV__` (e.g. `src/core/
  *     dev.ts`); rollup replaces it at build time and vitest's `define` + the
- *     `_setup-dev-global` setup file inject it for tests — under plain node it is
+ *     `_setup-dev-global` setup file inject it for tests - under plain node it is
  *     undefined and any guarded code path throws `__DEV__ is not defined`.
  */
 import { register } from 'node:module';

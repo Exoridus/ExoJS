@@ -25,7 +25,7 @@ import { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 // The metrics are deliberately CONSTANT across font sizes. A real font scales
 // with the size, which would make "did the ratio reach the rasterizer" and "did
 // the result get normalized back" indistinguishable; with constant metrics the
-// two are separate observations — the font string carries the first, the
+// two are separate observations - the font string carries the first, the
 // returned GlyphInfo the second.
 // ---------------------------------------------------------------------------
 
@@ -147,7 +147,7 @@ describe('GlyphAtlas rasterization at a pixel ratio', () => {
   });
 
   // The logical font size never reaches the canvas as a raster size, but it
-  // MUST reach it as a measurement size — that is where the advance comes from.
+  // MUST reach it as a measurement size - that is where the advance comes from.
   test('measures the advance at the logical size', () => {
     atlasAt(3).getGlyph('A', 9);
 
@@ -169,7 +169,7 @@ describe('GlyphAtlas rasterization at a pixel ratio', () => {
   });
 
   // The advance is the number layout is built out of. It comes from the shared
-  // logical metrics, so it is bit-identical at every ratio — a re-rasterization
+  // logical metrics, so it is bit-identical at every ratio - a re-rasterization
   // at a different density cannot move a line break by a fraction of a pixel.
   test('keeps the advance identical across ratios', () => {
     const advances = [1, 1.5, 2, 3].map(ratio => atlasAt(ratio).getGlyph('A', 9).advance);
@@ -178,7 +178,7 @@ describe('GlyphAtlas rasterization at a pixel ratio', () => {
   });
 
   test('keeps the slot origin and UVs in atlas texels', () => {
-    // Padded slot at ratio 3: 9 + 4 wide, 18 + 4 tall — unscaled, because a UV
+    // Padded slot at ratio 3: 9 + 4 wide, 18 + 4 tall - unscaled, because a UV
     // addresses the raster grid rather than the logical one.
     const info = atlasAt(3).getGlyph('A', 16);
 

@@ -1,15 +1,15 @@
-// PitchShift AudioWorkletProcessor — SOLA time-stretch + resample pitch shifter.
+// PitchShift AudioWorkletProcessor - SOLA time-stretch + resample pitch shifter.
 //
 // This worklet is built through the `.worklet.ts` → `?worklet`
 // build plugin (see `@codexo/exojs-config/worklet-plugin`): real, typed
 // TypeScript instead of a template-string constant. It typechecks against the
 // AudioWorkletGlobalScope (see `worklet-globals.d.ts` + `../../tsconfig.worklets.json`),
-// NOT the DOM — this file must stay self-contained (no imports at runtime):
+// NOT the DOM - this file must stay self-contained (no imports at runtime):
 // `registerAudioWorkletProcessor` (`#audio/worklet/registerWorklet`) loads the
 // build-inlined source via a Blob URL passed to `audioWorklet.addModule()`.
 //
 // Consumed via `import pitchShiftWorkletSource from './pitch-shift.worklet.ts?worklet'`
-// (see `../effects/PitchShiftEffect.ts`) — the `?worklet` query is what routes
+// (see `../effects/PitchShiftEffect.ts`) - the `?worklet` query is what routes
 // this file through the transpile-to-string plugin instead of normal
 // TypeScript module resolution.
 
@@ -39,7 +39,7 @@ class PitchShiftProcessor extends AudioWorkletProcessor {
 
   // Pitch shift = SOLA time-stretch by `pitch` followed by resampling by
   // `pitch`. SOLA (synchronized overlap-add) realigns each synthesis grain by
-  // cross-correlation so grain restarts stay phase coherent — this is what
+  // cross-correlation so grain restarts stay phase coherent - this is what
   // keeps the carrier exactly at f_in * pitch. A naive granular delay drifts
   // the pitch because its grain-boundary phase jumps accumulate into a
   // frequency offset.
@@ -70,7 +70,7 @@ class PitchShiftProcessor extends AudioWorkletProcessor {
   }
 
   // Find the input offset (within ±seek of `nominal`) whose grain head best
-  // matches the existing output overlap region — the waveform-similarity step
+  // matches the existing output overlap region - the waveform-similarity step
   // that keeps successive grains in phase.
   private _correlate(nominal: number): number {
     const ov = this._overlap;

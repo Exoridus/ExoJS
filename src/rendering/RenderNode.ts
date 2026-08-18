@@ -53,22 +53,22 @@ const NO_FILTERS: readonly Filter[] = [];
 /**
  * Acceptable mask sources for {@link RenderNode.mask}.
  *
- * - `Rectangle` — solid axis-aligned mask. The fastest path: implemented
+ * - `Rectangle` - solid axis-aligned mask. The fastest path: implemented
  *   internally via GPU scissor / clip rect; no intermediate render
  *   targets are required.
- * - `Texture` — uses the texture's alpha channel as the mask. Stretched
+ * - `Texture` - uses the texture's alpha channel as the mask. Stretched
  *   to fit the masked node's local bounds. The texture is sampled with
  *   no transform of its own; if you need transform/anchor/scale, use a
  *   `Sprite(texture)` as the mask source instead.
- * - `RenderTexture` — same alpha-mask semantics as `Texture` for a
+ * - `RenderTexture` - same alpha-mask semantics as `Texture` for a
  *   dynamic/offscreen source.
- * - `RenderNode` — the mask node's full visual output (after its own
+ * - `RenderNode` - the mask node's full visual output (after its own
  *   transform, filters, cacheAsTexture, etc.) is rendered into an
  *   intermediate render texture and used as the alpha mask. Acceptable
  *   sources include `Sprite`, `Graphics`, `Container`, and any other
  *   class that extends `RenderNode`. Bare `SceneNode` instances are
  *   structural-only and rejected at compile time.
- * - `null` — no mask.
+ * - `null` - no mask.
  *
  * Cost summary: `Rectangle` is O(1) GPU state. The other sources require
  * one or two intermediate render textures plus an alpha-composite pass.
@@ -83,7 +83,7 @@ export type MaskSource = Rectangle | Texture | RenderTexture | RenderNode | null
  * the interaction surface (`interactive`, `draggable`, all the pointer
  * Signals).
  *
- * `tint` and `blendMode` are NOT here — they belong to {@link Drawable}, the
+ * `tint` and `blendMode` are NOT here - they belong to {@link Drawable}, the
  * subclass that actually issues geometry. A {@link Container} has neither; to
  * recolour a whole subtree, put a {@link ColorMatrixFilter} on it.
  *
@@ -366,7 +366,7 @@ export abstract class RenderNode extends SceneNode {
    */
   private _filters: Filter[] | null = null;
   /**
-   * The bounds the texture cache was captured at — built on the first capture.
+   * The bounds the texture cache was captured at - built on the first capture.
    * A `Rectangle` is four heap objects (itself, its observable position and
    * size, and the bound change callback), and only `cacheAsTexture` nodes ever
    * need one.
@@ -425,8 +425,8 @@ export abstract class RenderNode extends SceneNode {
    *
    * Setting a `RenderNode` that is `this` is rejected (a node cannot
    * mask itself). Indirect cycles (`a.mask = b; b.mask = a`) are rejected
-   * as well: the candidate's mask chain is walked and any cycle — whether
-   * it closes on `this` or was already present in the chain — fails the
+   * as well: the candidate's mask chain is walked and any cycle - whether
+   * it closes on `this` or was already present in the chain - fails the
    * assignment.
    */
   public get mask(): MaskSource {
@@ -585,8 +585,8 @@ export abstract class RenderNode extends SceneNode {
    * frame.
    *
    * Worth it for a subtree that is expensive to draw and rarely changes. The
-   * cache is invalidated by anything that moves the node's world bounds — the
-   * node's own transform included — so a node that animates re-bakes every
+   * cache is invalidated by anything that moves the node's world bounds - the
+   * node's own transform included - so a node that animates re-bakes every
    * frame and is strictly slower than not caching it at all.
    *
    * Setting it to `false` frees the texture immediately.
@@ -613,7 +613,7 @@ export abstract class RenderNode extends SceneNode {
    *
    * `'inherit'` (the default) matches the surface the cache is composited into,
    * so enabling the cache does not soften the picture on a HiDPI display. Pin it
-   * to a number to trade sharpness for memory and bake cost — a cache is
+   * to a number to trade sharpness for memory and bake cost - a cache is
    * `resolution²` texels, so `1` on a DPR-3 phone is a ninth of the VRAM and a
    * ninth of the fill per re-bake.
    *
@@ -801,7 +801,7 @@ export abstract class RenderNode extends SceneNode {
    * its first recorded frame such a node owns a group-scoped instance,
    * transform and tint buffer, and the backend holds that bundle until the
    * node is destroyed or the backend itself is. Dropping the last reference
-   * is not enough — GPU lifetime is deterministic here on purpose and is not
+   * is not enough - GPU lifetime is deterministic here on purpose and is not
    * tied to garbage collection.
    */
   public override destroy(): void {

@@ -19,8 +19,8 @@ import { createFakeWebGl2Context, GlRecorder, installFakeWebGl2Globals } from '.
  * Construct a real {@link WebGl2Backend} against a recording fake context and
  * hand back the attributes it asked `getContext('webgl2')` for.
  *
- * `rendering` is resolved through {@link resolveRenderingOptions} first —
- * the same call the real {@link Application} constructor makes — so this
+ * `rendering` is resolved through {@link resolveRenderingOptions} first -
+ * the same call the real {@link Application} constructor makes - so this
  * exercises the actual public-options-to-defaults merge, not a re-typed copy
  * of it.
  */
@@ -65,7 +65,7 @@ describe('canvas alphaMode → WebGL2 context attributes', () => {
 
     expect(attributes.alpha).toBe(false);
     // The engine always writes premultiplied colour, so the canvas is always
-    // told so — with `alpha: false` the flag is inert per the WebGL spec.
+    // told so - with `alpha: false` the flag is inert per the WebGL spec.
     expect(attributes.premultipliedAlpha).toBe(true);
   });
 
@@ -134,7 +134,7 @@ describe('canvas alphaMode → WebGL2 context attributes', () => {
       webglAttributes: { stencil: false } as NonNullable<RenderingApplicationOptions['webglAttributes']>,
     });
 
-    // Root-target stencil clipping needs a stencil buffer unconditionally —
+    // Root-target stencil clipping needs a stencil buffer unconditionally -
     // the public option is not authoritative over this attribute.
     expect(attributes.stencil).toBe(true);
   });

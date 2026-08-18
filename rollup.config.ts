@@ -42,8 +42,8 @@ const extensionSourcePlugin = (): Plugin => ({
   },
 });
 
-// Shader text (`.vert`/`.frag`/`.wgsl`) ships verbatim inside the bundle —
-// Terser never descends into a string literal — so the outputs that minify get
+// Shader text (`.vert`/`.frag`/`.wgsl`) ships verbatim inside the bundle -
+// Terser never descends into a string literal - so the outputs that minify get
 // the comment-stripped variant and the readable ones keep the source as
 // authored. See `@codexo/exojs-config/shader-plugin`.
 const shaderPlugin = createShaderPlugin();
@@ -66,7 +66,7 @@ const codecovBundlePlugin = (bundleName: string): Plugin[] =>
 // `@codexo/exojs-config/worklet-plugin`) are transpiled and inlined as a JS
 // string; untouched worklets keep exporting a plain template-string constant
 // and never reach this plugin. It is a no-op for any input that never uses
-// the `?worklet` query — safe to include in every config below. Mirrors the
+// the `?worklet` query - safe to include in every config below. Mirrors the
 // shader plugin split above: the outputs that minify get the minified worklet
 // string, the readable ones keep the plain transpile.
 const workletPlugin = createWorkletPlugin();

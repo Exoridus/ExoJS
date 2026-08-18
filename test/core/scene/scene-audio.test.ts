@@ -442,7 +442,7 @@ describe('SceneAudio — dormancy gate widens to Ready/Suspended, rejects Destro
     });
   });
 
-  // NEU-O5: same failure class as ME-41 one level down — `AudioGeneratorVoice`
+  // Same failure class as the paused sound voice one level down: `AudioGeneratorVoice`
   // never implemented `Pausable`, so a held synth note kept sounding straight
   // through scene.pause()/suspend().
   describe('with a real AudioGenerator voice', () => {

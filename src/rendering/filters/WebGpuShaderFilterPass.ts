@@ -57,13 +57,13 @@ interface WebGpuConnection {
  * The WebGPU half of a {@link ShaderFilter}: builds the pipeline from the WGSL
  * module, assembles the bind groups, and draws the fullscreen quad.
  *
- * Not a {@link Filter} itself and not public — the filter owns it, decides when
+ * Not a {@link Filter} itself and not public - the filter owns it, decides when
  * it is built, and hands it the uniform record it keeps writing to, so a
  * `setUniform` call reaches this pass without copying anything.
  * @internal
  */
 export class WebGpuShaderFilterPass {
-  /** One redirect pass, re-pointed per application — see {@link BackendTargetPass.retarget}. */
+  /** One redirect pass, re-pointed per application - see {@link BackendTargetPass.retarget}. */
   private readonly _pass: BackendTargetPass = new BackendTargetPass(backend => this._run(backend));
   /** `vec2<f32>` padded to the buffer's 16 bytes, reused so a frame allocates none. */
   private readonly _resolutionScratch = new Float32Array(4);
@@ -94,7 +94,7 @@ export class WebGpuShaderFilterPass {
 
     // Staged on the instance rather than captured: the pass object and its body
     // are built once per filter, so a filtered node costs no allocation per
-    // frame — which it did while both were rebuilt inside every `apply`.
+    // frame - which it did while both were rebuilt inside every `apply`.
     this._passInput = input;
     this._passOutput = output;
 
@@ -110,7 +110,7 @@ export class WebGpuShaderFilterPass {
     }
   }
 
-  /** The pass body — see {@link _pass}. */
+  /** The pass body - see {@link _pass}. */
   private _run(backend: RenderBackend): void {
     const gpu = backend as WebGpuBackend;
     const conn = this._connection!;
@@ -274,7 +274,7 @@ export class WebGpuShaderFilterPass {
   private _buildUserBindGroupLayout(device: GPUDevice): GPUBindGroupLayout {
     // Binding 0 is unconditional: `_buildUserBindGroup` always binds a uniform
     // buffer there (a 16-byte dummy when there are no scalar uniforms), so a
-    // layout that omitted it rejected the bind group outright — which is what
+    // layout that omitted it rejected the bind group outright - which is what
     // a texture-only filter such as `LutFilter`'s rgb1d mode produces. A layout
     // entry the shader never reads is valid; a bind group entry the layout
     // never declared is not.

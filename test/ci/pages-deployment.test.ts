@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
  * The site is built and validated exactly once, by the `site-build` job in
  * `_ci-checks.yml`, which publishes `site/dist/**` as an artifact named after
  * the commit it was built from. `deploy-pages.yml` then downloads exactly that
- * artifact — from exactly the workflow run that triggered it — and deploys it.
+ * artifact - from exactly the workflow run that triggered it - and deploys it.
  *
  * The defect this prevents: the Pages workflow used to check the sources out
  * and rebuild the library and the site itself, so what went live was a second,

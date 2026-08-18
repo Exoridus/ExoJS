@@ -1,8 +1,8 @@
 /**
  * WebGPU control cells for `webgl2-text-anisotropic-antialiasing.test.ts`.
  *
- * The contract — an SDF edge is sized against the device density its OWN normal
- * lands on, not against the horizontal one — is backend-independent, but each
+ * The contract - an SDF edge is sized against the device density its OWN normal
+ * lands on, not against the horizontal one - is backend-independent, but each
  * backend carries its own copy of the vertex and fragment stages. These cells
  * pin the WGSL half.
  *
@@ -57,7 +57,7 @@ afterEach(() => {
 
 describe('SDF edge width under an anisotropic node scale', () => {
   /**
-   * One configuration, averaged over four subpixel phases — a single placement
+   * One configuration, averaged over four subpixel phases - a single placement
    * measures alignment as much as edge width, since an edge that lands on a
    * device-pixel boundary needs no partially-lit pixel at all.
    */

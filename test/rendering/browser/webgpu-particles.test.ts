@@ -1,20 +1,20 @@
 /**
- * WebGPU ParticleSystem browser tests — opt-in, capability-aware.
+ * WebGPU ParticleSystem browser tests - opt-in, capability-aware.
  *
  * Validates the `@codexo/exojs-particles` WebGpuParticleRenderer end-to-end:
  * a particle spawned with a fixed slot, position, scale and packed color is
  * rendered to a real WebGPU canvas and read back via a 2D-canvas snapshot.
  *
- * Determinism note: `ParticleSystem` has no built-in RNG — spawn/update
+ * Determinism note: `ParticleSystem` has no built-in RNG - spawn/update
  * modules (which may use distributions) are entirely optional. These tests
  * bypass spawn modules altogether and write the SoA arrays
  * (`posX`/`posY`/`scaleX`/`scaleY`/`color`/`lifetime`) directly after calling
- * `system.spawn()`, then render without ever calling `system.update()` — so
+ * `system.spawn()`, then render without ever calling `system.update()` - so
  * `elapsed` stays at 0 and the particle never expires. This yields fully
  * deterministic, seed-free particle placement across runs.
  *
  * The renderer itself draws from the render mode's WGSL, but the mode's
- * `Material` pairs that WGSL with the shipped GLSL — and `ShaderSource` rejects
+ * `Material` pairs that WGSL with the shipped GLSL - and `ShaderSource` rejects
  * an empty source, so the package's `.vert`/`.frag` files have to load as their
  * real text even though nothing here compiles them.
  *

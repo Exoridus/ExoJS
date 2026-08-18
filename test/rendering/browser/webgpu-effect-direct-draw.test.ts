@@ -2,7 +2,7 @@
  * WebGPU half of the effect direct-draw pixel coverage.
  *
  * `RenderNode._drawTexture` and the stock `ColorMatrixFilter` / `BlurFilter` are
- * backend-neutral — they go through `backend.execute` and `backend.draw` — so
+ * backend-neutral - they go through `backend.execute` and `backend.draw` - so
  * the switch to `drawDrawableDirect` changes the WebGPU path as much as the
  * WebGL2 one. WebGPU is also where it could plausibly break differently: a pass
  * is an explicit encoder object here, not ambient state, so a quad issued
@@ -13,7 +13,7 @@
  * whose failure mode is backend-specific (pass/encoder routing, target
  * restore), not the ones that re-test filter arithmetic.
  *
- * The lane guarantees a real adapter, so there is no availability guard here —
+ * The lane guarantees a real adapter, so there is no availability guard here -
  * a mid-test device loss is handled by `renderWebGpuOnce`, which skips.
  *
  * Run via:  pnpm test:browser:webgpu

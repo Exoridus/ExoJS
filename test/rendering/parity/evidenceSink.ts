@@ -60,7 +60,7 @@ export interface EvidenceRow {
  *
  * Held once per browser rather than repeated on every row. The stamp changes
  * on every re-measurement while the observations usually do not, so folding it
- * into the rows made a run that found nothing new rewrite the whole file —
+ * into the rows made a run that found nothing new rewrite the whole file -
  * hundreds of lines of pure noise in the diff, and a conflict on every branch
  * that had also run the suite. One stamp per browser keeps a no-change run to
  * a single changed line, and leaves two branches that measured the same
@@ -69,7 +69,7 @@ export interface EvidenceRow {
  * Chromium re-measures whenever someone runs the lane, Firefox and WebKit only
  * on a machine with a display. Without a stamp the file would read as uniformly
  * current, so a stale WebKit row would look exactly like a fresh Chromium one.
- * Day resolution keeps the diff quiet — the question a reader has is "how old
+ * Day resolution keeps the diff quiet - the question a reader has is "how old
  * is this", not "at what second".
  */
 export interface EvidenceStamp {
@@ -89,7 +89,7 @@ export interface EvidenceStamp {
   /**
    * Release these rows are published as part of, e.g. `0.16.0`.
    *
-   * Written by `release:cut`, not by this sink — the runner executes before the
+   * Written by `release:cut`, not by this sink - the runner executes before the
    * release, when `package.json` still carries the previous version. Absent for
    * a browser measured since the last release, which is the honest reading: it
    * is current data, but no release has claimed it yet.
@@ -110,7 +110,7 @@ const OUTPUT = 'test/rendering/parity/evidence.json';
  * Opt-in for rewriting the artifact.
  *
  * The parity specs are part of the `browser-webgpu` project, so they run on
- * every push as a backend-comparison gate — but a gate run has no business
+ * every push as a backend-comparison gate - but a gate run has no business
  * rewriting a published, committed file. Only the `test:parity*` scripts set
  * this, so an ordinary run leaves the working tree clean and a measurement run
  * still records what it found.
@@ -163,7 +163,7 @@ const currentCommit = (): string => {
  * disappear when a scene or property is removed.
  *
  * Returns the row count so a spec can assert the handoff happened rather than
- * trusting a silent void — including on a gate run, where the count is what the
+ * trusting a silent void - including on a gate run, where the count is what the
  * run observed and nothing is written.
  */
 export const writeParityEvidence = (_ctx: unknown, rows: readonly EvidenceRow[]): number => {

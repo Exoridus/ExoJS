@@ -1,5 +1,5 @@
 /**
- * WebGL2 renderer-matrix browser tests — RetainedContainer pixel cells
+ * WebGL2 renderer-matrix browser tests - RetainedContainer pixel cells
  * (correctness gate for real rendered output).
  *
  * Seven cells asserting real rendered output for the retained-group feature:

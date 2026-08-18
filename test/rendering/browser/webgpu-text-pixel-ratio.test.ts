@@ -1,8 +1,8 @@
 /**
  * WebGPU control cells for `webgl2-text-pixel-ratio.test.ts`.
  *
- * The raster side of `Text.pixelRatio` is backend-independent — it happens on a
- * Canvas 2D before a texture ever exists — and is pinned once in the WebGL2
+ * The raster side of `Text.pixelRatio` is backend-independent - it happens on a
+ * Canvas 2D before a texture ever exists - and is pinned once in the WebGL2
  * suite. What is backend-specific, and therefore repeated here, is the part the
  * backend actually owns:
  *
@@ -10,7 +10,7 @@
  *    only learn from the backend it is being collected for.
  * 2. The shadow offset is authored in logical pixels and applied as an atlas-UV
  *    shift, so each backend's node-data packing has to scale it by the node's
- *    raster density — and each has its own packer.
+ *    raster density - and each has its own packer.
  *
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
  * against Mesa lavapipe); a run only skips when the software adapter drops the

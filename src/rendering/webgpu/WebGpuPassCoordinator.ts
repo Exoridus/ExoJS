@@ -68,7 +68,7 @@ interface StencilClipEntry {
  */
 export interface WebGpuPassBackend {
   /**
-   * The persistent clear colour, read and restored around a child pass —
+   * The persistent clear colour, read and restored around a child pass -
    * `clear(colour)` writes through to it.
    */
   readonly clearColor: Color;

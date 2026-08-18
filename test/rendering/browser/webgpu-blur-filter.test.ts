@@ -1,5 +1,5 @@
 /**
- * BlurFilter's kernel shape on a real WebGPU GPU — the counterpart to
+ * BlurFilter's kernel shape on a real WebGPU GPU - the counterpart to
  * `webgl2-blur-filter.test.ts`. The two-sweep blur is written entirely in
  * backend-neutral draw calls, so both backends must produce the same shape;
  * this spec is what proves it rather than assumes it.

@@ -17,8 +17,8 @@ export type LutMode = 'rgb1d' | '3d';
 export interface LutFilterOptions {
   /**
    * Storage mode of the LUT texture.
-   * - `'rgb1d'` — texture is `N×1`, holding three independent per-channel curves: red is graded through the LUT's red channel, green through green, blue through blue. Used for levels/curves-style grading, colour ramps and posterisation.
-   * - `'3d'` — texture is `N²×N`, indexed by the full source RGB. Used for color grading, tone mapping, film emulation. Default `'3d'`.
+   * - `'rgb1d'` - texture is `N×1`, holding three independent per-channel curves: red is graded through the LUT's red channel, green through green, blue through blue. Used for levels/curves-style grading, colour ramps and posterisation.
+   * - `'3d'` - texture is `N²×N`, indexed by the full source RGB. Used for color grading, tone mapping, film emulation. Default `'3d'`.
    */
   mode?: LutMode;
   /**
@@ -28,7 +28,7 @@ export interface LutFilterOptions {
   size?: number;
 }
 
-// Three independent lookups, one per channel — NOT one lookup indexed by red.
+// Three independent lookups, one per channel - NOT one lookup indexed by red.
 // `textureSize` supplies N, so the sample lands on a texel centre for LUTs of
 // any width and an identity ramp is an exact no-op.
 /**
@@ -49,7 +49,7 @@ export const lut3dShaderSource = createFilterShaderSource({ glsl: { fragment: gl
  * A {@link Filter} that maps every pixel of the input through a Look-Up Table texture.
  *
  * Two storage modes:
- * - **RGB 1D LUT** (`N×1`, default `N=256`): three independent per-channel curves — `R' = lut(src.r).r`, `G' = lut(src.g).g`, `B' = lut(src.b).b`, alpha untouched. Used for levels/curves-style grading, colour ramps, posterisation and animated recolouring.
+ * - **RGB 1D LUT** (`N×1`, default `N=256`): three independent per-channel curves - `R' = lut(src.r).r`, `G' = lut(src.g).g`, `B' = lut(src.b).b`, alpha untouched. Used for levels/curves-style grading, colour ramps, posterisation and animated recolouring.
  * - **3D LUT** (`N²×N` unwrapped cube): indexed by the full source RGB with trilinear interpolation between slices. Used for cinematic colour grading, tone mapping, film stock emulation, accessibility filters (color-blindness simulation), and similar standard colour-pipeline tasks. `N=17` matches DaVinci/OBS export defaults.
  *
  * A 1D LUT cannot express cross-channel mixing (that is what the 3D mode is
@@ -64,7 +64,7 @@ export const lut3dShaderSource = createFilterShaderSource({ glsl: { fragment: gl
  * const filter = new LutFilter({ mode: '3d', size: 17 }).setLut(lut);
  * sprite.filters = [filter];
  *
- * // Animated per-channel curves — shift the ramp every frame:
+ * // Animated per-channel curves - shift the ramp every frame:
  * const ramp = LutFilter.identityLut1D();
  * const filter = new LutFilter({ mode: 'rgb1d' }).setLut(ramp);
  * // Replace `ramp.source` per frame with a shifted copy.

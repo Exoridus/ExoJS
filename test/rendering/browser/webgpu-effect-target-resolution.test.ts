@@ -1,11 +1,11 @@
 /**
- * WebGPU effect / cache render-target resolution browser tests (`NEU-S4`).
+ * WebGPU effect / cache render-target resolution browser tests.
  *
  * The resolution POLICY is backend-agnostic (plan builder + effect executor) and
  * is pinned in detail by the WebGL2 twin. What is backend-specific, and what
  * this file exists for, is the two values the policy reads off the device:
- * `rootResolution` — derived from the canvas backing store against the logical
- * root target — and `maxTextureSize`, which on WebGPU comes from the granted
+ * `rootResolution` - derived from the canvas backing store against the logical
+ * root target - and `maxTextureSize`, which on WebGPU comes from the granted
  * device's `maxTextureDimension2D` with the spec default standing in.
  *
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs

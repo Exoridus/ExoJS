@@ -4,20 +4,20 @@
  * A skipped test reports as neither pass nor fail, so it disappears from the
  * summary everyone reads. Every silent-skip defect found so far had the same
  * shape: a `runIf` guard on an environment condition that no lane satisfied, so
- * the test never ran anywhere while the run stayed green — the WeakRef
+ * the test never ran anywhere while the run stayed green - the WeakRef
  * reclamation specs (no `--expose-gc`) and the production-stripping checks (no
  * `dist/` in the unit lane) both sat that way for their whole lifetime. A
- * dynamic `ctx.skip('WebGPU device lost mid-test — …')` inside a test body is
- * the same class of blind spot, just runtime instead of `runIf` — it counts
+ * dynamic `ctx.skip('WebGPU device lost mid-test - …')` inside a test body is
+ * the same class of blind spot, just runtime instead of `runIf` - it counts
  * here exactly like a statically-skipped test.
  *
- * The gate reads EVERY JUnit report under `test-results/*.junit.xml` — not
- * just the unit lane — and compares the summed skips per suite file against
+ * The gate reads EVERY JUnit report under `test-results/*.junit.xml` - not
+ * just the unit lane - and compares the summed skips per suite file against
  * `skipped-tests-baseline.json`. Each CI test lane (unit, browser-webgl,
  * browser-webgpu, browser-webgl-firefox, browser-audio, browser-tilemap-worker)
  * writes its own JUnit file; a dedicated `skip-budget` CI job downloads all of
  * them into `test-results/` before running this script, so the budget is ONE
- * global number per suite file, not one per lane — a file's runtime skips in
+ * global number per suite file, not one per lane - a file's runtime skips in
  * the WebGPU lane and its static skips in the unit lane land in the same
  * ledger entry. A file that skips more than its budget fails, and so does a
  * file that skips at all without a recorded budget: a new conditional test has
@@ -28,7 +28,7 @@
  * stripping checks skip in the unit lane and run in the build lane, so a
  * contributor running only some lanes locally legitimately sees fewer skips
  * than the full CI aggregate records. Undershooting therefore prints a note
- * instead of failing — tightening the budget is a judgement call about
+ * instead of failing - tightening the budget is a judgement call about
  * whether the lower count describes every lane or just the ones that ran.
  */
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -57,7 +57,7 @@ function fail(message: string): never {
 
 /**
  * Explicit report paths from the CLI, or every `*.junit.xml` under
- * `test-results/` sorted for determinism — one file per lane in CI (see the
+ * `test-results/` sorted for determinism - one file per lane in CI (see the
  * `skip-budget` job), or whichever lanes a local run happened to produce.
  */
 function reportPaths(): string[] {
@@ -97,8 +97,8 @@ function writeBaseline(files: Record<string, number>): void {
 
 /**
  * Sums the `skipped` attribute per suite file. Vitest emits one `<testsuite>`
- * per file per project, so a file collected by two projects — or, now, by two
- * separate CI lanes reading their own JUnit report — contributes twice, which
+ * per file per project, so a file collected by two projects - or, now, by two
+ * separate CI lanes reading their own JUnit report - contributes twice, which
  * is what we want to budget for: one global count per file across everything.
  */
 function readSkips(xml: string): Record<string, number> {

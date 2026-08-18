@@ -187,7 +187,7 @@ export class RenderTexture extends RenderTarget {
       // Both halves of the default view. `resize` only restates its EXTENT; the
       // view was built centred on the target it was created for, and leaving
       // that centre behind means a resized target renders a region offset by
-      // half the size difference — content shifted, and the far edge clipped by
+      // half the size difference - content shifted, and the far edge clipped by
       // the same amount. Nothing outside a resize can observe the difference,
       // which is why it survived: the region only stops matching the target
       // when the two are set from different sizes.

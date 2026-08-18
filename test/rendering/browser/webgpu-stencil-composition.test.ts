@@ -1,8 +1,8 @@
 /**
- * WebGPU stencil composition matrix — opt-in, capability-aware.
+ * WebGPU stencil composition matrix - opt-in, capability-aware.
  *
  * Exercises geometric stencil clipping (phase 12E) composed with the other
- * render-pass-consolidation features (phase 12B–12D): rendering a clipped scene
+ * render-pass-consolidation features (phase 12B-12D): rendering a clipped scene
  * into an off-screen RenderTexture and sampling it back, clipping a
  * cacheAsTexture node, and reusing a pooled RenderTexture for a clip then for
  * plain rendering (no stale stencil attachment).

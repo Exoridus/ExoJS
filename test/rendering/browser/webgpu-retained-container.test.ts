@@ -1,5 +1,5 @@
 /**
- * WebGPU renderer-matrix browser tests — RetainedContainer pixel cells
+ * WebGPU renderer-matrix browser tests - RetainedContainer pixel cells
  * (correctness gate for real rendered output).
  *
  * Mirrors webgl2-retained-container.test.ts 1:1 on the WebGPU harness: real

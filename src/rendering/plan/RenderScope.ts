@@ -130,7 +130,7 @@ export interface BarrierScope {
   height: number;
   /**
    * Device pixels per logical unit the barrier's internal targets are allocated
-   * at. `left`/`top`/`width`/`height` stay LOGICAL — the capture view and the
+   * at. `left`/`top`/`width`/`height` stay LOGICAL - the capture view and the
    * composite both work in logical units, and only the texture extent is scaled
    * by this. Resolved once per barrier by the plan builder (see
    * `targetResolution.ts`).

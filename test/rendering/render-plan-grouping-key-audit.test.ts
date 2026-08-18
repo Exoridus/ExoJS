@@ -3,7 +3,7 @@
  * between RenderPlanOptimizer groupIndex assignment and Sprite/Mesh renderer
  * batch boundaries.
  *
- * Outcome A — already aligned. No optimizer runtime changes are needed.
+ * Outcome A - already aligned. No optimizer runtime changes are needed.
  *
  * Key findings:
  *
@@ -28,21 +28,21 @@
  *    bindKey encodes the material's own extra textures (material.textures /
  *    texture-valued uniforms), NOT the sprite's base texture (sprite.texture).
  *    Two custom-material sprites sharing a material instance get the same
- *    groupIndex regardless of their base texture — and the custom path now
+ *    groupIndex regardless of their base texture - and the custom path now
  *    rotates base textures through its own slot table, so that also costs no
  *    flush until the table is exhausted.
  *
  * 5. The z-split in _assignGroupIndices serves mesh static-batch draw order:
  *    meshes at different z must not coalesce. For sprite renderers the split
- *    is harmless — their own state machine coalesces compatible sprites
+ *    is harmless - their own state machine coalesces compatible sprites
  *    regardless of groupIndex boundaries.
  *
  * Hard boundaries preserved by the optimizer:
  *   - Barrier entries (filter/mask/cacheAsTexture effects)
  *   - Group scope entries (nested containers)
  *   - Material changes that force the batcher to flush (`forcesBatchFlush`):
- *     pipelineKey, crossing between the default and custom paths, and — on the
- *     custom path only — bindKey
+ *     pipelineKey, crossing between the default and custom paths, and - on the
+ *     custom path only - bindKey
  *   - z-index changes
  *   Render-target changes, scissor/stencil changes, and texture-slot
  *   exhaustion are renderer-owned and are not the optimizer's concern.

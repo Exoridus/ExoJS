@@ -7,7 +7,7 @@
  * `[ExoJS] shader: vertex shader failed to compile`, reaching the page as an
  * uncaught error while the cell still reported plausible timings. Several
  * `Application`s one after another is a valid engine lifecycle either way, so
- * this spec pins the whole order matrix — no reload, no fresh browser context,
+ * this spec pins the whole order matrix - no reload, no fresh browser context,
  * no second document.
  *
  * The failure does NOT reproduce here, nor in the probe's own page under
@@ -19,7 +19,7 @@
  *
  * Every sequence also watches `window`'s `error` and `unhandledrejection`: a
  * renderer failure that only surfaces as an uncaught error must fail the test,
- * not slip past a green pixel assertion. Both nets are verified to bite — a
+ * not slip past a green pixel assertion. Both nets are verified to bite - a
  * deliberately broken `sprite.vert` fails five of the six orders with exactly
  * the message above.
  *
@@ -56,7 +56,7 @@ interface ErrorSink {
 
 const describeError = (value: unknown): string => {
   if (value instanceof Error) {
-    // `RenderError.detail` carries the driver's compile log — the decisive part.
+    // `RenderError.detail` carries the driver's compile log - the decisive part.
     const detail = (value as { detail?: unknown }).detail;
 
     return `${value.name}: ${value.message}${typeof detail === 'string' ? `\n${detail}` : ''}`;
@@ -233,7 +233,7 @@ describe('Sequential Application backends in one document', () => {
   });
 
   // The probe fires `destroy()` and constructs the next Application without
-  // awaiting it — the shape the failure was first seen in.
+  // awaiting it - the shape the failure was first seen in.
   test('WebGPU → un-awaited destroy → WebGL2', async ctx => {
     await runSequence(ctx, ['webgpu', 'webgl2'], { awaitDestroy: false });
   });

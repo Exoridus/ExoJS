@@ -5,7 +5,7 @@
 // esbuild descends into a string literal, so every explanatory comment in a
 // shader is payload every consumer downloads.
 //
-// The stripping is deliberately non-destructive — it never renames an
+// The stripping is deliberately non-destructive - it never renames an
 // identifier, reorders a statement or joins two lines. What it removes cannot
 // change program meaning:
 //
@@ -16,7 +16,7 @@
 //
 // Line structure survives one-for-one for every line that has content, which
 // is what keeps GLSL's preprocessor directives (`#version`, `#define`,
-// `#ifdef`) valid — each must own its line, and `#version` must be the first
+// `#ifdef`) valid - each must own its line, and `#version` must be the first
 // of them.
 
 /** Engine-owned `//`-prefixed directives, kept verbatim by {@link stripShaderSource}. */

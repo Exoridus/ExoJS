@@ -2,7 +2,7 @@
  * WebGL2 side of the public canvas composite contract: `rendering.alphaMode`
  * must reach the real drawing buffer, not just the attribute dictionary.
  *
- * A real browser is required here — the node-level test proves what ExoJS asks
+ * A real browser is required here - the node-level test proves what ExoJS asks
  * for, this one proves what the browser actually hands back.
  *
  * Run via:  pnpm test:browser:webgl

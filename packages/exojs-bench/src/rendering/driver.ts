@@ -167,7 +167,7 @@ const ADAPTER_CAPABILITIES: readonly EngineAdapter[] = [
 /**
  * Starts a programmatic Vite dev server rooted at the matrix harness page.
  *
- * Thin wrapper over the shared factory in `shared/viteServer.ts` — the Vite
+ * Thin wrapper over the shared factory in `shared/viteServer.ts` - the Vite
  * configuration (engine `#*` alias, real-shader transform, dev globals, COOP /
  * COEP isolation headers) is identical for every page this package serves, so it
  * lives in one place; only the page root differs.

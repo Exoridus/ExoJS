@@ -144,8 +144,8 @@ export class FocusController implements FocusHooks {
   /**
    * Whether `node` may hold keyboard focus at all: {@link RenderNode.focusable}
    * must be set, and a {@link Widget} must additionally be
-   * {@link Widget.effectiveEnabled}. A widget that is effectively disabled —
-   * its own flag, or that of a disabled ancestor widget — stops responding to
+   * {@link Widget.effectiveEnabled}. A widget that is effectively disabled -
+   * its own flag, or that of a disabled ancestor widget - stops responding to
    * input the moment it becomes so, so leaving it in the Tab order would
    * strand focus on something that swallows every key it receives.
    */
@@ -512,14 +512,14 @@ export class FocusController implements FocusHooks {
   /**
    * Recursively collect focus-eligible, owned descendants of `node`
    * (inclusive) into `out`. {@link _isFocusEligible} and {@link _isOwned} gate
-   * collection the same way they gate {@link focus} itself — a disabled
+   * collection the same way they gate {@link focus} itself - a disabled
    * widget, a node killed via a bare `destroy()` (no prior `removeChild()`, so
    * it is still structurally reachable by this walk) or one belonging to a
    * different Application must not be Tab-reachable just because the tree walk
    * still finds it.
    *
    * An effectively-disabled widget is skipped as a Tab STOP but its subtree
-   * is still walked — {@link Widget.effectiveEnabled} already accounts for
+   * is still walked - {@link Widget.effectiveEnabled} already accounts for
    * every ancestor, so a descendant nested inside a disabled container
    * correctly stops being reachable too, and re-enabling the container makes
    * it reachable again without this walk needing to change.

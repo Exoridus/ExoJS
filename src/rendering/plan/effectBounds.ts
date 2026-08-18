@@ -16,11 +16,11 @@ import type { Filter } from '#rendering/filters/Filter';
  * pass is clipped by a target smaller than the domain it declared. For the
  * expanding and identity effects that exist today the union IS the final stage's
  * answer; for a bounds-reducing effect it keeps the room its predecessors needed
- * and the reduced region simply lands inside a domain with transparent margin —
+ * and the reduced region simply lands inside a domain with transparent margin -
  * correct pixels, at the cost of a target nobody had to redesign the executor to
  * allocate.
  *
- * Everything here is in LOGICAL capture units — the same units
+ * Everything here is in LOGICAL capture units - the same units
  * `RenderNode.getBounds` reports. The device-pixel density of the targets is a
  * separate axis, applied by the executor via the barrier's resolution.
  * @internal
@@ -37,8 +37,8 @@ export class EffectBoundsResolver {
 
   /**
    * Resolve `source` through `filters` and quantise the result to whole logical
-   * units. Returns `false` for a domain nothing can be rendered into — an empty
-   * source, or one an effect answered about with a non-finite rectangle — which
+   * units. Returns `false` for a domain nothing can be rendered into - an empty
+   * source, or one an effect answered about with a non-finite rectangle - which
    * the caller treats the same way it treats an empty drawable.
    *
    * The empty-source check lives here rather than at the call site so a filter
@@ -65,7 +65,7 @@ export class EffectBoundsResolver {
         filters[index]!.getOutputBounds(input, output);
 
         // A stage that answers with a non-finite rectangle is skipped entirely
-        // — neither counted nor passed on. One filter with a broken bounds
+        // - neither counted nor passed on. One filter with a broken bounds
         // transform then costs its own expansion instead of poisoning every
         // stage after it, and there is no size a NaN domain could be captured
         // at. One `isFinite` on the sum catches NaN and either infinity.

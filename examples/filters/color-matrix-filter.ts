@@ -6,7 +6,7 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
 // A full-hue ramp shows every preset on every colour at once.
 const HUE_RAMP = assets.technical.color.hueRamp;
 
-// One filter class, one matrix — each preset is a different concatenation onto
+// One filter class, one matrix - each preset is a different concatenation onto
 // it, not a different filter. `reset()` goes back to the identity first so the
 // presets do not stack on each other.
 const PRESETS = [

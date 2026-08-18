@@ -1,10 +1,10 @@
 /**
- * ShaderFilter WGSL browser test — opt-in, capability-aware, real GPU.
+ * ShaderFilter WGSL browser test - opt-in, capability-aware, real GPU.
  *
  * Reproduces the black-screen bug (crt-scanlines / chromatic-aberration
  * examples on the WebGPU backend): the WebGPU pass behind `ShaderFilter`
  * builds and permanently caches its `GPURenderPipeline` against
- * `backend.renderTargetFormat` — which reflects whatever render target is
+ * `backend.renderTargetFormat` - which reflects whatever render target is
  * *currently bound* (still the canvas/root target at the moment the
  * pipeline is built) rather than the filter's own offscreen `output`
  * RenderTexture the pipeline will actually render into. Offscreen render
@@ -12,7 +12,7 @@
  * (`rgba8unorm`), so whenever the canvas' preferred format differs (e.g.
  * `bgra8unorm`), every draw through the mismatched pipeline is silently
  * rejected by WebGPU validation and the filter's `output` never receives
- * any pixels — it stays cleared to transparent black.
+ * any pixels - it stays cleared to transparent black.
  *
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
  * against Mesa lavapipe); this only skips when the software adapter drops the

@@ -8,12 +8,12 @@ import { Color } from '#core/Color';
  * the 2D canvas API, and `apply()` delegates to a `ShaderFilter` carrying both
  * language sources (covered by its own dedicated test files). These tests focus
  * on LutFilter's own logic: texture generation, option defaults/clamping,
- * `setLut`, source selection, and lifecycle — using the same minimal
+ * `setLut`, source selection, and lifecycle - using the same minimal
  * WebGL2/WebGPU backend mocks established in shader-filter-webgl2.test.ts /
  * shader-filter-webgpu.test.ts, not a from-scratch GPU simulation.
  *
  * The shared jsdom canvas 2D context stub (test/setup-env.vitest.ts) only
- * implements `fillStyle`/`fillRect`/`drawImage` — LutFilter's identity-LUT
+ * implements `fillStyle`/`fillRect`/`drawImage` - LutFilter's identity-LUT
  * builders also need `createImageData`/`putImageData`, so this file installs
  * a fuller local mock for the duration of the suite and restores the
  * original afterwards.

@@ -10,7 +10,7 @@ export interface RenderStats {
    * Total scene nodes submitted for rendering before culling.
    *
    * Always nodes, never GPU instances: a node whose renderer expands it into
-   * many instances — a tile chunk, a nine-slice, a repeating sprite, a text run —
+   * many instances - a tile chunk, a nine-slice, a repeating sprite, a text run -
    * counts once, and reads the same whether the frame was drawn live, replayed
    * entry by entry, or replayed from a recorded retained batch.
    */
@@ -26,7 +26,7 @@ export interface RenderStats {
    *   last collect discarded", not as "nodes off-screen this frame".
    * - the decision is taken against the cull rectangle retention inflates by
    *   1/16 per side, not the exact view rectangle. A node just outside the view
-   *   is therefore kept rather than culled — that margin is what lets a small
+   *   is therefore kept rather than culled - that margin is what lets a small
    *   camera move replay instead of re-collect.
    */
   culledNodes: number;

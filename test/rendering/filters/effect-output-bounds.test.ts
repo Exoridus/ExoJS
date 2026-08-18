@@ -6,8 +6,8 @@
  * will be given, the chain composes those answers in order, and the capture
  * domain is quantised from the resulting rectangle edge by edge.
  *
- * These cells pin the contract itself — the `Bounds -> Bounds` shape, its
- * sequential composition and the quantisation — without a GPU. The pixel proof
+ * These cells pin the contract itself - the `Bounds -> Bounds` shape, its
+ * sequential composition and the quantisation - without a GPU. The pixel proof
  * that a blur is no longer clipped lives in the browser suites.
  */
 
@@ -19,7 +19,7 @@ import { EffectBoundsResolver } from '#rendering/plan/effectBounds';
 /** Bounds-preserving: the default contract, spelled out by not overriding it. */
 class IdentityFilter extends Filter {
   public apply(): void {
-    // no GPU work — these cells never render
+    // no GPU work - these cells never render
   }
 }
 
@@ -39,7 +39,7 @@ class AsymmetricFilter extends Filter {
   }
 
   public apply(): void {
-    // no GPU work — these cells never render
+    // no GPU work - these cells never render
   }
 
   public override getOutputBounds(input: ReadonlyRectangle, output: Rectangle): void {
@@ -54,7 +54,7 @@ class ShrinkFilter extends Filter {
   }
 
   public apply(): void {
-    // no GPU work — these cells never render
+    // no GPU work - these cells never render
   }
 
   public override getOutputBounds(input: ReadonlyRectangle, output: Rectangle): void {
@@ -149,8 +149,8 @@ describe('a chain composes sequentially', () => {
 
 describe('capture quantisation covers every logical pixel', () => {
   test('a fractional origin does not lose the far edge', () => {
-    // x spans [0.25, 10.75]. Rounding the size independently — floor(0.25) plus
-    // ceil(10.5) — would give 10 and cut the last half pixel off.
+    // x spans [0.25, 10.75]. Rounding the size independently - floor(0.25) plus
+    // ceil(10.5) - would give 10 and cut the last half pixel off.
     expect(resolve(new Rectangle(0.25, 0.25, 10.5, 10.5), [])).toEqual({ left: 0, top: 0, width: 11, height: 11 });
   });
 

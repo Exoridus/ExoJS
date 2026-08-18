@@ -122,7 +122,7 @@ export type ColorTextureFormat = TextureFormat.Rgba8 | TextureFormat.Rgba16F | T
  * Resolution an internal render target is rasterized at, in device pixels per
  * logical unit.
  *
- * `'inherit'` — the default everywhere — takes the resolution of the target the
+ * `'inherit'` - the default everywhere - takes the resolution of the target the
  * result is composited into, so a filtered or cached subtree is as sharp as the
  * surface around it. A number overrides that: `0.5` on a heavy blur halves its
  * linear resolution (a quarter of the fragments) at the cost of detail, `1`

@@ -310,12 +310,12 @@ function glslPassOf(filter: ShaderFilter): Record<string, unknown> | null {
 // ---------------------------------------------------------------------------
 
 describe('ShaderFilter on WebGL2', () => {
-  // 1. Construction with a GLSL fragment only — succeeds
+  // 1. Construction with a GLSL fragment only - succeeds
   test('constructs successfully with only a GLSL fragment source', () => {
     expect(() => new ShaderFilter({ glsl: { fragment: minimalFragSrc } })).not.toThrow();
   });
 
-  // 2. Construction without any source — throws
+  // 2. Construction without any source - throws
   test('throws when constructed without any shader source', () => {
     expect(() => new ShaderFilter()).toThrow('ShaderSource requires at least one of `glsl` or `wgsl`.');
   });

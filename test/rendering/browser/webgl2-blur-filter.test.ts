@@ -62,7 +62,7 @@ describe('BlurFilter kernel shape (WebGL2)', () => {
         expect(Math.abs(corner[0]! - corners[0]![0]!)).toBeLessThanOrEqual(2);
       }
 
-      // Horizontal reach equals vertical reach — the isotropy the cross kernel
+      // Horizontal reach equals vertical reach - the isotropy the cross kernel
       // also had, and which the rewrite must not lose.
       expect(Math.abs(pixel(OUTSIDE_HIGH, 31)[0]! - pixel(31, OUTSIDE_HIGH)[0]!)).toBeLessThanOrEqual(2);
       expect(Math.abs(pixel(OUTSIDE_HIGH, 31)[0]! - pixel(OUTSIDE_LOW, 31)[0]!)).toBeLessThanOrEqual(2);

@@ -4,7 +4,7 @@ import type { Filter } from '#rendering/filters/Filter';
 import { clampResolutionToTextureSize, resolveBarrierResolution, targetTexels } from '#rendering/plan/targetResolution';
 
 /**
- * Resolution policy for internal render targets (`NEU-S4`).
+ * Resolution policy for internal render targets.
  *
  * These pin the arithmetic; that the policy actually reaches the allocated
  * texture is a browser-lane concern and lives in
@@ -46,7 +46,7 @@ describe('resolveBarrierResolution', () => {
   test('a chain runs at the LOWEST resolution any of its filters asks for', () => {
     const filters = [withResolution(new ColorMatrixFilter(), 2), withResolution(new BlurFilter(), 0.5), new ColorMatrixFilter()];
 
-    // Not 2, not 3 (the inherited value of the third filter) — one cheap filter
+    // Not 2, not 3 (the inherited value of the third filter) - one cheap filter
     // pulls the whole chain down, because the chain shares one target size.
     expect(resolveBarrierResolution(3, { cacheAsTexture: false, cacheResolution: 'inherit', filters })).toBe(0.5);
   });

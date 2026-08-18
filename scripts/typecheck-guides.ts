@@ -5,14 +5,14 @@
  * config maps `@codexo/exojs` onto `src/index.ts`, which pulls the whole engine
  * into the program. `tsc` reports diagnostics for those dependency files too,
  * under a compiler configuration the engine and the packages never build with
- * — they have their own, stricter gate. Acting on such a diagnostic means
+ * - they have their own, stricter gate. Acting on such a diagnostic means
  * editing library source to satisfy a documentation check, which is backwards,
  * so this reports only diagnostics that belong to a generated snippet.
  *
  * Diagnostics with no file at all (bad config, missing lib) are always
  * reported: those are failures of the gate itself, not of a dependency.
  *
- * A `no-check`-tagged fence never reaches this program at all — it is dropped
+ * A `no-check`-tagged fence never reaches this program at all - it is dropped
  * before extraction (see `extract-guide-snippets.ts`), which is exactly the
  * blind spot `check-guide-no-check-reasons.ts` (run right before this script
  * in `pnpm typecheck:guides`, see package.json) exists to budget: a per-file,

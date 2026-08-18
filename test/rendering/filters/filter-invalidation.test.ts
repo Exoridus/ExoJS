@@ -26,7 +26,7 @@ class CountingNode extends RenderNode {
 
 class ProbeFilter extends Filter {
   public apply(): void {
-    // no GPU work — these cells never render
+    // no GPU work - these cells never render
   }
 
   public change(): void {
@@ -82,7 +82,7 @@ describe('a mutated filter reaches the nodes that render it', () => {
     node.addFilter(blur);
     blur.radius = 9;
 
-    // The filter is still attached exactly once — the invalidation came from
+    // The filter is still attached exactly once - the invalidation came from
     // the mutation itself.
     expect(node.filters).toEqual([blur]);
   });
@@ -142,7 +142,7 @@ describe('every stock filter owns its own invalidation', () => {
 
     filter.reset().tint(new Color(255, 0, 0));
 
-    // Two writes, two notifications — the point is that neither is silent.
+    // Two writes, two notifications - the point is that neither is silent.
     expect(node.invalidations).toBe(afterAttach + 2);
   });
 });

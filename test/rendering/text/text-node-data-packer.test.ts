@@ -2,7 +2,7 @@
  * Node-lane coverage for the shared per-node data packer both text renderers
  * call (`WebGl2TextRenderer._packNodeData` / `WebGpuTextRenderer._packNodeData`
  * and their own-transform-move row patches). Neither backend needs a GL/GPU
- * context to pack these ~40 floats — this test asserts the packed bytes
+ * context to pack these ~40 floats - this test asserts the packed bytes
  * directly, without a mock device or a screenshot, closing the gap the rest of
  * the row (transform, snap flag, outline/shadow parameters) had: only the
  * gradient box was covered end to end, by `webgl2-text-gradient.test.ts`.
@@ -22,12 +22,12 @@ import type { GlyphInfo } from '#rendering/text/types';
 import type { Texture } from '#rendering/texture/Texture';
 
 // ---------------------------------------------------------------------------
-// Mock GlyphAtlasPool — Text's layout pass reads glyph metrics from the pool,
+// Mock GlyphAtlasPool - Text's layout pass reads glyph metrics from the pool,
 // never a real canvas, so this suffices to lay a Text node out headlessly
 // (mirrors test/rendering/text/text.test.ts).
 // ---------------------------------------------------------------------------
 
-// Asymmetric width/height/bearings — the ink box this produces has x != y and
+// Asymmetric width/height/bearings - the ink box this produces has x != y and
 // width != height, so an assertion that swaps either axis is caught even
 // before the transform (which is applied uniformly, x and y alike) enters
 // the picture.
@@ -79,7 +79,7 @@ afterEach(() => {
 });
 
 // ---------------------------------------------------------------------------
-// BitmapText fixture (no canvas involved at all — metrics come from BMFont data).
+// BitmapText fixture (no canvas involved at all - metrics come from BMFont data).
 // ---------------------------------------------------------------------------
 
 function makeBmFontData(): BmFontData {
@@ -138,7 +138,7 @@ describe('shared text node-data packer', () => {
 
       packTextNodeData(target, base, text);
 
-      // Transform (texels 0-1): mapping only — the matrix math itself belongs to Matrix.
+      // Transform (texels 0-1): mapping only - the matrix math itself belongs to Matrix.
       const m = text.getGlobalTransform().toArray(false);
       expect(target[base + 0]).toBe(m[0]); // a
       expect(target[base + 1]).toBe(m[1]); // c
@@ -264,7 +264,7 @@ describe('shared text node-data packer', () => {
       expect(target[19]).toBe(1);
       expect(target[20]).toBeCloseTo(71 / 255);
       expect(target[23]).toBeCloseTo(0.64);
-      // BitmapText.rasterPixelRatio is always 1 (offline atlas — see AbstractText).
+      // BitmapText.rasterPixelRatio is always 1 (offline atlas - see AbstractText).
       expect(target[24]).toBeCloseTo(4);
       expect(target[25]).toBeCloseTo(-6);
       expect(target[26]).toBe(1); // gradientAxis 'vertical'

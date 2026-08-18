@@ -687,7 +687,7 @@ describe('FocusController — ownership hardening', () => {
     onKeyDown.dispatch(Keyboard.Tab);
     expect(focus.focused).toBe(sibling);
 
-    // Wraps straight back to `sibling` — `child` is never a stop along the way.
+    // Wraps straight back to `sibling` - `child` is never a stop along the way.
     onKeyDown.dispatch(Keyboard.Tab);
     expect(focus.focused).toBe(sibling);
   });

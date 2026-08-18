@@ -12,7 +12,7 @@ export type ColorMatrixEntries = readonly number[];
 
 const ENTRIES = 20;
 
-/** Rec. 709 luma weights — the same ones the rest of the engine desaturates with. */
+/** Rec. 709 luma weights - the same ones the rest of the engine desaturates with. */
 const LUMA_R = 0.2126;
 const LUMA_G = 0.7152;
 const LUMA_B = 0.0722;
@@ -33,7 +33,7 @@ export const colorMatrixShaderSource = createFilterShaderSource({ glsl: { fragme
  * `[r, g, b, a, offset]` rows.
  *
  * One matrix expresses brightness, contrast, saturation, hue-ish channel
- * mixing, inversion, sepia and flat tinting — so there is one filter class
+ * mixing, inversion, sepia and flat tinting - so there is one filter class
  * rather than one per operation. The conveniences below CONCATENATE onto the
  * current matrix in call order, and {@link reset} goes back to the identity.
  *
@@ -45,7 +45,7 @@ export const colorMatrixShaderSource = createFilterShaderSource({ glsl: { fragme
  * flash.tint(Color.red);
  * ```
  *
- * For a cheap per-drawable multiply, use {@link Drawable.tint} instead — it
+ * For a cheap per-drawable multiply, use {@link Drawable.tint} instead - it
  * costs no render target at all. Reach for this filter when the transform is
  * more than a multiply, or when it has to cover a whole subtree as one image.
  * For non-linear, authored grading use {@link LutFilter}.
@@ -134,7 +134,7 @@ export class ColorMatrixFilter extends Filter {
     return this._concat([r + amount, g, b, 0, 0, r, g + amount, b, 0, 0, r, g, b + amount, 0, 0, 0, 0, 0, 1, 0]);
   }
 
-  /** Collapse every channel onto its luminance — {@link saturate} at `0`. */
+  /** Collapse every channel onto its luminance - {@link saturate} at `0`. */
   public grayscale(): this {
     return this.saturate(0);
   }
@@ -150,7 +150,7 @@ export class ColorMatrixFilter extends Filter {
   }
 
   /**
-   * Multiply by a flat colour, alpha included — the same arithmetic
+   * Multiply by a flat colour, alpha included - the same arithmetic
    * {@link Drawable.tint} applies per drawable, here over the whole subtree the
    * filter is attached to.
    */
@@ -221,7 +221,7 @@ export class ColorMatrixFilter extends Filter {
 
   /**
    * Tell the owners the output changed. The shader reads the row buffers this
-   * class owns, so nothing has to be re-uploaded by hand — but a cached or
+   * class owns, so nothing has to be re-uploaded by hand - but a cached or
    * retained node still has to be told to re-run the filter.
    */
   private _publish(): void {

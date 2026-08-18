@@ -1183,8 +1183,8 @@ export default defineConfig([
     },
   },
 
-  // The worklet sources run inside AudioWorkletGlobalScope — no DOM, no
-  // module imports at runtime — and typecheck separately against
+  // The worklet sources run inside AudioWorkletGlobalScope - no DOM, no
+  // module imports at runtime - and typecheck separately against
   // packages/exojs-audio-fx/tsconfig.worklets.json (see worklet-globals.d.ts),
   // not the package's main (DOM-lib) program covered by `projectService`
   // above. Disable type-aware linting here (matching the test/example
@@ -1240,7 +1240,7 @@ export default defineConfig([
   },
 
   // An AudioWorklet processor ships to the audio thread as one self-contained
-  // source file — it cannot import other modules at runtime — so its body
+  // source file - it cannot import other modules at runtime - so its body
   // cannot be split across files the way `max-lines` assumes. The limit
   // measures something these files cannot act on.
   {

@@ -14,7 +14,7 @@ import type { TextLayoutResult, TextPageQuads, TextSize } from './types';
 export type { TextPageQuads };
 
 /**
- * Reject a raster density that cannot mean anything — `0`, negative, `NaN`,
+ * Reject a raster density that cannot mean anything - `0`, negative, `NaN`,
  * `Infinity`. Not clamped: a silently corrected ratio would rasterize an atlas
  * the caller never asked for and hide the typo that produced it.
  */
@@ -43,7 +43,7 @@ export interface TextOptions extends TextStyleOptions, LayoutOptions {
    * Device pixels per logical pixel this node's glyphs are RASTERIZED at.
    *
    * Omit it and the node inherits the `pixelRatio` of the {@link Application}
-   * it is drawn by — which is the deterministic default, and the only thing that
+   * it is drawn by - which is the deterministic default, and the only thing that
    * ever happens without an explicit opt-in. Nothing in the text stack reads
    * `window.devicePixelRatio`; there is no silent supersampling.
    *
@@ -57,17 +57,17 @@ export interface TextOptions extends TextStyleOptions, LayoutOptions {
    * ```
    *
    * The logical font size, layout, advances and line breaks are identical in
-   * both — only the raster grid behind the glyphs changes. Must be a positive
+   * both - only the raster grid behind the glyphs changes. Must be a positive
    * finite number.
    *
    * The value to want is usually the inherited one. Lowering it lowers the raster
    * resolution the distance field is built from, so the quality floor it hits
-   * depends on the glyph — size, thinnest stroke, SDF radius, outline — rather
+   * depends on the glyph - size, thinnest stroke, SDF radius, outline - rather
    * than on the ratio alone, and small text reaches that floor first. Raising it
    * costs roughly the square of the ratio, and bought no visible sharpness for
    * unscaled screen text when measured on hardware.
    *
-   * Raise it for content whose ON-SCREEN density exceeds the surface ratio — a
+   * Raise it for content whose ON-SCREEN density exceeds the surface ratio - a
    * node scaled up at runtime, or one drawn through a zoomed camera; lower it to
    * trade sharpness for atlas memory, which is safe on large text and harmful on
    * small. Antialiasing is not part of the trade: the shader sizes its edge against
@@ -82,7 +82,7 @@ export interface TextOptions extends TextStyleOptions, LayoutOptions {
  * per-font-variant {@link GlyphAtlas} using the SDF (Signed Distance Field)
  * technique and renders them through the `text-sdf` shader.
  *
- * Style mutations are applied automatically before the next draw — no manual
+ * Style mutations are applied automatically before the next draw - no manual
  * `update()` call required. Mutating `text.style` any number of times in the
  * same frame is cheap; the geometry is rebuilt at most once, on demand.
  *
@@ -90,14 +90,14 @@ export interface TextOptions extends TextStyleOptions, LayoutOptions {
  * const label = new Text('Hello', { fontSize: 24 });
  * scene.addChild(label);
  *
- * label.style.fillColor = new Color(255, 0, 0);   // cheap — no atlas work
- * label.style.outlineWidth = 0.08;     // cheap — only shader uniforms
+ * label.style.fillColor = new Color(255, 0, 0);   // cheap - no atlas work
+ * label.style.outlineWidth = 0.08;     // cheap - only shader uniforms
  * // changes are picked up automatically on the next render pass
  * ```
  *
  * **FontFace-first:** load fonts via {@link FontFactory} before constructing
  * the node, then pass the loaded `FontFace` via the `font` style option. The
- * label renders immediately with the correct glyphs — no async waiting needed.
+ * label renders immediately with the correct glyphs - no async waiting needed.
  *
  * ```ts
  * const face = await loader.load(Asset.type('font', 'roboto.woff2', { family: 'Roboto' }));
@@ -126,7 +126,7 @@ export class Text extends AbstractText {
    *
    * `0` is an internal sentinel and never leaves the class: the public property
    * reports `undefined` when there is no override, because that is the honest
-   * answer — the node inherits, it does not carry a ratio of its own.
+   * answer - the node inherits, it does not carry a ratio of its own.
    */
   private _pixelRatio = 0;
 
@@ -150,13 +150,13 @@ export class Text extends AbstractText {
   /**
    * Advance extent `text` would occupy under `options`, without constructing
    * a node. Takes the same options as the constructor and gives the same
-   * answer as the resulting node's `textBounds` — it runs the identical layout
+   * answer as the resulting node's `textBounds` - it runs the identical layout
    * pass over the identical shared metrics, so the two cannot drift.
    *
    * Costs one canvas measurement per glyph it has not seen before, and nothing
    * else: no atlas is created, no glyph is rasterized, and no page is claimed.
    * The answer is therefore independent of `pixelRatio`, of which
-   * {@link Application} exists, and of whether anything has been rendered yet —
+   * {@link Application} exists, and of whether anything has been rendered yet -
    * `colorGlyphs`, `sdfRadius` and `pixelRatio` are ignored here because none of
    * them can move a line break.
    *
@@ -239,7 +239,7 @@ export class Text extends AbstractText {
   }
 
   /**
-   * The resolved raster density — the explicit {@link pixelRatio} when there is
+   * The resolved raster density - the explicit {@link pixelRatio} when there is
    * one, otherwise the `pixelRatio` of the surface this node was last collected
    * for (1 until it has been collected once).
    */
@@ -251,7 +251,7 @@ export class Text extends AbstractText {
    * Tell this node the raster density of the surface it is about to be drawn on.
    *
    * Called by the backend text renderers during collection, which is the
-   * earliest point where a node and a concrete surface are both in hand — a
+   * earliest point where a node and a concrete surface are both in hand - a
    * `Text` constructor knows no {@link Application}, and materializing an
    * inherited ratio there would mean reading a global. A node with an explicit
    * override records the value but keeps rasterizing at its own.

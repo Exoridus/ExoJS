@@ -307,7 +307,7 @@ describe('WebGPU backdrop-aware blend (Darken spike)', () => {
  * The root canvas is only a fully covered backdrop while it composites opaquely.
  * Under `alphaMode: 'premultiplied'` it carries real alpha, so an untouched
  * region must contribute NO coverage and the source has to pass through
- * unblended — the same rule the WebGL2 compositor derives from its context
+ * unblended - the same rule the WebGL2 compositor derives from its context
  * attributes (`webgl2-backdrop-blend`, mirrored cell).
  *
  * Multiply against an empty root separates the two readings maximally: a
@@ -333,7 +333,7 @@ describe('WebGPU backdrop-aware blend — root coverage follows alphaMode', () =
 
   test("'opaque': an empty root stays a fully covered (black) backdrop", async ctx => {
     try {
-      // The canvas has no alpha channel, so its captured alpha is meaningless —
+      // The canvas has no alpha channel, so its captured alpha is meaningless -
       // coverage is forced and Multiply against black yields black.
       expectRgbNear(await composeOverEmptyRoot('opaque'), [0, 0, 0]);
     } catch (error) {

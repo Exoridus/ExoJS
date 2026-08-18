@@ -350,7 +350,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
 
   // ── Node data packing ────────────────────────────────────────────────────
   // The 10-texel/40-float layout is packed by the shared, backend-free
-  // `packTextNodeData` (mirrors `WebGpuTextRenderer`, byte for byte) — see
+  // `packTextNodeData` (mirrors `WebGpuTextRenderer`, byte for byte) - see
   // `textNodeDataPacker.ts` for the texel-by-texel layout comment.
 
   private _packNodeData(ni: number, node: Text | BitmapText): void {
@@ -595,7 +595,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     };
 
     // The batch's instances are its glyph quads; its NODES are the text runs the
-    // quads came from — a single run contributes one to `submittedNodes` however
+    // quads came from - a single run contributes one to `submittedNodes` however
     // many glyphs it draws, on this tier as on the live one.
     backend._recordRetainedBatch(
       this,

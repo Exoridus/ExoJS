@@ -3,7 +3,7 @@
  *
  * `LutFilter`'s 1D mode used to index the LUT by the source's RED channel only
  * and then take the whole RGB of that one lookup, so green and blue were
- * decided by the red channel. `LutFilter.identityLut1D()` — a grey ramp — was
+ * decided by the red channel. `LutFilter.identityLut1D()` - a grey ramp - was
  * therefore not a no-op for anything but grey: pure green came out black.
  *
  * These specs pin the contract a 1D LUT actually has: three independent
@@ -74,7 +74,7 @@ describe('LutFilter rgb1d grading (WebGL2)', () => {
 
   test('a red-indexed lookup cannot produce these pixels', () => {
     // Guards the guard: for pure green, reading the whole RGB of lut(src.r)
-    // yields the LUT's entry 0 — which differs from the per-channel result in
+    // yields the LUT's entry 0 - which differs from the per-channel result in
     // green. A shader that regressed to the old behaviour fails the spec above.
     const perChannel = expectedProbeOutput(0, 255, 0);
     const redIndexed = [255, 0, 255, 255];

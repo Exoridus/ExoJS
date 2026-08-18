@@ -22,7 +22,7 @@ import {
 
 // Must run before any arm's `init` calls `requestDevice`; a top-level statement
 // in this entry module is the earliest such point. Previously a module-scope
-// side effect of the (then inline) timer code — now explicit, because the timer
+// side effect of the (then inline) timer code - now explicit, because the timer
 // module is shared with a second page that installs it the same way.
 requestTimestampFeature();
 

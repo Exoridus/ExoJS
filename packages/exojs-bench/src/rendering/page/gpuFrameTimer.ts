@@ -35,7 +35,7 @@ export const WEBGPU_NO_TIMESTAMP_NOTE =
 
 /**
  * Note recorded alongside every WebGPU cell's `queueMs*` pair, stating exactly
- * what that column is and — just as importantly — what its floor is.
+ * what that column is and - just as importantly - what its floor is.
  */
 export const WEBGPU_QUEUE_NOTE =
   'queueMs* = queue occupancy attributed to the frame that caused it (doneAt − max(submitAt, previous doneAt)), from queue.onSubmittedWorkDone. It is an UPPER BOUND on the frame\'s queue work and carries a completion-observation floor of ~0.5ms (presenting frame) to ~3.2ms (non-presenting), so any value below ~4ms is dominated by observation latency rather than GPU work; read it for large events, never as a small-frame GPU time';
@@ -99,7 +99,7 @@ interface DisjointTimerExtension {
 /**
  * A real GPU-time source backed by `EXT_disjoint_timer_query_webgl2` when the
  * context exposes it (browsers gate it behind privacy policy, so it is usually
- * absent — then this returns {@link noopGpuTimer} and the caller uses the rAF
+ * absent - then this returns {@link noopGpuTimer} and the caller uses the rAF
  * delta). One `TIME_ELAPSED` query may be outstanding at a time, so each frame
  * opens a query, closes it, and drains any results that have since resolved;
  * unresolved queries are collected at the end. Every GL call is guarded: any
@@ -217,8 +217,8 @@ const TIMESTAMP_QUERY_CAPACITY = 4096;
  * Make every `requestDevice` on this page also ask for `timestamp-query` when
  * the adapter has it.
  *
- * A device's feature set is immutable, and every arm — ours and the competitors'
- * — builds its own device descriptor, so the feature cannot be added after the
+ * A device's feature set is immutable, and every arm - ours and the competitors'
+ * - builds its own device descriptor, so the feature cannot be added after the
  * fact. Patching the adapter prototype at module scope is the only place that
  * runs before any arm's `init`. The patch is ADDITIVE (an arm's own
  * `requiredFeatures` are preserved) and IDENTICAL for every arm, so it cannot
@@ -259,7 +259,7 @@ interface TimestampPass {
  * descriptor synchronously, so wrapping the device's `createCommandEncoder` and
  * the encoders it returns is enough to inject `timestampWrites` without touching
  * engine source. Query slots are allocated per pass and resolved ONCE, after the
- * timed window — no per-frame readback, so the instrument adds no completion
+ * timed window - no per-frame readback, so the instrument adds no completion
  * wait to the measured path.
  *
  * Returns null when the device has no `timestamp-query` feature; the caller then
@@ -307,7 +307,7 @@ const createTimestampSource = (
     // engine REUSES one render-pass descriptor object, so a `timestampWrites`
     // left on it by the last timed pass would silently follow the descriptor
     // into warmup/teardown passes and overwrite query values already recorded.
-    // The wrapper therefore always writes the member — the injected pair inside
+    // The wrapper therefore always writes the member - the injected pair inside
     // the window, `undefined` outside it.
     encoderRecord['beginRenderPass'] = function beginRenderPass(this: GPUCommandEncoder, descriptorArg: GPURenderPassDescriptor): GPURenderPassEncoder {
       // Written through an index signature: under `exactOptionalPropertyTypes`
@@ -372,7 +372,7 @@ const createTimestampSource = (
         const end = raw[pass.end]!;
 
         // An unavailable query resolves to zero; a non-increasing pair means the
-        // GPU clock was interrupted. Neither is a measurement — drop it rather
+        // GPU clock was interrupted. Neither is a measurement - drop it rather
         // than fold a bogus interval into the frame.
         if (begin === 0n || end <= begin) {
           dropped++;
@@ -406,19 +406,19 @@ const createTimestampSource = (
  * Reports TWO series, because no single WebGPU clock is both complete and
  * resolving:
  *
- * 1. `frameMs` — hardware `timestamp-query` around the frame's render passes.
+ * 1. `frameMs` - hardware `timestamp-query` around the frame's render passes.
  *    Exact and reproducible (a 1k / 10k / 100k / 1M sweep measured
  *    0.004 / 0.007 / 0.045 / 0.412ms with p95 == median to the third decimal),
  *    but it covers pass EXECUTION only: `queue.writeBuffer` is a queue operation
  *    outside every command buffer, so its device copy cannot be bracketed.
- * 2. `queueMs` — `queue.onSubmittedWorkDone` wall clock, with each frame charged
+ * 2. `queueMs` - `queue.onSubmittedWorkDone` wall clock, with each frame charged
  *    only the interval after the PREVIOUS frame's observed completion
  *    (`doneAt − max(submitAt, previousDoneAt)`). This is the only signal that
  *    sees upload cost, and the only one that can surface a stall.
  *
  * Why `queueMs` is not the frame time, despite being the historical column: it is
  * floored by when the browser OBSERVES the completion, not by when the GPU
- * finished. Two control arms pin that down — a rAF-paced submit that clears the
+ * finished. Two control arms pin that down - a rAF-paced submit that clears the
  * canvas swapchain (2µs of GPU work) reports 0.50ms, and the identical clear into
  * an offscreen texture reports 3.18ms, because a present flushes the device and
  * nothing else does. Real engine frames land in both regimes, which is why the
@@ -431,7 +431,7 @@ const createTimestampSource = (
  * 26.7ms event was reported by three consecutive frames as 26.70 / 26.98 /
  * 24.65ms; the attribution reports 26.70 / 1.52 / 1.18, keeping the event on the
  * frame that caused it. The attributed value for a frame queued behind a big one
- * is a LOWER bound on its own work — strictly better than counting the big frame
+ * is a LOWER bound on its own work - strictly better than counting the big frame
  * again, and disclosed as such in {@link WEBGPU_QUEUE_NOTE}.
  */
 export const createWebGpuGpuTimer = (device: GPUDevice): GpuFrameTimer => {
@@ -451,7 +451,7 @@ export const createWebGpuGpuTimer = (device: GPUDevice): GpuFrameTimer => {
     async drainSubmittedWork(): Promise<void> {
       // The measurement boundary, and it still earns its place under the
       // timestamp timer: a timestamp pair cannot inherit a backlog, but the
-      // `queueMs` series can — the first timed frame's cumulative
+      // `queueMs` series can - the first timed frame's cumulative
       // `onSubmittedWorkDone` would otherwise resolve after warmup work it never
       // did (measured: 128.3ms of backlog moved out of a 1M-node cell's window).
       // It also opens the window on an idle GPU, so the first frames' passes do

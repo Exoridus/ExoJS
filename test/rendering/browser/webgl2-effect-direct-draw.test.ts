@@ -2,7 +2,7 @@
  * Pixel coverage for the effect path's direct-draw seam.
  *
  * `ColorMatrixFilter.apply`, `BlurFilter.apply` and `RenderNode._drawTexture` used to
- * issue their quad through `sprite.render(backend)` — a full
+ * issue their quad through `sprite.render(backend)` - a full
  * build/optimize/play plan cycle per quad. They now hand the drawable to
  * `drawDrawableDirect`, which keeps the plan-depth bracket (flush order,
  * transform-row rewind) and drops everything else, including the cull test.

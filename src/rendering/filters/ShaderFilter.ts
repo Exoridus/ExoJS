@@ -12,7 +12,7 @@ import { WebGl2ShaderFilterPass } from './WebGl2ShaderFilterPass';
 import { WebGpuShaderFilterPass } from './WebGpuShaderFilterPass';
 
 /**
- * A scalar number, vector tuple, typed array, or texture — the value types a
+ * A scalar number, vector tuple, typed array, or texture - the value types a
  * {@link ShaderFilter} accepts for a user uniform and marshals to the active
  * backend.
  */
@@ -54,7 +54,7 @@ export interface ShaderFilterSourceOptions {
   };
 
   /**
-   * WGSL source for the WebGPU backend — one module carrying both entry points,
+   * WGSL source for the WebGPU backend - one module carrying both entry points,
    * the same convention {@link ShaderSource} uses for materials.
    *
    * The fragment entry point must be `fragmentMain`. A module that declares no
@@ -66,7 +66,7 @@ export interface ShaderFilterSourceOptions {
 
   /**
    * Auto-upgrade legacy GLSL ES 1.00 fragment source to GLSL ES 3.00. Default
-   * `true` — Shadertoy/ISF-style and modern 3.00 sources are both accepted.
+   * `true` - Shadertoy/ISF-style and modern 3.00 sources are both accepted.
    *
    * Set to `false` for strict 3.00 input, which turns legacy constructs into
    * compile errors instead of silently rewriting them. Only the fragment source
@@ -80,7 +80,7 @@ export interface ShaderFilterOptions extends ShaderFilterSourceOptions {
   /**
    * A ready-made source pair, the way {@link Material} takes one. Takes the
    * place of {@link ShaderFilterSourceOptions.glsl}/{@link ShaderFilterSourceOptions.wgsl}
-   * and is used verbatim — no default vertex stage is filled in, and no GLSL
+   * and is used verbatim - no default vertex stage is filled in, and no GLSL
    * upgrade is run.
    */
   readonly shader?: ShaderSource;
@@ -96,8 +96,8 @@ export interface ShaderFilterOptions extends ShaderFilterSourceOptions {
 /**
  * A {@link ShaderFilter} was applied on a backend it carries no source for.
  *
- * Thrown when the filter first attaches to a backend — before any program,
- * pipeline or buffer is created — so a WGSL-less filter fails the moment a
+ * Thrown when the filter first attaches to a backend - before any program,
+ * pipeline or buffer is created - so a WGSL-less filter fails the moment a
  * WebGPU backend touches it rather than somewhere inside a draw.
  */
 export class ShaderFilterBackendError extends Error {
@@ -132,7 +132,7 @@ export { defaultGlslVertexSource };
  */
 export { defaultWgslVertexSource };
 
-/** `@vertex` outside a comment — see {@link createFilterShaderSource}. */
+/** `@vertex` outside a comment - see {@link createFilterShaderSource}. */
 const wgslVertexStagePattern = /@vertex\b/;
 
 /** Strip line and block comments so a commented-out `@vertex` does not count. */
@@ -174,7 +174,7 @@ export function createFilterShaderSource(options: ShaderFilterSourceOptions): Sh
  * A {@link Filter} that renders its input through a user-supplied shader, in
  * whichever language the active backend speaks.
  *
- * One filter carries both sources — GLSL for WebGL2, WGSL for WebGPU — on the
+ * One filter carries both sources - GLSL for WebGL2, WGSL for WebGPU - on the
  * same {@link ShaderSource} contract materials use, and picks between them
  * internally. Supply both and the filter runs unchanged under
  * `backend: 'auto'`, where the engine decides which backend it gets.
@@ -247,14 +247,14 @@ export function createFilterShaderSource(options: ShaderFilterSourceOptions): Sh
  *
  * A filter that carries only one language throws
  * {@link ShaderFilterBackendError} when it attaches to a backend speaking the
- * other one — before it compiles or allocates anything.
+ * other one - before it compiles or allocates anything.
  * @stable
  */
 export class ShaderFilter extends Filter {
   /**
    * Build a filter from an existing {@link ShaderSource}, so one source can back
    * several filters. The source must already carry complete sources per language
-   * — no default vertex stage is filled in.
+   * - no default vertex stage is filled in.
    */
   public static from(source: ShaderSource, options?: { readonly uniforms?: Record<string, ShaderFilterUniformValue> }): ShaderFilter {
     return new ShaderFilter({ shader: source, ...(options?.uniforms !== undefined ? { uniforms: options.uniforms } : {}) });
@@ -342,7 +342,7 @@ export class ShaderFilter extends Filter {
    * missing the active backend's source fails on attachment instead of leaking
    * half-built GPU state into a draw.
    *
-   * A filter carrying both sources may be attached to both backends in turn —
+   * A filter carrying both sources may be attached to both backends in turn -
    * each keeps its own pass.
    */
   private _attach(backend: RenderBackend): ShaderFilterPass {

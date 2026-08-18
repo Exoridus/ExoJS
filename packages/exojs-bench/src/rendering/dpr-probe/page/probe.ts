@@ -6,7 +6,7 @@ import { DEFAULT_MEASURE_MS, measureTimerResolutionMs, runProbeCell, startVisual
 import { STAGE_SIZE } from '../scenes';
 
 /**
- * Manual DPR / internal-render-target probe page for `NEU-S4`.
+ * Manual DPR / internal-render-target probe page.
  *
  * Opened by hand on a real device; there is no driver, no result collector and
  * no remote control. Everything the run produces stays in the page until the
@@ -61,7 +61,7 @@ const copyButton = element<HTMLButtonElement>('copy-json');
 const clearButton = element<HTMLButtonElement>('clear-results');
 const jsonOutput = element<HTMLTextAreaElement>('json-output');
 
-/** `Application.resolveAutoPixelRatio` — mirrored so the capture records what `auto` WOULD have chosen. */
+/** `Application.resolveAutoPixelRatio` - mirrored so the capture records what `auto` WOULD have chosen. */
 const ENGINE_MAX_AUTO_PIXEL_RATIO = 2;
 const engineAutoPixelRatio = Math.min(window.devicePixelRatio || 1, ENGINE_MAX_AUTO_PIXEL_RATIO);
 
@@ -72,7 +72,7 @@ const visual: { scene: ProbeSceneId; dpr: number; mode: ProbeMode; textRatio: nu
   scene: 'baseline',
   dpr: engineAutoPixelRatio,
   mode: 'inherit',
-  // `null` is the shipped default — no override, so the text inherits the
+  // `null` is the shipped default - no override, so the text inherits the
   // application's ratio. It is a distinct choice from any number, which is why
   // it gets its own button rather than being spelled as one of them.
   textRatio: null,
@@ -82,7 +82,7 @@ const visual: { scene: ProbeSceneId; dpr: number; mode: ProbeMode; textRatio: nu
 /**
  * Logical stage the run uses.
  *
- * `fixed` is a 360 x 360 square — small, identical on every device, and
+ * `fixed` is a 360 x 360 square - small, identical on every device, and
  * therefore the only preset whose numbers compare across devices. `fill` takes
  * the usable area of THIS device, which is what a real full-screen game renders
  * and roughly twice the pixel count of the square on a phone. Captured once when
@@ -124,7 +124,7 @@ const setStatus = (text: string, warn = false): void => {
  *
  * The measure controls and the results table are far below the canvas on a phone,
  * so during a run the tester is looking at the stage with no indication of how
- * far along it is — or whether it finished at all. This keeps both in one view.
+ * far along it is - or whether it finished at all. This keeps both in one view.
  */
 const setProgress = (text: string, state: 'running' | 'done' | 'error' | 'idle'): void => {
   visualProgress.textContent = text;
@@ -576,7 +576,7 @@ clearButton.addEventListener('click', () => {
  * shader, and the affected cell then renders nothing while still reporting
  * timings. Reloading gives each backend a page of its own, which is also how the
  * matrix harness isolates them (one browser per backend). Any collected results
- * are dropped with the reload, which is correct — they belong to the other
+ * are dropped with the reload, which is correct - they belong to the other
  * backend.
  */
 backendSelect.addEventListener('change', () => {
@@ -590,7 +590,7 @@ backendSelect.addEventListener('change', () => {
  * Automation hook, mirroring the matrix harness's `globalThis.__runBaselineCell`.
  *
  * Exists so the probe can be driven headlessly for a desktop control run and so
- * its page can be smoke-tested without a human tapping buttons — the same
+ * its page can be smoke-tested without a human tapping buttons - the same
  * escape hatch the matrix harness already relies on. The manual run never
  * touches it.
  */

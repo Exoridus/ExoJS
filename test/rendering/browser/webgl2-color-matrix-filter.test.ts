@@ -4,7 +4,7 @@
  * Two things can only be checked here rather than in the matrix unit specs:
  * that the shader implements the same arithmetic, and that it does so on
  * STRAIGHT alpha. Render targets store premultiplied colour, so a transform
- * with an offset — invert, contrast, a bias row — gives a visibly different
+ * with an offset - invert, contrast, a bias row - gives a visibly different
  * answer when it is applied to the stored sample instead of the recovered one.
  */
 import { describe, expect, test } from 'vitest';

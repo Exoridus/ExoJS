@@ -250,17 +250,17 @@ export class RenderingContext implements DrawContext {
    * is one of three ownership patterns for GPU-backed render resources, and the
    * only one that hands ownership across the API boundary:
    *
-   * - **Caller-owned** — this method. Nothing releases the result for you; hold
+   * - **Caller-owned** - this method. Nothing releases the result for you; hold
    *   it as long as you need it and destroy it when you are done. Capturing per
    *   frame without destroying leaks VRAM steadily.
-   * - **Backend-pooled, borrowed** — `acquireRenderTexture()` /
+   * - **Backend-pooled, borrowed** - `acquireRenderTexture()` /
    *   `releaseRenderTexture()` on the backend, used for filter intermediates.
    *   Whoever acquires returns it; destroying a pooled texture instead of
    *   releasing it corrupts the pool.
-   * - **Node-owned** — {@link RenderNode}'s `cacheAsTexture` texture. Entirely
+   * - **Node-owned** - {@link RenderNode}'s `cacheAsTexture` texture. Entirely
    *   internal; the node allocates, resizes and frees it.
    *
-   * Using any of them after `destroy()` throws — see `assertLiveResource`.
+   * Using any of them after `destroy()` throws - see `assertLiveResource`.
    */
   public capture(node: RenderNode, options: CaptureOptions): RenderTexture {
     const target = new RenderTexture(options.width, options.height, options.format !== undefined ? { format: options.format } : undefined);

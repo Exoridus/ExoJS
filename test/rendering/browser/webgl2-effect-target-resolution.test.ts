@@ -1,11 +1,11 @@
 /**
- * WebGL2 effect / cache render-target resolution browser tests (`NEU-S4`).
+ * WebGL2 effect / cache render-target resolution browser tests.
  *
  * An internal render target used to be `ceil(logical bounds)` texels no matter
  * how large the surface it was composited into, so a filtered or cached subtree
  * rasterized at `1/pixelRatio` of the detail it was then sampled over. These
- * tests pin the current contract — inherit the surface resolution, overridable
- * per filter and per node — at the only place it is observable: the size of the
+ * tests pin the current contract - inherit the surface resolution, overridable
+ * per filter and per node - at the only place it is observable: the size of the
  * texture the backend is actually asked for.
  *
  * Run via:  pnpm test:browser:webgl
@@ -40,7 +40,7 @@ const CONTENT = 32;
 
 /**
  * Backend whose canvas backing store is `LOGICAL × pixelRatio` while the render
- * target stays logical — exactly what `Application` builds for `pixelRatio > 1`.
+ * target stays logical - exactly what `Application` builds for `pixelRatio > 1`.
  */
 const createBackend = async (pixelRatio: number): Promise<WebGl2Backend> => {
   const canvas = document.createElement('canvas');
@@ -71,7 +71,7 @@ const createBackend = async (pixelRatio: number): Promise<WebGl2Backend> => {
  *
  * The allocated size is the only place the resolution policy is unambiguously
  * observable: the composite draws the target back at its LOGICAL size, so a
- * correctly and an incorrectly sized target differ in sharpness — which a pixel
+ * correctly and an incorrectly sized target differ in sharpness - which a pixel
  * probe can only detect indirectly and only for content with the right spatial
  * frequency. The pixel assertions below still run, but they guard placement and
  * colour; this guards the resolution.
@@ -216,7 +216,7 @@ describe('WebGL2 effect target resolution', () => {
       root.render(backend);
       backend.flush();
 
-      // Capture + two filter outputs, every one at 0.5 — not 2 for the second
+      // Capture + two filter outputs, every one at 0.5 - not 2 for the second
       // filter: a chain shares one target size.
       expect(recorder.sizes).toEqual([
         [CONTENT / 2, CONTENT / 2],

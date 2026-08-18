@@ -77,7 +77,7 @@ export abstract class Widget extends Container {
 
   /**
    * The widget's own enabled flag, independent of any ancestor's. Disabling a
-   * container widget does not change this on its children — see
+   * container widget does not change this on its children - see
    * {@link effectiveEnabled} for the value interaction and keyboard focus
    * actually consult, and for what disabling a container does to them.
    */
@@ -94,14 +94,14 @@ export abstract class Widget extends Container {
 
   /**
    * Whether the widget responds to input right now: its own {@link enabled}
-   * flag AND every Widget ancestor's — `ownEnabled && parent.effectiveEnabled`.
+   * flag AND every Widget ancestor's - `ownEnabled && parent.effectiveEnabled`.
    * This is what interaction (e.g. {@link Button} activation) and keyboard
    * focus actually gate on. Disabled widgets typically dim and ignore clicks,
-   * and are skipped by keyboard focus — they drop out of the Tab order and
+   * and are skipped by keyboard focus - they drop out of the Tab order and
    * reject programmatic focus while effectively disabled.
    *
    * Disabling a container widget does not touch its children's OWN
-   * {@link enabled} flag — only their effective state. Re-enabling the
+   * {@link enabled} flag - only their effective state. Re-enabling the
    * container makes a child whose own flag was never touched effectively
    * enabled again automatically.
    */
@@ -147,7 +147,7 @@ export abstract class Widget extends Container {
   }
 
   /**
-   * React to an {@link effectiveEnabled} change — fired whenever it flips,
+   * React to an {@link effectiveEnabled} change - fired whenever it flips,
    * whether the widget's own {@link enabled} flag changed or an ancestor
    * widget's did. Override in subclasses.
    */
@@ -159,7 +159,7 @@ export abstract class Widget extends Container {
    * Recompute {@link effectiveEnabled} from the current own flag and parent
    * chain. No-ops if it did not actually change; otherwise fires
    * {@link _onEnabledChanged} and pushes the same recompute into every Widget
-   * descendant — an ancestor's effective state changing is the only way a
+   * descendant - an ancestor's effective state changing is the only way a
    * descendant's effective state can change without its own {@link enabled}
    * flag ever being touched. Stops descending into a subtree the moment its
    * own effective value turns out unchanged: everything beneath it is
@@ -207,9 +207,9 @@ export abstract class Widget extends Container {
   }
 
   /**
-   * @internal — recompute {@link effectiveEnabled} on reparenting (attach or
-   * detach), since the nearest Widget ancestor — and so the value inherited
-   * from it — can change without this widget's own {@link enabled} ever
+   * @internal - recompute {@link effectiveEnabled} on reparenting (attach or
+   * detach), since the nearest Widget ancestor - and so the value inherited
+   * from it - can change without this widget's own {@link enabled} ever
    * being touched.
    */
   public override _setParent(parent: Container | null): void {

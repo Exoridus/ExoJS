@@ -512,7 +512,7 @@ describe('Application', () => {
 
     expect(appArg.options.rendering?.debug).toBe(true);
     // A partial webglAttributes override merges on top of ExoJS's own WebGL
-    // defaults — it does not replace them wholesale.
+    // defaults - it does not replace them wholesale.
     expect(appArg.options.rendering?.webglAttributes).toEqual({
       antialias: true,
       depth: false,

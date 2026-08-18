@@ -1,7 +1,7 @@
 /**
  * ColorMatrixFilter's matrix algebra, checked on the CPU.
  *
- * The filter is one affine transform of straight-alpha RGBA — `RGBA' = M·RGBA
+ * The filter is one affine transform of straight-alpha RGBA - `RGBA' = M·RGBA
  * + bias`, carried as a 4×5 row-major matrix. Everything the conveniences do is
  * concatenation onto that one matrix, so the arithmetic can be verified here
  * without a GPU; the browser specs then check that the shader agrees and that

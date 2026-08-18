@@ -51,7 +51,7 @@ export interface Scene {
    * needs a reason rooted in the hardware rather than in the engine, stated at
    * the scene. Both bounds hold together: no channel may differ by more than
    * `delta`, and no more than `maxPixelFraction` of the frame may differ at
-   * all. The second is what keeps the check meaningful — an engine-side
+   * all. The second is what keeps the check meaningful - an engine-side
    * divergence (a threshold, a swizzle, a wrong varying) moves a large,
    * contiguous share of the image, not a sparse rim of it.
    */

@@ -385,8 +385,8 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     this._ensureGeoCapacity(this._geoQuadCount + quads.length);
 
     // render() already flushed if this node cannot join the pending batch, and
-    // all of its quads then go into that one batch — the staging array grows
-    // instead of chunking — so one increment here is exact.
+    // all of its quads then go into that one batch - the staging array grows
+    // instead of chunking - so one increment here is exact.
     this._geoBatchNodeCount++;
 
     const f32 = this._geoInstF32;

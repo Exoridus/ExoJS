@@ -1,5 +1,5 @@
 /**
- * Tests for the `Text.pixelRatio` contract — the raster density a runtime text
+ * Tests for the `Text.pixelRatio` contract - the raster density a runtime text
  * node rasterizes its glyphs at.
  *
  * The public promise has three halves and each is pinned here:
@@ -13,7 +13,7 @@
  *    drawing from pages rasterized for a different density.
  *
  * The pool is mocked: this file is about which atlas a node ASKS for, not about
- * what rasterization does with it (that needs a real canvas — see
+ * what rasterization does with it (that needs a real canvas - see
  * `webgl2-text-pixel-ratio.test.ts`).
  */
 
@@ -104,7 +104,7 @@ describe('Text.pixelRatio', () => {
     const text = new Text('Hi', { fontSize: 16 });
 
     expect(() => (text.pixelRatio = value)).toThrow(/positive finite/);
-    // Rejected, not clamped — the node is unchanged.
+    // Rejected, not clamped - the node is unchanged.
     expect(text.pixelRatio).toBeUndefined();
   });
 });

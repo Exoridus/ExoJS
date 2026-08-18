@@ -1,9 +1,9 @@
 /**
  * WebGPU control cells for `webgl2-cache-as-texture-text.test.ts`.
  *
- * The contract is backend-independent — text must be correct on the first
+ * The contract is backend-independent - text must be correct on the first
  * frame it is drawn, and a `cacheAsTexture` subtree containing text must be
- * correct on its first bake — but the defect that motivated the WebGL2 suite
+ * correct on its first bake - but the defect that motivated the WebGL2 suite
  * was a WebGL-only one (a global pixel-store flag leaking from one texture
  * upload into the next). WebGPU has no equivalent global upload state, so
  * these cells exist to prove the backend stays correct, not to reproduce

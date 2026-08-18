@@ -39,7 +39,7 @@ export interface EvidenceRow {
  * The artifact: one stamp per browser, then the observations.
  *
  * Provenance lives beside the rows rather than on them so a re-measurement that
- * finds nothing new changes one line instead of every one — see
+ * finds nothing new changes one line instead of every one - see
  * `test/rendering/parity/evidenceSink.ts` for the full reasoning.
  */
 export interface EvidenceDocument {
@@ -109,7 +109,7 @@ export function staleEvidenceReasons(doc: EvidenceDocument, head: string): strin
  * `package.json` still carries the previous version. It owns
  * `measuredAt`/`commit`/`platform`; `release` is the release step's field.
  *
- * Non-guaranteed browsers are left untouched — stamping them would extend the
+ * Non-guaranteed browsers are left untouched - stamping them would extend the
  * claim to rows nobody promised to keep current.
  */
 export function stampRelease(doc: EvidenceDocument, version: string): EvidenceDocument {

@@ -25,13 +25,13 @@ export interface BackendTargetPassOptions {
 /**
  * A {@link BackendRenderPass} that redirects rendering into an off-screen {@link RenderTarget}.
  *
- * Saves the current render target and view before executing the callback, then restores them afterwards —
+ * Saves the current render target and view before executing the callback, then restores them afterwards -
  * even if the callback throws. This makes it safe to nest passes or use in try/finally chains without manual
  * cleanup.
  *
  * Engine-internal target-redirect primitive: used by the stock filters, `RenderNode`'s texture-cache capture,
  * and the high-level `RenderNodePass` / `CallbackRenderPass` `{ target }` redirect. Not part of the public
- * surface — high-level code sets `{ target }` on a leaf pass instead.
+ * surface - high-level code sets `{ target }` on a leaf pass instead.
  * @internal
  */
 export class BackendTargetPass implements BackendRenderPass {

@@ -7,7 +7,7 @@ import { AudioManager } from '#audio/AudioManager';
 import { Envelope } from '#audio/Envelope';
 
 // ---------------------------------------------------------------------------
-// Helpers — same oscillator/gain spies as audio-generator-voice.test.ts, plus a
+// Helpers - same oscillator/gain spies as audio-generator-voice.test.ts, plus a
 // movable context clock (the envelope is scheduled against `currentTime`).
 // ---------------------------------------------------------------------------
 
@@ -167,7 +167,7 @@ describe('AudioGeneratorVoice — Pausable', () => {
 
     expect(voice.paused).toBe(true);
     expect(voice.ended).toBe(false);
-    // The oscillator is retired outright — a paused scene must not keep an
+    // The oscillator is retired outright - a paused scene must not keep an
     // oscillator running.
     expect(spy.oscillators[0]!.stop).toHaveBeenCalledTimes(1);
     expect(spy.oscillators[0]!.disconnect).toHaveBeenCalledTimes(1);
@@ -287,11 +287,11 @@ describe('AudioGeneratorVoice — Pausable', () => {
     voice.pause();
     voice.stop();
 
-    // Nothing audible is left to ramp — a release tail on a retired oscillator
+    // Nothing audible is left to ramp - a release tail on a retired oscillator
     // would only strand the voice for `releaseMs`.
     expect(releaseSpy).not.toHaveBeenCalled();
     expect(voice.ended).toBe(true);
-    // `paused` is not unwound by the end — same as `SoundVoice`/
+    // `paused` is not unwound by the end - same as `SoundVoice`/
     // `AudioStreamVoice`, where a voice stopped while paused also stays
     // `paused`. Every `SceneAudio` path gates on `ended` first.
     expect(voice.paused).toBe(true);
@@ -371,7 +371,7 @@ describe('AudioGeneratorVoice — Pausable', () => {
     setCurrentTime(0.05);
     voice.pause();
 
-    // Five seconds of scene pause — far past attack + decay. The envelope must
+    // Five seconds of scene pause - far past attack + decay. The envelope must
     // not have run to sustain in the meantime.
     setCurrentTime(5);
     gain.setValueAtTime.mockClear();
@@ -457,8 +457,8 @@ describe('AudioGeneratorVoice — Pausable', () => {
     const held = manager.play(generator) as AudioGeneratorVoice;
     held.pause();
 
-    // A paused voice looks oldest under FIFO — its pool bookkeeping ages against
-    // the still-running context clock — so it would be evicted first, stopped
+    // A paused voice looks oldest under FIFO - its pool bookkeeping ages against
+    // the still-running context clock - so it would be evicted first, stopped
     // for good, and `SceneAudio.restore()` would then pass over it (`ended`, not
     // `paused`): the held note is silently gone.
     for (let index = 0; index < 4; index++) {
@@ -500,7 +500,7 @@ describe('AudioGeneratorVoice — Pausable', () => {
     voice.pause();
     voice.frequency = 880;
 
-    // No live oscillator to ramp — the retired one must not be written to.
+    // No live oscillator to ramp - the retired one must not be written to.
     expect(spy.oscillators[0]!.frequency.setTargetAtTime).not.toHaveBeenCalled();
 
     voice.resume();

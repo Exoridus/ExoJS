@@ -122,7 +122,7 @@ describe('WebGPU WGSL shader sources', () => {
   // `webgpu-backdrop-blend.test.ts`), and keeping `ctx.skip` unambiguous.
   //
   // Every source is compiled twice: as authored, and as the comment-stripped
-  // text the production build ships (see `shader-strip.test.ts`) — the stripped
+  // text the production build ships (see `shader-strip.test.ts`) - the stripped
   // form is the only one a consumer's driver ever sees.
   for (const { name, source } of shaders) {
     for (const [variant, code] of [

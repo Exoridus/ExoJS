@@ -27,7 +27,7 @@ interface EffectFrame {
   barrier: BarrierScope | null;
   backend: RenderBackend | null;
   playScope: ((scope: GroupScope) => void) | null;
-  /** Set on the `cacheAsTexture` replay path — the baked texture to composite. */
+  /** Set on the `cacheAsTexture` replay path - the baked texture to composite. */
   cachedTexture: RenderTexture | null;
   /** Set on the full path — the filter chain's output, or the capture when there are no filters. */
   finalTexture: RenderTexture | null;

@@ -3,7 +3,7 @@
  *
  * Runs the REAL WebGl2Backend against a genuine WebGL2 context (Chromium
  * SwiftShader) and asserts the same deterministic draw-call / batching
- * invariants that the Node fake-context harness captures — proving that the
+ * invariants that the Node fake-context harness captures - proving that the
  * CPU-side renderer decisions (multi-texture slot merge, nine-slice flush
  * policy, repeating-sprite shader path, tilemap chunk pages) produce
  * identical counts under a real GPU pipeline.
@@ -11,7 +11,7 @@
  * The sprite and mesh programs compile from the shipped GLSL. The tilemap
  * renderer needs no core-renderer wiring.
  *
- * Canvas size: 1280 × 720 — large enough that ≤200 sprites scattered inside
+ * Canvas size: 1280 × 720 - large enough that ≤200 sprites scattered inside
  * always pass view-frustum culling. Tilemap tests use a smaller canvas sized
  * to the map so the whole map is always in view.
  *

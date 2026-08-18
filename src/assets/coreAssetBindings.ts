@@ -180,8 +180,8 @@ const svgBinding = defineAsset({
 });
 
 // Subtitle serves two value types through one handler. `defineAsset` registers
-// its primary type `vtt` (+ the `vtt` suffix) globally; the `srt` alias type — a
-// distinct AssetDefinitions key sharing this handler — rides the `aliases` list
+// its primary type `vtt` (+ the `vtt` suffix) globally; the `srt` alias type - a
+// distinct AssetDefinitions key sharing this handler - rides the `aliases` list
 // so it gets the same global (kind + extension) registration through the one
 // declarative call, and both suffixes load via the subtitle handler (routed at
 // runtime by `typeNames: ['vtt', 'srt']`).

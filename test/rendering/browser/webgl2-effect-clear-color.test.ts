@@ -6,7 +6,7 @@
  * persistent one. Without restoring it around the child pass, ONE filtered or
  * cached node repaints the application's background for the rest of the
  * session: every later frame clears to transparent black instead of
- * `clearColor`. Found on a real device — the probe's background went from the
+ * `clearColor`. Found on a real device - the probe's background went from the
  * app colour to see-through the moment a filter scene had run once.
  *
  * Run via:  pnpm test:browser:webgl
@@ -105,18 +105,18 @@ describe('WebGL2 effect clear colour', () => {
     const { root, filter } = createFilteredSubject(texture);
 
     try {
-      // Frame 1 — no effect has run yet; the far corner is the app background.
+      // Frame 1 - no effect has run yet; the far corner is the app background.
       backend.clear();
       backend.flush();
       expectPixelNear(readPixel(backend, SIZE - 4, SIZE - 4), [20, 20, 40, 255]);
 
-      // Frame 2 — the filter runs, which captures into its own target and clears
+      // Frame 2 - the filter runs, which captures into its own target and clears
       // that target to transparent black.
       backend.clear();
       root.render(backend);
       backend.flush();
 
-      // Frame 3 — nothing about the background changed, so it must still be the
+      // Frame 3 - nothing about the background changed, so it must still be the
       // app colour. Before the fix this read (0, 0, 0, 0): the capture's clear
       // colour had replaced the persistent one.
       backend.clear();
@@ -157,7 +157,7 @@ describe('WebGL2 effect clear colour', () => {
       backend.flush();
       expectPixelNear(readPixel(backend, SIZE / 2, SIZE / 2), [0, 128, 0, 255]);
 
-      // Persisting is the whole point of the setter — a later argument-less
+      // Persisting is the whole point of the setter - a later argument-less
       // clear keeps it.
       backend.clear();
       backend.flush();

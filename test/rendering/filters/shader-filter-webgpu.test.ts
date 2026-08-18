@@ -392,12 +392,12 @@ describe('ShaderFilter on WebGPU', () => {
     env.restore();
   });
 
-  // 1. Construction with a WGSL fragment module only — succeeds
+  // 1. Construction with a WGSL fragment module only - succeeds
   test('constructs successfully with only a WGSL source', () => {
     expect(() => new ShaderFilter({ wgsl: minimalFragSrc })).not.toThrow();
   });
 
-  // 2. Construction without any source — throws
+  // 2. Construction without any source - throws
   test('throws when constructed without any shader source', () => {
     expect(() => new ShaderFilter()).toThrow('ShaderSource requires at least one of `glsl` or `wgsl`.');
   });

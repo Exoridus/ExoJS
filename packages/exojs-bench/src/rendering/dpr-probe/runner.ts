@@ -56,7 +56,7 @@ export const measureTimerResolutionMs = (): number => {
  * `getContext` freezes its attribute dictionary on the first call, so a reused
  * canvas would hand the next `Application` a context configured for the previous
  * one. The outgoing context is force-lost first, because removing the element
- * only drops the reference and leaves the context alive until GC — across a
+ * only drops the reference and leaves the context alive until GC - across a
  * 32-cell run that would pile up past the browser's live-context cap.
  */
 const freshStageCanvas = (host: HTMLElement): HTMLCanvasElement => {
@@ -91,7 +91,7 @@ interface ProbeApplication {
  * Boot one `Application` at an explicit pixel ratio and wire a hardware GPU
  * timer to it when the platform offers one.
  *
- * `pixelRatio` is passed EXPLICITLY, which is the only way to reach 3 — the
+ * `pixelRatio` is passed EXPLICITLY, which is the only way to reach 3 - the
  * engine's `auto` policy is `min(devicePixelRatio, 2)`, and that clamp is one of
  * the things under measurement here rather than something to work around
  * silently.
@@ -213,7 +213,7 @@ const instrumentCell = (app: Application, scene: ProbeScene): { recorder: Target
  * timed window → collect → tear down.
  *
  * The recorded frame is the FIRST frame, not a frame in the middle, because a
- * `cacheAsTexture` node allocates its cache texture exactly once — on the bake —
+ * `cacheAsTexture` node allocates its cache texture exactly once - on the bake -
  * and replays without allocating afterwards. Arming later would report "this
  * scene has no internal target", which is the opposite of true.
  */
@@ -384,7 +384,7 @@ export interface VisualPreview {
 /**
  * Render one scene continuously so the tester can LOOK at it.
  *
- * Never used for timing, and never running while a cell is measured — §6 of the
+ * Never used for timing, and never running while a cell is measured - §6 of the
  * brief: one variant on screen at a time, or the measurement pays for both.
  */
 export const startVisualPreview = async (options: {

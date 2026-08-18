@@ -3,7 +3,7 @@
  *
  * One filter carries both languages and picks between them internally, so the
  * surface a caller touches never names a backend. What is verified here is that
- * choice — which source runs, when the choice is made, and what happens when the
+ * choice - which source runs, when the choice is made, and what happens when the
  * source the active backend needs is missing.
  */
 import { ShaderFilter, ShaderFilterBackendError } from '#rendering/filters/ShaderFilter';
@@ -32,7 +32,7 @@ fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
 
 /**
  * A backend stub that only answers `backendType`. Enough for everything the
- * attach check does — which is the point: the refusal lands before the filter
+ * attach check does - which is the point: the refusal lands before the filter
  * asks the backend for anything at all.
  */
 function makeBackendStub(backendType: RenderBackendType): RenderBackend {

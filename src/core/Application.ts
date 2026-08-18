@@ -95,7 +95,7 @@ export type CanvasSizingMode = 'fixed' | 'fill' | 'fit' | 'shrink' | 'letterbox'
  *
  * This is purely about the *browser-side* composite step. It says nothing about
  * how the engine stores or blends colour internally: ExoJS renders premultiplied
- * end to end — textures, render targets and blend modes alike — under both modes.
+ * end to end - textures, render targets and blend modes alike - under both modes.
  */
 export type CanvasAlphaMode = 'opaque' | 'premultiplied';
 
@@ -162,7 +162,7 @@ export interface RenderingApplicationOptions {
    * WebGL2 context attributes. Ignored by WebGPU.
    *
    * Merged as **partial overrides on top of ExoJS's own WebGL defaults**
-   * (`antialias: false`, `depth: false`, `preserveDrawingBuffer: false`) —
+   * (`antialias: false`, `depth: false`, `preserveDrawingBuffer: false`) -
    * passing e.g. `{ antialias: true }` only flips that one attribute and
    * keeps the rest of ExoJS's defaults, it never replaces the whole default
    * set with the browser's own WebGL-spec defaults.
@@ -172,7 +172,7 @@ export interface RenderingApplicationOptions {
    * - `alpha` and `premultipliedAlpha` are derived from
    *   {@link RenderingApplicationOptions.alphaMode}, which is the one
    *   spelling of that contract both backends understand.
-   * - `stencil` is always forced to `true` — geometric stencil clipping
+   * - `stencil` is always forced to `true` - geometric stencil clipping
    *   needs a stencil buffer on the root target unconditionally.
    */
   webglAttributes?: Omit<WebGLContextAttributes, 'alpha' | 'premultipliedAlpha' | 'stencil'>;
@@ -421,9 +421,9 @@ const defaultRenderingSettings: Required<RenderingApplicationOptions> = {
  * Resolve public {@link RenderingApplicationOptions} against ExoJS's own
  * defaults. `webglAttributes` is merged as partial overrides on top of the
  * full default set (see {@link RenderingApplicationOptions.webglAttributes})
- * — everything else is a plain per-field fallback.
+ * - everything else is a plain per-field fallback.
  *
- * @internal — shared by the constructor and by tests that need to assert on
+ * @internal - shared by the constructor and by tests that need to assert on
  * the resolved options without spinning up a full {@link Application}.
  */
 export const resolveRenderingOptions = (renderingOptions: RenderingApplicationOptions): Required<RenderingApplicationOptions> => ({

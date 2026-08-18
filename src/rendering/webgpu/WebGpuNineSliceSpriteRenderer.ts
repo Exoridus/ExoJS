@@ -224,8 +224,8 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
     this._ensureInstanceCapacity(this._quadIndex + quads.length);
 
     // Booked after the flush decision above, so the node lands on the batch that
-    // holds its quads. All of this node's quads go into that one batch — the
-    // arena grows instead of chunking — so one increment is exact.
+    // holds its quads. All of this node's quads go into that one batch - the
+    // arena grows instead of chunking - so one increment is exact.
     this._batchNodeCount++;
 
     const f32 = this._instanceFloat32;

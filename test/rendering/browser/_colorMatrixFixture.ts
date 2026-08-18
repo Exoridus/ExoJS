@@ -2,7 +2,7 @@
  * Shared scene for the ColorMatrixFilter pixel specs (WebGL2 + WebGPU).
  *
  * Everything is drawn over black, so a composited reading of a colour `c` with
- * alpha `a` is simply `c * a` — which is what makes the half-transparent cells
+ * alpha `a` is simply `c * a` - which is what makes the half-transparent cells
  * able to tell a straight-alpha transform from one applied to the stored
  * premultiplied sample.
  */
@@ -59,7 +59,7 @@ export const matrixScene = (css: string, filters: readonly Filter[]): { root: Co
   return { root, textures: [texture] };
 };
 
-/** Two sprites under ONE filtered container — the whole-subtree case. */
+/** Two sprites under ONE filtered container - the whole-subtree case. */
 export const matrixSubtreeScene = (first: string, second: string, filters: readonly Filter[]): { root: Container; textures: Texture[] } => {
   const firstTexture = flatTexture(first);
   const secondTexture = flatTexture(second);

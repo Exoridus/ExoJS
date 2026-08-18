@@ -1,7 +1,7 @@
 /**
  * WebGL2 browser tests for the SDF text antialiasing contract.
  *
- * A distance field carries no antialiasing of its own — the shader decides how
+ * A distance field carries no antialiasing of its own - the shader decides how
  * wide the reconstructed edge should be. The only correct width is one measured
  * against the PROJECTED pixel footprint: whatever the atlas density, the surface
  * ratio and the node's own scale conspire to put on screen, an edge should fade
@@ -24,7 +24,7 @@ import { createWebGl2TestBackend, readWebGl2Frame, renderWebGl2Once } from './_b
 const size = 256;
 
 /**
- * Partially-lit pixels on one scanline — the total width of every edge ramp the
+ * Partially-lit pixels on one scanline - the total width of every edge ramp the
  * row crosses, in device pixels.
  *
  * 'H' at the sampled height is two plain vertical stems, so the row crosses
@@ -64,8 +64,8 @@ interface Sample {
  * The invariant, stated on a set of samples that differ only in how the glyph
  * reached the screen.
  *
- * Both directions carry weight. A ramp that collapses is a hard, aliased step —
- * which is what a constant edge width produces wherever the field is dense — and
+ * Both directions carry weight. A ramp that collapses is a hard, aliased step -
+ * which is what a constant edge width produces wherever the field is dense - and
  * a ramp that grows is the same constant smeared across a magnified field. The
  * spread is the real claim: the samples must agree with each other, not merely
  * each land inside a generous window.
@@ -78,7 +78,7 @@ const expectOnePixelEdges = (samples: readonly Sample[]): void => {
   }
 
   // Four stem edges on the row, so up to eight partially-lit pixels is roughly
-  // one per edge. The ceiling holds per sample — no subpixel phase hides a ramp
+  // one per edge. The ceiling holds per sample - no subpixel phase hides a ramp
   // that is genuinely too wide.
   expect(Math.max(...ramps)).toBeLessThanOrEqual(8);
 
@@ -128,7 +128,7 @@ afterEach(() => {
 describe('SDF edge width follows the projected pixel footprint', () => {
   // The headline case. A node scaled up magnifies the field it samples, so an
   // edge whose width is fixed in FIELD units grows on screen by the same factor
-  // — a 4x label would fade over four device pixels instead of one.
+  // - a 4x label would fade over four device pixels instead of one.
   test('a node scaled up keeps a one-pixel edge', async () => {
     const samples = await Promise.all([
       measure({ surfaceRatio: 1, scale: 1, fontSize: 32 }),

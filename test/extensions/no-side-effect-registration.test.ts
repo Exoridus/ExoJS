@@ -8,16 +8,16 @@ const rootDir = resolve(import.meta.dirname!, '..', '..');
 /**
  * Registration-by-import collides with `sideEffects: false` (declared on the
  * root package and every extension package): a bare top-level call to a
- * `register*` function — reachable merely by evaluating the module, not by
- * using any of its exports — is exactly what a tree-shaking bundler is
+ * `register*` function - reachable merely by evaluating the module, not by
+ * using any of its exports - is exactly what a tree-shaking bundler is
  * entitled to drop under that flag for a partial consumer that never
  * references the module's exports directly.
  *
  * The fix is architectural, not a `sideEffects` array entry: every
  * registration in these files funnels through an explicit, function-wrapped
- * seam — `buildCoreRendererBindings` + `materializeRendererBindings` for
+ * seam - `buildCoreRendererBindings` + `materializeRendererBindings` for
  * renderers, `defineAsset`'s declarative descriptor (including its `aliases`
- * list) for asset kinds — invoked by Application's bootstrap rather than
+ * list) for asset kinds - invoked by Application's bootstrap rather than
  * fired as an automatic consequence of importing the module.
  *
  * This is a source-level regression test, not a behavioural one: it catches

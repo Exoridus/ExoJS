@@ -47,7 +47,7 @@ export interface RenderBackend {
   readonly clearColor: Color;
 
   /**
-   * Device pixels per logical unit of the canvas root target — the
+   * Device pixels per logical unit of the canvas root target - the
    * application's effective `pixelRatio`.
    *
    * The root target is sized in LOGICAL units while the canvas backing store is

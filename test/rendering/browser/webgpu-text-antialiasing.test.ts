@@ -1,8 +1,8 @@
 /**
  * WebGPU control cells for `webgl2-text-antialiasing.test.ts`.
  *
- * The contract — an SDF edge fades over about one DEVICE pixel, whatever the
- * atlas density, the surface ratio and the node's scale jointly put on screen —
+ * The contract - an SDF edge fades over about one DEVICE pixel, whatever the
+ * atlas density, the surface ratio and the node's scale jointly put on screen -
  * is backend-independent, but each backend carries its own copy of the fragment
  * stage and its own derivative builtins. These cells pin the WGSL half.
  *
@@ -77,8 +77,8 @@ describe('SDF edge width follows the projected pixel footprint', () => {
     return sample;
   };
 
-  // Both halves matter. A collapsed ramp is a hard, aliased step — what a width
-  // fixed in field units produces wherever the field is dense — and a grown one
+  // Both halves matter. A collapsed ramp is a hard, aliased step - what a width
+  // fixed in field units produces wherever the field is dense - and a grown one
   // is that same constant smeared across a magnified field.
   const expectOnePixelEdges = (samples: ReadonlyArray<Sample | null>): void => {
     if (samples.includes(null)) return;
@@ -89,7 +89,7 @@ describe('SDF edge width follows the projected pixel footprint', () => {
       expect(sample.lit, 'the scanline must actually cross the glyph').toBeGreaterThan(4);
     }
 
-    // The ceiling holds per sample — no subpixel phase hides a ramp that is
+    // The ceiling holds per sample - no subpixel phase hides a ramp that is
     // genuinely too wide.
     expect(Math.max(...ramps)).toBeLessThanOrEqual(8);
 

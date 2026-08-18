@@ -26,7 +26,7 @@ export const SQUARE_EXTENT = 16;
 export const OUTSIDE_HIGH = 40;
 export const OUTSIDE_LOW = 23;
 
-/** A pixel just off a corner — diagonal from every lit texel. */
+/** A pixel just off a corner - diagonal from every lit texel. */
 export const DIAGONAL: readonly [number, number] = [OUTSIDE_HIGH, OUTSIDE_HIGH];
 
 /** The same distance out, but straight along an axis. */

@@ -2,7 +2,7 @@
  * WebGPU control cells for `webgl2-effect-output-bounds.test.ts`.
  *
  * The capture domain is decided once, in the render plan, and both backends
- * consume it. These cells prove the WGSL half actually does — that no backend
+ * consume it. These cells prove the WGSL half actually does - that no backend
  * recomputes the expansion for itself, and that a blur's tail survives the trip
  * through a WebGPU target exactly as it does through a WebGL2 one.
  *
@@ -145,7 +145,7 @@ describe('WebGPU consumes the same planned effect bounds', () => {
     // The same targets at the same size the WebGL2 cell pins: a chain of two
     // 6-unit blurs puts a 12-unit margin on every side of a 32-square. Any
     // backend-local recomputation of the expansion would show up here. Five
-    // borrows — three chain targets plus one separable-blur scratch each.
+    // borrows - three chain targets plus one separable-blur scratch each.
     const scene = await render(ctx, { radii: [6, 6] });
 
     if (scene === null) return;

@@ -37,18 +37,18 @@ interface WebGl2Connection {
  * The WebGL2 half of a {@link ShaderFilter}: compiles the GLSL pair, binds the
  * auto-bound and user uniforms, and draws the fullscreen quad.
  *
- * Not a {@link Filter} itself and not public — the filter owns it, decides when
+ * Not a {@link Filter} itself and not public - the filter owns it, decides when
  * it is built, and hands it the uniform record it keeps writing to, so a
  * `setUniform` call reaches this pass without copying anything.
  * @internal
  */
 export class WebGl2ShaderFilterPass {
-  /** One redirect pass, re-pointed per application — see {@link BackendTargetPass.retarget}. */
+  /** One redirect pass, re-pointed per application - see {@link BackendTargetPass.retarget}. */
   private readonly _pass: BackendTargetPass = new BackendTargetPass(backend => this._run(backend));
   /** Reused upload buffers for the auto-bound uniforms, so a frame allocates none. */
   private readonly _slotScratch = new Int32Array(1);
   private readonly _resolutionScratch = new Float32Array(2);
-  /** One reused buffer per non-texture user uniform — see {@link _marshalValue}. */
+  /** One reused buffer per non-texture user uniform - see {@link _marshalValue}. */
   private readonly _scratch = new Map<string, Float32Array>();
 
   private readonly _vertexSource: string;
@@ -79,7 +79,7 @@ export class WebGl2ShaderFilterPass {
 
     // Staged on the instance rather than captured: the pass object and its body
     // are built once per filter, so a filtered node costs no allocation per
-    // frame — which it did while both were rebuilt inside every `apply`.
+    // frame - which it did while both were rebuilt inside every `apply`.
     this._passInput = input;
     this._passOutput = output;
 
@@ -99,7 +99,7 @@ export class WebGl2ShaderFilterPass {
     }
   }
 
-  /** The pass body — see {@link _pass}. */
+  /** The pass body - see {@link _pass}. */
   private _run(backend: RenderBackend): void {
     const gl2 = backend as WebGl2Backend;
     const shader = this._shader!;
@@ -124,7 +124,7 @@ export class WebGl2ShaderFilterPass {
       shader.getUniform('uResolution').setValue(this._resolutionScratch);
     }
 
-    // Sync user uniforms — texture uniforms start at slot 1
+    // Sync user uniforms - texture uniforms start at slot 1
     let textureSlot = 1;
 
     for (const name in this._uniforms) {
@@ -155,7 +155,7 @@ export class WebGl2ShaderFilterPass {
     gl2.bindVertexArrayObject(connection.vao);
     connection.vao.draw(4, 0, RenderingPrimitives.TriangleStrip);
 
-    // The fullscreen quad is a real GPU draw and has to be counted as one —
+    // The fullscreen quad is a real GPU draw and has to be counted as one -
     // it goes straight through the VAO rather than a renderer, so nothing else
     // sees it. The WebGPU half already counts its own.
     gl2.stats.drawCalls++;

@@ -195,7 +195,7 @@ export class RenderPlanBuilder {
   /**
    * Effective resolution of the target each enclosing barrier renders into,
    * innermost last. Empty while collecting into the canvas root, whose
-   * resolution comes from the backend instead of being pushed — the root is not
+   * resolution comes from the backend instead of being pushed - the root is not
    * a barrier and has no scope to pair with.
    */
   private readonly _resolutionStack: number[] = [];
@@ -413,7 +413,7 @@ export class RenderPlanBuilder {
   }
 
   /**
-   * Effective resolution of the target being collected into — the innermost
+   * Effective resolution of the target being collected into - the innermost
    * enclosing barrier's, or the canvas root's when there is none.
    */
   private _currentTargetResolution(): number {
@@ -429,7 +429,7 @@ export class RenderPlanBuilder {
     // A backend that reports a non-finite or non-positive root resolution
     // (a stand-in in a test, a canvas measured before layout) must not be able
     // to turn every effect target into a NaN-sized texture several layers down,
-    // where the cause is unrecoverable. Fall back to logical size — the
+    // where the cause is unrecoverable. Fall back to logical size - the
     // behaviour that shipped before targets inherited anything.
     return Number.isFinite(rootResolution) && rootResolution > 0 ? rootResolution : 1;
   }
@@ -455,7 +455,7 @@ export class RenderPlanBuilder {
       let height = 0;
 
       if (needsBounds) {
-        // The barrier's capture domain — the source bounds run through the
+        // The barrier's capture domain - the source bounds run through the
         // filter chain's output-bounds contract, then quantised edge by edge.
         // The capture view, the target allocation, the texture cache's identity
         // and the composite placement all read it from here, so both backends
@@ -587,7 +587,7 @@ export class RenderPlanBuilder {
    *   matrix, group-level culling, branch-escape rule, capture key and
    *   transform-row patching. Descending into one would flatten all of that
    *   into the outer source and stop its `_collectContent` from ever running
-   *   again — which is why the discovery walk needs no copy of
+   *   again - which is why the discovery walk needs no copy of
    *   `_childEscapesTransformGroup`: it never gets below a boundary, so no
    *   discovered node ever has an engaged boundary as its parent.
    * - **View-dependent producers**, resolved after the fact in

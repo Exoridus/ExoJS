@@ -8,7 +8,7 @@ import type { TargetResolution } from '#rendering/types';
  * The canvas root's is the application's `pixelRatio`; before this module
  * existed, every effect and cache target was pinned at 1 regardless, so a
  * filtered or cached subtree rasterized at `1/pixelRatio` of the resolution it
- * was then sampled over — half the linear detail on a DPR-2 display, a third on
+ * was then sampled over - half the linear detail on a DPR-2 display, a third on
  * DPR 3.
  *
  * The rule is now: **an internal target inherits the resolution of the target it
@@ -41,15 +41,15 @@ const resolveOne = (value: TargetResolution, parentResolution: number): number =
 /**
  * Effective resolution for one barrier's targets.
  *
- * The MINIMUM across everything the barrier renders through — the node's cache
+ * The MINIMUM across everything the barrier renders through - the node's cache
  * setting when it caches, plus every filter in the chain. A filter chain shares
  * one target size from capture to composite, so a single low-resolution filter
  * has to pull the whole chain down with it; the alternative is resampling
  * between chain steps, which costs a full-target blit per step and still ends at
  * the lowest resolution in the chain.
  *
- * `parentResolution` is the enclosing target's — the canvas root's for a
- * top-level barrier, the enclosing barrier's for a nested one — so a filter
+ * `parentResolution` is the enclosing target's - the canvas root's for a
+ * top-level barrier, the enclosing barrier's for a nested one - so a filter
  * inside a cached container that halves its resolution composes multiplicatively
  * rather than jumping back to the root's.
  */
@@ -78,8 +78,8 @@ export const resolveBarrierResolution = (
  *
  * Clamping rather than failing is deliberate, and it is the one place this
  * feature is allowed to silently give you less than you asked for. The floor it
- * degrades toward is the behaviour that shipped before — a target at resolution
- * 1 — so the worst case of the clamp is exactly the old picture, never a lost
+ * degrades toward is the behaviour that shipped before - a target at resolution
+ * 1 - so the worst case of the clamp is exactly the old picture, never a lost
  * frame. Refusing instead would turn "your blurred container is 4100 units wide
  * on a DPR-3 phone" into a hard render error for a scene that renders fine
  * today.

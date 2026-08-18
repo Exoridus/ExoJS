@@ -29,7 +29,7 @@ function makeMeasureCtx(): Ctx2D {
 }
 
 /**
- * The LOGICAL typographic metrics of one font variant — advances and kerning,
+ * The LOGICAL typographic metrics of one font variant - advances and kerning,
  * in logical pixels, at the logical font size.
  *
  * This is the half of a glyph that layout consumes, and it is deliberately kept
@@ -45,7 +45,7 @@ function makeMeasureCtx(): Ctx2D {
  *   which {@link Application} happens to exist.
  *
  * One instance per `family` × `fontStyle` × `fontWeight`, shared by every atlas
- * of that variant regardless of mode, SDF radius or pixel ratio — see
+ * of that variant regardless of mode, SDF radius or pixel ratio - see
  * {@link GlyphAtlasPool.getMetrics}.
  *
  * Satisfies {@link GlyphProvider} so it can drive a measurement-only layout
@@ -62,7 +62,7 @@ export class GlyphMetrics implements GlyphProvider {
   private readonly _infos = new Map<string, GlyphInfo>();
   private readonly _kerning = new Map<string, number>();
 
-  /** Created on first use — a font variant that is never measured allocates no canvas. */
+  /** Created on first use - a font variant that is never measured allocates no canvas. */
   private _ctx: Ctx2D | null = null;
 
   public constructor(family: string, fontStyle: 'normal' | 'italic', fontWeight: string) {

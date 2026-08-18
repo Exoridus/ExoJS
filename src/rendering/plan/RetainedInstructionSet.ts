@@ -65,12 +65,12 @@ export interface RetainedBatchInstruction {
   /** `bundle.generation` at record time; a mismatch means stale GPU state. */
   readonly generation: number;
   /**
-   * GPU instances this batch draws — the replay draw's instance argument, NOT a
+   * GPU instances this batch draws - the replay draw's instance argument, NOT a
    * node count. See {@link nodeCount} for the `stats.submittedNodes` figure.
    */
   readonly instanceCount: number;
   /**
-   * Render nodes this batch was recorded from — its `stats.submittedNodes`
+   * Render nodes this batch was recorded from - its `stats.submittedNodes`
    * contribution on replay. Absent means one instance is one node, and
    * {@link instanceCount} stands in.
    *

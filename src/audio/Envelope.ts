@@ -54,13 +54,13 @@ export class Envelope {
    * note had been triggered `elapsedMs` ago, so the parameter is pinned to the
    * value the envelope had reached and only the stages still ahead are
    * scheduled. A stage already behind the resume point is skipped rather than
-   * replayed — that is what keeps a paused voice from starting its attack over,
+   * replayed - that is what keeps a paused voice from starting its attack over,
    * and equally from finding the envelope run out against a clock that kept
    * ticking while it was silent.
    */
   public trigger(gainParam: AudioParam, atTime: number, elapsedMs = 0): void {
-    // Bookkeeping records the *virtual* trigger point, so the geometry below —
-    // and every later `release()` — reads the same as for a note that really
+    // Bookkeeping records the *virtual* trigger point, so the geometry below -
+    // and every later `release()` - reads the same as for a note that really
     // started there.
     const triggeredAt = atTime - Math.max(0, elapsedMs) / 1000;
     const attackEnd = triggeredAt + this.attackMs / 1000;

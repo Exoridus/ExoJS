@@ -15,7 +15,7 @@ import {
 import { createWebGpuGpuTimer, WEBGPU_NO_TIMESTAMP_NOTE } from '../src/rendering/page/gpuFrameTimer';
 
 /**
- * Node-side tests for the `NEU-S4` DPR probe.
+ * Node-side tests for the DPR probe.
  *
  * Everything asserted here is the part that decides whether a capture taken on a
  * phone can be read at all: the run order, the internal-target instrumentation,
@@ -70,7 +70,7 @@ describe('probe matrix', () => {
     }
 
     // The last group is the enumerated text-density arm, which is a set of named
-    // pairs rather than a ladder — it still has to be adjacent in time.
+    // pairs rather than a ladder - it still has to be adjacent in time.
     expect(groups[groups.length - 1]).toEqual(TEXT_RATIO_CELLS.map(cell => cell.pixelRatio));
   });
 
@@ -81,7 +81,7 @@ describe('probe matrix', () => {
 
     // Three cells hold the surface at 2 and move only the glyph raster; the
     // fourth raises both. That is what separates "denser atlas" from "denser
-    // surface" — losing it would leave the comparison unable to answer either.
+    // surface" - losing it would leave the comparison unable to answer either.
     expect(cells.map(cell => [cell.pixelRatio, cell.textPixelRatio])).toEqual([
       [2, 1],
       [2, 2],
@@ -140,7 +140,7 @@ describe('internal-target instrumentation', () => {
     recorder.disarm();
     restore();
 
-    // Passed straight through: the engine sizes its own targets since NEU-S4,
+    // Passed straight through: the engine sizes its own targets,
     // and a probe that resized them would stop measuring the production path.
     expect(backend.calls).toEqual([[608, 644]]);
     expect(recorder.summary()).toEqual([{ kind: 'pooled', width: 608, height: 644, count: 1 }]);
@@ -336,7 +336,7 @@ describe('missing timestamp-query', () => {
 
     const samples = await timer.collect();
 
-    // No fabricated GPU time — the frame series stays empty. The queue series is
+    // No fabricated GPU time - the frame series stays empty. The queue series is
     // still gathered, because it measures a different thing and says so.
     expect(samples.frameMs).toEqual([]);
     expect(samples.queueMs).toHaveLength(1);

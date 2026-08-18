@@ -17,7 +17,7 @@ export interface AudioGeneratorVoiceInit extends BaseVoiceInit {
  * creates an independent voice.
  *
  * Exposes the generator parameters (`frequency`, `type`), mixes in
- * {@link RatePitched} (`detune` is real; `playbackRate` is stored but inert — an
+ * {@link RatePitched} (`detune` is real; `playbackRate` is stored but inert - an
  * oscillator has no playback rate, retune via `frequency`/`detune`) and
  * {@link Pausable}, and (via {@link BaseVoice}) {@link Spatializable}.
  *
@@ -27,7 +27,7 @@ export interface AudioGeneratorVoiceInit extends BaseVoiceInit {
  * **Pause retires the oscillator, it does not mute it.** An `OscillatorNode`
  * cannot be halted and restarted, so {@link AudioGeneratorVoice.pause} throws
  * the running one away and {@link AudioGeneratorVoice.resume} starts a fresh
- * one from the voice's current `type`/`frequency`/`detune` — a paused scene
+ * one from the voice's current `type`/`frequency`/`detune` - a paused scene
  * must not keep an oscillator synthesizing. The envelope is frozen at its pause
  * point and re-scheduled from there on resume, so a held note does not run
  * through its attack while inaudible. Only the waveform phase is lost, which is
@@ -52,7 +52,7 @@ export class AudioGeneratorVoice extends BaseVoice implements RatePitched, Pausa
    */
   private _paused = false;
   /**
-   * `true` once a stop is in flight — an envelope release or a timed fade —
+   * `true` once a stop is in flight - an envelope release or a timed fade -
    * and the voice is only waiting to be finished. Such a voice can no longer be
    * paused, only ended.
    */
@@ -148,8 +148,8 @@ export class AudioGeneratorVoice extends BaseVoice implements RatePitched, Pausa
   /**
    * Halt playback, keeping the envelope where it stands. An `OscillatorNode`
    * can be neither repositioned nor stopped-and-restarted, so the running one
-   * is retired outright — with its `onended` cleared first, so the teardown does
-   * not finish the voice — and {@link AudioGeneratorVoice.resume} starts a fresh
+   * is retired outright - with its `onended` cleared first, so the teardown does
+   * not finish the voice - and {@link AudioGeneratorVoice.resume} starts a fresh
    * one.
    *
    * The envelope is frozen at the value it has reached and its pending
@@ -157,8 +157,8 @@ export class AudioGeneratorVoice extends BaseVoice implements RatePitched, Pausa
    * `audioContext.currentTime` and a held note would silently run through its
    * attack and decay while the scene was paused.
    *
-   * A voice that is already stopping — an envelope release or a timed fade is in
-   * flight — ends here instead of pausing: nothing audible is left to freeze,
+   * A voice that is already stopping - an envelope release or a timed fade is in
+   * flight - ends here instead of pausing: nothing audible is left to freeze,
    * and retiring the oscillator would clear the `onended` that is the only thing
    * left to finish it.
    */

@@ -98,7 +98,7 @@ const mockAtlas: Partial<GlyphAtlas> = {
 };
 
 /**
- * The measurement path deliberately does NOT go through an atlas — it asks the
+ * The measurement path deliberately does NOT go through an atlas - it asks the
  * pool for the variant's logical metrics instead. The mock hands back the same
  * advance the mock atlas does, which is the whole point: a node and a static
  * measurement have to agree, and they only can if both numbers come from the
@@ -502,8 +502,8 @@ describe('Text.measure', () => {
   });
 
   // A measurement is a typographic question, not a rendering one. Routing it
-  // through an atlas would make it rasterize glyphs, claim atlas space, and —
-  // once an atlas is keyed on a pixel ratio — force it to guess which ratio it
+  // through an atlas would make it rasterize glyphs, claim atlas space, and -
+  // once an atlas is keyed on a pixel ratio - force it to guess which ratio it
   // should be measuring at.
   test('measures without ever acquiring an atlas', () => {
     Text.measure('Hello', { fontSize: 16 });

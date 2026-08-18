@@ -1,15 +1,15 @@
-// BeatDetector AudioWorkletProcessor — spectral-flux onset detection + ACF tempogram + PLL beat tracking.
+// BeatDetector AudioWorkletProcessor - spectral-flux onset detection + ACF tempogram + PLL beat tracking.
 //
 // This worklet is built through the `.worklet.ts` → `?worklet`
 // build plugin (see `@codexo/exojs-config/worklet-plugin`): real, typed
 // TypeScript instead of a template-string constant. It typechecks against the
 // AudioWorkletGlobalScope (see `worklet-globals.d.ts` + `../../tsconfig.worklets.json`),
-// NOT the DOM — this file must stay self-contained (no imports at runtime):
+// NOT the DOM - this file must stay self-contained (no imports at runtime):
 // `registerAudioWorkletProcessor` (`#audio/worklet/registerWorklet`) loads the
 // build-inlined source via a Blob URL passed to `audioWorklet.addModule()`.
 //
 // Consumed via `import beatDetectorWorkletSource from './beat-detector.worklet.ts?worklet'`
-// (see `../BeatDetector.ts`) — the `?worklet` query is what routes
+// (see `../BeatDetector.ts`) - the `?worklet` query is what routes
 // this file through the transpile-to-string plugin instead of normal
 // TypeScript module resolution.
 
@@ -413,7 +413,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
     this._maxBpm = opts.maxBpm || 300;
     this._melBands = opts.melBands || 24;
     // Low-latency emission: minSettlingMs replaces the old settlingMs (1500). It sets the
-    // EARLIEST point a (provisional) beat may be emitted — the ACF starts hunting a tempo once
+    // EARLIEST point a (provisional) beat may be emitted - the ACF starts hunting a tempo once
     // the flux ring holds this many hops instead of waiting a full slowest-tempo period.
     this._minSettlingMs = opts.minSettlingMs !== undefined ? opts.minSettlingMs : 400;
     this._emitProvisionalBeats = opts.emitProvisionalBeats !== false; // default true
@@ -482,7 +482,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
     this._ibiHistory = new Float32Array(4); // last 4 inter-beat intervals
     this._ibiIdx = 0;
 
-    // Bar position state — parallel posteriors for 4/4 and 3/4
+    // Bar position state - parallel posteriors for 4/4 and 3/4
     this._posterior4 = new Float32Array([0.25, 0.25, 0.25, 0.25]);
     this._posterior3 = new Float32Array([1 / 3, 1 / 3, 1 / 3]);
     this._ts4Confidence = 0.5;
@@ -507,7 +507,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
     // _emitBeat). _onGridStreak counts consecutive onset-matched beats toward promotion.
     this._minEmitHops = Math.max(1, Math.round((this._minSettlingMs * 0.001 * this._sampleRate) / this._hopSize));
     // _authLocked flips true the first time the flux ring holds a full slowest-tempo period
-    // (fluxCount ≥ maxLag+1) — the AUTHORITATIVE lock, identical to the original first lock.
+    // (fluxCount ≥ maxLag+1) - the AUTHORITATIVE lock, identical to the original first lock.
     // Before it, any ACF tempo is an early estimate that drives provisional beats only and is
     // re-adopted every hop (never frozen). After it, the octave-aware hysteresis owns the grid.
     this._authLocked = false;
@@ -637,7 +637,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
 
     // Tempogram: compute ACF periodically. The warm-up gate is lowered from a full slowest-
     // tempo period (_maxLag+1, ~1.2 s at minBpm) to _minEmitHops (~0.4 s) so a fast/core tempo
-    // can lock — and a provisional beat can fire — far earlier. The ACF over a short span only
+    // can lock - and a provisional beat can fire - far earlier. The ACF over a short span only
     // resolves tempos that already have ≳1 period of evidence in it, so slow tempos still wait
     // (physically) for their period; promotion to 'locked' still requires the full window.
     this._hopsSinceACF++;
@@ -652,7 +652,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
       this._computeACFAndCandidates();
     }
 
-    // Phase tracker — runs as soon as a tempo is locked. It is no longer gated on the
+    // Phase tracker - runs as soon as a tempo is locked. It is no longer gated on the
     // full settling window: the PLL bootstraps its phase from a real onset, so beats are
     // not lost to warm-up (the state-message tempo report still honours settling). Lock
     // itself cannot occur before the flux window holds ≥ maxLag+1 hops (~1.2 s at minBpm).
@@ -692,11 +692,11 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
       lin[t] = buf[(((wp - 1 - (n - 1 - t)) % len) + len) % len]!;
     }
 
-    // ACF (mean-subtracted, biased, zero-lag normalised) — mirrors computeAcf.
+    // ACF (mean-subtracted, biased, zero-lag normalised) - mirrors computeAcf.
     const acf = this._acf;
     computeAcfInline(lin, n, minLag, maxLag, acf);
 
-    // Raw positive peaks (interior + endpoints) — mirrors findTempoPeaks.
+    // Raw positive peaks (interior + endpoints) - mirrors findTempoPeaks.
     const peaks: TempoCandidateInline[] = [];
     const lastIdx = numLags - 1;
     if (numLags > 1 && acf[0]! > acf[1]! && acf[0]! > 0) {
@@ -714,7 +714,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
     }
     peaks.sort((a, b) => b.score - a.score);
 
-    // Filter to BPM range (with edge tolerance) — mirrors computeTempoCandidates filter.
+    // Filter to BPM range (with edge tolerance) - mirrors computeTempoCandidates filter.
     const inRange: TempoCandidateInline[] = [];
     for (let pf = 0; pf < peaks.length; pf++) {
       if (peaks[pf]!.bpm >= loBpm && peaks[pf]!.bpm <= hiBpm) inRange.push(peaks[pf]!);
@@ -750,7 +750,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
   // Metrically-related = same beat at another level (octaves + 3:2/2:3 dotted/triple).
   // Switching across these needs the strong margin so subdivision artefacts (e.g. the
   // 120 "dotted" grouping of a drifting 180 kit) cannot steal the lock. Independent
-  // reimplementation of isOctaveRelated (src/dsp/tempogram.ts) — constants must stay in sync.
+  // reimplementation of isOctaveRelated (src/dsp/tempogram.ts) - constants must stay in sync.
   // Shared by the stable-window hysteresis and the fast-window drift check below, which both
   // apply this exact test to their own tempo ratio.
   private _isOctaveRelated(ratio: number): boolean {
@@ -780,7 +780,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
     if (!this._authLocked) {
       // Pre-authoritative (provisional) phase: the flux ring does not yet hold a full
       // slowest-tempo period, so this tempo is an EARLY, possibly under-resolved estimate
-      // used only to drive provisional beats. Re-adopt the current best estimate every hop —
+      // used only to drive provisional beats. Re-adopt the current best estimate every hop -
       // never freeze it (an under-resolved edge lock must not stick). The AUTHORITATIVE lock
       // fires the instant the full window is available; that value is identical to the original
       // first lock, so the locked grid + hysteresis (and every locked beat) are unchanged.
@@ -854,7 +854,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
   // small-but-meaningful distance from the grid, and keeps pointing there for DRIFT_CONFIRM_HOPS
   // consecutive ACF hops, the grid follows it. Octave-scale and hard-jump disagreements are
   // left to the stable hysteresis above (it carries the octave guards); single noisy hops are
-  // filtered out by the persistence streak — so a static tempo is never made nervous.
+  // filtered out by the persistence streak - so a static tempo is never made nervous.
   private _trackDrift(fast: TempoCandidateInline[]): void {
     if (fast.length === 0) {
       this._driftHops = 0;
@@ -874,7 +874,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
       return;
     }
 
-    // Diverging within the drift band — accumulate a confirmation streak on a stable target.
+    // Diverging within the drift band - accumulate a confirmation streak on a stable target.
     if (this._driftBpm > 0 && Math.abs(fastTop.bpm / this._driftBpm - 1) < DRIFT_AGREE_FRAC) {
       this._driftHops++;
     } else {
@@ -910,7 +910,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
   // IBI-derived refractory. Updates the per-hop _onsetStrength and the detected-onset
   // stream consumed by the PLL.
   private _detectOnset(flux: number): void {
-    // Decaying running flux maximum — the reference level for the noise floor.
+    // Decaying running flux maximum - the reference level for the noise floor.
     this._fluxPeak *= ONSET_PEAK_DECAY;
     if (flux > this._fluxPeak) this._fluxPeak = flux;
 
@@ -946,8 +946,8 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
     this._onsetStrength = norm;
 
     // Rising-edge onset detection on the normalised novelty: fire on the UPWARD crossing
-    // of the adaptive threshold — the onset attack, exactly where the old crude heuristic
-    // fired, so the shipped beat-offset behaviour is preserved — gated by the noise floor
+    // of the adaptive threshold - the onset attack, exactly where the old crude heuristic
+    // fired, so the shipped beat-offset behaviour is preserved - gated by the noise floor
     // and an IBI-derived refractory. Zero lookahead latency.
     const noiseFloor = floorScale;
     const refractory = this._onsetRefractorySamples();
@@ -975,7 +975,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
     this._onsetHopCount++;
   }
 
-  // Onset CLOSEST to targetSample within ±windowSamples (sub-hop precise, from the onset ring) —
+  // Onset CLOSEST to targetSample within ±windowSamples (sub-hop precise, from the onset ring) -
   // the PLL's nearestOnset(): the phase-error reference for the period/phase correction. Using
   // the closest (not the loudest) onset keeps the loop locked to the phase it is tracking; a
   // louder neighbour (e.g. a bright off-beat hat) must not be allowed to yank the grid.
@@ -997,9 +997,9 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
     return best;
   }
 
-  // Strongest onset no older than maxAgeSamples (ties → most recent) — the phase anchor for
+  // Strongest onset no older than maxAgeSamples (ties → most recent) - the phase anchor for
   // the first beat. Anchoring to the strongest recent transient, rather than merely the
-  // latest, biases the bootstrap toward a real beat onset. Always a real onset — never the old
+  // latest, biases the bootstrap toward a real beat onset. Always a real onset - never the old
   // arbitrary settling boundary. Returns the anchor sample, or -1 if the ring is empty.
   private _bootstrapOnset(maxAgeSamples: number): number {
     let best = -1;
@@ -1035,8 +1035,8 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
     this._updateLookahead(beatTime);
 
     // Provisional→locked promotion (latched, one transition per stable segment). Locked needs
-    // the SAME evidence the old detector waited for before emitting at all — the full stable
-    // window (the AUTHORITATIVE lock) — PLUS LOCK_PROMOTE_BEATS beats sustained on that grid
+    // the SAME evidence the old detector waited for before emitting at all - the full stable
+    // window (the AUTHORITATIVE lock) - PLUS LOCK_PROMOTE_BEATS beats sustained on that grid
     // and a confidence floor, so a 'locked' beat is at least as trustworthy as a beat from the original detector.
     if (this._authLocked) {
       this._beatsSinceAuthLock++;
@@ -1082,7 +1082,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
     const acfIbi = (60 / this._bestBpm) * this._sampleRate;
 
     // Bootstrap: anchor the first beat to a real recent onset (never an arbitrary
-    // boundary). Emit it — it is a genuine, just-detected transient — so the leading
+    // boundary). Emit it - it is a genuine, just-detected transient - so the leading
     // on-grid beat is not lost to warm-up. If no onset has arrived yet, wait.
     if (this._lastBeatSample < 0) {
       const anchor = this._bootstrapOnset(PLL_BOOTSTRAP_MAX_AGE_IBI * acfIbi);
@@ -1095,7 +1095,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
 
     // Keep the PLL period anchored to the ACF tempo: it may track drift within the bounded
     // tempoGain, but a large gap (octave re-lock / tempoChange) re-seeds it so the loop
-    // never chases a stale interval. Tempo SELECTION is unchanged — this only refines the
+    // never chases a stale interval. Tempo SELECTION is unchanged - this only refines the
     // local period the phase tracker runs on.
     if (this._ibiSamples <= 0) this._ibiSamples = acfIbi;
     if (Math.abs(this._ibiSamples - acfIbi) > PLL_RESYNC_FRAC * acfIbi) {
@@ -1106,7 +1106,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
     const predicted = this._lastBeatSample + ibi;
     const acceptWin = PLL_ACCEPT_FRAC * ibi;
 
-    // Still early in the beat cycle — wait until we approach the prediction.
+    // Still early in the beat cycle - wait until we approach the prediction.
     if (this._sampleCount < predicted - acceptWin) return;
 
     const onset = this._nearestOnset(predicted, acceptWin);
@@ -1129,7 +1129,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
       // Prediction passed with no matching onset → free-run on the grid (period held).
       beatSample = predicted;
     } else {
-      // Inside the accept window with no onset yet — give a late onset a chance next hop.
+      // Inside the accept window with no onset yet - give a late onset a chance next hop.
       return;
     }
 
@@ -1137,7 +1137,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
     this._lastBeatSample = beatSample;
 
     // Coast gate: after a sustained onset gap (break / silence) keep the grid
-    // advancing but STOP emitting — this is what holds the breakDrop false-positive rate
+    // advancing but STOP emitting - this is what holds the breakDrop false-positive rate
     // down. Onset-rich material never trips it.
     const coasting = this._lastOnsetSample >= 0 && this._sampleCount - this._lastOnsetSample > ONSET_BEAT_COAST_IBI * ibi;
     if (coasting) return;

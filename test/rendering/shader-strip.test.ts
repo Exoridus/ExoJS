@@ -1,7 +1,7 @@
 /**
  * The production build ships shader sources with their comments and layout
  * whitespace removed (`@codexo/exojs-config/shader-strip`), because neither
- * Terser nor esbuild descends into a string literal — every comment in a
+ * Terser nor esbuild descends into a string literal - every comment in a
  * shader would otherwise be payload in every consumer's bundle.
  *
  * Removing text from a source that no test compiles in its stripped form is a

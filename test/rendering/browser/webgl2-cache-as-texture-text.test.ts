@@ -1,18 +1,18 @@
 /**
- * WebGL2 browser tests — text is correct on the first frame it is drawn,
+ * WebGL2 browser tests - text is correct on the first frame it is drawn,
  * cached or not.
  *
  * These pin the public correctness contract only, no implementation detail:
  *
  * 1. A text draw must not change pixels outside the geometry it actually
- *    covers — including when it is issued inside a cache/capture pass.
+ *    covers - including when it is issued inside a cache/capture pass.
  * 2. A `cacheAsTexture` subtree containing text must be correct on the FIRST
  *    bake, not only from a later frame on. A cache bakes whatever the first
  *    frame produced, so a first-frame error there is permanent rather than
  *    self-healing.
  *
- * The scene is deliberately trivial — one large, unambiguous red fill plus a
- * small text node in a bounded region — so a probe well inside the fill but
+ * The scene is deliberately trivial - one large, unambiguous red fill plus a
+ * small text node in a bounded region - so a probe well inside the fill but
  * well outside the text is an unambiguous witness for contract 1.
  *
  * The last cell pins the backend invariant these rest on: WebGL keeps the
@@ -308,7 +308,7 @@ describe('WebGL2 cacheAsTexture + Text correctness', () => {
 
       render(backend, root);
 
-      // Frame 1 must not differ from frame 0 — a self-healing second frame is
+      // Frame 1 must not differ from frame 0 - a self-healing second frame is
       // exactly the symptom this cell exists to catch.
       expect(readWebGl2Pixel(backend, 20, 20)).toEqual(firstFrame);
       expectContract(backend, 'uncached frame 1');

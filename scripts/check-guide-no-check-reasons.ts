@@ -4,13 +4,13 @@
  *   ```ts no-check -- <reason>
  *
  * A `no-check` block tells `extract-guide-snippets.ts` to skip a fenced
- * ts/tsx/js/javascript block entirely — nothing ever type-checks it. Until now
+ * ts/tsx/js/javascript block entirely - nothing ever type-checks it. Until now
  * that was a bare opt-out: any author could silence any block with no record
  * of why. This closes that gap the same way `guide-partial-baseline.ts` closes
- * the `partial`-block one (imported and reused here, unmodified — the ratchet
+ * the `partial`-block one (imported and reused here, unmodified - the ratchet
  * shape is identical, only what gets counted differs): a per-file,
  * monotonically-decreasing budget of "no-check blocks that still lack a
- * reason", frozen at the count measured when this gate shipped — see
+ * reason", frozen at the count measured when this gate shipped - see
  * `guide-no-check-baseline.json`.
  *
  * Deliberately NOT a hard "every no-check needs a reason, starting today"
@@ -22,20 +22,20 @@
  *   - Giving an EXISTING no-check block a reason removes it from the count,
  *     shrinking the budget -> improvement -> `--update-baseline` records it.
  *   - A no-check block WITH a reason never counts against the budget at all,
- *     new or old — so the practical effect is "a no-check needs a reason
+ *     new or old - so the practical effect is "a no-check needs a reason
  *     unless you are (knowingly) spending down inherited, reviewed debt in
  *     that same file."
  *
  * This does not replace `extract-guide-snippets.ts`'s own `no-check` handling
- * (a plain `meta.includes('no-check')` check) — a reason sits right after
+ * (a plain `meta.includes('no-check')` check) - a reason sits right after
  * `no-check` on the same fence-meta line without breaking that check, so no
  * change there is needed or made. This script re-parses the same fences
  * independently (mirroring `extract-guide-snippets.ts`'s own `CHECKED_LANGS` +
  * `FENCE_RE`) rather than importing from the extractor, so the count matches
- * what that script actually processes — NOT a raw text grep, which also
+ * what that script actually processes - NOT a raw text grep, which also
  * matches fences the extractor cannot see at all (`FENCE_RE` anchors
  * `` ^``` `` at column 0, so a list-indented fence is invisible to both the
- * extractor and this gate) — and so this gate can run standalone, before the
+ * extractor and this gate) - and so this gate can run standalone, before the
  * much heavier extraction + typecheck pass.
  */
 import { readdirSync, readFileSync } from 'node:fs';

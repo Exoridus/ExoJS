@@ -1,16 +1,16 @@
-// Structural GLSL integrity — the jsdom counterpart to
+// Structural GLSL integrity - the jsdom counterpart to
 // `test/rendering/browser/webgl2-shader-compile.test.ts`.
 //
 // jsdom has no WebGL2 context, so this project cannot compile/link shaders the
-// way the browser lanes do — that gap is intentional and stays covered there.
+// way the browser lanes do - that gap is intentional and stays covered there.
 // What jsdom CAN and, until now, did not check: that `.vert`/`.frag` imports
 // resolve to the real shipped source at all. `shaderStubPlugin` rewrites every
 // `.vert`/`.frag` import to `export default ""` in most jsdom projects; the
 // `exojs` and `exojs-particles` projects (see `vitest.config.ts`) now use
 // `realShaderPlugin` instead, but a `?raw` import bypasses either plugin, so
 // this spec verifies the actual files on disk independent of that wiring. A
-// corrupted or truncated shader — one that would silently pass in a
-// stub-blanked lane — fails a purely textual check here without needing a GPU.
+// corrupted or truncated shader - one that would silently pass in a
+// stub-blanked lane - fails a purely textual check here without needing a GPU.
 import { describe, expect, test } from 'vitest';
 
 // Same glob as the browser compile suite: core WebGL2 GLSL plus every
@@ -41,8 +41,8 @@ const BRACKET_CLOSER_CHARS = new Set(Object.values(BRACKET_CLOSERS));
  * Returns `null` when every `()`/`[]`/`{}` in `source` is balanced and
  * correctly nested, otherwise a short description of the first mismatch.
  * A stack-based check catches truncation and copy/paste corruption without
- * parsing GLSL — exactly the "what the code hands us" structural gate ME-79
- * asked for, no GLSL parser dependency required.
+ * parsing GLSL: a "what the code hands us" structural gate with no GLSL parser
+ * dependency.
  */
 const findBracketMismatch = (source: string): string | null => {
   const stack: string[] = [];

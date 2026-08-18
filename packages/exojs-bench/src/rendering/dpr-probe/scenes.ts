@@ -13,7 +13,7 @@ import type { ProbeMode, ProbeSceneId } from './matrix';
 /**
  * Scenes for the manual DPR / internal-target probe.
  *
- * Every scene is built from PUBLIC engine API only — `Graphics`, `Sprite`,
+ * Every scene is built from PUBLIC engine API only - `Graphics`, `Sprite`,
  * `Text`, `ColorMatrixFilter`, `BlurFilter`, `cacheAsTexture`. Nothing here is a new
  * engine feature; the probe measures paths a user already has.
  */
@@ -66,13 +66,13 @@ export interface ProbeSceneOptions {
   readonly stageHeight: number;
   /**
    * `Text.pixelRatio` for the scene's runtime text, or omitted to let it inherit
-   * the application's ratio. Only the `text-ratio` scene reads it — every other
+   * the application's ratio. Only the `text-ratio` scene reads it - every other
    * scene must keep measuring the shipped default.
    */
   readonly textPixelRatio?: number;
   /**
    * Which arm the cell runs. `logical` pins `Filter.resolution` and
-   * `RenderNode.cacheResolution` to 1, reproducing the pre-`NEU-S4` sizing
+   * `RenderNode.cacheResolution` to 1, reproducing the pre-inheritance sizing
    * through ordinary public API; `inherit` leaves both at their default.
    */
   readonly mode: ProbeMode;
@@ -82,7 +82,7 @@ export interface ProbeSceneOptions {
  * A small texture with hard, off-axis edges: two diagonals and a corner wedge on
  * a flat field.
  *
- * Deliberately a real raster texture, not vector art — a sprite is the one part
+ * Deliberately a real raster texture, not vector art - a sprite is the one part
  * of the scene whose sharpness CANNOT improve with device pixels, so it is the
  * control against which the resolution-independent content (Graphics, SDF text)
  * is judged.
@@ -146,7 +146,7 @@ const createFlatTexture = (): Texture => {
  *
  * The hairlines are the point. A 1-unit stroke is one device pixel at DPR 1,
  * two at DPR 2 and three at DPR 3, so its rendered sharpness is a direct read of
- * the surface's real resolution — and, when the content sits behind an effect or
+ * the surface's real resolution - and, when the content sits behind an effect or
  * a texture cache, of the INTERNAL target's resolution instead.
  */
 const buildSharpContent = (stageSize: number, withText: boolean): { node: Container; textures: Texture[]; spin: Graphics; textNodes: Text[] } => {
@@ -223,8 +223,8 @@ const buildSharpContent = (stageSize: number, withText: boolean): { node: Contai
 };
 
 /**
- * Build the `text-ratio` scene: the same sentence at 9, 11 and 16px, twice —
- * once as plain fill and once with an outline — over a flat panel.
+ * Build the `text-ratio` scene: the same sentence at 9, 11 and 16px, twice -
+ * once as plain fill and once with an outline - over a flat panel.
  *
  * Deliberately nothing but text. Every other scene mixes geometry, a sprite and
  * an effect so a tester can judge the SURFACE resolution; this one exists to
@@ -315,7 +315,7 @@ const buildOverdrawScene = (stageWidth: number, stageHeight: number): ProbeScene
     cacheNodes: [],
     textNodes: [],
     update(frame: number): void {
-      // A one-unit wobble so the frame is never a literal repeat of the last —
+      // A one-unit wobble so the frame is never a literal repeat of the last -
       // it changes no fill-rate property, it only stops a driver from treating
       // the surface as unchanged.
       const dx = Math.sin(frame * 0.15);
@@ -337,14 +337,14 @@ const buildOverdrawScene = (stageWidth: number, stageHeight: number): ProbeScene
  * `cache-texture` is deliberately the only STATIC scene: a texture cache exists to
  * be baked once and replayed, and any per-frame mutation would change the node's
  * world bounds, invalidate the cache every frame and turn the scene into a
- * "re-bake a cache 60 times a second" benchmark — which is not what anyone runs
- * and not what `NEU-S4` is about. Its measured cost is therefore the REPLAY
+ * "re-bake a cache 60 times a second" benchmark - which is not what anyone runs
+ * and not what this probe is about. Its measured cost is therefore the REPLAY
  * cost, and its interesting column is sharpness, not milliseconds.
  *
  * It is also the only scene WITHOUT text, and not by preference. Measured while
  * building this probe (desktop Chromium, both backends, same page): a
  * `cacheAsTexture` container that contains a `Text` node draws NOTHING on WebGL2
- * — not the text and not its non-text siblings — while the identical scene
+ * - not the text and not its non-text siblings - while the identical scene
  * renders correctly on WebGPU, and while the same content behind a filter (no
  * cache) renders correctly on both. Since iOS Safari is always WebGL2, keeping
  * text here would have made the whole `cacheAsTexture` arm a black rectangle on
@@ -354,7 +354,7 @@ const buildOverdrawScene = (stageWidth: number, stageHeight: number): ProbeScene
 export const createProbeScene = (id: ProbeSceneId, options: ProbeSceneOptions): ProbeScene => {
   const { stageWidth, stageHeight, mode } = options;
   const stageSize = Math.min(stageWidth, stageHeight);
-  // `logical` reproduces the pre-NEU-S4 sizing through ordinary public API
+  // `logical` reproduces the pre-inheritance sizing through ordinary public API
   // rather than through a bench hook: pin both knobs to 1 device pixel per
   // logical unit. `inherit` leaves them at their default and is what a user
   // gets without touching anything.
@@ -384,7 +384,8 @@ export const createProbeScene = (id: ProbeSceneId, options: ProbeSceneOptions): 
   }
 
   if (id === 'blur') {
-    // `radius` is in LOGICAL units since NEU-S4, so it is NOT scaled here — the
+    // `radius` is in LOGICAL units since internal targets inherit the surface
+    // resolution, so it is NOT scaled here - the
     // filter converts it into target texels itself. Both arms therefore blur
     // over the same on-screen distance and differ only in how finely it is
     // sampled, which is exactly the comparison this scene is for.

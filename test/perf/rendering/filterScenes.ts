@@ -4,7 +4,7 @@
  * Deliberately NOT part of `ALLOCATION_ARCHETYPES`: that list's documented
  * baselines are the medians ITS order produces, so appending to it would
  * invalidate every number in the gate. These scenes answer a different
- * question — how filter allocation SCALES — and are driven one-per-process by
+ * question - how filter allocation SCALES - and are driven one-per-process by
  * `run-allocation-cell.ts`.
  *
  * ── Why a matrix and not a coverage list ──────────────────────────────────
@@ -15,10 +15,10 @@
  *
  *   BARRIER      the plan-side entry: an effect descriptor, a barrier scope, a
  *                child plan, and a collect walk that cannot use the retained
- *                tier. `clip/N` isolates it — a rect clip is a barrier with NO
+ *                tier. `clip/N` isolates it - a rect clip is a barrier with NO
  *                offscreen target and NO filter pass.
  *   TARGET       the offscreen capture: acquire, a `BackendTargetPass`, a
- *                render-to-texture round trip, release. `mask/N` isolates it —
+ *                render-to-texture round trip, release. `mask/N` isolates it -
  *                an alpha mask takes two targets and composites, with no
  *                `Filter.apply` anywhere.
  *   FILTER PASS  `Filter.apply` itself, once per filter in the chain.
@@ -35,7 +35,7 @@
  * same subtree with `cacheAsTexture`, where the filter passes are supposed to
  * stop running after the bake.
  *
- * Every scene here is STATIC — no `beforeFrame`. That is the point: a static
+ * Every scene here is STATIC - no `beforeFrame`. That is the point: a static
  * filtered scene should be the cheapest frame there is, and measuring one that
  * is not is what this catalog exists for.
  *

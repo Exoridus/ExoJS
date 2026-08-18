@@ -86,8 +86,8 @@ function driveAndCompare(samples: Float32Array): void {
 
 /**
  * Builds a callable that invokes the worklet's own `_isOctaveRelated` method on a real,
- * running processor instance (via the eval sandbox). Exercising the actual method — rather
- * than pattern-matching it out of the emitted source text — keeps this parity check valid
+ * running processor instance (via the eval sandbox). Exercising the actual method - rather
+ * than pattern-matching it out of the emitted source text - keeps this parity check valid
  * regardless of minification or any other source-level transform.
  */
 function buildWorkletOctaveCheck(): (bpm: number, ref: number) => boolean {
@@ -97,7 +97,7 @@ function buildWorkletOctaveCheck(): (bpm: number, ref: number) => boolean {
 }
 
 describe('isOctaveRelated ↔ worklet inline octave check parity', () => {
-  // Invoked live on a real worklet processor instance — if worklet constants drift, this fails.
+  // Invoked live on a real worklet processor instance - if worklet constants drift, this fails.
   const workletIsOctave = buildWorkletOctaveCheck();
 
   const cases: [number, number, boolean, string][] = [

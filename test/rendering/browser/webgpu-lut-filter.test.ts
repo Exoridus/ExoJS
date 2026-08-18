@@ -1,5 +1,5 @@
 /**
- * RGB-1D LUT grading, on a real WebGPU GPU — the WGSL half of
+ * RGB-1D LUT grading, on a real WebGPU GPU - the WGSL half of
  * `webgl2-lut-filter.test.ts`. Both backends must implement the same contract:
  * three independent per-channel curves, alpha untouched.
  */

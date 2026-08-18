@@ -1,15 +1,15 @@
-// Vocoder AudioWorkletProcessor — bandpass filterbank + envelope-follower carrier modulation.
+// Vocoder AudioWorkletProcessor - bandpass filterbank + envelope-follower carrier modulation.
 //
 // This worklet is built through the `.worklet.ts` → `?worklet`
 // build plugin (see `@codexo/exojs-config/worklet-plugin`): real, typed
 // TypeScript instead of a template-string constant. It typechecks against the
 // AudioWorkletGlobalScope (see `worklet-globals.d.ts` + `../../tsconfig.worklets.json`),
-// NOT the DOM — this file must stay self-contained (no imports at runtime):
+// NOT the DOM - this file must stay self-contained (no imports at runtime):
 // `registerAudioWorkletProcessor` (`#audio/worklet/registerWorklet`) loads the
 // build-inlined source via a Blob URL passed to `audioWorklet.addModule()`.
 //
 // Consumed via `import vocoderWorkletSource from './vocoder.worklet.ts?worklet'`
-// (see `../effects/VocoderEffect.ts`) — the `?worklet` query is what routes
+// (see `../effects/VocoderEffect.ts`) - the `?worklet` query is what routes
 // this file through the transpile-to-string plugin instead of normal
 // TypeScript module resolution.
 
@@ -17,7 +17,7 @@
 // deliberately NOT the same as reading the ambient `sampleRate` global directly
 // inside the constructor. Test harnesses that `eval()` this source stub the
 // `sampleRate` global only for the duration of that eval call (class
-// definition), then restore it — an instance created later (e.g. from a test's
+// definition), then restore it - an instance created later (e.g. from a test's
 // `beforeAll`) would otherwise see the global's restored (unset) value. Capturing
 // it here, at eval time, is what makes construction see the right value.
 const sampleRate: number = (globalThis as unknown as { sampleRate: number }).sampleRate;

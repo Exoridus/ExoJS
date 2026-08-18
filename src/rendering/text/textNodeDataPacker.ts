@@ -4,20 +4,20 @@ import { Text } from '#rendering/text/Text';
 // ── Shared per-node data layout ──────────────────────────────────────────────
 //
 // 10 texels (40 floats) per node, packed identically by WebGl2TextRenderer
-// (an RGBA32F data texture) and WebGpuTextRenderer (a storage buffer) — only
+// (an RGBA32F data texture) and WebGpuTextRenderer (a storage buffer) - only
 // the destination resource differs, never the bytes.
 //
-// Texel 0 : (a,  c,  0,  tx)  — mat3 column-major: col0 + translate.x
-// Texel 1 : (b,  d,  0,  ty)  — mat3 column-major: col1 + translate.y
-// Texel 2 : (r,  g,  b,  a )  — fillColor (linear 0-1)
-// Texel 3 : (r,  g,  b,  a )  — outlineColor
+// Texel 0 : (a,  c,  0,  tx) - mat3 column-major: col0 + translate.x
+// Texel 1 : (b,  d,  0,  ty) - mat3 column-major: col1 + translate.y
+// Texel 2 : (r,  g,  b,  a ) - fillColor (linear 0-1)
+// Texel 3 : (r,  g,  b,  a ) - outlineColor
 // Texel 4 : (outlineMin, shadowAlpha, shadowBlur, gradientEnabled)
 //             outlineMin = 0.5 → disabled; < 0.5 → enabled with that threshold
-// Texel 5 : (r,  g,  b,  a )  — shadowColor
+// Texel 5 : (r,  g,  b,  a ) - shadowColor
 // Texel 6 : (shadowOffX_px, shadowOffY_px, gradientVertical, sdfRadius_logical)
-// Texel 7 : (r,  g,  b,  a )  — gradientTop
-// Texel 8 : (r,  g,  b,  a )  — gradientBottom
-// Texel 9 : (minX, minY, w, h) — text block bounds (local space, for gradient UV)
+// Texel 7 : (r,  g,  b,  a ) - gradientTop
+// Texel 8 : (r,  g,  b,  a ) - gradientBottom
+// Texel 9 : (minX, minY, w, h) - text block bounds (local space, for gradient UV)
 //
 // texel 0's spare `.z` carries the snap-mode flag the vertex shader reads to
 // decide whether to snap the glyph origin to the device-pixel grid. Both
@@ -53,9 +53,9 @@ export function packTextNodeTransform(target: Float32Array, base: number, node: 
 }
 
 /**
- * Packs one node's full 10-texel (40-float) row — world transform, snap-mode
+ * Packs one node's full 10-texel (40-float) row - world transform, snap-mode
  * flag, fill/outline/shadow colors, shadow offset, gradient axis/colors, and
- * ink bounds — into `target` starting at float index `base`.
+ * ink bounds - into `target` starting at float index `base`.
  *
  * Backend-free: this is the single implementation both `WebGl2TextRenderer`
  * and `WebGpuTextRenderer` call to fill their respective per-node data
@@ -106,7 +106,7 @@ export function packTextNodeData(target: Float32Array, base: number, node: Text 
   // Shadow offset + gradient axis (texel 6)
   // Stored in ATLAS TEXELS; the shaders divide by the atlas page size to get
   // the UV offset. The style states the offset in LOGICAL pixels, and one
-  // logical pixel is `rasterPixelRatio` texels — without the scale a shadow
+  // logical pixel is `rasterPixelRatio` texels - without the scale a shadow
   // would shorten by exactly that factor as the glyph raster got denser.
   const texelsPerLogicalPixel = node.rasterPixelRatio;
   target[base + 24] = style.shadowOffsetX * texelsPerLogicalPixel;
@@ -115,8 +115,8 @@ export function packTextNodeData(target: Float32Array, base: number, node: Text 
   // The node's SDF buffer radius in LOGICAL pixels, which is the field's scale:
   // the distance value moves by 1/radius per logical unit whatever the atlas
   // density. The fragment stage sizes its antialiased edge from it. Zero means
-  // "unknown", which is the honest answer for a BitmapText — an offline MSDF
-  // atlas carries no distance range — and selects the derivative fallback.
+  // "unknown", which is the honest answer for a BitmapText - an offline MSDF
+  // atlas carries no distance range - and selects the derivative fallback.
   target[base + 27] = node instanceof Text ? node.sdfRadius : 0;
 
   // Gradient top (texel 7) / bottom (texel 8)
@@ -137,7 +137,7 @@ export function packTextNodeData(target: Float32Array, base: number, node: Text 
 
   // Text ink bounds (texel 9): (minX, minY, width, height)
   // The vertex shader uses these to compute normalized gradient UV, so it
-  // needs the rectangle the glyph quads actually cover — not the advance
+  // needs the rectangle the glyph quads actually cover - not the advance
   // extent, whose origin is (0, 0) while the SDF quads start at a negative
   // offset.
   const ink = node.getLocalBounds();

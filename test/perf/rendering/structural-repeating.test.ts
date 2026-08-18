@@ -56,7 +56,7 @@ describe('structural — RepeatingSprite', () => {
       const tiers = [measureFrame(harness, root), measureFrame(harness, root), measureFrame(harness, root), measureFrame(harness, root)];
 
       for (const tier of tiers) {
-        // 2×2 tiles per sprite — the instance count the node expands into.
+        // 2×2 tiles per sprite - the instance count the node expands into.
         expect(tier.instances).toBe(4 * 4);
         expect(tier.visibleNodes).toBe(4);
       }

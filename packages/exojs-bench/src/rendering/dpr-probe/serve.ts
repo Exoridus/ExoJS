@@ -30,7 +30,7 @@ const CERT_DIR = join(REPO_ROOT, '.workspace', 'dpr-probe-cert');
 /**
  * Interface names that belong to a virtual switch rather than to a real network.
  *
- * They are non-internal, so a naive "first non-internal IPv4" picks them — and on
+ * They are non-internal, so a naive "first non-internal IPv4" picks them - and on
  * this machine it did, printing a Hyper-V `172.24.16.1` that no phone can reach.
  * They are sorted last rather than dropped: on a host where the only usable
  * address IS such an adapter, printing it beats printing nothing.
@@ -84,7 +84,7 @@ const resolveOpenssl = (): string => {
  * separate reasons, and a LAN `http://` origin is not one:
  *
  * 1. `crossOriginIsolated` requires it, and without isolation WebKit coarsens
- *    `performance.now()` — the probe's primary metric.
+ *    `performance.now()` - the probe's primary metric.
  * 2. `navigator.gpu` is unavailable outside a secure context, so the WebGPU arm
  *    could not even be attempted.
  *
@@ -168,7 +168,7 @@ interface SubmitResponse {
  * server, never in anything shipped.
  *
  * The filename is derived SERVER-SIDE from the parsed capture (its own
- * timestamp and device label, both slugged) and joined onto a fixed directory —
+ * timestamp and device label, both slugged) and joined onto a fixed directory -
  * nothing the page sends can steer the write out of {@link CAPTURE_DIR}.
  */
 const submitPlugin = (): unknown => ({

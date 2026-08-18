@@ -205,7 +205,7 @@ export class AudioGenerator implements Playable {
   /**
    * Index of the voice to stop when the pool is at capacity.
    *
-   * Paused voices are considered only as a last resort — same rule, and same
+   * Paused voices are considered only as a last resort - same rule, and same
    * reason, as {@link Sound}: a paused voice is not a stale one, it is frozen
    * exactly where a scene pause or retention suspension left it, but its
    * `startedAt` keeps aging against the still-running context clock, so both

@@ -9,9 +9,9 @@
  * passes' worth of rows into the frame-scoped buffer.
  *
  * Nothing else catches its removal. The pixel suite
- * (`browser/webgl2-effect-direct-draw.test.ts`) passes with the bracket gone —
+ * (`browser/webgl2-effect-direct-draw.test.ts`) passes with the bracket gone -
  * the picture is identical, only the buffer traffic and the flush granularity
- * change — and the allocation gate reads a filtered scene as CHEAPER without
+ * change - and the allocation gate reads a filtered scene as CHEAPER without
  * it. Measured on `blur-q3`, dropping the bracket moves draw calls 1600 -> 300
  * and transform bytes 48000 -> 116288: batching improves, upload traffic
  * nearly triples.
@@ -19,7 +19,7 @@
  * ── INTEGRATOR NOTE ─────────────────────────────────────────────────────────
  * These are exact per-frame counts on a fixed scene, machine-independent for
  * the same reason `counter-gates.test.ts` pins its table. Hoisting the bracket
- * out of a filter's sample loop — batching a blur's samples into one draw — is
+ * out of a filter's sample loop - batching a blur's samples into one draw - is
  * a DELIBERATE follow-up that will move every number here. When that lands,
  * re-measure and update the table, and confirm the transform-byte column moved
  * the way you intended: fewer draw calls at the cost of more upload bytes is a
@@ -85,8 +85,8 @@ describe('effect pass shape', () => {
     try {
       const frame = measureSteadyFrame(harness, root);
 
-      // A separable blur is two sweeps — horizontal into a borrowed scratch,
-      // vertical into the output — so it costs one pass more than a
+      // A separable blur is two sweeps - horizontal into a borrowed scratch,
+      // vertical into the output - so it costs one pass more than a
       // single-pass filter. What the bracket is measured by is still the draw
       // and byte columns: the taps inside each sweep must not stack up.
       expect(frame.renderPasses).toBe(3 * NODES);

@@ -44,7 +44,7 @@ export const readEngineVersion = (): string => {
  * The subset of {@link LIBRARY_ARMS} actually resolvable from this package, so
  * Vite's `optimizeDeps.include` only pre-bundles competitors that are present. A
  * competitor left unlinked (no `bench:setup`) is simply omitted rather than
- * crashing esbuild's optimizer at server startup — an ExoJS-only run then needs
+ * crashing esbuild's optimizer at server startup - an ExoJS-only run then needs
  * none of the competitor deps present.
  */
 const resolvableCompetitors = (): string[] => {
@@ -78,7 +78,7 @@ const loadVite = async (): Promise<{ createServer: (config: Record<string, unkno
  * Serves `.vert`/`.frag`/`.glsl`/`.wgsl` imports as their REAL source text
  * (mirrors the production shader plugin). This is the deliberate inverse of the
  * vitest browser project's `shaderStubPlugin`, which replaces shaders with `""`
- * — benchmarking a renderer with empty shaders measures nothing.
+ * - benchmarking a renderer with empty shaders measures nothing.
  */
 const realShaderPlugin = {
   name: 'baseline-real-shader',
@@ -97,8 +97,8 @@ const realShaderPlugin = {
  * MUST be `false`: the competitor arms are pre-bundled from their published npm
  * dist (`optimizeDeps.include`), i.e. their PRODUCTION builds with dev-only
  * guards already stripped. Measuring exojs source with `__DEV__=true` therefore
- * pits an unshipped dev build — carrying per-frame dev diagnostics that can scan
- * the whole captured set on a clean retained frame — against competitors' prod
+ * pits an unshipped dev build - carrying per-frame dev diagnostics that can scan
+ * the whole captured set on a clean retained frame - against competitors' prod
  * builds. That asymmetry inflated the exojs numbers by 20-30x on the
  * static-heavy retained arm alone (2.3 ms vs the real ~0.1 ms prod floor).
  * `false` compiles the same path a shipped exojs game runs, making the
@@ -133,8 +133,8 @@ const devGlobalsPlugin = (version: string) => ({
  * resolution (~5µs), so the CPU timer can actually resolve the small per-frame
  * costs the low-node-count cells sit on instead of quantising them to the timer
  * floor. It also unlocks `SharedArrayBuffer`. Isolation requires BOTH:
- *   - COOP `same-origin` — severs the opener relationship.
- *   - COEP `require-corp` — every subresource must opt in via CORP/CORS.
+ *   - COOP `same-origin` - severs the opener relationship.
+ *   - COEP `require-corp` - every subresource must opt in via CORP/CORS.
  * Every resource a harness page loads (the page, its entry module, engine
  * source, shaders) is served by this same Vite origin, so it is same-origin and
  * passes the COEP check without a CORP header; textures are generated in-page
@@ -142,7 +142,7 @@ const devGlobalsPlugin = (version: string) => ({
  * same-origin subresource is unambiguously embeddable.
  *
  * Isolation additionally requires a SECURE context, which `http://` on a LAN
- * address is not — see {@link StartViteServerOptions.https}.
+ * address is not - see {@link StartViteServerOptions.https}.
  */
 const CROSS_ORIGIN_ISOLATION_HEADERS: Readonly<Record<string, string>> = {
   'Cross-Origin-Opener-Policy': 'same-origin',
@@ -204,7 +204,7 @@ export const startViteServer = async (options: StartViteServerOptions): Promise<
     },
     // Resolve the engine's `#*` subpath imports to its TypeScript source.
     //
-    // The nearest package.json to the adapter files is `@codexo/exojs-bench`'s —
+    // The nearest package.json to the adapter files is `@codexo/exojs-bench`'s -
     // which deliberately does NOT redefine `#*` (Node forbids an `imports` target
     // escaping the package with `../`). A single alias maps every `#…` specifier
     // straight to `<repo>/src/…`, reproducing the root map's pure `#* → ./src/*`
@@ -215,7 +215,7 @@ export const startViteServer = async (options: StartViteServerOptions): Promise<
     // `realShaderPlugin`'s transform.
     resolve: { alias: [{ find: /^#(.*)$/, replacement: `${ENGINE_SRC}/$1` }], conditions: srcConditions },
     ssr: { resolve: { conditions: srcConditions } },
-    // `noDiscovery` keeps the automatic dep scanner OFF — it runs esbuild over
+    // `noDiscovery` keeps the automatic dep scanner OFF - it runs esbuild over
     // the whole import graph, which would choke on the engine's `.vert`/`.frag`
     // imports the real-shader plugin only handles in the transform pass. But the
     // competitor arms are real npm dependencies whose bundles/transitive deps

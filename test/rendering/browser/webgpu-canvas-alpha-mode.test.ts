@@ -5,7 +5,7 @@
  * option.
  *
  * The frame is sampled through a 2D canvas, which is the browser's own
- * composite of the presented canvas — exactly the step a framebuffer readback
+ * composite of the presented canvas - exactly the step a framebuffer readback
  * (and therefore the parity matrix) cannot see.
  *
  * Run via:  pnpm test:browser:webgpu

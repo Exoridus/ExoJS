@@ -1,5 +1,5 @@
 /**
- * ColorMatrixFilter on a real WebGPU GPU — the WGSL half of
+ * ColorMatrixFilter on a real WebGPU GPU - the WGSL half of
  * `webgl2-color-matrix-filter.test.ts`. Same matrices, same expected pixels:
  * the straight-alpha round trip has to be identical on both backends, since
  * both write into the same premultiplied targets.

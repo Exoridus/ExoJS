@@ -1,11 +1,11 @@
 /**
- * WebGL2 browser tests for HiDPI runtime text — `Text.pixelRatio`.
+ * WebGL2 browser tests for HiDPI runtime text - `Text.pixelRatio`.
  *
  * These need a REAL canvas: the whole cut is about what the glyph rasterizer
  * puts on the raster grid, and jsdom has neither `getImageData` nor real font
  * metrics. What is pinned here:
  *
- * 1. The raster grid grows with the ratio — bigger tiles, bigger SDF buffer.
+ * 1. The raster grid grows with the ratio - bigger tiles, bigger SDF buffer.
  * 2. The LOGICAL layout does not move. Advances, wrapping, line breaks,
  *    `Text.measure` and the outline/shadow reach are identical at every ratio;
  *    only sharpness, tile size and memory change. This is the invariant the
@@ -13,7 +13,7 @@
  *    silently break.
  * 3. A node inherits the SURFACE's ratio through the backend it is drawn by,
  *    and an explicit override beats it.
- * 4. Cost and limits are measured rather than assumed — the memory table is
+ * 4. Cost and limits are measured rather than assumed - the memory table is
  *    printed, and the page-overflow diagnosis names the ratio that caused it.
  *
  * Run via:  pnpm test:browser:webgl
@@ -68,7 +68,7 @@ describe('SDF rasterization at a pixel ratio', () => {
   });
 
   // The SDF buffer is the outline/shadow reach. It has to grow with the raster
-  // grid, or the reach would shrink by exactly the ratio in logical units —
+  // grid, or the reach would shrink by exactly the ratio in logical units -
   // which is why the bearing (−buffer, normalized back) is ratio-invariant.
   test('scales the SDF buffer so the logical reach is unchanged', () => {
     const pool = new GlyphAtlasPool();
@@ -84,7 +84,7 @@ describe('SDF rasterization at a pixel ratio', () => {
   // The tile is the one number that CANNOT be ratio-invariant: its edges are
   // ceiled onto the raster grid, and a denser grid rounds differently. The
   // requirement is that it stays within a logical pixel, which is what keeps
-  // the ink extent — and therefore culling and hit testing — stable.
+  // the ink extent - and therefore culling and hit testing - stable.
   test('reports the tile in logical pixels, within a pixel of the ratio-1 tile', () => {
     const pool = new GlyphAtlasPool();
     const infos = RATIOS.map(ratio => pool.getAtlas(FAMILY, 'normal', '400', 'sdf', 8, ratio).getGlyph('M', 16));
@@ -144,7 +144,7 @@ describe('the SDF atlas is sampled as a continuous field', () => {
   });
 
   // A glyph magnified past its atlas density is the case every ratio mismatch
-  // produces — a node scaled up at runtime, or a `pixelRatio` below the surface
+  // produces - a node scaled up at runtime, or a `pixelRatio` below the surface
   // it is drawn on. Under NEAREST this frame is a staircase.
   test('keeps a magnified glyph smooth rather than blocky', async () => {
     const backend = await createWebGl2TestBackend(size, 1);
@@ -161,7 +161,7 @@ describe('the SDF atlas is sampled as a continuous field', () => {
 
     // Measured on this scene: 185 distinct intensities linearly filtered, 2 with
     // NEAREST. The two are that far apart because the sampler and the shader's
-    // derivative-based edge width compound — a piecewise constant field has no
+    // derivative-based edge width compound - a piecewise constant field has no
     // gradient inside a texel, so the fade it is entitled to collapses too and
     // the frame is left pure black and white.
     expect(distinct).toBeGreaterThan(80);
@@ -196,7 +196,7 @@ describe('logical layout is independent of the raster density', () => {
       const node = new Text(sample, { ...options, pixelRatio });
       const quads = node.pageQuads.reduce((sum, page) => sum + page.quadCount, 0);
       // The top-left corner of every quad carries alignment, kerning,
-      // letterSpacing and the wrap decision that produced the line it sits on —
+      // letterSpacing and the wrap decision that produced the line it sits on -
       // comparing the whole list compares all of them at once. It is built from
       // the advance and the SDF bearing, both of which are exact, so this is an
       // exact comparison rather than a tolerant one.
@@ -220,7 +220,7 @@ describe('logical layout is independent of the raster density', () => {
     // the raster grid: the glyph box is ceiled to whole raster texels on each
     // edge, and a coarse grid rounds up further than a fine one. Two logical
     // pixels is the arithmetic bound of that (one ceil per edge at ratio 1,
-    // a third of one at ratio 3), and it lands on the ink extent only — never
+    // a third of one at ratio 3), and it lands on the ink extent only - never
     // on the advance, which is what layout is actually built from.
     for (const index of laidOut[0]!.extents.keys()) {
       expect(Math.abs(laidOut[2]!.extents[index]! - laidOut[0]!.extents[index]!), `vertex ${index}`).toBeLessThanOrEqual(2);
@@ -228,7 +228,7 @@ describe('logical layout is independent of the raster density', () => {
   });
 
   // `Text.measure` has no application behind it, so it must answer out of the
-  // ratio-free metrics — and still agree with every node, at every ratio.
+  // ratio-free metrics - and still agree with every node, at every ratio.
   test.each(FONT_SIZES)('Text.measure agrees with a node at any ratio — %ppx', fontSize => {
     const measured = Text.measure(sample, { fontSize, maxWidth: fontSize * 8 });
 
@@ -256,7 +256,7 @@ describe('logical layout is independent of the raster density', () => {
 
     const measured = Text.measure('Nothing here has ever been drawn', { fontSize: 16 });
 
-    // A real font behind a real measurement — and no atlas, no page, no glyph
+    // A real font behind a real measurement - and no atlas, no page, no glyph
     // rasterized to produce it.
     expect(measured.width).toBeGreaterThan(0);
     expect(atlasRequests).toBe(0);
@@ -302,15 +302,15 @@ describe('memory cost of a raised raster density', () => {
       };
     });
 
-    // The measurement IS the deliverable here — the numbers go into the report.
+    // The measurement IS the deliverable here - the numbers go into the report.
     console.log(`[text pixelRatio memory]\n${JSON.stringify(rows, null, 2)}`);
 
     expect(rows[1]!.tileTexels).toBeGreaterThan(rows[0]!.tileTexels);
     expect(rows[2]!.tileTexels).toBeGreaterThan(rows[1]!.tileTexels);
 
     // Bounded on both sides so the number stays honest: the SDF buffer is a
-    // fixed logical width that also scales, so the growth sits near — but not
-    // exactly on — the square of the ratio.
+    // fixed logical width that also scales, so the growth sits near - but not
+    // exactly on - the square of the ratio.
     const growth = rows[2]!.tileTexels / rows[0]!.tileTexels;
 
     expect(growth).toBeGreaterThan(4);
@@ -414,7 +414,7 @@ describe('style lengths stated in logical pixels', () => {
   // The shadow offset is authored in logical pixels but applied as an atlas-UV
   // shift, i.e. in TEXELS. Without scaling it by the raster density, raising a
   // node's `pixelRatio` would quietly shorten its shadow by exactly that factor
-  // — a style change nobody asked for.
+  // - a style change nobody asked for.
   //
   // Both runs draw on a ratio-1 SURFACE, so the device grid is identical and
   // only the glyph raster differs; the offset is then directly readable in
@@ -438,7 +438,7 @@ describe('style lengths stated in logical pixels', () => {
 
       // Same glyph, same place, plus a shadow. A black fill keeps the glyph
       // itself invisible against the black clear, so the only ink left in the
-      // frame is the shadow — and its right edge is the reach being measured.
+      // frame is the shadow - and its right edge is the reach being measured.
       const shadowed = new Text('H', {
         fontSize: 48,
         pixelRatio,

@@ -122,7 +122,7 @@ const render = async (options: SceneOptions): Promise<Scene> => {
 };
 
 /**
- * The texel size of every render target the backend hands out for one render —
+ * The texel size of every render target the backend hands out for one render -
  * the plan's capture domain, read where nothing can reinterpret it.
  */
 const recordedTargetSizes = async (options: SceneOptions): Promise<Array<[number, number]>> => {
@@ -246,7 +246,7 @@ describe('a blur is not clipped by the bounds it was captured from', () => {
     const chained = await render({ radii: [6, 6] });
 
     try {
-      // The outer tail of a chained blur is a fraction of a fraction of white —
+      // The outer tail of a chained blur is a fraction of a fraction of white -
       // the composition question is where the SIGNAL ends, not where it crosses
       // the threshold the single-pass cells use. The Gaussian kernel puts the
       // outermost tap at e⁻² of the centre, so twelve units out lands on 2/255;
@@ -272,7 +272,7 @@ describe('a blur is not clipped by the bounds it was captured from', () => {
 
     // Three chain targets plus the scratch each separable blur borrows for its
     // horizontal sweep. What the domain contract pins is that every one of them
-    // is the SAME rectangle — the sequence's, not each filter's own.
+    // is the SAME rectangle - the sequence's, not each filter's own.
     expect(sizes).toHaveLength(5);
 
     for (const recorded of sizes) {

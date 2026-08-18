@@ -133,7 +133,7 @@ export default defineConfig({
     },
     projects: [
       // ── jsdom unit/integration projects (Core + extensions) ──────────────
-      // Every project loads shader sources as their real text — the same loader
+      // Every project loads shader sources as their real text - the same loader
       // the production build uses. An earlier stub blanked `.vert`/`.frag` to
       // `""`, which ran the biggest test project (`test:core`) against blank
       // shaders and made GLSL regressions invisible outside the 3 browser lanes
@@ -151,7 +151,7 @@ export default defineConfig({
           // The parity matrix runs in `browser-webgpu`: its runner imports the
           // browser context module, which throws on import under jsdom. The
           // WebGPU allocation cell is the same story one project further down
-          // (`browser-webgpu-alloc`) — it needs a real adapter and a CDP session.
+          // (`browser-webgpu-alloc`) - it needs a real adapter and a CDP session.
           exclude: [
             'test/rendering/browser/**/*.test.ts',
             'test/rendering/parity/**/*.test.ts',

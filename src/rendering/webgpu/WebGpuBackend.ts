@@ -167,7 +167,7 @@ export class WebGpuBackend implements RenderBackend {
   // and re-applied by every `context.configure()`, including the one that
   // follows device-loss recovery.
   private readonly _alphaMode: CanvasAlphaMode;
-  /** The application's `canvas.pixelRatio`, sanitized once — see {@link surfacePixelRatio}. */
+  /** The application's `canvas.pixelRatio`, sanitized once - see {@link surfacePixelRatio}. */
   private readonly _surfacePixelRatio: number;
   private readonly _rootRenderTarget: RenderTarget;
   private _clearColor: Color = new Color();
@@ -301,7 +301,7 @@ export class WebGpuBackend implements RenderBackend {
    *
    * Derived rather than stored: the root target carries the LOGICAL size while
    * the canvas backing store carries `logical × pixelRatio`, so the ratio
-   * between them is always current — including after a `resize()` that changes
+   * between them is always current - including after a `resize()` that changes
    * only one of the two.
    */
   public get rootResolution(): number {
@@ -318,7 +318,7 @@ export class WebGpuBackend implements RenderBackend {
    * it has to be stable and quantized to be safe there: under `'letterbox'`
    * sizing the root target stays at the design size while the backing store
    * tracks the parent's fitted rectangle, so `rootResolution` is an arbitrary
-   * float that moves on every window resize — keying a glyph atlas on it would
+   * float that moves on every window resize - keying a glyph atlas on it would
    * mint a fresh set of pages per resize step.
    */
   public get surfacePixelRatio(): number {
@@ -328,7 +328,7 @@ export class WebGpuBackend implements RenderBackend {
   /**
    * `maxTextureDimension2D` of the granted device.
    *
-   * The spec DEFAULT stands in when no limits object is reachable — a device
+   * The spec DEFAULT stands in when no limits object is reachable - a device
    * that exposes none is either a test double or non-conformant, and a
    * conformant device is never granted less, so assuming the default is the safe
    * direction (the same rule `webgpuStorageLimits` follows).
@@ -384,7 +384,7 @@ export class WebGpuBackend implements RenderBackend {
    * `alphaMode: 'premultiplied'` the canvas carries real alpha, so an untouched
    * region genuinely has no coverage.
    *
-   * The configured mode is the authority here — WebGPU has no equivalent of
+   * The configured mode is the authority here - WebGPU has no equivalent of
    * WebGL's `getContextAttributes()`, and this is the same value that goes into
    * `context.configure()`.
    * @internal
@@ -1495,7 +1495,7 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     // Parity with the live path: draw() counts submitted nodes before any
-    // flush-time visibility decision (mask/scissor) can drop the batch — and it
+    // flush-time visibility decision (mask/scissor) can drop the batch - and it
     // counts NODES, so a batch whose renderer expands one node into many
     // instances contributes its recorded node count (see
     // RetainedBatchInstruction), not its instance count.
@@ -1580,7 +1580,7 @@ export class WebGpuBackend implements RenderBackend {
    *
    * `nodeCount` is the batch's `stats.submittedNodes` contribution and defaults
    * to `instanceCount` (one instance is one node). A renderer whose node expands
-   * into several instances must pass its own count — see
+   * into several instances must pass its own count - see
    * {@link RetainedBatchInstruction.nodeCount}. It is the LAST parameter on
    * purpose: inserting it next to `instanceCount` would silently shift the
    * existing optional trailing arguments at every cross-package call site.

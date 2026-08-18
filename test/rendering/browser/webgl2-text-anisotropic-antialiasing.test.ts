@@ -2,8 +2,8 @@
  * WebGL2 browser probe for the SDF text antialiasing contract under a
  * NON-UNIFORM node scale.
  *
- * The analytical edge width is derived from a single scalar — the device pixels
- * one local unit covers — taken from column 0 of the composed transform, i.e.
+ * The analytical edge width is derived from a single scalar - the device pixels
+ * one local unit covers - taken from column 0 of the composed transform, i.e.
  * the image of the local +x direction. That scalar describes the whole pixel
  * footprint only while the transform is a similarity (uniform scale, optionally
  * rotated). Under `scale(sx, sy)` with `sx != sy` the horizontal and vertical
@@ -12,8 +12,8 @@
  *
  * This probe measures both edge families independently:
  *
- *   vertical stems   — edge normal along local x, crossed by a horizontal scan
- *   horizontal bar   — edge normal along local y, crossed by a vertical scan
+ *   vertical stems - edge normal along local x, crossed by a horizontal scan
+ *   horizontal bar - edge normal along local y, crossed by a vertical scan
  *
  * Run via:  pnpm test:browser:webgl
  */

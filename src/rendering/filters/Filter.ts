@@ -4,7 +4,7 @@ import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { TargetResolution } from '#rendering/types';
 
 /**
- * What a {@link Filter} notifies when its state changes — a {@link RenderNode}
+ * What a {@link Filter} notifies when its state changes - a {@link RenderNode}
  * in practice, narrowed to the one call so the filter module does not depend on
  * the node module.
  */
@@ -29,7 +29,7 @@ export abstract class Filter {
    *
    * `'inherit'` (the default) matches the surface the result is composited into,
    * so a filtered subtree stays as sharp as its surroundings on a HiDPI display.
-   * Lower it for a filter whose output is low-frequency anyway — a heavy blur at
+   * Lower it for a filter whose output is low-frequency anyway - a heavy blur at
    * `0.5` costs a quarter of the fragments and is hard to tell apart.
    *
    * A filter CHAIN shares one target size, so the whole chain runs at the lowest
@@ -54,7 +54,7 @@ export abstract class Filter {
 
   /**
    * The logical bounds this effect can produce from the logical bounds it is
-   * given — the contract that lets an effect change a drawable's visual extent
+   * given - the contract that lets an effect change a drawable's visual extent
    * instead of being clipped by the geometry it was captured from.
    *
    * Both rectangles are in the capture domain's LOGICAL units, the same ones
@@ -62,7 +62,7 @@ export abstract class Filter {
    * a pass runs against is separately allocated at `bounds × resolution` texels,
    * so an expansion of 8 stays 8 logical units at every pixel ratio.
    *
-   * The default is the identity — an effect that only recolours what it is given
+   * The default is the identity - an effect that only recolours what it is given
    * (a colour matrix, a LUT) needs no override. An effect that reaches outside
    * its input (a blur, a glow) must declare that reach, and one that reaches
    * asymmetrically (a drop shadow) may move the edges independently:
@@ -76,7 +76,7 @@ export abstract class Filter {
    * In a CHAIN each filter is asked in turn, with the previous filter's output
    * as its input, and the barrier's capture domain is the union of the source
    * bounds and every stage's answer. A bounds-REDUCING effect is therefore
-   * represented — the domain simply keeps the room its predecessors needed, so
+   * represented - the domain simply keeps the room its predecessors needed, so
    * no pass is ever clipped by a target smaller than what it declared.
    *
    * `input` and `output` are never the same object, so an implementation may
@@ -93,7 +93,7 @@ export abstract class Filter {
    * of date.
    *
    * Call it after mutating anything that changes what the filter draws or how
-   * far it reaches — the stock filters do this from their own setters. Without
+   * far it reaches - the stock filters do this from their own setters. Without
    * it a cached or retained representation of the owning node keeps replaying
    * the result the filter produced before the change.
    */
@@ -132,7 +132,7 @@ export abstract class Filter {
   /**
    * Execute one filter pass: sample from `input`, write the result to `output`.
    *
-   * Both textures are `bounds × resolution` texels — NOT the drawable's logical
+   * Both textures are `bounds × resolution` texels - NOT the drawable's logical
    * bounding box. Any parameter a subclass expresses in pixels (a blur radius, a
    * displacement amount) is in LOGICAL units by convention and must be
    * multiplied by `resolution` before it is used as a texel offset; otherwise the
@@ -140,8 +140,8 @@ export abstract class Filter {
    * a fraction of the target (or as pure colour maths) need no adjustment.
    *
    * The engine always passes `resolution`. It is optional for the hand-rolled
-   * case — a post-processing chain that creates its own {@link RenderTexture}s
-   * and calls `apply` directly — where the textures are whatever size the caller
+   * case - a post-processing chain that creates its own {@link RenderTexture}s
+   * and calls `apply` directly - where the textures are whatever size the caller
    * made them and `1` is the honest answer.
    */
   public abstract apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture, resolution?: number): void;

@@ -6,8 +6,8 @@
  *   R' = lut(src.r).r   G' = lut(src.g).g   B' = lut(src.b).b   A' = src.a
  *
  * The probe LUT below therefore gives the three channels three visibly
- * different curves, so a shader that reads the whole RGB of one lookup — the
- * defect this fixture exists to catch — cannot produce the expected pixels for
+ * different curves, so a shader that reads the whole RGB of one lookup - the
+ * defect this fixture exists to catch - cannot produce the expected pixels for
  * any input that is not already grey.
  */
 
@@ -80,7 +80,7 @@ export const probeLut = (): Texture => {
   return LutFilter.fromImage(canvas);
 };
 
-/** `probeLut()` applied to one 0–255 channel triple, on the CPU. */
+/** `probeLut()` applied to one 0-255 channel triple, on the CPU. */
 export const expectedProbeOutput = (r: number, g: number, b: number): RgbaTuple => [255 - r, Math.round(g / 2), 255, 255];
 
 /** A sprite of `color`, filtered by `filter`, parented under a fresh root. */
@@ -98,7 +98,7 @@ export const lutScene = (color: string, filter: LutFilter): { root: Container; t
   return { root, texture };
 };
 
-/** The primaries and a mixed colour, as CSS strings plus their 0–255 triples. */
+/** The primaries and a mixed colour, as CSS strings plus their 0-255 triples. */
 export const PROBE_COLOURS = [
   { css: '#ff0000', rgb: [255, 0, 0] },
   { css: '#00ff00', rgb: [0, 255, 0] },

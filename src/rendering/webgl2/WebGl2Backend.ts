@@ -294,7 +294,7 @@ export class WebGl2Backend implements RenderBackend {
   // with GL_INVALID_VALUE and leave every transform fetch reading an incomplete
   // texture (a black frame). Re-read after a context restore.
   private _maxTextureSize = 0;
-  /** The application's `canvas.pixelRatio`, sanitized once — see {@link surfacePixelRatio}. */
+  /** The application's `canvas.pixelRatio`, sanitized once - see {@link surfacePixelRatio}. */
   private readonly _surfacePixelRatio: number;
   private _renderTarget: RenderTarget;
   // Device-pixel viewport rect last handed to `gl.viewport` (x, y, width,
@@ -429,7 +429,7 @@ export class WebGl2Backend implements RenderBackend {
    *
    * Derived rather than stored: the root target carries the LOGICAL size while
    * the canvas backing store carries `logical × pixelRatio`, so the ratio
-   * between them is always current — including after a `resize()` that changes
+   * between them is always current - including after a `resize()` that changes
    * only one of the two.
    */
   public get rootResolution(): number {
@@ -446,7 +446,7 @@ export class WebGl2Backend implements RenderBackend {
    * it has to be stable and quantized to be safe there: under `'letterbox'`
    * sizing the root target stays at the design size while the backing store
    * tracks the parent's fitted rectangle, so `rootResolution` is an arbitrary
-   * float that moves on every window resize — keying a glyph atlas on it would
+   * float that moves on every window resize - keying a glyph atlas on it would
    * mint a fresh set of pages per resize step.
    */
   public get surfacePixelRatio(): number {
@@ -1608,7 +1608,7 @@ export class WebGl2Backend implements RenderBackend {
    *
    * `nodeCount` is the batch's `stats.submittedNodes` contribution and defaults
    * to `instanceCount` (one instance is one node). A renderer whose node expands
-   * into several instances must pass its own count — see
+   * into several instances must pass its own count - see
    * {@link RetainedBatchInstruction.nodeCount}. It is the LAST parameter on
    * purpose: inserting it next to `instanceCount` would silently shift the
    * existing optional trailing arguments at every cross-package call site.
@@ -2679,12 +2679,12 @@ export class WebGl2Backend implements RenderBackend {
       this._accountant.recordTextureUpload(texture.width * texture.height * RGBA8_BYTES_PER_PIXEL);
     }
 
-    // Pixel-store state is upload-local, never inherited — the same discipline
+    // Pixel-store state is upload-local, never inherited - the same discipline
     // the UNPACK_ALIGNMENT restore above follows. GL keeps
     // UNPACK_PREMULTIPLY_ALPHA_WEBGL globally, so leaving it set lets the NEXT
     // upload multiply its RGB channels by its alpha channel. A renderer-private
-    // raw upload that never calls pixelStorei itself — the text renderer's
-    // RGBA32F node-data texture is the only one today — then inherits it, and
+    // raw upload that never calls pixelStorei itself - the text renderer's
+    // RGBA32F node-data texture is the only one today - then inherits it, and
     // in a float payload the "alpha" slot carries real data (a transform's
     // `ty`, an ink-bounds height), so the result is arbitrary geometry rather
     // than merely darker pixels.

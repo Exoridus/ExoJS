@@ -129,13 +129,13 @@ export class AtlasPage {
       this._sdfBuffer = new Uint8Array(width * height);
       this._sdfTexture = new DataTexture({ width, height, format: TextureFormat.R8, data: this._sdfBuffer });
       // A DataTexture defaults to NEAREST, which is right for the lookup tables
-      // that class exists for — a transform row must be read back as the exact
+      // that class exists for - a transform row must be read back as the exact
       // number that was written. An SDF page is the opposite kind of data: it
       // stores a CONTINUOUS distance, and bilinear reconstruction of it between
       // texels is the entire reason a distance field is resolution-independent.
       // Sampled with NEAREST the field is piecewise constant, so a glyph drawn
       // at anything other than one atlas texel per device pixel gets a staircased
-      // edge (magnified) or a jittered one (minified) — which is exactly what a
+      // edge (magnified) or a jittered one (minified) - which is exactly what a
       // raised or lowered `Text.pixelRatio` produces.
       this._sdfTexture.setScaleMode(ScaleModes.Linear);
       this._sdfTexture.setSize(width, height);
@@ -239,7 +239,7 @@ export class AtlasPage {
  * pixel: a glyph asked for at logical size 9 in a ratio-3 atlas is rendered from
  * a 27px font, and every raster-derived number it hands back is divided by the
  * ratio again so the caller keeps working in logical units. The ratio is part of
- * the atlas's identity ({@link GlyphAtlasPool}) — it has to be, because the pool
+ * the atlas's identity ({@link GlyphAtlasPool}) - it has to be, because the pool
  * is process-wide and two applications at different densities must not share one
  * set of pages. The LOGICAL metrics layout consumes (advance, kerning) come from
  * the ratio-independent {@link GlyphMetrics} instead, so the same string lays out
@@ -273,7 +273,7 @@ export class GlyphAtlas implements GlyphProvider {
    */
   public readonly onPageAdded = new Signal<[pageIndex: number]>();
 
-  /** {@link GlyphSdf} instances keyed by RASTER font size — only used in SDF mode. */
+  /** {@link GlyphSdf} instances keyed by RASTER font size - only used in SDF mode. */
   private readonly _sdfInstances = new Map<number, GlyphSdf>();
 
   public constructor(
@@ -323,7 +323,7 @@ export class GlyphAtlas implements GlyphProvider {
   }
 
   /**
-   * SDF buffer radius in LOGICAL pixels — the outline/shadow reach this atlas
+   * SDF buffer radius in LOGICAL pixels - the outline/shadow reach this atlas
    * can encode. Independent of {@link pixelRatio}: the raster buffer grows with
    * the ratio so the logical reach stays put.
    */
@@ -405,7 +405,7 @@ export class GlyphAtlas implements GlyphProvider {
     const info: GlyphInfo = {
       x: slot.x,
       y: slot.y,
-      // Slot origin and UVs stay in ATLAS TEXELS — they address the raster grid.
+      // Slot origin and UVs stay in ATLAS TEXELS - they address the raster grid.
       // Everything else is divided back into logical pixels, which is the space
       // the quad, the cursor and the node's bounds live in.
       width: result.width / ratio,
@@ -434,7 +434,7 @@ export class GlyphAtlas implements GlyphProvider {
     const ratio = this._pixelRatio;
     const rasterSize = this._rasterFontSize(size);
     // Colour glyphs are rasterized by the canvas at the RASTER size, so their
-    // tile metrics have to be measured there too — the ratio-1 numbers would
+    // tile metrics have to be measured there too - the ratio-1 numbers would
     // size the slot for a glyph a third the size of the one actually drawn.
     const font = this._cssFont(rasterSize);
     // Invariant: a base page is always present (constructor + clear add one).

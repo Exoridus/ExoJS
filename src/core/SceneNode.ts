@@ -653,7 +653,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    * barrier-effect nodes (filters/mask/clip/cacheAsTexture), whose effect
    * machinery composites in world space, and for direct
    * children a RetainedContainer pushed out because their subtree contains a
-   * DEEP barrier — the sub-branch escape. Escapes are LIVE state,
+   * DEEP barrier - the sub-branch escape. Escapes are LIVE state,
    * picked up lazily through the same parent-version seam as boundary flips.
    * @internal
    */
