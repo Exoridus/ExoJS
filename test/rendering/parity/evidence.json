@@ -1,8 +1,8 @@
 {
   "stamps": {
     "chromium": {
-      "measuredAt": "2026-08-17",
-      "commit": "72b65fbd",
+      "measuredAt": "2026-08-18",
+      "commit": "ab42a315",
       "platform": "win32"
     },
     "firefox": {
