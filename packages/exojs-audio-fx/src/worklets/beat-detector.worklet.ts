@@ -394,12 +394,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
   private _fluxPeak: number;
   private _onsetPrev1: number;
   private _onsetHopCount: number;
-  // Diagnostic state (write-only within this class): exposes the most recent onset
-  // detection outcome for external introspection (e.g. test harnesses), not consumed
-  // internally.
-  public _onsetFiredThisHop: boolean;
   private _lastOnsetSample: number;
-  public _lastOnsetStrength: number;
   private readonly _onsetRingSamples: Float32Array;
   private readonly _onsetRingStrengths: Float32Array;
   private _onsetRingPos: number;
@@ -536,12 +531,10 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
     this._fluxPeak = 0; // decaying running flux maximum (noise-floor reference)
     this._onsetPrev1 = 0; // normalised novelty at the previous hop (rising-edge detect)
     this._onsetHopCount = 0;
-    this._onsetFiredThisHop = false; // a confirmed onset peak was registered this hop
     // ---- Onset stream exposed for the PLL ----
-    // _lastOnsetSample / _lastOnsetStrength = most recent confirmed onset (sub-hop precise);
-    // the ring holds the last ONSET_RING_SIZE onsets so the PLL can pick nearestOnset().
+    // _lastOnsetSample = most recent confirmed onset (sub-hop precise); the ring holds
+    // the last ONSET_RING_SIZE onsets so the PLL can pick nearestOnset().
     this._lastOnsetSample = -1;
-    this._lastOnsetStrength = 0;
     this._onsetRingSamples = new Float32Array(ONSET_RING_SIZE);
     this._onsetRingStrengths = new Float32Array(ONSET_RING_SIZE);
     this._onsetRingPos = 0;
@@ -956,7 +949,6 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
     // of the adaptive threshold — the onset attack, exactly where the old crude heuristic
     // fired, so the shipped beat-offset behaviour is preserved — gated by the noise floor
     // and an IBI-derived refractory. Zero lookahead latency.
-    this._onsetFiredThisHop = false;
     const noiseFloor = floorScale;
     const refractory = this._onsetRefractorySamples();
     const crossedUp = this._onsetHopCount >= 1 && this._onsetPrev1 <= ONSET_THRESHOLD && norm > ONSET_THRESHOLD;
@@ -972,8 +964,6 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
       else if (frac > 1) frac = 1;
       const onsetSample = this._sampleCount - this._hopSize + frac * this._hopSize;
       this._lastOnsetSample = onsetSample;
-      this._lastOnsetStrength = norm;
-      this._onsetFiredThisHop = true;
       this._onsetRingSamples[this._onsetRingPos] = onsetSample;
       this._onsetRingStrengths[this._onsetRingPos] = norm;
       this._onsetRingPos = (this._onsetRingPos + 1) % this._onsetRingSamples.length;
