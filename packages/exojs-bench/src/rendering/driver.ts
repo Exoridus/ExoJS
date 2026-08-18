@@ -763,7 +763,7 @@ interface CdpProfile {
 
 /**
  * Shorten a profiler URL to something readable: the Vite dev server serves
- * engine source from the repo root, so `http://127.0.0.1:PORT/@fs/C:/…/exojs/src/x.ts`
+ * engine source from the repo root, so `http://127.0.0.1:PORT/@fs/<repo-root>/src/x.ts`
  * and `/src/x.ts` both collapse to `src/x.ts`; a pre-bundled competitor keeps
  * its `node_modules/.vite/deps/…` identity, which is exactly what distinguishes
  * "time inside Pixi" from "time inside the engine".

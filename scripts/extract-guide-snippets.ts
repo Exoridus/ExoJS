@@ -1,11 +1,11 @@
 /**
  * Extracts TypeScript/JavaScript code blocks from guide MDX files and writes
- * them as standalone .ts files into .workspace/generated/guide-typecheck/ for
+ * them as standalone .ts files into the snippet output directory for
  * typechecking via `pnpm typecheck:guides`.
  *
  * Skip conventions (applied inside the guide MDX source):
  *   - Fence with `no-check` meta:  ```ts no-check
- *     Marks the block as intentionally untypeable — partial snippets, prose
+ *     Marks the block as intentionally untypeable - partial snippets, prose
  *     illustrations, or temporarily stale API. Use sparingly.
  *   - Blocks without any `import` statement, that are also not recognized as
  *     a bare method/fragment (see below), are skipped automatically as
@@ -14,45 +14,45 @@
  *
  * Two extraction strategies:
  *
- * 1. STANDALONE — a block with its own `import` line(s), not shaped like a
+ * 1. STANDALONE - a block with its own `import` line(s), not shaped like a
  *    bare class-method body. Written verbatim to its own output file, one
  *    file per block (`isStandaloneSnippet`, unchanged from the original
  *    extractor).
  *
- * 2. BARE — a block with no import, whose first real line either looks like
+ * 2. BARE - a block with no import, whose first real line either looks like
  *    a class-method declaration (`update(delta) {`, `async load(loader) {`)
  *    or a raw `this.*` statement/control-flow fragment shown without its
  *    enclosing class. These are guide-prose illustrations of "one hook of
  *    the scene you already built two paragraphs ago" and are the most common
- *    shape in the guide — until this fix they were silently skipped, so a
+ *    shape in the guide - until this fix they were silently skipped, so a
  *    guide could reference `this.bunny` in a bare `update()` block forever
  *    without any type-checker ever seeing it (see the "your-first-scene.mdx"
  *    incident this fix closes).
  *
  *    All BARE blocks belonging to the same MDX file are merged into ONE
  *    synthetic class per file, so a field assigned in one bare block's
- *    `init()` is known to a later bare block's `update()` — exactly how the
+ *    `init()` is known to a later bare block's `update()` - exactly how the
  *    guide narrates it. How strictly `this.*` access is checked depends on
  *    whether the page embeds a real example class:
  *
- *    ANCHORED — the chapter embeds a real, fully-typed class via
+ *    ANCHORED - the chapter embeds a real, fully-typed class via
  *    `<SourceSnippet source=".." region=".." />` (the common "one real
  *    example, several follow-up hook snippets" pattern). The bare blocks are
  *    spliced directly into that real class (the best-covering class among
- *    the region and the referenced file's classes — see `findAnchor`), so
+ *    the region and the referenced file's classes - see `findAnchor`), so
  *    `this.sprite` is checked against the actual `private sprite!: Sprite`
  *    field of the example. A `this.bunny` that the example never declares is
- *    a hard error — the F8 bug class ("prose snippet contradicts the very
+ *    a hard error - the F8 bug class ("prose snippet contradicts the very
  *    example it explains") this gate exists to catch. Fields the page
  *    assigns in other snippets are mined page-wide (`mineAssignedFields`)
  *    and declared `any` so legitimate cross-snippet narrative still
  *    resolves.
  *
- *    UNANCHORED — no example class on the page. Narrative shorthand
+ *    UNANCHORED - no example class on the page. Narrative shorthand
  *    (`this.player`, `this.world`, ... introduced only in prose) is
  *    pervasive there and indistinguishable from a typo, so the synthetic
  *    shell carries a `[key: string]: any` index signature: `this.*` member
- *    EXISTENCE is not checked, but everything else still is — engine
+ *    EXISTENCE is not checked, but everything else still is - engine
  *    imports (renamed/removed exports fail), the inherited Scene API
  *    (`this.app`, `this.loader`, `this.inputs` keep their real types), and
  *    all argument/assignment typing against those APIs (this is how
@@ -60,7 +60,7 @@
  *
  *    Free identifiers the bare blocks reference without declaring (`loader`,
  *    `delta`, `app`, a bare `sprite` used as shorthand for "your sprite",
- *    etc.) are intentionally NOT type-checked — that's an established guide
+ *    etc.) are intentionally NOT type-checked - that's an established guide
  *    convention (see CONTEXT_VAR_RE below), not a bug class this gate
  *    targets. They're declared as `any` (`var x;`, plus a merging
  *    `type X = any;` for PascalCase names used in type position) so they
@@ -70,12 +70,13 @@
  *    `BeatDetector`, or guide-local placeholder class names like
  *    `GameScene`) also falls back to `any`.
  *
- * Output location: .workspace/generated/guide-typecheck/ (gitignored).
+ * Output location: `GUIDE_SNIPPET_OUT`, defaulting to a gitignored scratch
+ * directory (see `OUT_DIR`).
  * Each file is named after its source MDX path (and block index, for
  * standalone blocks) and carries a header comment mapping back to the
  * original guide location.
  *
- * PARTIAL BUDGET — blocks that fall into none of the checkable buckets and
+ * PARTIAL BUDGET - blocks that fall into none of the checkable buckets and
  * carry no `no-check` tag used to be dropped without a trace. They are now
  * counted per guide file and ratcheted against a committed baseline
  * (`guide-partial-baseline.json`); see `guide-partial-baseline.ts` for why the

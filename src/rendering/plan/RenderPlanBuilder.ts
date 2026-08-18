@@ -890,8 +890,8 @@ export class RenderPlanBuilder {
   /**
    * Collect the render root through its automatic persistent representation.
    *
-   * Same ladder a {@link RetainedContainer} climbs — recorded-instruction
-   * splice, then entry replay, then plain collect — over a key that additionally
+   * Same ladder a {@link RetainedContainer} climbs - recorded-instruction
+   * splice, then entry replay, then plain collect - over a key that additionally
    * covers what a root needs and a group does not: the subtree's transform
    * revision (no group matrix, no row patch), the root's own global-transform
    * stamp (an ancestor ABOVE the root moves it without stamping its revisions),
@@ -900,7 +900,7 @@ export class RenderPlanBuilder {
    *
    * Between "the product still fits" and "rebuild from the scene graph" sits the
    * selection tier. A camera step that leaves the capture's margin used to cost
-   * a complete collect — walk, transform resolve, material resolve, record — for
+   * a complete collect - walk, transform resolve, material resolve, record - for
    * a scene where nothing but the camera changed. The persistent source already
    * holds every item in the subtree, on screen or not, so such a frame becomes a
    * selection over those items instead:
@@ -915,8 +915,8 @@ export class RenderPlanBuilder {
    * Tier 2 sits BELOW the capture decision, not inside it: the source is keyed
    * on the node's own content, structure and ancestry and on nothing the capture
    * owns, so a frame that may not capture at all still gets to select. That is
-   * not a detail — a root holding a view-dependent producer can never replay its
-   * capture (PR #553), so its captures are always wasted and capture suppression
+   * not a detail - a root holding a view-dependent producer can never replay its
+   * capture, so its captures are always wasted and capture suppression
    * eventually turns them off for good. Keying the selection on the capture
    * would have withdrawn the source from a parallax-bearing scrolling map, which
    * is the exact scene this whole tier exists for.

@@ -27,7 +27,7 @@ let TMP_DIR: string;
 let TMP_REL: string; // relative to repo root (== process.cwd() in vitest)
 
 beforeAll(() => {
-  // Create a temp directory under .workspace so it is gitignored.
+  // Create the temp directory inside the repository's gitignored scratch area.
   const base = join(process.cwd(), '.workspace', 'test-snippets');
   mkdirSync(base, { recursive: true });
   TMP_DIR = mkdtempSync(join(base, 'tmp-'));

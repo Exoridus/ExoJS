@@ -9,11 +9,11 @@
  *   and replay under a camera pan with ZERO instance / transform re-upload,
  * - a position-snapped tilemap node records and splices the same way,
  * - the SAME two scenes in `PixelSnapMode.Geometry` are now equally recordable
- *   (PR 2 moved boundary snapping to the GPU, so geometry no longer poisons),
+ *   (boundary snapping happens on the GPU, so geometry no longer poisons),
  * - a transform-only move of a position-snapped DIRECT child fast-patches its
  *   row in place (raw translation + snap flag) without dropping the recording.
  *
- * Real WebGl2Backend + renderers against the recording fake GL context —
+ * Real WebGl2Backend + renderers against the recording fake GL context -
  * deterministic, GPU-free, CI-safe.
  */
 import { describe, expect, it, vi } from 'vitest';
@@ -114,7 +114,7 @@ describe('GPU position pixel-snap: retained recording gates (PR 1)', () => {
       measureFrame(harness, root); // F3 splice (first bind of the group transform texture)
 
       // The recording exists precisely because a position-snapped draw is
-      // recordable now (the whole point of PR 1).
+      // recordable now.
       expect(fragmentOf(group).instructions?.hasRecording).toBe(true);
 
       const beginSpy = vi.spyOn(harness.backend, '_beginRetainedCapture');
@@ -180,7 +180,7 @@ describe('GPU position pixel-snap: retained recording gates (PR 1)', () => {
       measureFrame(harness, root); // F2 record
       measureFrame(harness, root); // F3 splice
 
-      // PR 2 moved boundary snapping into the vertex shaders, so a geometry-
+      // Boundary snapping happens in the vertex shaders, so a geometry-
       // snapped draw uploads raw quads + the snap flag and is fully recordable.
       expect(fragmentOf(group).instructions?.hasRecording).toBe(true);
 
@@ -219,7 +219,7 @@ describe('GPU position pixel-snap: retained recording gates (PR 1)', () => {
       measureFrame(harness, root); // F2 record
       measureFrame(harness, root); // F3 splice
 
-      // Tilemaps snap only their chunk ORIGIN (GPU-side, PR 1) and keep integer
+      // Tilemaps snap only their chunk ORIGIN (GPU-side) and keep integer
       // chunk-local tile bounds, so geometry mode records exactly like position.
       expect(fragmentOf(group).instructions?.hasRecording).toBe(true);
 

@@ -517,7 +517,7 @@ describe('AudioBus', () => {
     expect(() => bus.destroy()).not.toThrow();
   });
 
-  // ---- addEffect() after destroy() must not leak onto a dead bus (NEU-E2) ----
+  // ---- addEffect() after destroy() must not leak onto a dead bus ----
 
   test('addEffect() after destroy() is a no-op — the effect list does not grow on a dead bus', () => {
     const spy = spyOnBusCreation();

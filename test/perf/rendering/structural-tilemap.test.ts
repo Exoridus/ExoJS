@@ -57,7 +57,7 @@ describe('structural — Tilemap', () => {
       // a tile chunk, a text run, an instanced mesh. The defect predates the
       // automatic root representation (a `RetainedContainer` around this chunk
       // reported the same), but retention by default is what makes it the normal
-      // reading. Tracked as `NEU-O53`; pinned here so the fix has to come through
+      // reading. Pinned here so the fix has to come through
       // this gate rather than around it.
       expect(result.visibleNodes).toBe(1024);
 

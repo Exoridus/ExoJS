@@ -49,8 +49,8 @@ const makeStage = (
 
 /**
  * Stub `content`'s bounds for deterministic wheel-routing tests. The widget's
- * OWN bounds are deliberately left real (not stubbed) — they now derive from
- * `uiWidth`/`uiHeight` (see ME-58), and a wheel-routing test that stubs them
+ * OWN bounds are deliberately left real (not stubbed) - they now derive from
+ * `uiWidth`/`uiHeight`, and a wheel-routing test that stubs them
  * back to an arbitrary rect would mask exactly the viewport-vs-content bug
  * these tests guard against.
  */
@@ -246,8 +246,8 @@ describe('ScrollContainer viewport bounds (ME-58)', () => {
     const { stage, onMouseWheel } = makeStage({ x: 150, y: 150 });
     const scroll = new ScrollContainer({ width: 100, height: 100 });
 
-    // The content is far bigger than the 100x100 viewport; before ME-58,
-    // wheel routing gated on this union instead of the viewport, so a point
+    // The content is far bigger than the 100x100 viewport; wheel routing
+    // used to gate on this union instead of the viewport, so a point
     // at (150, 150) — inside the content extent, outside the viewport —
     // would have wrongly been accepted.
     stubContentBounds(scroll, new Rectangle(0, 0, 5000, 5000));

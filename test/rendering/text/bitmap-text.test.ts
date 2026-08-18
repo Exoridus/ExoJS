@@ -186,7 +186,7 @@ describe('BitmapText', () => {
     expect(text.pageQuads[0]).not.toBe(afterFirst);
   });
 
-  // NEU-K3 / ME-60: BitmapText used to lay text out inside every setter and in
+  // BitmapText used to lay text out inside every setter and in
   // its style-change signal handler, so a burst of edits paid for a full pass
   // each. It now shares the deferred model with Text.
   test('a run of mutations costs exactly one layout pass', () => {

@@ -133,7 +133,7 @@ describe('Voice — per-voice effects', () => {
     fx.destroy();
   });
 
-  // ---- an effect still mid-setup must not make detaching throw (NEU-E3) ----
+  // ---- an effect still mid-setup must not make detaching throw ----
   //
   // `AudioBus.removeEffect`/`destroy` probe `outputNode` readiness before
   // touching it (a built-in effect throws when accessed pre-setup); these
