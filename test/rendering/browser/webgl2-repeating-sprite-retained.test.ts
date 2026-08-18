@@ -39,11 +39,6 @@ import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
 
-// RepeatingSprite's own GLSL is authored inline in
-// WebGl2RepeatingSpriteRenderer.ts rather than imported, so only the Sprite/
-// Mesh/Text programs that wireCoreRenderers() registers rely on the shipped
-// sources the `_glslMocks` setup file restores.
-
 // ---------------------------------------------------------------------------
 // Infrastructure helpers
 // ---------------------------------------------------------------------------

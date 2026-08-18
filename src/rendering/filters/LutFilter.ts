@@ -5,6 +5,10 @@ import { ScaleModes, WrapModes } from '#rendering/types';
 
 import { Filter } from './Filter';
 import { createFilterShaderSource, ShaderFilter } from './ShaderFilter';
+import glsl3dFragment from './shaders/lut-3d.frag';
+import wgsl3dFragment from './shaders/lut-3d.wgsl';
+import glslRgb1dFragment from './shaders/lut-rgb1d.frag';
+import wgslRgb1dFragment from './shaders/lut-rgb1d.wgsl';
 
 /** Storage layout for a Look-Up Table texture. */
 export type LutMode = 'rgb1d' | '3d';
@@ -27,109 +31,6 @@ export interface LutFilterOptions {
 // Three independent lookups, one per channel — NOT one lookup indexed by red.
 // `textureSize` supplies N, so the sample lands on a texel centre for LUTs of
 // any width and an identity ramp is an exact no-op.
-const glslRgb1dFragment = `#version 300 es
-precision mediump float;
-uniform sampler2D uTexture;
-uniform sampler2D uLut;
-in vec2 vUv;
-out vec4 fragColor;
-void main() {
-    vec4 src = texture(uTexture, vUv);
-    float n = float(textureSize(uLut, 0).x);
-    vec3 coord = clamp(src.rgb, 0.0, 1.0) * ((n - 1.0) / n) + 0.5 / n;
-    float r = texture(uLut, vec2(coord.r, 0.5)).r;
-    float g = texture(uLut, vec2(coord.g, 0.5)).g;
-    float b = texture(uLut, vec2(coord.b, 0.5)).b;
-    fragColor = vec4(r, g, b, src.a);
-}
-`;
-
-const glsl3dFragment = `#version 300 es
-precision mediump float;
-uniform sampler2D uTexture;
-uniform sampler2D uLut;
-uniform float uLutSize;
-in vec2 vUv;
-out vec4 fragColor;
-
-vec3 sampleLut3d(vec3 c) {
-    float n = uLutSize;
-    float scaled = clamp(c.b, 0.0, 1.0) * (n - 1.0);
-    float bLow = floor(scaled);
-    float bHigh = min(bLow + 1.0, n - 1.0);
-    float bFrac = scaled - bLow;
-    float invN2 = 1.0 / (n * n);
-    float invN = 1.0 / n;
-    float halfPx = 0.5 / (n * n);
-    float halfRow = 0.5 / n;
-    float rOff = clamp(c.r, 0.0, 1.0) * (n - 1.0) * invN2;
-    float gOff = clamp(c.g, 0.0, 1.0) * (n - 1.0) * invN + halfRow;
-    float uLow = bLow * invN + rOff + halfPx;
-    float uHigh = bHigh * invN + rOff + halfPx;
-    vec3 lo = texture(uLut, vec2(uLow, gOff)).rgb;
-    vec3 hi = texture(uLut, vec2(uHigh, gOff)).rgb;
-    return mix(lo, hi, bFrac);
-}
-
-void main() {
-    vec4 src = texture(uTexture, vUv);
-    fragColor = vec4(sampleLut3d(src.rgb), src.a);
-}
-`;
-
-const wgslRgb1dFragment = `
-@group(0) @binding(1) var uTexture: texture_2d<f32>;
-@group(0) @binding(2) var uSampler: sampler;
-@group(1) @binding(1) var uLut: texture_2d<f32>;
-
-@fragment
-fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
-    let src = textureSample(uTexture, uSampler, vUv);
-    let n = f32(textureDimensions(uLut).x);
-    let coord = clamp(src.rgb, vec3<f32>(0.0), vec3<f32>(1.0)) * ((n - 1.0) / n) + 0.5 / n;
-    let r = textureSample(uLut, uSampler, vec2<f32>(coord.r, 0.5)).r;
-    let g = textureSample(uLut, uSampler, vec2<f32>(coord.g, 0.5)).g;
-    let b = textureSample(uLut, uSampler, vec2<f32>(coord.b, 0.5)).b;
-    return vec4<f32>(r, g, b, src.a);
-}
-`;
-
-const wgsl3dFragment = `
-struct Uniforms {
-    uLutSize: f32,
-};
-
-@group(0) @binding(1) var uTexture: texture_2d<f32>;
-@group(0) @binding(2) var uSampler: sampler;
-@group(1) @binding(0) var<uniform> uniforms: Uniforms;
-@group(1) @binding(1) var uLut: texture_2d<f32>;
-
-fn sampleLut3d(c: vec3<f32>) -> vec3<f32> {
-    let n = uniforms.uLutSize;
-    let scaled = clamp(c.b, 0.0, 1.0) * (n - 1.0);
-    let bLow = floor(scaled);
-    let bHigh = min(bLow + 1.0, n - 1.0);
-    let bFrac = scaled - bLow;
-    let invN2 = 1.0 / (n * n);
-    let invN = 1.0 / n;
-    let halfPx = 0.5 / (n * n);
-    let halfRow = 0.5 / n;
-    let rOff = clamp(c.r, 0.0, 1.0) * (n - 1.0) * invN2;
-    let gOff = clamp(c.g, 0.0, 1.0) * (n - 1.0) * invN + halfRow;
-    let uLow = bLow * invN + rOff + halfPx;
-    let uHigh = bHigh * invN + rOff + halfPx;
-    let lo = textureSample(uLut, uSampler, vec2<f32>(uLow, gOff)).rgb;
-    let hi = textureSample(uLut, uSampler, vec2<f32>(uHigh, gOff)).rgb;
-    return mix(lo, hi, bFrac);
-}
-
-@fragment
-fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
-    let src = textureSample(uTexture, uSampler, vUv);
-    return vec4<f32>(sampleLut3d(src.rgb), src.a);
-}
-`;
-
 /**
  * The per-channel-curve source pair, built once and shared by every `'rgb1d'`
  * instance. Exported so the structural parity checks can read the same object

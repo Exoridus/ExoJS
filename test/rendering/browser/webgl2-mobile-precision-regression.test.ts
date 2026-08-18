@@ -169,10 +169,8 @@ const rawRendererString = (gl: WebGL2RenderingContext): string => {
 // Firefox's own GL do not, and report 127/127/23 fp32.
 const isFp16ReportingBackend = (renderer: string): boolean => /swiftshader|angle.*opengl/i.test(renderer);
 
-// The position/UV vertex stages this fix promoted to highp. Standalone `.vert`
-// files only (each is entirely a vertex stage, so a whole-file precision scan is
-// unambiguous). Loaded via `?raw` to read the real shipped source, bypassing the
-// `.vert` stub plugin.
+// Every position/UV vertex stage the engine ships. Each file is entirely one
+// vertex stage, so a whole-file precision scan is unambiguous.
 const positionVertStages = {
   'sprite.vert': () => import('../../../src/rendering/webgl2/glsl/sprite.vert?raw'),
   'mesh.vert': () => import('../../../src/rendering/webgl2/glsl/mesh.vert?raw'),
@@ -183,41 +181,12 @@ const positionVertStages = {
   'mask-compose.vert': () => import('../../../src/rendering/webgl2/glsl/mask-compose.vert?raw'),
   'backdrop-blend.vert': () => import('../../../src/rendering/webgl2/glsl/backdrop-blend.vert?raw'),
   'stencil-clip.vert': () => import('../../../src/rendering/webgl2/glsl/stencil-clip.vert?raw'),
-} as const;
-
-// NineSlice/RepeatingSprite inline their vertex GLSL as module-private template
-// literals inside the renderer `.ts` files (not separate `.vert` files), so the
-// `?raw`-on-`.vert` technique above can't reach them and neither can `vi.mock`
-// (they're never imported by name). Read the `.ts` source as raw text instead
-// — the shader-stub plugin only rewrites `.vert`/`.frag` ids, so a `.ts?raw`
-// import always returns the real file — and extract each `const ... = \`...\`;`
-// vertex-source block by name.
-const extractTemplateLiteral = (source: string, constName: string): string => {
-  const match = new RegExp(`const ${constName} = \`([\\s\\S]*?)\`;`).exec(source);
-
-  if (match === null) {
-    throw new Error(`could not locate \`const ${constName}\` template literal — has the renderer source been restructured?`);
-  }
-
-  return match[1]!;
-};
-
-const inlinedPositionVertStages = {
-  'WebGl2NineSliceSpriteRenderer.ts: nineSliceVertexSource': async () => {
-    const raw = await import('../../../src/rendering/webgl2/WebGl2NineSliceSpriteRenderer.ts?raw');
-
-    return extractTemplateLiteral(raw.default, 'nineSliceVertexSource');
-  },
-  'WebGl2RepeatingSpriteRenderer.ts: shaderPathVertSource': async () => {
-    const raw = await import('../../../src/rendering/webgl2/WebGl2RepeatingSpriteRenderer.ts?raw');
-
-    return extractTemplateLiteral(raw.default, 'shaderPathVertSource');
-  },
-  'WebGl2RepeatingSpriteRenderer.ts: geoPathVertSource': async () => {
-    const raw = await import('../../../src/rendering/webgl2/WebGl2RepeatingSpriteRenderer.ts?raw');
-
-    return extractTemplateLiteral(raw.default, 'geoPathVertSource');
-  },
+  'nine-slice.vert': () => import('../../../src/rendering/webgl2/glsl/nine-slice.vert?raw'),
+  'repeating-sprite-shader-path.vert': () => import('../../../src/rendering/webgl2/glsl/repeating-sprite-shader-path.vert?raw'),
+  'repeating-sprite-geo-path.vert': () => import('../../../src/rendering/webgl2/glsl/repeating-sprite-geo-path.vert?raw'),
+  'sprite-material.vert': () => import('../../../src/rendering/sprite/glsl/sprite-material.vert?raw'),
+  // Ships from `@codexo/exojs-tilemap`.
+  'tile-chunk.vert': () => import('../../../packages/exojs-tilemap/src/webgl2/glsl/tile-chunk.vert?raw'),
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -277,24 +246,8 @@ describe('WebGL2 mobile precision — Layer 2: vertex position math stays highp'
       const src = (await load()).default;
 
       expect(src.length).toBeGreaterThan(0);
-      // It reached us as real source, not the stub-plugin's empty string.
       expect(src).toContain('void main');
       // The contract: position/UV math computed in fp32.
-      expect(src).toMatch(/precision\s+highp\s+float\s*;/);
-      expect(src).not.toMatch(/precision\s+(mediump|lowp)\s+float\s*;/);
-    });
-  }
-
-  // NineSlice/RepeatingSprite inline their vertex GLSL as template literals
-  // inside the renderer `.ts` files rather than separate `.vert` files (see
-  // `extractTemplateLiteral` above), so they need their own loop rather than
-  // fitting the `?raw`-on-`.vert` table above.
-  for (const [name, load] of Object.entries(inlinedPositionVertStages)) {
-    test(`${name} declares highp float and no reduced float precision`, async () => {
-      const src = await load();
-
-      expect(src.length).toBeGreaterThan(0);
-      expect(src).toContain('void main');
       expect(src).toMatch(/precision\s+highp\s+float\s*;/);
       expect(src).not.toMatch(/precision\s+(mediump|lowp)\s+float\s*;/);
     });

@@ -8,11 +8,11 @@ import { dirname, relative, resolve } from 'node:path';
 
 import { codecovRollupPlugin } from '@codecov/rollup-plugin';
 import { createBuildDefinesFromRepo } from '../build-defines/index.js';
+import { createShaderPlugin } from '../shader-plugin.js';
 import { createWorkletPlugin } from '../worklet-plugin.js';
 import nodeResolve from '@rollup/plugin-node-resolve';
 import replace from '@rollup/plugin-replace';
 import typescript from '@rollup/plugin-typescript';
-import { string } from 'rollup-plugin-string';
 
 // Core types come from the BUILT declarations (ambient .d.ts, outside the
 // extension's rootDir). The emitted import specifiers stay the external
@@ -90,7 +90,7 @@ export function createExtensionConfig(opts) {
       // Resolve this package's `#` imports to source via its OWN condition;
       // skipped when the package has no internal `#` imports.
       ...(sourceCondition ? [nodeResolve({ exportConditions: [sourceCondition, 'browser', 'module', 'import', 'default'], extensions: ['.ts', '.js'] })] : []),
-      string({ include: ['**/*.vert', '**/*.frag'] }),
+      createShaderPlugin(),
       // Real, typed AudioWorklet sources imported via `?worklet` (see
       // `../worklet-plugin.js`); untouched worklets keep exporting a plain
       // template-string constant and are unaffected.

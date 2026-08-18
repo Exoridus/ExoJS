@@ -4,6 +4,8 @@ import type { RenderTexture } from '#rendering/texture/RenderTexture';
 
 import { Filter } from './Filter';
 import { createFilterShaderSource, ShaderFilter } from './ShaderFilter';
+import glslFragment from './shaders/color-matrix.frag';
+import wgslFragment from './shaders/color-matrix.wgsl';
 
 /** A 4×5 row-major colour matrix: four rows of `[r, g, b, a, offset]`. */
 export type ColorMatrixEntries = readonly number[];
@@ -16,66 +18,6 @@ const LUMA_G = 0.7152;
 const LUMA_B = 0.0722;
 
 const IDENTITY: ColorMatrixEntries = [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0];
-
-/**
- * Render targets hold PREMULTIPLIED colour (the engine composites with
- * `ONE, ONE_MINUS_SRC_ALPHA`), so a colour transform cannot be applied to the
- * sample as it is stored: an offset added to premultiplied RGB brightens a
- * half-transparent pixel twice as much as an opaque one, and can push RGB above
- * alpha, which is not a representable premultiplied colour at all.
- *
- * Both shaders therefore divide out alpha, transform straight RGBA, clamp, and
- * multiply alpha back in.
- */
-const glslFragment = `#version 300 es
-precision mediump float;
-uniform sampler2D uTexture;
-uniform vec4 uRow0;
-uniform vec4 uRow1;
-uniform vec4 uRow2;
-uniform vec4 uRow3;
-uniform vec4 uBias;
-in vec2 vUv;
-out vec4 fragColor;
-void main() {
-    vec4 premultiplied = texture(uTexture, vUv);
-    float alpha = premultiplied.a;
-    vec4 straight = vec4(alpha > 0.0 ? premultiplied.rgb / alpha : vec3(0.0), alpha);
-    vec4 graded = clamp(vec4(dot(uRow0, straight), dot(uRow1, straight), dot(uRow2, straight), dot(uRow3, straight)) + uBias, 0.0, 1.0);
-    fragColor = vec4(graded.rgb * graded.a, graded.a);
-}
-`;
-
-const wgslFragment = `
-struct Uniforms {
-    uRow0: vec4<f32>,
-    uRow1: vec4<f32>,
-    uRow2: vec4<f32>,
-    uRow3: vec4<f32>,
-    uBias: vec4<f32>,
-};
-
-@group(0) @binding(1) var uTexture: texture_2d<f32>;
-@group(0) @binding(2) var uSampler: sampler;
-@group(1) @binding(0) var<uniform> uniforms: Uniforms;
-
-@fragment
-fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
-    let premultiplied = textureSample(uTexture, uSampler, vUv);
-    let alpha = premultiplied.a;
-    let straightRgb = select(vec3<f32>(0.0), premultiplied.rgb / max(alpha, 1e-5), alpha > 0.0);
-    let straight = vec4<f32>(straightRgb, alpha);
-    let transformed = vec4<f32>(
-        dot(uniforms.uRow0, straight),
-        dot(uniforms.uRow1, straight),
-        dot(uniforms.uRow2, straight),
-        dot(uniforms.uRow3, straight),
-    ) + uniforms.uBias;
-    let graded = clamp(transformed, vec4<f32>(0.0), vec4<f32>(1.0));
-
-    return vec4<f32>(graded.rgb * graded.a, graded.a);
-}
-`;
 
 /**
  * The colour-matrix source pair, built once and shared by every instance.

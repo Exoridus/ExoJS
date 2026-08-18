@@ -3,11 +3,12 @@
  * for the in-repo perf benches — the node/tsx counterpart of the vitest config's
  * `realShaderPlugin` + `aliasConfig`. Two jobs:
  *
- *  1. **GLSL imports.** Engine modules import shaders as
- *     `import src from '#rendering/.../x.frag'`, which `package.json#imports` maps
- *     to `./src/.../x.frag`. Node resolves the path but has no loader for the
- *     extension, so this hook loads the file as its source text exported as
- *     `default` (exactly like the vitest/rollup transforms).
+ *  1. **Shader imports.** Engine modules import shaders as
+ *     `import src from '#rendering/.../x.frag'` (and the WGSL counterparts as
+ *     `.wgsl`), which `package.json#imports` maps into `./src/`. Node resolves
+ *     the path but has no loader for those extensions, so this hook loads the
+ *     file as its source text exported as `default` (exactly like the
+ *     vitest/rollup transforms).
  *
  *  2. **Workspace package specifiers.** `@codexo/exojs` and the extension packages
  *     (`@codexo/exojs-tilemap` etc.) do NOT expose a `@codexo/exojs-source` export
@@ -38,7 +39,9 @@ const packageAliases = new Map([
   ['@codexo/exojs-audio-fx', 'packages/exojs-audio-fx/src/index.ts'],
 ]);
 
-const isGlsl = specifier => specifier.endsWith('.vert') || specifier.endsWith('.frag');
+const SHADER_EXTENSIONS = ['.vert', '.frag', '.wgsl'];
+
+const isShaderSource = specifier => SHADER_EXTENSIONS.some(extension => specifier.endsWith(extension));
 
 export async function resolve(specifier, context, nextResolve) {
   const alias = packageAliases.get(specifier);
@@ -49,15 +52,15 @@ export async function resolve(specifier, context, nextResolve) {
 
   const result = await nextResolve(specifier, context);
 
-  if (isGlsl(result.url)) {
-    return { ...result, format: 'glsl-source', shortCircuit: true };
+  if (isShaderSource(result.url)) {
+    return { ...result, format: 'shader-source', shortCircuit: true };
   }
 
   return result;
 }
 
 export async function load(url, context, nextLoad) {
-  if (context.format === 'glsl-source' || isGlsl(url)) {
+  if (context.format === 'shader-source' || isShaderSource(url)) {
     const source = await readFile(fileURLToPath(url), 'utf8');
 
     return {

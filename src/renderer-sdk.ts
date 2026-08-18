@@ -29,6 +29,7 @@ export { Shader } from '#rendering/shader/Shader';
 // their packing, and the helpers' bodies are internal and change without notice,
 // which is exactly why a renderer takes the directive instead of addressing
 // texels itself.
+export { fillShaderSource } from '#rendering/shader/fillShaderSource';
 export { TRANSFORM_TEXTURE_GLSL_INCLUDE } from '#rendering/shader/transformTextureLayout';
 export { Spritesheet } from '#rendering/sprite/Spritesheet';
 // Renderers that guard on `Texture.source === null` need this to tell "still

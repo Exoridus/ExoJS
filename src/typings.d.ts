@@ -8,6 +8,11 @@ declare module '*.frag' {
   export default content;
 }
 
+declare module '*.wgsl' {
+  const content: string;
+  export default content;
+}
+
 // A real, typed AudioWorklet module (`*.worklet.ts`) transpiled and inlined as
 // a JS string — the AudioWorklet analogue of the two shader declarations
 // above. Matches the `?worklet` import query (not the `.worklet.ts` filename)

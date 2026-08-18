@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'node:url';
 
-import { createJsdomTestProject, shaderStubPlugin, srcConditions, workletTransformPlugin } from '@codexo/exojs-config/vitest';
+import { createShaderPlugin } from '@codexo/exojs-config/shader-plugin';
+import { createJsdomTestProject, srcConditions, workletTransformPlugin } from '@codexo/exojs-config/vitest';
 import { playwright } from '@vitest/browser-playwright';
 import { webdriverio } from '@vitest/browser-webdriverio';
 import { defineConfig } from 'vitest/config';
@@ -30,6 +31,13 @@ const aliasConfig = [
   { find: '@codexo/exojs-physics', replacement: fileURLToPath(new URL('./packages/exojs-physics/src/index.ts', import.meta.url)) },
 ] as const;
 
+// Loads every shader source (`.vert`/`.frag`/`.wgsl`) as its REAL text, exactly
+// as the production build does. Tests read what ships: the renderer performance
+// harness reflects attribute names out of the actual GLSL, the parity specs
+// compare the two languages' declarations against each other, and
+// `ShaderSource` rejects an empty source outright.
+const realShaderPlugin = createShaderPlugin();
+
 // Shared resolution/plugin wiring for the repository-local browser projects.
 //
 // The top-level Vite `define` replaces `__DEV__` in files Vite transforms
@@ -46,25 +54,9 @@ const browserBase = {
   // `workletTransformPlugin` is the real (non-stub) transform — the browser-
   // audio-chromium project below renders converted worklets through a genuine
   // AudioContext, so it needs functioning DSP, not an empty string.
-  plugins: [shaderStubPlugin, workletTransformPlugin],
+  plugins: [realShaderPlugin, workletTransformPlugin],
   define: { __DEV__: JSON.stringify(true), __VERSION__: JSON.stringify('0.0.0'), __REVISION__: JSON.stringify('test') },
 } as const;
-
-// Inverse of `shaderStubPlugin`: loads `.vert`/`.frag` as their REAL source text
-// (mirroring the production `rollup-plugin-string`). The renderer performance
-// harness (`test/perf/rendering/`) runs the real WebGL2 renderers in jsdom and
-// reflects attribute/uniform names from the actual GLSL, so the stub's empty
-// string would break `shader.getAttribute(...)` lookups.
-const realShaderPlugin = {
-  name: 'exojs-real-shader',
-  transform(code: string, id: string): { code: string } | undefined {
-    if (id.endsWith('.vert') || id.endsWith('.frag')) {
-      return { code: `export default ${JSON.stringify(code)}` };
-    }
-
-    return undefined;
-  },
-};
 
 // Per-project browser headedness:
 //  - WebGL2 Chromium: new headless. EXOJS_BROWSER_HEADED=1 only for local headed debug.
@@ -87,14 +79,7 @@ const firefoxCiHeaded = process.env['EXOJS_FIREFOX_CI_HEADED'] === '1';
 // browserBase note) before any engine module evaluates.
 const browserSetupFiles = ['./test/rendering/browser/_setup-dev-global.ts'];
 
-// Additionally run in the rendering projects: restores the shipped GLSL that
-// `shaderStubPlugin` blanks out. It has to be a setup file rather than a
-// module the specs import — vitest hoists `vi.mock` only within the file
-// holding the calls, so a helper imported by a spec registers its mocks after
-// that spec's own imports have already pulled in the renderers. A spec needing
-// a probe shader instead of the shipped one still declares its own `vi.mock`,
-// which takes precedence over these.
-const renderingBrowserSetupFiles = [...browserSetupFiles, './test/rendering/browser/_glslMocks.ts'];
+const renderingBrowserSetupFiles = browserSetupFiles;
 
 // The parity runner executes in the browser and cannot write files, so it hands
 // its evidence rows to these node-side commands.
@@ -148,22 +133,16 @@ export default defineConfig({
     },
     projects: [
       // ── jsdom unit/integration projects (Core + extensions) ──────────────
-      // `exojs` and `exojs-particles` are the only jsdom projects whose `src/`
-      // actually imports `.vert`/`.frag` files (core WebGL2 renderers and the
-      // particle render modes, respectively) — every other jsdom project below
-      // only reaches the engine through `@codexo/exojs`'s public surface, which
-      // loads backends lazily and never touches GLSL at module scope. Both are
-      // switched to `realShaderPlugin` (the same real-text loader `rendering-perf`
-      // and `rendering-alloc` use below) so a `.vert`/`.frag` import here resolves
-      // to the shipped source instead of `shaderStubPlugin`'s empty string — the
-      // biggest test project (`test:core`) previously ran every spec against a
-      // blank shader, which made GLSL regressions invisible outside the 3 browser
-      // lanes and `rendering-perf`. jsdom has no WebGL2 context to actually
-      // compile against (that's what the browser lanes are for), so
+      // Every project loads shader sources as their real text — the same loader
+      // the production build uses. An earlier stub blanked `.vert`/`.frag` to
+      // `""`, which ran the biggest test project (`test:core`) against blank
+      // shaders and made GLSL regressions invisible outside the 3 browser lanes
+      // and `rendering-perf`; it also forced per-path `vi.mock` workarounds
+      // wherever `ShaderSource`'s non-empty-string validation ran at module
+      // scope. jsdom has no WebGL2 context to actually compile against (that is
+      // what the browser lanes are for), so
       // `test/rendering/shader-source-structure.test.ts` adds a GPU-free
-      // structural check instead. This also retires the `_particleGlslMocks.ts`
-      // per-path `vi.mock` workaround: with real text loaded for every shader,
-      // `ShaderSource`'s non-empty-string validation no longer needs un-stubbing.
+      // structural check instead.
       {
         ...createJsdomTestProject({
           name: 'exojs',
@@ -344,6 +323,7 @@ export default defineConfig({
                   'webgl.force-enabled': true,
                   'webgl.disabled': false,
                   'gfx.webrender.software': true,
+                  'webgl.angle.force-warp': true,
                 },
               },
             }),
@@ -512,13 +492,6 @@ export default defineConfig({
       // Prerequisites on the Mac, once: `safaridriver --enable`, plus
       // Develop ▸ Allow Remote Automation in Safari's menu.
       //
-      // Uses `realShaderPlugin` instead of `browserBase.plugins` (which carries
-      // `shaderStubPlugin`) and skips `_glslMocks.ts`: that setup file
-      // un-stubs GLSL via `vi.mock`, but `@vitest/browser-webdriverio` has no
-      // CDP-equivalent hook for Vitest's module-mock interception, so the mock
-      // silently no-ops and every shader compiles from an empty string. Serving
-      // real GLSL straight from the transform sidesteps the gap instead of
-      // depending on a mock that cannot fire under plain WebDriver.
       {
         ...browserBase,
         plugins: [realShaderPlugin, workletTransformPlugin],

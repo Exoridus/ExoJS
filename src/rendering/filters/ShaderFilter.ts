@@ -6,6 +6,8 @@ import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 
 import { Filter } from './Filter';
+import defaultGlslVertexSource from './shaders/default-vertex.vert';
+import defaultWgslVertexSource from './shaders/default-vertex.wgsl';
 import { WebGl2ShaderFilterPass } from './WebGl2ShaderFilterPass';
 import { WebGpuShaderFilterPass } from './WebGpuShaderFilterPass';
 
@@ -121,34 +123,14 @@ export class ShaderFilterBackendError extends Error {
  * space (-1..1), so no projection matrix is needed.
  * @internal
  */
-export const defaultGlslVertexSource = `#version 300 es
-in vec2 aPosition;
-in vec2 aUv;
-out vec2 vUv;
-void main() {
-    vUv = aUv;
-    gl_Position = vec4(aPosition, 0.0, 1.0);
-}
-`;
+export { defaultGlslVertexSource };
 
 /**
  * Default fullscreen-quad WGSL vertex stage, prepended to a fragment-only WGSL
  * module. Same geometry and same `vUv` semantics as {@link defaultGlslVertexSource}.
  * @internal
  */
-export const defaultWgslVertexSource = `struct VsOut {
-    @builtin(position) position: vec4<f32>,
-    @location(0) vUv: vec2<f32>,
-};
-
-@vertex
-fn vertexMain(@location(0) aPosition: vec2<f32>, @location(1) aUv: vec2<f32>) -> VsOut {
-    var out: VsOut;
-    out.position = vec4<f32>(aPosition, 0.0, 1.0);
-    out.vUv = aUv;
-    return out;
-}
-`;
+export { defaultWgslVertexSource };
 
 /** `@vertex` outside a comment — see {@link createFilterShaderSource}. */
 const wgslVertexStagePattern = /@vertex\b/;

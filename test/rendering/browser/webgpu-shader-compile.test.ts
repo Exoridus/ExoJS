@@ -35,6 +35,8 @@
  * device mid-test. Run via: pnpm test:browser:webgpu
  */
 
+import { stripShaderSource } from '@codexo/exojs-config/shader-strip';
+
 import { spriteMaterialPrologueWgsl } from '#rendering/sprite/spriteMaterialSources';
 import { compositorShaderSource as backdropBlendCompositorWgsl } from '#rendering/webgpu/WebGpuBackdropBlendCompositor';
 import { mipmapWgsl } from '#rendering/webgpu/WebGpuBackend';
@@ -118,27 +120,40 @@ describe('WebGPU WGSL shader sources', () => {
   // gets its own device — matching the isolation-per-test pattern the other
   // WebGPU browser specs in this directory use (see `setupBackend` in
   // `webgpu-backdrop-blend.test.ts`), and keeping `ctx.skip` unambiguous.
+  //
+  // Every source is compiled twice: as authored, and as the comment-stripped
+  // text the production build ships (see `shader-strip.test.ts`) — the stripped
+  // form is the only one a consumer's driver ever sees.
   for (const { name, source } of shaders) {
-    test(`compiles ${name}`, async ctx => {
-      const device = await requestTestDevice();
+    for (const [variant, code] of [
+      ['as authored', source],
+      ['stripped', stripShaderSource(source)],
+    ] as const) {
+      test(`compiles ${name} (${variant})`, async ctx => {
+        const device = await requestTestDevice();
 
-      try {
-        const { errorCount, log } = await compileWgsl(device, source);
+        try {
+          const { errorCount, log } = await compileWgsl(device, code);
 
-        expect(errorCount, `${name} failed to compile:\n${log}`).toBe(0);
-      } catch (error) {
-        if (isDeviceLoss(error)) {
-          // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
-          ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+          expect(
+            errorCount,
+            `${name} (${variant}) failed to compile:
+${log}`,
+          ).toBe(0);
+        } catch (error) {
+          if (isDeviceLoss(error)) {
+            // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+            ctx.skip('WebGPU device lost mid-test — unstable software adapter');
 
-          return;
+            return;
+          }
+
+          throw error;
+        } finally {
+          device.destroy();
         }
-
-        throw error;
-      } finally {
-        device.destroy();
-      }
-    });
+      });
+    }
   }
 
   // ── Best-effort adapter-identity diagnostic ─────────────────────────────

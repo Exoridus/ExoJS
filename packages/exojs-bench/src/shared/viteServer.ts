@@ -22,7 +22,7 @@ const REPO_ROOT = resolve(HERE, '..', '..', '..', '..');
 const ENGINE_SRC = resolve(REPO_ROOT, 'src');
 
 /** Shader extensions the engine imports as text. */
-const SHADER_EXTENSIONS = ['.vert', '.frag', '.glsl'] as const;
+const SHADER_EXTENSIONS = ['.vert', '.frag', '.glsl', '.wgsl'] as const;
 
 /**
  * Competitor library arms whose installed version + resolution are stamped into
@@ -75,8 +75,8 @@ const loadVite = async (): Promise<{ createServer: (config: Record<string, unkno
 };
 
 /**
- * Serves `.vert`/`.frag`/`.glsl` imports as their REAL source text (mirrors the
- * production `rollup-plugin-string`). This is the deliberate inverse of the
+ * Serves `.vert`/`.frag`/`.glsl`/`.wgsl` imports as their REAL source text
+ * (mirrors the production shader plugin). This is the deliberate inverse of the
  * vitest browser project's `shaderStubPlugin`, which replaces shaders with `""`
  * — benchmarking a renderer with empty shaders measures nothing.
  */

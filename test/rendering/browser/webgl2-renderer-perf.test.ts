@@ -8,10 +8,8 @@
  * policy, repeating-sprite shader path, tilemap chunk pages) produce
  * identical counts under a real GPU pipeline.
  *
- * The sprite and mesh programs compile from the shipped GLSL, restored by the
- * `_glslMocks` setup file. NineSlice, RepeatingSprite and the tilemap renderer
- * author their GLSL inline; the tilemap renderer also needs no core-renderer
- * wiring.
+ * The sprite and mesh programs compile from the shipped GLSL. The tilemap
+ * renderer needs no core-renderer wiring.
  *
  * Canvas size: 1280 × 720 — large enough that ≤200 sprites scattered inside
  * always pass view-frustum culling. Tilemap tests use a smaller canvas sized

@@ -30,10 +30,10 @@ import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
 
-// The particle GLSL comes from `_glslMocks.ts`, which `?raw`-imports the shipped
-// `.vert`/`.frag` files. This spec renders the stock particle stage, so it must
-// not carry its own copy of those sources: a copy silently goes stale the next
-// time the shipped shader changes and the spec then tests a shader nobody ships.
+// The particle GLSL is the shipped `.vert`/`.frag` text, loaded by the shader
+// plugin. This spec renders the stock particle stage, so it must not carry its
+// own copy of those sources: a copy silently goes stale the next time the
+// shipped shader changes and the spec then tests a shader nobody ships.
 
 // ---------------------------------------------------------------------------
 // Infrastructure helpers
