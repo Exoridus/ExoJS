@@ -247,11 +247,6 @@ const modules: RollupOptions = {
           outDir: 'dist/esm',
           declaration: true,
           declarationDir: 'dist/esm',
-          // An `@internal` export is not part of the published surface, and a
-          // few of them hold shader sources loaded from `.vert`/`.wgsl` files.
-          // Emitting them makes the declaration name a module that resolves
-          // only in this repository, which fails every consumer's type-check.
-          stripInternal: true,
           // Embed the original TS text so the shipped maps work without src/
           // on disk (npm consumers, and Vite's missing-source check).
           inlineSources: true,
