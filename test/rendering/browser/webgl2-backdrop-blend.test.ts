@@ -14,7 +14,7 @@
  * Run via:  pnpm test:browser:webgl
  */
 
-import type { Application } from '#core/Application';
+import type { Application, CanvasAlphaMode } from '#core/Application';
 import { Color } from '#core/Color';
 import { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
@@ -36,7 +36,7 @@ const defaultWebGlAttributes: WebGLContextAttributes = {
   depth: false,
 };
 
-const createBackend = async (): Promise<WebGl2Backend> => {
+const createBackend = async (alphaMode: CanvasAlphaMode = 'opaque'): Promise<WebGl2Backend> => {
   const canvas = document.createElement('canvas');
 
   canvas.width = canvasSize;
@@ -47,7 +47,7 @@ const createBackend = async (): Promise<WebGl2Backend> => {
     options: {
       clearColor: Color.black,
       canvas: { width: canvasSize, height: canvasSize, pixelRatio: 1 },
-      rendering: { debug: false, webglAttributes: defaultWebGlAttributes },
+      rendering: { alphaMode, debug: false, webglAttributes: defaultWebGlAttributes },
     },
   } as unknown as Application;
 
@@ -203,5 +203,37 @@ describe('WebGL2 backdrop-aware blend (Darken spike)', () => {
       source.destroy();
       backend.destroy();
     }
+  });
+});
+
+/**
+ * Mirror of the WebGPU cells in `webgpu-backdrop-blend`: root coverage is a
+ * function of the canvas alpha mode, not of "is this the root target". Both
+ * backends must read the same numbers from the same public option.
+ */
+describe('WebGL2 backdrop-aware blend — root coverage follows alphaMode', () => {
+  const sourceColor: [number, number, number] = [90, 200, 150];
+
+  const composeOverEmptyRoot = async (alphaMode: CanvasAlphaMode): Promise<RgbaTuple> => {
+    const backend = await createBackend(alphaMode);
+    const source = createSolidTexture(`rgb(${sourceColor[0]}, ${sourceColor[1]}, ${sourceColor[2]})`);
+
+    try {
+      backend.clear(new Color(0, 0, 0, 0));
+      composeBackdropBlend(backend, source, BlendModes.Multiply);
+
+      return readPixel(backend, 32, 32);
+    } finally {
+      source.destroy();
+      backend.destroy();
+    }
+  };
+
+  test("'opaque': an empty root stays a fully covered (black) backdrop", async () => {
+    expectRgbNear(await composeOverEmptyRoot('opaque'), [0, 0, 0]);
+  });
+
+  test("'premultiplied': an empty root contributes no backdrop coverage", async () => {
+    expectRgbNear(await composeOverEmptyRoot('premultiplied'), sourceColor);
   });
 });

@@ -29,7 +29,7 @@
  * Run via:  pnpm test:browser:webgpu
  */
 
-import type { Application } from '#core/Application';
+import type { Application, CanvasAlphaMode } from '#core/Application';
 import { Color } from '#core/Color';
 import { Mesh } from '#rendering/mesh/Mesh';
 import { DataTexture } from '#rendering/texture/DataTexture';
@@ -52,22 +52,23 @@ const solidDataTexture = (r: number, g: number, b: number): DataTexture =>
     samplerOptions: { scaleMode: ScaleModes.Nearest },
   });
 
-const makeApp = (canvas: HTMLCanvasElement): Application =>
+const makeApp = (canvas: HTMLCanvasElement, alphaMode: CanvasAlphaMode): Application =>
   ({
     canvas,
     options: {
       canvas: { width: canvasSize, height: canvasSize },
       clearColor: Color.black,
+      rendering: { alphaMode },
     },
   }) as unknown as Application;
 
-const setupBackend = async (): Promise<WebGpuBackend> => {
+const setupBackend = async (alphaMode: CanvasAlphaMode = 'opaque'): Promise<WebGpuBackend> => {
   const canvas = document.createElement('canvas');
 
   canvas.width = canvasSize;
   canvas.height = canvasSize;
 
-  const backend = new WebGpuBackend(makeApp(canvas));
+  const backend = new WebGpuBackend(makeApp(canvas, alphaMode));
 
   wireCoreRenderers(backend);
   await backend.initialize();
@@ -298,6 +299,65 @@ describe('WebGPU backdrop-aware blend (Darken spike)', () => {
       source.destroy();
       backdrop.destroy();
       backend.destroy();
+    }
+  });
+});
+
+/**
+ * The root canvas is only a fully covered backdrop while it composites opaquely.
+ * Under `alphaMode: 'premultiplied'` it carries real alpha, so an untouched
+ * region must contribute NO coverage and the source has to pass through
+ * unblended — the same rule the WebGL2 compositor derives from its context
+ * attributes (`webgl2-backdrop-blend`, mirrored cell).
+ *
+ * Multiply against an empty root separates the two readings maximally: a
+ * wrongly-assumed opaque backdrop multiplies the source by black.
+ */
+describe('WebGPU backdrop-aware blend — root coverage follows alphaMode', () => {
+  const sourceColor: [number, number, number] = [90, 200, 150];
+
+  const composeOverEmptyRoot = async (alphaMode: CanvasAlphaMode): Promise<RgbaTuple> => {
+    const backend = await setupBackend(alphaMode);
+    const source = solidDataTexture(...sourceColor);
+
+    try {
+      backend.clear(new Color(0, 0, 0, 0));
+      composeBackdropBlend(backend, source, BlendModes.Multiply);
+
+      return (await readGpuCanvas(backend))(32, 32);
+    } finally {
+      source.destroy();
+      backend.destroy();
+    }
+  };
+
+  test("'opaque': an empty root stays a fully covered (black) backdrop", async ctx => {
+    try {
+      // The canvas has no alpha channel, so its captured alpha is meaningless —
+      // coverage is forced and Multiply against black yields black.
+      expectRgbNear(await composeOverEmptyRoot('opaque'), [0, 0, 0]);
+    } catch (error) {
+      if (isDeviceLoss(error)) {
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+      } else {
+        throw error;
+      }
+    }
+  });
+
+  test("'premultiplied': an empty root contributes no backdrop coverage", async ctx => {
+    try {
+      // Real alpha 0 in the captured backdrop: αb = 0, so Cs' = Cs and the
+      // source reaches the canvas unblended.
+      expectRgbNear(await composeOverEmptyRoot('premultiplied'), sourceColor);
+    } catch (error) {
+      if (isDeviceLoss(error)) {
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+      } else {
+        throw error;
+      }
     }
   });
 });

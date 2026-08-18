@@ -394,7 +394,10 @@ export class WebGpuBackdropBlendCompositor {
 
     device.queue.submit([encoder.finish()]);
 
-    this._drawBlend(manager, source, backdropView, x, y, width, height, blendMode, target.root);
+    // A root target is a fully covered backdrop only while the canvas composites
+    // opaquely; under `alphaMode: 'premultiplied'` its captured alpha is real and
+    // must be honoured. Offscreen targets always carry real alpha.
+    this._drawBlend(manager, source, backdropView, x, y, width, height, blendMode, target.root && manager._rootCanvasOpaque);
   }
 
   private _ensureBackdrop(device: GPUDevice, width: number, height: number, format: GPUTextureFormat): GPUTextureView {

@@ -671,6 +671,35 @@ describe('WebGpuBackend', () => {
     }
   });
 
+  test.each([
+    ['opaque', true],
+    ['premultiplied', false],
+  ] as const)('alphaMode %s reports the root canvas as opaque=%o', async (alphaMode, expected) => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const app = {
+        canvas: environment.canvas,
+        options: {
+          canvas: { width: 64, height: 64 },
+          clearColor: Color.black,
+          rendering: { alphaMode },
+        },
+      } as unknown as Application;
+      const manager = new WebGpuBackend(app);
+
+      await manager.initialize();
+
+      // The flag the backdrop-blend compositor reads to decide whether a root
+      // target may be treated as a fully covered backdrop.
+      expect(manager._rootCanvasOpaque).toBe(expected);
+
+      manager.destroy();
+    } finally {
+      environment.restore();
+    }
+  });
+
   test('supports additive blending for the built-in WebGPU primitive path', async () => {
     const environment = createMockWebGpuEnvironment();
 

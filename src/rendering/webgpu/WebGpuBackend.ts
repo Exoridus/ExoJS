@@ -418,6 +418,21 @@ export class WebGpuBackend implements RenderBackend {
     return managedTextureFormat;
   }
 
+  /**
+   * Whether the root canvas composites without an alpha channel. Only then may a
+   * root target be treated as a fully covered backdrop: under
+   * `alphaMode: 'premultiplied'` the canvas carries real alpha, so an untouched
+   * region genuinely has no coverage.
+   *
+   * The configured mode is the authority here — WebGPU has no equivalent of
+   * WebGL's `getContextAttributes()`, and this is the same value that goes into
+   * `context.configure()`.
+   * @internal
+   */
+  public get _rootCanvasOpaque(): boolean {
+    return this._alphaMode === 'opaque';
+  }
+
   public get clearRequested(): boolean {
     return this._clearRequested;
   }
