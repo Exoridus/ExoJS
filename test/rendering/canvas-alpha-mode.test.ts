@@ -10,6 +10,7 @@
 import { describe, expect, test } from 'vitest';
 
 import type { Application, RenderingApplicationOptions } from '#core/Application';
+import { resolveRenderingOptions } from '#core/Application';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import { createFakeWebGl2Context, GlRecorder, installFakeWebGl2Globals } from '../perf/rendering/fakeWebGl2';
@@ -17,6 +18,11 @@ import { createFakeWebGl2Context, GlRecorder, installFakeWebGl2Globals } from '.
 /**
  * Construct a real {@link WebGl2Backend} against a recording fake context and
  * hand back the attributes it asked `getContext('webgl2')` for.
+ *
+ * `rendering` is resolved through {@link resolveRenderingOptions} first —
+ * the same call the real {@link Application} constructor makes — so this
+ * exercises the actual public-options-to-defaults merge, not a re-typed copy
+ * of it.
  */
 const captureContextAttributes = (rendering: RenderingApplicationOptions): WebGLContextAttributes => {
   installFakeWebGl2Globals();
@@ -42,7 +48,7 @@ const captureContextAttributes = (rendering: RenderingApplicationOptions): WebGL
     canvas,
     options: {
       canvas: { width: 64, height: 64 },
-      rendering,
+      rendering: resolveRenderingOptions(rendering),
     },
   } as unknown as Application;
 
@@ -99,5 +105,37 @@ describe('canvas alphaMode → WebGL2 context attributes', () => {
 
     expect(attributes.alpha).toBe(true);
     expect(attributes.premultipliedAlpha).toBe(true);
+  });
+
+  test('applies ExoJS defaults (not the browser WebGL-spec defaults) when no override is given', () => {
+    const attributes = captureContextAttributes({});
+
+    expect(attributes.antialias).toBe(false);
+    expect(attributes.depth).toBe(false);
+    expect(attributes.preserveDrawingBuffer).toBe(false);
+    expect(attributes.stencil).toBe(true);
+  });
+
+  test('merges a partial webglAttributes override on top of the full ExoJS defaults', () => {
+    const attributes = captureContextAttributes({
+      webglAttributes: { antialias: true },
+    });
+
+    expect(attributes.antialias).toBe(true);
+    // The rest of ExoJS's defaults must survive a partial override instead of
+    // being replaced wholesale by the browser's own WebGL-spec defaults
+    // (which would flip `depth` to `true`).
+    expect(attributes.depth).toBe(false);
+    expect(attributes.preserveDrawingBuffer).toBe(false);
+  });
+
+  test('lets the engine-owned stencil attribute win over a smuggled-in override', () => {
+    const attributes = captureContextAttributes({
+      webglAttributes: { stencil: false } as NonNullable<RenderingApplicationOptions['webglAttributes']>,
+    });
+
+    // Root-target stencil clipping needs a stencil buffer unconditionally —
+    // the public option is not authoritative over this attribute.
+    expect(attributes.stencil).toBe(true);
   });
 });

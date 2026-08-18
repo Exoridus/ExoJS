@@ -20,6 +20,12 @@ const legacyAlpha: RenderingApplicationOptions = { webglAttributes: { alpha: tru
 // @ts-expect-error — canvas premultiplication is owned by alphaMode
 const legacyPremultiplied: RenderingApplicationOptions = { webglAttributes: { premultipliedAlpha: false } };
 
+// The renderer unconditionally needs a stencil buffer on the root target for
+// geometric stencil clipping, so `stencil` is engine-owned too, exactly like
+// `alpha`/`premultipliedAlpha` above — not a free-form user override.
+// @ts-expect-error — stencil is forced on internally, not caller-configurable
+const legacyStencil: RenderingApplicationOptions = { webglAttributes: { stencil: true } };
+
 // Genuinely WebGL-only context attributes stay available and unchanged.
 const keptAttributes: RenderingApplicationOptions = {
   webglAttributes: {
@@ -29,8 +35,7 @@ const keptAttributes: RenderingApplicationOptions = {
     failIfMajorPerformanceCaveat: false,
     powerPreference: 'high-performance',
     preserveDrawingBuffer: true,
-    stencil: true,
   },
 };
 
-export { keptAttributes, legacyAlpha, legacyPremultiplied, looseMode, mode, opaque, premultiplied, unsupportedMode };
+export { keptAttributes, legacyAlpha, legacyPremultiplied, legacyStencil, looseMode, mode, opaque, premultiplied, unsupportedMode };

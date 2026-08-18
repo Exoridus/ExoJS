@@ -511,7 +511,13 @@ describe('Application', () => {
     const appArg = BackendMock.mock.calls[0][0] as import('#core/Application').Application;
 
     expect(appArg.options.rendering?.debug).toBe(true);
-    expect(appArg.options.rendering?.webglAttributes).toEqual({ antialias: true });
+    // A partial webglAttributes override merges on top of ExoJS's own WebGL
+    // defaults — it does not replace them wholesale.
+    expect(appArg.options.rendering?.webglAttributes).toEqual({
+      antialias: true,
+      depth: false,
+      preserveDrawingBuffer: false,
+    });
     expect(appArg.options.rendering?.spriteRendererBatchSize).toBe(128);
   });
 

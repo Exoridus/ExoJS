@@ -161,11 +161,21 @@ export interface RenderingApplicationOptions {
   /**
    * WebGL2 context attributes. Ignored by WebGPU.
    *
-   * The composite attributes `alpha` and `premultipliedAlpha` are not settable
-   * here — they are derived from {@link RenderingApplicationOptions.alphaMode},
-   * which is the one spelling of that contract both backends understand.
+   * Merged as **partial overrides on top of ExoJS's own WebGL defaults**
+   * (`antialias: false`, `depth: false`, `preserveDrawingBuffer: false`) —
+   * passing e.g. `{ antialias: true }` only flips that one attribute and
+   * keeps the rest of ExoJS's defaults, it never replaces the whole default
+   * set with the browser's own WebGL-spec defaults.
+   *
+   * Two attributes are not settable here because the engine owns them
+   * outright and always overrides whatever is passed:
+   * - `alpha` and `premultipliedAlpha` are derived from
+   *   {@link RenderingApplicationOptions.alphaMode}, which is the one
+   *   spelling of that contract both backends understand.
+   * - `stencil` is always forced to `true` — geometric stencil clipping
+   *   needs a stencil buffer on the root target unconditionally.
    */
-  webglAttributes?: Omit<WebGLContextAttributes, 'alpha' | 'premultipliedAlpha'>;
+  webglAttributes?: Omit<WebGLContextAttributes, 'alpha' | 'premultipliedAlpha' | 'stencil'>;
   /** WebGL2 sprite renderer batch size. Ignored by WebGPU. */
   spriteRendererBatchSize?: number;
 }
@@ -404,10 +414,25 @@ const defaultRenderingSettings: Required<RenderingApplicationOptions> = {
   webglAttributes: {
     antialias: false,
     preserveDrawingBuffer: false,
-    stencil: false,
     depth: false,
   },
 };
+/**
+ * Resolve public {@link RenderingApplicationOptions} against ExoJS's own
+ * defaults. `webglAttributes` is merged as partial overrides on top of the
+ * full default set (see {@link RenderingApplicationOptions.webglAttributes})
+ * — everything else is a plain per-field fallback.
+ *
+ * @internal — shared by the constructor and by tests that need to assert on
+ * the resolved options without spinning up a full {@link Application}.
+ */
+export const resolveRenderingOptions = (renderingOptions: RenderingApplicationOptions): Required<RenderingApplicationOptions> => ({
+  alphaMode: renderingOptions.alphaMode ?? defaultRenderingSettings.alphaMode,
+  debug: renderingOptions.debug ?? defaultRenderingSettings.debug,
+  webglAttributes: { ...defaultRenderingSettings.webglAttributes, ...renderingOptions.webglAttributes },
+  spriteRendererBatchSize: renderingOptions.spriteRendererBatchSize ?? defaultRenderingSettings.spriteRendererBatchSize,
+});
+
 const defaultInputSettings: Required<InputApplicationOptions> = {
   gamepadDefinitions: [],
   gamepadSlotStrategy: 'sticky',
@@ -690,12 +715,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
           ...(loaderOptions.cacheStrategy !== undefined && { cacheStrategy: loaderOptions.cacheStrategy }),
           ...(loaderOptions.concurrency !== undefined && { concurrency: loaderOptions.concurrency }),
         },
-        rendering: {
-          alphaMode: renderingOptions.alphaMode ?? defaultRenderingSettings.alphaMode,
-          debug: renderingOptions.debug ?? defaultRenderingSettings.debug,
-          webglAttributes: renderingOptions.webglAttributes ?? defaultRenderingSettings.webglAttributes,
-          spriteRendererBatchSize: renderingOptions.spriteRendererBatchSize ?? defaultRenderingSettings.spriteRendererBatchSize,
-        },
+        rendering: resolveRenderingOptions(renderingOptions),
         input: {
           gamepadDefinitions: inputOptions.gamepadDefinitions ?? [...defaultInputSettings.gamepadDefinitions],
           gamepadSlotStrategy: inputOptions.gamepadSlotStrategy ?? defaultInputSettings.gamepadSlotStrategy,

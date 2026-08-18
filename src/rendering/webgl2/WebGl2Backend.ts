@@ -1904,12 +1904,15 @@ export class WebGl2Backend implements RenderBackend {
       // Force a stencil buffer on the default framebuffer so geometric stencil
       // clipping (RenderNode.clip with a Geometry clipShape) works on the root
       // target. Inert until a clip is pushed (STENCIL_TEST stays disabled).
+      // `stencil` is excluded from the public `webglAttributes` type, so
+      // `options` can never smuggle a conflicting value in here.
       //
       // The two composite attributes are derived from `alphaMode`, never taken
       // from the caller's attributes, so the canvas ends up with the same
       // browser-side composite behaviour WebGPU gets from the same option.
       // `premultipliedAlpha` is unconditionally true because the engine always
       // writes premultiplied colour; with `alpha: false` the browser ignores it.
+      // Both are likewise excluded from the public type for the same reason.
       return this._canvas.getContext('webgl2', {
         ...options,
         alpha: alphaMode === 'premultiplied',
