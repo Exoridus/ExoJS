@@ -16,14 +16,20 @@
  * identifiers and JSX text can never be mistaken for a comment, and a comment
  * in an otherwise empty block is still seen.
  *
- * The gate is diff-aware by default: it scans the files this branch changes
- * relative to the merge base with the default branch, plus staged, unstaged and
- * untracked changes. The tree predates the policy and a full scan is still red,
- * so introduction has to be the thing that fails, not the backlog. Pass `--all`
- * to scan the whole tree (reporting mode, for scoping the cleanup), `--base`
- * to compare against another ref, or explicit paths to scan just those files.
- * Every run prints the scope it used, so a partial run cannot be mistaken for
- * full coverage.
+ * The gate is line-scoped by default. It diffs against the merge base with the
+ * default branch, including staged, unstaged and untracked work, and reports
+ * only comments that touch a changed line. Scoping by file would be unusable:
+ * the tree predates the policy, most files carry some legacy violation, and a
+ * one-line edit in a grown file would block on decades of comment history the
+ * change never touched. A comment block counts as touched when any of its lines
+ * changed, so editing one sentence inside an existing JSDoc block puts the whole
+ * block in scope rather than just the new line; a new file has every line
+ * changed and is therefore checked in full.
+ *
+ * Pass `--all` to scan every comment in the tree (reporting mode, for scoping
+ * the cleanup), `--base` to compare against another ref, or explicit paths to
+ * check those files end to end. Every run prints the scope it used, so a
+ * line-scoped run cannot be mistaken for full coverage.
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, statSync } from 'node:fs';
@@ -64,6 +70,14 @@ export const TASK_ID_ALLOWLIST: readonly string[] = [
   'WUP-028',
 ];
 
+/**
+ * The repositories whose issue and pull-request numbers are this project's own
+ * development history. A link into someone else's tracker is a technical
+ * reference a workaround comment often needs, and stays allowed; a link into
+ * one of these is provenance.
+ */
+export const OWN_REPOSITORIES: readonly string[] = ['Exoridus/ExoJS'];
+
 const REPO_ROOT = resolve(import.meta.dirname, '..');
 const SELF_PATH = fileURLToPath(import.meta.url);
 const SCANNABLE_EXTENSIONS = ['.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs', '.cjs'];
@@ -80,6 +94,15 @@ const GENERATED_BANNER = /@generated|auto[- ]generated|do not edit/i;
 const GENERATED_BANNER_LINES = 5;
 
 const ALLOWED_TASK_IDS = new Set(TASK_ID_ALLOWLIST.map(id => id.toUpperCase()));
+const OWN_REPOSITORY_SET = new Set(OWN_REPOSITORIES.map(name => name.toLowerCase()));
+const GITHUB_ISSUE_URL = /https?:\/\/(?:www\.)?github\.com\/([\w.-]+)\/([\w.-]+)\/(?:issues|pull|pulls)\/\d+/i;
+
+/** True for a GitHub issue or pull-request link that points outside this project. */
+function isForeignIssueUrl(match: string): boolean {
+  const url = GITHUB_ISSUE_URL.exec(match);
+
+  return url !== null && !OWN_REPOSITORY_SET.has(`${url[1]}/${url[2]}`.toLowerCase());
+}
 
 interface HygieneRule {
   readonly name: string;
@@ -131,8 +154,9 @@ const RULES: readonly HygieneRule[] = [
       /(?<![\w#])#\d{3,6}(?![\w])/g,
       /\b(?:PR|pull request)[ -]?#?\d{1,6}\b/gi,
       /\bissues?[ -]#?\d{1,6}\b/gi,
-      /https?:\/\/(?:www\.)?github\.com\/[\w.-]+\/[\w.-]+\/(?:issues|pull|pulls)\/\d+/gi,
+      new RegExp(GITHUB_ISSUE_URL.source, 'gi'),
     ],
+    allow: isForeignIssueUrl,
   },
 ];
 
@@ -154,6 +178,14 @@ function git(args: readonly string[]): string {
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
   });
+}
+
+function tryGit(args: readonly string[]): string {
+  try {
+    return git(args);
+  } catch {
+    return '';
+  }
 }
 
 function gitLines(args: readonly string[]): string[] {
@@ -213,6 +245,26 @@ function collectComments(sourceFile: ts.SourceFile, source: string): ts.CommentR
   return comments;
 }
 
+/** A one-based, inclusive span of source lines. */
+interface LineRange {
+  readonly start: number;
+  readonly end: number;
+}
+
+/**
+ * Whether any line of the comment falls inside a changed range. Testing the
+ * whole span rather than the comment's first line is what puts an existing
+ * JSDoc block in scope when a single sentence inside it is rewritten.
+ */
+function isInScope(sourceFile: ts.SourceFile, comment: ts.CommentRange, ranges: readonly LineRange[] | null): boolean {
+  if (ranges === null) return true;
+
+  const first = sourceFile.getLineAndCharacterOfPosition(comment.pos).line + 1;
+  const last = sourceFile.getLineAndCharacterOfPosition(Math.max(comment.pos, comment.end - 1)).line + 1;
+
+  return ranges.some(range => range.start <= last && range.end >= first);
+}
+
 interface Match {
   readonly rule: string;
   readonly start: number;
@@ -249,7 +301,11 @@ function summarize(text: string): string {
   return collapsed.length > 120 ? `${collapsed.slice(0, 117)}...` : collapsed;
 }
 
-function scanFile(repoPath: string, absolutePath: string): Violation[] {
+/**
+ * Scans one file. `ranges` limits reporting to comments intersecting those
+ * one-based, inclusive line ranges; `null` reports every comment.
+ */
+function scanFile(repoPath: string, absolutePath: string, ranges: readonly LineRange[] | null): Violation[] {
   const source = readFileSync(absolutePath, 'utf8');
 
   if (isGenerated(source)) return [];
@@ -258,6 +314,8 @@ function scanFile(repoPath: string, absolutePath: string): Violation[] {
   const violations: Violation[] = [];
 
   for (const comment of collectComments(sourceFile, source)) {
+    if (!isInScope(sourceFile, comment, ranges)) continue;
+
     const text = source.slice(comment.pos, comment.end);
     const matches: Match[] = [];
 
@@ -283,11 +341,59 @@ function scanFile(repoPath: string, absolutePath: string): Violation[] {
 
 interface Scope {
   readonly description: string;
-  readonly files: string[];
+  /** Repo-relative path to the changed line ranges to report on, or `null` for the whole file. */
+  readonly files: Map<string, LineRange[] | null>;
 }
 
 function unique(paths: readonly string[]): string[] {
   return [...new Set(paths)].sort((a, b) => a.localeCompare(b));
+}
+
+function wholeFiles(paths: readonly string[]): Map<string, LineRange[] | null> {
+  return new Map(unique(paths).map(path => [path, null]));
+}
+
+/**
+ * New-side line ranges per file from a zero-context diff.
+ *
+ * Only the header block of each entry may name a file: a `+++` line is honoured
+ * until the first hunk, after which everything starting with `+` is added
+ * content that can look like a header. A hunk with a zero new-side count is a
+ * pure deletion and contributes nothing to scan.
+ */
+function parseChangedRanges(diff: string): Map<string, LineRange[]> {
+  const ranges = new Map<string, LineRange[]>();
+  let current: string | null = null;
+  let inHeader = false;
+
+  for (const line of diff.split('\n')) {
+    if (line.startsWith('diff --git ')) {
+      current = null;
+      inHeader = true;
+    } else if (inHeader && line.startsWith('+++ ')) {
+      const path = line.slice(4).trim();
+
+      current = path === '/dev/null' ? null : path.replace(/^b\//, '');
+    } else if (line.startsWith('@@')) {
+      inHeader = false;
+
+      const hunk = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/.exec(line);
+
+      if (!hunk || current === null) continue;
+
+      const start = Number(hunk[1]);
+      const count = hunk[2] === undefined ? 1 : Number(hunk[2]);
+
+      if (count === 0) continue;
+
+      const existing = ranges.get(current) ?? [];
+
+      existing.push({ start, end: start + count - 1 });
+      ranges.set(current, existing);
+    }
+  }
+
+  return ranges;
 }
 
 /** The default branch to compare against, preferring the remote's own HEAD over a guess. */
@@ -303,31 +409,43 @@ function defaultBaseRef(): string {
   return 'HEAD';
 }
 
+/**
+ * Comments touching a line this branch changed. The diff runs against the
+ * working tree, so it already spans committed, staged and unstaged edits and
+ * its line numbers describe the file as it sits on disk. Untracked files have
+ * no diff to read and are scanned whole.
+ */
 function changedScope(baseRef: string): Scope {
   const mergeBase = gitLines(['merge-base', 'HEAD', baseRef])[0] ?? baseRef;
-  const files = unique([
-    ...gitLines(['diff', '--name-only', '--diff-filter=ACMR', mergeBase]),
-    ...gitLines(['diff', '--name-only', '--diff-filter=ACMR', '--cached', mergeBase]),
-    ...gitLines(['ls-files', '--others', '--exclude-standard']),
-  ]);
+  const files = new Map<string, LineRange[] | null>();
+
+  for (const [path, ranges] of parseChangedRanges(tryGit(['diff', '--unified=0', '--diff-filter=ACMR', mergeBase]))) {
+    files.set(path, ranges);
+  }
+
+  for (const path of gitLines(['ls-files', '--others', '--exclude-standard'])) {
+    files.set(path, null);
+  }
 
   return {
-    description: `changed vs merge base with ${baseRef} (${mergeBase.slice(0, 12)}), including staged, unstaged and untracked files`,
+    description:
+      `lines changed vs merge base with ${baseRef} (${mergeBase.slice(0, 12)}), including staged, unstaged and untracked work ` +
+      '(line-scoped: only comments touching a changed line)',
     files,
   };
 }
 
 function allScope(): Scope {
   return {
-    description: 'the whole tree (reporting mode)',
-    files: unique([...gitLines(['ls-files']), ...gitLines(['ls-files', '--others', '--exclude-standard'])]),
+    description: 'the whole tree, every comment (reporting mode)',
+    files: wholeFiles([...gitLines(['ls-files']), ...gitLines(['ls-files', '--others', '--exclude-standard'])]),
   };
 }
 
 function explicitScope(paths: readonly string[]): Scope {
   return {
-    description: `${paths.length} explicitly named path(s)`,
-    files: unique(paths.map(path => toRepoPath(resolve(REPO_ROOT, path)))),
+    description: `${paths.length} explicitly named path(s), every comment`,
+    files: wholeFiles(paths.map(path => toRepoPath(resolve(REPO_ROOT, path)))),
   };
 }
 
@@ -367,7 +485,7 @@ const scope = paths.length > 0 ? explicitScope(paths) : all ? allScope() : chang
 const scanned: string[] = [];
 const violations: Violation[] = [];
 
-for (const repoPath of scope.files) {
+for (const [repoPath, ranges] of [...scope.files].sort(([a], [b]) => a.localeCompare(b))) {
   if (!isScannable(repoPath)) continue;
 
   const absolutePath = resolve(REPO_ROOT, repoPath);
@@ -376,7 +494,7 @@ for (const repoPath of scope.files) {
   if (!existsSync(absolutePath) || !statSync(absolutePath).isFile()) continue;
 
   scanned.push(repoPath);
-  violations.push(...scanFile(repoPath, absolutePath));
+  violations.push(...scanFile(repoPath, absolutePath, ranges));
 }
 
 const scanLine = `lint:source-hygiene: scanned ${scanned.length} source file(s) in scope: ${scope.description}.`;
