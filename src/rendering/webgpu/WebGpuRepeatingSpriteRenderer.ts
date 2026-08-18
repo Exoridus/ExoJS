@@ -25,9 +25,9 @@ import {
 } from './WebGpuRetainedGroupResources';
 import { packSnapViewport } from './webgpuSnapViewport';
 import { stencilContentDepthStencilState } from './WebGpuStencilState';
-import commonWgsl from './wgsl/repeating-sprite-common.wgsl';
-import geoPathEntries from './wgsl/repeating-sprite-geo-path.wgsl';
-import shaderPathEntries from './wgsl/repeating-sprite-shader-path.wgsl';
+import commonWgslModule from './wgsl/repeating-sprite-common.wgsl';
+import geoPathEntriesModule from './wgsl/repeating-sprite-geo-path.wgsl';
+import shaderPathEntriesModule from './wgsl/repeating-sprite-shader-path.wgsl';
 
 // ---------------------------------------------------------------------------
 // Shared WGSL declarations — structs, bindings, and output struct used by
@@ -35,21 +35,21 @@ import shaderPathEntries from './wgsl/repeating-sprite-shader-path.wgsl';
 // ---------------------------------------------------------------------------
 
 /** Shared WGSL structs/bindings used by both repeating-sprite entry points. @internal */
-export { commonWgsl };
+export const commonWgsl: string = commonWgslModule;
 
 // ---------------------------------------------------------------------------
 // Shader path WGSL — one quad per sprite, UVs computed in vertex shader.
 // ---------------------------------------------------------------------------
 
 /** WGSL entry points for the shader (one-quad-per-sprite) repeating-sprite path. @internal */
-export { shaderPathEntries };
+export const shaderPathEntries: string = shaderPathEntriesModule;
 
 // ---------------------------------------------------------------------------
 // Geometry path WGSL — N quads per sprite, UVs pre-computed in CPU.
 // ---------------------------------------------------------------------------
 
 /** WGSL entry points for the geometry (N-quads-per-sprite) repeating-sprite path. @internal */
-export { geoPathEntries };
+export const geoPathEntries: string = geoPathEntriesModule;
 
 // ---------------------------------------------------------------------------
 // Layout constants

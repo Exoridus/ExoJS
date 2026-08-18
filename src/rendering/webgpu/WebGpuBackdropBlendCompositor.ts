@@ -8,10 +8,10 @@ import { BlendModes } from '#rendering/types';
 import type { WebGpuBackend } from './WebGpuBackend';
 import { getWebGpuBlendState } from './WebGpuBlendState';
 import { stencilContentDepthStencilState } from './WebGpuStencilState';
-import compositorShaderSource from './wgsl/backdrop-blend-compositor.wgsl';
+import compositorShaderSourceModule from './wgsl/backdrop-blend-compositor.wgsl';
 
 /** WGSL source for the backdrop-blend compositor pipeline. @internal */
-export { compositorShaderSource };
+export const compositorShaderSource: string = compositorShaderSourceModule;
 
 // 4 floats per vertex: position(x, y) + texcoord(u, v).
 const vertexStrideBytes = 16;

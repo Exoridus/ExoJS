@@ -41,14 +41,14 @@ import {
   type UserUniformState,
   type UserUniformUpload,
 } from './webgpuUserUniforms';
-import meshShaderSource from './wgsl/mesh.wgsl';
-import instancedMeshShaderSource from './wgsl/mesh-instanced.wgsl';
+import meshShaderSourceModule from './wgsl/mesh.wgsl';
+import instancedMeshShaderSourceModule from './wgsl/mesh-instanced.wgsl';
 
 /** WGSL source for the default (non-instanced) mesh pipeline. @internal */
-export { meshShaderSource };
+export const meshShaderSource: string = meshShaderSourceModule;
 
 /** WGSL source for the instanced mesh pipeline. @internal */
-export { instancedMeshShaderSource };
+export const instancedMeshShaderSource: string = instancedMeshShaderSourceModule;
 
 // Per-vertex layout (20 bytes): pos f32x2 + uv f32x2 + color u8x4-norm.
 // Default-shader path bakes the (view * globalTransform) into position so the

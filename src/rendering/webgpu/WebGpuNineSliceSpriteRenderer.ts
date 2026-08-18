@@ -23,10 +23,10 @@ import {
 } from './WebGpuRetainedGroupResources';
 import { packSnapViewport } from './webgpuSnapViewport';
 import { stencilContentDepthStencilState } from './WebGpuStencilState';
-import nineSliceShaderSource from './wgsl/nine-slice.wgsl';
+import nineSliceShaderSourceModule from './wgsl/nine-slice.wgsl';
 
 /** WGSL source for the nine-slice sprite pipeline. @internal */
-export { nineSliceShaderSource };
+export const nineSliceShaderSource: string = nineSliceShaderSourceModule;
 
 const instanceStrideBytes = 32;
 const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT; // = 8

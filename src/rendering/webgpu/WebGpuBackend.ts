@@ -61,7 +61,7 @@ import {
 import { baseSpriteBatchTextureSlots, maxSpriteBatchTextureSlots } from './WebGpuSpriteRenderer';
 import { WEBGPU_DEFAULT_MAX_TEXTURE_DIMENSION_2D } from './webgpuStorageLimits';
 import { WebGpuTransformStorage } from './WebGpuTransformStorage';
-import mipmapWgsl from './wgsl/mipmap.wgsl';
+import mipmapWgslModule from './wgsl/mipmap.wgsl';
 
 interface ManagedWebGpuTextureState {
   texture: GPUTexture;
@@ -123,7 +123,7 @@ const managedTextureFormat: GPUTextureFormat = 'rgba8unorm';
 const MANAGED_TEXTURE_BYTES_PER_PIXEL = 4;
 
 /** WGSL source for the box-filter mipmap-generation pipeline. @internal */
-export { mipmapWgsl };
+export const mipmapWgsl: string = mipmapWgslModule;
 
 /**
  * WebGPU implementation of {@link RenderBackend}. Manages the GPU device,

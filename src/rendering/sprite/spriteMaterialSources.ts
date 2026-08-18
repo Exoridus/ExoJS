@@ -32,10 +32,10 @@
  * {@link spriteMaterialTextureSlots}..N / WGSL group(2)).
  */
 
-import spriteVertexGlsl from './glsl/sprite-material.vert';
-import spriteFragmentMainWgsl from './wgsl/sprite-fragment-main.wgsl';
-import spriteSharedStorageWgsl from './wgsl/sprite-shared-storage.wgsl';
-import spriteVertexCoreWgsl from './wgsl/sprite-vertex-core.wgsl';
+import spriteVertexGlslModule from './glsl/sprite-material.vert';
+import spriteFragmentMainWgslModule from './wgsl/sprite-fragment-main.wgsl';
+import spriteSharedStorageWgslModule from './wgsl/sprite-shared-storage.wgsl';
+import spriteVertexCoreWgslModule from './wgsl/sprite-vertex-core.wgsl';
 
 /**
  * Base-texture batch slots a custom {@link SpriteMaterial} rotates through.
@@ -58,7 +58,7 @@ export const spriteMaterialTextureSlots = 8;
  * (tint read from the separate `u_tintTexture`, no per-instance color).
  * @internal
  */
-export { spriteVertexGlsl };
+export const spriteVertexGlsl: string = spriteVertexGlslModule;
 
 /**
  * GLSL ES 3.00 multi-texture slot table for `textureSlots` base textures:
@@ -163,7 +163,7 @@ export const composeSpriteMaterialFragmentGlsl = (fragment: string): string => {
  * `matrix`, `group`, `viewport` — keep their meaning.
  * @internal
  */
-export { spriteVertexCoreWgsl };
+export const spriteVertexCoreWgsl: string = spriteVertexCoreWgslModule;
 
 /**
  * The group(0) declarations every WGSL sprite path that reads the SHARED
@@ -171,7 +171,7 @@ export { spriteVertexCoreWgsl };
  * and the packed rgba8 tint words.
  * @internal
  */
-export { spriteSharedStorageWgsl };
+export const spriteSharedStorageWgsl: string = spriteSharedStorageWgslModule;
 
 /**
  * The default sprite fragment stage: sample this instance's slot with explicit
@@ -179,7 +179,7 @@ export { spriteSharedStorageWgsl };
  * modulate by the interpolated tint.
  * @internal
  */
-export { spriteFragmentMainWgsl };
+export const spriteFragmentMainWgsl: string = spriteFragmentMainWgslModule;
 
 /**
  * WGSL vertex stage for the custom sprite-material path. Declares the
