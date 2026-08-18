@@ -104,11 +104,32 @@ function isForeignIssueUrl(match: string): boolean {
   return url !== null && !OWN_REPOSITORY_SET.has(`${url[1]}/${url[2]}`.toLowerCase());
 }
 
+/**
+ * "This session" is the one provenance phrase that is also ordinary domain
+ * vocabulary here: a `SceneTransitionSession` is a session, and a doc comment
+ * on one says so. Every other phrase the rule matches names a tool or a past
+ * conversation and cannot mean anything else.
+ */
+const AMBIGUOUS_SESSION = /^this session$/i;
+
+/**
+ * What separates "this session owns the transition state" from "this session
+ * changed the default": a verb that can only have a person as its subject.
+ * Matched against the whole comment block, since the sentence that gives the
+ * phrase away is often the next one.
+ */
+const RECOUNTS_A_CONVERSATION = /\b(?:discussed|decided|requested|asked|mentioned|agreed|suggested|reviewed)\b/i;
+
 interface HygieneRule {
   readonly name: string;
   readonly patterns: readonly RegExp[];
-  /** Returns true for a match that is legitimate despite matching the pattern. */
-  readonly allow?: (match: string) => boolean;
+  /**
+   * Returns true for a match that is legitimate despite matching the pattern.
+   * Receives the whole comment block, because a word can be domain vocabulary
+   * in one comment and provenance in the next; the block is the smallest unit
+   * that can tell them apart.
+   */
+  readonly allow?: (match: string, comment: string) => boolean;
 }
 
 /**
@@ -137,7 +158,15 @@ const RULES: readonly HygieneRule[] = [
   },
   {
     name: 'agent-provenance',
-    patterns: [/\bclaude\b/gi, /\bcodex\b/gi, /\bthe agent\b/gi, /\bthis session\b/gi, /\bthe previous session\b/gi],
+    patterns: [
+      /\bclaude\b/gi,
+      /\bcodex\b/gi,
+      /\bchatgpt\b/gi,
+      /\bthe agent\b/gi,
+      /\b(?:agent|coding|conversation|chat|previous|earlier|prior|last)\s+session\b/gi,
+      /\bthis session\b/gi,
+    ],
+    allow: (match, comment) => AMBIGUOUS_SESSION.test(match) && !RECOUNTS_A_CONVERSATION.test(comment),
   },
   {
     name: 'unicode-dash',
@@ -322,7 +351,7 @@ function scanFile(repoPath: string, absolutePath: string, ranges: readonly LineR
     for (const rule of RULES) {
       for (const pattern of rule.patterns) {
         for (const match of text.matchAll(pattern)) {
-          if (rule.allow?.(match[0])) continue;
+          if (rule.allow?.(match[0], text)) continue;
 
           matches.push({ rule: rule.name, start: match.index, end: match.index + match[0].length, text: match[0] });
         }
