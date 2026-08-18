@@ -80,8 +80,8 @@ tasks, commits, issues/PRs, branches/worktrees, conversation or agent history,
 private workspace references, or machine-specific paths. Preserve durable
 technical rationale only.
 
-Developer-facing source documentation is English and uses plain ASCII
-punctuation.
+Developer-facing source documentation is English and uses ASCII punctuation;
+non-ASCII characters are allowed only when technically meaningful.
 
 ## Performance and correctness
 
