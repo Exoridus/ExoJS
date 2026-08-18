@@ -29,13 +29,9 @@
  * This does not replace `extract-guide-snippets.ts`'s own `no-check` handling
  * (a plain `meta.includes('no-check')` check) - a reason sits right after
  * `no-check` on the same fence-meta line without breaking that check, so no
- * change there is needed or made. This script re-parses the same fences
- * independently (mirroring `extract-guide-snippets.ts`'s own `CHECKED_LANGS` +
- * `FENCE_RE`) rather than importing from the extractor, so the count matches
- * what that script actually processes - NOT a raw text grep, which also
- * matches fences the extractor cannot see at all (`FENCE_RE` anchors
- * `` ^``` `` at column 0, so a list-indented fence is invisible to both the
- * extractor and this gate) - and so this gate can run standalone, before the
+ * change there is needed or made. This script scans the fences itself, through
+ * the same `parseFences` the extractor uses, so the count matches what that
+ * script actually processes and this gate can still run standalone, before the
  * much heavier extraction + typecheck pass.
  */
 import { readdirSync, readFileSync } from 'node:fs';
@@ -49,6 +45,7 @@ import {
   writePartialBaseline,
   type BaselineDiff,
 } from './guide-partial-baseline.ts';
+import { parseFences } from './guide-fences.ts';
 
 const REPO_ROOT = join(import.meta.dirname, '..');
 const GUIDE_DIR = join(REPO_ROOT, 'site', 'src', 'content', 'guide');
@@ -66,10 +63,9 @@ const BASELINE_NOTE =
   `Run \`${UPDATE_COMMAND}\` to record a decrease (adding a reason, or removing the block, both shrink it). ` +
   'A guide with no such blocks is absent from this file.';
 
-// Mirrors extract-guide-snippets.ts's own fence scan (CHECKED_LANGS + FENCE_RE)
-// exactly, so the count here matches what that script actually processes.
+// Mirrors extract-guide-snippets.ts's own language filter, so the count here
+// matches what that script actually processes.
 const CHECKED_LANGS = new Set(['ts', 'tsx', 'typescript', 'js', 'javascript']);
-const FENCE_RE = /^```(?<lang>[a-zA-Z]+)?(?<meta>[^\n]*)?\n(?<body>[\s\S]*?)^```/gm;
 
 // A reason is anything non-whitespace after `no-check`, once an optional
 // `--` / `:` / em-dash separator is stripped: ```ts no-check -- pseudo-code```
@@ -111,10 +107,7 @@ function scanGuide(): NoCheckBlock[] {
     const content = readFileSync(file, 'utf8');
     const rel = relative(GUIDE_DIR, file).replaceAll('\\', '/');
 
-    for (const match of content.matchAll(FENCE_RE)) {
-      const lang = (match.groups?.lang ?? '').toLowerCase();
-      const meta = match.groups?.meta ?? '';
-
+    for (const { lang, meta } of parseFences(content)) {
       if (!CHECKED_LANGS.has(lang) || !meta.includes('no-check')) continue;
 
       const reason = (NO_CHECK_REASON_RE.exec(meta)?.[1] ?? '').trim();

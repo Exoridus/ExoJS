@@ -97,6 +97,7 @@ import {
   readPartialBaseline,
   writePartialBaseline,
 } from './guide-partial-baseline.ts';
+import { parseFences } from './guide-fences.ts';
 
 const REPO_ROOT = join(import.meta.dirname, '..');
 const GUIDE_DIR = join(REPO_ROOT, 'site', 'src', 'content', 'guide');
@@ -128,10 +129,6 @@ function isInScope(rel: string): boolean {
 }
 
 const CHECKED_LANGS = new Set(['ts', 'tsx', 'typescript', 'js', 'javascript']);
-
-// Matches a fenced code block. Group "lang" = language tag, "meta" = rest of
-// the opening fence line, "body" = the block content (without the fences).
-const FENCE_RE = /^```(?<lang>[a-zA-Z]+)?(?<meta>[^\n]*)?\n(?<body>[\s\S]*?)^```/gm;
 
 // Bare-method prefixes that indicate a snippet is a class method body shown
 // without its enclosing class — these snippets cannot be compiled standalone
@@ -771,11 +768,7 @@ for (const file of files) {
   const allCodeBodies: string[] = [];
   bareMemberCounter = 0;
 
-  for (const match of content.matchAll(FENCE_RE)) {
-    const lang = (match.groups?.lang ?? '').toLowerCase();
-    const meta = match.groups?.meta ?? '';
-    const body = match.groups?.body ?? '';
-
+  for (const { lang, meta, body } of parseFences(content)) {
     if (!CHECKED_LANGS.has(lang)) continue;
 
     allCodeBodies.push(body);
