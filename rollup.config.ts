@@ -66,8 +66,11 @@ const codecovBundlePlugin = (bundleName: string): Plugin[] =>
 // `@codexo/exojs-config/worklet-plugin`) are transpiled and inlined as a JS
 // string; untouched worklets keep exporting a plain template-string constant
 // and never reach this plugin. It is a no-op for any input that never uses
-// the `?worklet` query — safe to include in every config below.
+// the `?worklet` query — safe to include in every config below. Mirrors the
+// shader plugin split above: the outputs that minify get the minified worklet
+// string, the readable ones keep the plain transpile.
 const workletPlugin = createWorkletPlugin();
+const minifiedWorkletPlugin = createWorkletPlugin({ minify: true });
 
 const constantReplacementPlugin = replace({
   preventAssignment: true,
@@ -119,7 +122,7 @@ function basePlugins(options: {
     ...(extensionSource ? [extensionSourcePlugin()] : []),
     resolve({ mainFields, exportConditions }),
     minifies ? minifiedShaderPlugin : shaderPlugin,
-    workletPlugin,
+    minifies ? minifiedWorkletPlugin : workletPlugin,
     transform,
     ...minifyPlugins,
   ];

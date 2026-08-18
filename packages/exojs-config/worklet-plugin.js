@@ -39,9 +39,14 @@ import { transformSync } from 'esbuild';
 const WORKLET_QUERY = '?worklet';
 
 /**
+ * @param {{ minify?: boolean }} [options] `minify` additionally passes
+ *   esbuild's `minify: true` for the transpile step; leave it off wherever the
+ *   emitted worklet string should stay readable (the unminified module tree,
+ *   dev builds, tests — see `rollup.config.ts`, which mirrors the shader
+ *   plugin's minified/plain instance split).
  * @returns {import('rollup').Plugin}
  */
-export function createWorkletPlugin() {
+export function createWorkletPlugin({ minify = false } = {}) {
   return {
     name: 'exojs-worklet-transform',
     // Vite-only: makes sure this plugin's `resolveId`/`load` run before Vite's
@@ -65,6 +70,7 @@ export function createWorkletPlugin() {
         format: 'iife',
         target: 'es2022',
         sourcefile: filePath,
+        minify,
       });
       return `export default ${JSON.stringify(code)};`;
     },
