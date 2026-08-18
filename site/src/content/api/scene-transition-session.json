@@ -123,7 +123,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Draw this session's own visual output — not the scene itself; it does not share the render-surface the scene draws to."
+          "description": "Draw this transition session's own visual output - not the scene itself; it does not share the render-surface the scene draws to."
         },
         {
           "name": "update",
@@ -200,7 +200,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "true once this session has fully finished. Must never be true before SceneTransitionEnvironment.committed is also true — see SceneTransitionLifecycleError."
+          "description": "true once this transition session has fully finished. Must never be true before SceneTransitionEnvironment.committed is also true - see SceneTransitionLifecycleError."
         },
         {
           "name": "placement",
@@ -229,7 +229,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Which render layer this session's output composites against, read live every frame. May change mid-session for composed sessions."
+          "description": "Which render layer this transition session's output composites against, read live every frame. May change mid-session for composed sessions."
         }
       ],
       "paragraphs": [],
