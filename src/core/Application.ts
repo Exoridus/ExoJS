@@ -83,6 +83,22 @@ export enum ApplicationState {
 /** How {@link Application} sizes its canvas within the parent element. */
 export type CanvasSizingMode = 'fixed' | 'fill' | 'fit' | 'shrink' | 'letterbox';
 
+/**
+ * How the finished frame composites against the page behind the canvas.
+ *
+ * - `'opaque'`: the canvas has no alpha channel. Whatever is behind it in the
+ *   document never shows through, no matter what alpha the frame ends on.
+ * - `'premultiplied'`: the canvas keeps its alpha channel and the browser
+ *   composites the frame over the page with it. Combine with a
+ *   {@link ApplicationOptions.clearColor} whose alpha is below `1` to let the
+ *   page show through.
+ *
+ * This is purely about the *browser-side* composite step. It says nothing about
+ * how the engine stores or blends colour internally: ExoJS renders premultiplied
+ * end to end — textures, render targets and blend modes alike — under both modes.
+ */
+export type CanvasAlphaMode = 'opaque' | 'premultiplied';
+
 export interface CanvasApplicationOptions {
   /**
    * Existing canvas element to use. If omitted, Application creates one — and
@@ -132,10 +148,24 @@ export interface CanvasApplicationOptions {
 }
 
 export interface RenderingApplicationOptions {
+  /**
+   * How the canvas composites against the page. Default `'opaque'`. Honoured by
+   * both backends: WebGL2 derives the context's `alpha`/`premultipliedAlpha`
+   * from it, WebGPU its `GPUCanvasConfiguration.alphaMode`.
+   *
+   * @see {@link CanvasAlphaMode} for what the two modes do and do not control.
+   */
+  alphaMode?: CanvasAlphaMode;
   /** WebGL2-only debug wrapper. Ignored by WebGPU. */
   debug?: boolean;
-  /** WebGL2 context attributes. Ignored by WebGPU. */
-  webglAttributes?: WebGLContextAttributes;
+  /**
+   * WebGL2 context attributes. Ignored by WebGPU.
+   *
+   * The composite attributes `alpha` and `premultipliedAlpha` are not settable
+   * here — they are derived from {@link RenderingApplicationOptions.alphaMode},
+   * which is the one spelling of that contract both backends understand.
+   */
+  webglAttributes?: Omit<WebGLContextAttributes, 'alpha' | 'premultipliedAlpha'>;
   /** WebGL2 sprite renderer batch size. Ignored by WebGPU. */
   spriteRendererBatchSize?: number;
 }
@@ -368,12 +398,11 @@ const defaultLoaderFetchOptions: RequestInit = {
   cache: 'default',
 };
 const defaultRenderingSettings: Required<RenderingApplicationOptions> = {
+  alphaMode: 'opaque',
   debug: false,
   spriteRendererBatchSize: 4096, // ~ 262kb
   webglAttributes: {
-    alpha: false,
     antialias: false,
-    premultipliedAlpha: false,
     preserveDrawingBuffer: false,
     stencil: false,
     depth: false,
@@ -662,6 +691,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
           ...(loaderOptions.concurrency !== undefined && { concurrency: loaderOptions.concurrency }),
         },
         rendering: {
+          alphaMode: renderingOptions.alphaMode ?? defaultRenderingSettings.alphaMode,
           debug: renderingOptions.debug ?? defaultRenderingSettings.debug,
           webglAttributes: renderingOptions.webglAttributes ?? defaultRenderingSettings.webglAttributes,
           spriteRendererBatchSize: renderingOptions.spriteRendererBatchSize ?? defaultRenderingSettings.spriteRendererBatchSize,

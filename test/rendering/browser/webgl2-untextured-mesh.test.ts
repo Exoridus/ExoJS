@@ -28,9 +28,7 @@ type RgbaTuple = [number, number, number, number];
 // .vert/.frag imports to '' (jsdom can't use them), but the `?raw` specifier
 // is a different module id and resolves to the actual file contents.
 const defaultWebGlAttributes: WebGLContextAttributes = {
-  alpha: false,
   antialias: false,
-  premultipliedAlpha: false,
   preserveDrawingBuffer: true,
   stencil: false,
   depth: false,

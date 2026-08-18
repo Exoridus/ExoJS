@@ -620,6 +620,57 @@ describe('WebGpuBackend', () => {
     }
   });
 
+  test('configures the canvas opaque by default', async () => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const app = {
+        canvas: environment.canvas,
+        options: {
+          canvas: { width: 64, height: 64 },
+          clearColor: Color.black,
+        },
+      } as unknown as Application;
+      const manager = new WebGpuBackend(app);
+
+      await manager.initialize();
+
+      const configuration = (environment.context.configure as unknown as MockInstance).mock.calls[0]![0] as GPUCanvasConfiguration;
+
+      expect(configuration.alphaMode).toBe('opaque');
+
+      manager.destroy();
+    } finally {
+      environment.restore();
+    }
+  });
+
+  test('maps rendering.alphaMode onto the canvas configuration', async () => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const app = {
+        canvas: environment.canvas,
+        options: {
+          canvas: { width: 64, height: 64 },
+          clearColor: Color.black,
+          rendering: { alphaMode: 'premultiplied' },
+        },
+      } as unknown as Application;
+      const manager = new WebGpuBackend(app);
+
+      await manager.initialize();
+
+      const configuration = (environment.context.configure as unknown as MockInstance).mock.calls[0]![0] as GPUCanvasConfiguration;
+
+      expect(configuration.alphaMode).toBe('premultiplied');
+
+      manager.destroy();
+    } finally {
+      environment.restore();
+    }
+  });
+
   test('supports additive blending for the built-in WebGPU primitive path', async () => {
     const environment = createMockWebGpuEnvironment();
 

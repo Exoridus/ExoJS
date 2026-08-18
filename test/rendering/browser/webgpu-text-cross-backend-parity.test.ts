@@ -44,9 +44,7 @@ const makeApp = (canvas: HTMLCanvasElement): Application =>
       rendering: {
         debug: false,
         webglAttributes: {
-          alpha: false,
           antialias: false,
-          premultipliedAlpha: false,
           preserveDrawingBuffer: true,
           stencil: false,
           depth: false,

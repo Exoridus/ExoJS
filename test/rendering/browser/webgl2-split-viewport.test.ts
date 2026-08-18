@@ -16,9 +16,7 @@ const canvasWidth = 400;
 const canvasHeight = 200;
 
 const defaultWebGlAttributes: WebGLContextAttributes = {
-  alpha: false,
   antialias: false,
-  premultipliedAlpha: false,
   preserveDrawingBuffer: true,
   stencil: false,
   depth: false,

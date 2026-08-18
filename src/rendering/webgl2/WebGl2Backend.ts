@@ -1,4 +1,4 @@
-import type { Application } from '#core/Application';
+import type { Application, CanvasAlphaMode, RenderingApplicationOptions } from '#core/Application';
 import { Color } from '#core/Color';
 import { Signal } from '#core/Signal';
 import { Matrix } from '#math/Matrix';
@@ -360,11 +360,12 @@ export class WebGl2Backend implements RenderBackend {
     const height = canvasOptions.height ?? 600;
     const clearColor = app.options.clearColor;
     const webglAttributes = renderingOptions.webglAttributes;
+    const alphaMode = renderingOptions.alphaMode ?? 'opaque';
     const debug = renderingOptions.debug ?? false;
     this._surfacePixelRatio = sanitizeSurfacePixelRatio(canvasOptions.pixelRatio);
     this._canvas = app.canvas;
 
-    const gl = this._createContext(webglAttributes);
+    const gl = this._createContext(webglAttributes, alphaMode);
 
     if (!gl) {
       throw new Error('This browser or hardware does not support WebGL.');
@@ -1898,12 +1899,23 @@ export class WebGl2Backend implements RenderBackend {
     this._transformTextureHash = 0;
   }
 
-  private _createContext(options?: WebGLContextAttributes): WebGL2RenderingContext | null {
+  private _createContext(options: RenderingApplicationOptions['webglAttributes'], alphaMode: CanvasAlphaMode): WebGL2RenderingContext | null {
     try {
       // Force a stencil buffer on the default framebuffer so geometric stencil
       // clipping (RenderNode.clip with a Geometry clipShape) works on the root
       // target. Inert until a clip is pushed (STENCIL_TEST stays disabled).
-      return this._canvas.getContext('webgl2', { ...options, stencil: true });
+      //
+      // The two composite attributes are derived from `alphaMode`, never taken
+      // from the caller's attributes, so the canvas ends up with the same
+      // browser-side composite behaviour WebGPU gets from the same option.
+      // `premultipliedAlpha` is unconditionally true because the engine always
+      // writes premultiplied colour; with `alpha: false` the browser ignores it.
+      return this._canvas.getContext('webgl2', {
+        ...options,
+        alpha: alphaMode === 'premultiplied',
+        premultipliedAlpha: true,
+        stencil: true,
+      });
     } catch (_e) {
       return null;
     }

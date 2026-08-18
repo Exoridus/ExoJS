@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 3,
+  "memberCount": 4,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 3,
+    "properties": 4,
     "events": 0
   },
   "sections": [
@@ -26,6 +26,31 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "alphaMode",
+          "signature": "alphaMode?: CanvasAlphaMode",
+          "signatureTokens": [
+            {
+              "text": "alphaMode",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CanvasAlphaMode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How the canvas composites against the page. Default 'opaque'. Honoured by both backends: WebGL2 derives the context's alpha/premultipliedAlpha from it, WebGPU its GPUCanvasConfiguration.alphaMode."
+        },
         {
           "name": "debug",
           "signature": "debug?: boolean",
@@ -78,7 +103,7 @@
         },
         {
           "name": "webglAttributes",
-          "signature": "webglAttributes?: WebGLContextAttributes",
+          "signature": "webglAttributes?: Omit<WebGLContextAttributes, \"alpha\" | \"premultipliedAlpha\">",
           "signatureTokens": [
             {
               "text": "webglAttributes",
@@ -93,13 +118,41 @@
               "kind": "punctuation"
             },
             {
+              "text": "Omit",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
               "text": "WebGLContextAttributes",
               "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"alpha\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"premultipliedAlpha\"",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "WebGL2 context attributes. Ignored by WebGPU."
+          "description": "WebGL2 context attributes. Ignored by WebGPU. The composite attributes alpha and premultipliedAlpha are not settable here — they are derived from RenderingApplicationOptions.alphaMode, which is the one spelling of that contract both backends understand."
         }
       ],
       "paragraphs": [],

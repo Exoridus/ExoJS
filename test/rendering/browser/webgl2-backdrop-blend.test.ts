@@ -27,10 +27,10 @@ type RgbaTuple = [number, number, number, number];
 
 const canvasSize = 64;
 
+// The root canvas stays opaque (the engine's default alphaMode), which is what
+// exercises the opaque-backdrop path.
 const defaultWebGlAttributes: WebGLContextAttributes = {
-  alpha: false, // engine default: opaque root canvas (exercises the opaque-backdrop path)
   antialias: false,
-  premultipliedAlpha: false,
   preserveDrawingBuffer: true,
   stencil: false,
   depth: false,

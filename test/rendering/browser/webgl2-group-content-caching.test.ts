@@ -50,9 +50,7 @@ const createBackend = async (wire: (backend: WebGl2Backend) => void): Promise<We
       rendering: {
         debug: false,
         webglAttributes: {
-          alpha: false,
           antialias: false,
-          premultipliedAlpha: false,
           preserveDrawingBuffer: true,
           stencil: false,
           depth: false,

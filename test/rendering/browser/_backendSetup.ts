@@ -25,8 +25,8 @@ import { getBackendDevice } from './webgpu-test-helpers';
 
 /**
  * Minimal `Application` stand-in carrying only what the backends read during
- * construction. `alpha`/`premultipliedAlpha` are off and `preserveDrawingBuffer`
- * is on so a rendered frame can be read back unmodified.
+ * construction. The canvas keeps the default opaque `alphaMode` and
+ * `preserveDrawingBuffer` is on so a rendered frame can be read back unmodified.
  */
 export const makeTestApp = (canvas: HTMLCanvasElement, size: number, pixelRatio?: number): Application =>
   ({
@@ -37,9 +37,7 @@ export const makeTestApp = (canvas: HTMLCanvasElement, size: number, pixelRatio?
       rendering: {
         debug: false,
         webglAttributes: {
-          alpha: false,
           antialias: false,
-          premultipliedAlpha: false,
           preserveDrawingBuffer: true,
           stencil: false,
           depth: false,

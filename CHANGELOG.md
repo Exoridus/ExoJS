@@ -362,6 +362,24 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
 
 ### Changed
 
+- **BREAKING — canvas compositing is one backend-neutral option.** How the
+  finished frame composites against the page used to be spelled per backend:
+  WebGL2 read it from `rendering.webglAttributes.alpha` /
+  `.premultipliedAlpha`, while WebGPU hard-coded its canvas `alphaMode` to
+  `'opaque'`. The two could only agree by coincidence, and they stopped agreeing
+  as soon as anyone passed `webglAttributes` at all — the option is replaced
+  wholesale rather than merged, so `{ antialias: true }` silently dropped the
+  default's `alpha: false` and produced a transparent canvas under WebGL2 and an
+  opaque one under WebGPU. `rendering.alphaMode` (`'opaque' | 'premultiplied'`,
+  default `'opaque'`) is now the single spelling both backends honour: WebGPU
+  passes it to `GPUCanvasConfiguration.alphaMode`, WebGL2 derives `alpha` from it
+  and always requests `premultipliedAlpha` because the engine writes
+  premultiplied colour under both modes. The default preserves today's visible
+  behaviour exactly. This controls the browser-side composite step and nothing
+  else — internal texture and render-target premultiplication, blend modes and
+  material blend state are unaffected. Consequently `webglAttributes` no longer
+  accepts `alpha` or `premultipliedAlpha`; every other WebGL-only context
+  attribute is unchanged.
 - **`Text.measure` no longer rasterizes.** It used to run its layout pass against
   the shared glyph atlas, so measuring an unfamiliar string rasterized every glyph
   in it and claimed atlas space. It now reads the font variant's logical metrics

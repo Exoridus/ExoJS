@@ -53,9 +53,7 @@ const createBackend = async (): Promise<WebGl2Backend> => {
       rendering: {
         debug: false,
         webglAttributes: {
-          alpha: false,
           antialias: false,
-          premultipliedAlpha: false,
           preserveDrawingBuffer: true,
           stencil: false,
           depth: false,

@@ -55,9 +55,7 @@ const SPRITE_CANVAS_W = 1280;
 const SPRITE_CANVAS_H = 720;
 
 const defaultWebGlAttributes: WebGLContextAttributes = {
-  alpha: false,
   antialias: false,
-  premultipliedAlpha: false,
   preserveDrawingBuffer: true,
   stencil: false,
   depth: false,

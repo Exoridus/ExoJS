@@ -108,9 +108,7 @@ const startApplication = async (backend: BackendChoice, sink: ErrorSink): Promis
     canvas: { width: canvasSize, height: canvasSize, pixelRatio: 1 },
     rendering: {
       webglAttributes: {
-        alpha: false,
         antialias: false,
-        premultipliedAlpha: false,
         // Readback happens outside a compositing frame, but an explicit
         // preserve keeps the assertion independent of when the browser presents.
         preserveDrawingBuffer: true,

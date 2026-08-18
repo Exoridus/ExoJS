@@ -1,6 +1,6 @@
 /// <reference types="@webgpu/types" />
 
-import type { Application } from '#core/Application';
+import type { Application, CanvasAlphaMode } from '#core/Application';
 import { Color } from '#core/Color';
 import { logger } from '#core/logging';
 import { Signal } from '#core/Signal';
@@ -203,6 +203,10 @@ export class WebGpuBackend implements RenderBackend {
   public readonly onRenderError = new Signal<[RenderError]>();
 
   private readonly _canvas: HTMLCanvasElement;
+  // Browser-side composite mode of the root canvas. Read once at construction
+  // and re-applied by every `context.configure()`, including the one that
+  // follows device-loss recovery.
+  private readonly _alphaMode: CanvasAlphaMode;
   /** The application's `canvas.pixelRatio`, sanitized once — see {@link surfacePixelRatio}. */
   private readonly _surfacePixelRatio: number;
   private readonly _rootRenderTarget: RenderTarget;
@@ -310,6 +314,7 @@ export class WebGpuBackend implements RenderBackend {
     const height = canvasOptions.height ?? 600;
     const clearColor = app.options.clearColor;
 
+    this._alphaMode = app.options.rendering?.alphaMode ?? 'opaque';
     this._canvas = app.canvas;
     this._surfacePixelRatio = sanitizeSurfacePixelRatio(canvasOptions.pixelRatio);
     this._rootRenderTarget = new RenderTarget(width, height, true);
@@ -1970,7 +1975,7 @@ export class WebGpuBackend implements RenderBackend {
         context.configure({
           device,
           format,
-          alphaMode: 'opaque',
+          alphaMode: this._alphaMode,
           // COPY_SRC is required by WebGpuBackdropBlendCompositor to capture
           // the root-canvas backdrop via copyTextureToTexture.
           usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,

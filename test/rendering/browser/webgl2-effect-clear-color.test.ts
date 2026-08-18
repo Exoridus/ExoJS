@@ -42,7 +42,7 @@ const createBackend = async (): Promise<WebGl2Backend> => {
       canvas: { width: SIZE, height: SIZE, pixelRatio: 1 },
       rendering: {
         debug: false,
-        webglAttributes: { alpha: false, antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: true, stencil: false, depth: false },
+        webglAttributes: { antialias: false, preserveDrawingBuffer: true, stencil: false, depth: false },
         spriteRendererBatchSize: 1024,
       },
     },

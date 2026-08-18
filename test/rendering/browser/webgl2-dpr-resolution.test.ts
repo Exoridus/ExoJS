@@ -23,9 +23,7 @@ import { expectPixelNear } from './_pixels';
 type RgbaTuple = [number, number, number, number];
 
 const defaultWebGlAttributes: WebGLContextAttributes = {
-  alpha: false,
   antialias: false,
-  premultipliedAlpha: false,
   preserveDrawingBuffer: true,
   stencil: false,
   depth: false,
