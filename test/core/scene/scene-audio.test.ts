@@ -1,4 +1,6 @@
+import { AudioGenerator } from '#audio/AudioGenerator';
 import { AudioManager } from '#audio/AudioManager';
+import { Envelope } from '#audio/Envelope';
 import type { Pausable, Playable, Voice } from '#audio/Playable';
 import { Sound } from '#audio/Sound';
 import type { Application } from '#core/Application';
@@ -436,6 +438,69 @@ describe('SceneAudio — dormancy gate widens to Ready/Suspended, rejects Destro
 
       voice.stop();
       sound.destroy();
+      app.audio.destroy();
+    });
+  });
+
+  // NEU-O5: same failure class as ME-41 one level down — `AudioGeneratorVoice`
+  // never implemented `Pausable`, so a held synth note kept sounding straight
+  // through scene.pause()/suspend().
+  describe('with a real AudioGenerator voice', () => {
+    const makeRealSetup = (envelope: Envelope | null = null): { app: Application; generator: AudioGenerator; audio: SceneAudio } => {
+      const manager = new AudioManager();
+      const generator = new AudioGenerator({ frequency: 440, envelope });
+      const app = { audio: manager } as unknown as Application;
+
+      return { app, generator, audio: new SceneAudio(app, () => SceneState.Active) };
+    };
+
+    test('suspend()/restore() pause and resume a generator voice', () => {
+      const { app, generator, audio } = makeRealSetup();
+      const voice = audio.play(generator) as Voice & Pausable;
+
+      expect(voice.paused).toBe(false);
+
+      audio.suspend();
+      expect(voice.paused).toBe(true);
+      expect(voice.ended).toBe(false);
+
+      audio.restore();
+      expect(voice.paused).toBe(false);
+      expect(voice.ended).toBe(false);
+
+      voice.stop();
+      generator.destroy();
+      app.audio.destroy();
+    });
+
+    test('pause() reaches a `when: active` generator voice, and resume() gives it back', () => {
+      const { app, generator, audio } = makeRealSetup(new Envelope({ attackMs: 10, decayMs: 50 }));
+      const voice = audio.play(generator, { when: SceneAvailability.Active }) as Voice & Pausable;
+
+      audio.pause();
+      expect(voice.paused).toBe(true);
+
+      audio.resume();
+      expect(voice.paused).toBe(false);
+      expect(voice.ended).toBe(false);
+
+      voice.stop();
+      generator.destroy();
+      app.audio.destroy();
+    });
+
+    test('destroy() stops a generator voice that is currently paused', () => {
+      const { app, generator, audio } = makeRealSetup();
+      const voice = audio.play(generator) as Voice & Pausable;
+
+      audio.suspend();
+      expect(voice.paused).toBe(true);
+
+      audio.destroy();
+
+      expect(voice.ended).toBe(true);
+
+      generator.destroy();
       app.audio.destroy();
     });
   });

@@ -552,9 +552,9 @@ export class SceneAudio implements Destroyable {
   /**
    * Pause every tracked, currently-playing {@link Pausable} voice, recording
    * exactly that set so {@link SceneAudio.restore} can reinstate it. Reserved
-   * for retention suspension — voices without pause support ({@link
-   * AudioGeneratorVoice}, {@link InputVoice}) are left playing, matching the
-   * definition's "suspended where supported" contract.
+   * for retention suspension — voices without pause support ({@link InputVoice},
+   * {@link NoopVoice}) are left playing, matching the definition's "suspended
+   * where supported" contract.
    * @internal
    */
   public suspend(): void {
