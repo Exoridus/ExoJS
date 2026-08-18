@@ -122,14 +122,33 @@ describe('the SDF atlas is sampled as a continuous field', () => {
    * collapses onto the handful of values its atlas texels happen to hold;
    * sampled linearly the same glyph produces a full ramp.
    */
-  const distinctIntensities = (frame: Uint8Array): number => {
+  const intensityLevels = (frame: Uint8Array): number[] => {
     const seen = new Set<number>();
 
     for (let i = 0; i < frame.length; i += 4) {
       seen.add(frame[i]!);
     }
 
-    return seen.size;
+    return [...seen].sort((a, b) => a - b);
+  };
+
+  const distinctIntensities = (frame: Uint8Array): number => intensityLevels(frame).length;
+
+  /**
+   * The levels themselves plus the gaps between them, for a failure message.
+   *
+   * A short ramp says the field is being reconstructed at reduced precision,
+   * and the gaps say by how much: an even spacing is a quantisation step and
+   * names the format or qualifier that produced it, while an uneven one points
+   * at the edge width instead. Without them a failure here reports only that
+   * some adapter produced fewer levels than some other adapter, which no amount
+   * of staring at the shader resolves.
+   */
+  const describeRamp = (frame: Uint8Array): string => {
+    const levels = intensityLevels(frame);
+    const gaps = levels.slice(1).map((level, index) => level - levels[index]!);
+
+    return `levels (${levels.length}): [${levels.join(', ')}]\ngaps: [${gaps.join(', ')}]`;
   };
 
   test('pins the page sampler to linear filtering', () => {
@@ -154,7 +173,9 @@ describe('the SDF atlas is sampled as a continuous field', () => {
     node.setScale(4);
     renderWebGl2Once(backend, node, Color.black);
 
-    const distinct = distinctIntensities(readWebGl2Frame(backend, size));
+    const frame = readWebGl2Frame(backend, size);
+    const distinct = distinctIntensities(frame);
+    const ramp = describeRamp(frame);
 
     node.destroy();
     backend.destroy();
@@ -164,7 +185,12 @@ describe('the SDF atlas is sampled as a continuous field', () => {
     // derivative-based edge width compound - a piecewise constant field has no
     // gradient inside a texel, so the fade it is entitled to collapses too and
     // the frame is left pure black and white.
-    expect(distinct).toBeGreaterThan(80);
+    //
+    // Asserted through the ramp rather than the count so a failure reports what
+    // the frame actually contained: what a short ramp means is not decidable
+    // from its length, and the adapters that produce one are exactly the ones
+    // absent from the machine where the failure gets read.
+    expect(distinct > 80 ? 'a full ramp' : ramp).toBe('a full ramp');
   });
 });
 
