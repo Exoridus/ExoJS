@@ -7,3 +7,11 @@ declare module '*?raw' {
   const content: string;
   export default content;
 }
+
+// `import.meta.glob` is Vite's build-time directory query. Vite ships the type
+// with `vite/client`, but that also pulls in the whole DOM-asset module surface,
+// which this program has no use for and which would shadow the narrower `?raw`
+// declaration above. Only the eager form the shader suites use is declared.
+interface ImportMeta {
+  glob<T = unknown>(patterns: string | readonly string[], options: { query?: string; import?: string; eager: true }): Record<string, T>;
+}

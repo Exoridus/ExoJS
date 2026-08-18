@@ -25,6 +25,9 @@ import {
 } from './WebGpuRetainedGroupResources';
 import { packSnapViewport } from './webgpuSnapViewport';
 import { stencilContentDepthStencilState } from './WebGpuStencilState';
+import commonWgslModule from './wgsl/repeating-sprite-common.wgsl';
+import geoPathEntriesModule from './wgsl/repeating-sprite-geo-path.wgsl';
+import shaderPathEntriesModule from './wgsl/repeating-sprite-shader-path.wgsl';
 
 // ---------------------------------------------------------------------------
 // Shared WGSL declarations — structs, bindings, and output struct used by
@@ -32,187 +35,21 @@ import { stencilContentDepthStencilState } from './WebGpuStencilState';
 // ---------------------------------------------------------------------------
 
 /** Shared WGSL structs/bindings used by both repeating-sprite entry points. @internal */
-export const commonWgsl = `
-struct ProjectionUniforms {
-    matrix: mat4x4<f32>,
-    group: mat4x4<f32>,
-    viewport: vec4<f32>,        // device-pixel snap rect (x, y, width, height)
-};
-struct TransformSlot {
-    m0: vec4<f32>,
-    m1: vec4<f32>,
-};
-
-@group(0) @binding(0) var<uniform> projection: ProjectionUniforms;
-@group(0) @binding(1) var<storage, read> transforms: array<TransformSlot>;
-@group(1) @binding(0) var spriteTexture: texture_2d<f32>;
-@group(1) @binding(1) var spriteSampler: sampler;
-
-struct VOut {
-    @builtin(position) pos: vec4<f32>,
-    @location(0) uv:    vec2<f32>,
-    @location(1) color: vec4<f32>,
-};
-
-// Render-only pixel snapping (slot.m1.z: 0 = none, non-zero = snap origin).
-// Snap the node ORIGIN's device-pixel position and rigid-shift the whole
-// primitive by the same delta. floor(x + 0.5) matches the CPU Math.round
-// policy; WGSL round() is half-to-even. Grid alignment is independent of the
-// y-axis convention because the staged viewport rect is whole device pixels.
-fn snapPosition(position: vec4<f32>, slot: TransformSlot) -> vec4<f32> {
-    if (slot.m1.z == 0.0) {
-        return position;
-    }
-    let originClip = projection.matrix * projection.group * vec4<f32>(slot.m1.x, slot.m1.y, 0.0, 1.0);
-    let originDevice = projection.viewport.xy + (originClip.xy * 0.5 + vec2<f32>(0.5)) * projection.viewport.zw;
-    let snapDelta = (floor(originDevice + vec2<f32>(0.5)) - originDevice) * 2.0 / max(projection.viewport.zw, vec2<f32>(1.0));
-    return vec4<f32>(position.xy + snapDelta, position.z, position.w);
-}
-
-// Round one local boundary coordinate to the device grid along an axis whose
-// local-to-device scale is scale: floor(L*scale + 0.5) / scale. Pure in the
-// boundary value, so two quads sharing a boundary snap identically — seams stay
-// closed. Degenerate scales pass the value through unchanged.
-fn snapBoundary(localValue: f32, scale: f32) -> f32 {
-    if (abs(scale) < 1e-6) {
-        return localValue;
-    }
-    return floor(localValue * scale + 0.5) / scale;
-}
-
-// Per-axis device scale for the geometry boundary snap, derived from the
-// composed pipeline: device positions of the local origin and the two local
-// unit axes. Returns (scaleX, scaleY,
-// axisAligned) where axisAligned is 1.0 only when the cross-terms vanish (safe
-// to boundary-snap), else 0.0.
-fn deviceSnapScale(slot: TransformSlot) -> vec3<f32> {
-    let vp = projection.viewport.zw;
-    let dO = projection.matrix * projection.group * vec4<f32>(slot.m1.x, slot.m1.y, 0.0, 1.0);
-    let devO = projection.viewport.xy + (dO.xy * 0.5 + vec2<f32>(0.5)) * vp;
-    let dX = projection.matrix * projection.group * vec4<f32>(slot.m1.x + slot.m0.x, slot.m1.y + slot.m0.z, 0.0, 1.0);
-    let dY = projection.matrix * projection.group * vec4<f32>(slot.m1.x + slot.m0.y, slot.m1.y + slot.m0.w, 0.0, 1.0);
-    let devX = projection.viewport.xy + (dX.xy * 0.5 + vec2<f32>(0.5)) * vp;
-    let devY = projection.viewport.xy + (dY.xy * 0.5 + vec2<f32>(0.5)) * vp;
-    let axisAligned = select(0.0, 1.0, abs(devX.y - devO.y) < 1e-3 && abs(devY.x - devO.x) < 1e-3);
-    return vec3<f32>(devX.x - devO.x, devY.y - devO.y, axisAligned);
-}
-`;
+export const commonWgsl: string = commonWgslModule;
 
 // ---------------------------------------------------------------------------
 // Shader path WGSL — one quad per sprite, UVs computed in vertex shader.
 // ---------------------------------------------------------------------------
 
 /** WGSL entry points for the shader (one-quad-per-sprite) repeating-sprite path. @internal */
-export const shaderPathEntries = `
-struct ShaderVIn {
-    @location(0) quadBounds: vec4<f32>,  // x0,y0,x1,y1
-    @location(1) uvParams:   vec4<f32>,  // tilingX, tilingY, offsetU, offsetV
-    @location(2) color:      vec4<f32>,  // RGBA tint
-    @location(3) nodeIndex:  u32,
-};
-
-@vertex
-fn shaderVert(input: ShaderVIn, @builtin(vertex_index) vid: u32) -> VOut {
-    var out: VOut;
-    let cx = ((vid + 1u) >> 1u) & 1u;
-    let cy = vid >> 1u;
-
-    let slot = transforms[input.nodeIndex];
-
-    // Local destination boundaries. In geometry mode (slot.m1.z == 2.0,
-    // axis-aligned only) they are snapped to the device grid; destW/destH — which
-    // drive the tiling UVs — are then derived from the SNAPPED corners so the
-    // tile period stays aligned to the snapped destination width.
-    var x0 = input.quadBounds.x;
-    var y0 = input.quadBounds.y;
-    var x1 = input.quadBounds.z;
-    var y1 = input.quadBounds.w;
-
-    if (slot.m1.z == 2.0) {
-        let s = deviceSnapScale(slot);
-        if (s.z == 1.0) {
-            x0 = snapBoundary(x0, s.x);
-            x1 = snapBoundary(x1, s.x);
-            y0 = snapBoundary(y0, s.y);
-            y1 = snapBoundary(y1, s.y);
-        }
-    }
-
-    let lx = select(x0, x1, cx == 1u);
-    let ly = select(y0, y1, cy == 1u);
-
-    let destW = x1 - x0;
-    let destH = y1 - y0;
-
-    let wx = slot.m0.x * lx + slot.m0.y * ly + slot.m1.x;
-    let wy = slot.m0.z * lx + slot.m0.w * ly + slot.m1.y;
-    out.pos = snapPosition(projection.matrix * projection.group * vec4<f32>(wx, wy, 0.0, 1.0), slot);
-
-    let u = select(input.uvParams.z, ((lx - x0) / destW) * input.uvParams.x + input.uvParams.z, destW > 0.0);
-    let v = select(input.uvParams.w, ((ly - y0) / destH) * input.uvParams.y + input.uvParams.w, destH > 0.0);
-    out.uv    = vec2<f32>(u, v);
-    out.color = vec4<f32>(input.color.rgb * input.color.a, input.color.a);
-    return out;
-}
-
-@fragment
-fn shaderFrag(input: VOut) -> @location(0) vec4<f32> {
-    return textureSample(spriteTexture, spriteSampler, input.uv) * input.color;
-}
-`;
+export const shaderPathEntries: string = shaderPathEntriesModule;
 
 // ---------------------------------------------------------------------------
 // Geometry path WGSL — N quads per sprite, UVs pre-computed in CPU.
 // ---------------------------------------------------------------------------
 
 /** WGSL entry points for the geometry (N-quads-per-sprite) repeating-sprite path. @internal */
-export const geoPathEntries = `
-struct GeoVIn {
-    @location(0) quadBounds: vec4<f32>,  // x0,y0,x1,y1
-    @location(1) uvBounds:   vec4<f32>,  // u0,v0,u1,v1 (normalised, flipY pre-applied)
-    @location(2) color:      vec4<f32>,  // RGBA tint
-    @location(3) nodeIndex:  u32,
-};
-
-@vertex
-fn geoVert(input: GeoVIn, @builtin(vertex_index) vid: u32) -> VOut {
-    var out: VOut;
-    let cx = ((vid + 1u) >> 1u) & 1u;
-    let cy = vid >> 1u;
-
-    let slot = transforms[input.nodeIndex];
-
-    var lx = select(input.quadBounds.x, input.quadBounds.z, cx == 1u);
-    var ly = select(input.quadBounds.y, input.quadBounds.w, cy == 1u);
-
-    // Geometry boundary snap (slot.m1.z == 2.0, axis-aligned only): round each
-    // local corner to the device grid so the segment edges land on whole device
-    // pixels. Shared repeat-segment edges are the same local value, so this pure
-    // snap moves both neighbours identically — the internal seams stay closed.
-    if (slot.m1.z == 2.0) {
-        let s = deviceSnapScale(slot);
-        if (s.z == 1.0) {
-            lx = snapBoundary(lx, s.x);
-            ly = snapBoundary(ly, s.y);
-        }
-    }
-
-    let wx = slot.m0.x * lx + slot.m0.y * ly + slot.m1.x;
-    let wy = slot.m0.z * lx + slot.m0.w * ly + slot.m1.y;
-    out.pos = snapPosition(projection.matrix * projection.group * vec4<f32>(wx, wy, 0.0, 1.0), slot);
-
-    let u = select(input.uvBounds.x, input.uvBounds.z, cx == 1u);
-    let v = select(input.uvBounds.y, input.uvBounds.w, cy == 1u);
-    out.uv    = vec2<f32>(u, v);
-    out.color = vec4<f32>(input.color.rgb * input.color.a, input.color.a);
-    return out;
-}
-
-@fragment
-fn geoFrag(input: VOut) -> @location(0) vec4<f32> {
-    return textureSample(spriteTexture, spriteSampler, input.uv) * input.color;
-}
-`;
+export const geoPathEntries: string = geoPathEntriesModule;
 
 // ---------------------------------------------------------------------------
 // Layout constants
@@ -321,6 +158,11 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
   private _geoInstF32 = new Float32Array(this._geoInstData);
   private _geoInstU32 = new Uint32Array(this._geoInstData);
   private _geoQuadCount = 0;
+  // Render nodes booked against the PENDING geometry batch. One node expands into
+  // a Cartesian product of tile quads, so the recorded batch's `submittedNodes`
+  // contribution is this count and not `_geoQuadCount`. Shader-path sprites are
+  // never recorded (they poison the capture), so they are never booked either.
+  private _geoBatchNodeCount = 0;
 
   // Shared batch state
   private _maxNodeIndex = 0;
@@ -422,6 +264,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
 
     this._shaderQuadCount = 0;
     this._geoQuadCount = 0;
+    this._geoBatchNodeCount = 0;
     this._maxNodeIndex = 0;
     this._currentTexture = null;
     this._currentBlendMode = null;
@@ -540,6 +383,11 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     const words = geoStrideBytes / 4;
 
     this._ensureGeoCapacity(this._geoQuadCount + quads.length);
+
+    // render() already flushed if this node cannot join the pending batch, and
+    // all of its quads then go into that one batch - the staging array grows
+    // instead of chunking - so one increment here is exact.
+    this._geoBatchNodeCount++;
 
     const f32 = this._geoInstF32;
     const u32 = this._geoInstU32;
@@ -677,6 +525,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     // Batch flushes no longer submit; the backend ends the pass at boundaries.
     this._shaderQuadCount = 0;
     this._geoQuadCount = 0;
+    this._geoBatchNodeCount = 0;
     this._maxNodeIndex = 0;
     this._currentTexture = null;
     this._currentBlendMode = null;
@@ -775,6 +624,9 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
         this._currentBlendMode,
         this._recordTextureScratch,
         1,
+        null,
+        null,
+        this._geoBatchNodeCount,
       );
     }
   }

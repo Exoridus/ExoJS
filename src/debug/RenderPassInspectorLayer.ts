@@ -41,8 +41,8 @@ export interface RenderPassInspectorEntry {
   readonly height: number;
   /** Whether the drawable has a mask attached (mask passes count toward total). */
   readonly hasMask: boolean;
-  /** Whether the drawable is bitmap-cached (cached drawables apply filters once, not per frame). */
-  readonly cachedAsBitmap: boolean;
+  /** Whether the drawable is texture-cached (cached drawables apply filters once, not per frame). */
+  readonly cachedAsTexture: boolean;
 }
 
 /**
@@ -199,7 +199,7 @@ export class RenderPassInspectorLayer extends DebugLayer {
         width: Math.max(1, Math.ceil(bounds.width)),
         height: Math.max(1, Math.ceil(bounds.height)),
         hasMask: node.mask !== null,
-        cachedAsBitmap: node.cacheAsBitmap,
+        cachedAsTexture: node.cacheAsTexture,
       });
     }
 
@@ -250,7 +250,7 @@ export class RenderPassInspectorLayer extends DebugLayer {
       for (const entry of this._entries) {
         const flags: string[] = [];
         if (entry.hasMask) flags.push('mask');
-        if (entry.cachedAsBitmap) flags.push('cached');
+        if (entry.cachedAsTexture) flags.push('cached');
         const flagsText = flags.length > 0 ? ` [${flags.join(',')}]` : '';
         lines.push({
           text: `${entry.drawableLabel} ${entry.width}x${entry.height}${flagsText}`,

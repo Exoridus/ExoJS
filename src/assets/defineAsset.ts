@@ -32,6 +32,16 @@ export interface DefineAssetDescriptor<Result, Options> {
   readonly isValue?: boolean;
   /** Optional per-type IDB namespace for `context.fetchX()` calls made by this binding's handler. Defaults to the shared `__ctx_binary`/`__ctx_text`/`__ctx_json` namespace. */
   readonly storageName?: string;
+  /**
+   * Extra {@link AssetDefinitions} keys that resolve to the same handler as
+   * `type` but are distinct global kinds in their own right (their own
+   * placeholder strategy + suffix inference) - e.g. `srt` sharing the
+   * subtitle handler with its primary `vtt` type. Declaring an alias here
+   * folds its global registration into `defineAsset`'s own registration
+   * step instead of a bespoke top-level `registerAssetKind`/`registerExtensionKind`
+   * call next to the binding.
+   */
+  readonly aliases?: ReadonlyArray<{ readonly type: keyof AssetDefinitions; readonly isValue?: boolean; readonly extensions?: readonly string[] }>;
   /** Loader-local handler factory, called once per Loader by `materializeAssetBindings`. */
   readonly create: (loader: Loader) => AssetHandler<Result, Options>;
 }
@@ -64,6 +74,13 @@ export function defineAsset<Result = unknown, Options = undefined>(descriptor: D
     });
     for (const ext of descriptor.extensions ?? []) {
       registerExtensionKind(ext, descriptor.type);
+    }
+  }
+
+  for (const alias of descriptor.aliases ?? []) {
+    registerAssetKind(alias.type, { isValue: alias.isValue ?? isValue });
+    for (const ext of alias.extensions ?? []) {
+      registerExtensionKind(ext, alias.type);
     }
   }
 

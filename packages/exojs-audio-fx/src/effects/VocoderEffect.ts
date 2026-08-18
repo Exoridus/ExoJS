@@ -1,6 +1,6 @@
 import { type AudioBus, WorkletEffect } from '@codexo/exojs';
 
-import { vocoderWorkletSource } from '../worklets/vocoder.worklet';
+import vocoderWorkletSource from '../worklets/vocoder.worklet.ts?worklet';
 
 export interface VocoderEffectOptions {
   /** Modulator AudioBus — its output drives the spectral envelope.

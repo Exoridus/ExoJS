@@ -34,3 +34,31 @@ describe('RenderTexture dev assertions', () => {
     expect(() => rt.setSize(128, 128)).not.toThrow();
   });
 });
+
+describe('RenderTexture default view', () => {
+  test('a new texture is viewed from its own centre', () => {
+    const rt = new RenderTexture(64, 32);
+
+    expect([rt.view.center.x, rt.view.center.y]).toEqual([32, 16]);
+  });
+
+  test('setSize recentres the default view on the new size', () => {
+    // Extent alone is not enough: a view left on the old centre renders a
+    // region offset by half the size difference, so everything drawn into the
+    // resized target lands shifted and its far edge falls outside.
+    const rt = new RenderTexture(38, 38);
+
+    rt.setSize(60, 60);
+
+    expect([rt.view.center.x, rt.view.center.y]).toEqual([30, 30]);
+    expect([rt.view.size.width, rt.view.size.height]).toEqual([60, 60]);
+  });
+
+  test('shrinking recentres too', () => {
+    const rt = new RenderTexture(60, 60);
+
+    rt.setSize(38, 38);
+
+    expect([rt.view.center.x, rt.view.center.y]).toEqual([19, 19]);
+  });
+});

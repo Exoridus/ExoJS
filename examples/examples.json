@@ -563,11 +563,11 @@
   ],
   "filters": [
     {
-      "slug": "color-filter",
-      "path": "filters/color-filter.js",
+      "slug": "color-matrix-filter",
+      "path": "filters/color-matrix-filter.js",
       "language": "typescript",
-      "title": "Color Filter",
-      "description": "Tint, desaturate, invert, and adjust the brightness of a sprite; cycle through the presets from the control panel.",
+      "title": "Color Matrix Filter",
+      "description": "Tint, desaturate, invert, brighten, push contrast and sepia-tone a sprite — one colour matrix, cycled from the control panel.",
       "backend": "core",
       "tags": [
         "fx",
@@ -649,12 +649,12 @@
       "slug": "palette-cycling",
       "path": "filters/palette-cycling.js",
       "language": "typescript",
-      "title": "Palette Cycling",
-      "description": "Animate a 1D LUT each frame to recolour a sprite — classic indexed-colour palette-cycling effect (DOS-demo style).",
+      "title": "Colour Ramp Cycling",
+      "description": "Shift an RGB 1D LUT each frame to recolour a sprite — three per-channel curves sweeping the colour wheel.",
       "backend": "core",
       "tags": [
         "lut",
-        "palette",
+        "ramp",
         "color"
       ],
       "level": "advanced"

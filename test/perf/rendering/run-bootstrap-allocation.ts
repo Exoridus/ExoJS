@@ -1,10 +1,11 @@
 /**
  * Cold/bootstrap allocation driver.
  *
- * Spawns ONE fresh `run-bootstrap-cell.ts` process per cardinality — the cell
+ * Spawns ONE fresh `run-bootstrap-cell.ts` process per cardinality - the cell
  * runner's block comment explains why same-process attribution is worthless for
- * a first-ever-touch measurement — collects each cell's JSON line, prints a
- * scaling table, and writes `.workspace/output/render-perf/bootstrap-allocation.json`.
+ * a first-ever-touch measurement - collects each cell's JSON line, prints a
+ * scaling table, and writes `bootstrap-allocation.json` into the perf output
+ * directory, printing the resolved path on completion.
  *
  *   pnpm perf:renderers:bootstrap                       # 1k / 10k / 100k
  *   pnpm perf:renderers:bootstrap -- --counts 1000,1000000
@@ -39,7 +40,7 @@ const CELL = 'test/perf/rendering/run-bootstrap-cell.ts';
 const nodeArgs = (count: number): string[] => [
   '--expose-gc',
   '--max-old-space-size=8192',
-  '--conditions=@codexo/source',
+  '--conditions=@codexo/exojs-source',
   '--import',
   './scripts/glsl-register.mjs',
   '--import',

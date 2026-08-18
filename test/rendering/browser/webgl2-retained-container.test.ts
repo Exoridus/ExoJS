@@ -1,12 +1,12 @@
 /**
- * WebGL2 renderer-matrix browser tests — RetainedContainer pixel cells
+ * WebGL2 renderer-matrix browser tests - RetainedContainer pixel cells
  * (correctness gate for real rendered output).
  *
  * Seven cells asserting real rendered output for the retained-group feature:
  * camera motion over a retained fragment, a group move via the group matrix,
  * a child mutation inside the group, a tint/alpha change inside the group,
  * bitmap text lifted by the group uniform, an effect-bearing direct child
- * (cacheAsBitmap) that escapes the group convention, and a depth-2 effect
+ * (cacheAsTexture) that escapes the group convention, and a depth-2 effect
  * node whose branch escapes the group (sub-branch escape) while keeping
  * pixel-correct output.
  *
@@ -49,9 +49,7 @@ const createBackend = async (): Promise<WebGl2Backend> => {
       rendering: {
         debug: false,
         webglAttributes: {
-          alpha: false,
           antialias: false,
-          premultipliedAlpha: false,
           preserveDrawingBuffer: true,
           stencil: false,
           depth: false,
@@ -255,7 +253,7 @@ describe('WebGL2 renderer matrix: RetainedContainer cells', () => {
     }
   });
 
-  test('cell 6 — effect-bearing DIRECT child (cacheAsBitmap barrier) inside a moved group stays world-correct', async () => {
+  test('cell 6 — effect-bearing DIRECT child (cacheAsTexture barrier) inside a moved group stays world-correct', async () => {
     const backend = await createBackend();
     const texture = createSolidTexture('#ff0000', 16, 16);
     const root = new Container();
@@ -264,10 +262,10 @@ describe('WebGL2 renderer matrix: RetainedContainer cells', () => {
 
     try {
       // Barrier child escapes the group convention: world-space, and
-      // cacheAsBitmap is visually neutral, so "semantics-neutral by
+      // cacheAsTexture is visually neutral, so "semantics-neutral by
       // construction" is directly pixel-assertable: identical placement to
       // a plain sprite at the group position.
-      cached.cacheAsBitmap = true;
+      cached.cacheAsTexture = true;
       group.addChild(cached);
       root.addChild(group);
 
@@ -298,7 +296,7 @@ describe('WebGL2 renderer matrix: RetainedContainer cells', () => {
     const plainLeaf = new Sprite(green);
 
     try {
-      deepCached.cacheAsBitmap = true; // barrier at depth 2 -> mid's branch escapes (F13/R3)
+      deepCached.cacheAsTexture = true; // barrier at depth 2 -> mid's branch escapes (F13/R3)
       mid.setPosition(8, 8);
       mid.addChild(deepCached);
       group.addChild(mid);

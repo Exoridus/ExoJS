@@ -10,7 +10,7 @@ import { finalizeSourceScopes, type SourceScope } from './RenderSourceItem';
  *
  * This is the piece a captured product cannot supply. A capture holds what the
  * camera admitted at capture time, so an item that has since scrolled into view
- * is precisely the one it does not contain — which is why a view change outside
+ * is precisely the one it does not contain - which is why a view change outside
  * the capture margin had to rebuild the whole plan from the scene graph, at
  * ~0.4us per node (400ms at a million).
  *
@@ -22,14 +22,13 @@ import { finalizeSourceScopes, type SourceScope } from './RenderSourceItem';
  * Ownership is per render root, not per node. Visibility and records are
  * per-root and per-view, so a node rendered under two roots genuinely has two
  * states; a single owner slot on the node would make the two roots overwrite
- * each other every frame. Contract 5 of the architecture freeze
- * (`.workspace/rendering-optimization-O34-final.md`) requires exactly this.
+ * each other every frame.
  *
  * Deliberately carries nothing backend-, view- or frame-bound: no `MaterialKey`
  * (a backend switch invalidates one), no transform row and no `nodeIndex` (both
- * frame-local), and no membership (per view — see {@link DerivedRootProduct}).
+ * frame-local), and no membership (per view - see {@link DerivedRootProduct}).
  * Those are re-derived when a selection is emitted and belong to the derived
- * product, not here. The root-specific KEYS — view selection and render target —
+ * product, not here. The root-specific KEYS - view selection and render target -
  * likewise stay in {@link RetainedRootRepresentation} above it, which is what
  * keeps this half describable without a camera.
  *
@@ -39,8 +38,8 @@ import { finalizeSourceScopes, type SourceScope } from './RenderSourceItem';
  * a transform group can only ever return every item. It would pay the discovery
  * walk, the item store and the index for no selectivity, and trade an
  * O(batches) instruction replay for an O(items) emit. What the two tiers really
- * do share is the layer below — {@link RetainedGroupFragment}'s pooled records
- * and {@link CaptureThrashSuppressor} — and they share it already.
+ * do share is the layer below - {@link RetainedGroupFragment}'s pooled records
+ * and {@link CaptureThrashSuppressor} - and they share it already.
  *
  * The one exception is the ancestry stamp, which is a key here as well: the
  * items hold world bounds, so they are ancestry-dependent data rather than
@@ -160,9 +159,9 @@ export class RenderRootSource {
    * build each scope's spatial index.
    *
    * The caller owns the scope tree; the source only keys it. A structure or
-   * content change invalidates rather than patches — the incremental channels
-   * for those are separate work (`NEU-O47`/`NEU-O49`), and the case this cut
-   * exists for is a moving camera over unchanged content.
+   * content change invalidates rather than patches - incremental patching for
+   * those is deliberately not implemented here, and the case this path exists
+   * for is a moving camera over unchanged content.
    */
   public adopt(rootScope: SourceScope, contentRevision: number, structureRevision: number, ancestryStamp: number, transformRevision: number): void {
     const scopes: SourceScope[] = [];

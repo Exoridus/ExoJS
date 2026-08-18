@@ -1,4 +1,4 @@
-import type { Application } from '#core/Application';
+import type { Application, CanvasAlphaMode, RenderingApplicationOptions } from '#core/Application';
 import { Color } from '#core/Color';
 import { Signal } from '#core/Signal';
 import { Matrix } from '#math/Matrix';
@@ -24,6 +24,7 @@ import {
   stampRetainedBatchGeneration,
 } from '#rendering/plan/RetainedInstructionSet';
 import type { RenderBackend } from '#rendering/RenderBackend';
+import { sanitizeSurfacePixelRatio } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { InstanceDataView } from '#rendering/RenderBatch';
 import type { Renderer } from '#rendering/Renderer';
@@ -293,6 +294,8 @@ export class WebGl2Backend implements RenderBackend {
   // with GL_INVALID_VALUE and leave every transform fetch reading an incomplete
   // texture (a black frame). Re-read after a context restore.
   private _maxTextureSize = 0;
+  /** The application's `canvas.pixelRatio`, sanitized once - see {@link surfacePixelRatio}. */
+  private readonly _surfacePixelRatio: number;
   private _renderTarget: RenderTarget;
   // Device-pixel viewport rect last handed to `gl.viewport` (x, y, width,
   // height). Cached at the bind seam so the vertex shaders can map a drawable's
@@ -357,10 +360,12 @@ export class WebGl2Backend implements RenderBackend {
     const height = canvasOptions.height ?? 600;
     const clearColor = app.options.clearColor;
     const webglAttributes = renderingOptions.webglAttributes;
+    const alphaMode = renderingOptions.alphaMode ?? 'opaque';
     const debug = renderingOptions.debug ?? false;
+    this._surfacePixelRatio = sanitizeSurfacePixelRatio(canvasOptions.pixelRatio);
     this._canvas = app.canvas;
 
-    const gl = this._createContext(webglAttributes);
+    const gl = this._createContext(webglAttributes, alphaMode);
 
     if (!gl) {
       throw new Error('This browser or hardware does not support WebGL.');
@@ -417,6 +422,39 @@ export class WebGl2Backend implements RenderBackend {
 
   public get view(): View {
     return this._renderTarget.view;
+  }
+
+  /**
+   * Device pixels per logical unit of the canvas root target.
+   *
+   * Derived rather than stored: the root target carries the LOGICAL size while
+   * the canvas backing store carries `logical × pixelRatio`, so the ratio
+   * between them is always current - including after a `resize()` that changes
+   * only one of the two.
+   */
+  public get rootResolution(): number {
+    const logicalWidth = this._rootRenderTarget.width;
+
+    return logicalWidth > 0 ? this._canvas.width / logicalWidth : 1;
+  }
+
+  /**
+   * The application's configured `canvas.pixelRatio`.
+   *
+   * Deliberately NOT {@link rootResolution}, even though the two agree in every
+   * ordinary sizing mode. This is the number a rasterizer keys a cache on, and
+   * it has to be stable and quantized to be safe there: under `'letterbox'`
+   * sizing the root target stays at the design size while the backing store
+   * tracks the parent's fitted rectangle, so `rootResolution` is an arbitrary
+   * float that moves on every window resize - keying a glyph atlas on it would
+   * mint a fresh set of pages per resize step.
+   */
+  public get surfacePixelRatio(): number {
+    return this._surfacePixelRatio;
+  }
+
+  public get maxTextureSize(): number {
+    return this._maxTextureSize;
   }
 
   public get clearColor(): Color {
@@ -697,7 +735,7 @@ export class WebGl2Backend implements RenderBackend {
       this._drawPlanDepth--;
     }
 
-    // A nested plan (filter / cacheAsBitmap) just ended: flush its draws, then
+    // A nested plan (filter / cacheAsTexture) just ended: flush its draws, then
     // free its transform rows so the frame-scoped buffer only grows with
     // top-level render() calls. Top-level plans (depth back to 0) keep their rows
     // so cross-call batching survives to the frame-end flush.
@@ -1567,6 +1605,13 @@ export class WebGl2Backend implements RenderBackend {
    * batch instruction referencing that bundle is appended to EVERY open
    * frame's set (outer sets hold inner bundles' batches verbatim).
    * Called by capable renderers from `flush()` while a capture is open.
+   *
+   * `nodeCount` is the batch's `stats.submittedNodes` contribution and defaults
+   * to `instanceCount` (one instance is one node). A renderer whose node expands
+   * into several instances must pass its own count - see
+   * {@link RetainedBatchInstruction.nodeCount}. It is the LAST parameter on
+   * purpose: inserting it next to `instanceCount` would silently shift the
+   * existing optional trailing arguments at every cross-package call site.
    * @internal
    */
   public _recordRetainedBatch(
@@ -1578,6 +1623,7 @@ export class WebGl2Backend implements RenderBackend {
     textureCount: number,
     geometry: WebGl2RetainedGeometryRef | null = null,
     rendererData: unknown = null,
+    nodeCount: number = instanceCount,
   ): void {
     const captures = this._retainedCaptures;
 
@@ -1627,6 +1673,7 @@ export class WebGl2Backend implements RenderBackend {
       bundle: innermost.bundle,
       generation: retainedGenerationUnstamped,
       instanceCount,
+      nodeCount,
       drawCalls: 1,
       payload,
     };
@@ -1769,7 +1816,9 @@ export class WebGl2Backend implements RenderBackend {
     payload.replayer._replayRetainedBatch(payload);
     this._stats.batches++;
     this._stats.drawCalls += batch.drawCalls;
-    this._stats.submittedNodes += batch.instanceCount;
+    // Nodes, not instances: a batch whose renderer expands one node into many
+    // instances records its own node count (see RetainedBatchInstruction).
+    this._stats.submittedNodes += batch.nodeCount ?? batch.instanceCount;
   }
 
   public destroy(): void {
@@ -1850,12 +1899,26 @@ export class WebGl2Backend implements RenderBackend {
     this._transformTextureHash = 0;
   }
 
-  private _createContext(options?: WebGLContextAttributes): WebGL2RenderingContext | null {
+  private _createContext(options: RenderingApplicationOptions['webglAttributes'], alphaMode: CanvasAlphaMode): WebGL2RenderingContext | null {
     try {
       // Force a stencil buffer on the default framebuffer so geometric stencil
       // clipping (RenderNode.clip with a Geometry clipShape) works on the root
       // target. Inert until a clip is pushed (STENCIL_TEST stays disabled).
-      return this._canvas.getContext('webgl2', { ...options, stencil: true });
+      // `stencil` is excluded from the public `webglAttributes` type, so
+      // `options` can never smuggle a conflicting value in here.
+      //
+      // The two composite attributes are derived from `alphaMode`, never taken
+      // from the caller's attributes, so the canvas ends up with the same
+      // browser-side composite behaviour WebGPU gets from the same option.
+      // `premultipliedAlpha` is unconditionally true because the engine always
+      // writes premultiplied colour; with `alpha: false` the browser ignores it.
+      // Both are likewise excluded from the public type for the same reason.
+      return this._canvas.getContext('webgl2', {
+        ...options,
+        alpha: alphaMode === 'premultiplied',
+        premultipliedAlpha: true,
+        stencil: true,
+      });
     } catch (_e) {
       return null;
     }
@@ -2614,6 +2677,19 @@ export class WebGl2Backend implements RenderBackend {
       }
 
       this._accountant.recordTextureUpload(texture.width * texture.height * RGBA8_BYTES_PER_PIXEL);
+    }
+
+    // Pixel-store state is upload-local, never inherited - the same discipline
+    // the UNPACK_ALIGNMENT restore above follows. GL keeps
+    // UNPACK_PREMULTIPLY_ALPHA_WEBGL globally, so leaving it set lets the NEXT
+    // upload multiply its RGB channels by its alpha channel. A renderer-private
+    // raw upload that never calls pixelStorei itself - the text renderer's
+    // RGBA32F node-data texture is the only one today - then inherits it, and
+    // in a float payload the "alpha" slot carries real data (a transform's
+    // `ty`, an ink-bounds height), so the result is arbitrary geometry rather
+    // than merely darker pixels.
+    if (texture.premultiplyAlpha) {
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
     }
 
     if (texture.generateMipMap && (texture instanceof RenderTexture || texture.source !== null)) {

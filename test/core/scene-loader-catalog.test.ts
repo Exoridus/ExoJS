@@ -95,7 +95,7 @@ describe('SceneLoader catalog adopt', () => {
     expect(assets.ship.loadState).toBe('loading');
   });
 
-  // NEW-1: `SceneLoader.load` was missing the single-leaf overloads that
+  // `SceneLoader.load` was missing the single-leaf overloads that
   // `SceneLoader.get` already had, so `sceneLoader.load(assets.ship)` typed
   // against the wrong (greedy) overload. These mirror Loader.load's leaf
   // overloads (including the M1 AssetRef discriminator) verbatim.

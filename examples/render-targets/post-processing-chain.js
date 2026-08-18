@@ -1,5 +1,5 @@
 // Auto-generated from post-processing-chain.ts — edit the .ts source, not this file.
-import { Application, BlurFilter, CallbackRenderPass, Color, ColorFilter, Graphics, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
+import { Application, BlurFilter, CallbackRenderPass, Color, ColorMatrixFilter, Graphics, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
 class PostProcessingChainScene extends Scene {
     scene;
     a;
@@ -18,7 +18,7 @@ class PostProcessingChainScene extends Scene {
         this.b = new RenderTexture(width, height);
         this.c = new RenderTexture(width, height);
         this.blur = new BlurFilter({ radius: 6, quality: 2 });
-        this.color = new ColorFilter(new Color(140, 190, 255));
+        this.color = new ColorMatrixFilter().tint(new Color(140, 190, 255));
         this.final = new Sprite(this.c);
         // Configured once: scene → off-screen, two filter passes, composite to the canvas.
         this.pipeline = new RenderPipeline()

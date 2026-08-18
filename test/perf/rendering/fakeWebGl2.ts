@@ -61,8 +61,15 @@ interface ProgramReflection {
   readonly uniforms: ReflectedVar[];
 }
 
-const ATTRIBUTE_LINE = /^\s*(?:layout\s*\(\s*location\s*=\s*(\d+)\s*\)\s*)?in\s+(\w+)\s+(\w+)\s*;/;
-const UNIFORM_LINE = /^\s*uniform\s+(\w+)\s+(\w+)\s*;/;
+// A precision qualifier sits between the storage qualifier and the type, and a
+// declaration that carries one is as ordinary as one that does not - a fragment
+// stage reading a distance field has to state it, since the default for
+// `sampler2D` is `lowp`. Skipping such a line here would drop the declaration
+// from reflection entirely and surface as "uniform is not available" at the
+// first bind, which reads as an engine defect rather than a gap in this fake.
+const PRECISION = /(?:(?:highp|mediump|lowp)\s+)?/.source;
+const ATTRIBUTE_LINE = new RegExp(String.raw`^\s*(?:layout\s*\(\s*location\s*=\s*(\d+)\s*\)\s*)?in\s+${PRECISION}(\w+)\s+(\w+)\s*;`);
+const UNIFORM_LINE = new RegExp(String.raw`^\s*uniform\s+${PRECISION}(\w+)\s+(\w+)\s*;`);
 
 /**
  * Parse vertex/fragment GLSL into the attribute + uniform reflection the engine

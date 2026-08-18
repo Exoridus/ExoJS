@@ -1,89 +1,83 @@
 name: Deploy Pages
 
+# Deploys the site EXACTLY as CI built and validated it — this workflow builds
+# no source code. `_ci-checks.yml`'s `site-build` job runs `gates site` and
+# `site:build` and uploads `site/dist/**` as `site-dist-<sha>`; here that same
+# artifact is downloaded from the run that triggered this one and handed to
+# Pages unchanged.
+#
+# The defect this prevents: the workflow used to check the sources out and
+# rebuild the library and the site itself, so what went live was a second build
+# that no gate had ever seen. A green CI run said nothing about the deployed
+# bytes.
+#
+# Fail-closed by construction: there is no `workflow_dispatch` path, because a
+# manual run has no triggering run to read the artifact from. If the artifact is
+# missing or belongs to a different commit, the download step fails and nothing
+# is deployed. To re-deploy, re-run the CI workflow for the commit.
+
 on:
   workflow_run:
     workflows: ['Release', 'CI']
     types: [completed]
-  workflow_dispatch:
 
 permissions:
   contents: read
+  # Reading an artifact from ANOTHER workflow run needs `actions: read` plus an
+  # explicit token on the download step.
+  actions: read
   pages: write
   id-token: write
 
 concurrency:
-  group: pages-${{ github.event.workflow_run.head_sha || github.ref }}
+  group: pages-${{ github.event.workflow_run.head_sha }}
   cancel-in-progress: true
 
-env:
-  NODE_VERSION: '24.x'
-  PNPM_VERSION: '11.4.0'
-
 jobs:
-  build:
-    name: Build site
+  deploy:
+    name: Deploy to GitHub Pages
     if: >-
       ${{
-        github.event_name == 'workflow_dispatch' ||
+        github.event_name == 'workflow_run' &&
+        github.event.workflow_run.conclusion == 'success' &&
         (
-          github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.name == 'Release' ||
           (
-            github.event.workflow_run.name == 'Release' ||
-            (
-              github.event.workflow_run.name == 'CI' &&
-              github.event.workflow_run.event == 'push' &&
-              github.event.workflow_run.head_branch == 'main'
-            )
+            github.event.workflow_run.name == 'CI' &&
+            github.event.workflow_run.event == 'push' &&
+            github.event.workflow_run.head_branch == 'main'
           )
         )
       }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: ${{ env.PNPM_VERSION }}
-          run_install: false
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          check-latest: true
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install root dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
-
-      - name: Build library
-        run: pnpm build
-
-      - name: Build site
-        env:
-          EXOJS_PACKAGE_PATH: ..
-        run: pnpm site:build
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: site/dist
-
-  deploy:
-    name: Deploy to GitHub Pages
-    needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      # `run-id` pins the download to the exact run that triggered this one, and
+      # the commit in the artifact name pins it to that run's commit — an older
+      # or unrelated build cannot be picked up. A missing artifact fails here.
+      - name: Download validated site artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: site-dist-${{ github.event.workflow_run.head_sha }}
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+          path: site-dist
+
+      - name: Verify the artifact carries a built site
+        run: |
+          test -f site-dist/index.html || {
+            echo "::error::site-dist-${{ github.event.workflow_run.head_sha }} has no index.html — refusing to deploy."
+            exit 1
+          }
+
+      - name: Package for Pages
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site-dist
+
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v5

@@ -83,6 +83,22 @@ export enum ApplicationState {
 /** How {@link Application} sizes its canvas within the parent element. */
 export type CanvasSizingMode = 'fixed' | 'fill' | 'fit' | 'shrink' | 'letterbox';
 
+/**
+ * How the finished frame composites against the page behind the canvas.
+ *
+ * - `'opaque'`: the canvas has no alpha channel. Whatever is behind it in the
+ *   document never shows through, no matter what alpha the frame ends on.
+ * - `'premultiplied'`: the canvas keeps its alpha channel and the browser
+ *   composites the frame over the page with it. Combine with a
+ *   {@link ApplicationOptions.clearColor} whose alpha is below `1` to let the
+ *   page show through.
+ *
+ * This is purely about the *browser-side* composite step. It says nothing about
+ * how the engine stores or blends colour internally: ExoJS renders premultiplied
+ * end to end - textures, render targets and blend modes alike - under both modes.
+ */
+export type CanvasAlphaMode = 'opaque' | 'premultiplied';
+
 export interface CanvasApplicationOptions {
   /**
    * Existing canvas element to use. If omitted, Application creates one — and
@@ -132,10 +148,34 @@ export interface CanvasApplicationOptions {
 }
 
 export interface RenderingApplicationOptions {
+  /**
+   * How the canvas composites against the page. Default `'opaque'`. Honoured by
+   * both backends: WebGL2 derives the context's `alpha`/`premultipliedAlpha`
+   * from it, WebGPU its `GPUCanvasConfiguration.alphaMode`.
+   *
+   * @see {@link CanvasAlphaMode} for what the two modes do and do not control.
+   */
+  alphaMode?: CanvasAlphaMode;
   /** WebGL2-only debug wrapper. Ignored by WebGPU. */
   debug?: boolean;
-  /** WebGL2 context attributes. Ignored by WebGPU. */
-  webglAttributes?: WebGLContextAttributes;
+  /**
+   * WebGL2 context attributes. Ignored by WebGPU.
+   *
+   * Merged as **partial overrides on top of ExoJS's own WebGL defaults**
+   * (`antialias: false`, `depth: false`, `preserveDrawingBuffer: false`) -
+   * passing e.g. `{ antialias: true }` only flips that one attribute and
+   * keeps the rest of ExoJS's defaults, it never replaces the whole default
+   * set with the browser's own WebGL-spec defaults.
+   *
+   * Two attributes are not settable here because the engine owns them
+   * outright and always overrides whatever is passed:
+   * - `alpha` and `premultipliedAlpha` are derived from
+   *   {@link RenderingApplicationOptions.alphaMode}, which is the one
+   *   spelling of that contract both backends understand.
+   * - `stencil` is always forced to `true` - geometric stencil clipping
+   *   needs a stencil buffer on the root target unconditionally.
+   */
+  webglAttributes?: Omit<WebGLContextAttributes, 'alpha' | 'premultipliedAlpha' | 'stencil'>;
   /** WebGL2 sprite renderer batch size. Ignored by WebGPU. */
   spriteRendererBatchSize?: number;
 }
@@ -368,17 +408,31 @@ const defaultLoaderFetchOptions: RequestInit = {
   cache: 'default',
 };
 const defaultRenderingSettings: Required<RenderingApplicationOptions> = {
+  alphaMode: 'opaque',
   debug: false,
   spriteRendererBatchSize: 4096, // ~ 262kb
   webglAttributes: {
-    alpha: false,
     antialias: false,
-    premultipliedAlpha: false,
     preserveDrawingBuffer: false,
-    stencil: false,
     depth: false,
   },
 };
+/**
+ * Resolve public {@link RenderingApplicationOptions} against ExoJS's own
+ * defaults. `webglAttributes` is merged as partial overrides on top of the
+ * full default set (see {@link RenderingApplicationOptions.webglAttributes})
+ * - everything else is a plain per-field fallback.
+ *
+ * @internal - shared by the constructor and by tests that need to assert on
+ * the resolved options without spinning up a full {@link Application}.
+ */
+export const resolveRenderingOptions = (renderingOptions: RenderingApplicationOptions): Required<RenderingApplicationOptions> => ({
+  alphaMode: renderingOptions.alphaMode ?? defaultRenderingSettings.alphaMode,
+  debug: renderingOptions.debug ?? defaultRenderingSettings.debug,
+  webglAttributes: { ...defaultRenderingSettings.webglAttributes, ...renderingOptions.webglAttributes },
+  spriteRendererBatchSize: renderingOptions.spriteRendererBatchSize ?? defaultRenderingSettings.spriteRendererBatchSize,
+});
+
 const defaultInputSettings: Required<InputApplicationOptions> = {
   gamepadDefinitions: [],
   gamepadSlotStrategy: 'sticky',
@@ -661,11 +715,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
           ...(loaderOptions.cacheStrategy !== undefined && { cacheStrategy: loaderOptions.cacheStrategy }),
           ...(loaderOptions.concurrency !== undefined && { concurrency: loaderOptions.concurrency }),
         },
-        rendering: {
-          debug: renderingOptions.debug ?? defaultRenderingSettings.debug,
-          webglAttributes: renderingOptions.webglAttributes ?? defaultRenderingSettings.webglAttributes,
-          spriteRendererBatchSize: renderingOptions.spriteRendererBatchSize ?? defaultRenderingSettings.spriteRendererBatchSize,
-        },
+        rendering: resolveRenderingOptions(renderingOptions),
         input: {
           gamepadDefinitions: inputOptions.gamepadDefinitions ?? [...defaultInputSettings.gamepadDefinitions],
           gamepadSlotStrategy: inputOptions.gamepadSlotStrategy ?? defaultInputSettings.gamepadSlotStrategy,

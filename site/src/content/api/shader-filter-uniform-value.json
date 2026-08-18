@@ -1,6 +1,6 @@
 {
   "title": "ShaderFilterUniformValue",
-  "description": "A scalar number, vector tuple, typed array, or texture. Both WebGl2ShaderFilter and WebGpuShaderFilter accept and marshal these value types.",
+  "description": "A scalar number, vector tuple, typed array, or texture - the value types a ShaderFilter accepts for a user uniform and marshals to the active backend.",
   "symbol": "ShaderFilterUniformValue",
   "kind": "type",
   "subsystem": "rendering",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A scalar number, vector tuple, typed array, or texture. Both WebGl2ShaderFilter and WebGpuShaderFilter accept and marshal these value types."
+        "A scalar number, vector tuple, typed array, or texture - the value types a ShaderFilter accepts for a user uniform and marshals to the active backend."
       ],
       "importLine": "import { ShaderFilterUniformValue } from '@codexo/exojs'",
       "sourceLink": null
@@ -205,11 +205,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/rendering/filters/WebGl2ShaderFilter.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/WebGl2ShaderFilter.ts"
+        "label": "src/rendering/filters/ShaderFilter.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/ShaderFilter.ts"
       }
     }
   ],
-  "sourcePath": "src/rendering/filters/WebGl2ShaderFilter.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/WebGl2ShaderFilter.ts"
+  "sourcePath": "src/rendering/filters/ShaderFilter.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/ShaderFilter.ts"
 }

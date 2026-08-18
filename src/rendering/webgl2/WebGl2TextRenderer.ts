@@ -6,6 +6,7 @@ import { type BitmapText } from '#rendering/text/BitmapText';
 import type { TextPageQuads } from '#rendering/text/Text';
 import { Text } from '#rendering/text/Text';
 import { composeTextAtlasFragmentGlsl, packTextNodeAtlasSlot, textAtlasTextureSlots, textNodeIndexMask } from '#rendering/text/textAtlasTextureSlots';
+import { packTextNodeData, packTextNodeTransform, textNodeDataFloats, textNodeDataTexels } from '#rendering/text/textNodeDataPacker';
 import { DataTexture } from '#rendering/texture/DataTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import { BlendModes, BufferTypes, BufferUsage, IndexElementTypes, RenderingPrimitives, TextureFormat } from '#rendering/types';
@@ -37,10 +38,10 @@ import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './
 // Texel 1 : (b,  d,  0,  ty)  — mat3 column-major: col1 + translate.y
 // Texel 2 : (r,  g,  b,  a )  — fillColor (linear 0-1)
 // Texel 3 : (r,  g,  b,  a )  — outlineColor
-// Texel 4 : (outlineMin, shadowAlpha, softness, gradientEnabled)
+// Texel 4 : (outlineMin, shadowAlpha, shadowBlur, gradientEnabled)
 //             outlineMin = 0.5 → disabled; < 0.5 → enabled with that threshold
 // Texel 5 : (r,  g,  b,  a )  — shadowColor
-// Texel 6 : (shadowOffX_px, shadowOffY_px, gradientVertical, 0)
+// Texel 6 : (shadowOffX_px, shadowOffY_px, gradientVertical, sdfRadius_logical)
 // Texel 7 : (r,  g,  b,  a )  — gradientTop
 // Texel 8 : (r,  g,  b,  a )  — gradientBottom
 // Texel 9 : (minX, minY, w, h) — text block bounds (local space, for gradient UV)
@@ -48,8 +49,8 @@ import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './
 // The shaders divide shadowOffset by u_pageSize (a per-batch uniform shared by
 // compatible atlas textures) to convert px → UV space.
 
-const nodeTexels = 10;
-const nodeFloats = nodeTexels * 4; // 40 floats per node
+const nodeTexels = textNodeDataTexels;
+const nodeFloats = textNodeDataFloats;
 
 const identityGroupMat3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
 
@@ -190,7 +191,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
 
   // Retained-batch state: the renderer-owned, grow-only quad-index buffer (the
   // standard `0,1,2, 0,2,3` glyph pattern shared by every recorded batch) and
-  // which capture windows have already recorded a Text batch this session
+  // which capture windows have already recorded a Text batch
   // (nesting-safe — one entry per capture-open call).
   private _retainedQuadIndexBuffer: WebGl2RenderBuffer | null = null;
   private _retainedQuadCapacity = 0;
@@ -299,6 +300,10 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
   // ── Collection (called during scene traversal) ───────────────────────────
 
   private _collectText(node: Text): void {
+    // Before the layout pass, not after: this is what a node with no explicit
+    // `pixelRatio` inherits, and the pass it drives is the one that resolves
+    // which atlas the node rasterizes into.
+    node._setSurfacePixelRatio(this.getBackend().surfacePixelRatio);
     node.syncDirty();
     const { pageQuads, atlas } = node;
     if (pageQuads.length === 0 || atlas === null) return;
@@ -344,89 +349,12 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
   }
 
   // ── Node data packing ────────────────────────────────────────────────────
+  // The 10-texel/40-float layout is packed by the shared, backend-free
+  // `packTextNodeData` (mirrors `WebGpuTextRenderer`, byte for byte) - see
+  // `textNodeDataPacker.ts` for the texel-by-texel layout comment.
 
   private _packNodeData(ni: number, node: Text | BitmapText): void {
-    const arr = this._nodeDataArray;
-    const base = ni * nodeFloats;
-    const style = node.style;
-
-    // Transform (texels 0-1)
-    // In-bounds: `toArray(false)` returns the fixed 9-element mat3 column-major array.
-    const m = node.getGlobalTransform().toArray(false); // col-major: [a,c,0, b,d,0, tx,ty,1]
-    arr[base + 0] = m[0]!; // a
-    arr[base + 1] = m[1]!; // c
-    // texel 0's spare `.z` carries the snap-mode flag the vertex shader reads to
-    // decide whether to snap the glyph origin to the device-pixel grid —
-    // this turns Text position snapping from a silent no-op into a real feature.
-    arr[base + 2] = node.pixelSnapMode; // snap-mode flag
-    arr[base + 3] = m[6]!; // tx
-    arr[base + 4] = m[3]!; // b
-    arr[base + 5] = m[4]!; // d
-    arr[base + 6] = m[5]!; // 0
-    arr[base + 7] = m[7]!; // ty
-
-    // Fill color (texel 2)
-    const fc = style.fillColor;
-    arr[base + 8] = fc.r / 255;
-    arr[base + 9] = fc.g / 255;
-    arr[base + 10] = fc.b / 255;
-    arr[base + 11] = fc.a;
-
-    // Outline color (texel 3)
-    const oc = style.outlineColor;
-    arr[base + 12] = oc.r / 255;
-    arr[base + 13] = oc.g / 255;
-    arr[base + 14] = oc.b / 255;
-    arr[base + 15] = oc.a;
-
-    // Params (texel 4): outlineMin, shadowAlpha, softness, gradientEnabled
-    // outlineMin = 0.5 → disabled; 0.5 - outlineWidth when enabled
-    const outlineMin = style.outlineWidth > 0 ? Math.max(0, 0.5 - style.outlineWidth) : 0.5;
-    arr[base + 16] = outlineMin;
-    arr[base + 17] = style.shadowAlpha;
-    arr[base + 18] = Math.max(0.03, style.shadowBlur * 0.1);
-    arr[base + 19] = style.gradientColors !== null ? 1 : 0;
-
-    // Shadow color (texel 5)
-    const sc = style.shadowColor;
-    arr[base + 20] = sc.r / 255;
-    arr[base + 21] = sc.g / 255;
-    arr[base + 22] = sc.b / 255;
-    arr[base + 23] = sc.a;
-
-    // Shadow offset + gradient axis (texel 6)
-    // Store raw pixel offsets; shaders divide by u_pageSize to get UV offset.
-    arr[base + 24] = style.shadowOffsetX;
-    arr[base + 25] = style.shadowOffsetY;
-    arr[base + 26] = style.gradientAxis === 'vertical' ? 1 : 0;
-    arr[base + 27] = 0;
-
-    // Gradient top (texel 7)
-    const gc = style.gradientColors;
-    if (gc !== null) {
-      arr[base + 28] = gc[0].r / 255;
-      arr[base + 29] = gc[0].g / 255;
-      arr[base + 30] = gc[0].b / 255;
-      arr[base + 31] = gc[0].a;
-      // Gradient bottom (texel 8)
-      arr[base + 32] = gc[1].r / 255;
-      arr[base + 33] = gc[1].g / 255;
-      arr[base + 34] = gc[1].b / 255;
-      arr[base + 35] = gc[1].a;
-    } else {
-      arr[base + 28] = arr[base + 29] = arr[base + 30] = arr[base + 31] = 0;
-      arr[base + 32] = arr[base + 33] = arr[base + 34] = arr[base + 35] = 0;
-    }
-
-    // Text ink bounds (texel 9): (minX, minY, width, height)
-    // Vertex shader uses these to compute normalized gradient UV, so it needs
-    // the rectangle the glyph quads actually cover — not the advance extent,
-    // whose origin is (0, 0) while the SDF quads start at a negative offset.
-    const ink = node.getLocalBounds();
-    arr[base + 36] = ink.x;
-    arr[base + 37] = ink.y;
-    arr[base + 38] = ink.width;
-    arr[base + 39] = ink.height;
+    packTextNodeData(this._nodeDataArray, ni * nodeFloats, node);
   }
 
   // ── Flush ────────────────────────────────────────────────────────────────
@@ -666,15 +594,19 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       shaderType,
     };
 
+    // The batch's instances are its glyph quads; its NODES are the text runs the
+    // quads came from - a single run contributes one to `submittedNodes` however
+    // many glyphs it draws, on this tier as on the live one.
     backend._recordRetainedBatch(
       this,
       this._uint32View.subarray(0, wordCount),
-      this._nodeCount,
+      quadCount,
       BlendModes.Normal,
       atlases,
       atlases.length,
       null,
       rendererData,
+      this._nodeCount,
     );
 
     this._recordedCaptures.add(bundle);
@@ -867,18 +799,9 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       return false;
     }
 
-    // Column-major mat3 [a c 0 | b d 0 | tx ty 1] — indices 0..8 always valid.
-    const m = drawable.getGlobalTransform().toArray(false);
     const row = this._patchRowScratch;
 
-    row[0] = m[0]!; // a
-    row[1] = m[1]!; // c
-    row[2] = drawable.pixelSnapMode; // snap-mode flag (texel 0's spare .z)
-    row[3] = m[6]!; // tx
-    row[4] = m[3]!; // b
-    row[5] = m[4]!; // d
-    row[6] = m[5]!; // 0
-    row[7] = m[7]!; // ty
+    packTextNodeTransform(row, 0, drawable);
 
     state.nodeDataFloats.set(row, localIndex * nodeFloats);
     state.nodeDataTexture.commitRect(0, localIndex, 2, 1);

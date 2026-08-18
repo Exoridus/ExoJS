@@ -236,7 +236,7 @@ const pathLines = pathEntries.map(([k, v]) => `      "${k}": ["${v}"]`).join(',\
 // cross-package source typecheck stays clean. Deps with no `#` imports
 // (tilemap, etc.) contribute nothing.
 const SOURCE_CONDITION_RE = /-source$/;
-const customConditions = ['@codexo/source'];
+const customConditions = ['@codexo/exojs-source'];
 for (const dep of deps) {
   const depPkg = JSON.parse(readFileSync(resolve(rootDir, `packages/exojs-${dep}/package.json`), 'utf8')) as {
     imports?: Record<string, unknown>;

@@ -7,7 +7,7 @@ import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
 import { Drawable } from '#rendering/Drawable';
-import { ColorFilter } from '#rendering/filters/ColorFilter';
+import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import { Graphics } from '#rendering/primitives/Graphics';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { Renderer } from '#rendering/Renderer';
@@ -422,7 +422,7 @@ const createCustomRenderer = <Target extends Drawable>(): Renderer<WebGpuBackend
 
 /**
  * Install core renderer bindings on a directly-constructed WebGpuBackend.
- * Required after PR-2: core renderers are no longer registered in the backend constructor.
+ * Core renderers are no longer registered in the backend constructor.
  */
 function installCoreRenderers(backend: WebGpuBackend, renderingOptions: RenderingApplicationOptions = {}): void {
   const bindings = buildCoreRendererBindings(renderingOptions);
@@ -615,6 +615,86 @@ describe('WebGpuBackend', () => {
       expect(environment.context.unconfigure).toHaveBeenCalledTimes(1);
       expect(environment.buffers.length).toBeGreaterThan(0);
       expect(environment.buffers.every(buffer => buffer.destroy.mock.calls.length > 0)).toBe(true);
+    } finally {
+      environment.restore();
+    }
+  });
+
+  test('configures the canvas opaque by default', async () => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const app = {
+        canvas: environment.canvas,
+        options: {
+          canvas: { width: 64, height: 64 },
+          clearColor: Color.black,
+        },
+      } as unknown as Application;
+      const manager = new WebGpuBackend(app);
+
+      await manager.initialize();
+
+      const configuration = (environment.context.configure as unknown as MockInstance).mock.calls[0]![0] as GPUCanvasConfiguration;
+
+      expect(configuration.alphaMode).toBe('opaque');
+
+      manager.destroy();
+    } finally {
+      environment.restore();
+    }
+  });
+
+  test('maps rendering.alphaMode onto the canvas configuration', async () => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const app = {
+        canvas: environment.canvas,
+        options: {
+          canvas: { width: 64, height: 64 },
+          clearColor: Color.black,
+          rendering: { alphaMode: 'premultiplied' },
+        },
+      } as unknown as Application;
+      const manager = new WebGpuBackend(app);
+
+      await manager.initialize();
+
+      const configuration = (environment.context.configure as unknown as MockInstance).mock.calls[0]![0] as GPUCanvasConfiguration;
+
+      expect(configuration.alphaMode).toBe('premultiplied');
+
+      manager.destroy();
+    } finally {
+      environment.restore();
+    }
+  });
+
+  test.each([
+    ['opaque', true],
+    ['premultiplied', false],
+  ] as const)('alphaMode %s reports the root canvas as opaque=%o', async (alphaMode, expected) => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const app = {
+        canvas: environment.canvas,
+        options: {
+          canvas: { width: 64, height: 64 },
+          clearColor: Color.black,
+          rendering: { alphaMode },
+        },
+      } as unknown as Application;
+      const manager = new WebGpuBackend(app);
+
+      await manager.initialize();
+
+      // The flag the backdrop-blend compositor reads to decide whether a root
+      // target may be treated as a fully covered backdrop.
+      expect(manager._rootCanvasOpaque).toBe(expected);
+
+      manager.destroy();
     } finally {
       environment.restore();
     }
@@ -1955,7 +2035,7 @@ describe('WebGpuBackend', () => {
       sourceCanvas.width = 16;
       sourceCanvas.height = 16;
       texture.updateSource();
-      sprite.addFilter(new ColorFilter(Color.red));
+      sprite.addFilter(new ColorMatrixFilter().tint(Color.red));
 
       await manager.initialize();
 
@@ -1964,7 +2044,11 @@ describe('WebGpuBackend', () => {
       manager.flush();
 
       expect(environment.encoder.beginRenderPass.mock.calls.length).toBeGreaterThanOrEqual(3);
-      expect(environment.pass.drawIndexed.mock.calls.length).toBeGreaterThanOrEqual(3);
+      // The subject into the capture and the composite back out are indexed
+      // quads; the filter's own pass is a shader over a fullscreen
+      // triangle-strip, so it lands on `draw` rather than `drawIndexed`.
+      expect(environment.pass.drawIndexed.mock.calls.length).toBeGreaterThanOrEqual(2);
+      expect(environment.pass.draw.mock.calls.length).toBeGreaterThanOrEqual(1);
       sprite.destroy();
       manager.destroy();
     } finally {
@@ -2035,7 +2119,7 @@ describe('WebGpuBackend', () => {
       sourceCanvas.height = 16;
       texture.updateSource();
 
-      container.cacheAsBitmap = true;
+      container.cacheAsTexture = true;
       container.addChild(sprite);
 
       await manager.initialize();

@@ -56,7 +56,7 @@ const setupPannerSpy = (): { panners: MockPanner[]; restore: () => void } => {
 
 const getGlobalListener = (): Record<string, MockParam> => (getAudioContext() as unknown as { listener: Record<string, MockParam> }).listener;
 
-// ME-35: `ctx.listener` belongs to the process-wide AudioContext, so two
+// `ctx.listener` belongs to the process-wide AudioContext, so two
 // Applications used to write their own absolute world position into the same
 // global object every frame — last writer per frame wins, and both apps pan
 // against whichever listener happened to tick last. The fix is a virtual

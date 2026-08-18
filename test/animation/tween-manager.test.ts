@@ -180,7 +180,7 @@ describe('TweenManager', () => {
     expect(onComplete).not.toHaveBeenCalled();
   });
 
-  // ---- clear()/destroy() must not leave an evicted tween's state lying about Active (NEU-E4) ----
+  // ---- clear()/destroy() must not leave an evicted tween's state lying about Active ----
 
   test('clear() transitions every evicted tween to Stopped — state no longer claims Active', () => {
     const manager = new TweenManager();

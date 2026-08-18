@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!-- `viewport-fit=cover` + no user scaling: a pinch-zoom would change the CSS
+         pixel size of the canvas mid-run and silently invalidate every cell after
+         it. The probe controls resolution explicitly; the browser must not. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <title>ExoJS DPR &amp; internal render-target probe (NEU-S4)</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0d1117;
+        --panel: #161b22;
+        --line: #30363d;
+        --text: #e6edf3;
+        --muted: #9198a1;
+        --accent: #3b82f6;
+        --ok: #2ea043;
+        --warn: #d29922;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 12px;
+        background: var(--bg);
+        color: var(--text);
+        font: 13px/1.45 -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      }
+
+      h1 {
+        font-size: 15px;
+        margin: 0 0 8px;
+      }
+
+      h2 {
+        font-size: 13px;
+        margin: 0 0 6px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 8px;
+      }
+
+      /* Run progress, shown beside the section title so it stays in view while
+         the tester is watching the canvas rather than the results table. */
+      .progress {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+        letter-spacing: 0;
+        text-transform: none;
+        color: var(--accent);
+        white-space: nowrap;
+      }
+
+      .progress[data-state='done'] {
+        color: var(--ok);
+        font-weight: 600;
+      }
+
+      .progress[data-state='error'] {
+        color: var(--warn);
+      }
+
+      section {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px;
+        margin-bottom: 10px;
+      }
+
+      label {
+        display: block;
+        color: var(--muted);
+        margin-bottom: 2px;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        background: #0d1117;
+        color: var(--text);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 6px 8px;
+        font: inherit;
+        margin-bottom: 8px;
+      }
+
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 6px;
+      }
+
+      .row > span {
+        color: var(--muted);
+        min-width: 52px;
+        align-self: center;
+      }
+
+      button {
+        background: #21262d;
+        color: var(--text);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 7px 11px;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      button[aria-pressed='true'] {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+      }
+
+      button:disabled {
+        opacity: 0.45;
+      }
+
+      button.primary {
+        background: var(--ok);
+        border-color: var(--ok);
+        color: #fff;
+      }
+
+      #stage-host {
+        display: flex;
+        justify-content: center;
+        background: #000;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 4px;
+        margin-bottom: 8px;
+      }
+
+      canvas {
+        display: block;
+      }
+
+      .readout,
+      .status {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+        color: var(--muted);
+        white-space: pre-wrap;
+      }
+
+      .status {
+        color: var(--text);
+      }
+
+      .warn {
+        color: var(--warn);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--line);
+        padding: 3px 4px;
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      th:first-child,
+      td:first-child,
+      th:nth-child(2),
+      td:nth-child(2) {
+        text-align: left;
+      }
+
+      .scroll {
+        overflow-x: auto;
+      }
+
+      textarea {
+        height: 120px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>ExoJS DPR &amp; internal render-target probe — NEU-S4</h1>
+
+    <section>
+      <h2>Test metadata</h2>
+      <label for="device-label">Device (typed by you — never guessed from the user agent)</label>
+      <input id="device-label" type="text" placeholder="iPhone 13 Pro" autocomplete="off" />
+      <label for="tester-note">Note (thermal state, orientation, anything unusual)</label>
+      <input id="tester-note" type="text" placeholder="cold device, portrait, 100% battery" autocomplete="off" />
+      <label for="backend">Backend</label>
+      <select id="backend">
+        <option value="auto">auto (what a real app gets — WebGL2 on every WebKit browser)</option>
+        <option value="webgl2">webgl2 (forced)</option>
+        <option value="webgpu">webgpu (forced — known to render this engine incorrectly on WebKit)</option>
+      </select>
+      <div id="environment" class="readout"></div>
+    </section>
+
+    <section>
+      <h2><span id="visual-title">Look at it</span><span id="visual-progress" class="progress"></span></h2>
+      <div id="stage-host"></div>
+      <div class="row"><span>Scene</span><span id="scene-buttons" style="display: contents"></span></div>
+      <div class="row"><span>DPR</span><span id="dpr-buttons" style="display: contents"></span></div>
+      <div class="row"><span>Target</span><span id="mode-buttons" style="display: contents"></span></div>
+      <div class="row"><span>Text px</span><span id="text-ratio-buttons" style="display: contents"></span></div>
+      <div class="row"><span>Stage</span><span id="stage-buttons" style="display: contents"></span></div>
+      <div id="visual-readout" class="readout"></div>
+    </section>
+
+    <section>
+      <h2>Measure</h2>
+      <div class="row">
+        <button id="run-matrix" class="primary">Run full matrix</button>
+        <button id="run-sustained-2">60 s sustained — blur @ DPR 2</button>
+        <button id="run-sustained-3">60 s sustained — blur @ DPR 3</button>
+      </div>
+      <div id="status" class="status">idle</div>
+      <div class="scroll"><table id="results"></table></div>
+    </section>
+
+    <section>
+      <h2>Result</h2>
+      <div class="row">
+        <button id="submit-json" class="primary">Submit to host</button>
+        <button id="copy-json">Copy JSON</button>
+        <button id="clear-results">Clear results</button>
+      </div>
+      <textarea id="json-output" readonly placeholder="Run the matrix, then press Copy JSON. The text also appears here so you can select it by hand if the clipboard is blocked."></textarea>
+    </section>
+
+    <script type="module" src="./probe.ts"></script>
+  </body>
+</html>

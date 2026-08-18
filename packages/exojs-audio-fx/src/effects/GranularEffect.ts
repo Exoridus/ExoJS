@@ -1,6 +1,6 @@
 import { WorkletEffect } from '@codexo/exojs';
 
-import { granularWorkletSource } from '../worklets/granular.worklet';
+import granularWorkletSource from '../worklets/granular.worklet.ts?worklet';
 
 export interface GranularEffectOptions {
   /** Grain size in seconds. 0.005-0.5. Default 0.05 (50ms). */

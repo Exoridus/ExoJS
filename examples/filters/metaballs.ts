@@ -1,4 +1,4 @@
-import { Application, BlurFilter, Color, Graphics, RenderBackendType, type RenderingContext, Scene, type Time, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+import { Application, BlurFilter, Color, Graphics, type RenderingContext, Scene, ShaderFilter, type Time } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 
@@ -10,23 +10,20 @@ const glsl = `#version 300 es
 precision mediump float; uniform sampler2D uTexture; in vec2 vUv; out vec4 fragColor;
 void main(){ float l=texture(uTexture,vUv).r; float m=smoothstep(0.28,0.5,l); fragColor=vec4(vec3(0.2,0.9,1.0)*m,m); }`;
 const wgsl = `@group(0) @binding(1) var uTexture:texture_2d<f32>; @group(0) @binding(2) var uSampler:sampler;
-@fragment fn main(@location(0) vUv:vec2<f32>)->@location(0) vec4<f32>{ let l=textureSample(uTexture,uSampler,vUv).r; let m=smoothstep(0.28,0.5,l); return vec4<f32>(vec3<f32>(0.2,0.9,1.0)*m,m);} `;
+@fragment fn fragmentMain(@location(0) vUv:vec2<f32>)->@location(0) vec4<f32>{ let l=textureSample(uTexture,uSampler,vUv).r; let m=smoothstep(0.28,0.5,l); return vec4<f32>(vec3<f32>(0.2,0.9,1.0)*m,m);} `;
 
 class MetaballsScene extends Scene {
     private balls!: Graphics;
     private points!: Array<{ a: number; r: number }>;
     private blur!: BlurFilter;
-    private threshold!: WebGl2ShaderFilter | WebGpuShaderFilter;
+    private threshold!: ShaderFilter;
 
     override init(): void {
         this.balls = new Graphics();
         this.points = Array.from({ length: 8 }, (_, i) => ({ a: (i / 8) * Math.PI * 2, r: 120 + (i % 3) * 56 }));
 
         this.blur = new BlurFilter({ radius: 12, quality: 3 });
-        this.threshold =
-            app.backend.backendType === RenderBackendType.WebGpu
-                ? new WebGpuShaderFilter({ fragmentSource: wgsl })
-                : new WebGl2ShaderFilter({ fragmentSource: glsl });
+        this.threshold = new ShaderFilter({ glsl: { fragment: glsl }, wgsl });
 
         // Order matters: blur first (build the field), threshold second.
         this.balls.filters = [this.blur, this.threshold];

@@ -18,8 +18,8 @@ const retainedDiagnosticThreshold = 108;
 /**
  * A {@link Container} that declares its subtree "mostly static and/or moves
  * as a whole". While the subtree is unchanged, its whole
- * previously-collected command range is spliced into the render plan — no
- * walk, no per-child culling, no material keys — and moving the container
+ * previously-collected command range is spliced into the render plan - no
+ * walk, no per-child culling, no material keys - and moving the container
  * (or the camera) changes only one per-group GPU matrix instead of touching
  * every descendant.
  *
@@ -33,16 +33,16 @@ const retainedDiagnosticThreshold = 108;
  * group are group-local; per-child view culling is disabled inside the group
  * (the group is culled as a whole); particle-extension drawables bake their own
  * transforms and are not group-transform-aware. `PixelSnapMode.Position` IS
- * group-aware — the shader applies the group matrix before rounding the composed
+ * group-aware - the shader applies the group matrix before rounding the composed
  * device origin, so a position-snapped node inside a translated/scaled group
  * still lands on the device-pixel grid (and stays recordable). Group-wide fades are done
  * per-drawable tint (the engine has no inherited alpha) or via
- * {@link RenderNode.cacheAsBitmap}. Nodes with filters/mask/clip/
- * cacheAsBitmap are supported as DIRECT children (they stay world-space and
+ * {@link RenderNode.cacheAsTexture}. Nodes with filters/mask/clip/
+ * cacheAsTexture are supported as DIRECT children (they stay world-space and
  * re-collect every frame); nesting one deeper pushes ONLY the direct child
- * branch containing it out of the group — that sub-branch renders
+ * branch containing it out of the group - that sub-branch renders
  * world-space and re-collects every frame like a direct barrier child, while
- * retention and the group transform stay active for the rest of the group —
+ * retention and the group transform stay active for the rest of the group -
  * and warns once in dev builds. Note that any escaped branch keeps the
  * group's fragment off the recorded-instruction tier (barrier entries are
  * not batch-recordable); the group stays on entry replay.
@@ -529,7 +529,7 @@ export class RetainedContainer extends Container {
     if (__DEV__ && this._escapedBranches.size > 0 && !this._deepBarrierWarned) {
       this._deepBarrierWarned = true;
       logger.warn(
-        `RetainedContainer${this.name ? ` '${this.name}'` : ''} contains a node with filters/mask/clip/cacheAsBitmap ` +
+        `RetainedContainer${this.name ? ` '${this.name}'` : ''} contains a node with filters/mask/clip/cacheAsTexture ` +
           'nested deeper than one level below the group boundary. That sub-branch leaves the transform group and ' +
           're-collects in world space every frame — retention and the group transform stay active for the rest of ' +
           'the group — until the effect-bearing node is moved up to a direct child of the group or out of it.',

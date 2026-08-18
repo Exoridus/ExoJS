@@ -119,6 +119,21 @@ export enum TextureFormat {
 export type ColorTextureFormat = TextureFormat.Rgba8 | TextureFormat.Rgba16F | TextureFormat.Rgba32F;
 
 /**
+ * Resolution an internal render target is rasterized at, in device pixels per
+ * logical unit.
+ *
+ * `'inherit'` - the default everywhere - takes the resolution of the target the
+ * result is composited into, so a filtered or cached subtree is as sharp as the
+ * surface around it. A number overrides that: `0.5` on a heavy blur halves its
+ * linear resolution (a quarter of the fragments) at the cost of detail, `1`
+ * pins a target to logical size regardless of the display.
+ *
+ * Applies to {@link Filter.resolution} and {@link RenderNode.cacheResolution}.
+ * @stable
+ */
+export type TargetResolution = number | 'inherit';
+
+/**
  * GPU primitive topology used when issuing draw calls.
  * Values are WebGL2 GLenum constants (e.g. `gl.TRIANGLES`).
  */

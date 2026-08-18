@@ -174,11 +174,11 @@ describe('RenderNode/Drawable content mutations route through invalidateCache ->
     drawable.destroy();
   });
 
-  test('RenderNode.cacheAsBitmap bumps content revision', () => {
+  test('RenderNode.cacheAsTexture bumps content revision', () => {
     const container = new Container();
     const before = container._contentRevision;
 
-    container.cacheAsBitmap = true;
+    container.cacheAsTexture = true;
 
     expect(container._contentRevision).toBeGreaterThan(before);
     container.destroy();

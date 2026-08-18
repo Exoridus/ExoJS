@@ -184,7 +184,14 @@ export class RenderTexture extends RenderTarget {
     assert(width > 0 && height > 0, `RenderTexture.setSize() dimensions must be positive (got ${width}×${height})`);
     if (!this._size.equals({ width, height })) {
       this._size.set(width, height);
-      this._defaultView.resize(width, height);
+      // Both halves of the default view. `resize` only restates its EXTENT; the
+      // view was built centred on the target it was created for, and leaving
+      // that centre behind means a resized target renders a region offset by
+      // half the size difference - content shifted, and the far edge clipped by
+      // the same amount. Nothing outside a resize can observe the difference,
+      // which is why it survived: the region only stops matching the target
+      // when the two are set from different sizes.
+      this._defaultView.resize(width, height).setCenter(width / 2, height / 2);
       this.updateViewport();
       this._touchTexture();
     }

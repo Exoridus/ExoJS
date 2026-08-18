@@ -1,14 +1,15 @@
 /**
- * Allocation bench launcher — samples the per-frame plan allocation of the
+ * Allocation bench launcher - samples the per-frame plan allocation of the
  * budgeted gate archetypes plus the families the gate leaves out (nine-slice,
- * repeating, tilemap), and writes the numbers to `.workspace/output/render-perf/`.
+ * repeating, tilemap), and writes the numbers to the perf output directory,
+ * printing the resolved path on completion.
  *
  *   pnpm perf:renderers:alloc                 # gate archetypes + extra families
  *   pnpm perf:renderers:alloc --reference     # …plus the 1M scrolling-world stage
  *
  * SOURCE-ACCURATE. The `perf:renderers:alloc` script passes
- * `--conditions=@codexo/source` (so the `#*` imports resolve to `src`, NOT to a
- * `dist` build) and `--import ./scripts/glsl-register.mjs` — a node ESM loader
+ * `--conditions=@codexo/exojs-source` (so the `#*` imports resolve to `src`, NOT to a
+ * `dist` build) and `--import ./scripts/glsl-register.mjs` - a node ESM loader
  * hook that loads `.vert`/`.frag` as source text (the node/tsx counterpart of the
  * vitest `realShaderPlugin`) and installs the `__DEV__`/`__VERSION__`/
  * `__REVISION__` build-constant globals. Those two pieces plus the DOM shims in

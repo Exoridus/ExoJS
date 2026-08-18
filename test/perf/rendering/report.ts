@@ -1,7 +1,7 @@
 /**
  * Machine-readable output for the renderer benchmark sweep: a JSON array of
- * per-scenario results plus a flat CSV summary. Written under
- * `.workspace/output/render-perf/` (gitignored) by `sweep.test.ts`.
+ * per-scenario results plus a flat CSV summary. Written by `sweep.test.ts`
+ * into the output directory it passes in.
  *
  * @internal Test/perf-only.
  */

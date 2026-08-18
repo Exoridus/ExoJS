@@ -55,7 +55,7 @@ export interface RetainedGroupBundle {
  * offset/length into the group instance buffer, cached bind groups, ...)
  * lives in `payload`, owned by the backend that recorded it; the plan layer
  * carries only what validation (bundle + generation) and stats parity
- * (instanceCount/drawCalls) need.
+ * (nodeCount/drawCalls) need.
  * @internal
  */
 export interface RetainedBatchInstruction {
@@ -64,8 +64,25 @@ export interface RetainedBatchInstruction {
   readonly bundle: RetainedGroupBundle;
   /** `bundle.generation` at record time; a mismatch means stale GPU state. */
   readonly generation: number;
-  /** Instances drawn by this batch (stats: submittedNodes). */
+  /**
+   * GPU instances this batch draws - the replay draw's instance argument, NOT a
+   * node count. See {@link nodeCount} for the `stats.submittedNodes` figure.
+   */
   readonly instanceCount: number;
+  /**
+   * Render nodes this batch was recorded from - its `stats.submittedNodes`
+   * contribution on replay. Absent means one instance is one node, and
+   * {@link instanceCount} stands in.
+   *
+   * Set explicitly by every renderer whose single node expands into several
+   * instances (tile chunk, nine-slice, repeating sprite, text run); without it
+   * the recorded tier would report instances where the live and entry-replay
+   * tiers report nodes. Summed over a frame's batches it equals the live path's
+   * per-draw count: a node is booked once, against whichever batch was open when
+   * its first instance was written, and never re-booked when its remaining
+   * instances spill into a later batch.
+   */
+  readonly nodeCount?: number;
   /** GPU draw calls issued by this batch (stats: drawCalls). */
   readonly drawCalls: number;
   /** Backend-owned replay descriptor, opaque to the plan layer. */

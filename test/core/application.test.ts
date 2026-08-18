@@ -511,8 +511,34 @@ describe('Application', () => {
     const appArg = BackendMock.mock.calls[0][0] as import('#core/Application').Application;
 
     expect(appArg.options.rendering?.debug).toBe(true);
-    expect(appArg.options.rendering?.webglAttributes).toEqual({ antialias: true });
+    // A partial webglAttributes override merges on top of ExoJS's own WebGL
+    // defaults - it does not replace them wholesale.
+    expect(appArg.options.rendering?.webglAttributes).toEqual({
+      antialias: true,
+      depth: false,
+      preserveDrawingBuffer: false,
+    });
     expect(appArg.options.rendering?.spriteRendererBatchSize).toBe(128);
+  });
+
+  test('resolves the canvas alpha mode to opaque by default', async () => {
+    const { Application, BackendMock } = await loadApplicationHarness();
+
+    new Application({ backend: { type: 'webgl2' } });
+
+    const appArg = BackendMock.mock.calls[0][0] as import('#core/Application').Application;
+
+    expect(appArg.options.rendering?.alphaMode).toBe('opaque');
+  });
+
+  test('passes an explicit canvas alpha mode through to the backend', async () => {
+    const { Application, BackendMock } = await loadApplicationHarness();
+
+    new Application({ backend: { type: 'webgl2' }, rendering: { alphaMode: 'premultiplied' } });
+
+    const appArg = BackendMock.mock.calls[0][0] as import('#core/Application').Application;
+
+    expect(appArg.options.rendering?.alphaMode).toBe('premultiplied');
   });
 
   test('applies canvas pixelRatio to backing size and keeps resize logical', async () => {

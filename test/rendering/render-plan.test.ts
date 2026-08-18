@@ -81,6 +81,11 @@ const createRuntime = () => {
 
   const backend: RenderBackend = {
     backendType: RenderBackendType.WebGl2,
+    // Resolution 1 keeps every internal target at its logical size, which is
+    // what these tests assert on. The pixel-ratio behaviour of the same targets
+    // is covered by the browser DPR lanes, where a real surface exists.
+    rootResolution: 1,
+    maxTextureSize: 4096,
     stats,
     get renderTarget() {
       return currentTarget;
@@ -367,12 +372,12 @@ describe('render plan', () => {
     expect(failureRuntime.released).toHaveLength(failureRuntime.acquired.length);
   });
 
-  test('cacheAsBitmap cache hit skips subtree recollect and redraw', () => {
+  test('cacheAsTexture cache hit skips subtree recollect and redraw', () => {
     const { backend, drawEvents } = createRuntime();
     const container = new Container();
     const child = new BoxDrawable('child');
 
-    container.cacheAsBitmap = true;
+    container.cacheAsTexture = true;
     container.addChild(child);
 
     container.render(backend);
@@ -445,7 +450,7 @@ describe('render plan', () => {
     expect(draw).toHaveBeenCalledTimes(1);
   });
 
-  // Driven by a RenderNode mask, not by `cacheAsBitmap`. The bitmap-cache
+  // Driven by a RenderNode mask, not by `cacheAsTexture`. The bitmap-cache
   // composite used to render its cache sprite through `playRenderTree`, so it
   // nested a builder; it now hands the sprite to `drawDrawableDirect` and does
   // not. A node mask still renders its source subtree through a real nested

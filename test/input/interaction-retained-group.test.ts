@@ -331,11 +331,11 @@ describe('InteractionManager: hit-testing children of a translated RetainedConta
     const group = new RetainedContainer();
     const child = makeSprite();
 
-    // A barrier effect (cacheAsBitmap) pushes the child OUT of the transform
+    // A barrier effect (cacheAsTexture) pushes the child OUT of the transform
     // group: it resolves world-space transforms and is therefore indexed in the
     // world quadtree (not the anchored side list). Its quadtree bucket is keyed
     // on its bounds at insertion time.
-    child.cacheAsBitmap = true;
+    child.cacheAsTexture = true;
     group.addChild(child);
     scene.addChild(group);
     child.interactive = true;
@@ -383,7 +383,7 @@ describe('InteractionManager: hit-testing children of a translated RetainedConta
 
     // The barrier child escapes the group, taking its whole subtree to world
     // space with it — so the interactive grandchild is world-quadtree-indexed.
-    barrierChild.cacheAsBitmap = true;
+    barrierChild.cacheAsTexture = true;
     barrierChild.addChild(grandChild);
     group.addChild(barrierChild);
     scene.addChild(group);

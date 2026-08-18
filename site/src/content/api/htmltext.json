@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 99,
+  "memberCount": 100,
   "counts": {
     "constructors": 1,
     "methods": 44,
-    "properties": 40,
+    "properties": 41,
     "events": 14
   },
   "sections": [
@@ -613,7 +613,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Destroy this container and every node beneath it. Ownership is by containment: detaching a subtree only unlinks it, so the descendants' GPU-backed resources (cached bitmaps, filters, render textures) and signal listeners would outlive the tree that owned them and leak on every scene change."
+          "description": "Destroy this container and every node beneath it. Ownership is by containment: detaching a subtree only unlinks it, so the descendants' GPU-backed resources (cached textures, filters, render textures) and signal listeners would outlive the tree that owned them and leak on every scene change."
         },
         {
           "name": "focus",
@@ -2455,11 +2455,11 @@
           "description": "Bottommost edge of the subtree — see left."
         },
         {
-          "name": "cacheAsBitmap",
-          "signature": "cacheAsBitmap: boolean",
+          "name": "cacheAsTexture",
+          "signature": "cacheAsTexture: boolean",
           "signatureTokens": [
             {
-              "text": "cacheAsBitmap",
+              "text": "cacheAsTexture",
               "kind": "name"
             },
             {
@@ -2473,7 +2473,28 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Bake this node's subtree into a RenderTexture once and replay that texture until the subtree changes, instead of walking and drawing it every frame. Worth it for a subtree that is expensive to draw and rarely changes. The cache is invalidated by anything that moves the node's world bounds - the node's own transform included - so a node that animates re-bakes every frame and is strictly slower than not caching it at all. Setting it to false frees the texture immediately."
+        },
+        {
+          "name": "cacheResolution",
+          "signature": "cacheResolution: TargetResolution",
+          "signatureTokens": [
+            {
+              "text": "cacheResolution",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TargetResolution",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Resolution the cacheAsTexture texture is baked at, in device pixels per logical unit. 'inherit' (the default) matches the surface the cache is composited into, so enabling the cache does not soften the picture on a HiDPI display. Pin it to a number to trade sharpness for memory and bake cost - a cache is resolution² texels, so 1 on a DPR-3 phone is a ninth of the VRAM and a ninth of the fill per re-bake. Changing it invalidates the cache."
         },
         {
           "name": "children",
@@ -2815,7 +2836,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The mask source that controls visibility of this node's render output. See MaskSource for accepted source types and their semantics. Setting to null removes any active mask. Setting a RenderNode that is this is rejected (a node cannot mask itself); other cycles (mask of mask of self) are not detected."
+          "description": "The mask source that controls visibility of this node's render output. See MaskSource for accepted source types and their semantics. Setting to null removes any active mask. Setting a RenderNode that is this is rejected (a node cannot mask itself). Indirect cycles (a.mask = b; b.mask = a) are rejected as well: the candidate's mask chain is walked and any cycle - whether it closes on this or was already present in the chain - fails the assignment."
         },
         {
           "name": "origin",

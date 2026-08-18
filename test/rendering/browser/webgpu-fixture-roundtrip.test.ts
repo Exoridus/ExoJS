@@ -4,9 +4,9 @@
  * carrying the exact bytes its source texel held, so this is checked directly
  * rather than assumed.
  *
- * The WebGL2 arm depends on the shipped GLSL that the `_glslMocks` setup file
- * restores: a stub fragment stage would report its own synthesised colour
- * instead of the sampled texel, which is precisely what this test must not do.
+ * The WebGL2 arm depends on the shipped GLSL: a substitute fragment stage would
+ * report its own synthesised colour instead of the sampled texel, which is
+ * precisely what this test must not do.
  *
  * Run via:  pnpm test:browser:webgpu
  */

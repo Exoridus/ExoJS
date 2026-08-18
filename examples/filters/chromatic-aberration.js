@@ -1,5 +1,5 @@
 // Auto-generated from chromatic-aberration.ts — edit the .ts source, not this file.
-import { Application, Color, RenderBackendType, Scene, Sprite, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+import { Application, Color, Scene, ShaderFilter, Sprite } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // A dense checkerboard makes the per-channel RGB split read clearly along edges.
 const CHECKER = assets.technical.filtering.checker256;
@@ -11,7 +11,7 @@ const wgsl = `
 @group(0) @binding(2) var uSampler:sampler;
 struct Uniforms { uOffset:f32, _pad0:vec3<f32> };
 @group(1) @binding(0) var<uniform> uniforms:Uniforms;
-@fragment fn main(@location(0) vUv:vec2<f32>)->@location(0) vec4<f32>{
+@fragment fn fragmentMain(@location(0) vUv:vec2<f32>)->@location(0) vec4<f32>{
     let o=vec2<f32>(uniforms.uOffset,0.0);
     let r=textureSample(uTexture,uSampler,vUv+o).r;
     let g=textureSample(uTexture,uSampler,vUv).g;
@@ -31,10 +31,7 @@ class ChromaticAberrationScene extends Scene {
     init() {
         const app = this.app;
         const { width, height } = app;
-        this.filter =
-            app.backend.backendType === RenderBackendType.WebGpu
-                ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uOffset: 0 } })
-                : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uOffset: 0 } });
+        this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uOffset: 0 } });
         this.sprite = new Sprite(this.loader.get(CHECKER)).setAnchor(0.5).setScale(2.6).setPosition(width / 2, height / 2);
         this.sprite.filters = [this.filter];
         // The HUD must exist before applyIntensity() runs — it calls hud.setStatus().
@@ -59,7 +56,7 @@ class ChromaticAberrationScene extends Scene {
         this.applyIntensity();
     }
     applyIntensity() {
-        this.filter.uniforms.uOffset = this.intensity * MAX_OFFSET;
+        this.filter.setUniform('uOffset', this.intensity * MAX_OFFSET);
         this.hud.setStatus(this.statusText());
     }
     statusText() {

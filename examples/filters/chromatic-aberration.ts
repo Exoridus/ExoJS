@@ -1,4 +1,4 @@
-import { Application, Color, RenderBackendType, type RenderingContext, Scene, Sprite, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+import { Application, Color, type RenderingContext, Scene, ShaderFilter, Sprite } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 
@@ -14,7 +14,7 @@ const wgsl = `
 @group(0) @binding(2) var uSampler:sampler;
 struct Uniforms { uOffset:f32, _pad0:vec3<f32> };
 @group(1) @binding(0) var<uniform> uniforms:Uniforms;
-@fragment fn main(@location(0) vUv:vec2<f32>)->@location(0) vec4<f32>{
+@fragment fn fragmentMain(@location(0) vUv:vec2<f32>)->@location(0) vec4<f32>{
     let o=vec2<f32>(uniforms.uOffset,0.0);
     let r=textureSample(uTexture,uSampler,vUv+o).r;
     let g=textureSample(uTexture,uSampler,vUv).g;
@@ -28,7 +28,7 @@ struct Uniforms { uOffset:f32, _pad0:vec3<f32> };
 const MAX_OFFSET = 0.03;
 
 class ChromaticAberrationScene extends Scene {
-    private filter!: WebGl2ShaderFilter | WebGpuShaderFilter;
+    private filter!: ShaderFilter;
     private sprite!: Sprite;
     private intensity = 0.4;
     private hud!: ReturnType<typeof mountControls>;
@@ -38,10 +38,7 @@ class ChromaticAberrationScene extends Scene {
         const app = this.app;
         const { width, height } = app;
 
-        this.filter =
-            app.backend.backendType === RenderBackendType.WebGpu
-                ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uOffset: 0 } })
-                : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uOffset: 0 } });
+        this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uOffset: 0 } });
         this.sprite = new Sprite(this.loader.get(CHECKER)).setAnchor(0.5).setScale(2.6).setPosition(width / 2, height / 2);
         this.sprite.filters = [this.filter];
 
@@ -70,7 +67,7 @@ class ChromaticAberrationScene extends Scene {
     }
 
     private applyIntensity(): void {
-        this.filter.uniforms.uOffset = this.intensity * MAX_OFFSET;
+        this.filter.setUniform('uOffset', this.intensity * MAX_OFFSET);
         this.hud.setStatus(this.statusText());
     }
 

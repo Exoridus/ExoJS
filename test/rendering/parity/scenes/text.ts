@@ -30,6 +30,23 @@ export const textScenes: readonly Scene[] = [
     // SDF sampling is filtered by design; no output pixel maps to one texel.
     fixture: 'interpolated',
     nearestSampled: false,
+    // The one scene that cannot be bit-exact across adapters. A glyph edge is
+    // an antialiased ramp about one device pixel wide, and coverage there is
+    // `(sd - 0.5 + aa) / 2aa` - so the fraction of a channel step by which two
+    // adapters' texture filters disagree on the sampled distance comes out
+    // multiplied by `1 / 2aa`. Measured: 0 between two hardware adapters, 5
+    // between a hardware and a software one, 11 between two software ones, and
+    // ~1.5% of the frame - the glyph rim - at all. Widening the edge collapses
+    // it back to 0, which is what identifies the cause as the amplification and
+    // not the shaders.
+    //
+    // The bounds are set from both sides. Injected divergences that a reader
+    // would call bugs - a 0.04 shift of one backend's fill threshold, a 30%
+    // wider edge on one backend - measure 119 and 22 with 6.2-6.6% of the frame
+    // touched, so they stay caught; the adapter noise above sits several times
+    // under both bounds. Worth re-tightening if the sampling ever becomes
+    // adapter-independent.
+    crossBackendTolerance: { delta: 16, maxPixelFraction: 0.05 },
     build: () => {
       const root = new Container();
       const text = new Text('AB', { fillColor: Color.white, fontSize: 28 });

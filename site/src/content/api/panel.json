@@ -6,11 +6,11 @@
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 105,
+  "memberCount": 107,
   "counts": {
     "constructors": 1,
     "methods": 46,
-    "properties": 44,
+    "properties": 46,
     "events": 14
   },
   "sections": [
@@ -154,7 +154,7 @@
         },
         {
           "name": "_onEnabledChanged",
-          "signature": "_onEnabledChanged(_enabled: boolean): void",
+          "signature": "_onEnabledChanged(_effectiveEnabled: boolean): void",
           "signatureTokens": [
             {
               "text": "_onEnabledChanged",
@@ -165,7 +165,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "_enabled",
+              "text": "_effectiveEnabled",
               "kind": "param"
             },
             {
@@ -191,13 +191,13 @@
           ],
           "params": [
             {
-              "name": "_enabled",
+              "name": "_effectiveEnabled",
               "type": "boolean",
               "optional": false
             }
           ],
           "returnType": "void",
-          "description": "React to an enabled/disabled change. Override in subclasses."
+          "description": "React to an effectiveEnabled change - fired whenever it flips, whether the widget's own enabled flag changed or an ancestor widget's did. Override in subclasses."
         },
         {
           "name": "_relayout",
@@ -753,7 +753,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Destroy this container and every node beneath it. Ownership is by containment: detaching a subtree only unlinks it, so the descendants' GPU-backed resources (cached bitmaps, filters, render textures) and signal listeners would outlive the tree that owned them and leak on every scene change."
+          "description": "Destroy this container and every node beneath it. Ownership is by containment: detaching a subtree only unlinks it, so the descendants' GPU-backed resources (cached textures, filters, render textures) and signal listeners would outlive the tree that owned them and leak on every scene change."
         },
         {
           "name": "focus",
@@ -2611,11 +2611,11 @@
           "description": "Bottommost edge of the subtree — see left."
         },
         {
-          "name": "cacheAsBitmap",
-          "signature": "cacheAsBitmap: boolean",
+          "name": "cacheAsTexture",
+          "signature": "cacheAsTexture: boolean",
           "signatureTokens": [
             {
-              "text": "cacheAsBitmap",
+              "text": "cacheAsTexture",
               "kind": "name"
             },
             {
@@ -2629,7 +2629,28 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Bake this node's subtree into a RenderTexture once and replay that texture until the subtree changes, instead of walking and drawing it every frame. Worth it for a subtree that is expensive to draw and rarely changes. The cache is invalidated by anything that moves the node's world bounds - the node's own transform included - so a node that animates re-bakes every frame and is strictly slower than not caching it at all. Setting it to false frees the texture immediately."
+        },
+        {
+          "name": "cacheResolution",
+          "signature": "cacheResolution: TargetResolution",
+          "signatureTokens": [
+            {
+              "text": "cacheResolution",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TargetResolution",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Resolution the cacheAsTexture texture is baked at, in device pixels per logical unit. 'inherit' (the default) matches the surface the cache is composited into, so enabling the cache does not soften the picture on a HiDPI display. Pin it to a number to trade sharpness for memory and bake cost - a cache is resolution² texels, so 1 on a DPR-3 phone is a ninth of the VRAM and a ninth of the fill per re-bake. Changing it invalidates the cache."
         },
         {
           "name": "children",
@@ -2836,6 +2857,27 @@
           "description": "true once destroy has run on this node. A destroyed node has released its pooled resources (transform/bounds), has been unlinked from its parent, renders nothing, and must not be reused or re-attached. The render plan skips a destroyed node, so even one handed straight to a renderer as a detached root contributes nothing."
         },
         {
+          "name": "effectiveEnabled",
+          "signature": "effectiveEnabled: boolean",
+          "signatureTokens": [
+            {
+              "text": "effectiveEnabled",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the widget responds to input right now: its own enabled flag AND every Widget ancestor's - ownEnabled && parent.effectiveEnabled. This is what interaction (e.g. Button activation) and keyboard focus actually gate on. Disabled widgets typically dim and ignore clicks, and are skipped by keyboard focus - they drop out of the Tab order and reject programmatic focus while effectively disabled. Disabling a container widget does not touch its children's OWN enabled flag - only their effective state. Re-enabling the container makes a child whose own flag was never touched effectively enabled again automatically."
+        },
+        {
           "name": "enabled",
           "signature": "enabled: boolean",
           "signatureTokens": [
@@ -2854,7 +2896,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Whether the widget responds to input. Disabled widgets typically dim and ignore clicks, and are skipped by keyboard focus — they drop out of the Tab order and reject programmatic focus while disabled. Only the widget's own flag counts; disabling a container does not disable its children."
+          "description": "The widget's own enabled flag, independent of any ancestor's. Disabling a container widget does not change this on its children - see effectiveEnabled for the value interaction and keyboard focus actually consult, and for what disabling a container does to them."
         },
         {
           "name": "filters",
@@ -2992,7 +3034,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The mask source that controls visibility of this node's render output. See MaskSource for accepted source types and their semantics. Setting to null removes any active mask. Setting a RenderNode that is this is rejected (a node cannot mask itself); other cycles (mask of mask of self) are not detected."
+          "description": "The mask source that controls visibility of this node's render output. See MaskSource for accepted source types and their semantics. Setting to null removes any active mask. Setting a RenderNode that is this is rejected (a node cannot mask itself). Indirect cycles (a.mask = b; b.mask = a) are rejected as well: the candidate's mask chain is walked and any cycle - whether it closes on this or was already present in the chain - fails the assignment."
         },
         {
           "name": "origin",

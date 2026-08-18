@@ -44,6 +44,22 @@ export interface Scene {
   /** Builds a fresh scene graph. Called once per backend — never share nodes across backends. */
   readonly build: () => Container;
   /**
+   * Bounds within which this scene's two backends may disagree, for the rare
+   * scene whose output cannot be bit-exact across adapters.
+   *
+   * Declaring this drops the scene out of the bit-exact evidence class, so it
+   * needs a reason rooted in the hardware rather than in the engine, stated at
+   * the scene. Both bounds hold together: no channel may differ by more than
+   * `delta`, and no more than `maxPixelFraction` of the frame may differ at
+   * all. The second is what keeps the check meaningful - an engine-side
+   * divergence (a threshold, a swizzle, a wrong varying) moves a large,
+   * contiguous share of the image, not a sparse rim of it.
+   */
+  readonly crossBackendTolerance?: {
+    readonly delta: number;
+    readonly maxPixelFraction: number;
+  };
+  /**
    * Registers renderers this scene needs beyond the core set, called once on a
    * freshly initialised backend before anything is drawn.
    *

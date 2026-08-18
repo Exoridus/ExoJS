@@ -223,7 +223,7 @@ describe('SceneNode.getWorldTransform: world space through transform-group bound
     group.addChild(clipped);
     clipped.addChild(grandchild);
 
-    // Escaped: already world-space in the rendering convention (D-P4).
+    // Escaped: already world-space in the rendering convention.
     expect(clipped.getGlobalTransform().x).toBe(45);
     expect(clipped.getWorldTransform().x).toBe(45);
     expect(clipped.getWorldTransform()).toBe(clipped.getGlobalTransform());

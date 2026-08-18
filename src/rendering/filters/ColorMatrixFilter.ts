@@ -1,0 +1,230 @@
+import type { Color } from '#core/Color';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import type { RenderTexture } from '#rendering/texture/RenderTexture';
+
+import { Filter } from './Filter';
+import { createFilterShaderSource, ShaderFilter } from './ShaderFilter';
+import glslFragment from './shaders/color-matrix.frag';
+import wgslFragment from './shaders/color-matrix.wgsl';
+
+/** A 4×5 row-major colour matrix: four rows of `[r, g, b, a, offset]`. */
+export type ColorMatrixEntries = readonly number[];
+
+const ENTRIES = 20;
+
+/** Rec. 709 luma weights - the same ones the rest of the engine desaturates with. */
+const LUMA_R = 0.2126;
+const LUMA_G = 0.7152;
+const LUMA_B = 0.0722;
+
+const IDENTITY: ColorMatrixEntries = [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0];
+
+/**
+ * The colour-matrix source pair, built once and shared by every instance.
+ * Exported so the structural parity checks can read the same object the filter
+ * runs rather than a copy of it.
+ * @internal
+ */
+export const colorMatrixShaderSource = createFilterShaderSource({ glsl: { fragment: glslFragment }, wgsl: wgslFragment });
+
+/**
+ * A {@link Filter} that runs one affine colour transform over everything it is
+ * given: `RGBA' = M·RGBA + bias`, carried as a 4×5 row-major matrix of four
+ * `[r, g, b, a, offset]` rows.
+ *
+ * One matrix expresses brightness, contrast, saturation, hue-ish channel
+ * mixing, inversion, sepia and flat tinting - so there is one filter class
+ * rather than one per operation. The conveniences below CONCATENATE onto the
+ * current matrix in call order, and {@link reset} goes back to the identity.
+ *
+ * ```ts
+ * // Desaturate a whole subtree and lift it slightly.
+ * subtree.filters = [new ColorMatrixFilter().grayscale().brightness(1.1)];
+ *
+ * // Damage flash: multiply the subtree by red for a few frames.
+ * flash.tint(Color.red);
+ * ```
+ *
+ * For a cheap per-drawable multiply, use {@link Drawable.tint} instead - it
+ * costs no render target at all. Reach for this filter when the transform is
+ * more than a multiply, or when it has to cover a whole subtree as one image.
+ * For non-linear, authored grading use {@link LutFilter}.
+ *
+ * Colour operations run on STRAIGHT alpha: the shader divides the premultiplied
+ * sample by its alpha, transforms, and multiplies back, so a half-transparent
+ * edge grades the same way an opaque pixel does.
+ *
+ * Runs on a {@link ShaderFilter} carrying both a GLSL and a WGSL source, so it
+ * works on either backend without the caller choosing one.
+ */
+export class ColorMatrixFilter extends Filter {
+  private readonly _matrix = new Float32Array(ENTRIES);
+  /**
+   * The matrix split the way the shaders bind it: one `vec4` per row plus the
+   * offset column. Kept as live buffers so a frame uploads them without
+   * marshalling anything, and rewritten whenever the matrix changes.
+   */
+  private readonly _rows: readonly Float32Array[] = [new Float32Array(4), new Float32Array(4), new Float32Array(4), new Float32Array(4)];
+  private readonly _bias = new Float32Array(4);
+  private readonly _shaderFilter: ShaderFilter;
+
+  public constructor(matrix: ColorMatrixEntries = IDENTITY) {
+    super();
+
+    this._write(matrix);
+
+    // Insertion order matters on WebGPU: the packer lays each uniform out in a
+    // 16-byte slot, in declaration order, which is what the WGSL struct above
+    // spells out.
+    this._shaderFilter = ShaderFilter.from(colorMatrixShaderSource, {
+      uniforms: {
+        uRow0: this._rows[0]!,
+        uRow1: this._rows[1]!,
+        uRow2: this._rows[2]!,
+        uRow3: this._rows[3]!,
+        uBias: this._bias,
+      },
+    });
+  }
+
+  /** The current 4×5 matrix. Assign a new one, or use the conveniences. */
+  public get matrix(): ColorMatrixEntries {
+    return this._matrix as unknown as ColorMatrixEntries;
+  }
+
+  public set matrix(matrix: ColorMatrixEntries) {
+    this.setMatrix(matrix);
+  }
+
+  /** Replace the matrix outright. Returns `this` for chaining. */
+  public setMatrix(matrix: ColorMatrixEntries): this {
+    this._write(matrix);
+    this._publish();
+
+    return this;
+  }
+
+  /** Back to the identity transform. */
+  public reset(): this {
+    return this.setMatrix(IDENTITY);
+  }
+
+  /** Scale the colour channels by `amount`. `1` changes nothing. */
+  public brightness(amount: number): this {
+    return this._concat([amount, 0, 0, 0, 0, 0, amount, 0, 0, 0, 0, 0, amount, 0, 0, 0, 0, 0, 1, 0]);
+  }
+
+  /** Push the colour channels away from mid grey by `amount`. `1` changes nothing. */
+  public contrast(amount: number): this {
+    const offset = 0.5 * (1 - amount);
+
+    return this._concat([amount, 0, 0, 0, offset, 0, amount, 0, 0, offset, 0, 0, amount, 0, offset, 0, 0, 0, 1, 0]);
+  }
+
+  /**
+   * Interpolate between luminance (`0`) and the original colour (`1`). Values
+   * above `1` oversaturate.
+   */
+  public saturate(amount: number): this {
+    const inverse = 1 - amount;
+    const r = LUMA_R * inverse;
+    const g = LUMA_G * inverse;
+    const b = LUMA_B * inverse;
+
+    return this._concat([r + amount, g, b, 0, 0, r, g + amount, b, 0, 0, r, g, b + amount, 0, 0, 0, 0, 0, 1, 0]);
+  }
+
+  /** Collapse every channel onto its luminance - {@link saturate} at `0`. */
+  public grayscale(): this {
+    return this.saturate(0);
+  }
+
+  /** Replace each colour channel with `1 - channel`, leaving alpha alone. */
+  public invert(): this {
+    return this._concat([-1, 0, 0, 0, 1, 0, -1, 0, 0, 1, 0, 0, -1, 0, 1, 0, 0, 0, 1, 0]);
+  }
+
+  /** The standard warm-brown photographic matrix. */
+  public sepia(): this {
+    return this._concat([0.393, 0.769, 0.189, 0, 0, 0.349, 0.686, 0.168, 0, 0, 0.272, 0.534, 0.131, 0, 0, 0, 0, 0, 1, 0]);
+  }
+
+  /**
+   * Multiply by a flat colour, alpha included - the same arithmetic
+   * {@link Drawable.tint} applies per drawable, here over the whole subtree the
+   * filter is attached to.
+   */
+  public tint(color: Color): this {
+    const r = color.r / 255;
+    const g = color.g / 255;
+    const b = color.b / 255;
+
+    return this._concat([r, 0, 0, 0, 0, 0, g, 0, 0, 0, 0, 0, b, 0, 0, 0, 0, 0, color.a, 0]);
+  }
+
+  public apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture, resolution = 1): void {
+    this._shaderFilter.apply(backend, input, output, resolution);
+  }
+
+  public override destroy(): void {
+    super.destroy();
+    this._shaderFilter.destroy();
+  }
+
+  /** Apply `next` AFTER whatever the filter already does, and publish the result. */
+  private _concat(next: ColorMatrixEntries): this {
+    const current = this._matrix;
+    const combined = new Array<number>(ENTRIES);
+
+    for (let row = 0; row < 4; row++) {
+      const out = row * 5;
+
+      for (let column = 0; column < 5; column++) {
+        let sum = 0;
+
+        for (let inner = 0; inner < 4; inner++) {
+          // In-bounds: both indices stay inside a 4×5 matrix.
+          sum += next[out + inner]! * current[inner * 5 + column]!;
+        }
+
+        // The offset column also picks up `next`'s own offset.
+        combined[out + column] = column === 4 ? sum + next[out + 4]! : sum;
+      }
+    }
+
+    this._write(combined);
+    this._publish();
+
+    return this;
+  }
+
+  /** Validate, store, and re-split the matrix into the shader's row/bias buffers. */
+  private _write(matrix: ColorMatrixEntries): void {
+    if (matrix.length !== ENTRIES) {
+      throw new Error('ColorMatrixFilter: a colour matrix needs exactly 20 entries (4 rows of 5).');
+    }
+
+    this._matrix.set(matrix);
+
+    for (let row = 0; row < 4; row++) {
+      const base = row * 5;
+      // In-bounds: `row` < 4 === this._rows.length.
+      const target = this._rows[row]!;
+
+      target[0] = this._matrix[base]!;
+      target[1] = this._matrix[base + 1]!;
+      target[2] = this._matrix[base + 2]!;
+      target[3] = this._matrix[base + 3]!;
+      this._bias[row] = this._matrix[base + 4]!;
+    }
+  }
+
+  /**
+   * Tell the owners the output changed. The shader reads the row buffers this
+   * class owns, so nothing has to be re-uploaded by hand - but a cached or
+   * retained node still has to be told to re-run the filter.
+   */
+  private _publish(): void {
+    this.invalidate();
+  }
+}

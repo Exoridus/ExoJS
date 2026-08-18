@@ -97,8 +97,22 @@ const mockAtlas: Partial<GlyphAtlas> = {
   clear: vi.fn(),
 };
 
+/**
+ * The measurement path deliberately does NOT go through an atlas - it asks the
+ * pool for the variant's logical metrics instead. The mock hands back the same
+ * advance the mock atlas does, which is the whole point: a node and a static
+ * measurement have to agree, and they only can if both numbers come from the
+ * same typographic source.
+ */
+const mockMetrics = {
+  getGlyph: vi.fn(() => ({ ...fixedGlyphInfo, width: 0, height: 0, xBearing: 0, yBearing: 0 })),
+  advance: vi.fn(() => fixedGlyphInfo.advance),
+  clear: vi.fn(),
+};
+
 const mockPool = {
   getAtlas: vi.fn(() => mockAtlas),
+  getMetrics: vi.fn(() => mockMetrics),
 };
 
 beforeEach(() => {
@@ -301,7 +315,7 @@ describe('Text', () => {
     expect(text.pageQuads[0]).not.toBe(quadsBefore);
   });
 
-  // ME-60: the class doc promises "rebuilt at most once, on demand". Every
+  // The class doc promises "rebuilt at most once, on demand". Every
   // setter used to lay the text out on the spot, so a label updated three
   // times in a frame paid for three full passes and threw two of them away.
   test('a run of mutations costs exactly one layout pass', () => {
@@ -483,6 +497,18 @@ describe('Text.measure', () => {
 
   test('an empty string measures to nothing and touches no atlas', () => {
     expect(Text.measure('', { fontSize: 16 })).toEqual({ width: 0, height: 0 });
+    expect(mockPool.getAtlas).not.toHaveBeenCalled();
+    expect(mockPool.getMetrics).not.toHaveBeenCalled();
+  });
+
+  // A measurement is a typographic question, not a rendering one. Routing it
+  // through an atlas would make it rasterize glyphs, claim atlas space, and -
+  // once an atlas is keyed on a pixel ratio - force it to guess which ratio it
+  // should be measuring at.
+  test('measures without ever acquiring an atlas', () => {
+    Text.measure('Hello', { fontSize: 16 });
+
+    expect(mockPool.getMetrics).toHaveBeenCalled();
     expect(mockPool.getAtlas).not.toHaveBeenCalled();
   });
 

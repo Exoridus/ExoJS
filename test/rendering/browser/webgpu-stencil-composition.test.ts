@@ -1,10 +1,10 @@
 /**
- * WebGPU stencil composition matrix — opt-in, capability-aware.
+ * WebGPU stencil composition matrix - opt-in, capability-aware.
  *
  * Exercises geometric stencil clipping (phase 12E) composed with the other
- * render-pass-consolidation features (phase 12B–12D): rendering a clipped scene
+ * render-pass-consolidation features (phase 12B-12D): rendering a clipped scene
  * into an off-screen RenderTexture and sampling it back, clipping a
- * cacheAsBitmap node, and reusing a pooled RenderTexture for a clip then for
+ * cacheAsTexture node, and reusing a pooled RenderTexture for a clip then for
  * plain rendering (no stale stencil attachment).
  *
  * Pixels are read back via drawImage onto a 2D canvas, and every render runs
@@ -142,7 +142,7 @@ describe('WebGPU stencil composition', () => {
     }
   });
 
-  test('a cacheAsBitmap node renders correctly inside a stencil clip', async ctx => {
+  test('a cacheAsTexture node renders correctly inside a stencil clip', async ctx => {
     const backend = await setupBackend();
     const texture = createSolidTexture('#ff0000');
     const root = new Container();
@@ -155,7 +155,7 @@ describe('WebGPU stencil composition', () => {
       sprite.width = 64;
       sprite.height = 64;
       cached.addChild(sprite);
-      cached.cacheAsBitmap = true;
+      cached.cacheAsTexture = true;
       // Clip the cached node to the top half.
       clipped.clip = true;
       clipped.clipShape = createQuadGeometry(0, 0, 64, 32);

@@ -3,7 +3,7 @@
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src",
-    "customConditions": ["@codexo/source"]
+    "customConditions": ["@codexo/exojs-source"]
   },
   "include": ["src/**/*", "src/typings.d.ts"],
   "exclude": ["dist", "node_modules"]

@@ -18,7 +18,7 @@ Shaders compile lazily on first draw, and if the active backend has no source fo
 
 ## When to use a mesh material vs. a filter
 
-A custom shader filter ([`WebGl2ShaderFilter`](/ExoJS/en/api/web-gl2-shader-filter/) or [`WebGpuShaderFilter`](/ExoJS/en/api/web-gpu-shader-filter/)) applies a post-processing effect to a drawable's final rendered output — it works in screen space on the full viewport or on the drawable's rendered texture. A `MeshMaterial` replaces the drawable's vertex and fragment stages entirely. The distinction matters:
+A custom [`ShaderFilter`](/ExoJS/en/api/shader-filter/) applies a post-processing effect to a drawable's final rendered output — it works in screen space on the full viewport or on the drawable's rendered texture. A `MeshMaterial` replaces the drawable's vertex and fragment stages entirely. The distinction matters:
 
 - Use a filter when the effect is screen-space — blur, color grade, CRT scanlines, vignette.
 - Use a `MeshMaterial` when the effect is geometry-space — vertex displacement, per-vertex animation, custom UV mapping, or when the fragment shader needs to compute its own world position from interpolated attributes.
@@ -235,7 +235,7 @@ const mesh = new Mesh({
 });
 ```
 
-The mesh's `material` is set at construction and is read-only afterward. It renders with the same transform, tint, blend mode, filters, masks, and `cacheAsBitmap` behavior as a default mesh. Only the GPU program changes.
+The mesh's `material` is set at construction and is read-only afterward. It renders with the same transform, tint, blend mode, filters, masks, and `cacheAsTexture` behavior as a default mesh. Only the GPU program changes.
 
 ## Sharing and lifecycle
 
@@ -273,4 +273,4 @@ Reflection is best-effort regex parsing, not a full GLSL/WGSL grammar — it ser
 
 ## Where to go next
 
-For screen-space shader effects — blur, color grade, CRT scanlines, vignette — the complementary approach is [Filters](/ExoJS/en/guide/effects/filters/), which covers `WebGl2ShaderFilter` and `WebGpuShaderFilter` as post-processing passes. To build the multi-pass render chain those filters fit into, see [Post-processing](/ExoJS/en/guide/effects/post-processing/).
+For screen-space shader effects — blur, color grade, CRT scanlines, vignette — the complementary approach is [Filters](/ExoJS/en/guide/effects/filters/), which covers `ShaderFilter` as a post-processing pass. To build the multi-pass render chain those filters fit into, see [Post-processing](/ExoJS/en/guide/effects/post-processing/).

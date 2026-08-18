@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 
 import { codecovRollupPlugin } from '@codecov/rollup-plugin';
 import { createBuildDefinesFromRepo } from '@codexo/exojs-config/build-defines';
+import { createShaderPlugin } from '@codexo/exojs-config/shader-plugin';
 import { createWorkletPlugin } from '@codexo/exojs-config/worklet-plugin';
 import resolve from '@rollup/plugin-node-resolve';
 import replace from '@rollup/plugin-replace';
@@ -10,7 +11,6 @@ import terser from '@rollup/plugin-terser';
 import typescript from '@rollup/plugin-typescript';
 import type { Plugin, RollupOptions } from 'rollup';
 import esbuild from 'rollup-plugin-esbuild';
-import { string } from 'rollup-plugin-string';
 
 const rootDir = resolvePath(dirname(fileURLToPath(import.meta.url)));
 
@@ -18,15 +18,15 @@ const buildMode = process.env.EXOJS_ENV === 'development' ? 'development' : 'pro
 
 const defines = createBuildDefinesFromRepo({ mode: buildMode, packageDir: rootDir });
 
-// Activates the package-private `@codexo/source` condition in package.json#imports
+// Activates the package-private `@codexo/exojs-source` condition in package.json#imports
 // so `#*` resolves to ./src/*.ts at build time. preserveModules then rewrites the
 // resolved paths to relative specifiers in the emitted ESM tree. The trailing
 // standard conditions keep normal dependency resolution intact.
-const sourceConditions = ['@codexo/source', 'browser', 'module', 'import', 'default'];
+const sourceConditions = ['@codexo/exojs-source', 'browser', 'module', 'import', 'default'];
 
 // Full-bundle source conditions: includes per-package source conditions for the
 // extension packages that use # subpath imports internally (e.g. exojs-particles).
-const fullSourceConditions = ['@codexo/source', '@codexo/exojs-particles-source', 'browser', 'module', 'import', 'default'];
+const fullSourceConditions = ['@codexo/exojs-source', '@codexo/exojs-particles-source', 'browser', 'module', 'import', 'default'];
 
 // Resolves @codexo/exojs-<name> → packages/exojs-<name>/src/index.ts so the
 // full IIFE bundle can be built entirely from TypeScript source without requiring
@@ -42,9 +42,12 @@ const extensionSourcePlugin = (): Plugin => ({
   },
 });
 
-const glslPlugin = string({
-  include: ['**/*.vert', '**/*.frag'],
-});
+// Shader text (`.vert`/`.frag`/`.wgsl`) ships verbatim inside the bundle -
+// Terser never descends into a string literal - so the outputs that minify get
+// the comment-stripped variant and the readable ones keep the source as
+// authored. See `@codexo/exojs-config/shader-plugin`.
+const shaderPlugin = createShaderPlugin();
+const minifiedShaderPlugin = createShaderPlugin({ minify: true });
 
 // Codecov Bundle Analysis: uploads per-bundle module stats when a token is
 // present (CI passes CODECOV_TOKEN via secrets: inherit). A plain local
@@ -63,8 +66,11 @@ const codecovBundlePlugin = (bundleName: string): Plugin[] =>
 // `@codexo/exojs-config/worklet-plugin`) are transpiled and inlined as a JS
 // string; untouched worklets keep exporting a plain template-string constant
 // and never reach this plugin. It is a no-op for any input that never uses
-// the `?worklet` query — safe to include in every config below.
+// the `?worklet` query - safe to include in every config below. Mirrors the
+// shader plugin split above: the outputs that minify get the minified worklet
+// string, the readable ones keep the plain transpile.
 const workletPlugin = createWorkletPlugin();
+const minifiedWorkletPlugin = createWorkletPlugin({ minify: true });
 
 const constantReplacementPlugin = replace({
   preventAssignment: true,
@@ -95,9 +101,9 @@ type MinifyMode =
  * Assembles the plugin pipeline shared by every output below. Behavior that
  * varies per-output (module resolution fields/conditions, the TypeScript vs.
  * esbuild transform step, extension-package source resolution, minification)
- * is passed in explicitly; everything else (constant replacement, GLSL string
- * imports, the worklet transform) is identical across all outputs, so adding
- * a new cross-cutting plugin only means editing this one function.
+ * is passed in explicitly; everything else (constant replacement, shader
+ * string imports, the worklet transform) is identical across all outputs, so
+ * adding a new cross-cutting plugin only means editing this one function.
  */
 function basePlugins(options: {
   exportConditions: string[];
@@ -108,14 +114,15 @@ function basePlugins(options: {
 }): Plugin[] {
   const { exportConditions, mainFields = ['browser', 'module', 'main'], transform, extensionSource = false, minify = false } = options;
 
+  const minifies = minify === 'always' || (minify === 'production' && buildMode === 'production');
   const minifyPlugins = minify === 'always' ? [createTerserPlugin()] : minify === 'production' ? productionMinifyPlugins : [];
 
   return [
     constantReplacementPlugin,
     ...(extensionSource ? [extensionSourcePlugin()] : []),
     resolve({ mainFields, exportConditions }),
-    glslPlugin,
-    workletPlugin,
+    minifies ? minifiedShaderPlugin : shaderPlugin,
+    minifies ? minifiedWorkletPlugin : workletPlugin,
     transform,
     ...minifyPlugins,
   ];

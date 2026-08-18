@@ -23,6 +23,32 @@ export const maxChannelDelta = (a: ArrayLike<number>, b: ArrayLike<number>): num
 };
 
 /**
+ * Pixels whose worst channel differs by more than `tolerance`.
+ *
+ * The companion to {@link maxChannelDelta} for the scenes that cannot be
+ * bit-exact across adapters: the magnitude alone says nothing about whether a
+ * handful of edge pixels drifted or the whole image moved.
+ */
+export const pixelsExceeding = (a: ArrayLike<number>, b: ArrayLike<number>, tolerance: number): number => {
+  if (a.length !== b.length) {
+    throw new Error(`Frames differ in size (${a.length} vs ${b.length}); they are not comparable.`);
+  }
+
+  let exceeding = 0;
+
+  for (let i = 0; i < a.length; i += 4) {
+    for (let channel = 0; channel < 4; channel++) {
+      if (Math.abs(a[i + channel]! - b[i + channel]!) > tolerance) {
+        exceeding++;
+        break;
+      }
+    }
+  }
+
+  return exceeding;
+};
+
+/**
  * Pixels differing from an opaque black clear.
  *
  * Guards the blind spot the comparison properties share: a scene that draws

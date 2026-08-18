@@ -1,4 +1,4 @@
-import { Application, Color, RenderBackendType, type RenderingContext, Scene, Sprite, type Time, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+import { Application, Color, type RenderingContext, Scene, ShaderFilter, Sprite, type Time } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 
@@ -17,7 +17,7 @@ const wgsl = `
 struct Uniforms { uTime:f32, uIntensity:f32, _pad0:vec2<f32> };
 @group(1) @binding(0) var<uniform> uniforms:Uniforms;
 fn hash(p:vec2<f32>) -> f32 { return fract(sin(dot(p,vec2<f32>(12.9898,78.233)))*43758.5453); }
-@fragment fn main(@location(0) vUv:vec2<f32>)->@location(0) vec4<f32>{
+@fragment fn fragmentMain(@location(0) vUv:vec2<f32>)->@location(0) vec4<f32>{
     let c=textureSample(uTexture,uSampler,vUv);
     let n=(hash(vUv*vec2<f32>(1280.0,720.0)+uniforms.uTime*60.0)-0.5)*0.18*uniforms.uIntensity;
     let vig=1.0-smoothstep(0.35,0.85,length(vUv-vec2<f32>(0.5)))*uniforms.uIntensity;
@@ -27,7 +27,7 @@ fn hash(p:vec2<f32>) -> f32 { return fract(sin(dot(p,vec2<f32>(12.9898,78.233)))
 class NoiseVignetteScene extends Scene {
     private time = 0;
     private intensity = 1;
-    private filter!: WebGl2ShaderFilter | WebGpuShaderFilter;
+    private filter!: ShaderFilter;
     private sprite!: Sprite;
     private hud!: ReturnType<typeof mountControls>;
     private panel!: ReturnType<typeof mountControlPanel>;
@@ -36,10 +36,7 @@ class NoiseVignetteScene extends Scene {
         const app = this.app;
         const { width, height } = app;
 
-        this.filter =
-            app.backend.backendType === RenderBackendType.WebGpu
-                ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uTime: 0, uIntensity: this.intensity } })
-                : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uTime: 0, uIntensity: this.intensity } });
+        this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uTime: 0, uIntensity: this.intensity } });
 
         // Fill the whole 16:9 frame so the post effect covers the viewport.
         const texture = this.loader.get(UV_GRID);
@@ -65,7 +62,7 @@ class NoiseVignetteScene extends Scene {
             value: this.intensity,
             onChange: value => {
                 this.intensity = value;
-                this.filter.uniforms.uIntensity = value;
+                this.filter.setUniform('uIntensity', value);
                 this.hud.setStatus(this.statusText());
             },
         });
@@ -77,7 +74,7 @@ class NoiseVignetteScene extends Scene {
 
     override update(delta: Time): void {
         this.time += delta.seconds;
-        this.filter.uniforms.uTime = this.time;
+        this.filter.setUniform('uTime', this.time);
     }
 
     override draw(context: RenderingContext): void {

@@ -670,6 +670,45 @@ describe('FocusController — ownership hardening', () => {
     expect(focus.focused).toBeNull();
   });
 
+  test('a widget nested under a disabled ancestor widget is excluded from Tab order, even though its own enabled flag stays true (ME-56)', () => {
+    const { scene, focus, onKeyDown } = createFocusApp();
+    const parent = new TestWidget();
+    const child = focusableWidget();
+    const sibling = focusableWidget();
+
+    parent.addChild(child);
+    scene.root.addChild(sibling).addChild(parent);
+
+    parent.enabled = false;
+
+    focus.focus(child);
+    expect(focus.focused).toBeNull();
+
+    onKeyDown.dispatch(Keyboard.Tab);
+    expect(focus.focused).toBe(sibling);
+
+    // Wraps straight back to `sibling` - `child` is never a stop along the way.
+    onKeyDown.dispatch(Keyboard.Tab);
+    expect(focus.focused).toBe(sibling);
+  });
+
+  test('re-enabling the ancestor widget restores focus eligibility for a descendant whose own enabled flag never changed (ME-56)', () => {
+    const { scene, focus } = createFocusApp();
+    const parent = new TestWidget();
+    const child = focusableWidget();
+
+    parent.addChild(child);
+    scene.root.addChild(parent);
+
+    parent.enabled = false;
+    focus.focus(child);
+    expect(focus.focused).toBeNull();
+
+    parent.enabled = true;
+    focus.focus(child);
+    expect(focus.focused).toBe(child);
+  });
+
   test('focus() rejects a scope-confined target once the scope root itself has been destroyed', () => {
     const { scene, focus } = createFocusApp();
     const modal = new Container();

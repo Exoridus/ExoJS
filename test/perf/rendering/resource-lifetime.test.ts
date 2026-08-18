@@ -122,7 +122,7 @@ describe('GPU resource lifetime', () => {
         // owns a retained instruction bundle (group instance/transform buffers)
         // from its record frame on, and the backend holds it until it is
         // released. Leaving the root behind is what this cycle is modelling the
-        // absence of — see `NEU-O54` for the undestroyed-root case.
+        // absence of.
         root.destroy();
         texture.destroy();
 

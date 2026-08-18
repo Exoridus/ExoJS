@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 27,
+  "memberCount": 28,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 27,
+    "properties": 28,
     "events": 0
   },
   "sections": [
@@ -584,6 +584,31 @@
           "params": [],
           "returnType": null,
           "description": "What to do with lines that do not fit maxHeight. Defaults to 'visible'. - 'visible' — Keep every line; maxHeight is ignored. - 'clip' — Drop the lines that do not fit. - 'ellipsis' — Drop them and mark the last visible line with …, shortening it so it still fits maxWidth when one is set."
+        },
+        {
+          "name": "pixelRatio",
+          "signature": "pixelRatio?: number",
+          "signatureTokens": [
+            {
+              "text": "pixelRatio",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Device pixels per logical pixel this node's glyphs are RASTERIZED at. Omit it and the node inherits the pixelRatio of the Application it is drawn by - which is the deterministic default, and the only thing that ever happens without an explicit opt-in. Nothing in the text stack reads window.devicePixelRatio; there is no silent supersampling. Set it to decouple this node's glyph raster from the surface: ts const app = new Application({ canvas: { pixelRatio: 2 } }); new Text('9px label', { fontSize: 9 }); // rasterized at 2 new Text('9px label', { fontSize: 9, pixelRatio: 3 }); // rasterized at 3  The logical font size, layout, advances and line breaks are identical in both - only the raster grid behind the glyphs changes. Must be a positive finite number. The value to want is usually the inherited one. Lowering it lowers the raster resolution the distance field is built from, so the quality floor it hits depends on the glyph - size, thinnest stroke, SDF radius, outline - rather than on the ratio alone, and small text reaches that floor first. Raising it costs roughly the square of the ratio, and bought no visible sharpness for unscaled screen text when measured on hardware. Raise it for content whose ON-SCREEN density exceeds the surface ratio - a node scaled up at runtime, or one drawn through a zoomed camera; lower it to trade sharpness for atlas memory, which is safe on large text and harmful on small. Antialiasing is not part of the trade: the shader sizes its edge against the node's on-screen extent, so an edge lands at about one device pixel at every ratio."
         },
         {
           "name": "sdfRadius",

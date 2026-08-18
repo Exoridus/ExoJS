@@ -9,6 +9,7 @@ import { BlendModes, isAdvancedBlendMode } from '#rendering/types';
 import type { View } from '#rendering/View';
 
 import type { DerivedRootProduct } from './DerivedRootProduct';
+import { EffectBoundsResolver } from './effectBounds';
 import { type EntryPlacementState, reserveEntryPlacement } from './EntryPlacement';
 import type { PersistentSlotBackend } from './PersistentSlotDraw';
 import { type DrawCommand, materialKeyForcesFlush, RenderEntryKind } from './RenderCommand';
@@ -29,6 +30,7 @@ import type { RetainedFragmentEntry, RetainedFragmentGroup, RetainedGroupFragmen
 import type { RetainedInstructionSet } from './RetainedInstructionSet';
 import type { RetainedDrawData } from './RetainedRecordPool';
 import type { RetainedRootRepresentation } from './RetainedRootRepresentation';
+import { clampResolutionToTextureSize, resolveBarrierResolution } from './targetResolution';
 
 /**
  * Collect-time view of the backend's retained-batch hooks.
@@ -124,7 +126,7 @@ const groupEscapeEffect: EffectDescriptor = Object.freeze({
   clip: ClipKind.None,
   clipShape: null,
   maskSource: null,
-  cacheAsBitmap: false,
+  cacheAsTexture: false,
   blendMode: BlendModes.Normal,
   needsBackdropBlend: false,
 });
@@ -190,6 +192,19 @@ export class RenderPlanBuilder {
 
   public backend!: RenderBackend;
   private _view: View | null = null;
+  /**
+   * Effective resolution of the target each enclosing barrier renders into,
+   * innermost last. Empty while collecting into the canvas root, whose
+   * resolution comes from the backend instead of being pushed - the root is not
+   * a barrier and has no scope to pair with.
+   */
+  private readonly _resolutionStack: number[] = [];
+  /**
+   * Shared across every barrier. Barriers nest, but a barrier reads its four
+   * integers out before collecting its children, so no nested collect can
+   * observe a half-built domain.
+   */
+  private readonly _effectBounds = new EffectBoundsResolver();
 
   private readonly _plan = new MutableRenderPlan();
   private readonly _groupPool: MutableGroupScope[] = [];
@@ -303,6 +318,7 @@ export class RenderPlanBuilder {
   public build(root: RenderNode, backend: RenderBackend): RenderPlan {
     this.backend = backend;
     this._view = null;
+    this._resolutionStack.length = 0;
     this._plan.reset();
     this._groupPoolCursor = 0;
     this._drawEntryPoolCursor = 0;
@@ -396,6 +412,28 @@ export class RenderPlanBuilder {
     return this._view;
   }
 
+  /**
+   * Effective resolution of the target being collected into - the innermost
+   * enclosing barrier's, or the canvas root's when there is none.
+   */
+  private _currentTargetResolution(): number {
+    const depth = this._resolutionStack.length;
+
+    if (depth > 0) {
+      // Every pushed value came through the sanitising branch below.
+      return this._resolutionStack[depth - 1]!;
+    }
+
+    const rootResolution = this.backend.rootResolution;
+
+    // A backend that reports a non-finite or non-positive root resolution
+    // (a stand-in in a test, a canvas measured before layout) must not be able
+    // to turn every effect target into a NaN-sized texture several layers down,
+    // where the cause is unrecoverable. Fall back to logical size - the
+    // behaviour that shipped before targets inherited anything.
+    return Number.isFinite(rootResolution) && rootResolution > 0 ? rootResolution : 1;
+  }
+
   public emitNode(node: RenderNode, seq?: number): void {
     this._reserveEntryPlacement(seq, node.zIndex);
     const reservedSeq = this._reservedSeq;
@@ -410,39 +448,62 @@ export class RenderPlanBuilder {
     if (node._renderPlanHasBarrierEffects()) {
       const effect = this._createEffectDescriptor(node);
       const hasAlphaMask = effect.maskSource !== null && !(effect.maskSource instanceof Rectangle);
-      const needsBounds = effect.cacheAsBitmap || effect.filters.length > 0 || hasAlphaMask || (effect.needsBackdropBlend ?? false);
+      const needsBounds = effect.cacheAsTexture || effect.filters.length > 0 || hasAlphaMask || (effect.needsBackdropBlend ?? false);
       let left = 0;
       let top = 0;
       let width = 0;
       let height = 0;
 
       if (needsBounds) {
-        const bounds = node.getBounds();
-
-        if (bounds.width <= 0 || bounds.height <= 0) {
+        // The barrier's capture domain - the source bounds run through the
+        // filter chain's output-bounds contract, then quantised edge by edge.
+        // The capture view, the target allocation, the texture cache's identity
+        // and the composite placement all read it from here, so both backends
+        // consume one calculation (see `effectBounds.ts`). `false` means there
+        // is nothing to capture, an empty drawable included.
+        if (!this._effectBounds.resolve(node.getBounds(), effect.filters)) {
           return;
         }
 
-        left = Math.floor(bounds.left);
-        top = Math.floor(bounds.top);
-        width = Math.max(1, Math.ceil(bounds.width));
-        height = Math.max(1, Math.ceil(bounds.height));
+        // Destructured in one statement because the four are one value; the
+        // locals are declared above so the effect-less path can share them.
+        ({ left, top, width, height } = this._effectBounds);
       }
 
+      // Resolution the barrier's internal targets are allocated at. Resolved
+      // against the ENCLOSING target's, so a filter inside a cached container
+      // composes with it instead of jumping back to the root's, and clamped so a
+      // large subtree on a high-ratio display cannot ask the device for a
+      // texture it would refuse (see `targetResolution.ts`).
+      const parentResolution = this._currentTargetResolution();
+      const resolution = needsBounds
+        ? clampResolutionToTextureSize(
+            resolveBarrierResolution(parentResolution, {
+              cacheAsTexture: effect.cacheAsTexture,
+              cacheResolution: node.cacheResolution,
+              filters: effect.filters,
+            }),
+            width,
+            height,
+            this.backend.maxTextureSize,
+          )
+        : parentResolution;
       const childPlan =
-        effect.cacheAsBitmap && node._renderPlanCanReuseBitmapCache(left, top, width, height)
+        effect.cacheAsTexture && node._renderPlanCanReuseTextureCache(left, top, width, height, resolution)
           ? null
           : this._acquireGroupScope(this._resolvePreserveDrawOrder(node));
-      const barrierScope = this._acquireBarrierScope(node, effect, childPlan, left, top, width, height);
+      const barrierScope = this._acquireBarrierScope(node, effect, childPlan, left, top, width, height, resolution);
 
       this._pushBarrierEntry(reservedSeq, reservedZ, barrierScope);
 
       if (childPlan !== null) {
         this._pushScope(childPlan);
+        this._resolutionStack.push(resolution);
 
         try {
           node._collectForRenderPlan(this);
         } finally {
+          this._resolutionStack.pop();
           this._popScope();
         }
       }
@@ -462,7 +523,7 @@ export class RenderPlanBuilder {
     // normal path (a nested boundary still gets its own transformNode scope).
     if (node.parent !== null && this._currentScope().transformNode === node.parent && node.parent._childEscapesTransformGroup(node)) {
       const childPlan = this._acquireGroupScope(this._resolvePreserveDrawOrder(node));
-      const barrierScope = this._acquireBarrierScope(node, groupEscapeEffect, childPlan, 0, 0, 0, 0);
+      const barrierScope = this._acquireBarrierScope(node, groupEscapeEffect, childPlan, 0, 0, 0, 0, this._currentTargetResolution());
 
       this._pushBarrierEntry(reservedSeq, reservedZ, barrierScope);
       this._pushScope(childPlan);
@@ -518,7 +579,7 @@ export class RenderPlanBuilder {
    * otherwise have to re-implement semantics that already have exactly one
    * owner:
    *
-   * - **Barrier / effect nodes.** Filters, masks, `cacheAsBitmap`, clipping and
+   * - **Barrier / effect nodes.** Filters, masks, `cacheAsTexture`, clipping and
    *   backdrop blending live in the barrier entry and the effect executor. The
    *   retained fragment already stores such a node as a live re-dispatch, and
    *   the source does the same rather than growing a second copy of it.
@@ -526,7 +587,7 @@ export class RenderPlanBuilder {
    *   matrix, group-level culling, branch-escape rule, capture key and
    *   transform-row patching. Descending into one would flatten all of that
    *   into the outer source and stop its `_collectContent` from ever running
-   *   again — which is why the discovery walk needs no copy of
+   *   again - which is why the discovery walk needs no copy of
    *   `_childEscapesTransformGroup`: it never gets below a boundary, so no
    *   discovered node ever has an engaged boundary as its parent.
    * - **View-dependent producers**, resolved after the fact in
@@ -890,8 +951,8 @@ export class RenderPlanBuilder {
   /**
    * Collect the render root through its automatic persistent representation.
    *
-   * Same ladder a {@link RetainedContainer} climbs — recorded-instruction
-   * splice, then entry replay, then plain collect — over a key that additionally
+   * Same ladder a {@link RetainedContainer} climbs - recorded-instruction
+   * splice, then entry replay, then plain collect - over a key that additionally
    * covers what a root needs and a group does not: the subtree's transform
    * revision (no group matrix, no row patch), the root's own global-transform
    * stamp (an ancestor ABOVE the root moves it without stamping its revisions),
@@ -900,7 +961,7 @@ export class RenderPlanBuilder {
    *
    * Between "the product still fits" and "rebuild from the scene graph" sits the
    * selection tier. A camera step that leaves the capture's margin used to cost
-   * a complete collect — walk, transform resolve, material resolve, record — for
+   * a complete collect - walk, transform resolve, material resolve, record - for
    * a scene where nothing but the camera changed. The persistent source already
    * holds every item in the subtree, on screen or not, so such a frame becomes a
    * selection over those items instead:
@@ -915,8 +976,8 @@ export class RenderPlanBuilder {
    * Tier 2 sits BELOW the capture decision, not inside it: the source is keyed
    * on the node's own content, structure and ancestry and on nothing the capture
    * owns, so a frame that may not capture at all still gets to select. That is
-   * not a detail — a root holding a view-dependent producer can never replay its
-   * capture (PR #553), so its captures are always wasted and capture suppression
+   * not a detail - a root holding a view-dependent producer can never replay its
+   * capture, so its captures are always wasted and capture suppression
    * eventually turns them off for good. Keying the selection on the capture
    * would have withdrawn the source from a parallax-bearing scrolling map, which
    * is the exact scene this whole tier exists for.
@@ -1554,6 +1615,7 @@ export class RenderPlanBuilder {
     this._barrierScopePoolCursor = 0;
     this._effectDescriptorPoolCursor = 0;
     this._view = null;
+    this._resolutionStack.length = 0;
     this._nodeIndex = 0;
     this._viewCullSuppression = 0;
     this._retentionRoot = null;
@@ -1818,7 +1880,7 @@ export class RenderPlanBuilder {
       clip: ClipKind.None,
       clipShape: null,
       maskSource: null,
-      cacheAsBitmap: false,
+      cacheAsTexture: false,
       blendMode,
       needsBackdropBlend: false,
     });
@@ -1829,7 +1891,7 @@ export class RenderPlanBuilder {
     descriptor.clip = clip;
     descriptor.clipShape = clipShape;
     descriptor.maskSource = mask;
-    descriptor.cacheAsBitmap = node.cacheAsBitmap;
+    descriptor.cacheAsTexture = node.cacheAsTexture;
     descriptor.blendMode = blendMode;
     descriptor.needsBackdropBlend = isAdvancedBlendMode(blendMode);
 
@@ -1849,6 +1911,7 @@ export class RenderPlanBuilder {
     top: number,
     width: number,
     height: number,
+    resolution: number,
   ): BarrierScope {
     const scope = (this._barrierScopePool[this._barrierScopePoolCursor] ??= {
       kind: RenderEntryKind.Barrier,
@@ -1859,6 +1922,7 @@ export class RenderPlanBuilder {
       top,
       width,
       height,
+      resolution,
     });
 
     this._barrierScopePoolCursor++;
@@ -1870,6 +1934,7 @@ export class RenderPlanBuilder {
     scope.top = top;
     scope.width = width;
     scope.height = height;
+    scope.resolution = resolution;
 
     return scope;
   }

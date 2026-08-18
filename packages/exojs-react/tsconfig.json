@@ -2,7 +2,7 @@
   "extends": "@codexo/exojs-config/typescript/extension.json",
   "compilerOptions": {
     "jsx": "react-jsx",
-    "customConditions": ["@codexo/source"],
+    "customConditions": ["@codexo/exojs-source"],
     "paths": {
       "@codexo/exojs": ["../../src/index.ts"]
     }

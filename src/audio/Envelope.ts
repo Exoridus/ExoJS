@@ -48,18 +48,57 @@ export class Envelope {
   /**
    * Schedule attack → decay → sustain on the target gain parameter starting
    * at `atTime` (audioContext.currentTime).
+   *
+   * `elapsedMs` resumes an envelope that had already run for that long when it
+   * was frozen (see {@link Envelope.hold}): the schedule is laid out as if the
+   * note had been triggered `elapsedMs` ago, so the parameter is pinned to the
+   * value the envelope had reached and only the stages still ahead are
+   * scheduled. A stage already behind the resume point is skipped rather than
+   * replayed - that is what keeps a paused voice from starting its attack over,
+   * and equally from finding the envelope run out against a clock that kept
+   * ticking while it was silent.
    */
-  public trigger(gainParam: AudioParam, atTime: number): void {
-    const attackEnd = atTime + this.attackMs / 1000;
+  public trigger(gainParam: AudioParam, atTime: number, elapsedMs = 0): void {
+    // Bookkeeping records the *virtual* trigger point, so the geometry below -
+    // and every later `release()` - reads the same as for a note that really
+    // started there.
+    const triggeredAt = atTime - Math.max(0, elapsedMs) / 1000;
+    const attackEnd = triggeredAt + this.attackMs / 1000;
     const decayEnd = attackEnd + this.decayMs / 1000;
 
     gainParam.cancelScheduledValues(atTime);
-    gainParam.setValueAtTime(0, atTime);
-    gainParam.linearRampToValueAtTime(1, attackEnd);
-    gainParam.linearRampToValueAtTime(this.sustainLevel, decayEnd);
+    gainParam.setValueAtTime(this._valueSince(triggeredAt, atTime), atTime);
+
+    if (attackEnd > atTime) {
+      gainParam.linearRampToValueAtTime(1, attackEnd);
+    }
+
+    if (decayEnd > atTime) {
+      gainParam.linearRampToValueAtTime(this.sustainLevel, decayEnd);
+    }
     // Sustain held at sustainLevel until release()
 
-    this._triggeredAt.set(gainParam, atTime);
+    this._triggeredAt.set(gainParam, triggeredAt);
+  }
+
+  /**
+   * Freeze the running automation at its current value without releasing the
+   * note. Used when a voice is paused: the scheduled ramps must not keep
+   * advancing against `audioContext.currentTime` while nothing is audible.
+   *
+   * Unlike {@link Envelope.release} this keeps the trigger bookkeeping, so the
+   * envelope can be picked up again with `trigger(param, now, elapsedMs)`.
+   */
+  public hold(gainParam: AudioParam, atTime: number): void {
+    if (typeof gainParam.cancelAndHoldAtTime === 'function') {
+      gainParam.cancelAndHoldAtTime(atTime);
+
+      return;
+    }
+
+    const held = this._valueAt(gainParam, atTime);
+    gainParam.cancelScheduledValues(atTime);
+    gainParam.setValueAtTime(held, atTime);
   }
 
   /**
@@ -76,13 +115,7 @@ export class Envelope {
     // step. Firefox still does not implement it, hence the analytical fallback:
     // reconstruct the value from the attack/decay geometry and pin it there
     // before the release ramp starts.
-    if (typeof gainParam.cancelAndHoldAtTime === 'function') {
-      gainParam.cancelAndHoldAtTime(atTime);
-    } else {
-      const held = this._valueAt(gainParam, atTime);
-      gainParam.cancelScheduledValues(atTime);
-      gainParam.setValueAtTime(held, atTime);
-    }
+    this.hold(gainParam, atTime);
 
     this._triggeredAt.delete(gainParam);
 
@@ -101,6 +134,11 @@ export class Envelope {
 
     if (triggeredAt === undefined) return gainParam.value;
 
+    return this._valueSince(triggeredAt, time);
+  }
+
+  /** The envelope value at `time` for a schedule triggered at `triggeredAt`. */
+  private _valueSince(triggeredAt: number, time: number): number {
     const attackEnd = triggeredAt + this.attackMs / 1000;
     const decayEnd = attackEnd + this.decayMs / 1000;
 

@@ -1,4 +1,9 @@
-import { buildSpriteTextureSlotWgsl, composeSpriteMaterialFragmentGlsl, spriteMaterialTextureSlots } from '#rendering/sprite/spriteMaterialSources';
+import {
+  buildSpriteMaterialSlotGlsl,
+  buildSpriteTextureSlotWgsl,
+  composeSpriteMaterialFragmentGlsl,
+  spriteMaterialTextureSlots,
+} from '#rendering/sprite/spriteMaterialSources';
 
 /** Atlas textures rotated through one Text renderer batch. @internal */
 export const textAtlasTextureSlots = spriteMaterialTextureSlots;
@@ -27,5 +32,23 @@ ${dimensionCases}
     }
 }`;
 
-/** Inject the shared GLSL slot table into a shipped Text fragment shader. @internal */
-export const composeTextAtlasFragmentGlsl = composeSpriteMaterialFragmentGlsl;
+/**
+ * GLSL slot table for the Text atlases, sampled at fp32.
+ *
+ * The sprite prologue leaves `sampler2D` at its fragment-stage default, which
+ * is `lowp` and right for a colour texture, whose 8 bits per channel it covers.
+ * A glyph atlas is a distance field read through `smoothstep` over a band a
+ * fraction of a texel wide: there the sampler's step size, 2^-6 at `lowp`,
+ * would be the resolution of the antialiased edge itself. Raising the
+ * fragment's own `precision` does not reach this - sampler precision is
+ * declared separately and governs what `texture()` returns.
+ *
+ * Desktop ANGLE and SwiftShader compute everything at fp32 whatever the
+ * qualifier says, so the declaration is a guarantee for hardware that honours
+ * it rather than a fix for a defect visible here.
+ * @internal
+ */
+export const textAtlasPrologueGlsl = buildSpriteMaterialSlotGlsl(textAtlasTextureSlots, 'highp');
+
+/** Inject the Text slot table into a shipped Text fragment shader. @internal */
+export const composeTextAtlasFragmentGlsl = (fragment: string): string => composeSpriteMaterialFragmentGlsl(fragment, textAtlasPrologueGlsl);

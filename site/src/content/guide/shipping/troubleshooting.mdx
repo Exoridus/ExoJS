@@ -192,7 +192,7 @@ Common causes of poor performance:
 
 **Too many drawables.** Each sprite, container, and text node that is visible adds render work. For large counts, use a sprite atlas (single texture, many frames) so the renderer can batch them into fewer draw calls.
 
-**Expensive filters.** Each filter on a node adds a GPU render pass. A container with three filters costs three extra passes every frame. Remove filters you aren't using, or set `cacheAsBitmap = true` on filtered content that doesn't change.
+**Expensive filters.** Each filter on a node adds a GPU render pass. A container with three filters costs three extra passes every frame. Remove filters you aren't using, or set `cacheAsTexture = true` on filtered content that doesn't change.
 
 **Large or unnecessary render targets.** `RenderTexture` allocates GPU memory proportional to its dimensions. Keep sizes matched to their actual use.
 

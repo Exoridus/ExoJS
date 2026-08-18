@@ -434,7 +434,7 @@ describe('serialization — RenderNode interaction flags', () => {
     node.clip = true;
     node.clipShape = new Rectangle(0, 0, 50, 40);
     node.preserveDrawOrder = true;
-    node.cacheAsBitmap = true;
+    node.cacheAsTexture = true;
 
     const data = serializeTree(node);
 
@@ -446,7 +446,7 @@ describe('serialization — RenderNode interaction flags', () => {
       cursor: 'pointer',
       clip: true,
       preserveDrawOrder: true,
-      cacheAsBitmap: true,
+      cacheAsTexture: true,
       clipShape: [0, 0, 50, 40],
     });
 
@@ -459,7 +459,7 @@ describe('serialization — RenderNode interaction flags', () => {
     expect(restored.cursor).toBe('pointer');
     expect(restored.clip).toBe(true);
     expect(restored.preserveDrawOrder).toBe(true);
-    expect(restored.cacheAsBitmap).toBe(true);
+    expect(restored.cacheAsTexture).toBe(true);
     expect(restored.clipShape).toBeInstanceOf(Rectangle);
     expect((restored.clipShape as Rectangle).width).toBe(50);
   });

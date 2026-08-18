@@ -13,8 +13,13 @@
 // against the same SwiftShader driver the WebGL2 browser project runs on. A
 // reserved-word (or any other compile) regression now fails right here.
 
+import { stripShaderSource } from '@codexo/exojs-config/shader-strip';
+
+import { fillShaderSource } from '#rendering/shader/fillShaderSource';
 import { resolveTransformTextureGlsl } from '#rendering/shader/transformTextureLayout';
 import { composeTextAtlasFragmentGlsl } from '#rendering/text/textAtlasTextureSlots';
+
+import { TILE_DIAGONAL_BIT, TILE_ROW_MASK } from '../../../packages/exojs-tilemap/src/tileWord';
 
 // Core shaders plus the extension packages' own — the particle stage ships
 // from `@codexo/exojs-particles`, so a glob over `src/` alone would leave the
@@ -35,11 +40,22 @@ interface ShaderEntry {
   readonly stage: ShaderStage;
 }
 
+// Values for the `{{NAME}}` placeholders a source cannot state for itself,
+// keyed by file. Imported from the module that owns each value rather than
+// restated here, so a changed constant cannot leave the two out of step.
+const placeholderValues: Readonly<Record<string, Readonly<Record<string, number>>>> = {
+  'tile-chunk.vert': { tileRowMask: TILE_ROW_MASK, tileDiagonalBit: TILE_DIAGONAL_BIT },
+};
+
 // `WebGl2ShaderProgram` expands the engine's `#exo-include` directives before
 // handing a source to the driver, so a shader that reads the shared transform
 // store only compiles in its resolved form — the same form the renderer submits.
-const composeRuntimeSource = (name: string, source: string): string =>
-  resolveTransformTextureGlsl(name.startsWith('text-') && name.endsWith('.frag') ? composeTextAtlasFragmentGlsl(source) : source);
+const composeRuntimeSource = (name: string, source: string): string => {
+  const values = placeholderValues[name];
+  const filled = values ? fillShaderSource(source, values) : source;
+
+  return resolveTransformTextureGlsl(name.startsWith('text-') && name.endsWith('.frag') ? composeTextAtlasFragmentGlsl(filled) : filled);
+};
 
 const shaders: readonly ShaderEntry[] = Object.entries(shaderModules)
   .map(([path, source]) => {
@@ -72,6 +88,12 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['text.vert', 'text-color.frag'],
   ['text.vert', 'text-sdf.frag'],
   ['text.vert', 'text-msdf.frag'],
+  ['nine-slice.vert', 'nine-slice.frag'],
+  // Both repeating-sprite vertex paths (one quad per sprite, N quads per sprite)
+  // link against the same fragment stage.
+  ['repeating-sprite-shader-path.vert', 'repeating-sprite.frag'],
+  ['repeating-sprite-geo-path.vert', 'repeating-sprite.frag'],
+  ['tile-chunk.vert', 'tile-chunk.frag'],
   ['stencil-clip.vert', 'stencil-clip.frag'],
   ['mask-compose.vert', 'mask-compose.frag'],
   ['backdrop-blend.vert', 'backdrop-blend.frag'],
@@ -140,6 +162,23 @@ describe('WebGL2 GLSL shader sources', () => {
 
     try {
       expect(log, `${name} failed to compile:\n${log ?? ''}`).toBeNull();
+    } finally {
+      gl.deleteShader(shader);
+    }
+  });
+
+  // The production build ships these sources comment-stripped (see
+  // `shader-strip.test.ts` for the property that makes that safe); this is the
+  // half that puts the stripped text in front of a real driver.
+  test.each(shaders)('compiles $name (stripped)', ({ name, source, stage }) => {
+    const { shader, log } = compileShader(gl, stage, composeRuntimeSource(name, stripShaderSource(source)));
+
+    try {
+      expect(
+        log,
+        `stripped ${name} failed to compile:
+${log ?? ''}`,
+      ).toBeNull();
     } finally {
       gl.deleteShader(shader);
     }

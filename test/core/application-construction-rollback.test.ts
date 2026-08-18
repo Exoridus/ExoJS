@@ -179,8 +179,8 @@ describe('Application construction rollback', () => {
 
     // `SystemRegistry.destroy()` has no per-item guard, so this throw escapes
     // the very first teardown step of the rollback. Under one shared `try`
-    // that aborted everything after it — ME-7 all over again, in exactly the
-    // scenario that triggers a rollback: a misbehaving extension.
+    // that aborted everything after it, in exactly the scenario that triggers
+    // a rollback: a misbehaving extension.
     const hostile: System = {
       update: vi.fn(),
       destroy: () => {

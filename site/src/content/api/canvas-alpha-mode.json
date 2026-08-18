@@ -1,0 +1,73 @@
+{
+  "title": "CanvasAlphaMode",
+  "description": "How the finished frame composites against the page behind the canvas. - `'opaque'`: the canvas has no alpha channel. Whatever is behind it in the document never shows through, no matter what alpha the frame ends on. - `'premultiplied'`: the canvas keeps its alpha channel and the browser composites the frame over the page with it. Combine with a ApplicationOptions.clearColor whose alpha is below `1` to let the page show through. This is purely about the *browser-side* composite step. It says nothing about how the engine stores or blends colour internally: ExoJS renders premultiplied end to end - textures, render targets and blend modes alike - under both modes.",
+  "symbol": "CanvasAlphaMode",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "How the finished frame composites against the page behind the canvas.",
+        "- `'opaque'`: the canvas has no alpha channel. Whatever is behind it in the document never shows through, no matter what alpha the frame ends on. - `'premultiplied'`: the canvas keeps its alpha channel and the browser composites the frame over the page with it. Combine with a ApplicationOptions.clearColor whose alpha is below `1` to let the page show through.",
+        "This is purely about the *browser-side* composite step. It says nothing about how the engine stores or blends colour internally: ExoJS renders premultiplied end to end - textures, render targets and blend modes alike - under both modes."
+      ],
+      "importLine": "import { CanvasAlphaMode } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "CanvasAlphaMode",
+          "signature": "\"opaque\" | \"premultiplied\"",
+          "signatureTokens": [
+            {
+              "text": "\"opaque\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"premultiplied\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/Application.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/Application.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts"
+}

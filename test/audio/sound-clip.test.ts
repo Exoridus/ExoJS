@@ -87,7 +87,7 @@ describe('Sound.clip', () => {
     clip.destroy();
   });
 
-  // NEU-O1: the asset layer heals a Sound in place (`_evictBuffer` /
+  // The asset layer heals a Sound in place (`_evictBuffer` /
   // `_setBuffer`, identity preserved), so a sub-Sound that snapshotted the
   // buffer would keep the evicted one alive and play stale data after a reload.
   test('a clip follows the parent through evict + reload instead of pinning the old buffer', () => {

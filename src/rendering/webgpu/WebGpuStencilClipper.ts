@@ -5,6 +5,8 @@ import type { Geometry } from '#rendering/geometry/Geometry';
 import type { GeometryAttribute } from '#rendering/geometry/GeometryAttribute';
 import type { View } from '#rendering/View';
 
+import stencilWriteShaderSourceModule from './wgsl/stencil-write.wgsl';
+
 /** depth24plus-stencil8 is the portable depth/stencil format with an 8-bit stencil aspect. */
 export const stencilAttachmentFormat: GPUTextureFormat = 'depth24plus-stencil8';
 
@@ -12,24 +14,7 @@ const positionNames = new Set<string>(['a_position', 'position']);
 const matrixByteLength = 64; // mat4x4<f32>
 
 /** WGSL source for the stencil-write pipeline. @internal */
-export const stencilWriteShaderSource = `
-struct Uniforms {
-    matrix: mat4x4<f32>,
-};
-
-@group(0) @binding(0) var<uniform> u: Uniforms;
-
-@vertex
-fn vertexMain(@location(0) position: vec2<f32>) -> @builtin(position) vec4<f32> {
-    return u.matrix * vec4<f32>(position, 0.0, 1.0);
-}
-
-@fragment
-fn fragmentMain() -> @location(0) vec4<f32> {
-    // Color writes are masked off (writeMask 0); only the stencil aspect is touched.
-    return vec4<f32>(0.0);
-}
-`;
+export const stencilWriteShaderSource: string = stencilWriteShaderSourceModule;
 
 interface ManagedStencilTexture {
   texture: GPUTexture;

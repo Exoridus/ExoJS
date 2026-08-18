@@ -208,7 +208,7 @@ export class TransformBuffer {
    * Rewind the write cursor to `count`, freeing the rows above it for reuse, and
    * (optionally) restore the running content hash to its pre-rewind value so the
    * freed rows' writes don't linger in the hash and trigger spurious re-uploads.
-   * Used by nested draw plans (filters / cacheAsBitmap) to isolate their slots.
+   * Used by nested draw plans (filters / cacheAsTexture) to isolate their slots.
    * @internal
    */
   public rewindTo(count: number, frameHash?: number): this {

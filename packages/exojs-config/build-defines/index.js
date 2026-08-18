@@ -5,8 +5,8 @@
 //
 //   import { createBuildDefines, resolveRevision } from '@codexo/exojs-config/build-defines';
 //
-//   createBuildDefines({ mode: 'production', version: '0.12.0', revision: 'a31f92c8' });
-//   // => { __DEV__: 'false', __VERSION__: '"0.12.0"', __REVISION__: '"a31f92c8"' }
+//   createBuildDefines({ mode: 'production', version: '0.12.0', revision: '<short-sha>' });
+//   // => { __DEV__: 'false', __VERSION__: '"0.12.0"', __REVISION__: '"<short-sha>"' }
 
 import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -148,9 +148,9 @@ export const isTreeDirty = ({ cwd, runner } = {}) => {
  * Returns the short (7-char) form of a revision, appending "-dirty" when the
  * tree has uncommitted changes. Produces the canonical display revision:
  *
- *   a31f92c8          — clean local build
- *   a31f92c8-dirty    — local build with tracked changes
- *   unknown           — no Git metadata available
+ *   <short-sha>       - clean local build
+ *   <short-sha>-dirty - local build with tracked changes
+ *   unknown           - no Git metadata available
  *
  * @param {{ cwd?: string, runner?: MiniRunner }} opts
  * @returns {string}

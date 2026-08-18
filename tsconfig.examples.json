@@ -49,7 +49,7 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "resolvePackageJsonImports": true,
-    "customConditions": ["@codexo/source", "@codexo/exojs-particles-source"],
+    "customConditions": ["@codexo/exojs-source", "@codexo/exojs-particles-source"],
     "paths": {
       "@codexo/exojs": ["./src/index.ts"],
       "@codexo/exojs/extensions": ["./src/extensions/index.ts"],

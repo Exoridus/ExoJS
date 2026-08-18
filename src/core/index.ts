@@ -2,6 +2,7 @@ export type {
   ApplicationOptions,
   AutoBackendConfig,
   BackendConfig,
+  CanvasAlphaMode,
   CanvasApplicationOptions,
   CanvasSizingMode,
   InputApplicationOptions,

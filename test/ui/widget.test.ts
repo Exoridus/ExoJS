@@ -4,6 +4,7 @@
  * Widget itself is abstract.
  */
 
+import { Container } from '#rendering/Container';
 import { UIRoot } from '#ui/UIRoot';
 import { Widget } from '#ui/Widget';
 
@@ -153,5 +154,99 @@ describe('Widget.enabled', () => {
 
     widget.enabled = false;
     expect(calls).toBe(1);
+  });
+});
+
+describe('Widget.effectiveEnabled cascade (ME-56)', () => {
+  test("defaults to true, matching a freshly constructed widget's own enabled", () => {
+    const widget = new TestWidget();
+
+    expect(widget.effectiveEnabled).toBe(true);
+  });
+
+  test("a disabled parent makes an already-attached child report effectiveEnabled=false, without touching the child's own enabled flag", () => {
+    const parent = new TestWidget();
+    const child = new TestWidget();
+
+    parent.addChild(child);
+    parent.enabled = false;
+
+    expect(child.effectiveEnabled).toBe(false);
+    expect(child.enabled).toBe(true); // own flag untouched
+  });
+
+  test("re-enabling the parent restores the child's effective state automatically", () => {
+    const parent = new TestWidget();
+    const child = new TestWidget();
+
+    parent.addChild(child);
+    parent.enabled = false;
+    expect(child.effectiveEnabled).toBe(false);
+
+    parent.enabled = true;
+    expect(child.effectiveEnabled).toBe(true);
+  });
+
+  test('a plain (non-Widget) Container between two widgets does not block the cascade', () => {
+    const parent = new TestWidget();
+    const relay = new Container();
+    const child = new TestWidget();
+
+    parent.addChild(relay);
+    relay.addChild(child);
+    parent.enabled = false;
+
+    expect(child.effectiveEnabled).toBe(false);
+  });
+
+  test("a widget's own enabled=false wins regardless of an enabled parent", () => {
+    const parent = new TestWidget();
+    const child = new TestWidget();
+
+    parent.addChild(child);
+    child.enabled = false;
+
+    expect(child.effectiveEnabled).toBe(false);
+    expect(parent.effectiveEnabled).toBe(true);
+  });
+
+  test('attaching a widget under an already-disabled parent picks up the disabled effective state immediately', () => {
+    const parent = new TestWidget();
+    const child = new TestWidget();
+
+    parent.enabled = false;
+    parent.addChild(child);
+
+    expect(child.effectiveEnabled).toBe(false);
+    expect(child.enabled).toBe(true);
+  });
+
+  test('detaching a widget from a disabled parent restores its own enabled as the effective value', () => {
+    const parent = new TestWidget();
+    const child = new TestWidget();
+
+    parent.enabled = false;
+    parent.addChild(child);
+    expect(child.effectiveEnabled).toBe(false);
+
+    parent.removeChild(child);
+    expect(child.effectiveEnabled).toBe(true);
+  });
+
+  test("_onEnabledChanged fires with the effective value when a parent cascade changes it, not only on the widget's own flag change", () => {
+    const parent = new TestWidget();
+    const child = new TestWidget();
+    const received: boolean[] = [];
+
+    parent.addChild(child);
+    (child as unknown as { _onEnabledChanged: (e: boolean) => void })._onEnabledChanged = (e: boolean): void => {
+      received.push(e);
+    };
+
+    parent.enabled = false;
+    expect(received).toEqual([false]);
+
+    parent.enabled = true;
+    expect(received).toEqual([false, true]);
   });
 });

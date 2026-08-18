@@ -64,7 +64,7 @@ interface FakeNode {
   visible: boolean;
   filters: FakeFilter[];
   mask: object | null;
-  cacheAsBitmap: boolean;
+  cacheAsTexture: boolean;
   getBounds: MockInstance;
   children: FakeNode[];
   constructor: { name: string };
@@ -75,14 +75,14 @@ function makeNode(
     visible?: boolean;
     filters?: FakeFilter[];
     mask?: object | null;
-    cacheAsBitmap?: boolean;
+    cacheAsTexture?: boolean;
     width?: number;
     height?: number;
     children?: FakeNode[];
     className?: string;
   } = {},
 ): FakeNode {
-  const { visible = true, filters = [], mask = null, cacheAsBitmap = false, width = 100, height = 50, children = [], className = 'Sprite' } = opts;
+  const { visible = true, filters = [], mask = null, cacheAsTexture = false, width = 100, height = 50, children = [], className = 'Sprite' } = opts;
   class NamedClass {
     public static get name(): string {
       return className;
@@ -92,7 +92,7 @@ function makeNode(
     visible,
     filters,
     mask,
-    cacheAsBitmap,
+    cacheAsTexture,
     getBounds: vi.fn(() => ({ width, height, left: 0, top: 0, right: width, bottom: height })),
     children,
     constructor: NamedClass as any,
@@ -163,7 +163,7 @@ describe('RenderPassInspectorLayer', () => {
 
   test('update collects entries for nodes with active filter chains', () => {
     const blur = makeFilter('BlurFilter');
-    const color = makeFilter('ColorFilter');
+    const color = makeFilter('ColorMatrixFilter');
     const root = makeNode({
       className: 'Sprite',
       filters: [blur, color],
@@ -180,7 +180,7 @@ describe('RenderPassInspectorLayer', () => {
     expect(entry.width).toBe(800);
     expect(entry.height).toBe(600);
     expect(entry.hasMask).toBe(false);
-    expect(entry.cachedAsBitmap).toBe(false);
+    expect(entry.cachedAsTexture).toBe(false);
   });
 
   test('totalPasses counts filters across all entries plus masks', () => {
@@ -215,11 +215,11 @@ describe('RenderPassInspectorLayer', () => {
     expect(layer.entries[0].hasMask).toBe(true);
   });
 
-  test('cacheAsBitmap flag is reflected in entry', () => {
-    const root = makeNode({ filters: [makeFilter('BlurFilter')], cacheAsBitmap: true });
+  test('cacheAsTexture flag is reflected in entry', () => {
+    const root = makeNode({ filters: [makeFilter('BlurFilter')], cacheAsTexture: true });
     const layer = new RenderPassInspectorLayer(makeApp(root));
     layer.update(makeTime());
-    expect(layer.entries[0].cachedAsBitmap).toBe(true);
+    expect(layer.entries[0].cachedAsTexture).toBe(true);
   });
 
   test('recurses into Container children', () => {
@@ -234,7 +234,7 @@ describe('RenderPassInspectorLayer', () => {
   test('a leaf node with no children property is not recursed into', () => {
     // Plain leaf (no `children` key at all, as opposed to an empty array) —
     // exercises the Array.isArray(container.children) false branch in _collect.
-    const leaf = { visible: true, filters: [], mask: null, cacheAsBitmap: false, getBounds: vi.fn(), constructor: { name: 'Leaf' } };
+    const leaf = { visible: true, filters: [], mask: null, cacheAsTexture: false, getBounds: vi.fn(), constructor: { name: 'Leaf' } };
     const layer = new RenderPassInspectorLayer(makeApp(leaf as unknown as FakeNode));
 
     expect(() => layer.update(makeTime())).not.toThrow();

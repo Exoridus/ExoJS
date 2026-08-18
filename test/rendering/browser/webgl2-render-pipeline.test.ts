@@ -21,9 +21,7 @@ const center = canvasSize / 2;
 const red: [number, number, number, number] = [255, 0, 0, 255];
 
 const defaultWebGlAttributes: WebGLContextAttributes = {
-  alpha: false,
   antialias: false,
-  premultipliedAlpha: false,
   preserveDrawingBuffer: true,
   stencil: false,
   depth: false,

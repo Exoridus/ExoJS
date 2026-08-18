@@ -1,4 +1,4 @@
-// Type contract for `Container`'s child list (SG-008). Compiled by
+// Type contract for `Container`'s child list. Compiled by
 // `tsconfig.type-tests.json` via `pnpm typecheck:type-tests`, NOT collected by
 // vitest (no `.test.ts` suffix).
 //

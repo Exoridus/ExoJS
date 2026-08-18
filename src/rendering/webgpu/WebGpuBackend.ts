@@ -1,6 +1,6 @@
 /// <reference types="@webgpu/types" />
 
-import type { Application } from '#core/Application';
+import type { Application, CanvasAlphaMode } from '#core/Application';
 import { Color } from '#core/Color';
 import { logger } from '#core/logging';
 import { Signal } from '#core/Signal';
@@ -26,6 +26,7 @@ import {
   stampRetainedBatchGeneration,
 } from '#rendering/plan/RetainedInstructionSet';
 import type { RenderBackend } from '#rendering/RenderBackend';
+import { sanitizeSurfacePixelRatio } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { InstanceDataView } from '#rendering/RenderBatch';
 import type { Renderer } from '#rendering/Renderer';
@@ -58,7 +59,9 @@ import {
   type WebGpuRetainedNodeIndexRange,
 } from './WebGpuRetainedGroupResources';
 import { baseSpriteBatchTextureSlots, maxSpriteBatchTextureSlots } from './WebGpuSpriteRenderer';
+import { WEBGPU_DEFAULT_MAX_TEXTURE_DIMENSION_2D } from './webgpuStorageLimits';
 import { WebGpuTransformStorage } from './WebGpuTransformStorage';
+import mipmapWgslModule from './wgsl/mipmap.wgsl';
 
 interface ManagedWebGpuTextureState {
   texture: GPUTexture;
@@ -120,48 +123,7 @@ const managedTextureFormat: GPUTextureFormat = 'rgba8unorm';
 const MANAGED_TEXTURE_BYTES_PER_PIXEL = 4;
 
 /** WGSL source for the box-filter mipmap-generation pipeline. @internal */
-export const mipmapWgsl = `
-struct VertexOutput {
-    @builtin(position) position: vec4<f32>,
-    @location(0) texcoord: vec2<f32>,
-};
-
-@group(0) @binding(0)
-var sourceTexture: texture_2d<f32>;
-@group(0) @binding(1)
-var sourceSampler: sampler;
-
-@vertex
-fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
-    var positions = array<vec2<f32>, 3>(
-        vec2<f32>(-1.0, -1.0),
-        vec2<f32>(3.0, -1.0),
-        vec2<f32>(-1.0, 3.0)
-    );
-    // Y is flipped vs the position array: NDC Y points up, but texture UV
-    // Y points down (UV (0,0) is the top-left of the source). Matching the
-    // two ensures that the output texture's top-left pixel samples from the
-    // source's top-left, so every mip level has the same orientation as the
-    // level above it. Prior to this, odd mip levels were rendered upside
-    // down, producing visible texture flips at view-size doublings.
-    var texcoords = array<vec2<f32>, 3>(
-        vec2<f32>(0.0, 1.0),
-        vec2<f32>(2.0, 1.0),
-        vec2<f32>(0.0, -1.0)
-    );
-    var output: VertexOutput;
-
-    output.position = vec4<f32>(positions[vertexIndex], 0.0, 1.0);
-    output.texcoord = texcoords[vertexIndex];
-
-    return output;
-}
-
-@fragment
-fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
-    return textureSample(sourceTexture, sourceSampler, input.texcoord);
-}
-`;
+export const mipmapWgsl: string = mipmapWgslModule;
 
 /**
  * WebGPU implementation of {@link RenderBackend}. Manages the GPU device,
@@ -201,6 +163,12 @@ export class WebGpuBackend implements RenderBackend {
   public readonly onRenderError = new Signal<[RenderError]>();
 
   private readonly _canvas: HTMLCanvasElement;
+  // Browser-side composite mode of the root canvas. Read once at construction
+  // and re-applied by every `context.configure()`, including the one that
+  // follows device-loss recovery.
+  private readonly _alphaMode: CanvasAlphaMode;
+  /** The application's `canvas.pixelRatio`, sanitized once - see {@link surfacePixelRatio}. */
+  private readonly _surfacePixelRatio: number;
   private readonly _rootRenderTarget: RenderTarget;
   private _clearColor: Color = new Color();
   private _deviceLost = false;
@@ -306,7 +274,9 @@ export class WebGpuBackend implements RenderBackend {
     const height = canvasOptions.height ?? 600;
     const clearColor = app.options.clearColor;
 
+    this._alphaMode = app.options.rendering?.alphaMode ?? 'opaque';
     this._canvas = app.canvas;
+    this._surfacePixelRatio = sanitizeSurfacePixelRatio(canvasOptions.pixelRatio);
     this._rootRenderTarget = new RenderTarget(width, height, true);
     this._renderTarget = this._rootRenderTarget;
 
@@ -324,6 +294,49 @@ export class WebGpuBackend implements RenderBackend {
 
   public get renderTarget(): RenderTarget {
     return this._renderTarget;
+  }
+
+  /**
+   * Device pixels per logical unit of the canvas root target.
+   *
+   * Derived rather than stored: the root target carries the LOGICAL size while
+   * the canvas backing store carries `logical × pixelRatio`, so the ratio
+   * between them is always current - including after a `resize()` that changes
+   * only one of the two.
+   */
+  public get rootResolution(): number {
+    const logicalWidth = this._rootRenderTarget.width;
+
+    return logicalWidth > 0 ? this._canvas.width / logicalWidth : 1;
+  }
+
+  /**
+   * The application's configured `canvas.pixelRatio`.
+   *
+   * Deliberately NOT {@link rootResolution}, even though the two agree in every
+   * ordinary sizing mode. This is the number a rasterizer keys a cache on, and
+   * it has to be stable and quantized to be safe there: under `'letterbox'`
+   * sizing the root target stays at the design size while the backing store
+   * tracks the parent's fitted rectangle, so `rootResolution` is an arbitrary
+   * float that moves on every window resize - keying a glyph atlas on it would
+   * mint a fresh set of pages per resize step.
+   */
+  public get surfacePixelRatio(): number {
+    return this._surfacePixelRatio;
+  }
+
+  /**
+   * `maxTextureDimension2D` of the granted device.
+   *
+   * The spec DEFAULT stands in when no limits object is reachable - a device
+   * that exposes none is either a test double or non-conformant, and a
+   * conformant device is never granted less, so assuming the default is the safe
+   * direction (the same rule `webgpuStorageLimits` follows).
+   */
+  public get maxTextureSize(): number {
+    const limits = (this._device as { limits?: GPUSupportedLimits } | null)?.limits;
+
+    return limits?.maxTextureDimension2D ?? WEBGPU_DEFAULT_MAX_TEXTURE_DIMENSION_2D;
   }
 
   public get device(): GPUDevice {
@@ -363,6 +376,21 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     return managedTextureFormat;
+  }
+
+  /**
+   * Whether the root canvas composites without an alpha channel. Only then may a
+   * root target be treated as a fully covered backdrop: under
+   * `alphaMode: 'premultiplied'` the canvas carries real alpha, so an untouched
+   * region genuinely has no coverage.
+   *
+   * The configured mode is the authority here - WebGPU has no equivalent of
+   * WebGL's `getContextAttributes()`, and this is the same value that goes into
+   * `context.configure()`.
+   * @internal
+   */
+  public get _rootCanvasOpaque(): boolean {
+    return this._alphaMode === 'opaque';
   }
 
   public get clearRequested(): boolean {
@@ -614,7 +642,7 @@ export class WebGpuBackend implements RenderBackend {
       this._drawPlanDepth--;
     }
 
-    // A nested plan (filter / cacheAsBitmap) just ended: flush its draws, then
+    // A nested plan (filter / cacheAsTexture) just ended: flush its draws, then
     // free its transform rows so the frame-scoped buffer only grows with
     // top-level render() calls. Top-level plans (depth back to 0) keep their rows
     // so cross-call batching survives to the frame-end flush.
@@ -624,7 +652,7 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     // Only assert balance at the outermost plan: a nested render() (e.g.
-    // cacheAsBitmap drawing its cache sprite) sees the still-open outer clips,
+    // cacheAsTexture drawing its cache sprite) sees the still-open outer clips,
     // which are not leaks.
     if (this._drawPlanDepth === 0 && this._passCoordinatorInstance !== null) {
       const unbalanced = this._passCoordinatorInstance.unbalancedStencilClips();
@@ -1467,8 +1495,11 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     // Parity with the live path: draw() counts submitted nodes before any
-    // flush-time visibility decision (mask/scissor) can drop the batch.
-    this._stats.submittedNodes += batch.instanceCount;
+    // flush-time visibility decision (mask/scissor) can drop the batch - and it
+    // counts NODES, so a batch whose renderer expands one node into many
+    // instances contributes its recorded node count (see
+    // RetainedBatchInstruction), not its instance count.
+    this._stats.submittedNodes += batch.nodeCount ?? batch.instanceCount;
     this._setActiveRenderer(payload.renderer);
     payload.renderer._replayRetainedBatch(payload);
   }
@@ -1546,6 +1577,13 @@ export class WebGpuBackend implements RenderBackend {
    * packed instance bytes (owned by the INNERMOST capture's bundle),
    * resolves the recorded texture views, and appends one shared instruction
    * to every active set.
+   *
+   * `nodeCount` is the batch's `stats.submittedNodes` contribution and defaults
+   * to `instanceCount` (one instance is one node). A renderer whose node expands
+   * into several instances must pass its own count - see
+   * {@link RetainedBatchInstruction.nodeCount}. It is the LAST parameter on
+   * purpose: inserting it next to `instanceCount` would silently shift the
+   * existing optional trailing arguments at every cross-package call site.
    * @internal
    */
   public _recordRetainedBatch(
@@ -1558,6 +1596,7 @@ export class WebGpuBackend implements RenderBackend {
     slotCount: number,
     geometry: WebGpuRetainedGeometryRef | null = null,
     rendererData: unknown = null,
+    nodeCount: number = instanceCount,
   ): void {
     const frames = this._retainedCaptureFrames;
 
@@ -1623,6 +1662,7 @@ export class WebGpuBackend implements RenderBackend {
       bundle: owner.bundle,
       generation: retainedGenerationUnstamped,
       instanceCount,
+      nodeCount,
       drawCalls: 1,
       payload,
     };
@@ -1910,7 +1950,7 @@ export class WebGpuBackend implements RenderBackend {
         context.configure({
           device,
           format,
-          alphaMode: 'opaque',
+          alphaMode: this._alphaMode,
           // COPY_SRC is required by WebGpuBackdropBlendCompositor to capture
           // the root-canvas backdrop via copyTextureToTexture.
           usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,

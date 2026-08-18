@@ -1,9 +1,9 @@
 /**
  * Launcher for the renderer benchmark sweep.
  *
- * Sets `EXOJS_PERF_PROFILE` in-process (cross-platform — no shell env syntax
+ * Sets `EXOJS_PERF_PROFILE` in-process (cross-platform - no shell env syntax
  * needed) and runs the `rendering-perf` vitest project's `sweep.test.ts`, which
- * writes machine-readable output to `.workspace/output/render-perf/`.
+ * writes machine-readable output to the perf output directory it logs on start.
  *
  * Usage:
  *   tsx test/perf/rendering/run-sweep.ts            # quick profile

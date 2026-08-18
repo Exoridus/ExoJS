@@ -13,6 +13,7 @@ import {
   AbstractWebGpuRenderer,
   type BlendModes,
   DataTexture,
+  fillShaderSource,
   getWebGpuBlendState,
   packAffineMat4,
   packedGroupChanged,
@@ -24,6 +25,8 @@ import {
 
 import type { TileQuad } from '../chunkGeometry';
 import type { TileChunkNode } from '../TileChunkNode';
+import { TILE_DIAGONAL_BIT, TILE_ROW_MASK } from '../tileWord';
+import tileShaderTemplate from './wgsl/tile-chunk.wgsl';
 
 const instanceStrideBytes = 32;
 const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT; // = 8
@@ -33,101 +36,8 @@ const initialBatchCapacity = 256;
 const indicesPerInstance = 6;
 const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
 
-const TILE_ROW_MASK = 0x1fffffff;
-const TILE_DIAGONAL_BIT = 0x20000000;
 
-const tileShaderSource = `
-struct ProjectionUniforms {
-    matrix: mat4x4<f32>,
-    group: mat4x4<f32>,
-    viewport: vec4<f32>,        // device-pixel snap rect (x, y, width, height)
-};
-
-struct TransformSlot {
-    m0: vec4<f32>,
-    m1: vec4<f32>,
-};
-
-@group(0) @binding(0)
-var<uniform> projection: ProjectionUniforms;
-@group(0) @binding(1)
-var<storage, read> transforms: array<TransformSlot>;
-
-@group(1) @binding(0)
-var tileTexture: texture_2d<f32>;
-@group(1) @binding(1)
-var tileSampler: sampler;
-
-struct VertexInput {
-    @location(0) quadBounds: vec4<f32>,   // x0, y0, x1, y1
-    @location(1) uvBounds: vec4<f32>,     // uMin, vMin, uMax, vMax (flipX/Y + texture flipY baked)
-    @location(2) color: vec4<f32>,        // RGBA tint (layer opacity in alpha)
-    @location(3) tileWord: u32,           // transform row (bits 0..28) | diagonal (bit 29)
-};
-
-struct VertexOutput {
-    @builtin(position) position: vec4<f32>,
-    @location(0) texcoord: vec2<f32>,
-    @location(1) color: vec4<f32>,
-};
-
-@vertex
-fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutput {
-    var output: VertexOutput;
-
-    // vid 0..3 → TL, TR, BR, BL (matches static index buffer [0,1,2,0,2,3])
-    let cornerX = ((vid + 1u) >> 1u) & 1u;
-    let cornerY = vid >> 1u;
-
-    let localX = select(input.quadBounds.x, input.quadBounds.z, cornerX == 1u);
-    let localY = select(input.quadBounds.y, input.quadBounds.w, cornerY == 1u);
-
-    let row = input.tileWord & ${TILE_ROW_MASK}u;
-    let diagonal = (input.tileWord & ${TILE_DIAGONAL_BIT}u) != 0u;
-
-    let slot = transforms[row];
-    let worldX = slot.m0.x * localX + slot.m0.y * localY + slot.m1.x;
-    let worldY = slot.m0.z * localX + slot.m0.w * localY + slot.m1.y;
-
-    var position = projection.matrix * projection.group * vec4<f32>(worldX, worldY, 0.0, 1.0);
-
-    // Render-only pixel snapping (slot.m1.z: 0 = none, non-zero = snap origin).
-    // floor(x + 0.5) matches the CPU Math.round policy; WGSL round() is
-    // half-to-even. Grid alignment is independent of the y-axis convention
-    // because the staged viewport rect is whole device pixels.
-    if (slot.m1.z != 0.0) {
-        let originClip = projection.matrix * projection.group * vec4<f32>(slot.m1.x, slot.m1.y, 0.0, 1.0);
-        let originDevice = projection.viewport.xy + (originClip.xy * 0.5 + vec2<f32>(0.5)) * projection.viewport.zw;
-        let snapDelta = (floor(originDevice + vec2<f32>(0.5)) - originDevice) * 2.0 / max(projection.viewport.zw, vec2<f32>(1.0));
-        position = vec4<f32>(position.xy + snapDelta, position.z, position.w);
-    }
-    output.position = position;
-
-    // Tile orientation: diagonal transposes the corner-coordinate axes; flipX/Y
-    // are baked into the UV corner ordering by the CPU writer.
-    var su = cornerX;
-    var sv = cornerY;
-    if (diagonal) {
-        let t = su;
-        su = sv;
-        sv = t;
-    }
-
-    let u = select(input.uvBounds.x, input.uvBounds.z, su == 1u);
-    let v = select(input.uvBounds.y, input.uvBounds.w, sv == 1u);
-    output.texcoord = vec2<f32>(u, v);
-
-    output.color = vec4(input.color.rgb * input.color.a, input.color.a);
-
-    return output;
-}
-
-@fragment
-fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
-    let sample = textureSample(tileTexture, tileSampler, input.texcoord);
-    return sample * input.color;
-}
-`;
+const tileShaderSource = fillShaderSource(tileShaderTemplate, { tileRowMask: TILE_ROW_MASK, tileDiagonalBit: TILE_DIAGONAL_BIT });
 
 /**
  * Instanced WebGPU renderer for {@link TileChunkNode}, the parity counterpart of
@@ -190,6 +100,13 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
 
   private _quadIndex = 0;
   private _maxNodeIndex = 0;
+  // Chunk nodes booked against the PENDING batch, and whether the chunk being
+  // rendered right now has already been booked. One chunk emits one tile
+  // instance per tile, so the recorded batch's `submittedNodes` contribution is
+  // this count and not `_quadIndex`. A chunk whose pages span several batches is
+  // booked once, against the batch its first page lands in.
+  private _batchNodeCount = 0;
+  private _nodeBooked = false;
   private _currentBlendMode: BlendModes | null = null;
   private _currentTexture: Texture | null = null;
 
@@ -292,6 +209,8 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     this._instancePassBytes = 0;
     this._quadIndex = 0;
     this._maxNodeIndex = 0;
+    this._batchNodeCount = 0;
+    this._nodeBooked = false;
     this._currentBlendMode = null;
     this._currentTexture = null;
     this._writtenView = null;
@@ -307,6 +226,8 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     }
 
     const pages = node.pages;
+
+    this._nodeBooked = false;
 
     if (pages.length === 0) {
       return;
@@ -365,6 +286,14 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     backend.setBlendMode(blendMode);
 
     this._ensureStagingCapacity(this._quadIndex + quads.length);
+
+    // Booked after the flush decision above, so the chunk lands on the batch
+    // that actually holds its first tile; the flag keeps a multi-page chunk from
+    // being booked once per page.
+    if (!this._nodeBooked) {
+      this._nodeBooked = true;
+      this._batchNodeCount++;
+    }
 
     const f32 = this._instanceFloat32;
     const u32 = this._instanceUint32;
@@ -545,7 +474,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     // already poisoned the capture in render().
     if (this._quadIndex > 0 && backend._retainedCaptureActive && blendMode !== null && texture !== null) {
       this._recordTextures[0] = texture;
-      backend._recordRetainedBatch(this, this._instanceData, flushBytes, this._quadIndex, blendMode, this._recordTextures, 1);
+      backend._recordRetainedBatch(this, this._instanceData, flushBytes, this._quadIndex, blendMode, this._recordTextures, 1, null, null, this._batchNodeCount);
     }
 
     // The pass is deliberately left OPEN. It ends at genuine boundaries only
@@ -554,6 +483,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     // one pass and one submit rather than N.
     this._quadIndex = 0;
     this._maxNodeIndex = 0;
+    this._batchNodeCount = 0;
     this._currentBlendMode = null;
     this._currentTexture = null;
   }

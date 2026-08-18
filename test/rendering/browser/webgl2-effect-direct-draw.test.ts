@@ -1,8 +1,8 @@
 /**
  * Pixel coverage for the effect path's direct-draw seam.
  *
- * `ColorFilter.apply`, `BlurFilter.apply` and `RenderNode._drawTexture` used to
- * issue their quad through `sprite.render(backend)` — a full
+ * `ColorMatrixFilter.apply`, `BlurFilter.apply` and `RenderNode._drawTexture` used to
+ * issue their quad through `sprite.render(backend)` - a full
  * build/optimize/play plan cycle per quad. They now hand the drawable to
  * `drawDrawableDirect`, which keeps the plan-depth bracket (flush order,
  * transform-row rewind) and drops everything else, including the cull test.
@@ -21,7 +21,7 @@ import { Color } from '#core/Color';
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import { BlurFilter } from '#rendering/filters/BlurFilter';
-import { ColorFilter } from '#rendering/filters/ColorFilter';
+import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
 
@@ -49,7 +49,7 @@ const solidTexture = (color: string, width = 16, height = 16): Texture => {
 };
 
 describe('effect direct-draw pixel behaviour (WebGL2)', () => {
-  test('a single ColorFilter tints its subject and leaves the rest of the frame alone', async () => {
+  test('a single ColorMatrixFilter tints its subject and leaves the rest of the frame alone', async () => {
     const backend = await createWebGl2TestBackend(SIZE);
     const texture = solidTexture('#ffffff');
     const root = new Container();
@@ -60,7 +60,7 @@ describe('effect direct-draw pixel behaviour (WebGL2)', () => {
       sprite.setPosition(16, 16);
       // Multiplying white by pure red must leave red — a filter that never ran
       // would leave white, and one whose quad missed the target leaves black.
-      filtered.addFilter(new ColorFilter(new Color(255, 0, 0)));
+      filtered.addFilter(new ColorMatrixFilter().tint(new Color(255, 0, 0)));
       filtered.addChild(sprite);
       root.addChild(filtered);
 
@@ -86,8 +86,8 @@ describe('effect direct-draw pixel behaviour (WebGL2)', () => {
       sprite.setPosition(16, 16);
       // White × yellow × magenta = red. Either pass alone leaves a channel the
       // other kills, so this distinguishes "both ran" from "one ran".
-      filtered.addFilter(new ColorFilter(new Color(255, 255, 0)));
-      filtered.addFilter(new ColorFilter(new Color(255, 0, 255)));
+      filtered.addFilter(new ColorMatrixFilter().tint(new Color(255, 255, 0)));
+      filtered.addFilter(new ColorMatrixFilter().tint(new Color(255, 0, 255)));
       filtered.addChild(sprite);
       root.addChild(filtered);
 
@@ -142,7 +142,7 @@ describe('effect direct-draw pixel behaviour (WebGL2)', () => {
     try {
       left.setPosition(8, 8);
       right.setPosition(40, 40);
-      filtered.addFilter(new ColorFilter(new Color(0, 255, 0)));
+      filtered.addFilter(new ColorMatrixFilter().tint(new Color(0, 255, 0)));
       filtered.addChild(left);
       filtered.addChild(right);
       root.addChild(filtered);
@@ -158,7 +158,7 @@ describe('effect direct-draw pixel behaviour (WebGL2)', () => {
     }
   });
 
-  test('a filtered subtree with cacheAsBitmap renders the same pixels on the baked frame as on the first', async () => {
+  test('a filtered subtree with cacheAsTexture renders the same pixels on the baked frame as on the first', async () => {
     const backend = await createWebGl2TestBackend(SIZE);
     const texture = solidTexture('#ffffff');
     const root = new Container();
@@ -167,8 +167,8 @@ describe('effect direct-draw pixel behaviour (WebGL2)', () => {
 
     try {
       sprite.setPosition(16, 16);
-      filtered.addFilter(new ColorFilter(new Color(0, 0, 255)));
-      filtered.cacheAsBitmap = true;
+      filtered.addFilter(new ColorMatrixFilter().tint(new Color(0, 0, 255)));
+      filtered.cacheAsTexture = true;
       filtered.addChild(sprite);
       root.addChild(filtered);
 
@@ -199,7 +199,7 @@ describe('effect direct-draw pixel behaviour (WebGL2)', () => {
 
     try {
       sprite.setPosition(8, 8);
-      filtered.addFilter(new ColorFilter(new Color(255, 0, 0)));
+      filtered.addFilter(new ColorMatrixFilter().tint(new Color(255, 0, 0)));
       filtered.addChild(sprite);
       root.addChild(filtered);
 
@@ -232,7 +232,7 @@ describe('effect direct-draw pixel behaviour (WebGL2)', () => {
 
     try {
       sprite.setPosition(8, 8);
-      effected.addFilter(new ColorFilter(new Color(0, 255, 0)));
+      effected.addFilter(new ColorMatrixFilter().tint(new Color(0, 255, 0)));
       effected.mask = new Rectangle(16, 16, 16, 16);
       effected.addChild(sprite);
       root.addChild(effected);
@@ -255,7 +255,7 @@ describe('effect direct-draw pixel behaviour (WebGL2)', () => {
     const root = new Container();
     const filtered = new Container();
     const sprite = new Sprite(texture);
-    const filter = new ColorFilter(new Color(255, 0, 0));
+    const filter = new ColorMatrixFilter().tint(new Color(255, 0, 0));
 
     try {
       sprite.setPosition(16, 16);
@@ -266,7 +266,7 @@ describe('effect direct-draw pixel behaviour (WebGL2)', () => {
       renderWebGl2Once(backend, root);
       expectPixelNear(readWebGl2Pixel(backend, 20, 20), [255, 0, 0, 255]);
 
-      filter.color.set(0, 0, 255);
+      filter.reset().tint(new Color(0, 0, 255));
 
       renderWebGl2Once(backend, root);
       expectPixelNear(readWebGl2Pixel(backend, 20, 20), [0, 0, 255, 255]);
@@ -283,7 +283,7 @@ describe('effect direct-draw pixel behaviour (WebGL2)', () => {
     const root = new Container();
     const filtered = new Container();
     const sprite = new Sprite(texture);
-    const filter = new ColorFilter(new Color(255, 0, 0));
+    const filter = new ColorMatrixFilter().tint(new Color(255, 0, 0));
 
     try {
       sprite.setPosition(16, 16);
@@ -317,8 +317,8 @@ describe('effect direct-draw pixel behaviour (WebGL2)', () => {
     try {
       first.setPosition(8, 8);
       second.setPosition(40, 40);
-      first.addFilter(new ColorFilter(new Color(255, 0, 0)));
-      second.addFilter(new ColorFilter(new Color(0, 0, 255)));
+      first.addFilter(new ColorMatrixFilter().tint(new Color(255, 0, 0)));
+      second.addFilter(new ColorMatrixFilter().tint(new Color(0, 0, 255)));
       root.addChild(first);
       root.addChild(second);
 

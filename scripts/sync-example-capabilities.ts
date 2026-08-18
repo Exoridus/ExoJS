@@ -148,8 +148,8 @@ function syncCapabilities(): void {
     }
   }
 
-  // Write back with the same indentation Codex used (4 spaces) — match
-  // the existing manifest style.
+  // Write back with the manifest's existing 4-space indentation - re-indenting
+  // it would rewrite every line of the file.
   writeFileSync(manifestPath, `${JSON.stringify(catalog, null, 4)}\n`);
 
   process.stdout.write(`Sync complete. Changed: ${changed}, unchanged: ${unchanged}.\n`);

@@ -15,7 +15,7 @@ import { createWebGl2Harness } from './harness';
  * sampling profiler (see `allocation.ts`).
  *
  * Lives in its own `rendering-alloc` vitest project and runs via
- * `pnpm test:alloc` — NOT in `test:coverage`. See {@link INSTRUMENTED}.
+ * `pnpm test:alloc` - NOT in `test:coverage`. See {@link INSTRUMENTED}.
  *
  * ── Methodology ─────────────────────────────────────────────────
  * The sampler is a STATISTICAL profiler (Poisson, one sample per 512 B), so a
@@ -23,7 +23,7 @@ import { createWebGl2Harness } from './harness';
  * MEDIAN of {@link WINDOWS} independent sampling windows (each its own fresh
  * harness + profiler session) and asserts the median against the budget
  * {@link budgetBytesFor} derives from the documented baseline. The median is
- * immune to the occasional high outlier — see the `windows=[…]` log line, where
+ * immune to the occasional high outlier - see the `windows=[…]` log line, where
  * one window routinely lands several percent high while the median sits within
  * ~1% run to run.
  *
@@ -33,10 +33,10 @@ import { createWebGl2Harness } from './harness';
  * and never exceeds the same scene's fresh-process reading, so the pass/fail
  * decision is sound. What a shared process CANNOT do is attribute bytes to a
  * callsite, or measure a scene whose rate depends on which optimisation state
- * V8 settled into — both need one scene per process. That is
+ * V8 settled into - both need one scene per process. That is
  * `run-allocation-cell.ts`:
  *
- *   node --conditions=@codexo/source --import ./scripts/glsl-register.mjs --import tsx/esm \
+ *   node --conditions=@codexo/exojs-source --import ./scripts/glsl-register.mjs --import tsx/esm \
  *     test/perf/rendering/run-allocation-cell.ts --id "mesh/1000" --profile
  *
  * Never mix its numbers with this gate's inside one table; {@link BASELINE_KB}
@@ -53,10 +53,10 @@ import { createWebGl2Harness } from './harness';
  * number the way the entries below do.
  *
  * The standalone `pnpm perf:renderers:alloc` launcher measures the same scenes
- * the same way and is source-accurate too (it passes `--conditions=@codexo/source`,
+ * the same way and is source-accurate too (it passes `--conditions=@codexo/exojs-source`,
  * so `#*` resolves to `src`, not a `dist` build). It reports ONE window per
  * scene rather than a median, and it additionally covers the nine-slice /
- * repeating / tilemap families and the 1M reference stage — use it for a broad
+ * repeating / tilemap families and the 1M reference stage - use it for a broad
  * look, and this gate for the budgeted, reproducible numbers.
  */
 

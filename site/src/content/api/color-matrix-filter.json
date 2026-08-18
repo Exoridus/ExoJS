@@ -1,0 +1,750 @@
+{
+  "title": "ColorMatrixFilter",
+  "description": "A Filter that runs one affine colour transform over everything it is given: `RGBA' = M·RGBA + bias`, carried as a 4×5 row-major matrix of four `[r, g, b, a, offset]` rows. One matrix expresses brightness, contrast, saturation, hue-ish channel mixing, inversion, sepia and flat tinting - so there is one filter class rather than one per operation. The conveniences below CONCATENATE onto the current matrix in call order, and reset goes back to the identity. ```ts // Desaturate a whole subtree and lift it slightly. subtree.filters = [new ColorMatrixFilter().grayscale().brightness(1.1)]; // Damage flash: multiply the subtree by red for a few frames. flash.tint(Color.red); ``` For a cheap per-drawable multiply, use Drawable.tint instead - it costs no render target at all. Reach for this filter when the transform is more than a multiply, or when it has to cover a whole subtree as one image. For non-linear, authored grading use LutFilter. Colour operations run on STRAIGHT alpha: the shader divides the premultiplied sample by its alpha, transforms, and multiplies back, so a half-transparent edge grades the same way an opaque pixel does. Runs on a ShaderFilter carrying both a GLSL and a WGSL source, so it works on either backend without the caller choosing one.",
+  "symbol": "ColorMatrixFilter",
+  "kind": "class",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 16,
+  "counts": {
+    "constructors": 1,
+    "methods": 13,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A Filter that runs one affine colour transform over everything it is given: `RGBA' = M·RGBA + bias`, carried as a 4×5 row-major matrix of four `[r, g, b, a, offset]` rows.",
+        "One matrix expresses brightness, contrast, saturation, hue-ish channel mixing, inversion, sepia and flat tinting - so there is one filter class rather than one per operation. The conveniences below CONCATENATE onto the current matrix in call order, and reset goes back to the identity.",
+        "```ts // Desaturate a whole subtree and lift it slightly. subtree.filters = [new ColorMatrixFilter().grayscale().brightness(1.1)];",
+        "// Damage flash: multiply the subtree by red for a few frames. flash.tint(Color.red); ```",
+        "For a cheap per-drawable multiply, use Drawable.tint instead - it costs no render target at all. Reach for this filter when the transform is more than a multiply, or when it has to cover a whole subtree as one image. For non-linear, authored grading use LutFilter.",
+        "Colour operations run on STRAIGHT alpha: the shader divides the premultiplied sample by its alpha, transforms, and multiplies back, so a half-transparent edge grades the same way an opaque pixel does.",
+        "Runs on a ShaderFilter carrying both a GLSL and a WGSL source, so it works on either backend without the caller choosing one."
+      ],
+      "importLine": "import { ColorMatrixFilter } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(matrix: ColorMatrixEntries): ColorMatrixFilter",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "matrix",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ColorMatrixEntries",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ColorMatrixFilter",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "matrix",
+              "type": "ColorMatrixEntries",
+              "optional": false
+            }
+          ],
+          "returnType": "ColorMatrixFilter",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "apply",
+          "signature": "apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture, resolution: number): void",
+          "signatureTokens": [
+            {
+              "text": "apply",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "backend",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderBackend",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "input",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderTexture",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "output",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderTexture",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "resolution",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "backend",
+              "type": "RenderBackend",
+              "optional": false
+            },
+            {
+              "name": "input",
+              "type": "RenderTexture",
+              "optional": false
+            },
+            {
+              "name": "output",
+              "type": "RenderTexture",
+              "optional": false
+            },
+            {
+              "name": "resolution",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Execute one filter pass: sample from input, write the result to output. Both textures are bounds × resolution texels - NOT the drawable's logical bounding box. Any parameter a subclass expresses in pixels (a blur radius, a displacement amount) is in LOGICAL units by convention and must be multiplied by resolution before it is used as a texel offset; otherwise the effect shrinks by 1/resolution on a HiDPI display. Parameters expressed as a fraction of the target (or as pure colour maths) need no adjustment. The engine always passes resolution. It is optional for the hand-rolled case - a post-processing chain that creates its own RenderTextures and calls apply directly - where the textures are whatever size the caller made them and 1 is the honest answer."
+        },
+        {
+          "name": "brightness",
+          "signature": "brightness(amount: number): this",
+          "signatureTokens": [
+            {
+              "text": "brightness",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "amount",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "amount",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Scale the colour channels by amount. 1 changes nothing."
+        },
+        {
+          "name": "contrast",
+          "signature": "contrast(amount: number): this",
+          "signatureTokens": [
+            {
+              "text": "contrast",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "amount",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "amount",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Push the colour channels away from mid grey by amount. 1 changes nothing."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Release any GPU-side resources held by this filter (uniform buffers, pipelines, intermediate textures). The base drops the attachment list; subclasses with GPU state (BlurFilter, ColorMatrixFilter) override and call super.destroy()."
+        },
+        {
+          "name": "getOutputBounds",
+          "signature": "getOutputBounds(input: ReadonlyRectangle, output: Rectangle): void",
+          "signatureTokens": [
+            {
+              "text": "getOutputBounds",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "input",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyRectangle",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "output",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Rectangle",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "input",
+              "type": "ReadonlyRectangle",
+              "optional": false
+            },
+            {
+              "name": "output",
+              "type": "Rectangle",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "The logical bounds this effect can produce from the logical bounds it is given - the contract that lets an effect change a drawable's visual extent instead of being clipped by the geometry it was captured from. Both rectangles are in the capture domain's LOGICAL units, the same ones RenderNode.getBounds reports. They are not device pixels: the target a pass runs against is separately allocated at bounds × resolution texels, so an expansion of 8 stays 8 logical units at every pixel ratio. The default is the identity - an effect that only recolours what it is given (a colour matrix, a LUT) needs no override. An effect that reaches outside its input (a blur, a glow) must declare that reach, and one that reaches asymmetrically (a drop shadow) may move the edges independently: ts public override getOutputBounds(input: ReadonlyRectangle, output: Rectangle): void { output.set(input.x - this.radius, input.y - this.radius, input.width + this.radius * 2, input.height + this.radius * 2); }  In a CHAIN each filter is asked in turn, with the previous filter's output as its input, and the barrier's capture domain is the union of the source bounds and every stage's answer. A bounds-REDUCING effect is therefore represented - the domain simply keeps the room its predecessors needed, so no pass is ever clipped by a target smaller than what it declared. input and output are never the same object, so an implementation may read input freely while writing output. Called once per frame for every filtered node, so it must not allocate."
+        },
+        {
+          "name": "grayscale",
+          "signature": "grayscale(): this",
+          "signatureTokens": [
+            {
+              "text": "grayscale",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "Collapse every channel onto its luminance - saturate at 0."
+        },
+        {
+          "name": "invalidate",
+          "signature": "invalidate(): void",
+          "signatureTokens": [
+            {
+              "text": "invalidate",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Tell every node this filter is attached to that its rendered output is out of date. Call it after mutating anything that changes what the filter draws or how far it reaches - the stock filters do this from their own setters. Without it a cached or retained representation of the owning node keeps replaying the result the filter produced before the change."
+        },
+        {
+          "name": "invert",
+          "signature": "invert(): this",
+          "signatureTokens": [
+            {
+              "text": "invert",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "Replace each colour channel with 1 - channel, leaving alpha alone."
+        },
+        {
+          "name": "reset",
+          "signature": "reset(): this",
+          "signatureTokens": [
+            {
+              "text": "reset",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "Back to the identity transform."
+        },
+        {
+          "name": "saturate",
+          "signature": "saturate(amount: number): this",
+          "signatureTokens": [
+            {
+              "text": "saturate",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "amount",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "amount",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Interpolate between luminance (0) and the original colour (1). Values above 1 oversaturate."
+        },
+        {
+          "name": "sepia",
+          "signature": "sepia(): this",
+          "signatureTokens": [
+            {
+              "text": "sepia",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "The standard warm-brown photographic matrix."
+        },
+        {
+          "name": "setMatrix",
+          "signature": "setMatrix(matrix: ColorMatrixEntries): this",
+          "signatureTokens": [
+            {
+              "text": "setMatrix",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "matrix",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ColorMatrixEntries",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "matrix",
+              "type": "ColorMatrixEntries",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Replace the matrix outright. Returns this for chaining."
+        },
+        {
+          "name": "tint",
+          "signature": "tint(color: Color): this",
+          "signatureTokens": [
+            {
+              "text": "tint",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "color",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "color",
+              "type": "Color",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Multiply by a flat colour, alpha included - the same arithmetic Drawable.tint applies per drawable, here over the whole subtree the filter is attached to."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "resolution",
+          "signature": "resolution: TargetResolution",
+          "signatureTokens": [
+            {
+              "text": "resolution",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TargetResolution",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Resolution this filter's render targets are rasterized at, in device pixels per logical unit. 'inherit' (the default) matches the surface the result is composited into, so a filtered subtree stays as sharp as its surroundings on a HiDPI display. Lower it for a filter whose output is low-frequency anyway - a heavy blur at 0.5 costs a quarter of the fragments and is hard to tell apart. A filter CHAIN shares one target size, so the whole chain runs at the lowest resolution any of its filters asks for. ts const blur = new BlurFilter({ radius: 8 }); blur.resolution = 0.5; // half-resolution blur, quarter the fill cost "
+        },
+        {
+          "name": "matrix",
+          "signature": "matrix: ColorMatrixEntries",
+          "signatureTokens": [
+            {
+              "text": "matrix",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ColorMatrixEntries",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The current 4×5 matrix. Assign a new one, or use the conveniences."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/filters/ColorMatrixFilter.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/ColorMatrixFilter.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/filters/ColorMatrixFilter.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/ColorMatrixFilter.ts"
+}

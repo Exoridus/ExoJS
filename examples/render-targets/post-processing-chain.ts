@@ -1,4 +1,4 @@
-import { Application, BlurFilter, CallbackRenderPass, Color, ColorFilter, Graphics, type RenderingContext, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite, type Time } from '@codexo/exojs';
+import { Application, BlurFilter, CallbackRenderPass, Color, ColorMatrixFilter, Graphics, type RenderingContext, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite, type Time } from '@codexo/exojs';
 
 
 
@@ -8,7 +8,7 @@ class PostProcessingChainScene extends Scene {
     private b!: RenderTexture;
     private c!: RenderTexture;
     private blur!: BlurFilter;
-    private color!: ColorFilter;
+    private color!: ColorMatrixFilter;
     private final!: Sprite;
     private pipeline!: RenderPipeline;
     private time = 0;
@@ -22,7 +22,7 @@ class PostProcessingChainScene extends Scene {
         this.b = new RenderTexture(width, height);
         this.c = new RenderTexture(width, height);
         this.blur = new BlurFilter({ radius: 6, quality: 2 });
-        this.color = new ColorFilter(new Color(140, 190, 255));
+        this.color = new ColorMatrixFilter().tint(new Color(140, 190, 255));
         this.final = new Sprite(this.c);
 
         // Configured once: scene → off-screen, two filter passes, composite to the canvas.

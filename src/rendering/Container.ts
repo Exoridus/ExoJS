@@ -651,7 +651,7 @@ export class Container extends RenderNode {
    * Destroy this container and every node beneath it.
    *
    * Ownership is by containment: detaching a subtree only unlinks it, so the
-   * descendants' GPU-backed resources (cached bitmaps, filters, render
+   * descendants' GPU-backed resources (cached textures, filters, render
    * textures) and signal listeners would outlive the tree that owned them and
    * leak on every scene change.
    */

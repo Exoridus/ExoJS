@@ -1,8 +1,9 @@
 import { Signal } from '#core/Signal';
 import { DataTexture } from '#rendering/texture/DataTexture';
 import { Texture } from '#rendering/texture/Texture';
-import { TextureFormat } from '#rendering/types';
+import { ScaleModes, TextureFormat } from '#rendering/types';
 
+import { cssFontString, GlyphMetrics } from './GlyphMetrics';
 import { GlyphSdf } from './GlyphSdf';
 import type { GlyphInfo, GlyphKey, GlyphProvider } from './types';
 
@@ -113,6 +114,9 @@ export class AtlasPage {
   private readonly _ctx: Ctx2D | null = null;
   private readonly _colorGlyphs: boolean;
 
+  /** Scratch context used by {@link measureGlyph} in SDF mode, created on first use. */
+  private _measureCtx: Ctx2D | null = null;
+
   public constructor(index: number, width: number, height: number, mode: AtlasMode) {
     this.index = index;
     this.mode = mode;
@@ -124,12 +128,25 @@ export class AtlasPage {
     if (mode === 'sdf') {
       this._sdfBuffer = new Uint8Array(width * height);
       this._sdfTexture = new DataTexture({ width, height, format: TextureFormat.R8, data: this._sdfBuffer });
+      // A DataTexture defaults to NEAREST, which is right for the lookup tables
+      // that class exists for - a transform row must be read back as the exact
+      // number that was written. An SDF page is the opposite kind of data: it
+      // stores a CONTINUOUS distance, and bilinear reconstruction of it between
+      // texels is the entire reason a distance field is resolution-independent.
+      // Sampled with NEAREST the field is piecewise constant, so a glyph drawn
+      // at anything other than one atlas texel per device pixel gets a staircased
+      // edge (magnified) or a jittered one (minified) - which is exactly what a
+      // raised or lowered `Text.pixelRatio` produces.
+      this._sdfTexture.setScaleMode(ScaleModes.Linear);
       this._sdfTexture.setSize(width, height);
       this.texture = this._sdfTexture;
     } else {
       const { canvas, ctx } = makeCtx(width, height);
       this._ctx = ctx;
       this.texture = new Texture(canvas as HTMLCanvasElement);
+      // Already the `Texture` default; stated so the two page kinds visibly
+      // agree on how a glyph is filtered.
+      this.texture.setScaleMode(ScaleModes.Linear);
       this.texture.setSize(width, height);
     }
   }
@@ -165,8 +182,11 @@ export class AtlasPage {
       this._ctx.textBaseline = 'alphabetic';
       return this._ctx.measureText(char);
     }
-    const c = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(1, 1) : document.createElement('canvas');
-    const ctx = c.getContext('2d')!;
+    // SDF pages own no drawing context, so measuring needs a scratch one. Kept
+    // for the page's lifetime rather than created per call: this runs once per
+    // uncached glyph, and a fresh canvas per measurement is a whole allocation
+    // (plus a context) for one `measureText`.
+    const ctx = (this._measureCtx ??= makeCtx(1, 1).ctx);
     ctx.font = font;
     ctx.textBaseline = 'alphabetic';
     return ctx.measureText(char);
@@ -210,16 +230,25 @@ export class AtlasPage {
  *
  * In `'sdf'` mode (default) each atlas page is a single-channel R8
  * `DataTexture` populated by {@link GlyphSdf}. One `GlyphSdf` instance is kept per
- * font size so the atlas can mix sizes efficiently.
+ * raster font size so the atlas can mix sizes efficiently.
  *
  * In `'color'` mode pages are RGBA canvas textures that preserve full glyph
  * colour data for emoji and colour fonts.
+ *
+ * **Pixel ratio.** An atlas rasterizes at `pixelRatio` device pixels per logical
+ * pixel: a glyph asked for at logical size 9 in a ratio-3 atlas is rendered from
+ * a 27px font, and every raster-derived number it hands back is divided by the
+ * ratio again so the caller keeps working in logical units. The ratio is part of
+ * the atlas's identity ({@link GlyphAtlasPool}) - it has to be, because the pool
+ * is process-wide and two applications at different densities must not share one
+ * set of pages. The LOGICAL metrics layout consumes (advance, kerning) come from
+ * the ratio-independent {@link GlyphMetrics} instead, so the same string lays out
+ * identically at every ratio.
  * @advanced
  */
 export class GlyphAtlas implements GlyphProvider {
   private _pages: AtlasPage[] = [];
   private readonly _cache = new Map<GlyphKey, GlyphInfo>();
-  private readonly _kerningCache = new Map<string, number>();
   private readonly _pageSize: number;
 
   private readonly _family: string;
@@ -227,6 +256,9 @@ export class GlyphAtlas implements GlyphProvider {
   private readonly _fontWeight: string;
   private readonly _mode: AtlasMode;
   private readonly _sdfRadius: number;
+  private readonly _pixelRatio: number;
+  private readonly _rasterSdfRadius: number;
+  private readonly _metrics: GlyphMetrics;
 
   /**
    * Dispatched whenever a new atlas page is allocated.
@@ -241,16 +273,34 @@ export class GlyphAtlas implements GlyphProvider {
    */
   public readonly onPageAdded = new Signal<[pageIndex: number]>();
 
-  /** {@link GlyphSdf} instances keyed by font size — only used in SDF mode. */
+  /** {@link GlyphSdf} instances keyed by RASTER font size - only used in SDF mode. */
   private readonly _sdfInstances = new Map<number, GlyphSdf>();
 
-  public constructor(family: string, fontStyle: 'normal' | 'italic', fontWeight: string, pageSize = 1024, mode: AtlasMode = 'sdf', sdfRadius = SDF_RADIUS) {
+  public constructor(
+    family: string,
+    fontStyle: 'normal' | 'italic',
+    fontWeight: string,
+    pageSize = 1024,
+    mode: AtlasMode = 'sdf',
+    sdfRadius = SDF_RADIUS,
+    pixelRatio = 1,
+    metrics?: GlyphMetrics,
+  ) {
     this._family = family;
     this._fontStyle = fontStyle;
     this._fontWeight = fontWeight;
     this._pageSize = pageSize;
     this._mode = mode;
     this._sdfRadius = sdfRadius;
+    this._pixelRatio = pixelRatio;
+    // The SDF buffer has to grow with the raster grid, or the encoded distance
+    // field would reach `sdfRadius / pixelRatio` LOGICAL pixels past the glyph
+    // and an outline or shadow would silently shorten as the ratio rises.
+    this._rasterSdfRadius = Math.max(1, Math.round(sdfRadius * pixelRatio));
+    // A variant measured elsewhere hands its metrics in so every atlas of the
+    // same typeface answers with the same advances; a standalone atlas measures
+    // for itself.
+    this._metrics = metrics ?? new GlyphMetrics(family, fontStyle, fontWeight);
 
     this._addPage();
   }
@@ -263,6 +313,29 @@ export class GlyphAtlas implements GlyphProvider {
     return this._mode;
   }
 
+  /**
+   * Device pixels per logical pixel this atlas rasterizes at. Part of its
+   * identity in the {@link GlyphAtlasPool}: a ratio-2 and a ratio-3 atlas of the
+   * same font variant are different resources holding different pages.
+   */
+  public get pixelRatio(): number {
+    return this._pixelRatio;
+  }
+
+  /**
+   * SDF buffer radius in LOGICAL pixels - the outline/shadow reach this atlas
+   * can encode. Independent of {@link pixelRatio}: the raster buffer grows with
+   * the ratio so the logical reach stays put.
+   */
+  public get sdfRadius(): number {
+    return this._sdfRadius;
+  }
+
+  /** The shared logical metrics this atlas takes its advances and kerning from. */
+  public get metrics(): GlyphMetrics {
+    return this._metrics;
+  }
+
   public getGlyph(char: string, size: number): GlyphInfo {
     const key: GlyphKey = `${char}:${size}`;
     const cached = this._cache.get(key);
@@ -271,25 +344,12 @@ export class GlyphAtlas implements GlyphProvider {
   }
 
   public getKerning(prev: string, next: string, fontSize: number): number {
-    const key = `${prev}${next}:${fontSize}`;
-    const cached = this._kerningCache.get(key);
-    if (cached !== undefined) return cached;
-
-    const font = this._cssFont(fontSize);
-    // Invariant: a base page is always present (constructor + clear add one).
-    const page = this._pages[0]!;
-    const pair = page.measureGlyph(prev + next, font).width;
-    const a = page.measureGlyph(prev, font).width;
-    const b = page.measureGlyph(next, font).width;
-    const kerning = pair - a - b;
-
-    this._kerningCache.set(key, kerning);
-    return kerning;
+    return this._metrics.getKerning(prev, next, fontSize);
   }
 
   public clear(): void {
     this._cache.clear();
-    this._kerningCache.clear();
+    this._metrics.clear();
     this._sdfInstances.clear();
     for (const page of this._pages) {
       page.reset();
@@ -309,41 +369,52 @@ export class GlyphAtlas implements GlyphProvider {
   }
 
   private _cssFont(size: number): string {
-    const style = this._fontStyle !== 'normal' ? `${this._fontStyle} ` : '';
-    return `${style}${this._fontWeight} ${size}px ${this._family}`;
+    return cssFontString(this._family, this._fontStyle, this._fontWeight, size);
   }
 
-  private _getSdf(fontSize: number): GlyphSdf {
-    let instance = this._sdfInstances.get(fontSize);
+  /** Raster font size, in device pixels, for a glyph asked for at `size` logical pixels. */
+  private _rasterFontSize(size: number): number {
+    return size * this._pixelRatio;
+  }
+
+  private _getSdf(rasterFontSize: number): GlyphSdf {
+    let instance = this._sdfInstances.get(rasterFontSize);
     if (instance === undefined) {
       instance = new GlyphSdf({
-        fontSize,
+        fontSize: rasterFontSize,
         fontFamily: this._family,
         fontWeight: this._fontWeight,
         fontStyle: this._fontStyle,
-        buffer: this._sdfRadius,
-        radius: this._sdfRadius,
+        buffer: this._rasterSdfRadius,
+        radius: this._rasterSdfRadius,
         cutoff: 0.5,
       });
-      this._sdfInstances.set(fontSize, instance);
+      this._sdfInstances.set(rasterFontSize, instance);
     }
     return instance;
   }
 
   private _rasterizeSdf(char: string, size: number, key: GlyphKey): GlyphInfo {
-    const result = this._getSdf(size).draw(char);
+    const ratio = this._pixelRatio;
+    const result = this._getSdf(this._rasterFontSize(size)).draw(char);
 
-    const { page, slot } = this._allocateSlot(result.width, result.height);
+    const { page, slot } = this._allocateSlot(result.width, result.height, char, size);
     page.writeSdf(result.data, slot.x, slot.y, result.width, result.height);
 
     const ps = this._pageSize;
     const info: GlyphInfo = {
       x: slot.x,
       y: slot.y,
-      width: result.width,
-      height: result.height,
-      advance: result.glyphAdvance,
-      ascent: result.glyphTop + result.glyphHeight, // distance from tile top to glyph bottom
+      // Slot origin and UVs stay in ATLAS TEXELS - they address the raster grid.
+      // Everything else is divided back into logical pixels, which is the space
+      // the quad, the cursor and the node's bounds live in.
+      width: result.width / ratio,
+      height: result.height / ratio,
+      // Not `result.glyphAdvance`: the advance is a logical typographic number
+      // and comes from the shared metrics, so it is bit-identical at every
+      // ratio and a re-rasterization can never move a line break.
+      advance: this._metrics.advance(char, size),
+      ascent: (result.glyphTop + result.glyphHeight) / ratio, // tile top → glyph bottom
       page: page.index,
       uvLeft: slot.x / ps,
       uvTop: slot.y / ps,
@@ -351,8 +422,8 @@ export class GlyphAtlas implements GlyphProvider {
       uvBottom: (slot.y + result.height) / ps,
       // Shift the quad left/up by the SDF buffer so the glyph content aligns
       // with the logical cursor position (bearing = −buffer on both axes).
-      xBearing: -result.glyphLeft,
-      yBearing: -result.glyphTop,
+      xBearing: -result.glyphLeft / ratio,
+      yBearing: -result.glyphTop / ratio,
     };
 
     this._cache.set(key, info);
@@ -360,26 +431,30 @@ export class GlyphAtlas implements GlyphProvider {
   }
 
   private _rasterizeCanvas(char: string, size: number, key: GlyphKey): GlyphInfo {
-    const font = this._cssFont(size);
+    const ratio = this._pixelRatio;
+    const rasterSize = this._rasterFontSize(size);
+    // Colour glyphs are rasterized by the canvas at the RASTER size, so their
+    // tile metrics have to be measured there too - the ratio-1 numbers would
+    // size the slot for a glyph a third the size of the one actually drawn.
+    const font = this._cssFont(rasterSize);
     // Invariant: a base page is always present (constructor + clear add one).
     const metrics = this._pages[0]!.measureGlyph(char, font);
 
     const ascent = Math.ceil(
-      (metrics as TextMetrics & { fontBoundingBoxAscent?: number }).fontBoundingBoxAscent ?? metrics.actualBoundingBoxAscent ?? size * 0.8,
+      (metrics as TextMetrics & { fontBoundingBoxAscent?: number }).fontBoundingBoxAscent ?? metrics.actualBoundingBoxAscent ?? rasterSize * 0.8,
     );
     const descent = Math.ceil(
-      (metrics as TextMetrics & { fontBoundingBoxDescent?: number }).fontBoundingBoxDescent ?? metrics.actualBoundingBoxDescent ?? size * 0.2,
+      (metrics as TextMetrics & { fontBoundingBoxDescent?: number }).fontBoundingBoxDescent ?? metrics.actualBoundingBoxDescent ?? rasterSize * 0.2,
     );
-    const advance = metrics.width;
     const bbLeft = metrics.actualBoundingBoxLeft ?? 0;
     const bbRight = metrics.actualBoundingBoxRight ?? 0;
-    const glyphWidth = Math.max(1, Math.ceil(bbLeft + bbRight) || Math.ceil(advance));
+    const glyphWidth = Math.max(1, Math.ceil(bbLeft + bbRight) || Math.ceil(metrics.width));
     const glyphHeight = Math.max(1, ascent + descent);
 
     const slotW = glyphWidth + glyphPadding * 2;
     const slotH = glyphHeight + glyphPadding * 2;
 
-    const { page, slot } = this._allocateSlot(slotW, slotH);
+    const { page, slot } = this._allocateSlot(slotW, slotH, char, size);
     page.rasterize(char, slot.x, slot.y, ascent, bbLeft, font);
     page.uploadDirtyRegion();
 
@@ -387,10 +462,10 @@ export class GlyphAtlas implements GlyphProvider {
     const info: GlyphInfo = {
       x: slot.x,
       y: slot.y,
-      width: glyphWidth,
-      height: glyphHeight,
-      advance,
-      ascent,
+      width: glyphWidth / ratio,
+      height: glyphHeight / ratio,
+      advance: this._metrics.advance(char, size),
+      ascent: ascent / ratio,
       page: page.index,
       uvLeft: slot.x / ps,
       uvTop: slot.y / ps,
@@ -402,7 +477,7 @@ export class GlyphAtlas implements GlyphProvider {
     return info;
   }
 
-  private _allocateSlot(w: number, h: number): { page: AtlasPage; slot: { x: number; y: number } } {
+  private _allocateSlot(w: number, h: number, char: string, size: number): { page: AtlasPage; slot: { x: number; y: number } } {
     for (const page of this._pages) {
       const slot = page.insert(w, h);
       if (slot !== null) return { page, slot };
@@ -412,7 +487,14 @@ export class GlyphAtlas implements GlyphProvider {
     const slot = newPage.insert(w, h);
 
     if (slot === null) {
-      throw new Error(`GlyphAtlas: glyph (${w}×${h}px) exceeds page size (${this._pageSize}px).`);
+      // Named in full: at a raised pixel ratio the tile that overflows is
+      // several times the size the caller asked for, and "glyph too big" with
+      // no ratio in it sends the reader looking at the wrong number.
+      throw new Error(
+        `GlyphAtlas: the tile for "${char}" at font size ${size} × pixelRatio ${this._pixelRatio} ` +
+          `is ${w}×${h}px and exceeds the ${this._pageSize}px atlas page. ` +
+          `Lower the font size, lower the text pixelRatio, or use a larger atlas page size.`,
+      );
     }
 
     return { page: newPage, slot };

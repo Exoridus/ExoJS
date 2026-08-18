@@ -1,6 +1,6 @@
 import { WorkletEffect } from '@codexo/exojs';
 
-import { pitchShiftWorkletSource } from '../worklets/pitch-shift.worklet';
+import pitchShiftWorkletSource from '../worklets/pitch-shift.worklet.ts?worklet';
 
 export interface PitchShiftEffectOptions {
   /** Pitch ratio. 1.0 = no change, 0.5 = octave down, 2.0 = octave up. Default 1.0. */

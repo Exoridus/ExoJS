@@ -372,7 +372,7 @@ describe('material grouping', () => {
           scope: {
             kind: RenderEntryKind.Barrier as const,
             node: a as any,
-            effect: { filters: [], clip: 0, maskSource: null, cacheAsBitmap: false, blendMode: 0 },
+            effect: { filters: [], clip: 0, maskSource: null, cacheAsTexture: false, blendMode: 0 },
             childPlan: null,
             left: 0,
             top: 0,

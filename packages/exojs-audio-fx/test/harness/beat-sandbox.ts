@@ -16,7 +16,7 @@
  *     block boundaries, so hops fire at the same positions for any block size.
  */
 
-import { beatDetectorWorkletSource } from '../../src/worklets/beat-detector.worklet';
+import beatDetectorWorkletSource from '../../src/worklets/beat-detector.worklet.ts?worklet';
 
 export const SAMPLE_RATE = 48000;
 

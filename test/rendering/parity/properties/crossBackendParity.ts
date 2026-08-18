@@ -11,7 +11,7 @@ import { Color } from '#core/Color';
 
 import { readWebGl2Frame, readWebGpuFrame, renderWebGl2Once, renderWebGpuOnce, webGl2Available, webGpuAvailable } from '../../browser/_backendSetup';
 import { openWebGl2, openWebGpu } from '../backends';
-import { maxChannelDelta } from '../frames';
+import { maxChannelDelta, pixelsExceeding } from '../frames';
 import type { CrossBackendProperty, PropertyResult } from '../types';
 
 /**
@@ -79,6 +79,29 @@ export const crossBackendParity: CrossBackendProperty = {
           delta,
           note: `backends agree within ${delta} of one channel step`,
         };
+      }
+
+      const tolerance = scene.crossBackendTolerance;
+
+      if (tolerance !== undefined) {
+        const differing = pixelsExceeding(glFrame, gpuFrame, LAST_BIT);
+        const fraction = differing / (scene.size * scene.size);
+        const within = delta <= tolerance.delta && fraction <= tolerance.maxPixelFraction;
+        const measured = `${delta} on ${differing} px (${(fraction * 100).toFixed(1)}% of the frame)`;
+
+        return within
+          ? {
+              support: 'supported',
+              evidence: 'tolerant',
+              delta,
+              note: `backends differ by ${measured}, within this scene's declared tolerance`,
+            }
+          : {
+              support: 'divergent',
+              evidence: 'traced',
+              delta,
+              note: `backends differ by ${measured}, beyond this scene's tolerance of ${tolerance.delta} on ${(tolerance.maxPixelFraction * 100).toFixed(0)}% of the frame`,
+            };
       }
 
       return {

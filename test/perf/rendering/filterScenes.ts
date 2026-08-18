@@ -4,7 +4,7 @@
  * Deliberately NOT part of `ALLOCATION_ARCHETYPES`: that list's documented
  * baselines are the medians ITS order produces, so appending to it would
  * invalidate every number in the gate. These scenes answer a different
- * question — how filter allocation SCALES — and are driven one-per-process by
+ * question - how filter allocation SCALES - and are driven one-per-process by
  * `run-allocation-cell.ts`.
  *
  * ── Why a matrix and not a coverage list ──────────────────────────────────
@@ -15,10 +15,10 @@
  *
  *   BARRIER      the plan-side entry: an effect descriptor, a barrier scope, a
  *                child plan, and a collect walk that cannot use the retained
- *                tier. `clip/N` isolates it — a rect clip is a barrier with NO
+ *                tier. `clip/N` isolates it - a rect clip is a barrier with NO
  *                offscreen target and NO filter pass.
  *   TARGET       the offscreen capture: acquire, a `BackendTargetPass`, a
- *                render-to-texture round trip, release. `mask/N` isolates it —
+ *                render-to-texture round trip, release. `mask/N` isolates it -
  *                an alpha mask takes two targets and composites, with no
  *                `Filter.apply` anywhere.
  *   FILTER PASS  `Filter.apply` itself, once per filter in the chain.
@@ -32,10 +32,10 @@
  * the scaling law: `blur-q{1,3}` varies DRAWS per filter pass while holding the
  * pass count at one, `container/1000` puts a single filter over a large subtree
  * (the opposite extreme from `color/100`), and `container-cached/1000` is that
- * same subtree with `cacheAsBitmap`, where the filter passes are supposed to
+ * same subtree with `cacheAsTexture`, where the filter passes are supposed to
  * stop running after the bake.
  *
- * Every scene here is STATIC — no `beforeFrame`. That is the point: a static
+ * Every scene here is STATIC - no `beforeFrame`. That is the point: a static
  * filtered scene should be the cheapest frame there is, and measuring one that
  * is not is what this catalog exists for.
  *
@@ -43,7 +43,7 @@
  */
 import { Container } from '#rendering/Container';
 import { BlurFilter } from '#rendering/filters/BlurFilter';
-import { ColorFilter } from '#rendering/filters/ColorFilter';
+import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import type { Filter } from '#rendering/filters/Filter';
 import type { RenderNode } from '#rendering/RenderNode';
 import { Sprite } from '#rendering/sprite/Sprite';
@@ -80,7 +80,7 @@ const buildDecoratedSprites = (count: number, decorate: (sprite: Sprite, index: 
 };
 
 /** One filtered container over `count` plain sprites — the opposite extreme from one filter per sprite. */
-const buildFilteredContainer = (count: number, filters: readonly Filter[], cacheAsBitmap: boolean): AllocationScene => {
+const buildFilteredContainer = (count: number, filters: readonly Filter[], cacheAsTexture: boolean): AllocationScene => {
   const [texture] = makeTextures(1);
   const root = new Container();
   const group = new Container();
@@ -96,7 +96,7 @@ const buildFilteredContainer = (count: number, filters: readonly Filter[], cache
     group.addFilter(filter);
   }
 
-  group.cacheAsBitmap = cacheAsBitmap;
+  group.cacheAsTexture = cacheAsTexture;
   root.addChild(group);
 
   return { root, teardown: () => root.destroy() };
@@ -105,7 +105,7 @@ const buildFilteredContainer = (count: number, filters: readonly Filter[], cache
 const colorFilterScene = (count: number, filtersPerNode: number): AllocationScene =>
   buildDecoratedSprites(count, sprite => {
     for (let i = 0; i < filtersPerNode; i++) {
-      sprite.addFilter(new ColorFilter());
+      sprite.addFilter(new ColorMatrixFilter());
     }
   });
 
@@ -232,7 +232,7 @@ export const FILTER_ARCHETYPES: readonly AllocationArchetype[] = [
           sprite.setPosition(VIEW.w + 1 + (i % 15), (i * 251) % (VIEW.h - 64));
         }
 
-        sprite.addFilter(new ColorFilter());
+        sprite.addFilter(new ColorMatrixFilter());
         root.addChild(sprite);
       }
 
@@ -245,13 +245,13 @@ export const FILTER_ARCHETYPES: readonly AllocationArchetype[] = [
     id: 'filter/container 1000',
     rationale: 'One filter over a 1000-sprite subtree: one barrier, one target, one filter pass, a thousand drawables.',
     warmup: WARMUP,
-    build: () => buildFilteredContainer(1000, [new ColorFilter()], false),
+    build: () => buildFilteredContainer(1000, [new ColorMatrixFilter()], false),
   },
   {
     id: 'filter/container-cached 1000',
-    rationale: 'The same subtree with cacheAsBitmap. After the bake the filter pass should not run per frame at all — verifies that it does not.',
+    rationale: 'The same subtree with cacheAsTexture. After the bake the filter pass should not run per frame at all — verifies that it does not.',
     warmup: WARMUP,
-    build: () => buildFilteredContainer(1000, [new ColorFilter()], true),
+    build: () => buildFilteredContainer(1000, [new ColorMatrixFilter()], true),
   },
 ];
 

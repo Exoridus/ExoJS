@@ -8,5 +8,12 @@
     "noEmit": true,
     "rootDir": "src/worklets"
   },
-  "include": ["src/worklets/bit-crusher.worklet.ts", "src/worklets/worklet-globals.d.ts"]
+  "include": [
+    "src/worklets/beat-detector.worklet.ts",
+    "src/worklets/bit-crusher.worklet.ts",
+    "src/worklets/granular.worklet.ts",
+    "src/worklets/pitch-shift.worklet.ts",
+    "src/worklets/vocoder.worklet.ts",
+    "src/worklets/worklet-globals.d.ts"
+  ]
 }

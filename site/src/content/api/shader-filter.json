@@ -1,0 +1,768 @@
+{
+  "title": "ShaderFilter",
+  "description": "A Filter that renders its input through a user-supplied shader, in whichever language the active backend speaks. One filter carries both sources - GLSL for WebGL2, WGSL for WebGPU - on the same ShaderSource contract materials use, and picks between them internally. Supply both and the filter runs unchanged under `backend: 'auto'`, where the engine decides which backend it gets. ## Usage ```ts const filter = new ShaderFilter({ glsl: { fragment: `#version 300 es precision mediump float; uniform sampler2D uTexture; uniform float uTime; in vec2 vUv; out vec4 fragColor; void main() { fragColor = texture(uTexture, vUv); } `, }, wgsl: ` struct Uniforms { uTime: f32 }; @group(0) @binding(1) var uTexture: texture_2d<f32>; @group(0) @binding(2) var uSampler: sampler; @group(1) @binding(0) var<uniform> uniforms: Uniforms; @fragment fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> { return textureSample(uTexture, uSampler, vUv); } `, uniforms: { uTime: 0 }, }); filter.setUniform('uTime', performance.now() / 1000); sprite.filters = [filter]; ``` ## Auto-bound entries Both languages receive the filter's input texture and the output dimensions, and both see a `vUv` varying running 0..1 across the quad. ### GLSL ```glsl uniform sampler2D uTexture; // the filter's input, texture slot 0 uniform vec2 uResolution; // output dimensions in texels in vec2 vUv; ``` ### WGSL ```wgsl @group(0) @binding(0) var<uniform> uResolution: vec2<f32>; @group(0) @binding(1) var uTexture: texture_2d<f32>; @group(0) @binding(2) var uSampler: sampler; ``` ## User uniforms Anything in uniforms is bound after the auto-binds. GLSL resolves them by name, with texture uniforms claiming slots 1..N. WGSL packs every non-texture uniform into one buffer at `@group(1) @binding(0)`, each in a 16-byte slot **in declaration order**, and binds texture uniforms from `@group(1) @binding(1)` onwards, each followed by its sampler. ## Missing sources A filter that carries only one language throws ShaderFilterBackendError when it attaches to a backend speaking the other one - before it compiles or allocates anything.",
+  "symbol": "ShaderFilter",
+  "kind": "class",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 12,
+  "counts": {
+    "constructors": 1,
+    "methods": 8,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A Filter that renders its input through a user-supplied shader, in whichever language the active backend speaks.",
+        "One filter carries both sources - GLSL for WebGL2, WGSL for WebGPU - on the same ShaderSource contract materials use, and picks between them internally. Supply both and the filter runs unchanged under `backend: 'auto'`, where the engine decides which backend it gets.",
+        "## Usage",
+        "```ts const filter = new ShaderFilter({ glsl: { fragment: `#version 300 es precision mediump float; uniform sampler2D uTexture; uniform float uTime; in vec2 vUv; out vec4 fragColor; void main() { fragColor = texture(uTexture, vUv); } `, }, wgsl: ` struct Uniforms { uTime: f32 };",
+        "@group(0) @binding(1) var uTexture: texture_2d<f32>; @group(0) @binding(2) var uSampler: sampler; @group(1) @binding(0) var<uniform> uniforms: Uniforms;",
+        "@fragment fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> { return textureSample(uTexture, uSampler, vUv); } `, uniforms: { uTime: 0 }, });",
+        "filter.setUniform('uTime', performance.now() / 1000); sprite.filters = [filter]; ```",
+        "## Auto-bound entries",
+        "Both languages receive the filter's input texture and the output dimensions, and both see a `vUv` varying running 0..1 across the quad.",
+        "### GLSL",
+        "```glsl uniform sampler2D uTexture; // the filter's input, texture slot 0 uniform vec2 uResolution; // output dimensions in texels in vec2 vUv; ```",
+        "### WGSL",
+        "```wgsl @group(0) @binding(0) var<uniform> uResolution: vec2<f32>; @group(0) @binding(1) var uTexture: texture_2d<f32>; @group(0) @binding(2) var uSampler: sampler; ```",
+        "## User uniforms",
+        "Anything in uniforms is bound after the auto-binds. GLSL resolves them by name, with texture uniforms claiming slots 1..N. WGSL packs every non-texture uniform into one buffer at `@group(1) @binding(0)`, each in a 16-byte slot **in declaration order**, and binds texture uniforms from `@group(1) @binding(1)` onwards, each followed by its sampler.",
+        "## Missing sources",
+        "A filter that carries only one language throws ShaderFilterBackendError when it attaches to a backend speaking the other one - before it compiles or allocates anything."
+      ],
+      "importLine": "import { ShaderFilter } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: ShaderFilterOptions): ShaderFilter",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShaderFilterOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShaderFilter",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "ShaderFilterOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "ShaderFilter",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "apply",
+          "signature": "apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture, resolution: number): void",
+          "signatureTokens": [
+            {
+              "text": "apply",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "backend",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderBackend",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "input",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderTexture",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "output",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderTexture",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "resolution",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "backend",
+              "type": "RenderBackend",
+              "optional": false
+            },
+            {
+              "name": "input",
+              "type": "RenderTexture",
+              "optional": false
+            },
+            {
+              "name": "output",
+              "type": "RenderTexture",
+              "optional": false
+            },
+            {
+              "name": "resolution",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Execute one filter pass: sample from input, write the result to output. Both textures are bounds × resolution texels - NOT the drawable's logical bounding box. Any parameter a subclass expresses in pixels (a blur radius, a displacement amount) is in LOGICAL units by convention and must be multiplied by resolution before it is used as a texel offset; otherwise the effect shrinks by 1/resolution on a HiDPI display. Parameters expressed as a fraction of the target (or as pure colour maths) need no adjustment. The engine always passes resolution. It is optional for the hand-rolled case - a post-processing chain that creates its own RenderTextures and calls apply directly - where the textures are whatever size the caller made them and 1 is the honest answer."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Release any GPU-side resources held by this filter (uniform buffers, pipelines, intermediate textures). The base drops the attachment list; subclasses with GPU state (BlurFilter, ColorMatrixFilter) override and call super.destroy()."
+        },
+        {
+          "name": "getOutputBounds",
+          "signature": "getOutputBounds(input: ReadonlyRectangle, output: Rectangle): void",
+          "signatureTokens": [
+            {
+              "text": "getOutputBounds",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "input",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyRectangle",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "output",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Rectangle",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "input",
+              "type": "ReadonlyRectangle",
+              "optional": false
+            },
+            {
+              "name": "output",
+              "type": "Rectangle",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "The logical bounds this effect can produce from the logical bounds it is given - the contract that lets an effect change a drawable's visual extent instead of being clipped by the geometry it was captured from. Both rectangles are in the capture domain's LOGICAL units, the same ones RenderNode.getBounds reports. They are not device pixels: the target a pass runs against is separately allocated at bounds × resolution texels, so an expansion of 8 stays 8 logical units at every pixel ratio. The default is the identity - an effect that only recolours what it is given (a colour matrix, a LUT) needs no override. An effect that reaches outside its input (a blur, a glow) must declare that reach, and one that reaches asymmetrically (a drop shadow) may move the edges independently: ts public override getOutputBounds(input: ReadonlyRectangle, output: Rectangle): void { output.set(input.x - this.radius, input.y - this.radius, input.width + this.radius * 2, input.height + this.radius * 2); }  In a CHAIN each filter is asked in turn, with the previous filter's output as its input, and the barrier's capture domain is the union of the source bounds and every stage's answer. A bounds-REDUCING effect is therefore represented - the domain simply keeps the room its predecessors needed, so no pass is ever clipped by a target smaller than what it declared. input and output are never the same object, so an implementation may read input freely while writing output. Called once per frame for every filtered node, so it must not allocate."
+        },
+        {
+          "name": "invalidate",
+          "signature": "invalidate(): void",
+          "signatureTokens": [
+            {
+              "text": "invalidate",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Tell every node this filter is attached to that its rendered output is out of date. Call it after mutating anything that changes what the filter draws or how far it reaches - the stock filters do this from their own setters. Without it a cached or retained representation of the owning node keeps replaying the result the filter produced before the change."
+        },
+        {
+          "name": "setUniform",
+          "signature": "setUniform(name: string, value: ShaderFilterUniformValue): this",
+          "signatureTokens": [
+            {
+              "text": "setUniform",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShaderFilterUniformValue",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "value",
+              "type": "ShaderFilterUniformValue",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Set one uniform and notify every node rendering this filter."
+        },
+        {
+          "name": "setUniforms",
+          "signature": "setUniforms(values: Readonly<Record<string, ShaderFilterUniformValue>>): this",
+          "signatureTokens": [
+            {
+              "text": "setUniforms",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "values",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShaderFilterUniformValue",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "values",
+              "type": "Readonly<Record<string, ShaderFilterUniformValue>>",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Set several uniforms, notifying once for the batch."
+        },
+        {
+          "name": "supports",
+          "signature": "supports(backendType: RenderBackendType): boolean",
+          "signatureTokens": [
+            {
+              "text": "supports",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "backendType",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderBackendType",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "backendType",
+              "type": "RenderBackendType",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Whether this filter carries a source the given backend can run."
+        },
+        {
+          "name": "from",
+          "signature": "from(source: ShaderSource, options?: { uniforms?: Record<string, ShaderFilterUniformValue> }): ShaderFilter",
+          "signatureTokens": [
+            {
+              "text": "from",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShaderSource",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "uniforms",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShaderFilterUniformValue",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShaderFilter",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "ShaderSource",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "{ uniforms?: Record<string, ShaderFilterUniformValue> }",
+              "optional": true
+            }
+          ],
+          "returnType": "ShaderFilter",
+          "description": "Build a filter from an existing ShaderSource, so one source can back several filters. The source must already carry complete sources per language - no default vertex stage is filled in."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "resolution",
+          "signature": "resolution: TargetResolution",
+          "signatureTokens": [
+            {
+              "text": "resolution",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TargetResolution",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Resolution this filter's render targets are rasterized at, in device pixels per logical unit. 'inherit' (the default) matches the surface the result is composited into, so a filtered subtree stays as sharp as its surroundings on a HiDPI display. Lower it for a filter whose output is low-frequency anyway - a heavy blur at 0.5 costs a quarter of the fragments and is hard to tell apart. A filter CHAIN shares one target size, so the whole chain runs at the lowest resolution any of its filters asks for. ts const blur = new BlurFilter({ radius: 8 }); blur.resolution = 0.5; // half-resolution blur, quarter the fill cost "
+        },
+        {
+          "name": "shader",
+          "signature": "shader: ShaderSource",
+          "signatureTokens": [
+            {
+              "text": "shader",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShaderSource",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The source pair this filter runs, with the default stages already filled in."
+        },
+        {
+          "name": "uniforms",
+          "signature": "uniforms: Readonly<Record<string, ShaderFilterUniformValue>>",
+          "signatureTokens": [
+            {
+              "text": "uniforms",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShaderFilterUniformValue",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The current uniform values, for reading. Deliberately not writable: a value written straight into this record would reach the GPU on the next draw but tell nobody, so a cached or retained representation of the owning node would keep replaying the frame the old value produced. Write through setUniform / setUniforms."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/filters/ShaderFilter.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/ShaderFilter.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/filters/ShaderFilter.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/ShaderFilter.ts"
+}

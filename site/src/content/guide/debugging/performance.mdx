@@ -53,7 +53,7 @@ const inspector = new RenderPassInspectorLayer(app);
 inspector.visible = true;
 ```
 
-The two highest-impact reductions: remove filters you don't need, and set `cacheAsBitmap = true` on filtered containers that don't change every frame. For the full set of strategies with examples, see [Render pipeline debugging](/ExoJS/en/guide/debugging/debugging-and-inspection/).
+The two highest-impact reductions: remove filters you don't need, and set `cacheAsTexture = true` on filtered containers that don't change every frame. For the full set of strategies with examples, see [Render pipeline debugging](/ExoJS/en/guide/debugging/debugging-and-inspection/).
 
 ## Particle system throughput
 

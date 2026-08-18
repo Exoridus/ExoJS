@@ -2,7 +2,7 @@ import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
-import { ColorFilter } from '#rendering/filters/ColorFilter';
+import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import { LinearGradient } from '#rendering/gradient/LinearGradient';
 import { Mesh } from '#rendering/mesh/Mesh';
 import type { RenderNode } from '#rendering/RenderNode';
@@ -21,9 +21,7 @@ interface BackendRuntime {
 
 const canvasSize = 64;
 const defaultWebGlAttributes: WebGLContextAttributes = {
-  alpha: false,
   antialias: false,
-  premultipliedAlpha: false,
   preserveDrawingBuffer: true,
   stencil: false,
   depth: false,
@@ -99,7 +97,7 @@ describe('RenderPlan WebGL2 browser regressions', () => {
 
     try {
       sprite.setPosition(16, 16);
-      filtered.addFilter(new ColorFilter(Color.white));
+      filtered.addFilter(new ColorMatrixFilter().tint(Color.white));
       filtered.addChild(sprite);
       root.addChild(filtered);
 
@@ -138,7 +136,7 @@ describe('RenderPlan WebGL2 browser regressions', () => {
     }
   });
 
-  test('cacheAsBitmap renders cached output correctly across two renders', async () => {
+  test('cacheAsTexture renders cached output correctly across two renders', async () => {
     const { backend } = await createBackend();
     const texture = createSolidTexture('#ff0000');
     const root = new Container();
@@ -147,7 +145,7 @@ describe('RenderPlan WebGL2 browser regressions', () => {
 
     try {
       sprite.setPosition(16, 16);
-      cachedContainer.cacheAsBitmap = true;
+      cachedContainer.cacheAsTexture = true;
       cachedContainer.addChild(sprite);
       root.addChild(cachedContainer);
 
@@ -440,7 +438,7 @@ describe('RenderPlan WebGL2 browser regressions', () => {
       spriteA.setPosition(4, 4);
       spriteB.setPosition(20, 20);
       spriteC.setPosition(36, 36);
-      filtered.addFilter(new ColorFilter(Color.white));
+      filtered.addFilter(new ColorMatrixFilter().tint(Color.white));
       filtered.addChild(spriteB);
       root.addChild(spriteA, filtered, spriteC);
 

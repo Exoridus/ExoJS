@@ -1,5 +1,5 @@
 // Auto-generated from noise-vignette.ts — edit the .ts source, not this file.
-import { Application, Color, RenderBackendType, Scene, Sprite, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+import { Application, Color, Scene, ShaderFilter, Sprite } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // A detailed full-frame texture so grain + vignette read as a screen-wide post
 // effect rather than decorating one small sprite.
@@ -14,7 +14,7 @@ const wgsl = `
 struct Uniforms { uTime:f32, uIntensity:f32, _pad0:vec2<f32> };
 @group(1) @binding(0) var<uniform> uniforms:Uniforms;
 fn hash(p:vec2<f32>) -> f32 { return fract(sin(dot(p,vec2<f32>(12.9898,78.233)))*43758.5453); }
-@fragment fn main(@location(0) vUv:vec2<f32>)->@location(0) vec4<f32>{
+@fragment fn fragmentMain(@location(0) vUv:vec2<f32>)->@location(0) vec4<f32>{
     let c=textureSample(uTexture,uSampler,vUv);
     let n=(hash(vUv*vec2<f32>(1280.0,720.0)+uniforms.uTime*60.0)-0.5)*0.18*uniforms.uIntensity;
     let vig=1.0-smoothstep(0.35,0.85,length(vUv-vec2<f32>(0.5)))*uniforms.uIntensity;
@@ -30,10 +30,7 @@ class NoiseVignetteScene extends Scene {
     init() {
         const app = this.app;
         const { width, height } = app;
-        this.filter =
-            app.backend.backendType === RenderBackendType.WebGpu
-                ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uTime: 0, uIntensity: this.intensity } })
-                : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uTime: 0, uIntensity: this.intensity } });
+        this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uTime: 0, uIntensity: this.intensity } });
         // Fill the whole 16:9 frame so the post effect covers the viewport.
         const texture = this.loader.get(UV_GRID);
         this.sprite = new Sprite(texture).setAnchor(0.5).setPosition(width / 2, height / 2);
@@ -55,7 +52,7 @@ class NoiseVignetteScene extends Scene {
             value: this.intensity,
             onChange: value => {
                 this.intensity = value;
-                this.filter.uniforms.uIntensity = value;
+                this.filter.setUniform('uIntensity', value);
                 this.hud.setStatus(this.statusText());
             },
         });
@@ -65,7 +62,7 @@ class NoiseVignetteScene extends Scene {
     }
     update(delta) {
         this.time += delta.seconds;
-        this.filter.uniforms.uTime = this.time;
+        this.filter.setUniform('uTime', this.time);
     }
     draw(context) {
         context.render(this.sprite);

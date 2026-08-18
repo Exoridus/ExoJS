@@ -1,16 +1,16 @@
 {
   "title": "Text",
-  "description": "GPU-accelerated text node that rasterizes individual glyphs into a shared per-font-variant GlyphAtlas using the SDF (Signed Distance Field) technique and renders them through the `text-sdf` shader. Style mutations are applied automatically before the next draw — no manual `update()` call required. Mutating `text.style` any number of times in the same frame is cheap; the geometry is rebuilt at most once, on demand. ```ts const label = new Text('Hello', { fontSize: 24 }); scene.addChild(label); label.style.fillColor = new Color(255, 0, 0); // cheap — no atlas work label.style.outlineWidth = 0.08; // cheap — only shader uniforms // changes are picked up automatically on the next render pass ``` **FontFace-first:** load fonts via FontFactory before constructing the node, then pass the loaded `FontFace` via the `font` style option. The label renders immediately with the correct glyphs — no async waiting needed. ```ts const face = await loader.load(Asset.type('font', 'roboto.woff2', { family: 'Roboto' })); const label = new Text('Score: 0', { font: face, fontSize: 24 }); scene.addChild(label); // renders immediately with Roboto ``` Enable colour-glyph (emoji) mode via `colorGlyphs: true` in the constructor options. Colour-glyph nodes use the `text-color` shader instead of `text-sdf`.",
+  "description": "GPU-accelerated text node that rasterizes individual glyphs into a shared per-font-variant GlyphAtlas using the SDF (Signed Distance Field) technique and renders them through the `text-sdf` shader. Style mutations are applied automatically before the next draw - no manual `update()` call required. Mutating `text.style` any number of times in the same frame is cheap; the geometry is rebuilt at most once, on demand. ```ts const label = new Text('Hello', { fontSize: 24 }); scene.addChild(label); label.style.fillColor = new Color(255, 0, 0); // cheap - no atlas work label.style.outlineWidth = 0.08; // cheap - only shader uniforms // changes are picked up automatically on the next render pass ``` **FontFace-first:** load fonts via FontFactory before constructing the node, then pass the loaded `FontFace` via the `font` style option. The label renders immediately with the correct glyphs - no async waiting needed. ```ts const face = await loader.load(Asset.type('font', 'roboto.woff2', { family: 'Roboto' })); const label = new Text('Score: 0', { font: face, fontSize: 24 }); scene.addChild(label); // renders immediately with Roboto ``` Enable colour-glyph (emoji) mode via `colorGlyphs: true` in the constructor options. Colour-glyph nodes use the `text-color` shader instead of `text-sdf`. Glyphs are rasterized at the Application's `pixelRatio`, so text is crisp on a HiDPI surface without any opt-in. TextOptions.pixelRatio decouples one node's glyph raster from the surface without changing its layout by so much as a line break.",
   "symbol": "Text",
   "kind": "class",
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 99,
+  "memberCount": 102,
   "counts": {
     "constructors": 1,
     "methods": 42,
-    "properties": 42,
+    "properties": 45,
     "events": 14
   },
   "sections": [
@@ -20,12 +20,13 @@
       "members": [],
       "paragraphs": [
         "GPU-accelerated text node that rasterizes individual glyphs into a shared per-font-variant GlyphAtlas using the SDF (Signed Distance Field) technique and renders them through the `text-sdf` shader.",
-        "Style mutations are applied automatically before the next draw — no manual `update()` call required. Mutating `text.style` any number of times in the same frame is cheap; the geometry is rebuilt at most once, on demand.",
+        "Style mutations are applied automatically before the next draw - no manual `update()` call required. Mutating `text.style` any number of times in the same frame is cheap; the geometry is rebuilt at most once, on demand.",
         "```ts const label = new Text('Hello', { fontSize: 24 }); scene.addChild(label);",
-        "label.style.fillColor = new Color(255, 0, 0); // cheap — no atlas work label.style.outlineWidth = 0.08; // cheap — only shader uniforms // changes are picked up automatically on the next render pass ```",
-        "**FontFace-first:** load fonts via FontFactory before constructing the node, then pass the loaded `FontFace` via the `font` style option. The label renders immediately with the correct glyphs — no async waiting needed.",
+        "label.style.fillColor = new Color(255, 0, 0); // cheap - no atlas work label.style.outlineWidth = 0.08; // cheap - only shader uniforms // changes are picked up automatically on the next render pass ```",
+        "**FontFace-first:** load fonts via FontFactory before constructing the node, then pass the loaded `FontFace` via the `font` style option. The label renders immediately with the correct glyphs - no async waiting needed.",
         "```ts const face = await loader.load(Asset.type('font', 'roboto.woff2', { family: 'Roboto' })); const label = new Text('Score: 0', { font: face, fontSize: 24 }); scene.addChild(label); // renders immediately with Roboto ```",
-        "Enable colour-glyph (emoji) mode via `colorGlyphs: true` in the constructor options. Colour-glyph nodes use the `text-color` shader instead of `text-sdf`."
+        "Enable colour-glyph (emoji) mode via `colorGlyphs: true` in the constructor options. Colour-glyph nodes use the `text-color` shader instead of `text-sdf`.",
+        "Glyphs are rasterized at the Application's `pixelRatio`, so text is crisp on a HiDPI surface without any opt-in. TextOptions.pixelRatio decouples one node's glyph raster from the surface without changing its layout by so much as a line break."
       ],
       "importLine": "import { Text } from '@codexo/exojs'",
       "sourceLink": null
@@ -573,7 +574,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Release this node's pooled state (transform, bounds, flags) and unlink it from its parent. The unlink comes first and is what makes a bare destroy() safe. A node left in its parent's child list bumps no revision, so every cache keyed on that revision — a Container's retained draw slots, a RetainedContainer's recorded GPU instruction set — would keep replaying the dead node's last captured frame. Removing it stamps the parent structure-dirty, which drops those captures, and runs the node's regular detach cleanup (bounds cascade, interaction/focus deregistration, stage clearing) while this node's own state is still intact. Container.removeChild is a no-op for a node it does not hold, so the already-correct removeChild()-then-destroy() order costs nothing more than the null check here. The destroyed flag is raised before the unlink so detach-time observers (e.g. focus, which suppresses onBlur on a destroyed node) see a node that is going away rather than one merely being reparented."
+          "description": "Releases everything this node owns, including GPU-side resources. Calling it is mandatory for a node that has acted as a render root: from its first recorded frame such a node owns a group-scoped instance, transform and tint buffer, and the backend holds that bundle until the node is destroyed or the backend itself is. Dropping the last reference is not enough - GPU lifetime is deterministic here on purpose and is not tied to garbage collection."
         },
         {
           "name": "focus",
@@ -1943,7 +1944,7 @@
             }
           ],
           "returnType": "TextSize",
-          "description": "Advance extent text would occupy under options, without constructing a node. Takes the same options as the constructor and gives the same answer as the resulting node's textBounds — it runs the identical layout pass against the identical shared atlas, so the two cannot drift. Rasterizes any glyph not yet in that atlas: measuring an unseen string is not free, and it does claim atlas space. ts const { width } = Text.measure('Continue', { fontSize: 24 }); button.width = width + 32; "
+          "description": "Advance extent text would occupy under options, without constructing a node. Takes the same options as the constructor and gives the same answer as the resulting node's textBounds - it runs the identical layout pass over the identical shared metrics, so the two cannot drift. Costs one canvas measurement per glyph it has not seen before, and nothing else: no atlas is created, no glyph is rasterized, and no page is claimed. The answer is therefore independent of pixelRatio, of which Application exists, and of whether anything has been rendered yet - colorGlyphs, sdfRadius and pixelRatio are ignored here because none of them can move a line break. ts const { width } = Text.measure('Continue', { fontSize: 24 }); button.width = width + 32; "
         },
         {
           "name": "setInternalSpriteFactory",
@@ -2285,11 +2286,11 @@
           "description": ""
         },
         {
-          "name": "cacheAsBitmap",
-          "signature": "cacheAsBitmap: boolean",
+          "name": "cacheAsTexture",
+          "signature": "cacheAsTexture: boolean",
           "signatureTokens": [
             {
-              "text": "cacheAsBitmap",
+              "text": "cacheAsTexture",
               "kind": "name"
             },
             {
@@ -2303,7 +2304,28 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Bake this node's subtree into a RenderTexture once and replay that texture until the subtree changes, instead of walking and drawing it every frame. Worth it for a subtree that is expensive to draw and rarely changes. The cache is invalidated by anything that moves the node's world bounds - the node's own transform included - so a node that animates re-bakes every frame and is strictly slower than not caching it at all. Setting it to false frees the texture immediately."
+        },
+        {
+          "name": "cacheResolution",
+          "signature": "cacheResolution: TargetResolution",
+          "signatureTokens": [
+            {
+              "text": "cacheResolution",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TargetResolution",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Resolution the cacheAsTexture texture is baked at, in device pixels per logical unit. 'inherit' (the default) matches the surface the cache is composited into, so enabling the cache does not soften the picture on a HiDPI display. Pin it to a number to trade sharpness for memory and bake cost - a cache is resolution² texels, so 1 on a DPR-3 phone is a ninth of the VRAM and a ninth of the fill per re-bake. Changing it invalidates the cache."
         },
         {
           "name": "clip",
@@ -2582,7 +2604,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The mask source that controls visibility of this node's render output. See MaskSource for accepted source types and their semantics. Setting to null removes any active mask. Setting a RenderNode that is this is rejected (a node cannot mask itself); other cycles (mask of mask of self) are not detected."
+          "description": "The mask source that controls visibility of this node's render output. See MaskSource for accepted source types and their semantics. Setting to null removes any active mask. Setting a RenderNode that is this is rejected (a node cannot mask itself). Indirect cycles (a.mask = b; b.mask = a) are rejected as well: the candidate's mask chain is walked and any cycle - whether it closes on this or was already present in the chain - fails the assignment."
         },
         {
           "name": "origin",
@@ -2668,6 +2690,35 @@
           "description": ""
         },
         {
+          "name": "pixelRatio",
+          "signature": "pixelRatio: number | undefined",
+          "signatureTokens": [
+            {
+              "text": "pixelRatio",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The EXPLICIT raster-density override, or undefined when this node inherits the Application's pixelRatio. Reports what was set, not what is in force: a node with no override answers undefined rather than the ratio it happens to be rasterizing at, because the inherited value belongs to the surface and can differ between two applications drawing the same node. rasterPixelRatio is the resolved number. Assigning undefined drops an override and returns the node to inheriting. Any other value must be a positive finite number."
+        },
+        {
           "name": "pixelSnapMode",
           "signature": "pixelSnapMode: PixelSnapMode",
           "signatureTokens": [
@@ -2729,6 +2780,27 @@
           "params": [],
           "returnType": null,
           "description": "When true, material-aware overlap reordering is disabled for this node's draw-order scope. Draw commands are submitted in exact document order (after scope-local z-sorting), preserving the painter's guarantee irrespective of material compatibility or AABB safety analysis. Adjacency coalescing of consecutive same-material draws still applies; it does not change visual output order."
+        },
+        {
+          "name": "rasterPixelRatio",
+          "signature": "rasterPixelRatio: number",
+          "signatureTokens": [
+            {
+              "text": "rasterPixelRatio",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The resolved raster density - the explicit pixelRatio when there is one, otherwise the pixelRatio of the surface this node was last collected for (1 until it has been collected once)."
         },
         {
           "name": "rotation",

@@ -12,7 +12,7 @@ import type { MockInstance } from 'vitest';
  * Math.random is stubbed with a deterministic PRNG so the grain scheduling is
  * reproducible across runs.
  */
-import { granularWorkletSource } from '../../src/worklets/granular.worklet';
+import granularWorkletSource from '../../src/worklets/granular.worklet.ts?worklet';
 
 const SAMPLE_RATE = 48000;
 const BLOCK = 128;

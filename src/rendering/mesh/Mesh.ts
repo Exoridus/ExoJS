@@ -55,14 +55,14 @@ export interface MeshOptions {
  *
  * `Mesh` lives alongside {@link Sprite} as a public Drawable: it has the
  * same transform (position/rotation/scale/origin), tint, blendMode,
- * filters, masks, and cacheAsBitmap — but the geometry it renders is
+ * filters, masks, and cacheAsTexture - but the geometry it renders is
  * user-supplied rather than implied by a texture frame. The intended use
  * cases are:
  *
  * - Custom-shape sprites whose silhouette isn't a quad (badges, speech
  *   bubbles, region overlays).
  * - Deformable visuals (rope/ribbon, banner, water surface): mutate the
- *   vertex array between frames and the GPU re-tessellates nothing —
+ *   vertex array between frames and the GPU re-tessellates nothing -
  *   only the transform changes per frame.
  * - Particles or trails with custom geometry per emitter.
  *
@@ -79,7 +79,7 @@ export interface MeshOptions {
  * `recomputeLocalBounds()`).
  *
  * A mesh has no declared layout box, so {@link Drawable.anchor} measures
- * against that vertex AABB — which makes it unstable by construction. A
+ * against that vertex AABB - which makes it unstable by construction. A
  * single vertex moved outside the current hull grows the AABB and moves the
  * pivot with it, and so does every `recomputeLocalBounds()` after a
  * deformation. Set {@link SceneNode.origin} directly whenever the pivot has to

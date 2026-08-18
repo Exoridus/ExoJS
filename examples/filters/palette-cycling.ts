@@ -5,16 +5,19 @@ import { mountControls } from '@examples/runtime';
 
 const PRIMARY_RAMP = assets.technical.color.primaryRamp;
 
-const PALETTE_SIZE = 256;
+const RAMP_SIZE = 256;
 
-function buildPaletteCanvas(offset: number): HTMLCanvasElement {
+// One sine curve per channel, each a third of a cycle out of phase. A 1D LUT
+// grades every channel through its OWN curve, so shifting all three by the same
+// offset each frame sweeps the sprite through the colour wheel.
+function buildRampCanvas(offset: number): HTMLCanvasElement {
     const canvas = document.createElement('canvas');
-    canvas.width = PALETTE_SIZE;
+    canvas.width = RAMP_SIZE;
     canvas.height = 1;
     const ctx = canvas.getContext('2d')!;
-    const image = ctx.createImageData(PALETTE_SIZE, 1);
-    for (let i = 0; i < PALETTE_SIZE; i++) {
-        const phase = ((i + offset) / PALETTE_SIZE) * Math.PI * 2;
+    const image = ctx.createImageData(RAMP_SIZE, 1);
+    for (let i = 0; i < RAMP_SIZE; i++) {
+        const phase = ((i + offset) / RAMP_SIZE) * Math.PI * 2;
         const r = Math.round(127 + 127 * Math.sin(phase));
         const g = Math.round(127 + 127 * Math.sin(phase + (Math.PI * 2) / 3));
         const b = Math.round(127 + 127 * Math.sin(phase + (Math.PI * 4) / 3));
@@ -28,8 +31,8 @@ function buildPaletteCanvas(offset: number): HTMLCanvasElement {
     return canvas;
 }
 
-class PaletteCyclingScene extends Scene {
-    private palette!: Texture;
+class ColourRampCyclingScene extends Scene {
+    private ramp!: Texture;
     private filter!: LutFilter;
     private sprite!: Sprite;
     private offset = 0;
@@ -39,23 +42,23 @@ class PaletteCyclingScene extends Scene {
         const app = this.app;
         const { width, height } = app;
 
-        this.palette = LutFilter.fromImage(buildPaletteCanvas(0));
-        this.filter = new LutFilter({ mode: '1d' }).setLut(this.palette);
+        this.ramp = LutFilter.fromImage(buildRampCanvas(0));
+        this.filter = new LutFilter({ mode: 'rgb1d' }).setLut(this.ramp);
 
         this.sprite = new Sprite(this.loader.get(PRIMARY_RAMP)).setAnchor(0.5).setScale(4);
         this.sprite.setPosition(width / 2, height / 2);
         this.sprite.filters = [this.filter];
 
         this.hud = mountControls({
-            title: 'Palette Cycling',
-            status: 'Rotating a 1D LUT each frame remaps the sprite colours.',
-            hint: 'Classic indexed-colour palette cycling: the texture is unchanged, only the lookup shifts.',
+            title: 'Colour Ramp Cycling',
+            status: 'Shifting an RGB 1D LUT each frame remaps the sprite colours.',
+            hint: 'The texture never changes — only the per-channel curves the LUT applies to it.',
         });
     }
 
     override update(delta: Time): void {
-        this.offset = (this.offset + delta.seconds * 80) % PALETTE_SIZE;
-        this.palette.source = buildPaletteCanvas(Math.floor(this.offset));
+        this.offset = (this.offset + delta.seconds * 80) % RAMP_SIZE;
+        this.ramp.source = buildRampCanvas(Math.floor(this.offset));
     }
 
     override draw(context: RenderingContext): void {
@@ -64,7 +67,7 @@ class PaletteCyclingScene extends Scene {
 }
 
 const app = new Application({
-    scenes: { PaletteCyclingScene },
+    scenes: { ColourRampCyclingScene },
     canvas: {
         width: 1280,
         height: 720,
@@ -74,4 +77,4 @@ const app = new Application({
     clearColor: Color.black,
 });
 
-app.start(PaletteCyclingScene);
+app.start(ColourRampCyclingScene);

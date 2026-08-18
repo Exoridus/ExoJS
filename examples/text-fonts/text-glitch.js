@@ -1,5 +1,5 @@
 // Auto-generated from text-glitch.ts — edit the .ts source, not this file.
-import { Application, Color, RenderBackendType, Scene, Text, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+import { Application, Color, Scene, ShaderFilter, Text } from '@codexo/exojs';
 const glsl = `#version 300 es
 precision mediump float;
 uniform sampler2D uTexture;
@@ -19,7 +19,7 @@ const wgsl = `
 struct Uniforms { uShift: f32, _pad0: vec3<f32> };
 @group(1) @binding(0) var<uniform> uniforms: Uniforms;
 @fragment
-fn main(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
+fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
     let r = textureSample(uTexture, uSampler, vUv + vec2(uniforms.uShift, 0.0)).r;
     let g = textureSample(uTexture, uSampler, vUv).g;
     let b = textureSample(uTexture, uSampler, vUv - vec2(uniforms.uShift, 0.0)).b;
@@ -35,14 +35,11 @@ class TextGlitchScene extends Scene {
         this.text = new Text('SIGNAL LOST', { fillColor: Color.white, fontSize: 100, align: 'center' });
         this.text.setAnchor(0.5, 0.5);
         this.text.setPosition(width / 2, height / 2);
-        this.filter =
-            app.backend.backendType === RenderBackendType.WebGpu
-                ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uShift: 0 } })
-                : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uShift: 0 } });
+        this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uShift: 0 } });
         this.text.filters = [this.filter];
     }
     update() {
-        this.filter.uniforms.uShift = (Math.random() - 0.5) * 0.01;
+        this.filter.setUniform('uShift', (Math.random() - 0.5) * 0.01);
     }
     draw(context) {
         context.render(this.text);

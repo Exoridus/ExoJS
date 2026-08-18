@@ -1,16 +1,16 @@
 {
   "title": "RenderNode",
-  "description": "SceneNode that can produce visual output. Adds the rendering pipeline features on top of the structural transform/bounds carried by SceneNode: `tint`, `blendMode`, post-process `filters`, an optional `mask` (via MaskSource), bitmap caching (`cacheAsBitmap`), and the interaction surface (`interactive`, `draggable`, all the pointer Signals). `RenderNode.render(backend)` is the per-frame visual entry point. The base implementation collects a render plan, optimizes local ordering, and plays it through the active backend. Subclasses of note: Container (children), Sprite (textured quad), Mesh (custom geometry), Graphics (immediate-mode shapes), Text (glyph-atlas text), Video (video texture), ParticleSystem (particles).",
+  "description": "SceneNode that can produce visual output. Adds the rendering pipeline features on top of the structural transform/bounds carried by SceneNode: post-process `filters`, an optional `mask` (via MaskSource), a hard `clip`, texture caching (`cacheAsTexture`), and the interaction surface (`interactive`, `draggable`, all the pointer Signals). `tint` and `blendMode` are NOT here - they belong to Drawable, the subclass that actually issues geometry. A Container has neither; to recolour a whole subtree, put a ColorMatrixFilter on it. `RenderNode.render(backend)` is the per-frame visual entry point. The base implementation collects a render plan, optimizes local ordering, and plays it through the active backend. Subclasses of note: Container (children), Sprite (textured quad), Mesh (custom geometry), Graphics (immediate-mode shapes), Text (glyph-atlas text), Video (video texture), ParticleSystem (particles).",
   "symbol": "RenderNode",
   "kind": "class",
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 75,
+  "memberCount": 76,
   "counts": {
     "constructors": 1,
     "methods": 31,
-    "properties": 29,
+    "properties": 30,
     "events": 14
   },
   "sections": [
@@ -19,7 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "SceneNode that can produce visual output. Adds the rendering pipeline features on top of the structural transform/bounds carried by SceneNode: `tint`, `blendMode`, post-process `filters`, an optional `mask` (via MaskSource), bitmap caching (`cacheAsBitmap`), and the interaction surface (`interactive`, `draggable`, all the pointer Signals).",
+        "SceneNode that can produce visual output. Adds the rendering pipeline features on top of the structural transform/bounds carried by SceneNode: post-process `filters`, an optional `mask` (via MaskSource), a hard `clip`, texture caching (`cacheAsTexture`), and the interaction surface (`interactive`, `draggable`, all the pointer Signals).",
+        "`tint` and `blendMode` are NOT here - they belong to Drawable, the subclass that actually issues geometry. A Container has neither; to recolour a whole subtree, put a ColorMatrixFilter on it.",
         "`RenderNode.render(backend)` is the per-frame visual entry point. The base implementation collects a render plan, optimizes local ordering, and plays it through the active backend.",
         "Subclasses of note: Container (children), Sprite (textured quad), Mesh (custom geometry), Graphics (immediate-mode shapes), Text (glyph-atlas text), Video (video texture), ParticleSystem (particles)."
       ],
@@ -323,7 +324,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Release this node's pooled state (transform, bounds, flags) and unlink it from its parent. The unlink comes first and is what makes a bare destroy() safe. A node left in its parent's child list bumps no revision, so every cache keyed on that revision — a Container's retained draw slots, a RetainedContainer's recorded GPU instruction set — would keep replaying the dead node's last captured frame. Removing it stamps the parent structure-dirty, which drops those captures, and runs the node's regular detach cleanup (bounds cascade, interaction/focus deregistration, stage clearing) while this node's own state is still intact. Container.removeChild is a no-op for a node it does not hold, so the already-correct removeChild()-then-destroy() order costs nothing more than the null check here. The destroyed flag is raised before the unlink so detach-time observers (e.g. focus, which suppresses onBlur on a destroyed node) see a node that is going away rather than one merely being reparented."
+          "description": "Releases everything this node owns, including GPU-side resources. Calling it is mandatory for a node that has acted as a render root: from its first recorded frame such a node owns a group-scoped instance, transform and tint buffer, and the backend holds that bundle until the node is destroyed or the backend itself is. Dropping the last reference is not enough - GPU lifetime is deterministic here on purpose and is not tied to garbage collection."
         },
         {
           "name": "focus",
@@ -1637,11 +1638,11 @@
           "description": "Tab-traversal order among focusable nodes in the same focus scope. Lower values are visited first; equal values keep document (tree) order."
         },
         {
-          "name": "cacheAsBitmap",
-          "signature": "cacheAsBitmap: boolean",
+          "name": "cacheAsTexture",
+          "signature": "cacheAsTexture: boolean",
           "signatureTokens": [
             {
-              "text": "cacheAsBitmap",
+              "text": "cacheAsTexture",
               "kind": "name"
             },
             {
@@ -1655,7 +1656,28 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Bake this node's subtree into a RenderTexture once and replay that texture until the subtree changes, instead of walking and drawing it every frame. Worth it for a subtree that is expensive to draw and rarely changes. The cache is invalidated by anything that moves the node's world bounds - the node's own transform included - so a node that animates re-bakes every frame and is strictly slower than not caching it at all. Setting it to false frees the texture immediately."
+        },
+        {
+          "name": "cacheResolution",
+          "signature": "cacheResolution: TargetResolution",
+          "signatureTokens": [
+            {
+              "text": "cacheResolution",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TargetResolution",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Resolution the cacheAsTexture texture is baked at, in device pixels per logical unit. 'inherit' (the default) matches the surface the cache is composited into, so enabling the cache does not soften the picture on a HiDPI display. Pin it to a number to trade sharpness for memory and bake cost - a cache is resolution² texels, so 1 on a DPR-3 phone is a ninth of the VRAM and a ninth of the fill per re-bake. Changing it invalidates the cache."
         },
         {
           "name": "clip",
@@ -1880,7 +1902,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The mask source that controls visibility of this node's render output. See MaskSource for accepted source types and their semantics. Setting to null removes any active mask. Setting a RenderNode that is this is rejected (a node cannot mask itself); other cycles (mask of mask of self) are not detected."
+          "description": "The mask source that controls visibility of this node's render output. See MaskSource for accepted source types and their semantics. Setting to null removes any active mask. Setting a RenderNode that is this is rejected (a node cannot mask itself). Indirect cycles (a.mask = b; b.mask = a) are rejected as well: the candidate's mask chain is walked and any cycle - whether it closes on this or was already present in the chain - fails the assignment."
         },
         {
           "name": "origin",

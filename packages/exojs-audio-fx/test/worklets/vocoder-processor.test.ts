@@ -7,7 +7,7 @@
  * a real AudioContext or browser.
  */
 
-import { vocoderWorkletSource } from '../../src/worklets/vocoder.worklet';
+import vocoderWorkletSource from '../../src/worklets/vocoder.worklet.ts?worklet';
 
 // ─── Worklet bootstrap helpers ────────────────────────────────────────────────
 

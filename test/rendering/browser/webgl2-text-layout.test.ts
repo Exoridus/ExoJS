@@ -24,9 +24,7 @@ import { wireCoreRenderers } from './_coreRenderers';
 // is brittle and unrelated to the layout behaviour under test. Asserting on the
 // real-atlas geometry also avoids any dependence on exact font rasterization.
 const defaultWebGlAttributes: WebGLContextAttributes = {
-  alpha: false,
   antialias: false,
-  premultipliedAlpha: false,
   preserveDrawingBuffer: true,
   stencil: false,
   depth: false,

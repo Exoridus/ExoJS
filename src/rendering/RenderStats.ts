@@ -6,9 +6,29 @@
 export interface RenderStats {
   /** Monotonically increasing frame index, incremented by {@link resetRenderStats}. */
   frame: number;
-  /** Total scene nodes submitted for rendering before culling. */
+  /**
+   * Total scene nodes submitted for rendering before culling.
+   *
+   * Always nodes, never GPU instances: a node whose renderer expands it into
+   * many instances - a tile chunk, a nine-slice, a repeating sprite, a text run -
+   * counts once, and reads the same whether the frame was drawn live, replayed
+   * entry by entry, or replayed from a recorded retained batch.
+   */
   submittedNodes: number;
-  /** Nodes skipped because they fell outside the view frustum. */
+  /**
+   * Nodes skipped because they fell outside the view frustum.
+   *
+   * Two caveats apply to retained subtrees, both by design:
+   * - the count is per COLLECT, not per frame. A retained subtree that replays
+   *   without re-collecting reports nothing here, so a scene whose first frame
+   *   culls N nodes reports 0 on every steady-state frame that follows and
+   *   reports N again only when a rebuild re-walks it. Read it as "nodes the
+   *   last collect discarded", not as "nodes off-screen this frame".
+   * - the decision is taken against the cull rectangle retention inflates by
+   *   1/16 per side, not the exact view rectangle. A node just outside the view
+   *   is therefore kept rather than culled - that margin is what lets a small
+   *   camera move replay instead of re-collect.
+   */
   culledNodes: number;
   /** Number of GPU draw calls issued this frame. */
   drawCalls: number;

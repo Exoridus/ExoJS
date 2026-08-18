@@ -57,6 +57,24 @@ export abstract class AbstractText extends Drawable {
     this._layout = pickLayoutOptions(layout);
   }
 
+  /**
+   * Device pixels per logical pixel this node's glyphs are rasterized at.
+   *
+   * `1` for everything whose glyph source is fixed at build time - a
+   * {@link BitmapText} draws from an atlas somebody else already rasterized, and
+   * whatever density that atlas was built at is baked into its own metrics.
+   * {@link Text} overrides this with the density it resolved for the surface it
+   * is drawn on.
+   *
+   * The renderers read it to convert style lengths that are expressed in logical
+   * pixels but applied in atlas texels - the shadow offset is the only one today.
+   * @advanced
+   */
+  // eslint-disable-next-line @typescript-eslint/class-literal-property-style -- a readonly field cannot be overridden by an accessor, and Text has to compute this
+  public get rasterPixelRatio(): number {
+    return 1;
+  }
+
   /** The string currently displayed by this node. */
   public get text(): string {
     return this._text;

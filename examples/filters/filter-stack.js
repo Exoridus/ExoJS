@@ -1,11 +1,11 @@
 // Auto-generated from filter-stack.ts — edit the .ts source, not this file.
-import { Application, BlurFilter, Color, ColorFilter, RenderBackendType, Scene, Sprite, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+import { Application, BlurFilter, Color, ColorMatrixFilter, Scene, ShaderFilter, Sprite } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const PRIMARY_RAMP = assets.technical.color.primaryRamp;
 const glsl = `#version 300 es
 precision mediump float; uniform sampler2D uTexture; in vec2 vUv; out vec4 fragColor;
 void main(){ vec4 c=texture(uTexture,vUv); fragColor=vec4(c.rgb*vec3(1.0,0.9,1.2),c.a);} `;
-const wgsl = `@group(0) @binding(1) var uTexture:texture_2d<f32>; @group(0) @binding(2) var uSampler:sampler; @fragment fn main(@location(0) vUv:vec2<f32>)->@location(0) vec4<f32>{ let c=textureSample(uTexture,uSampler,vUv); return vec4<f32>(c.rgb*vec3<f32>(1.0,0.9,1.2),c.a);} `;
+const wgsl = `@group(0) @binding(1) var uTexture:texture_2d<f32>; @group(0) @binding(2) var uSampler:sampler; @fragment fn fragmentMain(@location(0) vUv:vec2<f32>)->@location(0) vec4<f32>{ let c=textureSample(uTexture,uSampler,vUv); return vec4<f32>(c.rgb*vec3<f32>(1.0,0.9,1.2),c.a);} `;
 class FilterStackScene extends Scene {
     sprite;
     blur;
@@ -20,11 +20,8 @@ class FilterStackScene extends Scene {
         const { width, height } = app;
         this.sprite = new Sprite(this.loader.get(PRIMARY_RAMP)).setAnchor(0.5).setScale(4).setPosition(width / 2, height / 2);
         this.blur = new BlurFilter({ radius: 4, quality: 2 });
-        this.tint = new ColorFilter(new Color(140, 210, 255));
-        this.custom =
-            app.backend.backendType === RenderBackendType.WebGpu
-                ? new WebGpuShaderFilter({ fragmentSource: wgsl })
-                : new WebGl2ShaderFilter({ fragmentSource: glsl });
+        this.tint = new ColorMatrixFilter().tint(new Color(140, 210, 255));
+        this.custom = new ShaderFilter({ glsl: { fragment: glsl }, wgsl });
         this.rebuild();
         this.hud = mountControls({
             title: 'Filter Stack',

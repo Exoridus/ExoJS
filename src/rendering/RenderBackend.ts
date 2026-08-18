@@ -47,6 +47,28 @@ export interface RenderBackend {
   readonly clearColor: Color;
 
   /**
+   * Device pixels per logical unit of the canvas root target - the
+   * application's effective `pixelRatio`.
+   *
+   * The root target is sized in LOGICAL units while the canvas backing store is
+   * `logical × pixelRatio`, so this is the ratio between them. It is the
+   * resolution an effect or cache target inherits when nothing overrides it (see
+   * {@link TargetResolution}); without it an internal target would be pinned at
+   * 1 and rasterize at `1/pixelRatio` of the detail it is sampled over.
+   */
+  readonly rootResolution: number;
+
+  /**
+   * Largest texture extent, in texels, this device accepts on either axis
+   * (`gl.MAX_TEXTURE_SIZE` / `maxTextureDimension2D`).
+   *
+   * Read by the plan builder to clamp a barrier's resolution so a large filtered
+   * subtree on a high-ratio display cannot ask for a texture the device would
+   * refuse.
+   */
+  readonly maxTextureSize: number;
+
+  /**
    * Dispatched when the backend detects a GPU error that does not surface as a
    * synchronous exception — WGSL compilation errors, WebGPU uncaptured
    * validation/OOM/internal errors. Synchronous failures (WebGL2 shader
@@ -173,4 +195,17 @@ export interface RenderBackend {
   execute(pass: BackendRenderPass): this;
   flush(): this;
   destroy(): void;
+}
+
+/**
+ * Sanitize a configured `canvas.pixelRatio` into a usable raster density.
+ *
+ * A backend built from a stand-in application object (a test, a probe page, a
+ * canvas measured before layout) may be handed nothing, a zero or a `NaN`. A
+ * glyph atlas is keyed on this number and sized by it, so a bad value must
+ * collapse to the logical-pixel default here rather than mint an unusable
+ * cache entry several layers down.
+ */
+export function sanitizeSurfacePixelRatio(pixelRatio: number | undefined): number {
+  return pixelRatio !== undefined && Number.isFinite(pixelRatio) && pixelRatio > 0 ? pixelRatio : 1;
 }

@@ -6,7 +6,7 @@
  * nine-slices batch (up to ⌈quads / 4096⌉ draws); distinct textures cost one
  * draw per texture switch.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { buildNineSliceScene, makeTextures } from './fixtures';
 import { createWebGl2Harness, measureFrame, measureSteadyFrame, type WebGl2Harness } from './harness';
@@ -32,6 +32,35 @@ describe('structural — NineSlice', () => {
       expect(m.drawCalls).toBe(1);
       expect(m.instances).toBe(100 * quadsPer);
 
+      root.destroy();
+    });
+  });
+
+  it('submittedNodes counts nodes, not the 9 quad instances each node emits, on every tier', () => {
+    withHarness(harness => {
+      const { root, sprites } = buildNineSliceScene({ count: 4, textures: makeTextures(1), fill: 'stretch' });
+      const replaySpy = vi.spyOn(harness.backend, '_replayRetainedBatch');
+
+      expect(sprites[0].quads.length).toBe(9);
+
+      // The three tiers of the retention ladder, in the order the collect
+      // policy walks them: dirty-frame live collect, first clean frame (entry
+      // replay + instruction recording), then the recorded/spliced tier.
+      const live = measureFrame(harness, root);
+      const entryReplay = measureFrame(harness, root);
+      const recorded = measureFrame(harness, root);
+      const steady = measureFrame(harness, root);
+
+      // Pin which tier each frame is, so the parity below cannot pass because
+      // the group silently stopped reaching the recorded tier.
+      expect(replaySpy).toHaveBeenCalledTimes(2);
+
+      for (const tier of [live, entryReplay, recorded, steady]) {
+        expect(tier.instances).toBe(4 * 9);
+        expect(tier.visibleNodes).toBe(4);
+      }
+
+      replaySpy.mockRestore();
       root.destroy();
     });
   });

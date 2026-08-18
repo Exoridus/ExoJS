@@ -4,7 +4,7 @@ import type { InteractionHooks, Stage } from '#core/Stage';
 import { FocusController } from '#input/FocusController';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
-import { ColorFilter } from '#rendering/filters/ColorFilter';
+import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import { Graphics } from '#rendering/primitives/Graphics';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
@@ -652,7 +652,7 @@ describe('Container.destroy() tears down the whole subtree', () => {
     const root = new Container();
     const branch = new Container();
     const leaf = new DummyDrawable();
-    const filter = new ColorFilter();
+    const filter = new ColorMatrixFilter();
     const filterSpy = vi.spyOn(filter, 'destroy');
 
     leaf.filters = [filter];

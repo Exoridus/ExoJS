@@ -23,9 +23,7 @@ const canvasSize = 64;
 // `stencil:true` and is unaffected). Axis-aligned clip shapes keep MSAA edges
 // crisp so pixel assertions stay exact away from the boundary.
 const defaultWebGlAttributes: WebGLContextAttributes = {
-  alpha: false,
   antialias: true,
-  premultipliedAlpha: false,
   preserveDrawingBuffer: true,
   depth: false,
 };

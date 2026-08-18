@@ -17,6 +17,51 @@ release and includes intentional breaking changes; see **Changed** and
 
 ### Added
 
+- **Effects declare the bounds they produce.** A drawable's source bounds were
+  assumed to be its final visual bounds, so an effect that reaches outside what
+  it was handed had nowhere to put the result — a `BlurFilter` was clipped by its
+  own input on all four sides, and its tail was not faint but absent. `Filter`
+  now answers a `Bounds -> Bounds` question via `getOutputBounds(input, output)`,
+  defaulting to the identity so a colour matrix, a LUT or an existing custom
+  filter needs no change. A chain composes sequentially — each filter asked with
+  its predecessor's output — and the capture domain is the union of the source
+  bounds and every stage's answer, which represents asymmetric effects (a drop
+  shadow) and bounds-reducing ones (a crop) rather than only symmetric padding.
+  Bounds stay in LOGICAL units at every pixel ratio: a `pixelRatio: 2` surface
+  allocates twice the texels and the blur's 8-unit reach is still 8 units. An
+  explicit `clip` remains intentionally restrictive and still cuts the expanded
+  result.
+
+  Mutating an attached filter is now enough on its own. `blur.radius = 12` marks
+  every node the filter is attached to as dirty — including shared attachments —
+  so a `cacheAsTexture` node re-bakes at the new extent instead of replaying the
+  result the filter produced before the change. A custom filter with state of its
+  own calls `this.invalidate()`.
+
+- **HiDPI runtime text — `Text.pixelRatio`.** Runtime SDF and colour glyphs are
+  rasterized at the pixel ratio of the `Application` that draws them, instead of
+  always at one device pixel per logical unit. A `pixelRatio: 2` surface renders
+  its text from a 2x font onto 2x atlas tiles with no opt-in, and the resolution
+  is deterministic: nothing in the text stack reads `window.devicePixelRatio`, so
+  an application pinned at 2 renders text at 2 on a device reporting 3. The new
+  `TextOptions.pixelRatio` / `Text.pixelRatio` decouples one node's glyph raster
+  from the surface — for content whose on-screen density exceeds the surface
+  ratio (a node scaled up at runtime, a zoomed camera), or to trade sharpness for
+  atlas memory. Omitted means inherit, which is the value to want: sharpness
+  peaks at one atlas texel per device pixel. The property reads back `undefined`
+  rather than a materialized number; a value that
+  cannot be a density (`0`, negative, `NaN`, `Infinity`) is rejected, not clamped.
+  `Text.rasterPixelRatio` reports the density in force.
+
+  The logical layout is unaffected at every ratio: advances, kerning, wrapping,
+  line breaks, alignment, `textBounds`, `Text.measure` and the logical reach of an
+  outline or shadow are identical, because the SDF buffer scales with the raster
+  grid and the metrics layout consumes never touch it. Only sharpness, tile size
+  and memory change — measured over an ASCII set at 9/11/16px, 146k atlas texels
+  at ratio 1, 582k at 2 and 1.29M at 3, which is where that set outgrows a single
+  1024x1024 page. The pixel ratio is part of the glyph atlas's identity, so two
+  applications at different densities no longer share one set of pages.
+
 - **Multiphase `System` contract.** A `System` implements any subset of
   `fixedUpdate`/`update`/`draw` (previously `update` + `destroy` were
   required); `app.systems`/`scene.systems` dispatch each phase in ascending
@@ -240,8 +285,144 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
   An extension's lifetime is exactly its application's: there is no runtime
   `unregister`, and no scene-level scope.
 
+### Fixed
+
+- **Capture quantisation no longer drops a pixel at a fractional edge.** An
+  effect's render target was sized `floor(origin)` by `ceil(size)`, rounded
+  independently, which is short whenever the fractional origin pushes the far
+  edge past what `ceil(size)` covers — `x = 0.25, width = 10.5` spans to 10.75
+  and got 10. Both edges are now rounded outward: `floor(min)` and `ceil(max)`.
+
+- **A resized render target is viewed from its own centre.** `RenderTexture`
+  `setSize` restated the default view's extent and left its centre at half the
+  ORIGINAL size, so a target resized from 38 to 60 rendered the region
+  `[-11, 49]` — content shifted by the half-difference and the far edge outside
+  the target. Visible on a `cacheAsTexture` node whose capture domain grows: a
+  cached square with its blur grown from radius 3 to 14 read a lit span of
+  `[51, 93]` where the same node built at 14 reads `[34, 93]`.
+
+- **SDF text edges follow the density their own normal lands on.** The
+  analytical screen-space width came from a single scalar — device pixels per
+  local unit along the local +x direction — which describes the whole projected
+  footprint only under a similarity transform. Under a non-uniform scale every
+  edge, horizontal ones included, was sized against the horizontal density.
+  Measured on 'H' at 48px, phase-averaged over four subpixel placements, the
+  crossbar's ramp read 0.50 at `scale(4, 4)` and 2.50 at `scale(1, 4)` — both put
+  the same vertical density on screen. The fragment stage now recovers the edge
+  normal from the field and projects the footprint onto it, behind a branch that
+  is flat per node so the isotropic path is unchanged.
+
+- **SDF text antialiases against the pixel it lands on.** The `text-sdf` and
+  `text-msdf` shaders faded an edge over a constant width stated in FIELD units,
+  which is a fixed distance in logical pixels and therefore a different number of
+  device pixels in every situation: a hard, aliased step wherever the glyph was
+  dense, and a multi-pixel smear wherever it was magnified — a label scaled up
+  4x faded over roughly four device pixels. The width is now derived from how
+  many device pixels one of the node's local units covers, so an edge lands at
+  about one device pixel whatever the atlas density, the surface ratio, the
+  node's scale and the camera's zoom jointly did to it. Measured on a scanline
+  crossing two stems, the ramp went from 0/4/5 partially-lit pixels at scale
+  1/2/4 to a flat 4/4/3.
+
+  It is computed from the transform rather than from a hardware derivative
+  (`fwidth`) because derivatives are implementation-defined: the GLSL and WGSL
+  stages then disagree on the ramp by up to 47 of 255 on the edge pixels, which
+  would have cost the cross-backend parity matrix its bit-exact evidence for
+  text. Derived from the transform the two are byte-identical on every pixel,
+  ramp included. `fwidth` remains the fallback where the field's scale is
+  unknown, which today is `BitmapText`'s MSDF path — an offline atlas carries no
+  distance range in its font data.
+
+  `shadowBlur` is separated out by the same change. It used to share one number
+  with the antialiasing width, so it widened the fill and outline edges as well
+  and carried a floor that applied even with no shadow; it is now the shadow's
+  own softness, still stated in field units so an authored blur covers the same
+  logical distance at every raster density, and it can only ever widen the
+  shadow edge.
+
+- **The runtime glyph atlas is filtered linearly.** Its pages are `DataTexture`s,
+  and that class defaults to `NEAREST` — correct for the lookup tables it exists
+  for, where a row must read back as the exact number written, and wrong for a
+  signed distance field, where bilinear reconstruction between texels is the
+  whole reason the field is resolution-independent. Text drawn at anything other
+  than one atlas texel per device pixel was therefore sampled from a piecewise
+  constant field: staircased when magnified (a node scaled up, or a `pixelRatio`
+  below the surface it is drawn on), jittered when minified. Measured on a
+  4x-magnified glyph, the frame held 12 distinct intensities before and 211
+  after. Colour pages were already linear and are now explicitly so, so the two
+  page kinds visibly agree.
+- **An effect capture no longer repaints the application background.** A filter,
+  mask or `cacheAsTexture` capture clears its own target to transparent black,
+  and `backend.clear(colour)` writes the colour it is handed through to the
+  persistent one — which the pass coordinator saved and restored for the target,
+  the view and the stencil state, but not for the clear colour. One filtered or
+  cached node was therefore enough to clear every LATER frame to transparent
+  black instead of `clearColor`, for the rest of the session. Found on a real
+  device while measuring `NEU-S4`.
+
 ### Changed
 
+- **BREAKING — canvas compositing is one backend-neutral option.** How the
+  finished frame composites against the page used to be spelled per backend:
+  WebGL2 read it from `rendering.webglAttributes.alpha` /
+  `.premultipliedAlpha`, while WebGPU hard-coded its canvas `alphaMode` to
+  `'opaque'`. The two could only agree by coincidence, and they stopped agreeing
+  as soon as anyone passed `webglAttributes` at all — the option is replaced
+  wholesale rather than merged, so `{ antialias: true }` silently dropped the
+  default's `alpha: false` and produced a transparent canvas under WebGL2 and an
+  opaque one under WebGPU. `rendering.alphaMode` (`'opaque' | 'premultiplied'`,
+  default `'opaque'`) is now the single spelling both backends honour: WebGPU
+  passes it to `GPUCanvasConfiguration.alphaMode`, WebGL2 derives `alpha` from it
+  and always requests `premultipliedAlpha` because the engine writes
+  premultiplied colour under both modes. The default preserves today's visible
+  behaviour exactly. This controls the browser-side composite step and nothing
+  else — internal texture and render-target premultiplication, blend modes and
+  material blend state are unaffected. Consequently `webglAttributes` no longer
+  accepts `alpha` or `premultipliedAlpha`; every other WebGL-only context
+  attribute is unchanged.
+- **`Text.measure` no longer rasterizes.** It used to run its layout pass against
+  the shared glyph atlas, so measuring an unfamiliar string rasterized every glyph
+  in it and claimed atlas space. It now reads the font variant's logical metrics
+  directly — one canvas measurement per unseen glyph, no atlas created, no page
+  claimed. This is what makes the answer independent of `pixelRatio` and of which
+  `Application` happens to exist, and it still agrees exactly with the
+  `textBounds` of a node built from the same options. `colorGlyphs`, `sdfRadius`
+  and `pixelRatio` are accepted and ignored there: none of them can move a line
+  break.
+- **BREAKING — effect and cache render targets now inherit the surface
+  resolution.** An internal target (filter input, every filter output, alpha
+  mask, `cacheAsTexture`) used to be `ceil(logical bounds)` texels no matter how
+  large the surface it was composited into, so on a `pixelRatio: 2` display a
+  filtered or cached subtree rasterized at half the linear detail it was then
+  sampled over — a third on `pixelRatio: 3`. Targets now inherit the resolution
+  of the target they are composited into, and the two new knobs opt out of it:
+  `Filter.resolution` and `RenderNode.cacheResolution`, both `'inherit'` by
+  default, both accepting a number. A filter chain shares one target size, so it
+  runs at the lowest resolution any of its filters asks for. Very large barriers
+  are clamped to the device's maximum texture size rather than failing.
+
+  Two consequences worth planning for. Effect cost on a HiDPI display rises with
+  the pixel ratio, where it was previously flat — measured on an iPhone 13 Pro,
+  a blur that held 22 ms at every ratio costs 28 ms at ratio 3 once its target
+  inherits. And `Filter.apply` gains a fourth argument, the target resolution:
+  any custom filter with a pixel-valued parameter must scale it, because those
+  parameters are now LOGICAL units. `BlurFilter.radius` already does, so a blur
+  covers the same on-screen distance as before.
+
+- **BREAKING — `RenderNode.cacheAsBitmap` is now `RenderNode.cacheAsTexture`.**
+  The cache has always been a `RenderTexture` on the GPU, never a bitmap;
+  "bitmap" suggested a CPU raster image. The serialized field
+  (`commonFields`) and the render-pass inspector's `cachedAsBitmap` snapshot
+  field follow the same rename (`cachedAsTexture`). No alias is kept — pre-1.0
+  breaks are clean breaks.
+- **The Core source export condition is now `@codexo/exojs-source`.** It was
+  `@codexo/source`, which read like a package name rather than like "resolve
+  `#*` to source" and did not match the `<package>-source` shape every
+  extension already used (`@codexo/exojs-particles-source`). Purely internal:
+  the condition only selects between `src` and `dist` for package-private `#*`
+  imports and never appears in a consumer's import. Anything running the engine
+  from source (`node --conditions=…`, a `tsconfig.json` `customConditions`
+  entry) must use the new name.
 - **BREAKING — `Material.sampler` is now a real base-texture binding override.**
   It contains only `scaleMode` and `wrapMode`, applies to the drawable's base
   texture across WebGPU and WebGL2 (including particle materials), and leaves

@@ -5,6 +5,7 @@ import { affineMat3Std140FloatCount, packAffineMat3Std140, packedGroupChanged } 
 import type { RetainedGroupBundle } from '#rendering/plan/RetainedInstructionSet';
 import type { OwnTransformRowPatcher } from '#rendering/plan/retainedTransformRowPatch';
 import type { RenderNode } from '#rendering/RenderNode';
+import { fillShaderSource } from '#rendering/shader/fillShaderSource';
 import { type BitmapText } from '#rendering/text/BitmapText';
 import type { TextPageQuads } from '#rendering/text/Text';
 import { Text } from '#rendering/text/Text';
@@ -15,6 +16,7 @@ import {
   textAtlasTextureSlotWgsl,
   textNodeIndexMask,
 } from '#rendering/text/textAtlasTextureSlots';
+import { packTextNodeData, packTextNodeTransform, textNodeDataFloats } from '#rendering/text/textNodeDataPacker';
 import type { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
 import type { View } from '#rendering/View';
@@ -33,6 +35,7 @@ import {
 } from './WebGpuRetainedGroupResources';
 import { packSnapViewport } from './webgpuSnapViewport';
 import { stencilContentDepthStencilState } from './WebGpuStencilState';
+import textShaderTemplate from './wgsl/text.wgsl';
 
 // ── Node data layout (identical to WebGl2TextRenderer) ───────────────────────
 //
@@ -42,15 +45,14 @@ import { stencilContentDepthStencilState } from './WebGpuStencilState';
 // [ni*10+1]: (b,  d,  0,  ty)   transform col 1+2
 // [ni*10+2]: (r,  g,  b,  a )   fillColor
 // [ni*10+3]: (r,  g,  b,  a )   outlineColor
-// [ni*10+4]: (outlineMin, shadowAlpha, softness, gradientEnabled)
+// [ni*10+4]: (outlineMin, shadowAlpha, shadowBlur, gradientEnabled)
 // [ni*10+5]: (r,  g,  b,  a )   shadowColor
-// [ni*10+6]: (shadowOffX_px, shadowOffY_px, gradientVertical, 0)
+// [ni*10+6]: (shadowOffX_px, shadowOffY_px, gradientVertical, sdfRadius_logical)
 // [ni*10+7]: (r,  g,  b,  a )   gradientTop
 // [ni*10+8]: (r,  g,  b,  a )   gradientBottom
 // [ni*10+9]: (minX, minY, w, h) text block bounds
 
-const nodeTexels = 10;
-const nodeFloats = nodeTexels * 4;
+const nodeFloats = textNodeDataFloats;
 
 // Per-vertex layout (20 bytes): pos f32x2 + uv f32x2 + packed node/atlas u32
 const vertexStrideBytes = 20;
@@ -175,210 +177,11 @@ class TextRetainedReplayState implements WebGpuRetainedRendererReplayState {
 
 // ── WGSL: shared vertex + three fragment entry points ────────────────────────
 /** WGSL source for the text pipeline (shared vertex + color/SDF/MSDF fragment entry points). @internal */
-export const textShaderSource = `
-struct FrameUniforms {
-    projCol0 : vec4<f32>,
-    projCol1 : vec4<f32>,
-    projCol2 : vec4<f32>,
-    groupCol0 : vec4<f32>,
-    groupCol1 : vec4<f32>,
-    groupCol2 : vec4<f32>,
-    viewport : vec4<f32>,       // device-pixel snap rect (x, y, width, height)
-};
-
-@group(0) @binding(0) var<uniform>       frame : FrameUniforms;
-@group(0) @binding(1) var<storage, read> nodes : array<vec4<f32>>;
-
-${textAtlasTextureSlotWgsl}
-
-struct VertexInput {
-    @location(0) position  : vec2<f32>,
-    @location(1) texcoord  : vec2<f32>,
-    @location(2) packedNodeSlot : u32,
-};
-
-struct VertexOutput {
-    @builtin(position)              clipPos  : vec4<f32>,
-    @location(0)                    texcoord : vec2<f32>,
-    @location(1)                    gradUV   : vec2<f32>,
-    @location(2) @interpolate(flat) nodeIdx  : u32,
-    @location(3) @interpolate(flat) textureSlot : u32,
-};
-
-@vertex
-fn vertexMain(input: VertexInput) -> VertexOutput {
-    let ni   = input.packedNodeSlot & ${textNodeIndexMask}u;
-    let base = ni * 10u;
-
-    let t0 = nodes[base + 0u];
-    let t1 = nodes[base + 1u];
-    let t9 = nodes[base + 9u];
-
-    let proj = mat3x3<f32>(
-        frame.projCol0.xyz,
-        frame.projCol1.xyz,
-        frame.projCol2.xyz,
-    );
-    let xf = mat3x3<f32>(
-        vec3<f32>(t0.x, t0.y, 0.0),
-        vec3<f32>(t1.x, t1.y, 0.0),
-        vec3<f32>(t0.w, t1.w, 1.0),
-    );
-
-    let grp = mat3x3<f32>(
-        frame.groupCol0.xyz,
-        frame.groupCol1.xyz,
-        frame.groupCol2.xyz,
-    );
-    let worldPos = proj * grp * xf * vec3<f32>(input.position, 1.0);
-
-    var clipPos = vec4<f32>(worldPos.xy, 0.0, 1.0);
-
-    // Render-only pixel snapping (t0.z: 0 = none, non-zero = snap origin).
-    // Snap the node ORIGIN (t0.w, t1.w)'s device-pixel position and
-    // rigid-shift every glyph vertex by the same delta. floor(x + 0.5)
-    // matches the CPU Math.round policy; WGSL round() is half-to-even. Grid
-    // alignment is independent of the y-axis convention because the staged
-    // viewport rect is whole device pixels.
-    if (t0.z != 0.0) {
-        let originClip = (proj * grp * vec3<f32>(t0.w, t1.w, 1.0)).xy;
-        let originDevice = frame.viewport.xy + (originClip * 0.5 + vec2<f32>(0.5)) * frame.viewport.zw;
-        let snapDelta = (floor(originDevice + vec2<f32>(0.5)) - originDevice) * 2.0 / max(frame.viewport.zw, vec2<f32>(1.0));
-        clipPos = vec4<f32>(clipPos.xy + snapDelta, clipPos.z, clipPos.w);
-    }
-
-    let bSize  = t9.zw;
-    var gradUV = vec2<f32>(0.0);
-    if (bSize.x > 0.0 && bSize.y > 0.0) {
-        gradUV = clamp((input.position - t9.xy) / bSize, vec2<f32>(0.0), vec2<f32>(1.0));
-    }
-
-    var out: VertexOutput;
-    out.clipPos  = clipPos;
-    out.texcoord = input.texcoord;
-    out.gradUV   = gradUV;
-    out.nodeIdx  = ni;
-    out.textureSlot = input.packedNodeSlot >> ${textAtlasSlotShift}u;
-    return out;
-}
-
-// ── SDF (R8 atlas) ────────────────────────────────────────────────────────────
-
-@fragment
-fn fragmentSdf(in: VertexOutput) -> @location(0) vec4<f32> {
-    let ni   = in.nodeIdx;
-    let base = ni * 10u;
-
-    let tFill    = nodes[base + 2u];
-    let tOutline = nodes[base + 3u];
-    let tParams  = nodes[base + 4u];
-    let tShadow  = nodes[base + 5u];
-    let tShadow2 = nodes[base + 6u];
-    let tGradTop = nodes[base + 7u];
-    let tGradBot = nodes[base + 8u];
-
-    let outlineMin   = tParams.x;
-    let shadowAlpha  = tParams.y;
-    let soft         = max(tParams.z, 0.001);
-    let gradEnabled  = tParams.w;
-    let pageSize     = f32(atlasTextureDimensions(in.textureSlot).x);
-    let shadowOffset = tShadow2.xy / pageSize;
-    let gradVertical = tShadow2.z;
-
-    let uvDx = dpdx(in.texcoord);
-    let uvDy = dpdy(in.texcoord);
-    let sd   = sampleTexture(in.textureSlot, in.texcoord, uvDx, uvDy).r;
-    let fill = smoothstep(0.5 - soft, 0.5 + soft, sd);
-
-    let shadowSd = sampleTexture(in.textureSlot, in.texcoord - shadowOffset, uvDx, uvDy).r;
-
-    let outline = select(0.0,
-        smoothstep(outlineMin - soft, outlineMin + soft, sd) * (1.0 - fill),
-        outlineMin < 0.5);
-
-    let shadow = smoothstep(0.5 - soft, 0.5 + soft, shadowSd)
-                 * shadowAlpha * (1.0 - fill) * (1.0 - outline);
-
-    var fillColor : vec4<f32>;
-    if (gradEnabled > 0.5) {
-        // gradUV is 0 at the top/left edge of the ink box and 1 at the
-        // bottom/right, so texel 7 (gradientColors[0]) belongs at t = 0.
-        let t = select(in.gradUV.x, in.gradUV.y, gradVertical > 0.5);
-        fillColor = mix(tGradTop, tGradBot, t);
-    } else {
-        fillColor = tFill;
-    }
-
-    return fillColor * fill + tOutline * outline + tShadow * shadow;
-}
-
-// ── MSDF (RGB atlas) ──────────────────────────────────────────────────────────
-
-fn median3(r: f32, g: f32, b: f32) -> f32 {
-    return max(min(r, g), min(max(r, g), b));
-}
-
-@fragment
-fn fragmentMsdf(in: VertexOutput) -> @location(0) vec4<f32> {
-    let ni   = in.nodeIdx;
-    let base = ni * 10u;
-
-    let tFill    = nodes[base + 2u];
-    let tOutline = nodes[base + 3u];
-    let tParams  = nodes[base + 4u];
-    let tShadow  = nodes[base + 5u];
-    let tShadow2 = nodes[base + 6u];
-    let tGradTop = nodes[base + 7u];
-    let tGradBot = nodes[base + 8u];
-
-    let outlineMin   = tParams.x;
-    let shadowAlpha  = tParams.y;
-    let soft         = max(tParams.z, 0.001);
-    let gradEnabled  = tParams.w;
-    let pageSize     = f32(atlasTextureDimensions(in.textureSlot).x);
-    let shadowOffset = tShadow2.xy / pageSize;
-    let gradVertical = tShadow2.z;
-
-    let uvDx = dpdx(in.texcoord);
-    let uvDy = dpdy(in.texcoord);
-    let msd  = sampleTexture(in.textureSlot, in.texcoord, uvDx, uvDy).rgb;
-    let sd   = median3(msd.r, msd.g, msd.b);
-    let fill = smoothstep(0.5 - soft, 0.5 + soft, sd);
-
-    let shadowMsd = sampleTexture(in.textureSlot, in.texcoord - shadowOffset, uvDx, uvDy).rgb;
-    let shadowSd  = median3(shadowMsd.r, shadowMsd.g, shadowMsd.b);
-
-    let outline = select(0.0,
-        smoothstep(outlineMin - soft, outlineMin + soft, sd) * (1.0 - fill),
-        outlineMin < 0.5);
-
-    let shadow = smoothstep(0.5 - soft, 0.5 + soft, shadowSd)
-                 * shadowAlpha * (1.0 - fill) * (1.0 - outline);
-
-    var fillColor : vec4<f32>;
-    if (gradEnabled > 0.5) {
-        // gradUV is 0 at the top/left edge of the ink box and 1 at the
-        // bottom/right, so texel 7 (gradientColors[0]) belongs at t = 0.
-        let t = select(in.gradUV.x, in.gradUV.y, gradVertical > 0.5);
-        fillColor = mix(tGradTop, tGradBot, t);
-    } else {
-        fillColor = tFill;
-    }
-
-    return fillColor * fill + tOutline * outline + tShadow * shadow;
-}
-
-// ── Color (RGBA atlas) ────────────────────────────────────────────────────────
-
-@fragment
-fn fragmentColor(in: VertexOutput) -> @location(0) vec4<f32> {
-    let ni     = in.nodeIdx;
-    let base   = ni * 10u;
-    let tint   = nodes[base + 2u];
-    let sample = sampleTexture(in.textureSlot, in.texcoord, dpdx(in.texcoord), dpdy(in.texcoord));
-    return sample * tint;
-}
-`;
+export const textShaderSource = fillShaderSource(textShaderTemplate, {
+  atlasTextureSlots: textAtlasTextureSlotWgsl,
+  nodeIndexMask: textNodeIndexMask,
+  atlasSlotShift: textAtlasSlotShift,
+});
 
 /**
  * WebGPU renderer for {@link Text} and {@link BitmapText} nodes.
@@ -944,6 +747,10 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
   // ── Collection ───────────────────────────────────────────────────────────
 
   private _collectText(node: Text): void {
+    // Before the layout pass, not after: this is what a node with no explicit
+    // `pixelRatio` inherits, and the pass it drives is the one that resolves
+    // which atlas the node rasterizes into.
+    node._setSurfacePixelRatio(this.getBackend().surfacePixelRatio);
     node.syncDirty();
     const { pageQuads, atlas } = node;
     if (pageQuads.length === 0 || atlas === null) return;
@@ -988,79 +795,13 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     return idx;
   }
 
-  // ── Node data packing (identical to WebGl2TextRenderer) ──────────────────
+  // ── Node data packing ─────────────────────────────────────────────────────
+  // The 10-texel/40-float layout is packed by the shared, backend-free
+  // `packTextNodeData` (mirrors `WebGl2TextRenderer`, byte for byte) - see
+  // `textNodeDataPacker.ts` for the texel-by-texel layout comment.
 
   private _packNodeData(ni: number, node: Text | BitmapText): void {
-    const arr = this._nodeDataArray;
-    const base = ni * nodeFloats;
-    const style = node.style;
-
-    // `toArray` returns a fixed Float32Array(9); indices 0..8 are always valid.
-    const m = node.getGlobalTransform().toArray(false);
-    arr[base + 0] = m[0]!;
-    arr[base + 1] = m[1]!;
-    // Texel 0's spare `.z` carries the snap-mode flag the vertex stage reads to
-    // decide whether to snap the glyph origin to the device-pixel grid —
-    // this turns Text position snapping from a silent no-op into a real feature.
-    arr[base + 2] = node.pixelSnapMode;
-    arr[base + 3] = m[6]!;
-    arr[base + 4] = m[3]!;
-    arr[base + 5] = m[4]!;
-    arr[base + 6] = m[5]!;
-    arr[base + 7] = m[7]!;
-
-    const fc = style.fillColor;
-    arr[base + 8] = fc.r / 255;
-    arr[base + 9] = fc.g / 255;
-    arr[base + 10] = fc.b / 255;
-    arr[base + 11] = fc.a;
-
-    const oc = style.outlineColor;
-    arr[base + 12] = oc.r / 255;
-    arr[base + 13] = oc.g / 255;
-    arr[base + 14] = oc.b / 255;
-    arr[base + 15] = oc.a;
-
-    const outlineMin = style.outlineWidth > 0 ? Math.max(0, 0.5 - style.outlineWidth) : 0.5;
-    arr[base + 16] = outlineMin;
-    arr[base + 17] = style.shadowAlpha;
-    arr[base + 18] = Math.max(0.03, style.shadowBlur * 0.1);
-    arr[base + 19] = style.gradientColors !== null ? 1 : 0;
-
-    const sc = style.shadowColor;
-    arr[base + 20] = sc.r / 255;
-    arr[base + 21] = sc.g / 255;
-    arr[base + 22] = sc.b / 255;
-    arr[base + 23] = sc.a;
-
-    arr[base + 24] = style.shadowOffsetX;
-    arr[base + 25] = style.shadowOffsetY;
-    arr[base + 26] = style.gradientAxis === 'vertical' ? 1 : 0;
-    arr[base + 27] = 0;
-
-    const gc = style.gradientColors;
-    if (gc !== null) {
-      arr[base + 28] = gc[0].r / 255;
-      arr[base + 29] = gc[0].g / 255;
-      arr[base + 30] = gc[0].b / 255;
-      arr[base + 31] = gc[0].a;
-      arr[base + 32] = gc[1].r / 255;
-      arr[base + 33] = gc[1].g / 255;
-      arr[base + 34] = gc[1].b / 255;
-      arr[base + 35] = gc[1].a;
-    } else {
-      arr[base + 28] = arr[base + 29] = arr[base + 30] = arr[base + 31] = 0;
-      arr[base + 32] = arr[base + 33] = arr[base + 34] = arr[base + 35] = 0;
-    }
-
-    // The gradient UV is normalized against the rectangle the glyph quads
-    // actually cover, not the advance extent — the SDF quads start at a
-    // negative offset, so an origin of (0, 0) would skew the ramp.
-    const ink = node.getLocalBounds();
-    arr[base + 36] = ink.x;
-    arr[base + 37] = ink.y;
-    arr[base + 38] = ink.width;
-    arr[base + 39] = ink.height;
+    packTextNodeData(this._nodeDataArray, ni * nodeFloats, node);
   }
 
   // ── GPU resource helpers ─────────────────────────────────────────────────
@@ -1382,16 +1123,20 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       quadCount: batch.indexCount / 6,
     };
 
+    // The batch's instances are its glyph quads; its NODES are the text runs the
+    // quads came from - a single run contributes one to `submittedNodes` however
+    // many glyphs it draws, on this tier as on the live one.
     backend._recordRetainedBatch(
       this,
       vertexBytes,
       vertexByteLength,
-      this._nodeCount,
+      rendererData.quadCount,
       BlendModes.Normal,
       batch.atlasTextures,
       batch.atlasTextures.length,
       null,
       rendererData,
+      this._nodeCount,
     );
 
     this._recordedCaptureFrames.add(frame);
@@ -1546,19 +1291,9 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       return false;
     }
 
-    // `toArray` returns a fixed Float32Array(9); indices 0..8 are always valid
-    // (mirrors `_packNodeData`'s transform packing above).
-    const m = drawable.getGlobalTransform().toArray(false);
     const row = this._patchRowScratch;
 
-    row[0] = m[0]!;
-    row[1] = m[1]!;
-    row[2] = drawable.pixelSnapMode; // snap-mode flag (texel 0's spare .z)
-    row[3] = m[6]!;
-    row[4] = m[3]!;
-    row[5] = m[4]!;
-    row[6] = m[5]!;
-    row[7] = m[7]!;
+    packTextNodeTransform(row, 0, drawable);
 
     const byteOffset = localIndex * nodeFloats * 4;
 

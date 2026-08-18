@@ -192,6 +192,43 @@ describe('Button', () => {
 
     expect(() => button.setSize(0, 0)).not.toThrow();
   });
+
+  test("a disabled parent Panel makes a contained Button non-interactive and blocks activation, without touching the button's own enabled (ME-56)", () => {
+    const panel = new Panel();
+    const button = new Button();
+    const handler = vi.fn();
+
+    panel.addChild(button);
+    button.onClick.add(handler);
+
+    panel.enabled = false;
+
+    expect(button.effectiveEnabled).toBe(false);
+    expect(button.enabled).toBe(true); // own flag untouched
+    expect(button.interactive).toBe(false);
+
+    button.onKeyDown.dispatch(new KeyEvent('keydown', Keyboard.Enter, button));
+    button.onPointerTap.dispatch({} as never);
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  test("re-enabling the parent Panel restores the contained Button's interactivity automatically (ME-56)", () => {
+    const panel = new Panel();
+    const button = new Button();
+    const handler = vi.fn();
+
+    panel.addChild(button);
+    button.onClick.add(handler);
+
+    panel.enabled = false;
+    panel.enabled = true;
+
+    expect(button.effectiveEnabled).toBe(true);
+    expect(button.interactive).toBe(true);
+
+    button.onPointerTap.dispatch({} as never);
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('ProgressBar', () => {
