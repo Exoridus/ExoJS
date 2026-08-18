@@ -446,6 +446,52 @@ describe('AudioGeneratorVoice — Pausable', () => {
     dispose();
   });
 
+  // ---- pool pressure while paused ----
+
+  test('a paused voice is not the eviction victim while unpaused voices exist', () => {
+    setCurrentTime(0);
+    const manager = new AudioManager();
+    const spy = setupSpy();
+    const generator = new AudioGenerator({ poolSize: 2 });
+
+    const held = manager.play(generator) as AudioGeneratorVoice;
+    held.pause();
+
+    // A paused voice looks oldest under FIFO — its pool bookkeeping ages against
+    // the still-running context clock — so it would be evicted first, stopped
+    // for good, and `SceneAudio.restore()` would then pass over it (`ended`, not
+    // `paused`): the held note is silently gone.
+    for (let index = 0; index < 4; index++) {
+      manager.play(generator);
+    }
+
+    expect(held.ended).toBe(false);
+    expect(held.paused).toBe(true);
+
+    spy.restore();
+    generator.destroy();
+    manager.destroy();
+  });
+
+  test('an all-paused pool still evicts, so a full pool never blocks new playback', () => {
+    setCurrentTime(0);
+    const manager = new AudioManager();
+    const spy = setupSpy();
+    const generator = new AudioGenerator({ poolSize: 1 });
+
+    const held = manager.play(generator) as AudioGeneratorVoice;
+    held.pause();
+
+    const next = manager.play(generator) as AudioGeneratorVoice;
+
+    expect(held.ended).toBe(true);
+    expect(next.ended).toBe(false);
+
+    spy.restore();
+    generator.destroy();
+    manager.destroy();
+  });
+
   // ---- pitch / rate across a pause ----
 
   test('frequency set while paused is applied to the oscillator resume starts', () => {
