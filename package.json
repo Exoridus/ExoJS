@@ -97,7 +97,7 @@
     "typecheck": "tsc --noEmit",
     "typecheck:full-bundle": "tsc --noEmit -p tsconfig.full-bundle.json",
     "typecheck:examples": "tsc --noEmit -p tsconfig.examples.json",
-    "typecheck:type-tests": "tsc --noEmit -p tsconfig.type-tests.json && tsc --noEmit -p tsconfig.type-tests-strict.json && tsc --noEmit -p tsconfig.type-tests.json --strict false --strictNullChecks false",
+    "typecheck:type-tests": "tsc --noEmit -p tsconfig.type-tests.json && tsc --noEmit -p tsconfig.type-tests-strict.json && tsc --noEmit -p tsconfig.type-tests.json --strict false --strictNullChecks false && tsc --noEmit -p tsconfig.type-tests-react.json",
     "typecheck:guides": "tsx scripts/extract-guide-snippets.ts && tsx scripts/typecheck-guides.ts",
     "typecheck:guides:update-baseline": "tsx scripts/extract-guide-snippets.ts --update-baseline",
     "typecheck:packages": "pnpm --filter \"@codexo/exojs-particles\" --filter \"@codexo/exojs-tilemap\" --filter \"@codexo/exojs-tiled\" --filter \"@codexo/exojs-physics\" --filter \"@codexo/exojs-audio-fx\" --filter \"@codexo/exojs-aseprite\" --filter \"@codexo/exojs-ldtk\" --filter \"@codexo/exojs-react\" typecheck",
