@@ -111,24 +111,40 @@ filter.setLut(differentLutTexture);
 
 ## Custom shader filters
 
-`WebGl2ShaderFilter` and `WebGpuShaderFilter` accept a fragment shader source and an optional uniforms map. They render a fullscreen quad and execute the shader against the filter input texture:
+`ShaderFilter` takes a fragment shader source per language and an optional uniforms map. It renders a fullscreen quad and executes the shader against the filter input texture, picking the source the active backend speaks:
 
 ```ts no-check
-import { WebGl2ShaderFilter } from '@codexo/exojs';
+import { ShaderFilter } from '@codexo/exojs';
 
-const waveFilter = new WebGl2ShaderFilter({
-    fragmentSource: `
-        #version 300 es
-        precision mediump float;
-        uniform sampler2D uTexture;
-        uniform float uTime;
-        in vec2 vUv;
-        out vec4 fragColor;
+const waveFilter = new ShaderFilter({
+    glsl: {
+        fragment: `
+            #version 300 es
+            precision mediump float;
+            uniform sampler2D uTexture;
+            uniform float uTime;
+            in vec2 vUv;
+            out vec4 fragColor;
 
-        void main() {
-            vec2 uv = vUv;
-            uv.y += sin(uv.x * 12.0 + uTime * 3.0) * 0.03;
-            fragColor = texture(uTexture, uv);
+            void main() {
+                vec2 uv = vUv;
+                uv.y += sin(uv.x * 12.0 + uTime * 3.0) * 0.03;
+                fragColor = texture(uTexture, uv);
+            }
+        `,
+    },
+    wgsl: `
+        struct Uniforms { uTime: f32 };
+
+        @group(0) @binding(1) var uTexture: texture_2d<f32>;
+        @group(0) @binding(2) var uSampler: sampler;
+        @group(1) @binding(0) var<uniform> uniforms: Uniforms;
+
+        @fragment
+        fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
+            var uv = vUv;
+            uv.y += sin(uv.x * 12.0 + uniforms.uTime * 3.0) * 0.03;
+            return textureSample(uTexture, uSampler, uv);
         }
     `,
     uniforms: { uTime: 0 },
@@ -143,7 +159,11 @@ update(delta) {
 }
 ```
 
-Use `WebGpuShaderFilter` identically for WebGPU — same `fragmentSource` and `uniforms` shape, only the shader language differs (WGSL instead of GLSL). For backend-portable filters, construct the appropriate variant based on `app.backend.backendType`.
+Both sources are optional on their own, but a filter is only portable when it carries both: `backend: 'auto'` decides which backend an application ends up on, and a filter missing that backend's language throws `ShaderFilterBackendError` the moment it is attached — before it compiles anything. Ask `filter.supports(backendType)` if you want to check first.
+
+The WGSL side is one module. Name the fragment entry point `fragmentMain`; a module without a `@vertex` stage gets the default fullscreen-quad vertex stage (`vertexMain`) prepended, and one that declares its own must name it `vertexMain` and emit `@location(0) vUv: vec2<f32>`.
+
+WGSL user uniforms live in `@group(1)`: every non-texture uniform packs into one buffer at `@binding(0)`, each in a 16-byte slot **in the order you passed them**, and textures follow from `@binding(1)`, each with its sampler in the next slot. The GLSL side binds by name instead, with texture uniforms taking slots 1..N.
 
 Both auto-bind `uTexture` (the filter input) and `uResolution` (output dimensions) — you don't declare these in your fragment source unless you want to read them. Write custom uniforms with `setUniform(name, value)` or `setUniforms({ ... })`: they are flushed before each pass AND they invalidate the nodes rendering the filter, which writing into the read-only `uniforms` view could not do. Accepted value types: `number`, `[n, n]`/`[n, n, n]`/`[n, n, n, n]` tuples, `Float32Array`, `Int32Array`, `Texture`, and `RenderTexture`.
 

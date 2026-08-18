@@ -11,8 +11,7 @@ import { Color } from '#core/Color';
 import { BlurFilter } from '#rendering/filters/BlurFilter';
 import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import { Filter } from '#rendering/filters/Filter';
-import { WebGl2ShaderFilter } from '#rendering/filters/WebGl2ShaderFilter';
-import { WebGpuShaderFilter } from '#rendering/filters/WebGpuShaderFilter';
+import { ShaderFilter } from '#rendering/filters/ShaderFilter';
 import { RenderNode } from '#rendering/RenderNode';
 
 class CountingNode extends RenderNode {
@@ -92,7 +91,7 @@ describe('a mutated filter reaches the nodes that render it', () => {
 describe('every stock filter owns its own invalidation', () => {
   test('a shader filter uniform written through setUniform notifies the owner', () => {
     const node = new CountingNode();
-    const filter = new WebGl2ShaderFilter({ fragmentSource: 'void main() {}', uniforms: { uTime: 0 } });
+    const filter = new ShaderFilter({ glsl: { fragment: 'void main() {}' }, uniforms: { uTime: 0 } });
 
     node.addFilter(filter);
 
@@ -106,7 +105,7 @@ describe('every stock filter owns its own invalidation', () => {
 
   test('setUniforms notifies once for a whole batch', () => {
     const node = new CountingNode();
-    const filter = new WebGl2ShaderFilter({ fragmentSource: 'void main() {}', uniforms: { uTime: 0, uStrength: 0 } });
+    const filter = new ShaderFilter({ glsl: { fragment: 'void main() {}' }, uniforms: { uTime: 0, uStrength: 0 } });
 
     node.addFilter(filter);
 
@@ -119,9 +118,9 @@ describe('every stock filter owns its own invalidation', () => {
     expect(node.invalidations).toBe(afterAttach + 1);
   });
 
-  test('the WebGPU shader filter carries the same contract', () => {
+  test('a WGSL-sourced shader filter carries the same contract', () => {
     const node = new CountingNode();
-    const filter = new WebGpuShaderFilter({ fragmentSource: 'void main() {}', uniforms: { uTime: 0 } });
+    const filter = new ShaderFilter({ wgsl: '@fragment fn fragmentMain() {}', uniforms: { uTime: 0 } });
 
     node.addFilter(filter);
 

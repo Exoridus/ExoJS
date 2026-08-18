@@ -1,9 +1,7 @@
 import { Color } from '#core/Color';
 import { BackendTargetPass } from '#rendering/BackendTargetPass';
 import type { RenderBackend } from '#rendering/RenderBackend';
-import { RenderBackendType } from '#rendering/RenderBackendType';
 import { Shader } from '#rendering/shader/Shader';
-import { upgradeFragmentShaderToGl300 } from '#rendering/shader/upgradeFragmentShaderToGl300';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
@@ -12,80 +10,7 @@ import { WebGl2RenderBuffer } from '#rendering/webgl2/WebGl2RenderBuffer';
 import { createWebGl2ShaderProgram } from '#rendering/webgl2/WebGl2ShaderProgram';
 import { WebGl2VertexArrayObject } from '#rendering/webgl2/WebGl2VertexArrayObject';
 
-import { Filter } from './Filter';
-
-/**
- * A scalar number, vector tuple, typed array, or texture. Both
- * {@link WebGl2ShaderFilter} and {@link WebGpuShaderFilter} accept and
- * marshal these value types.
- */
-export type ShaderFilterUniformValue =
-  | number
-  | readonly [number, number]
-  | readonly [number, number, number]
-  | readonly [number, number, number, number]
-  | Float32Array
-  | Int32Array
-  | Texture
-  | RenderTexture;
-
-export interface WebGl2ShaderFilterOptions {
-  /**
-   * GLSL fragment shader source. Required.
-   *
-   * The shader receives these auto-bound uniforms:
-   *   uniform sampler2D uTexture;     // the filter's input
-   *   uniform vec2 uResolution;        // output dimensions
-   *
-   * And these auto-bound varyings:
-   *   in vec2 vUv;                     // 0..1 across the quad
-   */
-  fragmentSource?: string;
-
-  /**
-   * GLSL vertex shader source. Optional; defaults to a pass-through
-   * fullscreen-quad shader.
-   */
-  vertexSource?: string;
-
-  /**
-   * Initial uniform values. Update them at runtime through
-   * `setUniform` / `setUniforms`, which also invalidate the nodes
-   * rendering the filter:
-   *
-   *   filter.setUniform('uTime', performance.now() / 1000);
-   */
-  uniforms?: Record<string, ShaderFilterUniformValue>;
-
-  /**
-   * Auto-upgrade legacy GLSL ES 1.00 fragment shader source to GLSL ES 3.00.
-   * Default `true` — accepts both Shadertoy/ISF/legacy shaders and modern
-   * 3.00 shaders interchangeably.
-   *
-   * Set to `false` if you want strict 3.00 input (will fail to compile if
-   * given 1.00-style code). Useful for CI/linting setups that want to catch
-   * legacy shader code as bugs.
-   *
-   * Note: only the fragment shader is upgraded. If you supply a 1.00-style
-   * vertex shader via `vertexSource`, you will get a compile error that
-   * must be fixed manually.
-   */
-  autoUpgrade?: boolean;
-}
-
-/**
- * Default fullscreen-quad vertex shader. Positions are already in clip
- * space (-1..1), so no projection matrix is needed.
- */
-const defaultVertexSource = `#version 300 es
-in vec2 aPosition;
-in vec2 aUv;
-out vec2 vUv;
-void main() {
-    vUv = aUv;
-    gl_Position = vec4(aPosition, 0.0, 1.0);
-}
-`;
+import type { ShaderFilterUniformValue } from './ShaderFilter';
 
 /**
  * Interleaved position+UV data for a fullscreen TRIANGLE_STRIP quad.
@@ -109,46 +34,15 @@ interface WebGl2Connection {
 }
 
 /**
- * A high-level {@link Filter} subclass that renders the input texture
- * through a user-provided GLSL fragment shader on the **WebGL2** backend.
+ * The WebGL2 half of a {@link ShaderFilter}: compiles the GLSL pair, binds the
+ * auto-bound and user uniforms, and draws the fullscreen quad.
  *
- * For the WebGPU backend use {@link WebGpuShaderFilter}.
- *
- * ## Usage
- *
- * ```ts
- * const filter = new WebGl2ShaderFilter({
- *   fragmentSource: `
- *     #version 300 es
- *     precision mediump float;
- *     uniform sampler2D uTexture;
- *     uniform vec2 uResolution;
- *     uniform float uTime;
- *     in vec2 vUv;
- *     out vec4 fragColor;
- *     void main() {
- *       fragColor = texture(uTexture, vUv);
- *     }
- *   `,
- *   uniforms: { uTime: 0.0 },
- * });
- *
- * // Update uniforms each frame:
- * filter.setUniform('uTime', performance.now() / 1000);
- * sprite.filters = [filter];
- * ```
- *
- * ## Auto-bound uniforms
- *
- * The backend automatically sets `uTexture` (slot 0) and `uResolution`
- * before each draw. User uniforms start at texture slot 1.
+ * Not a {@link Filter} itself and not public — the filter owns it, decides when
+ * it is built, and hands it the uniform record it keeps writing to, so a
+ * `setUniform` call reaches this pass without copying anything.
+ * @internal
  */
-export class WebGl2ShaderFilter extends Filter {
-  private readonly _uniforms: Record<string, ShaderFilterUniformValue>;
-
-  private readonly _fragmentSource: string;
-  private readonly _vertexSource: string;
-
+export class WebGl2ShaderFilterPass {
   /** One redirect pass, re-pointed per application — see {@link BackendTargetPass.retarget}. */
   private readonly _pass: BackendTargetPass = new BackendTargetPass(backend => this._run(backend));
   /** Reused upload buffers for the auto-bound uniforms, so a frame allocates none. */
@@ -157,67 +51,28 @@ export class WebGl2ShaderFilter extends Filter {
   /** One reused buffer per non-texture user uniform — see {@link _marshalValue}. */
   private readonly _scratch = new Map<string, Float32Array>();
 
+  private readonly _vertexSource: string;
+  private readonly _fragmentSource: string;
+  /** The filter's live uniform record, read on every draw. */
+  private readonly _uniforms: Readonly<Record<string, ShaderFilterUniformValue>>;
+
   private _shader: Shader | null = null;
   private _connection: WebGl2Connection | null = null;
   /** The textures the running pass reads from and writes to, staged by {@link apply}. */
   private _passInput: RenderTexture | null = null;
   private _passOutput: RenderTexture | null = null;
 
-  public constructor(options: WebGl2ShaderFilterOptions) {
-    super();
-
-    if (!options.fragmentSource) {
-      throw new Error('WebGl2ShaderFilter requires fragmentSource for the WebGL2 backend.');
-    }
-
-    const autoUpgrade = options.autoUpgrade !== false;
-    this._fragmentSource = autoUpgrade ? upgradeFragmentShaderToGl300(options.fragmentSource) : options.fragmentSource;
-    this._vertexSource = options.vertexSource ?? defaultVertexSource;
-    this._uniforms = { ...(options.uniforms ?? {}) };
-  }
-
-  /**
-   * The current uniform values, for reading.
-   *
-   * Deliberately not writable: a value written straight into this record would
-   * reach the GPU on the next draw but tell nobody, so a cached or retained
-   * representation of the owning node would keep replaying the frame the old
-   * value produced. Write through {@link setUniform} / {@link setUniforms}.
-   */
-  public get uniforms(): Readonly<Record<string, ShaderFilterUniformValue>> {
-    return this._uniforms;
-  }
-
-  /** Set one uniform and notify every node rendering this filter. */
-  public setUniform(name: string, value: ShaderFilterUniformValue): this {
-    this._uniforms[name] = value;
-    this.invalidate();
-
-    return this;
-  }
-
-  /** Set several uniforms, notifying once for the batch. */
-  public setUniforms(values: Readonly<Record<string, ShaderFilterUniformValue>>): this {
-    for (const name of Object.keys(values)) {
-      // In-bounds: `name` comes from `values`' own keys.
-      this._uniforms[name] = values[name]!;
-    }
-
-    this.invalidate();
-
-    return this;
+  public constructor(vertexSource: string, fragmentSource: string, uniforms: Readonly<Record<string, ShaderFilterUniformValue>>) {
+    this._vertexSource = vertexSource;
+    this._fragmentSource = fragmentSource;
+    this._uniforms = uniforms;
   }
 
   /**
    * Execute the GLSL shader pass: compile the program on first call, bind
-   * uniforms, and render the input texture into `output`. Throws if the
-   * active backend is WebGPU — use {@link WebGpuShaderFilter} on WebGPU.
+   * uniforms, and render the input texture into `output`.
    */
   public apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture, _resolution = 1): void {
-    if (backend.backendType === RenderBackendType.WebGpu) {
-      throw new Error('WebGl2ShaderFilter requires the WebGL2 backend. Use WebGpuShaderFilter on WebGPU.');
-    }
-
     const gl2Backend = backend as WebGl2Backend;
 
     this._ensureConnected(gl2Backend);
@@ -229,6 +84,19 @@ export class WebGl2ShaderFilter extends Filter {
     this._passOutput = output;
 
     backend.execute(this._pass.retarget(output, output.view, Color.transparentBlack));
+  }
+
+  public destroy(): void {
+    if (this._connection !== null) {
+      this._connection.vertexBuffer.destroy();
+      this._connection.vao.destroy();
+      this._connection = null;
+    }
+
+    if (this._shader !== null) {
+      this._shader.destroy();
+      this._shader = null;
+    }
   }
 
   /** The pass body — see {@link _pass}. */
@@ -293,28 +161,6 @@ export class WebGl2ShaderFilter extends Filter {
     gl2.stats.drawCalls++;
   }
 
-  public override destroy(): void {
-    super.destroy();
-    if (this._connection !== null) {
-      this._connection.vertexBuffer.destroy();
-      this._connection.vao.destroy();
-      this._connection = null;
-    }
-
-    if (this._shader !== null) {
-      this._shader.destroy();
-      this._shader = null;
-    }
-
-    for (const key of Object.keys(this._uniforms)) {
-      delete this._uniforms[key];
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Private helpers
-  // ---------------------------------------------------------------------------
-
   private _ensureConnected(backend: WebGl2Backend): void {
     if (this._shader !== null) {
       return;
@@ -336,7 +182,7 @@ export class WebGl2ShaderFilter extends Filter {
     const vaoHandle = gl.createVertexArray();
 
     if (vaoHandle === null) {
-      throw new Error('WebGl2ShaderFilter: could not create vertex array object.');
+      throw new Error('ShaderFilter: could not create vertex array object.');
     }
 
     const vertexBuffer = this._createVertexBuffer(gl);
@@ -350,7 +196,7 @@ export class WebGl2ShaderFilter extends Filter {
     const handle = gl.createBuffer();
 
     if (handle === null) {
-      throw new Error('WebGl2ShaderFilter: could not create vertex buffer.');
+      throw new Error('ShaderFilter: could not create vertex buffer.');
     }
 
     const buffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, quadVertices, BufferUsage.StaticDraw);

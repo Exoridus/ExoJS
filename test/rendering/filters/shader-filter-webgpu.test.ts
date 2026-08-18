@@ -3,14 +3,13 @@
 import { Color } from '#core/Color';
 /// <reference types="@webgpu/types" />
 /**
- * WebGpuShaderFilter unit tests.
+ * ShaderFilter unit tests for the WebGPU half.
  *
  * These tests use a minimal WebGPU mock (same pattern as webgpu-backend.test.ts)
- * to verify the WebGpuShaderFilter's construction, apply() pipeline/bind-group
- * setup, uniform marshalling, WebGL2 guard, and lifecycle methods.
+ * to verify the filter's construction, apply() pipeline/bind-group setup,
+ * uniform marshalling, missing-source guard, and lifecycle methods.
  */
-import type { WebGpuShaderFilterOptions } from '#rendering/filters/WebGpuShaderFilter';
-import { WebGpuShaderFilter } from '#rendering/filters/WebGpuShaderFilter';
+import { ShaderFilter, ShaderFilterBackendError } from '#rendering/filters/ShaderFilter';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
@@ -352,31 +351,37 @@ const minimalFragSrc = `
 @group(0) @binding(2) var uSampler: sampler;
 
 @fragment
-fn main(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
+fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
     return textureSample(uTexture, uSampler, vUv);
 }
 `;
 
-const customVertSrc = `
+/** A module that carries its own vertex stage, so nothing is prepended. */
+const completeModuleSrc = `
 struct VsOut {
     @builtin(position) position: vec4<f32>,
     @location(0) vUv: vec2<f32>,
 };
 
 @vertex
-fn main(@location(0) aPosition: vec2<f32>, @location(1) aUv: vec2<f32>) -> VsOut {
+fn vertexMain(@location(0) aPosition: vec2<f32>, @location(1) aUv: vec2<f32>) -> VsOut {
     var out: VsOut;
     out.position = vec4<f32>(aPosition, 0.0, 1.0);
     out.vUv = aUv;
     return out;
 }
-`;
+${minimalFragSrc}`;
+
+/** The WebGPU pass a filter built on its first attachment, or `null`. */
+function wgslPassOf(filter: ShaderFilter): Record<string, unknown> | null {
+  return (filter as unknown as Record<string, Record<string, unknown> | null>)['_wgslPass'] ?? null;
+}
 
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('WebGpuShaderFilter', () => {
+describe('ShaderFilter on WebGPU', () => {
   let env: MockWebGpuEnv;
 
   beforeEach(() => {
@@ -387,43 +392,43 @@ describe('WebGpuShaderFilter', () => {
     env.restore();
   });
 
-  // 1. Construction with fragmentSource only — succeeds
-  test('constructs successfully with only fragmentSource', () => {
-    expect(() => new WebGpuShaderFilter({ fragmentSource: minimalFragSrc })).not.toThrow();
+  // 1. Construction with a WGSL fragment module only — succeeds
+  test('constructs successfully with only a WGSL source', () => {
+    expect(() => new ShaderFilter({ wgsl: minimalFragSrc })).not.toThrow();
   });
 
-  // 2. Construction without fragmentSource — throws
-  test('throws when constructed without fragmentSource', () => {
-    expect(() => new WebGpuShaderFilter({} as WebGpuShaderFilterOptions)).toThrow('WebGpuShaderFilter requires fragmentSource.');
+  // 2. Construction without any source — throws
+  test('throws when constructed without any shader source', () => {
+    expect(() => new ShaderFilter()).toThrow('ShaderSource requires at least one of `glsl` or `wgsl`.');
   });
 
-  // 3. Default vertex shader is used when none provided
-  test('uses default vertex shader when vertexSource is omitted', () => {
-    const filter = new WebGpuShaderFilter({ fragmentSource: minimalFragSrc });
-    const vs = (filter as unknown as Record<string, unknown>)['_vertexSource'] as string;
+  // 3. The default vertex stage is prepended to a fragment-only module
+  test('prepends the default vertex stage when the module declares none', () => {
+    const filter = new ShaderFilter({ wgsl: minimalFragSrc });
+    const wgsl = filter.shader.wgsl!;
 
-    expect(vs).toContain('aPosition');
-    expect(vs).toContain('aUv');
-    expect(vs).toContain('vUv');
+    expect(wgsl).toContain('@vertex');
+    expect(wgsl).toContain('fn vertexMain');
+    expect(wgsl).toContain('aPosition');
+    expect(wgsl).toContain('aUv');
+    expect(wgsl).toContain('vUv');
+    expect(wgsl).toContain('fn fragmentMain');
 
     filter.destroy();
   });
 
-  // 4. Custom vertex shader is used when provided
-  test('uses provided vertexSource when specified', () => {
-    const filter = new WebGpuShaderFilter({
-      fragmentSource: minimalFragSrc,
-      vertexSource: customVertSrc,
-    });
+  // 4. A module carrying its own vertex stage is used verbatim
+  test('uses a module that declares its own @vertex stage verbatim', () => {
+    const filter = new ShaderFilter({ wgsl: completeModuleSrc });
 
-    expect((filter as unknown as Record<string, unknown>)['_vertexSource']).toBe(customVertSrc);
+    expect(filter.shader.wgsl).toBe(completeModuleSrc);
 
     filter.destroy();
   });
 
   // 5. uniforms are written through the setters, which also invalidate
   test('setUniform writes a value the uniforms view then reports', () => {
-    const filter = new WebGpuShaderFilter({ fragmentSource: minimalFragSrc });
+    const filter = new ShaderFilter({ wgsl: minimalFragSrc });
 
     filter.setUniform('uTime', 1.234);
     filter.setUniform('uColor', [1, 0.5, 0, 1] as unknown as readonly [number, number, number, number]);
@@ -436,8 +441,8 @@ describe('WebGpuShaderFilter', () => {
 
   // 6. Initial uniforms from constructor options populate the map
   test('constructor uniforms option populates the uniforms map', () => {
-    const filter = new WebGpuShaderFilter({
-      fragmentSource: minimalFragSrc,
+    const filter = new ShaderFilter({
+      wgsl: minimalFragSrc,
       uniforms: {
         uTime: 0.5,
         uScale: [2, 2] as unknown as readonly [number, number],
@@ -450,31 +455,37 @@ describe('WebGpuShaderFilter', () => {
     filter.destroy();
   });
 
-  // 7. apply() on WebGL2 backend throws clearly
-  test('apply() on WebGL2 backend throws with clear error message', () => {
-    const filter = new WebGpuShaderFilter({ fragmentSource: minimalFragSrc });
+  // 7. A WGSL-only filter refuses a WebGL2 backend on attach
+  test('a WGSL-only filter throws ShaderFilterBackendError when attached to WebGL2', () => {
+    const filter = new ShaderFilter({ wgsl: minimalFragSrc });
     const backend = makeWebGl2Backend();
     const input = new RenderTexture(16, 16);
     const output = new RenderTexture(16, 16);
 
-    expect(() => filter.apply(backend, input, output)).toThrow('WebGpuShaderFilter requires the WebGPU backend. Use WebGl2ShaderFilter on WebGL2.');
+    expect(() => filter.apply(backend, input, output)).toThrow(ShaderFilterBackendError);
+    expect(() => filter.apply(backend, input, output)).toThrow(/carries no GLSL source/);
 
     filter.destroy();
     input.destroy();
     output.destroy();
   });
 
-  // 8. apply() on WebGPU creates shader modules
-  test('apply() creates vertex and fragment shader modules', () => {
+  // 8. apply() on WebGPU creates ONE module carrying both entry points
+  test('apply() creates a single shader module for both entry points', () => {
     const backend = makeWebGpuBackend(env);
-    const filter = new WebGpuShaderFilter({ fragmentSource: minimalFragSrc });
+    const filter = new ShaderFilter({ wgsl: minimalFragSrc });
     const input = new RenderTexture(64, 64);
     const output = new RenderTexture(64, 64);
 
     filter.apply(backend, input, output);
 
-    // Two shader modules: vertex + fragment
-    expect(env.createShaderModule).toHaveBeenCalledTimes(2);
+    expect(env.createShaderModule).toHaveBeenCalledTimes(1);
+
+    const pipelineDesc = env.createRenderPipeline.mock.calls[0][0] as GPURenderPipelineDescriptor;
+
+    expect(pipelineDesc.vertex.entryPoint).toBe('vertexMain');
+    expect(pipelineDesc.fragment!.entryPoint).toBe('fragmentMain');
+    expect(pipelineDesc.fragment!.module).toBe(pipelineDesc.vertex.module);
 
     filter.destroy();
     input.destroy();
@@ -484,7 +495,7 @@ describe('WebGpuShaderFilter', () => {
   // 9. apply() creates bind group layouts + pipeline layout + render pipeline
   test('apply() creates bind group layouts, pipeline layout, and render pipeline', () => {
     const backend = makeWebGpuBackend(env);
-    const filter = new WebGpuShaderFilter({ fragmentSource: minimalFragSrc });
+    const filter = new ShaderFilter({ wgsl: minimalFragSrc });
     const input = new RenderTexture(32, 32);
     const output = new RenderTexture(32, 32);
 
@@ -502,7 +513,7 @@ describe('WebGpuShaderFilter', () => {
   // 10. apply() encodes render pass with pipeline + vertex buffer + bind groups + draw(4)
   test('apply() encodes render pass: setPipeline, setVertexBuffer, setBindGroup×2, draw(4)', () => {
     const backend = makeWebGpuBackend(env);
-    const filter = new WebGpuShaderFilter({ fragmentSource: minimalFragSrc });
+    const filter = new ShaderFilter({ wgsl: minimalFragSrc });
     const input = new RenderTexture(32, 32);
     const output = new RenderTexture(32, 32);
 
@@ -522,7 +533,7 @@ describe('WebGpuShaderFilter', () => {
   // 11. apply() writes resolution uniform buffer each frame
   test('apply() calls queue.writeBuffer to update the resolution uniform', () => {
     const backend = makeWebGpuBackend(env);
-    const filter = new WebGpuShaderFilter({ fragmentSource: minimalFragSrc });
+    const filter = new ShaderFilter({ wgsl: minimalFragSrc });
     const input = new RenderTexture(32, 32);
     const output = new RenderTexture(128, 64);
 
@@ -548,8 +559,8 @@ describe('WebGpuShaderFilter', () => {
   // 12. Number uniform → 16-byte aligned slot in the user UBO
   test('number uniform is placed at the start of a 16-byte slot', () => {
     const backend = makeWebGpuBackend(env);
-    const filter = new WebGpuShaderFilter({
-      fragmentSource: minimalFragSrc,
+    const filter = new ShaderFilter({
+      wgsl: minimalFragSrc,
       uniforms: { uTime: 3.14 },
     });
     const input = new RenderTexture(16, 16);
@@ -574,8 +585,8 @@ describe('WebGpuShaderFilter', () => {
   // 13. Vec3 uniform → 16-byte aligned slot (not 12-byte)
   test('vec3 uniform occupies a 16-byte aligned slot (not 12-byte)', () => {
     const backend = makeWebGpuBackend(env);
-    const filter = new WebGpuShaderFilter({
-      fragmentSource: minimalFragSrc,
+    const filter = new ShaderFilter({
+      wgsl: minimalFragSrc,
       uniforms: {
         uVec3: [1, 2, 3] as unknown as readonly [number, number, number],
         uFloat: 9.9,
@@ -606,8 +617,8 @@ describe('WebGpuShaderFilter', () => {
   // 14. Vec4 uniform → 16-byte aligned slot
   test('vec4 uniform occupies a 16-byte aligned slot', () => {
     const backend = makeWebGpuBackend(env);
-    const filter = new WebGpuShaderFilter({
-      fragmentSource: minimalFragSrc,
+    const filter = new ShaderFilter({
+      wgsl: minimalFragSrc,
       uniforms: {
         uColor: [0.1, 0.2, 0.3, 0.4] as unknown as readonly [number, number, number, number],
       },
@@ -639,8 +650,8 @@ describe('WebGpuShaderFilter', () => {
     canvas.height = 8;
     const extraTex = new Texture(canvas);
 
-    const filter = new WebGpuShaderFilter({
-      fragmentSource: minimalFragSrc,
+    const filter = new ShaderFilter({
+      wgsl: minimalFragSrc,
       uniforms: { uExtraTex: extraTex },
     });
     const input = new RenderTexture(16, 16);
@@ -660,7 +671,7 @@ describe('WebGpuShaderFilter', () => {
   // 16. _ensureConnected is idempotent — second apply() reuses the pipeline
   test('second apply() reuses the already-created pipeline (no new createRenderPipeline call)', () => {
     const backend = makeWebGpuBackend(env);
-    const filter = new WebGpuShaderFilter({ fragmentSource: minimalFragSrc });
+    const filter = new ShaderFilter({ wgsl: minimalFragSrc });
     const input = new RenderTexture(16, 16);
     const output = new RenderTexture(16, 16);
 
@@ -680,17 +691,20 @@ describe('WebGpuShaderFilter', () => {
   // 17. destroy() releases GPU buffers
   test('destroy() releases vertex buffer and resolution buffer', () => {
     const backend = makeWebGpuBackend(env);
-    const filter = new WebGpuShaderFilter({ fragmentSource: minimalFragSrc });
+    const filter = new ShaderFilter({ wgsl: minimalFragSrc });
     const input = new RenderTexture(16, 16);
     const output = new RenderTexture(16, 16);
 
     filter.apply(backend, input, output);
 
-    expect((filter as unknown as Record<string, unknown>)['_connection']).not.toBeNull();
+    const pass = wgslPassOf(filter)!;
+
+    expect(pass['_connection']).not.toBeNull();
 
     filter.destroy();
 
-    expect((filter as unknown as Record<string, unknown>)['_connection']).toBeNull();
+    expect(wgslPassOf(filter)).toBeNull();
+    expect(pass['_connection']).toBeNull();
 
     // At least the vertex buffer and resolution buffer should have been destroyed
     const destroyedCount = env.buffers.filter(b => b.destroy.mock.calls.length > 0).length;
@@ -703,8 +717,8 @@ describe('WebGpuShaderFilter', () => {
 
   // 18. destroy() clears the uniforms map
   test('destroy() clears the uniforms map', () => {
-    const filter = new WebGpuShaderFilter({
-      fragmentSource: minimalFragSrc,
+    const filter = new ShaderFilter({
+      wgsl: minimalFragSrc,
       uniforms: { uTime: 1.0 },
     });
 
@@ -713,11 +727,11 @@ describe('WebGpuShaderFilter', () => {
     expect(Object.keys(filter.uniforms)).toHaveLength(0);
   });
 
-  // 19. connection is null before first apply() (lazy initialization)
-  test('_connection is null before first apply() (lazy initialization)', () => {
-    const filter = new WebGpuShaderFilter({ fragmentSource: minimalFragSrc });
+  // 19. no pass exists before the first apply() (lazy initialization)
+  test('no WebGPU pass exists before the first apply() (lazy initialization)', () => {
+    const filter = new ShaderFilter({ wgsl: minimalFragSrc });
 
-    expect((filter as unknown as Record<string, unknown>)['_connection']).toBeNull();
+    expect(wgslPassOf(filter)).toBeNull();
 
     filter.destroy();
   });
@@ -725,7 +739,7 @@ describe('WebGpuShaderFilter', () => {
   // 20. apply() calls backend.execute (uses BackendTargetPass)
   test('apply() on WebGPU backend calls backend.execute', () => {
     const backend = makeWebGpuBackend(env);
-    const filter = new WebGpuShaderFilter({ fragmentSource: minimalFragSrc });
+    const filter = new ShaderFilter({ wgsl: minimalFragSrc });
     const input = new RenderTexture(32, 32);
     const output = new RenderTexture(32, 32);
 
@@ -741,7 +755,7 @@ describe('WebGpuShaderFilter', () => {
   // 21. Render pipeline uses triangle-strip topology
   test('render pipeline is created with triangle-strip topology', () => {
     const backend = makeWebGpuBackend(env);
-    const filter = new WebGpuShaderFilter({ fragmentSource: minimalFragSrc });
+    const filter = new ShaderFilter({ wgsl: minimalFragSrc });
     const input = new RenderTexture(32, 32);
     const output = new RenderTexture(32, 32);
 
@@ -759,7 +773,7 @@ describe('WebGpuShaderFilter', () => {
   // 22. Auto bind group layout has 3 entries: UBO, texture, sampler
   test('auto bind group layout has 3 entries (resolution UBO, texture, sampler)', () => {
     const backend = makeWebGpuBackend(env);
-    const filter = new WebGpuShaderFilter({ fragmentSource: minimalFragSrc });
+    const filter = new ShaderFilter({ wgsl: minimalFragSrc });
     const input = new RenderTexture(32, 32);
     const output = new RenderTexture(32, 32);
 

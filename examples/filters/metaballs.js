@@ -1,5 +1,5 @@
 // Auto-generated from metaballs.ts — edit the .ts source, not this file.
-import { Application, BlurFilter, Color, Graphics, RenderBackendType, Scene, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+import { Application, BlurFilter, Color, Graphics, Scene, ShaderFilter } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // Threshold pass: render solid cyan where the (blurred) red field is dense
 // enough, with a smooth edge. The blur in front of this builds the scalar field
@@ -8,7 +8,7 @@ const glsl = `#version 300 es
 precision mediump float; uniform sampler2D uTexture; in vec2 vUv; out vec4 fragColor;
 void main(){ float l=texture(uTexture,vUv).r; float m=smoothstep(0.28,0.5,l); fragColor=vec4(vec3(0.2,0.9,1.0)*m,m); }`;
 const wgsl = `@group(0) @binding(1) var uTexture:texture_2d<f32>; @group(0) @binding(2) var uSampler:sampler;
-@fragment fn main(@location(0) vUv:vec2<f32>)->@location(0) vec4<f32>{ let l=textureSample(uTexture,uSampler,vUv).r; let m=smoothstep(0.28,0.5,l); return vec4<f32>(vec3<f32>(0.2,0.9,1.0)*m,m);} `;
+@fragment fn fragmentMain(@location(0) vUv:vec2<f32>)->@location(0) vec4<f32>{ let l=textureSample(uTexture,uSampler,vUv).r; let m=smoothstep(0.28,0.5,l); return vec4<f32>(vec3<f32>(0.2,0.9,1.0)*m,m);} `;
 class MetaballsScene extends Scene {
     balls;
     points;
@@ -18,10 +18,7 @@ class MetaballsScene extends Scene {
         this.balls = new Graphics();
         this.points = Array.from({ length: 8 }, (_, i) => ({ a: (i / 8) * Math.PI * 2, r: 120 + (i % 3) * 56 }));
         this.blur = new BlurFilter({ radius: 12, quality: 3 });
-        this.threshold =
-            app.backend.backendType === RenderBackendType.WebGpu
-                ? new WebGpuShaderFilter({ fragmentSource: wgsl })
-                : new WebGl2ShaderFilter({ fragmentSource: glsl });
+        this.threshold = new ShaderFilter({ glsl: { fragment: glsl }, wgsl });
         // Order matters: blur first (build the field), threshold second.
         this.balls.filters = [this.blur, this.threshold];
         mountControls({

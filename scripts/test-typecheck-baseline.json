@@ -81,7 +81,6 @@
     "test/rendering/browser/webgpu-render-to-texture.test.ts": 1,
     "test/rendering/clip.test.ts": 1,
     "test/rendering/filters/lut-filter.test.ts": 1,
-    "test/rendering/filters/web-gl2-shader-filter.test.ts": 3,
     "test/rendering/gradient.test.ts": 1,
     "test/rendering/mask-source.test.ts": 1,
     "test/rendering/material-grouping.test.ts": 5,

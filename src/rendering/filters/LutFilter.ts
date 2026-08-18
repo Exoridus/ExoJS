@@ -1,12 +1,10 @@
 import type { RenderBackend } from '#rendering/RenderBackend';
-import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { ScaleModes, WrapModes } from '#rendering/types';
 
 import { Filter } from './Filter';
-import { WebGl2ShaderFilter } from './WebGl2ShaderFilter';
-import { WebGpuShaderFilter } from './WebGpuShaderFilter';
+import { createFilterShaderSource, ShaderFilter } from './ShaderFilter';
 
 /** Storage layout for a Look-Up Table texture. */
 export type LutMode = 'rgb1d' | '3d';
@@ -85,7 +83,7 @@ const wgslRgb1dFragment = `
 @group(1) @binding(1) var uLut: texture_2d<f32>;
 
 @fragment
-fn main(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
+fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
     let src = textureSample(uTexture, uSampler, vUv);
     let n = f32(textureDimensions(uLut).x);
     let coord = clamp(src.rgb, vec3<f32>(0.0), vec3<f32>(1.0)) * ((n - 1.0) / n) + 0.5 / n;
@@ -126,11 +124,25 @@ fn sampleLut3d(c: vec3<f32>) -> vec3<f32> {
 }
 
 @fragment
-fn main(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
+fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
     let src = textureSample(uTexture, uSampler, vUv);
     return vec4<f32>(sampleLut3d(src.rgb), src.a);
 }
 `;
+
+/**
+ * The per-channel-curve source pair, built once and shared by every `'rgb1d'`
+ * instance. Exported so the structural parity checks can read the same object
+ * the filter runs rather than a copy of it.
+ * @internal
+ */
+export const lutRgb1dShaderSource = createFilterShaderSource({ glsl: { fragment: glslRgb1dFragment }, wgsl: wgslRgb1dFragment });
+
+/**
+ * The cube-lookup source pair, built once and shared by every `'3d'` instance.
+ * @internal
+ */
+export const lut3dShaderSource = createFilterShaderSource({ glsl: { fragment: glsl3dFragment }, wgsl: wgsl3dFragment });
 
 /**
  * A {@link Filter} that maps every pixel of the input through a Look-Up Table texture.
@@ -157,8 +169,8 @@ fn main(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
  * // Replace `ramp.source` per frame with a shifted copy.
  * ```
  *
- * Internally creates a {@link WebGl2ShaderFilter} or {@link WebGpuShaderFilter} on first
- * apply, depending on the active backend.
+ * Runs on a {@link ShaderFilter} carrying both a GLSL and a WGSL source, so it
+ * works on either backend without the caller choosing one.
  */
 export class LutFilter extends Filter {
   /**
@@ -241,14 +253,23 @@ export class LutFilter extends Filter {
 
   private readonly _mode: LutMode;
   private readonly _size: number;
+  private readonly _shaderFilter: ShaderFilter;
   private _lut: Texture;
-  private _backendFilter: WebGl2ShaderFilter | WebGpuShaderFilter | null = null;
 
   public constructor(options: LutFilterOptions = {}) {
     super();
     this._mode = options.mode ?? '3d';
     this._size = Math.max(2, Math.floor(options.size ?? 17));
-    this._lut = this._mode === 'rgb1d' ? LutFilter.identityLut1D() : LutFilter.identityLut3D(this._size);
+
+    const is3d = this._mode === '3d';
+
+    this._lut = is3d ? LutFilter.identityLut3D(this._size) : LutFilter.identityLut1D();
+
+    // Insertion order matters on WebGPU: the packer lays each non-texture
+    // uniform out in a 16-byte slot, in declaration order.
+    const uniforms: Record<string, Texture | number> = is3d ? { uLutSize: this._size, uLut: this._lut } : { uLut: this._lut };
+
+    this._shaderFilter = ShaderFilter.from(is3d ? lut3dShaderSource : lutRgb1dShaderSource, { uniforms });
   }
 
   /** The LUT mode this filter was constructed with. */
@@ -269,43 +290,17 @@ export class LutFilter extends Filter {
   /** Replace the LUT texture. Returns `this` for chaining. */
   public setLut(lut: Texture): this {
     this._lut = lut;
-    if (this._backendFilter !== null) {
-      this._backendFilter.setUniform('uLut', lut);
-    }
+    this._shaderFilter.setUniform('uLut', lut);
     this.invalidate();
     return this;
   }
 
   public apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture, resolution = 1): void {
-    if (this._backendFilter === null) {
-      this._backendFilter = this._createBackendFilter(backend);
-    }
-    this._backendFilter.apply(backend, input, output, resolution);
+    this._shaderFilter.apply(backend, input, output, resolution);
   }
 
   public override destroy(): void {
     super.destroy();
-    if (this._backendFilter !== null) {
-      this._backendFilter.destroy();
-      this._backendFilter = null;
-    }
-  }
-
-  private _createBackendFilter(backend: RenderBackend): WebGl2ShaderFilter | WebGpuShaderFilter {
-    const is3d = this._mode === '3d';
-    const uniforms: Record<string, Texture | number> = { uLut: this._lut };
-    if (is3d) {
-      uniforms.uLutSize = this._size;
-    }
-    if (backend.backendType === RenderBackendType.WebGpu) {
-      return new WebGpuShaderFilter({
-        fragmentSource: is3d ? wgsl3dFragment : wgslRgb1dFragment,
-        uniforms,
-      });
-    }
-    return new WebGl2ShaderFilter({
-      fragmentSource: is3d ? glsl3dFragment : glslRgb1dFragment,
-      uniforms,
-    });
+    this._shaderFilter.destroy();
   }
 }

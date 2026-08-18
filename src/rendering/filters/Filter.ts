@@ -19,9 +19,8 @@ export interface FilterOwner {
  * Filters are rendered into a temporary {@link RenderTexture} (the `output`)
  * that is composited back onto the scene after all filters in the chain have
  * been applied. Subclasses implement {@link apply} to run their shader pass.
- * Stock implementations: {@link BlurFilter}, {@link ColorMatrixFilter}.
- * User-supplied GLSL/WGSL shaders: {@link WebGl2ShaderFilter},
- * {@link WebGpuShaderFilter}.
+ * Stock implementations: {@link BlurFilter}, {@link ColorMatrixFilter},
+ * {@link LutFilter}. User-supplied GLSL/WGSL shaders: {@link ShaderFilter}.
  */
 export abstract class Filter {
   /**

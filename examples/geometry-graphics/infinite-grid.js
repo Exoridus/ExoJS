@@ -1,5 +1,5 @@
 // Auto-generated from infinite-grid.ts — edit the .ts source, not this file.
-import { Application, Color, Keyboard, RenderBackendType, Scene, Sprite, View, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+import { Application, Color, Keyboard, Scene, ShaderFilter, Sprite, View } from '@codexo/exojs';
 const glsl = `#version 300 es
 precision mediump float;
 uniform vec2 uCenter;
@@ -32,7 +32,7 @@ fn gridLine(p: vec2<f32>, s: f32, w: f32) -> f32 {
     let m = min(c.x, c.y) * 120.0;
     return 1.0 - smoothstep(w, w + 1.0, m);
 }
-@fragment fn main(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
+@fragment fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
     let world = (vUv - vec2<f32>(0.5)) * uniforms.uViewSize + uniforms.uCenter;
     let fine = gridLine(world, 40.0, 0.8) * 0.35;
     let bold = gridLine(world, 200.0, 1.1) * 0.7;
@@ -53,10 +53,7 @@ class InfiniteGridScene extends Scene {
         this.sprite = new Sprite(this.loader.get('image/uv-grid-256.png'));
         this.sprite.width = width;
         this.sprite.height = height;
-        this.filter =
-            app.backend.backendType === RenderBackendType.WebGpu
-                ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uCenter: [0, 0], uViewSize: [width, height] } })
-                : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uCenter: [0, 0], uViewSize: [width, height] } });
+        this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uCenter: [0, 0], uViewSize: [width, height] } });
         this.sprite.filters = [this.filter];
         this.inputs.onActive(Keyboard.A, () => { this.move.x = -1; });
         this.inputs.onStop(Keyboard.A, () => { if (this.move.x < 0)

@@ -5,13 +5,12 @@ import { Color } from '#core/Color';
  * LutFilter unit tests.
  *
  * LutFilter is a thin wrapper: its static factories rasterize LUT textures via
- * the 2D canvas API, and `apply()` lazily builds + delegates to a real
- * `WebGl2ShaderFilter` or `WebGpuShaderFilter` (both already covered by their
- * own dedicated test files) based on `backend.backendType`. These tests focus
+ * the 2D canvas API, and `apply()` delegates to a `ShaderFilter` carrying both
+ * language sources (covered by its own dedicated test files). These tests focus
  * on LutFilter's own logic: texture generation, option defaults/clamping,
- * `setLut`, backend selection, and lifecycle — using the same minimal
- * WebGL2/WebGPU backend mocks established in web-gl2-shader-filter.test.ts /
- * web-gpu-shader-filter.test.ts, not a from-scratch GPU simulation.
+ * `setLut`, source selection, and lifecycle — using the same minimal
+ * WebGL2/WebGPU backend mocks established in shader-filter-webgl2.test.ts /
+ * shader-filter-webgpu.test.ts, not a from-scratch GPU simulation.
  *
  * The shared jsdom canvas 2D context stub (test/setup-env.vitest.ts) only
  * implements `fillStyle`/`fillRect`/`drawImage` — LutFilter's identity-LUT
@@ -20,8 +19,7 @@ import { Color } from '#core/Color';
  * original afterwards.
  */
 import { LutFilter } from '#rendering/filters/LutFilter';
-import { WebGl2ShaderFilter } from '#rendering/filters/WebGl2ShaderFilter';
-import { WebGpuShaderFilter } from '#rendering/filters/WebGpuShaderFilter';
+import { ShaderFilter } from '#rendering/filters/ShaderFilter';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
@@ -449,8 +447,13 @@ describe('LutFilter construction and options', () => {
   });
 });
 
+/** The backend-neutral shader filter LutFilter delegates to. */
+function shaderFilterOf(filter: LutFilter): ShaderFilter {
+  return (filter as unknown as { _shaderFilter: ShaderFilter })._shaderFilter;
+}
+
 describe('LutFilter.setLut', () => {
-  test('replaces the LUT texture before any backend filter exists', () => {
+  test('replaces the LUT texture', () => {
     const filter = new LutFilter();
     const custom = LutFilter.identityLut3D(5);
 
@@ -460,66 +463,56 @@ describe('LutFilter.setLut', () => {
     expect(filter.lut).toBe(custom);
   });
 
-  test('also updates the live backend filter uniform once one has been created', () => {
+  test('also updates the shader filter uniform', () => {
     const filter = new LutFilter({ mode: '3d' });
-    const backend = makeWebGl2Backend();
-    const input = new RenderTexture(16, 16);
-    const output = new RenderTexture(16, 16);
-
-    filter.apply(backend, input, output);
-
     const replacement = LutFilter.identityLut3D(9);
 
     filter.setLut(replacement);
 
-    const backendFilter = (filter as unknown as { _backendFilter: WebGl2ShaderFilter })._backendFilter;
-
-    expect(backendFilter.uniforms['uLut']).toBe(replacement);
+    expect(shaderFilterOf(filter).uniforms['uLut']).toBe(replacement);
 
     filter.destroy();
-    input.destroy();
-    output.destroy();
   });
 });
 
-describe('LutFilter.apply — backend selection', () => {
-  test('builds a WebGl2ShaderFilter on the WebGL2 backend for 3D mode', () => {
+describe('LutFilter — source selection', () => {
+  test('runs one ShaderFilter that carries both languages', () => {
+    const filter = new LutFilter({ mode: '3d', size: 5 });
+    const shaderFilter = shaderFilterOf(filter);
+
+    expect(shaderFilter).toBeInstanceOf(ShaderFilter);
+    expect(shaderFilter.supports(RenderBackendType.WebGl2)).toBe(true);
+    expect(shaderFilter.supports(RenderBackendType.WebGpu)).toBe(true);
+    expect(shaderFilter.uniforms['uLutSize']).toBe(5);
+
+    filter.destroy();
+  });
+
+  test('rgb1d mode declares no uLutSize uniform', () => {
+    const filter = new LutFilter({ mode: 'rgb1d' });
+    const shaderFilter = shaderFilterOf(filter);
+
+    expect(shaderFilter.supports(RenderBackendType.WebGl2)).toBe(true);
+    expect(shaderFilter.supports(RenderBackendType.WebGpu)).toBe(true);
+    expect(shaderFilter.uniforms['uLutSize']).toBeUndefined();
+
+    filter.destroy();
+  });
+
+  test('applies on the WebGL2 backend', () => {
     const filter = new LutFilter({ mode: '3d', size: 5 });
     const backend = makeWebGl2Backend();
     const input = new RenderTexture(16, 16);
     const output = new RenderTexture(16, 16);
 
-    filter.apply(backend, input, output);
-
-    const backendFilter = (filter as unknown as { _backendFilter: unknown })._backendFilter;
-
-    expect(backendFilter).toBeInstanceOf(WebGl2ShaderFilter);
-    expect((backendFilter as WebGl2ShaderFilter).uniforms['uLutSize']).toBe(5);
+    expect(() => filter.apply(backend, input, output)).not.toThrow();
 
     filter.destroy();
     input.destroy();
     output.destroy();
   });
 
-  test('builds a WebGl2ShaderFilter on the WebGL2 backend for rgb1d mode (no uLutSize uniform)', () => {
-    const filter = new LutFilter({ mode: 'rgb1d' });
-    const backend = makeWebGl2Backend();
-    const input = new RenderTexture(16, 16);
-    const output = new RenderTexture(16, 16);
-
-    filter.apply(backend, input, output);
-
-    const backendFilter = (filter as unknown as { _backendFilter: WebGl2ShaderFilter })._backendFilter;
-
-    expect(backendFilter).toBeInstanceOf(WebGl2ShaderFilter);
-    expect(backendFilter.uniforms['uLutSize']).toBeUndefined();
-
-    filter.destroy();
-    input.destroy();
-    output.destroy();
-  });
-
-  test('builds a WebGpuShaderFilter on the WebGPU backend for 3D mode', () => {
+  test('applies on the WebGPU backend', () => {
     const env = makeWebGpuEnv();
 
     try {
@@ -528,12 +521,7 @@ describe('LutFilter.apply — backend selection', () => {
       const input = new RenderTexture(16, 16);
       const output = new RenderTexture(16, 16);
 
-      filter.apply(backend, input, output);
-
-      const backendFilter = (filter as unknown as { _backendFilter: unknown })._backendFilter;
-
-      expect(backendFilter).toBeInstanceOf(WebGpuShaderFilter);
-      expect((backendFilter as WebGpuShaderFilter).uniforms['uLutSize']).toBe(9);
+      expect(() => filter.apply(backend, input, output)).not.toThrow();
 
       filter.destroy();
       input.destroy();
@@ -543,42 +531,20 @@ describe('LutFilter.apply — backend selection', () => {
     }
   });
 
-  test('builds a WebGpuShaderFilter on the WebGPU backend for rgb1d mode', () => {
-    const env = makeWebGpuEnv();
-
-    try {
-      const filter = new LutFilter({ mode: 'rgb1d' });
-      const backend = makeWebGpuBackend(env.device);
-      const input = new RenderTexture(16, 16);
-      const output = new RenderTexture(16, 16);
-
-      filter.apply(backend, input, output);
-
-      const backendFilter = (filter as unknown as { _backendFilter: unknown })._backendFilter;
-
-      expect(backendFilter).toBeInstanceOf(WebGpuShaderFilter);
-
-      filter.destroy();
-      input.destroy();
-      output.destroy();
-    } finally {
-      env.restore();
-    }
-  });
-
-  test('reuses the already-built backend filter on a second apply()', () => {
+  test('reuses the already-built pass on a second apply()', () => {
     const filter = new LutFilter();
     const backend = makeWebGl2Backend();
     const input = new RenderTexture(16, 16);
     const output = new RenderTexture(16, 16);
 
     filter.apply(backend, input, output);
-    const first = (filter as unknown as { _backendFilter: unknown })._backendFilter;
+    const first = (shaderFilterOf(filter) as unknown as { _glslPass: unknown })._glslPass;
 
     filter.apply(backend, input, output);
-    const second = (filter as unknown as { _backendFilter: unknown })._backendFilter;
+    const second = (shaderFilterOf(filter) as unknown as { _glslPass: unknown })._glslPass;
 
     expect(second).toBe(first);
+    expect(first).not.toBeNull();
 
     filter.destroy();
     input.destroy();
@@ -587,26 +553,27 @@ describe('LutFilter.apply — backend selection', () => {
 });
 
 describe('LutFilter.destroy', () => {
-  test('is a no-op when no backend filter was ever built', () => {
+  test('is a no-op when the filter never rendered', () => {
     const filter = new LutFilter();
 
     expect(() => filter.destroy()).not.toThrow();
   });
 
-  test('releases the backend filter and clears the reference', () => {
+  test('releases the shader filter', () => {
     const filter = new LutFilter();
     const backend = makeWebGl2Backend();
     const input = new RenderTexture(16, 16);
     const output = new RenderTexture(16, 16);
 
     filter.apply(backend, input, output);
-    const backendFilter = (filter as unknown as { _backendFilter: WebGl2ShaderFilter })._backendFilter;
-    const destroySpy = vi.spyOn(backendFilter, 'destroy');
+
+    const shaderFilter = shaderFilterOf(filter);
+    const destroySpy = vi.spyOn(shaderFilter, 'destroy');
 
     filter.destroy();
 
     expect(destroySpy).toHaveBeenCalledTimes(1);
-    expect((filter as unknown as { _backendFilter: unknown })._backendFilter).toBeNull();
+    expect((shaderFilter as unknown as { _glslPass: unknown })._glslPass).toBeNull();
 
     input.destroy();
     output.destroy();

@@ -1,6 +1,6 @@
 {
   "title": "Filter",
-  "description": "Abstract base class for post-process filters applied to a drawable's render output. Filters are rendered into a temporary RenderTexture (the `output`) that is composited back onto the scene after all filters in the chain have been applied. Subclasses implement apply to run their shader pass. Stock implementations: BlurFilter, ColorMatrixFilter. User-supplied GLSL/WGSL shaders: WebGl2ShaderFilter, WebGpuShaderFilter.",
+  "description": "Abstract base class for post-process filters applied to a drawable's render output. Filters are rendered into a temporary RenderTexture (the `output`) that is composited back onto the scene after all filters in the chain have been applied. Subclasses implement apply to run their shader pass. Stock implementations: BlurFilter, ColorMatrixFilter, LutFilter. User-supplied GLSL/WGSL shaders: ShaderFilter.",
   "symbol": "Filter",
   "kind": "class",
   "subsystem": "rendering",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Abstract base class for post-process filters applied to a drawable's render output.",
-        "Filters are rendered into a temporary RenderTexture (the `output`) that is composited back onto the scene after all filters in the chain have been applied. Subclasses implement apply to run their shader pass. Stock implementations: BlurFilter, ColorMatrixFilter. User-supplied GLSL/WGSL shaders: WebGl2ShaderFilter, WebGpuShaderFilter."
+        "Filters are rendered into a temporary RenderTexture (the `output`) that is composited back onto the scene after all filters in the chain have been applied. Subclasses implement apply to run their shader pass. Stock implementations: BlurFilter, ColorMatrixFilter, LutFilter. User-supplied GLSL/WGSL shaders: ShaderFilter."
       ],
       "importLine": "import { Filter } from '@codexo/exojs'",
       "sourceLink": null

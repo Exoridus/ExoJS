@@ -3,69 +3,11 @@
 import { Color } from '#core/Color';
 import { BackendTargetPass } from '#rendering/BackendTargetPass';
 import type { RenderBackend } from '#rendering/RenderBackend';
-import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
-import { Filter } from './Filter';
-import type { ShaderFilterUniformValue } from './WebGl2ShaderFilter';
-
-export type { ShaderFilterUniformValue };
-
-export interface WebGpuShaderFilterOptions {
-  /**
-   * WGSL source code for the fragment shader. Required.
-   *
-   * The shader receives these auto-bound entries via @group(0):
-   *   @group(0) @binding(0) var<uniform> uResolution: vec2<f32>;  // output dimensions
-   *   @group(0) @binding(1) var uTexture: texture_2d<f32>;
-   *   @group(0) @binding(2) var uSampler: sampler;
-   *
-   * User uniforms go in @group(1):
-   *   @group(1) @binding(0) var<uniform> uniforms: <UserUniformsStruct>;
-   *
-   * User uniforms are packed into a single uniform buffer with 16-byte
-   * alignment per member. Declare your WGSL struct to match this layout.
-   * Texture/RenderTexture uniforms are placed as separate bind group entries
-   * starting at @group(1) @binding(1).
-   */
-  fragmentSource: string;
-
-  /**
-   * WGSL source for the vertex shader. Optional; defaults to a fullscreen
-   * pass-through quad with a varying `vUv: vec2<f32>`.
-   */
-  vertexSource?: string;
-
-  /**
-   * Initial uniform values. Update them at runtime through
-   * `setUniform` / `setUniforms`, which also invalidate the nodes
-   * rendering the filter:
-   *
-   *   filter.setUniform('uTime', performance.now() / 1000);
-   */
-  uniforms?: Record<string, ShaderFilterUniformValue>;
-}
-
-/**
- * Default fullscreen-quad vertex shader (WGSL). Positions are already in
- * clip space (-1..1), so no projection matrix is needed.
- */
-const defaultVertexSource = `
-struct VsOut {
-    @builtin(position) position: vec4<f32>,
-    @location(0) vUv: vec2<f32>,
-};
-
-@vertex
-fn main(@location(0) aPosition: vec2<f32>, @location(1) aUv: vec2<f32>) -> VsOut {
-    var out: VsOut;
-    out.position = vec4<f32>(aPosition, 0.0, 1.0);
-    out.vUv = aUv;
-    return out;
-}
-`;
+import type { ShaderFilterUniformValue } from './ShaderFilter';
 
 /**
  * Interleaved position+UV data for a fullscreen TRIANGLE_STRIP quad.
@@ -112,116 +54,40 @@ interface WebGpuConnection {
 }
 
 /**
- * A high-level {@link Filter} subclass that renders the input texture through
- * a user-provided WGSL fragment shader on the **WebGPU** backend.
+ * The WebGPU half of a {@link ShaderFilter}: builds the pipeline from the WGSL
+ * module, assembles the bind groups, and draws the fullscreen quad.
  *
- * For the WebGL2 backend use {@link WebGl2ShaderFilter}.
- *
- * ## Usage
- *
- * ```ts
- * const filter = new WebGpuShaderFilter({
- *   fragmentSource: `
- *     @group(0) @binding(0) var<uniform> uResolution: vec2<f32>;
- *     @group(0) @binding(1) var uTexture: texture_2d<f32>;
- *     @group(0) @binding(2) var uSampler: sampler;
- *
- *     @fragment
- *     fn main(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
- *       return textureSample(uTexture, uSampler, vUv);
- *     }
- *   `,
- *   uniforms: { uTime: 0.0 },
- * });
- *
- * // Update uniforms each frame:
- * filter.setUniform('uTime', performance.now() / 1000);
- * sprite.filters = [filter];
- * ```
- *
- * ## Auto-bound uniforms (group 0)
- *
- * - `@binding(0)` — `var<uniform> uResolution: vec2<f32>` (output dimensions)
- * - `@binding(1)` — `var uTexture: texture_2d<f32>` (filter input)
- * - `@binding(2)` — `var uSampler: sampler`
- *
- * ## User uniforms (group 1)
- *
- * All non-texture user uniforms are packed into a single uniform buffer at
- * `@binding(0)`. Each member occupies a 16-byte aligned slot (conservative
- * alignment). Declare your WGSL struct to match this layout.
- *
- * Texture/RenderTexture uniforms are bound as separate entries starting at
- * `@binding(1)` (texture) and `@binding(N+1)` (sampler), in declaration order.
+ * Not a {@link Filter} itself and not public — the filter owns it, decides when
+ * it is built, and hands it the uniform record it keeps writing to, so a
+ * `setUniform` call reaches this pass without copying anything.
+ * @internal
  */
-export class WebGpuShaderFilter extends Filter {
-  private readonly _uniforms: Record<string, ShaderFilterUniformValue>;
-
-  private readonly _fragmentSource: string;
-  private readonly _vertexSource: string;
-
+export class WebGpuShaderFilterPass {
   /** One redirect pass, re-pointed per application — see {@link BackendTargetPass.retarget}. */
   private readonly _pass: BackendTargetPass = new BackendTargetPass(backend => this._run(backend));
   /** `vec2<f32>` padded to the buffer's 16 bytes, reused so a frame allocates none. */
   private readonly _resolutionScratch = new Float32Array(4);
+
+  /** The one WGSL module, carrying both entry points. */
+  private readonly _source: string;
+  /** The filter's live uniform record, read on every draw. */
+  private readonly _uniforms: Readonly<Record<string, ShaderFilterUniformValue>>;
 
   private _connection: WebGpuConnection | null = null;
   /** The textures the running pass reads from and writes to, staged by {@link apply}. */
   private _passInput: RenderTexture | null = null;
   private _passOutput: RenderTexture | null = null;
 
-  public constructor(options: WebGpuShaderFilterOptions) {
-    super();
-
-    if (!options.fragmentSource) {
-      throw new Error('WebGpuShaderFilter requires fragmentSource.');
-    }
-
-    this._fragmentSource = options.fragmentSource;
-    this._vertexSource = options.vertexSource ?? defaultVertexSource;
-    this._uniforms = { ...(options.uniforms ?? {}) };
+  public constructor(source: string, uniforms: Readonly<Record<string, ShaderFilterUniformValue>>) {
+    this._source = source;
+    this._uniforms = uniforms;
   }
 
   /**
-   * The current uniform values, for reading.
-   *
-   * Deliberately not writable — see {@link WebGl2ShaderFilter.uniforms}. Write
-   * through {@link setUniform} / {@link setUniforms}.
-   */
-  public get uniforms(): Readonly<Record<string, ShaderFilterUniformValue>> {
-    return this._uniforms;
-  }
-
-  /** Set one uniform and notify every node rendering this filter. */
-  public setUniform(name: string, value: ShaderFilterUniformValue): this {
-    this._uniforms[name] = value;
-    this.invalidate();
-
-    return this;
-  }
-
-  /** Set several uniforms, notifying once for the batch. */
-  public setUniforms(values: Readonly<Record<string, ShaderFilterUniformValue>>): this {
-    for (const name of Object.keys(values)) {
-      // In-bounds: `name` comes from `values`' own keys.
-      this._uniforms[name] = values[name]!;
-    }
-
-    this.invalidate();
-
-    return this;
-  }
-
-  /**
-   * Execute the WGSL shader pass: flush uniforms, build bind groups, and
-   * render the input texture into `output`. Throws if the active backend is
-   * not WebGPU — use {@link WebGl2ShaderFilter} on WebGL2.
+   * Execute the WGSL shader pass: flush uniforms, build bind groups, and render
+   * the input texture into `output`.
    */
   public apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture, _resolution = 1): void {
-    if (backend.backendType !== RenderBackendType.WebGpu) {
-      throw new Error('WebGpuShaderFilter requires the WebGPU backend. Use WebGl2ShaderFilter on WebGL2.');
-    }
-
     const gpuBackend = backend as WebGpuBackend;
 
     this._ensureConnected(gpuBackend, output);
@@ -233,6 +99,15 @@ export class WebGpuShaderFilter extends Filter {
     this._passOutput = output;
 
     backend.execute(this._pass.retarget(output, output.view, Color.transparentBlack));
+  }
+
+  public destroy(): void {
+    if (this._connection !== null) {
+      this._connection.vertexBuffer.destroy();
+      this._connection.resolutionBuffer.destroy();
+      this._connection.userUniformBuffer?.destroy();
+      this._connection = null;
+    }
   }
 
   /** The pass body — see {@link _pass}. */
@@ -281,24 +156,6 @@ export class WebGpuShaderFilter extends Filter {
     gpu._passCoordinator.endPass();
   }
 
-  public override destroy(): void {
-    super.destroy();
-    if (this._connection !== null) {
-      this._connection.vertexBuffer.destroy();
-      this._connection.resolutionBuffer.destroy();
-      this._connection.userUniformBuffer?.destroy();
-      this._connection = null;
-    }
-
-    for (const key of Object.keys(this._uniforms)) {
-      delete this._uniforms[key];
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Private helpers
-  // ---------------------------------------------------------------------------
-
   private _ensureConnected(backend: WebGpuBackend, output: RenderTexture): void {
     if (this._connection !== null) {
       return;
@@ -306,9 +163,9 @@ export class WebGpuShaderFilter extends Filter {
 
     const device = backend.device;
 
-    // Shader modules
-    const vsModule = device.createShaderModule({ code: this._vertexSource });
-    const fsModule = device.createShaderModule({ code: this._fragmentSource });
+    // One module for both stages, the way every other WGSL source in the engine
+    // is built: `vertexMain` and `fragmentMain` live in the same compilation.
+    const module = device.createShaderModule({ code: this._source });
 
     // ---- Group 0 layout: resolution uniform + input texture + sampler ----
     const autoBindGroupLayout = device.createBindGroupLayout({
@@ -351,8 +208,8 @@ export class WebGpuShaderFilter extends Filter {
     const pipeline = device.createRenderPipeline({
       layout: pipelineLayout,
       vertex: {
-        module: vsModule,
-        entryPoint: 'main',
+        module,
+        entryPoint: 'vertexMain',
         buffers: [
           {
             arrayStride: vertexStrideBytes,
@@ -364,8 +221,8 @@ export class WebGpuShaderFilter extends Filter {
         ],
       },
       fragment: {
-        module: fsModule,
-        entryPoint: 'main',
+        module,
+        entryPoint: 'fragmentMain',
         targets: [{ format: targetFormat }],
       },
       primitive: { topology: 'triangle-strip' },

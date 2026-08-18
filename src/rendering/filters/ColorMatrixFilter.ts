@@ -1,11 +1,9 @@
 import type { Color } from '#core/Color';
 import type { RenderBackend } from '#rendering/RenderBackend';
-import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 
 import { Filter } from './Filter';
-import { WebGl2ShaderFilter } from './WebGl2ShaderFilter';
-import { WebGpuShaderFilter } from './WebGpuShaderFilter';
+import { createFilterShaderSource, ShaderFilter } from './ShaderFilter';
 
 /** A 4×5 row-major colour matrix: four rows of `[r, g, b, a, offset]`. */
 export type ColorMatrixEntries = readonly number[];
@@ -62,7 +60,7 @@ struct Uniforms {
 @group(1) @binding(0) var<uniform> uniforms: Uniforms;
 
 @fragment
-fn main(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
+fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
     let premultiplied = textureSample(uTexture, uSampler, vUv);
     let alpha = premultiplied.a;
     let straightRgb = select(vec3<f32>(0.0), premultiplied.rgb / max(alpha, 1e-5), alpha > 0.0);
@@ -78,6 +76,14 @@ fn main(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
     return vec4<f32>(graded.rgb * graded.a, graded.a);
 }
 `;
+
+/**
+ * The colour-matrix source pair, built once and shared by every instance.
+ * Exported so the structural parity checks can read the same object the filter
+ * runs rather than a copy of it.
+ * @internal
+ */
+export const colorMatrixShaderSource = createFilterShaderSource({ glsl: { fragment: glslFragment }, wgsl: wgslFragment });
 
 /**
  * A {@link Filter} that runs one affine colour transform over everything it is
@@ -106,8 +112,8 @@ fn main(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
  * sample by its alpha, transforms, and multiplies back, so a half-transparent
  * edge grades the same way an opaque pixel does.
  *
- * Internally creates a {@link WebGl2ShaderFilter} or {@link WebGpuShaderFilter}
- * on first apply, depending on the active backend.
+ * Runs on a {@link ShaderFilter} carrying both a GLSL and a WGSL source, so it
+ * works on either backend without the caller choosing one.
  */
 export class ColorMatrixFilter extends Filter {
   private readonly _matrix = new Float32Array(ENTRIES);
@@ -118,12 +124,25 @@ export class ColorMatrixFilter extends Filter {
    */
   private readonly _rows: readonly Float32Array[] = [new Float32Array(4), new Float32Array(4), new Float32Array(4), new Float32Array(4)];
   private readonly _bias = new Float32Array(4);
-  private _backendFilter: WebGl2ShaderFilter | WebGpuShaderFilter | null = null;
+  private readonly _shaderFilter: ShaderFilter;
 
   public constructor(matrix: ColorMatrixEntries = IDENTITY) {
     super();
 
     this._write(matrix);
+
+    // Insertion order matters on WebGPU: the packer lays each uniform out in a
+    // 16-byte slot, in declaration order, which is what the WGSL struct above
+    // spells out.
+    this._shaderFilter = ShaderFilter.from(colorMatrixShaderSource, {
+      uniforms: {
+        uRow0: this._rows[0]!,
+        uRow1: this._rows[1]!,
+        uRow2: this._rows[2]!,
+        uRow3: this._rows[3]!,
+        uBias: this._bias,
+      },
+    });
   }
 
   /** The current 4×5 matrix. Assign a new one, or use the conveniences. */
@@ -202,20 +221,12 @@ export class ColorMatrixFilter extends Filter {
   }
 
   public apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture, resolution = 1): void {
-    if (this._backendFilter === null) {
-      this._backendFilter = this._createBackendFilter(backend);
-    }
-
-    this._backendFilter.apply(backend, input, output, resolution);
+    this._shaderFilter.apply(backend, input, output, resolution);
   }
 
   public override destroy(): void {
     super.destroy();
-
-    if (this._backendFilter !== null) {
-      this._backendFilter.destroy();
-      this._backendFilter = null;
-    }
+    this._shaderFilter.destroy();
   }
 
   /** Apply `next` AFTER whatever the filter already does, and publish the result. */
@@ -273,24 +284,5 @@ export class ColorMatrixFilter extends Filter {
    */
   private _publish(): void {
     this.invalidate();
-  }
-
-  private _createBackendFilter(backend: RenderBackend): WebGl2ShaderFilter | WebGpuShaderFilter {
-    // Insertion order matters on WebGPU: the packer lays each uniform out in a
-    // 16-byte slot, in declaration order, which is what the WGSL struct above
-    // spells out.
-    const uniforms = {
-      uRow0: this._rows[0]!,
-      uRow1: this._rows[1]!,
-      uRow2: this._rows[2]!,
-      uRow3: this._rows[3]!,
-      uBias: this._bias,
-    };
-
-    if (backend.backendType === RenderBackendType.WebGpu) {
-      return new WebGpuShaderFilter({ fragmentSource: wgslFragment, uniforms });
-    }
-
-    return new WebGl2ShaderFilter({ fragmentSource: glslFragment, uniforms });
   }
 }

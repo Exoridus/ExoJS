@@ -1,8 +1,8 @@
 /**
- * WebGpuShaderFilter browser test — opt-in, capability-aware, real GPU.
+ * ShaderFilter WGSL browser test — opt-in, capability-aware, real GPU.
  *
  * Reproduces the black-screen bug (crt-scanlines / chromatic-aberration
- * examples on the WebGPU backend): `WebGpuShaderFilter._ensureConnected`
+ * examples on the WebGPU backend): the WebGPU pass behind `ShaderFilter`
  * builds and permanently caches its `GPURenderPipeline` against
  * `backend.renderTargetFormat` — which reflects whatever render target is
  * *currently bound* (still the canvas/root target at the moment the
@@ -23,7 +23,7 @@
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
-import { WebGpuShaderFilter } from '#rendering/filters/WebGpuShaderFilter';
+import { ShaderFilter } from '#rendering/filters/ShaderFilter';
 import { Mesh } from '#rendering/mesh/Mesh';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
@@ -71,7 +71,7 @@ const solidRedFragSrc = `
 @group(0) @binding(2) var uSampler: sampler;
 
 @fragment
-fn main(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
+fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
     return vec4<f32>(1.0, 0.0, 0.0, 1.0);
 }
 `;
@@ -112,14 +112,14 @@ const readTexturePixel = (backend: WebGpuBackend, texture: RenderTexture, x: num
   return [data[0], data[1], data[2], data[3]];
 };
 
-describe('WebGpuShaderFilter (real GPU)', () => {
+describe('ShaderFilter on WebGPU (real GPU)', () => {
   test('apply() writes non-black pixels into output — pipeline format matches the offscreen target', async ctx => {
     const backend = await setupBackend();
     const device = getBackendDevice(backend);
 
     const input = new RenderTexture(canvasSize, canvasSize);
     const output = new RenderTexture(canvasSize, canvasSize);
-    const filter = new WebGpuShaderFilter({ fragmentSource: solidRedFragSrc });
+    const filter = new ShaderFilter({ wgsl: solidRedFragSrc });
 
     try {
       device.pushErrorScope('validation');
