@@ -6,7 +6,7 @@
  * and the spectral envelope follows the modulator's formant.
  */
 
-import { vocoderWorkletSource } from '../../src/worklets/vocoder.worklet';
+import vocoderWorkletSource from '../../src/worklets/vocoder.worklet.ts?worklet';
 import { rms, SAMPLE_RATE, tail } from './_audio-harness';
 
 interface VocoderRenderOptions {

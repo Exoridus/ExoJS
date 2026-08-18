@@ -11,7 +11,7 @@
  * shipped shifting by (1+pitch) instead of pitch.
  */
 
-import { pitchShiftWorkletSource } from '../../src/worklets/pitch-shift.worklet';
+import pitchShiftWorkletSource from '../../src/worklets/pitch-shift.worklet.ts?worklet';
 
 const SAMPLE_RATE = 48000;
 const BLOCK = 128;

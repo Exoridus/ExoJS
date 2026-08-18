@@ -6,7 +6,7 @@
  * runtime (input 440 Hz, pitch=2 -> 880 Hz), which the jsdom mock cannot do.
  */
 
-import { pitchShiftWorkletSource } from '../../src/worklets/pitch-shift.worklet';
+import pitchShiftWorkletSource from '../../src/worklets/pitch-shift.worklet.ts?worklet';
 import { dominantFreq, renderWorklet, rms, SAMPLE_RATE, tail } from './_audio-harness';
 
 describe('PitchShift worklet — real Web Audio', () => {

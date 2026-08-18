@@ -1,6 +1,6 @@
 import { type AudioBus, getAudioContext, isAudioContextReady, onAudioContextReady, registerAudioWorkletProcessor, Signal, type Voice } from '@codexo/exojs';
 
-import { beatDetectorWorkletSource } from './worklets/beat-detector.worklet';
+import beatDetectorWorkletSource from './worklets/beat-detector.worklet.ts?worklet';
 
 // ---------------------------------------------------------------------------
 // Public types

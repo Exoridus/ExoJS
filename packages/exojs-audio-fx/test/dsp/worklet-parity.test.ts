@@ -11,7 +11,6 @@
  */
 
 import { computeTempoCandidates, isOctaveRelated } from '../../src/dsp/tempogram';
-import { beatDetectorWorkletSource } from '../../src/worklets/beat-detector.worklet';
 import { clicktrack, doubleTime, halfTime, swing } from '../fixtures/beat-fixtures';
 import { buildBeatProcessor, SAMPLE_RATE } from '../harness/beat-sandbox';
 
@@ -20,6 +19,7 @@ interface ParityProc {
   port: { postMessage: (m: unknown) => void };
   process(inputs: Float32Array[][], outputs: Float32Array[][], parameters: Record<string, Float32Array>): boolean;
   _computeACFAndCandidates(): void;
+  _isOctaveRelated(ratio: number): boolean;
   _fluxWindow: Float32Array;
   _fluxWritePos: number;
   _fluxCount: number;
@@ -85,22 +85,19 @@ function driveAndCompare(samples: Float32Array): void {
 }
 
 /**
- * Builds a callable that mirrors the worklet's inline `isOctave` check by extracting the
- * expression directly from the worklet source string. Any divergence in constants between
- * `isOctaveRelated` (tempogram.ts) and the worklet's copy causes the test below to fail.
+ * Builds a callable that invokes the worklet's own `_isOctaveRelated` method on a real,
+ * running processor instance (via the eval sandbox). Exercising the actual method — rather
+ * than pattern-matching it out of the emitted source text — keeps this parity check valid
+ * regardless of minification or any other source-level transform.
  */
 function buildWorkletOctaveCheck(): (bpm: number, ref: number) => boolean {
-  const m = beatDetectorWorkletSource.match(/var isOctave\s*=\s*([^;]+);/);
-  if (!m) throw new Error('isOctave assignment not found in worklet source');
-  const expr = m[1]!.trim();
-  return new Function('bpm', 'ref', `var ratio = bpm / ref; return !!(${expr});`) as (
-    bpm: number,
-    ref: number,
-  ) => boolean;
+  const Ctor = buildBeatProcessor();
+  const proc = new Ctor({ processorOptions: {} }) as unknown as ParityProc;
+  return (bpm: number, ref: number) => proc._isOctaveRelated(bpm / ref);
 }
 
 describe('isOctaveRelated ↔ worklet inline octave check parity', () => {
-  // Parsed live from the worklet source string — if worklet constants drift, this fails.
+  // Invoked live on a real worklet processor instance — if worklet constants drift, this fails.
   const workletIsOctave = buildWorkletOctaveCheck();
 
   const cases: [number, number, boolean, string][] = [

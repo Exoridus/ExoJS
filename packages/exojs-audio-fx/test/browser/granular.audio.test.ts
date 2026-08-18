@@ -7,7 +7,7 @@
  * test (granular-processor.test.ts).
  */
 
-import { granularWorkletSource } from '../../src/worklets/granular.worklet';
+import granularWorkletSource from '../../src/worklets/granular.worklet.ts?worklet';
 import { renderWorklet, rms, tail } from './_audio-harness';
 
 describe('Granular worklet — real Web Audio', () => {
