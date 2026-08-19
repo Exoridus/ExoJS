@@ -5,8 +5,7 @@
  * After the call, real[i] and imag[i] hold the complex spectrum.
  * A Hann window is applied to the input before the transform.
  *
- * These functions are duplicated (as plain JS) inside the beat-detector worklet
- * source string because AudioWorklets cannot import modules.
+ * The beat-detector worklet imports these directly; its build bundles them in.
  */
 
 /** Apply a Hann window in-place to `real`. `imag` is zeroed. */

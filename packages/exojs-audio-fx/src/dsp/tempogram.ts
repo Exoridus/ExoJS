@@ -5,10 +5,11 @@
  * this module computes the autocorrelation function (ACF) over a sliding window and
  * selects the musically-correct tempo from the resulting periodicity peaks.
  *
- * The same pipeline is transliterated verbatim into the beat-detector worklet source
- * string (worklets cannot import modules). `test/dsp/worklet-parity.test.ts` guards that
- * the worklet's tempo candidates equal `computeTempoCandidates(...)` here, so this file
- * is the canonical implementation and the worklet is a mechanical mirror of it.
+ * The beat-detector worklet imports these functions directly; its bundle inlines them,
+ * so there is one implementation. The worklet drives them from its own scratch buffers
+ * rather than calling `computeTempoCandidates` - the audio thread cannot afford the
+ * per-call allocation that convenience wrapper makes - which is why the allocating
+ * entry points here are thin shells around out-parameter primitives.
  *
  * Octave disambiguation (the core fix)
  * ------------------------------------
@@ -75,12 +76,12 @@ export const defaultPriorSigma = Math.log(2) * 0.9;
 export const candidateEdgeTolerance = 0.05;
 
 /** Periodicity-comb weights for a candidate's own sub-multiples (f, f/2, f/3). */
-const combWeightFundamental = 1;
-const combWeightHalf = 0.5;
-const combWeightThird = 0.3;
+export const combWeightFundamental = 1;
+export const combWeightHalf = 0.5;
+export const combWeightThird = 0.3;
 /** Super-harmonic penalty weights (2f, 3f) — strong evidence the candidate is a sub-harmonic. */
-const combPenaltyDouble = 1;
-const combPenaltyTriple = 0.5;
+export const combPenaltyDouble = 1;
+export const combPenaltyTriple = 0.5;
 
 /**
  * The ACF is computed down to a shorter lag than the candidate band needs, so that
@@ -107,9 +108,28 @@ export function acfExtendedMinLag(minLag: number): number {
  * @returns          ACF array indexed by lag (index 0 = lag minLag).
  */
 export function computeAcf(flux: Float32Array, minLag: number, maxLag: number): Float32Array {
-  const n = flux.length;
+  const acf = new Float32Array(maxLag - minLag + 1);
+
+  computeAcfInto(flux, flux.length, minLag, maxLag, acf);
+
+  return acf;
+}
+
+/**
+ * {@link computeAcf} writing into a caller-owned buffer.
+ *
+ * Separate from the allocating form because the AudioWorklet calls this once per ACF hop
+ * on the audio thread, where a per-call `Float32Array` is unaffordable, and because it
+ * reads only the first `n` entries of a longer scratch buffer instead of the whole array.
+ *
+ * @param flux    Novelty scratch buffer; only `flux[0..n-1]` is read (oldest first).
+ * @param n       Number of valid novelty values in `flux`.
+ * @param minLag  Minimum lag in hops (inclusive).
+ * @param maxLag  Maximum lag in hops (inclusive).
+ * @param out     Receives `maxLag - minLag + 1` values, indexed by lag from `minLag`.
+ */
+export function computeAcfInto(flux: Float32Array, n: number, minLag: number, maxLag: number, out: Float32Array): void {
   const lagCount = maxLag - minLag + 1;
-  const acf = new Float32Array(lagCount);
 
   // Window mean — subtracted before correlation to remove the DC pedestal.
   let mean = 0;
@@ -134,10 +154,8 @@ export function computeAcf(flux: Float32Array, minLag: number, maxLag: number): 
     for (let t = lag; t < n; t++) {
       sum += (flux[t]! - mean) * (flux[t - lag]! - mean);
     }
-    acf[lagIndex] = n > 0 ? sum / n / norm : 0;
+    out[lagIndex] = n > 0 ? sum / n / norm : 0;
   }
-
-  return acf;
 }
 
 /**
@@ -145,7 +163,7 @@ export function computeAcf(flux: Float32Array, minLag: number, maxLag: number): 
  * Returns 0 outside the computed lag range and clamps negative correlation to 0 so
  * anti-correlated harmonics never contribute to (or subtract spuriously from) a comb.
  */
-function acfAtLag(acf: Float32Array, minLag: number, lag: number): number {
+export function acfAtLag(acf: Float32Array, minLag: number, lag: number): number {
   const maxIndex = acf.length - 1;
   const f = lag - minLag;
   if (f < 0 || f > maxIndex) return 0;
@@ -166,7 +184,7 @@ function acfAtLag(acf: Float32Array, minLag: number, lag: number): number {
  * Returns 0 when the three points are not strictly concave (cannot happen for a genuine
  * strict local maximum, but guards floating-point edge cases).
  */
-function parabolicPeakOffset(yPrev: number, yMid: number, yNext: number): number {
+export function parabolicPeakOffset(yPrev: number, yMid: number, yNext: number): number {
   const denom = yPrev - 2 * yMid + yNext;
   if (denom >= 0) return 0;
   let d = (0.5 * (yPrev - yNext)) / denom;

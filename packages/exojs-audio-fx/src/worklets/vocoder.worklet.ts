@@ -1,17 +1,15 @@
 // Vocoder AudioWorkletProcessor - bandpass filterbank + envelope-follower carrier modulation.
 //
-// This worklet is built through the `.worklet.ts` → `?worklet`
-// build plugin (see `@codexo/exojs-config/worklet-plugin`): real, typed
-// TypeScript instead of a template-string constant. It typechecks against the
-// AudioWorkletGlobalScope (see `worklet-globals.d.ts` + `../../tsconfig.worklets.json`),
-// NOT the DOM - this file must stay self-contained (no imports at runtime):
-// `registerAudioWorkletProcessor` (`#audio/worklet/registerWorklet`) loads the
-// build-inlined source via a Blob URL passed to `audioWorklet.addModule()`.
+// Built through the `?worklet` plugin (see `@codexo/exojs-config/worklet-plugin`),
+// which bundles this module - imports included - into the single self-contained
+// source string `registerAudioWorkletProcessor` (`#audio/worklet/registerWorklet`)
+// hands to `audioWorklet.addModule()` via a Blob URL.
+//
+// Typechecked against the AudioWorkletGlobalScope (`worklet-globals.d.ts` +
+// `../../tsconfig.worklets.json`), not the DOM.
 //
 // Consumed via `import vocoderWorkletSource from './vocoder.worklet.ts?worklet'`
-// (see `../effects/VocoderEffect.ts`) - the `?worklet` query is what routes
-// this file through the transpile-to-string plugin instead of normal
-// TypeScript module resolution.
+// (see `../effects/VocoderEffect.ts`).
 
 // Captured once, at module-eval time, rather than read lazily inside the class:
 // deliberately NOT the same as reading the ambient `sampleRate` global directly

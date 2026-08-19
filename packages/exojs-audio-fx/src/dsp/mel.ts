@@ -5,8 +5,7 @@
  * on the mel scale. Each filter is a typed array of weights for the FFT
  * magnitude bins.
  *
- * These helpers are also inlined inside the beat-detector worklet source
- * string (worklets cannot import modules).
+ * The beat-detector worklet imports these directly; its build bundles them in.
  */
 
 /** Convert Hz to mel. */
@@ -92,7 +91,7 @@ export function buildMelFilterbank(bandCount: number, fMin: number, fMax: number
  * @param out     Optional pre-allocated output array of length `bands.length`.
  * @returns       Log-compressed mel band energies.
  */
-export function computeMelBands(mag: Float32Array, bands: MelBand[], out?: Float32Array): Float32Array {
+export function computeMelBands(mag: Float32Array, bands: readonly MelBand[], out?: Float32Array): Float32Array {
   const result = out ?? new Float32Array(bands.length);
   for (let b = 0; b < bands.length; b++) {
     const { startBin, weights } = bands[b]!;

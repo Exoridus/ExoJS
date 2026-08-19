@@ -1,19 +1,12 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "_comment": "Typechecks *.worklet.ts source against the AudioWorkletGlobalScope, not the package's main (DOM-lib) program: `lib` drops `dom`/`dom.iterable` entirely and relies on the hand-rolled ambient globals in src/worklets/worklet-globals.d.ts. These files are excluded from tsconfig.json's `include` (see its comment) and typechecked here instead; `pnpm typecheck` runs both.",
+  "_comment": "Typechecks *.worklet.ts source against the AudioWorkletGlobalScope, not the package's main (DOM-lib) program: `lib` drops `dom`/`dom.iterable` entirely and relies on the hand-rolled ambient globals in src/worklets/worklet-globals.d.ts. The worklets are excluded from tsconfig.json's `include` (see its comment) and typechecked here instead; `pnpm typecheck` runs both. src/dsp is included because the worklets import it and the `?worklet` build bundles it into them: those modules must therefore also hold up without DOM, which is exactly what checking them in this program proves.",
   "extends": "@codexo/exojs-config/typescript/base.json",
   "compilerOptions": {
     "lib": ["ES2022"],
     "types": [],
     "noEmit": true,
-    "rootDir": "src/worklets"
+    "rootDir": "src"
   },
-  "include": [
-    "src/worklets/beat-detector.worklet.ts",
-    "src/worklets/bit-crusher.worklet.ts",
-    "src/worklets/granular.worklet.ts",
-    "src/worklets/pitch-shift.worklet.ts",
-    "src/worklets/vocoder.worklet.ts",
-    "src/worklets/worklet-globals.d.ts"
-  ]
+  "include": ["src/worklets/*.worklet.ts", "src/worklets/worklet-globals.d.ts", "src/dsp/*.ts"]
 }
