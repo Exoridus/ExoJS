@@ -122,7 +122,7 @@ The transform removes comments and whitespace and nothing else. It never renames
 
 Only a bare import is claimed. An import carrying a query - `./ripple.frag?raw`, `?url`, anything else - is left to the bundler, so Vite's own asset handling keeps working next to the plugin:
 
-```ts no-check -- `?url` is Vite's own import query, typed by `vite/client` rather than by this package
+```ts no-check -- ?url is Vite's own import query, typed by vite/client rather than by this package
 import shaderUrl from './ripple.frag?url';
 ```
 
@@ -132,7 +132,7 @@ The two can appear in the same program. Use the bare import for source you compi
 
 Source assembled at runtime - a fragment stage composed from several strings, a variant switched on a feature flag - never passes through the plugin, so `minify` cannot reach it. Put it through the same transform explicitly and both halves ship on the same terms:
 
-```ts no-check -- `stripShaderSource` is build-time tooling, checked against the published package rather than against the engine
+```ts no-check -- stripShaderSource is build-time tooling, checked against the published package rather than against the engine
 import { stripShaderSource } from '@codexo/exojs-build/shader-strip';
 
 const composed = stripShaderSource(`${prelude}\n${body}`);

@@ -68,7 +68,7 @@ export const saturate = (sample: number, drive: number): number => Math.tanh(sam
 
 The processor imports it like any other module:
 
-```ts no-check -- an AudioWorkletGlobalScope declares `AudioWorkletProcessor` and `registerProcessor`, which the app's own TypeScript program cannot also declare
+```ts no-check -- an AudioWorkletGlobalScope declares AudioWorkletProcessor and registerProcessor, which the app's own TypeScript program cannot also declare
 // saturator.worklet.ts
 import { saturate } from './dsp';
 
@@ -126,7 +126,7 @@ export const fibonacci = (n: number): number => {
 };
 ```
 
-```ts no-check -- a worker module is checked against `lib: webworker`, where `self` is the worker global rather than the window
+```ts no-check -- a worker module is checked against lib: webworker, where self is the worker global rather than the window
 // generator.worker.ts
 import { fibonacci, GENERATOR_TAG } from './shared';
 

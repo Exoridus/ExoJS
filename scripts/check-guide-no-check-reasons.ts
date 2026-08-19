@@ -98,9 +98,51 @@ interface NoCheckBlock {
   readonly hasReason: boolean;
 }
 
+interface InfoStringProblem {
+  readonly file: string;
+  readonly line: number;
+  readonly text: string;
+}
+
+/**
+ * Backtick-fenced blocks whose info string contains a backtick.
+ *
+ * CommonMark forbids it, and the consequence is silent rather than loud: the
+ * line stops opening a code block at all, so everything meant to be inside it
+ * is read as prose. In MDX that prose is JSX, and the first `{` in the snippet
+ * becomes an unterminated expression - which surfaces only in `astro build`,
+ * far from the guide that caused it, and not in `astro check`.
+ *
+ * This repository's own fence scanner accepts the character (its meta group is
+ * `[^\n]*`), which is exactly why nothing else notices. A reason on a
+ * `no-check` fence is the natural place to reach for backticks, so the rule
+ * lives beside the gate that asks for those reasons.
+ */
+function scanInfoStrings(files: readonly string[]): InfoStringProblem[] {
+  const problems: InfoStringProblem[] = [];
+
+  for (const file of files) {
+    const rel = relative(GUIDE_DIR, file).replaceAll('\\', '/');
+
+    readFileSync(file, 'utf8')
+      .split('\n')
+      .forEach((text, index) => {
+        const info = /^[ \t]*```(?<info>.*)$/.exec(text)?.groups?.['info'];
+
+        if (info !== undefined && info.includes('`')) {
+          problems.push({ file: rel, line: index + 1, text: text.trim() });
+        }
+      });
+  }
+
+  return problems;
+}
+
+const guideFiles = walkFiles(GUIDE_DIR, name => name.endsWith('.mdx') || name.endsWith('.md'));
+
 /** Every `no-check` fenced ts/tsx/js/javascript block in the guide tree, with whether its meta carries a reason. */
 function scanGuide(): NoCheckBlock[] {
-  const files = walkFiles(GUIDE_DIR, name => name.endsWith('.mdx') || name.endsWith('.md'));
+  const files = guideFiles;
   const blocks: NoCheckBlock[] = [];
 
   for (const file of files) {
@@ -165,6 +207,22 @@ function formatFailure(diff: BaselineDiff): string {
   }
 
   return sections.join('\n\n');
+}
+
+const infoStringProblems = scanInfoStrings(guideFiles);
+
+if (infoStringProblems.length > 0) {
+  fail(
+    [
+      `typecheck:guides:no-check: ${infoStringProblems.length} fence(s) carry a backtick in their info string.`,
+      '',
+      ...infoStringProblems.map(p => `    ${p.file}:${p.line}  ${p.text}`),
+      '',
+      'CommonMark forbids a backtick there, so the line opens no code block and the',
+      'snippet below it is read as prose - as JSX, in an .mdx file. Drop the backticks;',
+      'a fence-meta reason is plain text and needs none.',
+    ].join('\n'),
+  );
 }
 
 const blocks = scanGuide();
