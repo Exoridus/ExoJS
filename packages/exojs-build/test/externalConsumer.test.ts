@@ -170,7 +170,7 @@ beforeAll(() => {
           noEmit: true,
           skipLibCheck: false,
         },
-        include: ['main.ts', 'my-effect/**/*.ts', 'worker-example/**/*.ts', 'vite.config.ts'],
+        include: ['main.ts', 'my-effect/**/*.ts', 'shader-example/**/*.ts', 'worker-example/**/*.ts', 'vite.config.ts'],
         exclude: ['**/*.worklet.ts', '**/*.worker.ts'],
       },
       null,
@@ -224,16 +224,52 @@ beforeAll(() => {
     'utf8',
   );
 
-  // Rollup gets a plain-JS entry on purpose: it proves the two plugins are the
-  // only thing a Rollup user has to add, with no TypeScript plugin in sight -
-  // the `.ts` modules behind the queries are esbuild's business, not Rollup's.
+  // Rollup gets a plain-JS entry on purpose: it proves the preset is the only
+  // thing a Rollup user has to add, with no TypeScript plugin in sight - the
+  // `.ts` modules behind the queries are esbuild's business, not Rollup's. The
+  // shader imports are here too because Rollup, unlike Vite, offers nothing of
+  // its own for them.
   writeFileSync(
     join(consumer, 'rollup.entry.mjs'),
     [
       "import workletSource from './my-effect/my-effect.worklet.ts?worklet';",
+      "import fragmentSource from './shader-example/demo.frag';",
+      "import vertexSource from './shader-example/demo.vert';",
+      "import wgslSource from './shader-example/demo.wgsl';",
       "import workerSource from './worker-example/generator.worker.ts?worker';",
       '',
-      'export const sources = [workletSource, workerSource];',
+      'export const sources = [workletSource, workerSource, vertexSource, fragmentSource, wgslSource];',
+      '',
+    ].join('\n'),
+    'utf8',
+  );
+
+  // The production shape: `minify: true`, plus a `?raw` import of a shader the
+  // same entry also imports bare. One bundle then carries both forms of one
+  // file, which is what makes "a query is left to the bundler" checkable.
+  writeFileSync(
+    join(consumer, 'vite.min.entry.mjs'),
+    [
+      "import strippedFragment from './shader-example/demo.frag';",
+      "import rawFragment from './shader-example/demo.frag?raw';",
+      '',
+      'export const fragments = [strippedFragment, rawFragment];',
+      '',
+    ].join('\n'),
+    'utf8',
+  );
+
+  writeFileSync(
+    join(consumer, 'vite.config.min.ts'),
+    [
+      "import { defineConfig } from 'vite';",
+      '',
+      "import { exojs } from '@codexo/exojs-build';",
+      '',
+      'export default defineConfig({',
+      '  plugins: [exojs({ minify: true })],',
+      "  build: { outDir: 'dist-min', lib: { entry: 'vite.min.entry.mjs', formats: ['es'], fileName: 'consumer-min' }, minify: false },",
+      '});',
       '',
     ].join('\n'),
     'utf8',
@@ -327,7 +363,7 @@ describe('external consumer', () => {
     succeeds(process.execPath, [tscBin, '-p', 'tsconfig.workers.json'], consumer);
   });
 
-  it('builds with Vite, inlining both sources into the one entry chunk', () => {
+  it('builds with Vite, inlining every source into the one entry chunk', () => {
     succeeds(process.execPath, [join(consumer, 'node_modules', 'vite', 'bin', 'vite.js'), 'build'], consumer);
 
     const emitted = treeFiles(join(consumer, 'dist'));
@@ -335,9 +371,13 @@ describe('external consumer', () => {
 
     expect(bundle).toContain('exojs-build-saturator-dsp');
     expect(bundle).toContain('exojs-build-generator');
+    expect(bundle).toContain('exojs-build-demo-wgsl');
+    expect(bundle).toContain('#version 300 es');
     // The transitive helper, reached only through the worklet's own import.
     expect(bundle).toContain('Math.tanh');
     expect(emitted.filter(file => /worklet|worker/i.test(file))).toStrictEqual([]);
+    // Shader text is bundle payload, never a fetched asset - the single emitted
+    // chunk is what says so.
     expect(emitted).toStrictEqual(['consumer.js']);
   });
 
@@ -349,7 +389,26 @@ describe('external consumer', () => {
 
     expect(bundle).toContain('exojs-build-saturator-dsp');
     expect(bundle).toContain('exojs-build-generator');
+    expect(bundle).toContain('#version 300 es');
+    expect(bundle).toContain('fn fragmentMain');
     expect(emitted.filter(file => /worklet|worker/i.test(file))).toStrictEqual([]);
+    expect(emitted.filter(file => /\.(vert|frag|wgsl)$/.test(file))).toStrictEqual([]);
+  });
+
+  it('strips shader comments under `minify`, and leaves a `?raw` import alone', () => {
+    succeeds(process.execPath, [join(consumer, 'node_modules', 'vite', 'bin', 'vite.js'), 'build', '--config', 'vite.config.min.ts'], consumer);
+
+    const bundle = readFileSync(join(consumer, 'dist-min', 'consumer-min.js'), 'utf8');
+    // The same file twice: bare (stripped by the plugin) and `?raw` (verbatim,
+    // because the plugin never claimed it). The marker comment therefore
+    // survives exactly once, which no other split of the two behaviours gives.
+    const markers = bundle.match(/exojs-build-demo-fragment/g) ?? [];
+
+    expect(markers).toHaveLength(1);
+    // Stripping is comment and layout removal only - the code is still there.
+    expect(bundle.match(/#version 300 es/g) ?? []).toHaveLength(2);
+    expect(bundle).toContain('fragColor = vec4(vUv, abs(sin(u_time)), 1.0);');
+    expect(treeFiles(join(consumer, 'dist-min')).filter(file => /\.(vert|frag|wgsl)$/.test(file))).toStrictEqual([]);
   });
 
   it('stays a small tarball', () => {
