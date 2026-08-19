@@ -840,8 +840,9 @@ jobs:
 
       - name: Build core
         env:
-          # Enables the Codecov bundle-analysis upload in rollup.config.ts;
-          # absent (e.g. fork PRs, local builds) the build stays offline.
+          # Enables the Codecov bundle-analysis upload in scripts/build.ts and
+          # rollup.full-bundle.config.ts; absent (e.g. fork PRs, local builds)
+          # the build stays offline.
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
           # Also build + track the all-in-one bundle (core + every extension)
           # so Codecov's Bundles tab carries the "everything together" number.

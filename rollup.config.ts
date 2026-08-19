@@ -1,3 +1,12 @@
+// `pnpm build` no longer runs this file - see `scripts/build.ts` (Rolldown)
+// and `rollup.full-bundle.config.ts` (the opt-in all-in-one bundle, which
+// stays on Rollup). This config is retained only because
+// `test/core/logging-production-filter.test.ts` and
+// `test/core/scene-scope-sync-hooks.test.ts` read its `pure_funcs` list as
+// the single source of truth for their own self-contained production-strip
+// pipelines. Redirecting those tests to a Rolldown-based mechanism (Rolldown
+// needs no `pure_funcs` list at all - see `scripts/build.ts`'s comment on
+// why) is tracked as follow-up work, not done here.
 import { dirname, relative as relativePath, resolve as resolvePath } from 'node:path';
 import { fileURLToPath } from 'node:url';
 

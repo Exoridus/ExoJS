@@ -216,12 +216,14 @@ describe('invariant always-on contract (source-level, no build required)', () =>
 describe.runIf(hasProductionBuild || mustHaveProductionBuild)('production build stripping', () => {
   const expectedVersion = resolveVersion(rootDir);
 
-  it('has no bare __DEV__ reference in the dev helper (replaced with false)', () => {
+  it('has no bare __DEV__ reference in the dev helper', () => {
     const content = read('dist/esm/core/dev.js');
-    // The guard `if (__DEV__ && ...)` must become `if (false && ...)`
+    // The guard `if (__DEV__ && ...)` must not survive as a literal token. The
+    // bundler is free to leave `if (false && ...)` in place or fold the whole
+    // dead branch away - both satisfy "no unresolved __DEV__ reference", and
+    // which one happens is a bundler DCE-depth detail, not part of the
+    // contract this test verifies.
     expect(content).not.toMatch(/(?<![a-zA-Z0-9_$])__DEV__(?![a-zA-Z0-9_$])/);
-    // The literal `false` must appear where __DEV__ was.
-    expect(content).toContain('false');
   });
 
   it('strips the __DEV__-gated assert/assertDefined bodies to no-ops', () => {

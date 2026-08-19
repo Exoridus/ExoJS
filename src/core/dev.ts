@@ -31,9 +31,9 @@
 
 /**
  * Assert `condition` at dev/test time. Throws with `[ExoJS] message` when the
- * condition is falsy and `__DEV__` is true. No-op in production builds.
+ * condition is falsy in a dev build. No-op in production builds.
  *
- * `message` is optional — omit it for invariant/in-bounds checks where the
+ * `message` is optional - omit it for invariant/in-bounds checks where the
  * stack trace already localizes the failure. Prefer a constant string over a
  * template literal: arguments are evaluated before the (stripped) body runs, so
  * an interpolated message still allocates in production.
@@ -59,10 +59,10 @@ export function assertDefined<T>(value: T | null | undefined, message?: string):
 /**
  * Enforce a public-contract invariant. Always-on: throws with `[ExoJS]
  * message` when `condition` is falsy in **every** build, including
- * production — unlike {@link assert}, this is never stripped and never
- * gated by `__DEV__`. Use it for contract checks that guard against corrupt
- * state or misuse the type system cannot express, where silently continuing
- * would be worse than throwing.
+ * production - unlike {@link assert}, this is never stripped and never
+ * gated by the dev-only build flag. Use it for contract checks that guard
+ * against corrupt state or misuse the type system cannot express, where
+ * silently continuing would be worse than throwing.
  */
 export function invariant(condition: boolean, message?: string): asserts condition {
   if (!condition) {

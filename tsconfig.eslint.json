@@ -16,5 +16,5 @@
     "ignoreDeprecations": "6.0",
     "types": ["vitest/globals", "node", "jsdom", "@webgpu/types", "css-font-loading-module"]
   },
-  "include": ["src/**/*", "test/**/*", "eslint.config.ts", "rollup.config.ts", "scripts/**/*"]
+  "include": ["src/**/*", "test/**/*", "eslint.config.ts", "rollup.config.ts", "rollup.full-bundle.config.ts", "scripts/**/*"]
 }
